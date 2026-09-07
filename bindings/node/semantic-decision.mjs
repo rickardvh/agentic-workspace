@@ -70,6 +70,14 @@ function request(payload) {
   return JSON.parse(result.stdout);
 }
 
+export function start(context) {
+  return request({start: context});
+}
+
+export function invoke(context) {
+  return request({invoke: context});
+}
+
 export function operationResult(invocation, outcome, decision) {
   return request({ operation_result: { invocation, outcome, decision } });
 }

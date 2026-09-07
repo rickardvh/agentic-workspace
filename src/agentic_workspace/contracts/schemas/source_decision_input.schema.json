@@ -59,6 +59,31 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "direct_task_subject_input": {
+      "description": "Existing direct-task semantic subject inputs; no source admission or claim authority is supplied by this request.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task", "paths"],
+      "properties": {
+        "task": {"type": "string"},
+        "paths": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "verification_claim_request": {
+      "description": "Request current Verification judgment for an exact work-bound claim. Evidence references identify candidates; they do not authenticate producers or assert acceptance.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_class"],
+      "properties": {
+        "claim_class": {"const": "slice_complete"},
+        "evidence_refs": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^proof://receipts/[A-Za-z0-9_.-]+$"}
+        }
+      }
+    },
     "decision_dismissal": {
       "type": "object",
       "description": "Trusted owner-admitted dismissal. A client-authored assertion cannot admit human or domain authority.",
@@ -676,6 +701,12 @@
       },
       "required": ["kind", "revision", "owners"],
       "additionalProperties": false
+    },
+    "public_request_set": {
+      "oneOf": [
+        {"$ref": "#/$defs/public_request"},
+        {"type": "array", "maxItems": 16, "items": {"$ref": "#/$defs/public_request"}}
+      ]
     },
     "public_request": {
       "type": "object",

@@ -39,6 +39,59 @@
     "cross_owner_results": "evidence only until the responsible owner admits a typed request",
     "procedure_references": "non-authoritative"
   },
+  "native_cli": {
+    "executable": "agentic-workspace",
+    "help_flag": "--help",
+    "commands": [
+      {
+        "name": "start",
+        "description": "Resolve the current operating decision.",
+        "input_field": "request",
+        "input_required": false
+      },
+      {
+        "name": "invoke",
+        "description": "Invoke the exact operation returned by the current owner.",
+        "input_field": "invocation",
+        "input_required": true
+      }
+    ],
+    "options": [
+      {
+        "flag": "--target",
+        "field": "target",
+        "default": ".",
+        "description": "Repository target (default: current directory)."
+      },
+      {
+        "flag": "--task",
+        "field": "task",
+        "default": "",
+        "description": "Current task text; semantics remain agent-owned."
+      },
+      {
+        "flag": "--changed",
+        "field": "changed",
+        "default": [],
+        "multiple": true,
+        "description": "Changed paths; accepts multiple values and repetition."
+      },
+      {
+        "flag": "--format",
+        "field": "format",
+        "default": "json",
+        "choices": [
+          "json"
+        ],
+        "description": "Output format (json)."
+      },
+      {
+        "flag": "--input",
+        "field": "input",
+        "description": "JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action."
+      }
+    ]
+  },
   "authority": {
     "data_shapes": "this JSON contract and referenced JSON Schema",
     "executable_semantics": "crates/agentic-workspace-core",

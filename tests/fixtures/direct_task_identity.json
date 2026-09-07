@@ -1,0 +1,54 @@
+[
+  {
+    "input": {
+      "task": " Check  current\tfiles\n",
+      "paths": [
+        "b.txt",
+        "a.txt",
+        "a.txt"
+      ]
+    },
+    "expected": "direct-task:sha256:ea9bfc2b4477c4ea01a32ab511cf81fb8ed4a3f372b8a76399870cd6dff15ba6"
+  },
+  {
+    "input": {
+      "task": "\u00c5\u00a0\u2003\ud83d\ude42\u001cverify\u001d\u001e\u001fnow\u2028done",
+      "paths": [
+        "\u00e9.txt",
+        "\ud83d\ude42.txt",
+        "a\\b",
+        "quote\".txt"
+      ]
+    },
+    "expected": "direct-task:sha256:a3512451acb6c30c5764d09ec24bc6941252e4f9bae5b8fa0734bc9d9bfb7de8"
+  },
+  {
+    "input": {
+      "task": "\u0085\u202f\u3000",
+      "paths": []
+    },
+    "expected": "direct-task:sha256:fbf2595b39b918452b7ce9165a238f79224dccd4948b7ce03972034590ec4ab6"
+  },
+  {
+    "input": {
+      "task": "same task",
+      "paths": [
+        "z",
+        "A",
+        "\u00e9"
+      ]
+    },
+    "expected": "direct-task:sha256:f6601da85c18900c0dfb75557683a95e375f7b46972456d0bc5052a9f40552a6"
+  },
+  {
+    "input": {
+      "task": "same task",
+      "paths": [
+        "A",
+        "\u00e9",
+        "z"
+      ]
+    },
+    "expected": "direct-task:sha256:f6601da85c18900c0dfb75557683a95e375f7b46972456d0bc5052a9f40552a6"
+  }
+]

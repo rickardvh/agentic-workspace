@@ -98,6 +98,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     // No judgmental text classification or completion inference is performed.
     let material = json!({
         "outcome": {"intent": body["intent"], "goals": body["goal"]},
+        "canonical_core": body["canonical_core"],
         "scope": {"declared": body["scope"], "paths": body["touched_paths"], "owner_level": body["owner_level"], "selection": body["relationships"]["selection"]},
         "dependencies": {"declared": body["relationships"]["dependencies"], "parent": body["parent"], "references": body["references"], "external_posture": body["relationships"]["external_posture"]},
         "constraints": {"non_goals": body["non_goals"], "bounds": body["execution_bounds"]},
@@ -114,6 +115,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         "revision",
         "intent",
         "goal",
+        "canonical_core",
         "scope",
         "touched_paths",
         "parent",
@@ -181,7 +183,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     }))
 }
 
-fn decision(input: &Input, reconciled: &Value, current: bool) -> Result<Value, CoreError> {
+fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Value, CoreError> {
     let actions = if !current && reconciled["coverage"]["complete"] == true {
         json!([{
             "operation_id": "planning.reconcile",
@@ -216,26 +218,60 @@ fn decision(input: &Input, reconciled: &Value, current: bool) -> Result<Value, C
         }
         value["capability_contract"] = contract.clone();
     }
-    let mut result = compile_value(value)?;
+    Ok(value)
+}
+
+fn decision(input: &Input, reconciled: &Value, current: bool) -> Result<Value, CoreError> {
+    let mut result = compile_value(decision_input(input, reconciled, current)?)?;
     result["planning"] = json!({"reconciliation": reconciled, "current": current});
     Ok(result)
 }
 
-fn direct(input: &Input) -> Result<Value, CoreError> {
-    compile_value(json!({"contributions": [], "intent": input.intent}))
+/// Compose the authoritative pending owner contribution without first compiling
+/// a competing decision packet. Native durable custody admission is separate.
+#[cfg(test)]
+pub(crate) fn pending_input(value: Value) -> Result<Value, CoreError> {
+    let input: Input = serde_json::from_value(value).map_err(error)?;
+    if input.custody.is_some() || input.invocation.is_some() {
+        return Err(error(
+            "pending Planning composition does not admit stored custody or invocation",
+        ));
+    }
+    if !input.relevant {
+        return Ok(json!({"contributions":[],"intent":input.intent}));
+    }
+    let reconciled = reconciliation(&input)?;
+    decision_input(&input, &reconciled, false)
 }
 
 /// Read-only host boundary. Source/custody inputs must be independently admitted
 /// owner evidence. Ordinary clients select intentions, not these authority facts.
 pub fn view(value: Value) -> Result<Value, CoreError> {
+    let (value, detail) = compose_input(value)?;
+    let mut result = compile_value(value)?;
+    if !detail.is_null() {
+        result["planning"] = detail;
+    }
+    Ok(result)
+}
+
+/// Return the current owner contribution after the existing exact effect
+/// admission checks, for one final composed operating decision.
+pub(crate) fn compose_input(value: Value) -> Result<(Value, Value), CoreError> {
     let input: Input = serde_json::from_value(value).map_err(error)?;
     if !input.relevant {
-        return direct(&input);
+        return Ok((
+            json!({"contributions":[],"intent":input.intent}),
+            Value::Null,
+        ));
     }
     let reconciled = reconciliation(&input)?;
     let pending = decision(&input, &reconciled, false)?;
     if reconciled["coverage"]["complete"] != true {
-        return Ok(pending);
+        return Ok((
+            decision_input(&input, &reconciled, false)?,
+            json!({"reconciliation":reconciled,"current":false}),
+        ));
     }
     if let Some(custody) = &input.custody {
         let action = &pending["primary_action"];
@@ -248,19 +284,45 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     "committed Planning reconciliation does not match current source semantics",
                 ));
             }
-            return decision(&input, &reconciled, true);
+            return Ok((
+                decision_input(&input, &reconciled, true)?,
+                json!({"reconciliation":reconciled,"current":true,"committed_operation":{"invocation":admission["record"]["invocation"],"outcome":admission["record"]["outcome"],"custody":admission["custody"]}}),
+            ));
         }
         // This owner can finish only its deterministic immutable result write.
         // An incomplete attempt does not make the subject current; return the
         // exact current action without creating anything during this view.
-        return Ok(pending);
+        return Ok((
+            decision_input(&input, &reconciled, false)?,
+            json!({"reconciliation":reconciled,"current":false}),
+        ));
     }
-    Ok(pending)
+    Ok((
+        decision_input(&input, &reconciled, false)?,
+        json!({"reconciliation":reconciled,"current":false}),
+    ))
 }
 
 /// Execute only the exact owner-derived operation. Its sole mutation is the
 /// durable reconciliation result; the former representation is never edited.
 pub fn reconcile(value: Value) -> Result<Value, CoreError> {
+    reconcile_retaining(value, |_| Ok(()))
+}
+
+/// Native Planning retains producer custody in its already selected owner
+/// record before committing, and retains the committed reference afterwards.
+pub(crate) fn reconcile_retaining(
+    value: Value,
+    retain: impl FnMut(&Value) -> Result<(), CoreError>,
+) -> Result<Value, CoreError> {
+    reconcile_retaining_checked(value, retain, || Ok(()))
+}
+
+pub(crate) fn reconcile_retaining_checked(
+    value: Value,
+    mut retain: impl FnMut(&Value) -> Result<(), CoreError>,
+    mut revalidate: impl FnMut() -> Result<(), CoreError>,
+) -> Result<Value, CoreError> {
     let input: Input = serde_json::from_value(value).map_err(error)?;
     if !input.relevant {
         return Err(error("no Planning reconciliation is applicable"));
@@ -274,6 +336,7 @@ pub fn reconcile(value: Value) -> Result<Value, CoreError> {
     let admission = attempt_store::admit(
         json!({"target": input.target, "decision": pending, "invocation": invocation, "custody": input.custody}),
     )?;
+    retain(&admission["custody"])?;
     let stored = if admission["disposition"] != "replay" {
         // Recheck the former authority before the only semantic commit.
         // Planning has no external side effect here: finishing this same
@@ -281,6 +344,10 @@ pub fn reconcile(value: Value) -> Result<Value, CoreError> {
         // Existing results without retained custody still fail closed in the
         // store, including partial writes and a lost successful commit reply.
         reconciliation(&input)?;
+        // The public owner re-derives the full composed decision here. A
+        // changed configuration or other owner can withdraw this exact effect
+        // after admission; retained attempt custody remains recoverable.
+        revalidate()?;
         attempt_store::commit(
             json!({"target": input.target, "custody": admission["custody"], "outcome": {
                 "status": "applied", "effects": ["planning-state"], "value": reconciled
@@ -289,6 +356,7 @@ pub fn reconcile(value: Value) -> Result<Value, CoreError> {
     } else {
         json!({"record": admission["record"], "custody": admission["custody"]})
     };
+    retain(&stored["custody"])?;
     if stored["record"]["outcome"]["value"] != reconciled {
         return Err(error(
             "committed Planning reconciliation does not match current source semantics",

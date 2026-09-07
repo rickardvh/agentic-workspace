@@ -67,6 +67,28 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "retained_reconciliation": {
+      "type": "object",
+      "description": "Bounded producer custody retained by the already admitted current owner selection; not caller authority or Planning semantics.",
+      "properties": {
+        "kind": {"const": "agentic-planning/reconciliation-custody/v1", "description": "Versioned retained producer custody."},
+        "current_work": {"type": "object", "description": "Exact work identity whose continuation was admitted."},
+        "source": {"$ref": "#/$defs/evidence", "description": "Exact selected semantic owner source at production."},
+        "invocation": {"type": "object", "description": "Exact owner-derived admitted operation."},
+        "custody": {"$ref": "#/$defs/custody", "description": "Producer-returned attempt and optional committed references."}
+      },
+      "required": ["kind", "current_work", "source", "invocation", "custody"],
+      "additionalProperties": false
+    },
+    "continuation_request": {
+      "type": "object",
+      "description": "Agent intention concerning the current source-selected Planning owner; grants neither source authority nor completion.",
+      "properties": {
+        "answer": {"type": "string", "enum": ["continue-selected", "unrelated-direct"], "description": "Explicit current-task relationship to the selected owner."}
+      },
+      "required": ["answer"],
+      "additionalProperties": false
+    },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
@@ -128,6 +150,7 @@
       "type": "object",
       "description": "Minimum shape of the admitted former execplan; unknown fields remain a coverage ambiguity.",
       "properties": {
+        "canonical_core": {"type": "object", "description": "Preserved owner-declared outcome, hard constraints and judgment boundaries; all nested fields remain material."},
         "kind": {
           "const": "planning-execplan/v1",
           "description": "Supported former Planning representation."
@@ -188,6 +211,7 @@
       "type": "object",
       "description": "Current material Planning state, excluding execution history.",
       "properties": {
+        "canonical_core": {"type": ["object", "null"], "description": "Lossless current owner canonical semantics, never attempt-only bookkeeping."},
         "outcome": {
           "type": "object",
           "description": "Preserved current outcome semantics."

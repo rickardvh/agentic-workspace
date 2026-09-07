@@ -45232,7 +45232,9 @@ def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_
     if task_text.strip() and relation in {"bounded-independent", "not-applicable"}:
         # Legacy field names carry a work reference, not necessarily a file or
         # durable Planning owner. The exact direct task is its semantic source.
-        direct_revision = "direct-task:" + revision({"task": " ".join(task_text.split()), "paths": sorted(set(changed_paths))})
+        from agentic_workspace.decision import direct_task_subject
+
+        direct_revision = str(direct_task_subject(task_text, changed_paths)["revision"])
         return {
             "plan_ref": direct_revision,
             "plan_revision": direct_revision,
@@ -45296,9 +45298,9 @@ def _assignment_plan_binding_matches(*, assignment: dict[str, Any], live_binding
     ):
         # Already sealed legacy work keeps its admitted source contract, but
         # cannot borrow an unrelated modern direct task merely by being current.
-        from agentic_workspace.assignment_source import revision
+        from agentic_workspace.decision import direct_task_subject
 
-        expected = "direct-task:" + revision({"task": " ".join(str(gate.get("human_intent") or "").split()), "paths": bound_paths})
+        expected = str(direct_task_subject(str(gate.get("human_intent") or ""), bound_paths)["revision"])
         return plan_revision == expected and bound_paths == allowed_paths
     return (
         str(gate.get("plan_ref") or "").strip() == plan_ref

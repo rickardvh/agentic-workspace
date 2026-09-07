@@ -12,6 +12,21 @@ class DecisionContractError(ValueError):
     """Raised when the shared core rejects a source-decision request."""
 
 
+def start(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Consume repository sources through the native public owner boundary."""
+    return _request({"start": context})
+
+
+def invoke(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Submit an exact public invocation to the same native owner boundary."""
+    return _request({"invoke": context})
+
+
+def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
+    """Use the shared owner's established direct-task semantic identity."""
+    return _request({"direct_task_subject": {"task": task, "paths": paths}})
+
+
 def attribute_assignment_outcome(evidence: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"attribute_assignment_outcome": evidence})
 
@@ -127,6 +142,8 @@ def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
+    "start",
+    "invoke",
     "semantic_route_view",
     "normalize_decision_record",
     "DecisionContractError",

@@ -256,6 +256,16 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
 /// Trusted source-owner input. Native and fallback admissions are independent;
 /// a record cannot choose its owner or assert that another owner has its value.
 pub fn view(value: Value) -> Result<Value, CoreError> {
+    let (input, route_view) = resolve(value)?;
+    let mut result = compile_value(input)?;
+    if let Some(view) = route_view {
+        result["semantic_route_result"] = view;
+    }
+    Ok(result)
+}
+
+/// Preserve the owner input for one final composition with other current owners.
+pub(crate) fn resolve(value: Value) -> Result<(Value, Option<Value>), CoreError> {
     let input: Input = serde_json::from_value(value).map_err(error)?;
     let (route_view, intent) = if let Some(routes) = &input.semantic_routes {
         let (view, intent) = crate::semantic_routes::resolve(routes.clone())?;
@@ -268,16 +278,12 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         .and_then(|v| v["decision"]["semantic_task_routes"]["routes"].as_array())
         .cloned()
         .unwrap_or_default();
-    let finish = |context: Option<Value>| -> Result<Value, CoreError> {
+    let finish = |context: Option<Value>| -> Result<(Value, Option<Value>), CoreError> {
         let mut value = json!({"contributions":[], "intent":intent});
         if let Some(context) = context {
             value["decision_context"] = context;
         }
-        let mut result = compile_value(value)?;
-        if let Some(view) = &route_view {
-            result["semantic_route_result"] = view.clone();
-        }
-        Ok(result)
+        Ok((value, route_view.clone()))
     };
     if input.applicable_scope.is_empty() && selected.is_empty() {
         return finish(None);

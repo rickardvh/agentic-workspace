@@ -11,6 +11,21 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("direct_task_subject"))
+    {
+        agentic_workspace_core::direct_task::view(request["direct_task_subject"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("start"))
+    {
+        agentic_workspace_core::native_public::start(request["start"].clone())
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("invoke"))
+    {
+        agentic_workspace_core::native_public::invoke(request["invoke"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("attribute_assignment_outcome"))
     {
         agentic_workspace_core::assignment::attribute_outcome(
