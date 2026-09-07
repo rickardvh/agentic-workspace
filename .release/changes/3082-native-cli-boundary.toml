@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Add the canonical Rust CLI and current-source native owner ingress."
+issues = [3077, 2986, 2987]
