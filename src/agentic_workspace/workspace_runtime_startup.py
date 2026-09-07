@@ -516,6 +516,16 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "repo_posture": _compact_repo_posture_projection(payload.get("repo_posture", {})),
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
         **(
+            {
+                "assignment_action": {
+                    key: payload["assignment_action"].get(key)
+                    for key in ("status", "action", "operation_invocation", "implementation_allowed")
+                }
+            }
+            if _as_dict(payload.get("assignment_action")).get("status") == "requirements-required"
+            else {}
+        ),
+        **(
             {"task_assignment_disposition": payload["task_assignment_disposition"]}
             if isinstance(payload.get("task_assignment_disposition"), dict)
             else {}
@@ -2495,12 +2505,21 @@ def _ordinary_start_decision_payload(
             **({"operation": child_operation} if child_operation else {}),
             "required_inputs": ["task_assignment_disposition.bounded_child_assignment"],
         }
+    requirements_action = _as_dict(source_payload.get("assignment_action"))
+    requirements_blocked = requirements_action.get("status") == "requirements-required"
+    if requirements_blocked and raw_immediate.get("action") == requirements_action.get("action"):
+        action = {
+            "id": str(requirements_action["action"]),
+            "why": "The current task requires an exact role and result judgment before assignment.",
+            "operation": copy.deepcopy(_as_dict(requirements_action.get("operation_invocation"))),
+        }
     effects = {
         "workflow_required": bounded_external_effect.get("status") != "direct-route-admitted",
         "implementation_allowed": (
             bool(next_action.get("implementation_allowed")) or bounded_external_effect.get("status") == "direct-route-admitted"
         )
-        and not child_implementation_blocked,
+        and not child_implementation_blocked
+        and not requirements_blocked,
         **({"external_write_allowed": True} if bounded_external_effect.get("status") == "direct-route-admitted" else {}),
         "read_only_allowed": bool(next_action.get("read_only_allowed")),
         "exploration_allowed": bool(next_action.get("exploration_allowed")),
