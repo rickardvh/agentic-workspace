@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Consume source-current scoped instructions before native Planning writes."
+issues = [2613, 2987]
