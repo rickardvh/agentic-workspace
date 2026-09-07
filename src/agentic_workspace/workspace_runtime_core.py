@@ -45645,17 +45645,45 @@ def _current_assignment_selection(
             **posture,
             "posture": {**posture["posture"], "execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]},
         }
+    live_binding: dict[str, Any] = {}
+    if config.target_root is not None and config.local_override.delegation_targets:
+        live_binding = _live_assignment_plan_binding(
+            target_root=config.target_root, task_text=str(task_text or ""), changed_paths=changed_paths
+        )
+        if live_binding.get("plan_record"):
+            # Consume Planning's existing route authority before borrowing its
+            # task judgment. An unrelated active owner is not this task's policy.
+            route = _as_dict(
+                _planning_safety_gate_payload(
+                    target_root=config.target_root,
+                    config=config,
+                    changed_paths=changed_paths,
+                    task_text=task_text,
+                    execution_posture={"capability_posture": posture},
+                ).get("route_decision")
+            )
+            if (
+                route.get("task_relation") == "continues-selected-owner"
+                and route.get("owner_posture") == "current"
+                and route.get("required_transition") == "none"
+                and (
+                    work_identity is None
+                    or (
+                        work_identity.get("plan_ref") == live_binding.get("plan_ref")
+                        and work_identity.get("plan_revision") == live_binding.get("plan_revision")
+                    )
+                )
+            ):
+                planning_posture = _as_dict(live_binding["plan_record"].get("capability_posture"))
+                posture = {**posture, "posture": {**posture["posture"], **planning_posture}}
+                if work_identity is not None:
+                    posture["posture"].update({"execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]})
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
     configurations: dict[str, Any] = {}
     work: dict[str, Any] = {}
     if config.target_root is not None and config.local_override.delegation_targets:
         from agentic_workspace.assignment_source import current_route_configurations
 
-        live_binding = (
-            _live_assignment_plan_binding(target_root=config.target_root, task_text=str(task_text or ""), changed_paths=changed_paths)
-            if work_identity is None
-            else {}
-        )
         work = (
             {"id": work_identity["slice_id"], "revision": str(work_identity["plan_revision"])}
             if work_identity is not None
