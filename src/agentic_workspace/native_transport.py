@@ -13,6 +13,7 @@ import os
 import queue
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
 import threading
@@ -490,6 +491,8 @@ class CodexConnection:
             text=True,
             encoding="utf-8",
             env={**os.environ, **environment} if environment is not None else None,
+            start_new_session=os.name != "nt",
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
         )
         self.messages: queue.Queue[dict[str, Any]] = queue.Queue()
         self.number = 0
@@ -566,11 +569,24 @@ class CodexConnection:
         try:
             self.process.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            self.process.terminate()
-            try:
+            if os.name == "nt":
+                # The installed CLI may be a cmd/node launcher. Terminating
+                # only that wrapper does not prove its worker has stopped.
+                killed = subprocess.run(
+                    ["taskkill", "/PID", str(self.process.pid), "/T", "/F"],
+                    capture_output=True,
+                    timeout=10,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                    check=False,
+                )
+                if killed.returncode != 0:
+                    raise ProviderError("native-process-tree-release-unconfirmed")
                 self.process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
+            else:
+                try:
+                    os.killpg(self.process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
                 self.process.wait(timeout=5)
 
 
@@ -770,6 +786,7 @@ def execute(
     started = time.monotonic()
     metrics: dict[str, Any] = {"kind": "agentic-workspace/assignment-transport-metrics/v1"}
     usage_current = True
+    deadline = None
     with exclusive_lineage(reference or "fresh:" + os.urandom(16).hex()):
         connection = (
             CodexConnection(snapshot["executable"], environment=worker_environment)
@@ -865,9 +882,10 @@ def execute(
                     }
             raise ProviderError("provider-turn-timeout")
         except (ProviderError, ValueError, OSError) as error:
-            raise ProviderError(
-                str(error) if isinstance(error, ProviderError) else "native-return-or-control-failed", metrics=metrics
-            ) from error
+            reason = str(error) if isinstance(error, ProviderError) else "native-return-or-control-failed"
+            if reason == "provider-response-timeout" and deadline is not None and time.monotonic() >= deadline:
+                reason = "provider-turn-timeout"
+            raise ProviderError(reason, metrics=metrics) from error
         finally:
             connection.close()
             if on_closed is not None:

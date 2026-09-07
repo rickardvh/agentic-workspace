@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 import json
 import os
+import subprocess
+import sys
 import time
 from types import SimpleNamespace
 
@@ -12,6 +14,71 @@ import pytest
 
 from agentic_workspace import native_transport as native
 from agentic_workspace.contracts.python_primitive_support import _assignment_dispatch_configuration, _assignment_seal_host_native_packet
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows launcher-tree contract; POSIX uses an owned process group")
+def test_forced_native_close_stops_owned_launcher_and_child():
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    connection = object.__new__(native.CodexConnection)
+    connection.process = subprocess.Popen(
+        [
+            sys.executable,
+            "-c",
+            "import subprocess,sys,time; child=subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)']); print(child.pid,flush=True); time.sleep(60)",
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    child = None
+    try:
+        child_pid = int(connection.process.stdout.readline())
+        child = kernel.OpenProcess(0x00100001, False, child_pid)  # synchronize + terminate, exact owned handle
+        assert child
+        connection.close()
+        assert connection.process.returncode is not None
+        assert kernel.WaitForSingleObject(child, 1000) == 0
+    finally:
+        if child:
+            if kernel.WaitForSingleObject(child, 0) != 0:
+                kernel.TerminateProcess(child, 1)
+            kernel.CloseHandle(child)
+        if connection.process.poll() is None:
+            connection.process.kill()
+            connection.process.wait(timeout=5)
+
+
+def test_active_turn_deadline_is_not_reported_as_initial_control_failure(tmp_path, monkeypatch, snapshot):
+    clock = [0.0]
+    monkeypatch.setattr(native, "time", SimpleNamespace(time=time.time, monotonic=lambda: clock[0]))
+
+    class Connection:
+        def __init__(self, executable):
+            self.events = []
+
+        def call(self, method, params):
+            return {"turn": {"id": "turn"}} if method == "turn/start" else {"thread": {"id": "fresh"}}
+
+        def next(self, timeout):
+            clock[0] = 2.0
+            raise native.ProviderError("provider-response-timeout")
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(native, "CodexConnection", Connection)
+    with pytest.raises(native.ProviderError, match="provider-turn-timeout"):
+        native.execute(tmp_path, snapshot, selection(snapshot), "unused", {}, timeout=1)
 
 
 @pytest.fixture

@@ -223,3 +223,20 @@ remain unknown. Duplicate updates do not add cumulative counters again. Neither
 scope is a monetary estimate. A metadata-only query of the installed account usage
 endpoint for the exact interrupted worker returned no thread usage; that does not
 mean zero cost and does not justify reading unrelated account activity.
+
+The parameterized ordinary host check on Codex 0.153.4 selected Sol, explicit low
+effort, ephemeral execution and a 90-second turn deadline through public export.
+It timed out without a structured return after 91347 ms. The fresh cumulative
+observations were 103262 input, 73088 cached input and 1522 output tokens. This is
+censored counterevidence, not successful delegation, target failure evidence or a
+savings comparison against the earlier last-response counters. Monetary cost and
+orientation/repair burden remain unknown. Exact cleanup reported `not-stored`,
+retained semantic assignment state, and deleted no provider state. No further
+provider inference was used to guess the cause.
+
+Active-turn expiry is now distinguished from initial control-plane response timeout.
+After a graceful close deadline, the native adapter terminates the owned Windows
+launcher tree or POSIX process group; it does not treat killing only a launcher as
+proof of worker release. An unconfirmed forced release leaves custody pending.
+The Windows launcher/child termination fixture uses owned non-provider processes.
+It is not a live-provider interrupt/steer proof.
