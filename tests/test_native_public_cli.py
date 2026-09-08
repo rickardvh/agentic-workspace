@@ -50,7 +50,7 @@ def test_native_task_requirements_bind_current_judgment_and_preserve_owner_const
     unbound = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert "task-judgment-identity-stale" in unbound["task_requirements"]["result"]["gaps"]
     source.write_text(source.read_text().replace("history.non-persisted", "history.never-visible"))
-    with pytest.raises(AssertionError, match="source changed"):
+    with pytest.raises(AssertionError, match="stale for the current capability contract revision"):
         consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert not (tmp_path / ".agentic-workspace/local").exists()
 
@@ -90,7 +90,9 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
 
 @pytest.fixture(scope="module")
 def native_cli(shared_core_binary: Path) -> Path:
-    subprocess.run(["cargo", "build", "--locked", "-p", "agentic-workspace-cli"], cwd=ROOT, check=True)
+    subprocess.run(
+        ["cargo", "build", "--locked", "-p", "agentic-workspace-core", "-p", "agentic-workspace-cli", "--bins"], cwd=ROOT, check=True
+    )
     return shared_core_binary.with_name("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
 
 
@@ -573,3 +575,178 @@ def test_native_reader_rejects_invalid_or_unknown_contract_before_domain_parsing
     assert result["failed_checks"] == [failed_check]
     assert result["managed_state_interpreted"] is False
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_current_schema_consumption_preserves_other_residuals(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    declaration = 'schema_version=1\n[cli_compatibility]\ncontract_schema="agentic-workspace/installed-state-compatibility/v1"\n'
+    config.write_text(declaration)
+    context = {"target": str(tmp_path), "task": "Inspect unrelated source"}
+    current = consume(surface, shared_core_binary, native_cli, context)
+    assert current["runtime_compatibility"]["status"] == "admitted"
+    assert current["configuration"]["residuals"] == []
+    assert current["decision_packet"]["status"] == "direct"
+    config.write_text(declaration + 'enforcement="advisory"\nrequired_resources=["agentic_workspace:unobserved-resource"]\n')
+    residual = consume(surface, shared_core_binary, native_cli, context)
+    fields = {item["field"] for item in residual["configuration"]["residuals"]}
+    assert fields == {"cli_compatibility.enforcement", "cli_compatibility.required_resources"}
+    assert residual["decision_packet"]["status"] != "direct"
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize(
+    ("setting", "failed_check"),
+    [
+        ('contract_schema="agentic-workspace/future-contract/v99"', "contract_schema"),
+        ("minimum_reader_epoch=999", "minimum_reader_epoch"),
+        ('required_reader_capabilities=["future-reader"]', "required_reader_capabilities"),
+    ],
+)
+def test_native_advisory_does_not_waive_prestate_reader_contract(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, setting: str, failed_check: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('schema_version=1\n[cli_compatibility]\nenforcement="advisory"\n' + setting + "\n")
+    state = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    state.parent.mkdir(parents=True)
+    state.write_bytes(b"unreadable source must remain untouched")
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_bytes(b"unreadable route registry")
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Continue current work"})
+    assert result["status"] == "blocked"
+    assert result["failed_checks"] == [failed_check]
+    assert result["managed_state_interpreted"] is False
+    assert "decision_packet" not in result
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_explicit_empty_modules_stays_quiet_without_sources(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect unrelated source"})
+    assert result["decision_packet"]["status"] == "direct"
+    assert result["configuration"]["residuals"] == []
+    for owner in ("planning", "memory", "verification"):
+        assert result[owner]["status"] == "disabled"
+        assert result[owner]["requests"] == []
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize(
+    ("owner", "reference"),
+    [
+        ("planning", ".agentic-workspace/local/planning/owner-selection.json"),
+        ("memory", ".agentic-workspace/memory/repo/manifest.toml"),
+        ("verification", ".agentic-workspace/verification/manifest.toml"),
+        ("verification", ".agentic-workspace/proof/receipts/index.json"),
+        ("verification", ".agentic-workspace/local/independent-review-host-results/index.json"),
+    ],
+)
+def test_native_disabled_owner_preserves_uninterpreted_source(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, owner: str, reference: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    source = tmp_path / reference
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_bytes(b"invalid state must not be decoded or adopted")
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    context = {"target": str(tmp_path), "task": "Inspect unrelated source"}
+    result = consume(surface, shared_core_binary, native_cli, context)
+    assert result[owner]["status"] == "disabled"
+    assert result[owner]["sources"][0]["status"] == "present-uninterpreted"
+    assert any(b["code"].endswith("disabled-owner-source-reconciliation-required") for b in result["decision_packet"]["blockers"])
+    assert result[owner]["requests"] == []
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    again = consume(surface, shared_core_binary, native_cli, context)
+    assert again[owner]["source_revision"] == result[owner]["source_revision"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_disabled_verification_cannot_discard_assurance(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        'schema_version=1\n[modules]\nenabled=[]\n[assurance.requirements.review]\nlevel="high"\nforce="blocking"\napplies_to_paths=["src/**"]\nblocking_claims=["claim-work-complete"]\nrequired_evidence=["domain-review"]\n'
+    )
+    result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Change source", "changed": ["src/a.py"]})
+    assert result["verification"]["status"] == "disabled"
+    assert any(r["field"] == "assurance.requirements" and r["affects"] == ["claim:complete"] for r in result["configuration"]["residuals"])
+    assert result["decision_packet"]["blockers"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_enablement_change_stales_planning_request_and_action(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+    plan = tmp_path / reference
+    plan.parent.mkdir(parents=True)
+    plan.write_bytes((ROOT / reference).read_bytes())
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+        f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
+    )
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text('schema_version=1\n[modules]\nenabled=["planning"]\n')
+    context = {"target": str(tmp_path), "task": "Continue this owner"}
+    current = consume(surface, shared_core_binary, native_cli, context)
+    request = current["decision_packet"]["decision_request"]["response_request"]
+    request["arguments"]["answer"] = "continue-selected"
+    selected = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    action = selected["decision_packet"]["primary_action"]
+    config.write_text('schema_version=1\n[modules]\nenabled=["planning","memory"]\n')
+    with pytest.raises(AssertionError):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    with pytest.raises(AssertionError, match="stale"):
+        consume(surface, shared_core_binary, native_cli, {**context, "invocation": action})
+    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    with pytest.raises(AssertionError, match="disabled"):
+        consume(surface, shared_core_binary, native_cli, {**context, "invocation": action})
+    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+    config.write_text('schema_version=1\n[modules]\nenabled=["planning"]\n')
+    restored = consume(surface, shared_core_binary, native_cli, context)
+    fresh = restored["decision_packet"]["decision_request"]["response_request"]
+    fresh["arguments"]["answer"] = "continue-selected"
+    current_action = consume(surface, shared_core_binary, native_cli, {**context, "request": fresh})["decision_packet"]["primary_action"]
+    applied = consume(surface, shared_core_binary, native_cli, {**context, "invocation": current_action})
+    assert applied["status"] == "applied"
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_enablement_change_stales_proof_execution(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+    from tests.test_native_proof_producer import fixture
+
+    context = fixture(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text('schema_version=1\n[modules]\nenabled=["verification"]\n')
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    current = call(context)
+    request = current["verification"]["execution_requests"][0]
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    config.write_text('schema_version=1\n[modules]\nenabled=["verification","memory"]\n')
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "invocation": action})
+    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    with pytest.raises(AssertionError, match="disabled"):
+        call({**context, "invocation": action})
+    assert not (tmp_path / "count.txt").exists()
+    assert not (tmp_path / ".agentic-workspace/local").exists()

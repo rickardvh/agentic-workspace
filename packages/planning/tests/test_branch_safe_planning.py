@@ -211,10 +211,12 @@ def test_new_plan_activation_preserves_existing_current_work_identity(tmp_path: 
     created = create_execplan_scaffold(plan_id="owner-b", title="Owner B", activate=True, switch_active=True, target=tmp_path)
     after_create = json.loads(selection_path.read_text(encoding="utf-8"))
 
-    assert created.reason_code == ""
-    assert after_create["selected_owner"]["id"] == "owner-b"
+    assert created.reason_code == "owner-selection-acquisition-required"
+    assert after_create == selection
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/owner-b.plan.json").exists()
+    assert after_create["selected_owner"]["id"] == "owner-a"
     assert after_create["current_work_id"] == "thread-dogfood-2928"
-    assert any("thread-dogfood-2928" in action.detail for action in created.actions)
+    assert any("owner-selection-acquisition-required" in action.detail for action in created.actions)
 
     overwritten = create_execplan_scaffold(
         plan_id="owner-b",
@@ -226,8 +228,10 @@ def test_new_plan_activation_preserves_existing_current_work_identity(tmp_path: 
     )
     after_overwrite = json.loads(selection_path.read_text(encoding="utf-8"))
 
-    assert overwritten.reason_code == ""
-    assert after_overwrite["selected_owner"]["id"] == "owner-b"
+    assert overwritten.reason_code == "owner-selection-acquisition-required"
+    assert after_overwrite == selection
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/owner-b.plan.json").exists()
+    assert after_overwrite["selected_owner"]["id"] == "owner-a"
     assert after_overwrite["current_work_id"] == "thread-dogfood-2928"
 
 
@@ -271,21 +275,47 @@ candidates = [{{ id = "external-backlog", refs = ["#123"] }}]
     assert not any(action.path == state_path and action.kind in {"created", "updated"} for action in second.actions)
 
 
+def test_upgrade_preserves_legacy_source_when_selection_requires_acquisition(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "owner-a")
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.write_text(
+        f'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\n'
+        f'[todo]\nactive_items = [{{ id = "owner-a", status = "active", surface = "{owner_ref}" }}]\n',
+        encoding="utf-8",
+    )
+    selection_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    selection_path.write_text('{"unowned": "preserve exact source"}', encoding="utf-8")
+    state_before, selection_before = state_path.read_bytes(), selection_path.read_bytes()
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert result.reason_code == "owner-selection-acquisition-required"
+    assert state_path.read_bytes() == state_before
+    assert selection_path.read_bytes() == selection_before
+    assert not (selection_path.parent / "legacy-state-migration.json").exists()
+    assert not any(action.kind == "removed" and action.path == state_path for action in result.actions)
+
+
 def test_disjoint_owner_activation_merges_in_either_order_without_aggregate_repair(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "repo"
+    tmp_path.mkdir()
     install_bootstrap(target=tmp_path)
     (tmp_path / ".gitignore").write_text(".agentic-workspace/local/\n", encoding="utf-8")
     _init_git(tmp_path)
     _commit_all(tmp_path, "baseline without aggregate")
 
     for owner_id in ("owner-a", "owner-b"):
-        _git(tmp_path, "checkout", "main")
-        _git(tmp_path, "checkout", "-b", owner_id)
-        create_execplan_scaffold(plan_id=owner_id, title=owner_id, activate=True, switch_active=True, target=tmp_path)
-        assert not (tmp_path / ".agentic-workspace/planning/state.toml").exists()
-        assert _git(tmp_path, "status", "--short", "--untracked-files=all").stdout.splitlines() == [
+        branch_root = tmp_path.parent / owner_id
+        _git(tmp_path, "worktree", "add", "-b", owner_id, str(branch_root), "main")
+        selected = create_execplan_scaffold(plan_id=owner_id, title=owner_id, activate=True, switch_active=True, target=branch_root)
+        assert selected.reason_code == ""
+        assert not (branch_root / ".agentic-workspace/planning/state.toml").exists()
+        assert _git(branch_root, "status", "--short", "--untracked-files=all").stdout.splitlines() == [
             f"?? .agentic-workspace/planning/execplans/{owner_id}.plan.json"
         ]
-        _commit_all(tmp_path, f"create {owner_id}")
+        _commit_all(branch_root, f"create {owner_id}")
 
     for branch, order in (("merge-a-b", ("owner-a", "owner-b")), ("merge-b-a", ("owner-b", "owner-a"))):
         _git(tmp_path, "checkout", "main")

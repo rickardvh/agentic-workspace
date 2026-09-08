@@ -6,7 +6,6 @@ monolith keeps compatibility re-exports for legacy private import names.
 
 from __future__ import annotations
 
-import base64
 import copy
 import fnmatch
 import hashlib
@@ -20,7 +19,6 @@ import tomllib
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
-from types import MappingProxyType
 from typing import Any, Callable, Mapping
 
 from repo_verification_bootstrap.runtime_primitives import (
@@ -7828,28 +7826,6 @@ def _independent_review_workspace_ref(target_root: Path) -> str:
     return f"workspace:path:{target_root.resolve()}"
 
 
-def _rsa_sha256_signature_valid(*, signature_b64: str, payload: dict[str, Any], key: dict[str, Any]) -> bool:
-    try:
-        signature = base64.b64decode(signature_b64, validate=True)
-        modulus = int(str(key.get("n") or ""), 16)
-        exponent = int(key.get("e") or 0)
-    except (ValueError, TypeError):
-        return False
-    if modulus <= 0 or exponent <= 0:
-        return False
-    size = (modulus.bit_length() + 7) // 8
-    if len(signature) != size:
-        return False
-    decoded = pow(int.from_bytes(signature, "big"), exponent, modulus).to_bytes(size, "big")
-    digest_info = bytes.fromhex("3031300d060960864801650304020105000420") + hashlib.sha256(_stable_review_json_bytes(payload)).digest()
-    if not decoded.startswith(b"\x00\x01"):
-        return False
-    separator = decoded.find(b"\x00", 2)
-    if separator < 10:
-        return False
-    return decoded[2:separator] == b"\xff" * (separator - 2) and decoded[separator + 1 :] == digest_info
-
-
 def _signed_independent_review_host_verdict_with_keys(
     *,
     host_result_ref: str,
@@ -7857,133 +7833,38 @@ def _signed_independent_review_host_verdict_with_keys(
     target_root: Path,
     public_keys: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Verify a host result against an already-authoritative key set.
+    """Pure fixture/host seam; callers must already own key authority."""
+    from agentic_workspace.decision import review_authentication
 
-    This helper is a cryptographic unit seam, not a trust-registration surface.
-    Production callers use only the immutable release-pinned registry below.
-    """
-
-    admission = _as_dict(host_result.get("host_admission"))
-    signed_payload = _as_dict(admission.get("signed_payload"))
-    key_id = str(admission.get("key_id") or "").strip()
-    if admission.get("kind") != "agentic-workspace/independent-review-host-result-admission/v1":
-        return {}
-    if admission.get("status") != "current" or admission.get("algorithm") != "RS256":
-        return {}
-    if not key_id:
-        return {}
-    raw_key = public_keys.get(key_id)
-    key = dict(raw_key) if isinstance(raw_key, Mapping) else {}
-    if not key or key.get("status") != "current":
-        return {}
-    if key.get("algorithm") != "RS256":
-        return {}
-    if str(key.get("authority") or "") != "pinned-host-runtime":
-        return {}
-    if str(key.get("producer") or "") != str(_as_dict(host_result.get("custody")).get("producer") or ""):
-        return {}
-    if str(key.get("trusted_channel") or "") != str(_as_dict(host_result.get("custody")).get("trusted_channel") or ""):
-        return {}
-    if str(key.get("issuer") or "") != str(signed_payload.get("issuer") or ""):
-        return {}
-    expected_workspace_ref = _independent_review_workspace_ref(target_root)
-    if str(key.get("workspace_ref") or expected_workspace_ref) != expected_workspace_ref:
-        return {}
-    not_before = _parse_review_time(key.get("not_before"))
-    key_expires_at = _parse_review_time(key.get("expires_at"))
-    now = datetime.now(timezone.utc)
-    if not_before and now < not_before:
-        return {}
-    if key_expires_at and now >= key_expires_at:
-        return {}
-    if str(key.get("revoked_at") or key.get("superseded_by") or "").strip():
-        return {}
-    if not _rsa_sha256_signature_valid(signature_b64=str(admission.get("signature") or ""), payload=signed_payload, key=key):
-        return {}
-    if signed_payload.get("kind") != "agentic-workspace/independent-review-host-result-admission-payload/v1":
-        return {}
-    issued_at = _parse_review_time(signed_payload.get("issued_at"))
-    admission_expires_at = _parse_review_time(signed_payload.get("expires_at"))
-    if issued_at is None or admission_expires_at is None or admission_expires_at <= issued_at:
-        return {}
-    if not_before and issued_at < not_before:
-        return {}
-    if key_expires_at and admission_expires_at > key_expires_at:
-        return {}
-    expected_payload = {
-        "host_result_ref": host_result_ref,
-        "host_result_body_digest": _stable_review_json_digest(_host_result_body_for_admission(host_result)),
-        "producer": str(_as_dict(host_result.get("custody")).get("producer") or ""),
-        "trusted_channel": str(_as_dict(host_result.get("custody")).get("trusted_channel") or ""),
-        "audience": INDEPENDENT_REVIEW_HOST_RESULT_AUDIENCE,
-        "workspace_ref": expected_workspace_ref,
-        "operation": "assignment.admit.independent-review",
-        "assignment_revision": str(_as_dict(host_result.get("review_result")).get("assignment_revision") or ""),
-        "proof_subject_revision": str(_as_dict(host_result.get("review_result")).get("proof_subject_revision") or ""),
-        "key_revision": str(key.get("key_revision") or ""),
-    }
-    for field, expected in expected_payload.items():
-        if str(signed_payload.get(field) or "") != expected:
-            return {}
-    return {
-        "kind": "agentic-workspace/independent-review-host-result-verdict/v1",
-        "status": "admitted",
-        "authority": "host-adapter-resolver",
-        "verifier_revision": str(key.get("key_revision") or key_id),
-        "nonce": str(signed_payload.get("nonce") or ""),
-        "issued_at": str(signed_payload.get("issued_at") or ""),
-        "expires_at": str(signed_payload.get("expires_at") or ""),
-        "revoked_at": str(signed_payload.get("revoked_at") or ""),
-        "superseded_by": str(signed_payload.get("superseded_by") or ""),
-        "registry_authority": str(key.get("authority") or ""),
-        **expected_payload,
-    }
-
-
-def _build_release_pinned_independent_review_verifier(
-    public_keys: Mapping[str, Mapping[str, Any]],
-) -> Callable[..., dict[str, Any]]:
-    """Seal release-owned keys into the production verifier closure."""
-
-    sealed_keys: Mapping[str, Mapping[str, Any]] = MappingProxyType(
-        {str(key_id): MappingProxyType(dict(key)) for key_id, key in public_keys.items()}
+    return review_authentication(
+        {
+            "host_result_ref": host_result_ref,
+            "host_result": host_result,
+            "workspace_ref": _independent_review_workspace_ref(target_root),
+            "now_unix_micros": int(datetime.now(timezone.utc).timestamp() * 1_000_000),
+            "public_keys": {str(key): dict(value) for key, value in public_keys.items()},
+        }
     )
 
-    def verify(*, host_result_ref: str, host_result: dict[str, Any], target_root: Path) -> dict[str, Any]:
-        return _signed_independent_review_host_verdict_with_keys(
-            host_result_ref=host_result_ref,
-            host_result=host_result,
-            target_root=target_root,
-            public_keys=sealed_keys,
-        )
 
-    return verify
+def _signed_independent_review_host_verdict(
+    *,
+    host_result_ref: str,
+    host_result: dict[str, Any],
+    target_root: Path,
+) -> dict[str, Any]:
+    """Observe host context; shared core consumes unchanged release-pinned keys."""
+    from agentic_workspace.decision import review_authentication
 
-
-# Independent-review authority is deliberately not configurable from the AW
-# library process. Signing stays in the separately operated review adapter while
-# its release-owned public key is sealed into the verifier. Rotation, revocation,
-# and supersession require a reviewed package release rather than target-owned
-# runtime state.
-_signed_independent_review_host_verdict = _build_release_pinned_independent_review_verifier(
-    {
-        "github-review-adapter:release-2026-08": {
-            "key_id": "github-review-adapter:release-2026-08",
-            "key_revision": "github-review-adapter-key/2026-08-01",
-            "algorithm": "RS256",
-            "authority": "pinned-host-runtime",
-            "issuer": "github-review-webhook",
-            "producer": "github-review-adapter",
-            "trusted_channel": "github-review-webhook",
-            "status": "current",
-            "not_before": "2026-08-01T00:00:00Z",
-            "expires_at": "2027-08-01T00:00:00Z",
-            "n": "d00a7cb961b3e2d0719371dd5821eedef6bde01ad436ceb25d533ced12e83fd0786a09f4b840a05f6372964ebcd56d6b61504c5d16cb9e995e4d460206eda4ba03c8fdca73f63c564c4746cb88946e4558ff8a654cc493212ead218e7d447f0ec206db41488551c57a50149367274144fdc8c5c6a0b2005daf1ecc5c810ce74ff198997acdbd1e2a0ed0514a5dc31b6468cf0afe67b724d02d093ddfa1826b773f476ed62bac7fb5549638481112e3b4b5a20ab857f2cf4c5cb632d470fd41c43cbc5b248614a57a334ae0a98ba844ad55f98923b01f12472f05db0a6e653afa4223b84a9a99babe5898bb237e9f4ff448bbf8e970dac3e9d7d670164f0b157b",
-            "e": 65537,
+    return review_authentication(
+        {
+            "host_result_ref": host_result_ref,
+            "host_result": host_result,
+            "workspace_ref": _independent_review_workspace_ref(target_root),
+            "now_unix_micros": int(datetime.now(timezone.utc).timestamp() * 1_000_000),
+            "public_keys": None,
         }
-    }
-)
-del _build_release_pinned_independent_review_verifier
+    )
 
 
 def _load_indexed_independent_review_host_result(*, target_root: Path, host_result_ref: str) -> dict[str, Any]:

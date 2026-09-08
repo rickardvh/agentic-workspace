@@ -8,10 +8,14 @@ description = "Shared deterministic semantic core for Agentic Workspace"
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-sha2 = "0.10"
+sha2 = { version = "0.10", features = ["oid"] }
+rsa = { version = "0.9", default-features = false, features = ["std"] }
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
 jsonschema = { version = "0.53", default-features = false }
 cap-std = "4.0.3"
 toml = "0.8"
+process-wrap = { version = "10", default-features = false, features = ["std", "process-group", "job-object", "creation-flags"] }
 
 [dev-dependencies]
 serde_json = "1"
@@ -19,3 +23,6 @@ serde_json = "1"
 [[bin]]
 name = "agentic-workspace-core"
 path = "src/main.rs"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Win32_System_Threading"] }

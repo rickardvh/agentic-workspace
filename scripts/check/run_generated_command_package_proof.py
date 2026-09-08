@@ -96,13 +96,24 @@ def _pack_packages(destination: Path) -> None:
             continue
         if len(matches) > 1:
             raise RuntimeError(f"expected at most one packed artifact for {package['name']}, found {len(matches)} in {destination}")
-        subprocess.run(
-            [npm, "pack", "--pack-destination", str(destination.resolve())],
-            cwd=REPO_ROOT / package["generated_root"],
-            check=True,
-            text=True,
-            capture_output=True,
-        )
+        with tempfile.TemporaryDirectory(prefix="aw-packed-stage-") as temporary:
+            package_root = REPO_ROOT / package["generated_root"]
+            if package["id"] == "root-workspace":
+                package_root = Path(temporary) / "workspace"
+                subprocess.run(
+                    [sys.executable, str(REPO_ROOT / "scripts/release/stage_native_npm.py"), "--output", str(package_root)],
+                    cwd=REPO_ROOT,
+                    check=True,
+                    text=True,
+                    capture_output=True,
+                )
+            subprocess.run(
+                [npm, "pack", "--pack-destination", str(destination.resolve())],
+                cwd=package_root,
+                check=True,
+                text=True,
+                capture_output=True,
+            )
 
 
 def _tarball_for_package(artifact_dir: Path, package_name: str) -> Path:
@@ -134,6 +145,9 @@ def _extract_tarball(tarball: Path, destination: Path) -> None:
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(source.read())
+            # Native payloads need their archived execute bits on Unix. Never
+            # restore setuid/setgid/sticky metadata from a package archive.
+            target.chmod(member.mode & 0o777)
 
 
 def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None, execution_context: str = "local") -> int:

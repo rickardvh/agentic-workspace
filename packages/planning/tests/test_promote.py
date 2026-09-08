@@ -288,7 +288,8 @@ candidates = []
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
 
 
-def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
+@pytest.mark.parametrize("selection_collision", [False, True])
+def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path, selection_collision: bool) -> None:
     decomposition_path = tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "dogfood.decomposition.json"
     decomposition_path.parent.mkdir(parents=True, exist_ok=True)
     decomposition_path.write_text(
@@ -334,7 +335,20 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
+    selection_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    before = decomposition_path.read_bytes()
+    if selection_collision:
+        selection_path.parent.mkdir(parents=True, exist_ok=True)
+        selection_path.write_text('{"unowned": "preserve source"}', encoding="utf-8")
+        selection_before = selection_path.read_bytes()
+
     result = promote_todo_item_to_execplan("safety-slice", target=tmp_path)
+    if selection_collision:
+        assert result.reason_code == "owner-selection-acquisition-required"
+        assert decomposition_path.read_bytes() == before
+        assert selection_path.read_bytes() == selection_before
+        assert not (tmp_path / ".agentic-workspace/planning/execplans/safety-slice.plan.json").exists()
+        return
 
     assert [action.kind for action in result.actions] == ["created", "updated", "updated", "proof", "proof"]
     assert any("summary --target . --format json" in action.detail for action in result.actions if action.kind == "proof")

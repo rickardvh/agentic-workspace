@@ -4,6 +4,36 @@ use crate::CoreError;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
+/// Normalized publication identity preserves all historical absent-field defaults.
+/// Diagnostic fields do not grant authority; native detail references are sealed
+/// when present so retrieving a different artifact cannot inherit admission.
+pub fn publication_identity(receipt: &Value) -> Value {
+    let mut identity = serde_json::Map::new();
+    for field in ["command", "result", "changed_paths", "proof_subject"] {
+        identity.insert(field.into(), receipt[field].clone());
+    }
+    identity.insert(
+        "target_context".into(),
+        receipt.get("target_context").cloned().unwrap_or(json!({})),
+    );
+    identity.insert(
+        "proof_commands".into(),
+        receipt.get("proof_commands").cloned().unwrap_or(json!([])),
+    );
+    for field in [
+        "task_claim_judgment",
+        "assignment_proof_obligation",
+        "assignment_proof_binding",
+        "assignment_closeout_lineage",
+        "execution_artifact",
+    ] {
+        if let Some(value) = receipt.get(field) {
+            identity.insert(field.into(), value.clone());
+        }
+    }
+    Value::Object(identity)
+}
+
 pub fn assignment_binding(receipt: &Value) -> Result<String, CoreError> {
     let mut paths: Vec<String> = receipt["changed_paths"]
         .as_array()
@@ -202,6 +232,9 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         }
         Some("result") => Ok(result(&value["value"])),
         Some("command") => Ok(command(&value["value"])),
+        Some("publication-identity") => {
+            Ok(json!({"identity":publication_identity(&value["receipt"])}))
+        }
         Some("binding") => Ok(json!({"binding":assignment_binding(&value["receipt"])?})),
         Some("admit") => {
             let binding = assignment_binding(&value["receipt"])?;

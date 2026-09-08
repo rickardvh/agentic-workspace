@@ -417,7 +417,7 @@
                 "default": []
               },
               "applies_to_task_markers": {
-                "description": "Task-text markers that activate this requirement.",
+                "description": "Recognized former semantic scope. Markers never match raw task text as authority; exact facts or current agent applicability judgment resolve this scope.",
                 "type": "array",
                 "items": {
                   "type": "string",

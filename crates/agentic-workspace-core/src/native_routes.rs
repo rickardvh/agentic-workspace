@@ -94,7 +94,7 @@ fn discover(
 
 /// Match semantic_route_catalogue's current tools and workspace registry owners.
 /// Invalid declarations never degrade into an apparently empty current source.
-pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
+fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
     let mut paths = BTreeSet::new();
     // Check each parent without following links before admitting the direct source.
@@ -122,7 +122,7 @@ pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
         }
     }
     discover(&root, ".agentic-workspace", &mut paths, 0, &mut 16_384)?;
-    let mut declarations = BTreeMap::<String, String>::new();
+    let mut declarations = BTreeMap::<String, Value>::new();
     let mut material = Vec::new();
     for path in paths {
         let bytes = read(&root, &path)
@@ -186,19 +186,254 @@ pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
                         "invalid route match in {path}: {match_kind}"
                     )));
                 }
-                if let Some(previous) = declarations.insert(id.to_owned(), match_kind.to_owned())
-                    && previous != match_kind
-                {
+                let entry = declarations
+                    .entry(id.to_owned())
+                    .or_insert_with(|| json!({"id":id,"match":match_kind}));
+                if entry["match"] != match_kind {
                     return Err(error(format!(
                         "conflicting exact/subtree route declaration: {id}"
                     )));
                 }
+                if exact_detail != Some(id) {
+                    continue;
+                }
+                if entry.get("capability_bindings").is_none() {
+                    entry["description"] = json!(
+                        route
+                            .get("description")
+                            .and_then(Value::as_str)
+                            .or_else(|| skill.get("summary").and_then(Value::as_str))
+                            .unwrap_or("")
+                    );
+                    entry["capability_bindings"] = json!([]);
+                    entry["sources"] = json!([]);
+                }
+                let skill_id = skill.get("id").and_then(Value::as_str).unwrap_or("");
+                let capability = format!("skill:{skill_id}");
+                if !entry["capability_bindings"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|binding| binding["capability"] == capability)
+                {
+                    entry["capability_bindings"].as_array_mut().unwrap().push(json!({"capability":capability,"priority":route.get("priority").and_then(Value::as_u64).unwrap_or(100)}));
+                }
+                entry["sources"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"source_ref":path,"skill_id":skill_id}));
             }
         }
     }
+    for declaration in declarations.values_mut() {
+        if declaration.get("capability_bindings").is_none() {
+            continue;
+        }
+        let bindings = declaration["capability_bindings"].as_array_mut().unwrap();
+        bindings.sort_by(|left, right| {
+            left["priority"]
+                .as_u64()
+                .cmp(&right["priority"].as_u64())
+                .then_with(|| {
+                    left["capability"]
+                        .as_str()
+                        .cmp(&right["capability"].as_str())
+                })
+        });
+        declaration["capabilities"] = json!(
+            bindings
+                .iter()
+                .map(|binding| binding["capability"].clone())
+                .collect::<Vec<_>>()
+        );
+    }
     Ok(
-        json!({"revision":hash(material.join("\n").as_bytes()), "routes":declarations.into_keys().collect::<Vec<_>>()}),
+        json!({"revision":hash(material.join("\n").as_bytes()), "routes":declarations.into_values().collect::<Vec<_>>()}),
     )
+}
+
+pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
+    let catalogue = catalogue(target, None)?;
+    Ok(
+        json!({"revision":catalogue["revision"],"routes":catalogue["routes"].as_array().unwrap().iter().map(|route|route["id"].clone()).collect::<Vec<_>>()}),
+    )
+}
+
+/// Public source-owning discovery. No caller-supplied source facts or custody.
+pub fn discovery(value: Value) -> Result<Value, CoreError> {
+    #[derive(serde::Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Input {
+        target: String,
+        #[serde(default)]
+        parent: String,
+        #[serde(default)]
+        exact: String,
+    }
+    let input: Input = serde_json::from_value(value).map_err(error)?;
+    let parent = input.parent.trim_matches('/');
+    let exact = input.exact.trim_matches('/');
+    let catalogue = catalogue(
+        Path::new(&input.target),
+        if exact.is_empty() { None } else { Some(exact) },
+    )?;
+    let (level, rows) = if !exact.is_empty() {
+        (
+            "exact",
+            catalogue["routes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|route| route["id"] == exact)
+                .cloned()
+                .collect::<Vec<_>>(),
+        )
+    } else {
+        let prefix = if parent.is_empty() {
+            String::new()
+        } else {
+            format!("{parent}/")
+        };
+        let mut children = BTreeMap::<String, Value>::new();
+        for route in catalogue["routes"].as_array().unwrap() {
+            let id = route["id"].as_str().unwrap();
+            if let Some(suffix) = id.strip_prefix(&prefix) {
+                if suffix.is_empty() {
+                    continue;
+                }
+                let child = format!("{}{}", prefix, suffix.split('/').next().unwrap());
+                let entry = children
+                    .entry(child.clone())
+                    .or_insert_with(|| json!({"id":child,"leaf":false,"child_count":0}));
+                if id == child {
+                    entry["leaf"] = json!(true);
+                } else {
+                    entry["child_count"] = json!(entry["child_count"].as_u64().unwrap() + 1);
+                }
+            }
+        }
+        (
+            if parent.is_empty() { "roots" } else { "branch" },
+            children.into_values().collect(),
+        )
+    };
+    Ok(
+        json!({"kind":"agentic-workspace/semantic-task-route-discovery/v1","operation_id":"instructions.routes","status":"current","level":level,"parent":parent,"exact":exact,
+        "source_revision":catalogue["revision"],"route_count":rows.len(),"routes":rows,"full_catalogue_emitted":!exact.is_empty(),"diagnostics":[],"authority_effect":"applicability-only"}),
+    )
+}
+
+/// Read the recognized former applicability fact without transferring its old
+/// work identity to the current native task or acquiring custody of its bytes.
+pub(crate) fn former_selection(
+    target: &Path,
+    catalogue: &Value,
+) -> Result<(Value, Option<Value>), CoreError> {
+    const REFERENCE: &str = ".agentic-workspace/local/current-task-routes.json";
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+    let mut source = catalogue.clone();
+    let mut diagnostic = json!({"reference":REFERENCE,"status":"unresolved",
+        "current_task_relation":"unproven","authority_effect":"none","bytes_preserved":true});
+    for path in [".agentic-workspace", ".agentic-workspace/local", REFERENCE] {
+        match root.symlink_metadata(path) {
+            Err(failure) if failure.kind() == ErrorKind::NotFound => return Ok((source, None)),
+            Ok(metadata) if !linked(&metadata) && (path != REFERENCE || metadata.is_file()) => {}
+            _ => {
+                diagnostic["reason"] = json!("former-route-source-unreadable-or-linked");
+                source["revision"] =
+                    json!(crate::digest(&json!({"catalogue":catalogue["revision"],
+                    "former_selection":diagnostic["reason"]}))?);
+                return Ok((source, Some(diagnostic)));
+            }
+        }
+    }
+    let bytes = match read(&root, REFERENCE) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            diagnostic["reason"] = json!("former-route-source-unreadable-or-over-limit");
+            source["revision"] = json!(crate::digest(&json!({"catalogue":catalogue["revision"],
+                "former_selection":diagnostic["reason"]}))?);
+            return Ok((source, Some(diagnostic)));
+        }
+    };
+    let revision = hash(&bytes);
+    diagnostic["revision"] = json!(revision);
+    // The returned ordinary request binds both vocabulary and the exact former
+    // candidate. Neither its old ID nor its filename proves current task scope.
+    source["revision"] = json!(crate::digest(&json!({"catalogue":catalogue["revision"],
+        "former_selection":revision}))?);
+    let fact: Value = match serde_json::from_slice(&bytes) {
+        Ok(Value::Object(object)) => Value::Object(object),
+        _ => {
+            diagnostic["reason"] = json!("former-route-source-invalid");
+            return Ok((source, Some(diagnostic)));
+        }
+    };
+    let allowed = [
+        "kind",
+        "posture",
+        "routes",
+        "task_identity",
+        "current_work_id",
+        "source_revision",
+        "provenance",
+        "authority_effect",
+    ];
+    let routes = fact["routes"].as_array();
+    let old_work = fact["current_work_id"].as_str().unwrap_or("");
+    let shape_valid = fact
+        .as_object()
+        .unwrap()
+        .keys()
+        .all(|key| allowed.contains(&key.as_str()))
+        && fact["kind"] == "agentic-workspace/semantic-task-route-fact/v1"
+        && fact["provenance"] == "agent-selected"
+        && fact["authority_effect"] == "applicability-only"
+        && !old_work.is_empty()
+        && old_work.len() <= 256
+        && fact["task_identity"] == json!({"kind":"current-work","id":old_work})
+        && matches!(
+            fact["posture"].as_str(),
+            Some("selected" | "none" | "unresolved")
+        )
+        && routes.is_some_and(|routes| routes.iter().all(|route| route.as_str().is_some()));
+    if !shape_valid {
+        diagnostic["reason"] = json!("former-route-source-invalid-or-unsupported");
+        return Ok((source, Some(diagnostic)));
+    }
+    let routes = routes.unwrap();
+    if routes.len() > 16
+        || routes
+            .iter()
+            .any(|route| route.as_str().unwrap().len() > 256)
+    {
+        diagnostic["reason"] = json!("former-route-selection-exceeds-candidate-bound");
+        return Ok((source, Some(diagnostic)));
+    }
+    if fact["source_revision"] != catalogue["revision"] {
+        diagnostic["status"] = json!("stale");
+        diagnostic["reason"] = json!("former-route-vocabulary-revision-changed");
+        return Ok((source, Some(diagnostic)));
+    }
+    let declaration: Value = serde_json::from_str(include_str!(
+        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
+    ))
+    .expect("checked schema");
+    let shape = json!({"$schema":declaration["$schema"],"$defs":declaration["$defs"],"$ref":"#/$defs/semantic_route_choice"});
+    let choice = json!({"posture":fact["posture"],"routes":fact["routes"]});
+    if !crate::schema_validator(&shape, "former route candidate")?.is_valid(&choice)
+        || routes
+            .iter()
+            .any(|route| !catalogue["routes"].as_array().unwrap().contains(route))
+    {
+        diagnostic["reason"] = json!("former-route-selection-invalid");
+        return Ok((source, Some(diagnostic)));
+    }
+    diagnostic["status"] = json!("candidate");
+    diagnostic["reason"] = json!("current-vocabulary-requires-current-task-agent-selection");
+    diagnostic["posture"] = fact["posture"].clone();
+    diagnostic["routes"] = fact["routes"].clone();
+    Ok((source, Some(diagnostic)))
 }
 
 #[cfg(test)]

@@ -56,19 +56,62 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     }))?});
     let requests = owner_requests(input.request.as_ref())?;
     let request_for = |owner: &str| requests.iter().find(|request| request["owner"] == owner);
+    let verification_request = |kind: &str| {
+        requests
+            .iter()
+            .find(|request| request["owner"] == "verification" && request["request_kind"] == kind)
+    };
+    let (route_source, former_routes) =
+        native_routes::former_selection(target, &native_routes::source(target)?)?;
     let route_input = json!({
-        "current_work":work, "source":native_routes::source(target)?,
+        "current_work":work, "source":route_source,
         "request":request_for("semantic-routes")
     });
     let configuration = native_config::view(target)?;
+    let available = |owner: &str| native_config::module_enabled(&configuration, owner);
+    for request in &requests {
+        if matches!(
+            request["owner"].as_str(),
+            Some("planning" | "memory" | "verification")
+        ) && !available(request["owner"].as_str().unwrap())
+        {
+            return Err(CoreError::new(
+                "requested owner is disabled by current module enablement",
+            ));
+        }
+    }
+    if input.invocation.as_ref().is_some_and(|invocation| {
+        (invocation["operation_id"] == "planning.reconcile" && !available("planning"))
+            || (invocation["operation_id"] == "proof.report" && !available("verification"))
+    }) {
+        return Err(CoreError::new(
+            "invoked owner is disabled by current module enablement",
+        ));
+    }
+    let mut system_intent = crate::native_intent::view(target, &work, &configuration, None, None)?;
     let admissions = &configuration["admissions"];
-    let (mut owner_input, routes) = decision_source::resolve(json!({
+    let (mut owner_input, mut routes) = decision_source::resolve(json!({
         "target":target,
         "archive":admissions["decision_record_target"].as_str().unwrap_or(""),
         "admitted_revision":admissions["decision_record_revision"].as_str().unwrap_or(""),
         "applicable_scope":input.changed.iter().map(|path| format!("path:{path}")).collect::<Vec<_>>(),
         "semantic_routes":route_input
     }))?;
+    if let (Some(view), Some(mut candidate)) = (routes.as_mut(), former_routes) {
+        if candidate["status"] == "candidate" {
+            let mut request = view["requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|request| request["request_kind"] == "semantic-routes/select/v1")
+                .unwrap()
+                .clone();
+            request["arguments"] =
+                json!({"posture":candidate["posture"],"routes":candidate["routes"]});
+            candidate["selection_request"] = request;
+        }
+        view["former_selection"] = candidate;
+    }
     let route_fact = routes
         .as_ref()
         .map(|value| value["decision"]["semantic_task_routes"].clone())
@@ -79,19 +122,43 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &route_fact,
         admissions["instruction_revision"].as_str().unwrap_or(""),
     )?;
-    let mut memory =
-        native_memory::public_view(target, &input.changed, &route_fact, &work, None, None)?;
-    let planning_probe = native_planning::resolve(target, &work, None)?;
-    let verification_probe =
-        native_verification::view(target, &input.task, &input.changed, &work, None, None)?;
+    let mut memory = if available("memory") {
+        native_memory::public_view(target, &input.changed, &route_fact, &work, None, None)?
+    } else {
+        native_memory::disabled(target)?
+    };
+    let planning_probe = if available("planning") {
+        native_planning::resolve(target, &work, None)?
+    } else {
+        native_planning::disabled(target)?
+    };
+    let verification_probe = if available("verification") {
+        native_verification::view(target, &input.task, &input.changed, &work, None, None)?
+    } else {
+        native_verification::disabled(target)?
+    };
     let contract = combined_contract(&[
         &configuration["capability_contract"],
+        &system_intent["capability_contract"],
         &planning_probe["capability_contract"],
         &verification_probe["capability_contract"],
         &instructions["capability_contract"],
         &memory["capability_contract"],
         &native_requirements::contract()?,
     ])?;
+    if let Some(request) = request_for("system-intent") {
+        system_intent = crate::native_intent::view(
+            target,
+            &work,
+            &configuration,
+            Some(request),
+            Some(&contract),
+        )?;
+    } else {
+        for request in system_intent["requests"].as_array_mut().unwrap() {
+            request["capability_revision"] = contract["revision"].clone();
+        }
+    }
     if let Some(request) = request_for("memory") {
         memory = native_memory::public_view(
             target,
@@ -106,7 +173,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             request["capability_revision"] = contract["revision"].clone();
         }
     }
-    let mut planning = if executing {
+    let mut planning = if executing
+        && input
+            .invocation
+            .as_ref()
+            .is_some_and(|i| i["operation_id"] == "planning.reconcile")
+    {
         native_planning::resolve_for_execution(target, &work, &contract)?
     } else if request_for("planning").is_some() {
         native_planning::resolve_with_contract(
@@ -138,16 +210,41 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     let subject = planning_detail
         .get("reconciliation")
         .and_then(|value| value.get("subject"));
-    let verification = native_verification::view(
-        target,
-        &input.task,
-        &input.changed,
-        &work,
-        subject,
-        request_for("verification")
-            .filter(|r| r["request_kind"] == "verification/claim/v1")
-            .cloned(),
-    )?;
+    let verification = if available("verification") {
+        native_verification::view_with_applicability(
+            target,
+            &input.task,
+            &input.changed,
+            &work,
+            subject,
+            Some(json!(
+                requests
+                    .iter()
+                    .filter(|r| r["owner"] == "verification"
+                        && matches!(
+                            r["request_kind"].as_str(),
+                            Some(
+                                "verification/claim/v1"
+                                    | "verification/authenticate-host-review/v1"
+                                    | "verification/execute-selected/v1"
+                            )
+                        ))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            )),
+            native_verification::ApplicabilityContext {
+                facts: &json!({"route_fact":route_fact,"planning":{"status":planning["status"],"source_revision":planning["source_revision"]}}),
+                request: verification_request("verification/assurance-applicability/v1").cloned(),
+                contract: Some(&contract),
+                invocation: input
+                    .invocation
+                    .as_ref()
+                    .filter(|i| i["operation_id"] == "proof.report"),
+            },
+        )?
+    } else {
+        verification_probe
+    };
     contributions.push(verification["contribution"].clone());
     let requirements = native_requirements::view(
         target,
@@ -158,9 +255,10 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &configuration,
         &verification,
         request_for("assignment"),
-        request_for("verification").filter(|r| r["request_kind"] == "verification/requirements/v1"),
+        verification_request("verification/requirements/v1"),
         &contract,
     )?;
+    contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.push(instructions["contribution"].clone());
     owner_input["contributions"] = json!(contributions);
@@ -199,7 +297,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     Ok(
-        json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
+        json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
     )
 }
 
@@ -225,7 +323,13 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         if owner == "verification"
             && !matches!(
                 request["request_kind"].as_str(),
-                Some("verification/claim/v1" | "verification/requirements/v1")
+                Some(
+                    "verification/claim/v1"
+                        | "verification/execute-selected/v1"
+                        | "verification/requirements/v1"
+                        | "verification/authenticate-host-review/v1"
+                        | "verification/assurance-applicability/v1"
+                )
             )
         {
             return Err(CoreError::new(
@@ -234,13 +338,23 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         }
         if !matches!(
             owner,
-            "planning" | "semantic-routes" | "verification" | "memory" | "assignment"
+            "planning"
+                | "semantic-routes"
+                | "verification"
+                | "memory"
+                | "assignment"
+                | "system-intent"
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
-        if !owners.insert(owner) {
+        let key = if owner == "verification" {
+            format!("{owner}:{}", request["request_kind"].as_str().unwrap())
+        } else {
+            owner.to_owned()
+        };
+        if !owners.insert(key) {
             return Err(CoreError::new(
-                "supply at most one current request per owner",
+                "supply at most one current request per owner and Verification request kind",
             ));
         }
     }
@@ -273,7 +387,9 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         ));
     }
     let invocation = input.invocation.as_ref().unwrap();
-    if invocation["operation_id"] != "planning.reconcile" {
+    if invocation["operation_id"] != "planning.reconcile"
+        && invocation["operation_id"] != "proof.report"
+    {
         return Err(CoreError::new(
             "requested native operation is not available",
         ));
@@ -281,6 +397,24 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "proof.report" {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        let executed = crate::native_proof::execute(&target, &current, invocation, || {
+            let fresh = resolve(&input, &target, true)?;
+            crate::admit_invocation_value(
+                json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+            )?;
+            Ok(())
+        })?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|view| &view["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     let committed = &current["planning"]["current_owner"]["committed_operation"];
     crate::admit_invocation_value(

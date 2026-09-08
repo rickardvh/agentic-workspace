@@ -5,7 +5,7 @@ from tests.workspace_cli_support import *
 
 
 def test_assurance_semantic_route_is_applicability_only_and_does_not_replace_path_authority() -> None:
-    route_requirement = {"applies_to_semantic_routes": ["github/issues/**"]}
+    route_requirement = {"id": "route", "applies_to_semantic_routes": ["github/issues/**"]}
     matched, reasons, facts = workspace_runtime_core._assurance_requirement_match(
         requirement=route_requirement,
         changed_paths=[],
@@ -14,10 +14,10 @@ def test_assurance_semantic_route_is_applicability_only_and_does_not_replace_pat
         selected_semantic_routes=["github/issues/create"],
     )
     assert matched is True
-    assert reasons == ["semantic task route matched github/issues/**"]
+    assert reasons == ["current semantic task route matched"]
     assert facts == []
 
-    path_requirement = {"applies_to_paths": ["src/**"], "applies_to_semantic_routes": ["github/issues/**"]}
+    path_requirement = {"id": "path", "applies_to_paths": ["src/**"], "applies_to_semantic_routes": ["github/issues/**"]}
     path_matched, path_reasons, path_facts = workspace_runtime_core._assurance_requirement_match(
         requirement=path_requirement,
         changed_paths=["src/runtime.py"],

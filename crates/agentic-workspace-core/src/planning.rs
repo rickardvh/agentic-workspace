@@ -187,7 +187,9 @@ fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Va
     let actions = if !current && reconciled["coverage"]["complete"] == true {
         json!([{
             "operation_id": "planning.reconcile",
-            "dependency_revision": digest(reconciled)?,
+            "dependency_revision": if let Some(contract) = &input.capability_contract {
+                digest(&json!({"reconciliation":reconciled,"capability_revision":contract["revision"]}))?
+            } else { digest(reconciled)? },
             "arguments": {"target": input.target, "reconciliation": reconciled},
             "effects": ["planning-state"]
         }])

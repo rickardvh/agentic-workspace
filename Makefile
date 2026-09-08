@@ -232,6 +232,7 @@ sync-verification:
 .NOTPARALLEL: test-workspace
 
 test-rust-core:
+	@cargo build --locked --workspace --bins
 	@cargo test --workspace
 
 test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration

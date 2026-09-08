@@ -80,7 +80,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>` | object | no |  | One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.requirements.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched requirement. |  |  |
 | `assurance.requirements.<name>.applies_to_paths` | array of string | no | `[]` | Path globs that activate this requirement when changed paths match. |  |  |
-| `assurance.requirements.<name>.applies_to_task_markers` | array of string | no | `[]` | Task-text markers that activate this requirement. |  |  |
+| `assurance.requirements.<name>.applies_to_task_markers` | array of string | no | `[]` | Recognized former semantic scope. Markers never match raw task text as authority; exact facts or current agent applicability judgment resolve this scope. |  |  |
 | `assurance.requirements.<name>.applies_to_semantic_routes` | array of string | no | `[]` | Agent-selected semantic task-route selectors that provide applicability evidence without granting assurance authority. |  |  |
 | `assurance.requirements.<name>.applies_to_planning_refs` | array of string | no | `[]` | Planning refs or requirement ids that activate this requirement from active planning state. |  |  |
 | `assurance.requirements.<name>.applies_to_proof_profiles` | array of string | no | `[]` | Active planning proof profile ids that activate this requirement. |  |  |

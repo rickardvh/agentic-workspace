@@ -9,7 +9,10 @@
 // Agentic Workspace primitive behavior that is copied into generated packages.
 
 import {
+  closeSync,
   copyFileSync,
+  fsyncSync,
+  openSync,
   chmodSync,
   existsSync,
   lstatSync,
@@ -27,6 +30,7 @@ import {
 } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { routeDiscovery } from './native/semantic-decision.mjs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -1014,6 +1018,11 @@ export function finalizeMutationOutcome(result) {
   return result;
 }
 
+function existingPlanningSelectionCarrier(targetRoot) {
+  return ['.agentic-workspace/local/planning/owner-selection.json', '.agentic-workspace/local/planning/owner-selection-receipt.json']
+    .map((path) => join(targetRoot, path)).find((path) => existsSync(path));
+}
+
 function planningNewPlanResult(values, operationId) {
   const result = lifecycleResult(values, operationId);
   const slug = String(values.id ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -1085,6 +1094,12 @@ function planningNewPlanResult(values, operationId) {
         preservedCurrentWorkId = String(priorSelection.current_work_id ?? '').trim() || 'default';
       }
     } catch { /* invalid prior selection uses deterministic initialization */ }
+  }
+  const incumbent = activate && existingPlanningSelectionCarrier(result.target_root);
+  if (incumbent) {
+    result.reason_code = 'owner-selection-acquisition-required';
+    result.actions = [{ kind: 'manual review', path: incumbent, detail: 'Existing selection or receipt is preserved; activation requires admitted source-owner transfer before its first overwrite.' }];
+    return finalizeMutationOutcome(result);
   }
   const recordExisted = existsSync(recordPath);
   if (recordExisted && values.overwrite !== true) {
@@ -1205,17 +1220,27 @@ function planningNewPlanResult(values, operationId) {
   }
   if (laneItem) laneItem.execplan = owner;
   mkdirSync(dirname(recordPath), { recursive: true });
-  writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+  // Activation must use the same absent-only selection owner as owner-select.
+  // Preserve a created draft on incomplete admission: a later read/check/delete
+  // could remove another writer's replacement and cannot prove rollback custody.
+  writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, { encoding: 'utf8', flag: recordExisted ? 'w' : 'wx' });
   if (activate) {
-    mkdirSync(dirname(ownerSelectionPath), { recursive: true });
-    writeFileSync(ownerSelectionPath, `${JSON.stringify({
-      kind: 'agentic-planning/owner-selection/v1',
-      mode: 'local',
+    const selected = planningOwnerSelectResult({
+      ...values, owner: undefined, owner_ref: owner, mode: 'local',
       current_work_id: preservedCurrentWorkId,
-      selected_owner: { id: slug, ref: owner },
-      planning_revision: planningRevision(result.target_root, state).revision_id,
+      expect_planning_revision: undefined,
       reason: source || `Selected owner ${slug} for current work.`,
-    }, null, 2)}\n`, 'utf8');
+    }, 'planning.owner-select.lifecycle');
+    if (selected.reason_code) {
+      result.reason_code = selected.reason_code;
+      result.recovery_command = selected.recovery_command;
+      result.actions = [
+        { kind: recordExisted ? 'updated' : 'created', path: owner, detail: 'draft retained; activation did not complete and no rollback custody is inferred' },
+        ...selected.actions,
+      ];
+      return finalizeMutationOutcome(result);
+    }
+    result.operation_receipt = selected.operation_receipt;
   }
   result.actions = [{ kind: recordExisted ? 'updated' : 'created', path: owner, detail: prepOnly ? 'schema-valid prep-only execplan scaffold' : 'schema-valid execplan scaffold' }];
   if (activate || queue || laneItem) {
@@ -1504,8 +1529,19 @@ function planningOwnerSelectResult(values, operationId) {
     result.recovery_command = recovery || null;
     return finalizeMutationOutcome(result);
   };
+  const checkPaths = () => {
+    for (const path of [selectionPath, receiptPath]) {
+      for (let current = path; ; current = dirname(current)) {
+        try {
+          if (lstatSync(current).isSymbolicLink()) throw new Error(`Planning path crosses a link or junction: ${current}`);
+        } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        if (current === targetRoot || dirname(current) === current) break;
+      }
+    }
+  };
+  try { checkPaths(); } catch (error) { return refuse('owner-selection-path-unadmitted', selectionOwner, error.message); }
   if (!['local', 'shared'].includes(mode)) return refuse('unsupported-selection-mode', selectionOwner, '--mode must be local or shared');
-  if (mode === 'shared' && !reason) return refuse('shared-selection-reason-required', stateOwner, 'shared selection requires --reason');
+  if (mode === 'shared') return refuse('shared-selection-retired', selectionOwner, 'shared owner selection is retired because current-work selection is local context; use --mode local');
   if ((!ownerId && !ownerRefInput) || (ownerId && ownerRefInput)) return refuse('owner-identity-required', '.agentic-workspace/planning/execplans', 'provide --owner or --owner-ref, not both');
   const expectedPlanning = String(values.expect_planning_revision ?? '').trim();
   if (expectedPlanning && expectedPlanning !== beforePlanning.revision_id) {
@@ -1571,34 +1607,14 @@ function planningOwnerSelectResult(values, operationId) {
     planning_revision: beforePlanning.revision_id,
     reason,
   };
-  let proposedState = JSON.parse(JSON.stringify(state));
-  let changedFields = ['local.current_work.selected_owner'];
-  if (mode === 'shared') {
-    proposedState.todo = isObject(proposedState.todo) ? proposedState.todo : {};
-    const active = Array.isArray(proposedState.todo.active_items) ? proposedState.todo.active_items : [];
-    const queued = Array.isArray(proposedState.todo.queued_items) ? proposedState.todo.queued_items : [];
-    let selectedItem = null;
-    const remaining = [];
-    for (const item of [...active, ...queued]) {
-      const matchesOwner = isObject(item) && (String(item.id ?? '') === selection.selected_owner.id || String(item.surface ?? '') === selected.ref);
-      if (matchesOwner) {
-        if (selectedItem) return refuse('owner-index-ambiguous', stateOwner, `owner '${selection.selected_owner.id}' has multiple state index entries`);
-        selectedItem = { ...item };
-      } else if (isObject(item)) remaining.push({ ...item, status: 'next', maturity: 'ready' });
-    }
-    selectedItem = selectedItem ?? { id: selection.selected_owner.id, title: String(selected.record.title ?? selection.selected_owner.id), surface: selected.ref, why_now: selected.ref, owner_role: 'implementation', review_role: 'validation', handoff_ready: true, next_action: String(selected.record.next_action ?? 'Continue the selected owner.'), done_when: String(selected.record.proof?.claims?.[0] ?? 'Selected owner acceptance and proof are satisfied.'), proof: "Use the selected owner's proof contract." };
-    proposedState.todo.active_items = [{ ...selectedItem, status: 'active', maturity: 'active', surface: selected.ref }];
-    proposedState.todo.queued_items = remaining;
-    changedFields = ['todo.active_items', 'todo.queued_items'];
-  }
+  const proposedState = state;
+  const changedFields = ['local.current_work.selected_owner'];
   let existingSelection = null;
   if (existsSync(selectionPath)) {
     try { existingSelection = JSON.parse(readText(selectionPath)); } catch { existingSelection = null; }
   }
   const semanticSelectionFields = ['kind', 'mode', 'current_work_id', 'selected_owner', 'reason'];
-  const noOp = mode === 'local'
-    ? semanticSelectionFields.every((field) => stableJson(existingSelection?.[field]) === stableJson(selection[field]))
-    : stableJson(proposedState) === stableJson(state);
+  const noOp = semanticSelectionFields.every((field) => stableJson(existingSelection?.[field]) === stableJson(selection[field]));
   const buildReceipt = (outcome, afterPlanning, afterCurrent) => ({
     kind: 'agentic-planning/owner-selection-receipt/v1',
     operation: 'planning.owner-select.lifecycle',
@@ -1618,6 +1634,10 @@ function planningOwnerSelectResult(values, operationId) {
     result.actions = [{ kind: 'no-op', path: selected.ref, detail: 'requested owner is already selected; no file was rewritten' }];
     return finalizeMutationOutcome(result);
   }
+  const incumbent = existingPlanningSelectionCarrier(targetRoot);
+  if (incumbent) {
+    return refuse('owner-selection-acquisition-required', incumbent, 'Existing selection or receipt is preserved: this operation has no admitted custody for its first overwrite. Exact source-owner/human-authorized acquisition or transfer is required; matching JSON, revision, or continuation intent is not authority. Current native reconciliation custody remains with planning.reconcile.');
+  }
   if (result.dry_run) {
     result.operation_receipt = buildReceipt('dry-run', beforePlanning, 'proposed');
     result.actions = [
@@ -1626,25 +1646,29 @@ function planningOwnerSelectResult(values, operationId) {
     ];
     return finalizeMutationOutcome(result);
   }
-  const backups = new Map([[statePath, existsSync(statePath) ? readFileSync(statePath) : null], [selectionPath, existsSync(selectionPath) ? readFileSync(selectionPath) : null], [receiptPath, existsSync(receiptPath) ? readFileSync(receiptPath) : null]]);
+  const acquiredPaths = [];
+  const createCarrier = (path, value) => {
+    mkdirSync(dirname(path), { recursive: true });
+    checkPaths();
+    const fd = openSync(path, 'wx');
+    acquiredPaths.push(path);
+    try {
+      writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+      fsyncSync(fd);
+    } finally { closeSync(fd); }
+  };
   try {
-    if (mode === 'local') {
-      mkdirSync(dirname(selectionPath), { recursive: true });
-      writeFileSync(selectionPath, `${JSON.stringify(selection, null, 2)}\n`, 'utf8');
-    } else {
-      mkdirSync(dirname(statePath), { recursive: true });
-      writeFileSync(statePath, renderPlanningState(proposedState), 'utf8');
-    }
+    createCarrier(selectionPath, selection);
     const receipt = buildReceipt('selected', planningRevision(targetRoot, proposedState), shortFileHash(selectionPath));
-    mkdirSync(dirname(receiptPath), { recursive: true });
-    writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
+    createCarrier(receiptPath, receipt);
     result.operation_receipt = receipt;
   } catch (error) {
-    for (const [path, bytes] of backups.entries()) {
-      if (bytes === null) rmSync(path, { force: true });
-      else { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, bytes); }
-    }
-    return refuse('owner-selection-rolled-back', mode === 'local' ? selectionOwner : stateOwner, `owner selection rolled back after write failure: ${error.message}`);
+    // Never restore a snapshot over another writer's exclusive acquisition.
+    result.actions = acquiredPaths.map((path) => ({ kind: 'created', path, detail: 'exclusive acquisition created this carrier; completion is unresolved and bytes are preserved' }));
+    result.actions.push({ kind: 'manual review', path: selectionOwner, detail: `Exclusive owner selection acquisition did not complete; current selection/receipt are preserved for exact owner recovery: ${error.message}` });
+    result.reason_code = 'owner-selection-acquisition-incomplete';
+    result.operation_receipt = {};
+    return finalizeMutationOutcome(result);
   }
   result.actions = [
     { kind: 'updated', path: mode === 'local' ? selectionOwner : stateOwner, detail: `selected existing owner '${selection.selected_owner.id}' in ${mode} mode` },
@@ -3032,135 +3056,20 @@ function instructionsExecute(values, operationId) {
 }
 
 function instructionsRouteOperation(targetRoot, values, operationId, blocked) {
-  const scriptPath = resolve(targetRoot, 'scripts/run_agentic_workspace.py');
-  if (!existsSync(scriptPath)) {
-    return instructionsRouteOperationNative(targetRoot, values, operationId);
+  if (operationId === 'instructions.route-select') {
+    const result = blocked('native-persistent-route-selection-unavailable', 'Legacy route selection mutation is unavailable in this adapter. Use native agentic-workspace start --target <repository> --task <current task> --format json; inspect semantic_routes.requests and return the current semantic-routes/select/v1 request with your posture/routes via start --input. This is current applicability judgment, not a persisted legacy write.');
+    result.status = 'blocked';
+    result.exit_status = 0;
+    result.mutation_applied = false;
+    result.authority_effect = 'none';
+    result.recovery = { api: '@agentic-workspace/workspace-cli/native', method: 'start', target: targetRoot, required_input: 'task: exact current task', select_request_kind: 'semantic-routes/select/v1', effect: 'current request only; no legacy write' };
+    return result;
   }
-  const subcommand = operationId === 'instructions.routes' ? 'routes' : 'select-route';
-  const args = ['run', '--frozen', '--active', '--no-sync', 'python', scriptPath, 'instructions', subcommand, '--target', targetRoot, '--format', 'json'];
-  for (const [key, value] of Object.entries(values)) {
-    if (['target', 'target_root', 'format', 'operation_id'].includes(key) || key.startsWith('_') || key.endsWith('_command') || value === undefined || value === null || value === '' || value === false) continue;
-    const flag = `--${key === 'expected_source_revision' ? 'expect-source-revision' : key.replaceAll('_', '-')}`;
-    if (Array.isArray(value)) {
-      for (const item of value) args.push(flag, String(item));
-    } else if (value === true) args.push(flag);
-    else args.push(flag, String(value));
-  }
-  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-  const output = completed.stdout || completed.stderr || '';
   try {
-    const payload = JSON.parse(output);
-    return completed.status === 0 ? payload : blocked('authoritative-route-boundary-failed', JSON.stringify(payload).slice(0, 500));
-  } catch {
-    return blocked('authoritative-route-boundary-non-json', output.slice(0, 500) || 'Install uv/python and retry through AW.');
+    return routeDiscovery({ target: targetRoot, parent: String(values.parent ?? ''), exact: String(values.exact ?? '') });
+  } catch (error) {
+    return blocked('native-route-discovery-unavailable', error.message);
   }
-}
-
-function semanticRouteRegistryPaths(targetRoot) {
-  const paths = [];
-  const rootRegistry = resolveInside(targetRoot, 'tools/skills/REGISTRY.json');
-  if (existsSync(rootRegistry)) paths.push(rootRegistry);
-  const workspace = resolveInside(targetRoot, '.agentic-workspace');
-  const visit = (directory) => {
-    if (!existsSync(directory)) return;
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      const child = join(directory, entry.name);
-      if (entry.isDirectory()) visit(child);
-      else if (entry.name === 'REGISTRY.json' && dirname(child).endsWith(`${join('', 'skills')}`)) paths.push(child);
-    }
-  };
-  visit(workspace);
-  return [...new Set(paths.map((path) => resolve(path)))].sort();
-}
-
-function semanticRouteCatalogueNative(targetRoot) {
-  const declarations = new Map();
-  const diagnostics = [];
-  const sourceMaterial = [];
-  for (const registryPath of semanticRouteRegistryPaths(targetRoot)) {
-    const sourceRef = relative(targetRoot, registryPath).replaceAll('\\', '/');
-    try {
-      const rawText = readText(registryPath);
-      const payload = JSON.parse(rawText);
-      sourceMaterial.push(`${sourceRef}\0sha256:${createHash('sha256').update(rawText).digest('hex')}`);
-      for (const skill of Array.isArray(payload.skills) ? payload.skills : []) {
-        if (!skill || typeof skill !== 'object') continue;
-        for (const rawRoute of Array.isArray(skill.semantic_routes) ? skill.semantic_routes : []) {
-          const route = typeof rawRoute === 'string' ? { id: rawRoute } : rawRoute && typeof rawRoute === 'object' ? rawRoute : {};
-          const id = String(route.id ?? '').trim();
-          const match = String(route.match ?? 'exact').trim();
-          if (!/^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)+$/.test(id) || !['exact', 'subtree'].includes(match)) {
-            diagnostics.push({ source_ref: sourceRef, code: 'invalid-semantic-route', message: `skill '${skill.id ?? ''}' has invalid route '${id}' or match '${match}'` });
-            continue;
-          }
-          const current = declarations.get(id) ?? { id, description: String(route.description ?? skill.summary ?? '').trim(), match, capability_bindings: [], sources: [] };
-          if (current.match !== match) { diagnostics.push({ source_ref: sourceRef, code: 'route-match-conflict', message: `route '${id}' is declared with conflicting exact/subtree semantics` }); continue; }
-          const capability = `skill:${String(skill.id ?? '').trim()}`;
-          if (!current.capability_bindings.some((item) => item.capability === capability)) {
-            const priorityValue = route.priority ?? 100;
-            current.capability_bindings.push({ capability, priority: /^\d+$/.test(String(priorityValue)) ? Number(priorityValue) : 100 });
-          }
-          current.sources.push({ source_ref: sourceRef, skill_id: String(skill.id ?? '').trim() });
-          declarations.set(id, current);
-        }
-      }
-    } catch (error) { diagnostics.push({ source_ref: sourceRef, code: 'invalid-registry', message: error instanceof Error ? error.message : String(error) }); }
-  }
-  const routes = [...declarations.values()].sort((left, right) => left.id.localeCompare(right.id)).map((route) => {
-    route.capability_bindings.sort((left, right) => left.priority - right.priority || left.capability.localeCompare(right.capability));
-    route.sources.sort((left, right) => left.source_ref.localeCompare(right.source_ref) || left.skill_id.localeCompare(right.skill_id));
-    return { ...route, capabilities: route.capability_bindings.map((item) => item.capability) };
-  });
-  return { status: diagnostics.length ? 'invalid' : 'current', source_revision: `sha256:${createHash('sha256').update(sourceMaterial.join('\n')).digest('hex')}`, routes, diagnostics };
-}
-
-function instructionsRouteOperationNative(targetRoot, values, operationId) {
-  const catalogue = semanticRouteCatalogueNative(targetRoot);
-  if (operationId === 'instructions.routes') {
-    const exact = String(values.exact ?? '').trim().replace(/^\/+|\/+$/g, '');
-    const parent = String(values.parent ?? '').trim().replace(/^\/+|\/+$/g, '');
-    let routes;
-    let level;
-    if (exact) { routes = catalogue.routes.filter((route) => route.id === exact); level = 'exact'; }
-    else {
-      const prefix = parent ? `${parent}/` : '';
-      const children = new Map();
-      for (const route of catalogue.routes) {
-        if (prefix && !route.id.startsWith(prefix)) continue;
-        const suffix = route.id.slice(prefix.length);
-        const child = suffix.split('/', 1)[0];
-        if (!child) continue;
-        const id = `${prefix}${child}`.replace(/^\/+|\/+$/g, '');
-        const current = children.get(id) ?? { id, leaf: false, child_count: 0 };
-        current.leaf ||= route.id === id;
-        current.child_count += suffix.includes('/') ? 1 : 0;
-        children.set(id, current);
-      }
-      routes = [...children.values()].sort((left, right) => left.id.localeCompare(right.id));
-      level = parent ? 'branch' : 'roots';
-    }
-    return { kind: 'agentic-workspace/semantic-task-route-discovery/v1', operation_id: operationId, status: catalogue.status, level, parent, exact, source_revision: catalogue.source_revision, routes, route_count: routes.length, full_catalogue_emitted: Boolean(exact), diagnostics: catalogue.diagnostics, authority_effect: 'applicability-only', message: routes.map((item) => item.id).join('\n') };
-  }
-  const posture = String(values.posture ?? '');
-  const routes = [...new Set((Array.isArray(values.route) ? values.route : []).map((item) => String(item).replace(/^\/+|\/+$/g, '')).filter(Boolean))].sort();
-  const currentWorkId = createHash('sha256').update(`${targetRoot.replaceAll('\\', '/')}\0semantic-task-routes`).digest('hex').slice(0, 16);
-  const failures = [];
-  if (!['selected', 'none', 'unresolved'].includes(posture)) failures.push('unsupported-posture');
-  if (String(values.expected_source_revision ?? '') !== catalogue.source_revision) failures.push('route-source-revision-mismatch');
-  if (values.current_work_id && String(values.current_work_id) !== currentWorkId) failures.push('current-work-mismatch');
-  if (posture === 'selected' && !routes.length) failures.push('selected-routes-required');
-  if (posture === 'none' && routes.length) failures.push('none-posture-rejects-routes');
-  const known = new Set(catalogue.routes.map((route) => route.id));
-  if (routes.some((route) => !known.has(route))) failures.push('unknown-route');
-  if (failures.length) return { kind: 'agentic-workspace/semantic-task-route-selection/v1', operation_id: operationId, status: 'blocked', reason_codes: [...new Set(failures)].sort(), current_work_id: currentWorkId, source_revision: catalogue.source_revision, mutation_applied: false, authority_effect: 'none', message: 'Semantic task route selection: blocked' };
-  const fact = { kind: 'agentic-workspace/semantic-task-route-fact/v1', posture, routes, task_identity: { kind: 'current-work', id: currentWorkId }, current_work_id: currentWorkId, source_revision: catalogue.source_revision, provenance: 'agent-selected', authority_effect: 'applicability-only' };
-  const destination = resolveInside(targetRoot, '.agentic-workspace/local/current-task-routes.json');
-  const rendered = `${JSON.stringify(fact, null, 2)}\n`;
-  const existing = existsSync(destination) ? readText(destination) : '';
-  const dryRun = Boolean(values.dry_run);
-  const status = existing === rendered ? 'already-current' : dryRun ? 'preview' : { selected: 'selected', none: 'classified-none', unresolved: 'classified-unresolved' }[posture];
-  if (!dryRun && existing !== rendered) { mkdirSync(dirname(destination), { recursive: true }); writeFileSync(destination, rendered, 'utf8'); }
-  return { kind: 'agentic-workspace/semantic-task-route-selection/v1', operation_id: operationId, status, fact, path: '.agentic-workspace/local/current-task-routes.json', mutation_applied: !dryRun && existing !== rendered, authority_effect: 'none', message: `Semantic task route selection: ${status}` };
 }
 
 function validInstructionPattern(value) {
