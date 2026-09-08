@@ -355,3 +355,12 @@ separate from product friction. The failure log is retained.
 The corrected fresh Python/TypeScript forged-history case passed in 26.58 seconds.
 
 Integration of repair-retirement subtraction passed four cases and found one obsolete diagnostic assertion (77.82s). The updated negative covers both reported pass and failure, preserving zero publication when apply producer/source authority is unproven.
+
+### Native Planning update integration
+
+The cumulative native Planning update and proof interaction lane passed 62 tests
+in 119.35 seconds. Updates preserve exact creation custody and distinguish
+material revision from frontier changes. Interrupted postimage publication can
+resume its exact retained invocation; reworded same-semantic recovery remains an
+explicit owner-reentry implementation gap. No real provider work, target-quality
+observation or monetary saving is inferred from this deterministic run.
