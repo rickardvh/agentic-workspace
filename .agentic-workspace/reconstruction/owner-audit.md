@@ -450,3 +450,28 @@ and retained generated tooling/legacy operation APIs are not advertised as nativ
 owner completion. This cutover removes a competing command host and over a
 thousand obsolete lines rather than restoring aliases. It is a breaking command
 surface change, recorded by one major changeset; no parent is closed here.
+
+Hosted #3168 follow-through: Linux built-wheel create/update/recovery and raw
+native admission passed all three artifact tests. The broader external-consumer
+readiness gate still calls the retired `install` command and legacy operation
+APIs; native installation/configuration and those API outcomes are not admitted.
+That release-relevant gap is retained, not relabeled as successful readiness.
+Memory's maintainer checks now call their existing audit scripts directly rather
+than the retired root `report`; Planning retains its package handoff test and
+removes only the duplicate retired root-command assertion. The Makefile split inventory now includes its 51 previously unlisted root tests.
+The existing inventory/maintainer/Planning checks pass (18 cases), as do four
+native CLI black-box cases. Three obsolete root-command tests (241 lines) are
+removed: generated selector wrapper parity, automatic final-response proof
+continuation, and the duplicate Planning front-door integration wrapper.
+The historical diagnostic review now keeps its unchanged promotion note in the
+schema-supported recommendation map; structured-file inventory passes. No
+independent review verdict or authority is added. The maintainer checker no
+longer demands the retired generic workspace_behavior profile; owner scope,
+currentness paths and authority references remain checked. Hosted runtime and
+external-consumer installation/API failures remain unresolved.
+
+The real selected owner is native-authored revision 8, SHA-256
+`c7c2e7e414923ed96a15981890f6e04ea6049b6929e0a418c94b73edeebe8073`.
+Exact update/reconcile, fresh-process currentness and stale-update rejection pass;
+identity, scope, relationships and unrelated original-checkout files remain intact.
+The copied tracked bytes carry the observation only, not transported local custody.

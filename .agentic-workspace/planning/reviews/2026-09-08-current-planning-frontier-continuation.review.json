@@ -80,13 +80,13 @@
     "reason": "The missing outcome is already #2970's requirement that real established Planning work continue with current outcome, scope, dependencies, constraints, proof and frontier across the representation transition.",
     "required correction": "Provide one bounded authority-correct route from a selected real former Planning owner to a materially current owner, by admitted material update or exact transfer into native custody, then prove fresh-session current-frontier projection from the actual reconstruction owner.",
     "regression": "Add the resulting real-source fresh-agent continuation case to #2909 after the #2970 repair lands.",
-    "new issue": "no"
-  },
-  "promotion_gate": {
-    "status": "promoted-to-existing-owner",
-    "decision": "#2970 is not candidate-complete until this current-checkout counterevidence is repaired and independently re-reviewed.",
-    "next owner": "#2970",
-    "next action": "Implement and prove authority-correct material evolution/transfer of the selected real former Planning owner; do not patch its bytes directly as a substitute."
+    "new issue": "no",
+    "promotion gate": {
+      "status": "promoted-to-existing-owner",
+      "decision": "#2970 is not candidate-complete until this current-checkout counterevidence is repaired and independently re-reviewed.",
+      "next owner": "#2970",
+      "next action": "Implement and prove authority-correct material evolution/transfer of the selected real former Planning owner; do not patch its bytes directly as a substitute."
+    }
   },
   "retention": {
     "closeout shape": "shrink",

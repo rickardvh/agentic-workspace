@@ -173,12 +173,10 @@ def _runtime_verification_warnings(repo_root: Path, runtime_sources: list[str]) 
         applies_to_paths = _list_str(protocol.get("applies_to_paths"))
         stale_when = _list_str(protocol.get("stale_when"))
         authority_refs = _list_str(protocol.get("authority_refs"))
-        proof_profiles = _list_str(protocol.get("proof_profiles"))
         if (
             not _patterns_cover_runtime_sources(applies_to_paths, runtime_sources)
             or not _patterns_cover_runtime_sources(stale_when, runtime_sources)
             or RUNTIME_SUBSYSTEM_REF not in authority_refs
-            or "workspace_behavior" not in proof_profiles
         ):
             warnings.append(
                 MaintainerWarning(

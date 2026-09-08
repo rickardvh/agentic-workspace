@@ -51,7 +51,7 @@ jobs:
       - name: Sync the workspace once
         run: make sync-all
       - name: Run native root CLI and thin-launcher admission
-        run: uv run pytest tests/test_workspace_cli_blackbox.py tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness tests/test_native_public_cli.py::test_current_public_route_survives_fresh_process_but_not_source_change tests/test_native_public_cli.py::test_real_instruction_protection_and_source_drift -q
+        run: uv run pytest tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness tests/test_native_public_cli.py::test_current_public_route_survives_fresh_process_but_not_source_change tests/test_native_public_cli.py::test_real_instruction_protection_and_source_drift -q
       - name: Run routed workspace CLI and proof contracts
         run: uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q
       - name: Run shared operating-decision core proof
