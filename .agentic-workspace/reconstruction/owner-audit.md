@@ -39,7 +39,7 @@ The repair described below is not yet integrated into that candidate.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | Native exact human transfer and material evolution now succeeded against the real selected owner. Portable update provenance and fresh-checkout acquisition are proved across four surfaces. PR #3164 and its configuration/portability continuation require independent acceptance and #2909 aggregation. |
+| #2970 | bounded implementation gap | The native transfer/update mechanism is proved, but the real selected owner still has placeholder scope/proof requirements and the obsolete three-or-fewer-PR goal. Its complete current material has not been reconciled. Required payload currentness now blocks further mutation in the original checkout; preserve that gate and complete the existing #2613/#2767/#3077 continuation before claiming satisfied intent. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | No repo-owned `docs/adr/` archive or equivalent configured reconstruction decision archive was found. The ordinary repo seeding/promotion dogfood is absent. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -191,8 +191,31 @@ maintenance or release admission.
 
 ## Continuation and closure honesty
 
-The #2970 implementation bridge has current real-checkout proof; independent
-acceptance and cumulative conformance remain pending. Complete
+The #2970 mechanism has real-checkout proof, but the current material outcome
+is still incomplete. Independent review
+https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5586919856
+identified the preserved `scope.owned` placeholder, placeholder proof requirement,
+and obsolete three-or-fewer-PR goal in `v1-contraction-2983-2990`. The earlier
+native updates preserved these stale values; proving update capability did not
+make the complete owner current. This remains a bounded implementation gap,
+not merely missing conformance evidence.
+
+A fresh native probe of the original checkout against the current source-built
+artifact finds `native-payload-target-unproven`: its installed
+`.agentic-workspace/skills/workspace-startup/SKILL.md` differs from the bundled
+payload. The selector still has native custody and an update request, but the
+required-before-work gate blocks its effect. No invocation was submitted, no
+legacy host was substituted and no stale plan bytes were hand-edited. Reconcile
+that installation through its existing package/configuration owner, then use a
+fresh admitted native update to make scope, proof, goal and frontier fully current.
+
+The bounded `former-owner-maintenance-2970` record is the #3164 mechanism owner:
+its guarded feature-completion operation records focused proof with target
+integration pending. It is not a completion record for all #3165 behavior or
+the real reconstruction owner. The real owner and this audit retain the larger
+continuation rather than reopening that completed bounded mechanism.
+
+Complete
 #3077's real native repository path, the configured consequential delegation
 lifecycle (#2947/#2817/#2818/#2210), and positive #2209 evidence. Keep the other
 native owner gaps with their existing issues, consolidating coherent owner
@@ -204,7 +227,8 @@ then #2909, #2616 and exact #2990 admission; only then #3014/#3138 cutover.
 - `intent_served`: real former Planning intent can evolve after acquired native
   reconciliation without changing subject identity or restoring history machinery.
 - `proof`: current focused tests above; independent acceptance remains pending.
-- `unresolved`: independent acceptance, ordinary native configuration mutation,
+- `unresolved`: complete real-owner material reconciliation, current payload
+  installation, independent acceptance, ordinary native configuration mutation,
   release/platform proof, and the owner table's gaps. Source guidance is changed
   in the proposed continuation; it is not yet integrated into the candidate.
 - `closure_honest`: partial for #2970; no reconstruction parent or release gate
