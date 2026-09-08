@@ -135,6 +135,12 @@ transports = [{kind="manual"}]
     assert action["id"] == "resolve-current-task-requirements"
     assert startup["decision_packet"]["effects"]["implementation_allowed"] is False
     assert action["operation"]["operation_id"] == "assignment.export"
+    assert cli.main(["implement", "--target", str(tmp_path), "--task", task, "--changed", *paths, "--format", "json"]) == 0
+    implementation = json.loads(capsys.readouterr().out)["decision_packet"]
+    assert implementation["effects"]["implementation_allowed"] is False
+    recovery = implementation["action"]["operation"]
+    assert recovery["operation_id"] == "assignment.export"
+    assert recovery["arguments"] == {"task": task, "changed": paths, "dry_run": True}
     missing = export({"task": task, "changed": paths, "dry_run": True})
     assert missing["status"] == "requirements-required"
     assert not missing["mutation_applied"]
