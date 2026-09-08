@@ -1,12 +1,12 @@
 # First-stable owner audit — 2026-09-08
 
-Candidate inspected: `5d4f0fa819d7888b9e63526cad8dd9e697b0e7f2`, tree
-`235cad1e8f1eb1c7f8fb027f41ba1ace46152006`, freshly fetched from
-`origin/reconstruct/first-stable`. The original checkout was on
-`codex/native-proof-continuation`; its unrelated local state was preserved.
-PR #3164 uses `codex/first-stable-owner-audit`; its cumulative continuation is
-`codex/native-config-admission`. Classifications include the proposed cumulative
-repair tree, with integration and independent acceptance stated separately.
+Current cumulative base: `384473617acd395ebf66b3d449d7bd28bbe5bea9`, freshly
+fetched from `origin/reconstruct/first-stable` after #3164/#3165 integration.
+The original audit began at `5d4f0fa819d7888b9e63526cad8dd9e697b0e7f2`;
+historical proof below retains its actual subject rather than claiming a new run.
+This continuation reconciles the real selected owner through native custody.
+Unrelated original-checkout assignments, proof receipts and local files remain
+outside the patch. Integration of a mechanism does not close its parent intent.
 
 This is implementation/audit evidence, not independent review, a release
 admission, or a new execution epic. #2983 retains convergence ownership;
@@ -19,14 +19,14 @@ an implementation gap even when the former Python host supplies that behavior.
 ## P0/P1 dispositions
 
 Each owner has exactly one disposition against the fetched cumulative candidate.
-The repair described below is not yet integrated into that candidate.
+The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections remain proposed until their own integration.
 
 | Owner | Classification | Current evidence and remaining admission boundary |
 | --- | --- | --- |
 | #3012 | candidate-complete | Existing independent #3138 acceptance; `authority-and-salvage.toml` preserves current authority and destination-owner gates. Map tests remain applicable. |
 | #3013 | candidate-complete | Existing independent #3138 acceptance; the same map distinguishes PORT/ADAPT/EVIDENCE/DROP without importing prototype semantics wholesale. |
 | #2997 | candidate-complete | Existing independent #3138 acceptance; `SYSTEM_INTENT.md` preserves authority, currentness, subtraction and repository-lifetime intent. |
-| #3020 | bounded implementation gap | Native ingress is real, but the ordinary repo command still uses the Python host; unresolved native owner routes below prevent one-core final satisfaction. |
+| #3020 | bounded implementation gap | The source checkout ordinary command is now native. Unresolved native owner routes and retained semantic hosts below still prevent one-core final satisfaction. |
 | #2989 | evidence/conformance gap | Shared reducer has explicit outcome authority and ready-set tests; final selected-outcome/optional-consequence and cumulative cross-owner acceptance remain to be assembled. |
 | #2984 | bounded implementation gap | Former authority remains intentionally retained; #2970 and configuration/native migration still prevent the final clean representation break. Do not delete legacy machinery to manufacture completion. |
 | #3000 | evidence/conformance gap | Immutable attempt, process interruption, replay and owner recovery tests exist. Complete retained-operation coverage, including consequential delegation, is not yet admitted. |
@@ -39,7 +39,7 @@ The repair described below is not yet integrated into that candidate.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | bounded implementation gap | The native transfer/update mechanism is proved, but the real selected owner still has placeholder scope/proof requirements and the obsolete three-or-fewer-PR goal. Its complete current material has not been reconciled. Required payload currentness now blocks further mutation in the original checkout; preserve that gate and complete the existing #2613/#2767/#3077 continuation before claiming satisfied intent. |
+| #2970 | evidence/conformance gap | The real selected owner is now native-authored revision 6 with concrete scope/proof, current merged frontier and dependencies, and no obsolete three-PR cap. Native re-entry and fresh-process recovery report current custody; stale update requests fail without mutation. Full owner-specific cumulative conformance and independent acceptance remain under #2909; no parent closure is inferred. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | No repo-owned `docs/adr/` archive or equivalent configured reconstruction decision archive was found. The ordinary repo seeding/promotion dogfood is absent. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -282,3 +282,33 @@ Validation passed is separate from issue completion (no), larger intent
 satisfaction (partial), durable residue routing (tests/docs), and independent
 review (pending). The public contract supplies the correct request/action before
 validation; no operator must invent an invocation or edit a stale plan.
+
+## Real-owner reconciliation after #3165 integration
+
+Updating the original source checkout to the merged candidate cleared its payload
+mismatch through the normal Git source update. The revision-5 native plan was
+preserved byte-for-byte (`b9e6a3b06fc250c848781096b0390fbd9bc38b81e34c2d49c7fd34f674765f47`),
+and the existing native selector custody remained current. No new selector
+transfer, generic payload adoption or Python-host mutation was used.
+
+The owner-returned `planning/update/v1` request replaced stale material and the
+exact `planning.update` action authored revision 6. Its SHA-256 is
+`9a05db369352949a4c70f7ab2cfaaecd8202123b31c4bb1e2abb1a2f1c3448c8`.
+The initial request tried to update externally owned posture relationships;
+native admission refused it before mutation. The corrected request preserves
+all non-dependency relationships, including pending proof posture. Observed
+integration facts and focused evidence live in Planning material, not fabricated
+external/proof authority. This is not a completion or acceptance transition.
+
+A fresh process requested material re-entry. The exact `planning.reconcile`
+action admitted it, and another fresh process returned `current=true`, the same
+owner identity, current dependencies/proof/frontier and remaining blockers.
+Replaying the old update request returned exit 2, `Planning update request is
+stale`, with unchanged plan bytes. The tracked copy is the native writer output;
+local producer receipts remain in their original target and are not transported.
+
+Cost: Git source update plus two native owner effects resolved the real dead end
+without a new command, store, installer or workflow concept. The rejected
+relationship update is failed-attempt cost, not successful evidence. The durable
+regression remains `tests/test_native_planning_create.py` and
+`tests/test_native_startup_adapter.py`; #2909 owns cumulative admission.
