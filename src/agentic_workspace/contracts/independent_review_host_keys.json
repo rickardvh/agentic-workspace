@@ -1,0 +1,16 @@
+{
+  "github-review-adapter:release-2026-08": {
+    "key_id": "github-review-adapter:release-2026-08",
+    "key_revision": "github-review-adapter-key/2026-08-01",
+    "algorithm": "RS256",
+    "authority": "pinned-host-runtime",
+    "issuer": "github-review-webhook",
+    "producer": "github-review-adapter",
+    "trusted_channel": "github-review-webhook",
+    "status": "current",
+    "not_before": "2026-08-01T00:00:00Z",
+    "expires_at": "2027-08-01T00:00:00Z",
+    "n": "d00a7cb961b3e2d0719371dd5821eedef6bde01ad436ceb25d533ced12e83fd0786a09f4b840a05f6372964ebcd56d6b61504c5d16cb9e995e4d460206eda4ba03c8fdca73f63c564c4746cb88946e4558ff8a654cc493212ead218e7d447f0ec206db41488551c57a50149367274144fdc8c5c6a0b2005daf1ecc5c810ce74ff198997acdbd1e2a0ed0514a5dc31b6468cf0afe67b724d02d093ddfa1826b773f476ed62bac7fb5549638481112e3b4b5a20ab857f2cf4c5cb632d470fd41c43cbc5b248614a57a334ae0a98ba844ad55f98923b01f12472f05db0a6e653afa4223b84a9a99babe5898bb237e9f4ff448bbf8e970dac3e9d7d670164f0b157b",
+    "e": 65537
+  }
+}

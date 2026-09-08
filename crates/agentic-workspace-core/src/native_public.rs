@@ -145,7 +145,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &work,
         subject,
         request_for("verification")
-            .filter(|r| r["request_kind"] == "verification/claim/v1")
+            .filter(|r| {
+                matches!(
+                    r["request_kind"].as_str(),
+                    Some("verification/claim/v1" | "verification/authenticate-host-review/v1")
+                )
+            })
             .cloned(),
     )?;
     contributions.push(verification["contribution"].clone());
@@ -225,7 +230,11 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         if owner == "verification"
             && !matches!(
                 request["request_kind"].as_str(),
-                Some("verification/claim/v1" | "verification/requirements/v1")
+                Some(
+                    "verification/claim/v1"
+                        | "verification/requirements/v1"
+                        | "verification/authenticate-host-review/v1"
+                )
             )
         {
             return Err(CoreError::new(

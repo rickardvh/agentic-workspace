@@ -143,3 +143,7 @@ export function executionConfigurations(context) {
 export function attributeAssignmentOutcome(evidence) {
   return request({attribute_assignment_outcome: evidence});
 }
+
+export function reviewAuthentication(context) {
+  return request({review_authentication: context});
+}

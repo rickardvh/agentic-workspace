@@ -54,6 +54,170 @@ fn sha(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
+fn bounded_git_output(
+    command: &mut std::process::Command,
+    budget: std::time::Duration,
+) -> Result<(std::process::ExitStatus, Vec<u8>), String> {
+    use std::process::Stdio;
+    let deadline = std::time::Instant::now() + budget;
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| "git-observation-unavailable")?;
+    let stdout = child.stdout.take().expect("piped stdout");
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let result = stdout.take(4097).read_to_end(&mut bytes).map(|_| bytes);
+        let _ = sender.send(result);
+    });
+    let result = loop {
+        if std::time::Instant::now() >= deadline {
+            break Err("git-observation-timeout".into());
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                break match receiver
+                    .recv_timeout(deadline.saturating_duration_since(std::time::Instant::now()))
+                {
+                    Ok(Ok(bytes)) if bytes.len() <= 4096 => Ok((status, bytes)),
+                    Ok(Ok(_)) => Err("git-observation-output-exceeds-bound".into()),
+                    Ok(Err(_)) => Err("git-observation-read-failed".into()),
+                    Err(_) => Err("git-observation-timeout".into()),
+                };
+            }
+            Err(_) => break Err("git-observation-process-state-unavailable".into()),
+            Ok(None) => std::thread::sleep(
+                std::time::Duration::from_millis(10)
+                    .min(deadline.saturating_duration_since(std::time::Instant::now())),
+            ),
+        }
+    };
+    if result.is_err() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    result
+}
+
+fn authenticate_review(root: &Dir, target: &Path, reference: &str) -> Value {
+    let rejected =
+        |reason: &str| json!({"status":"unadmitted","reason":reason,"authority_effect":"none"});
+    let Some(id) = reference.strip_prefix("independent-review-host-result:") else {
+        return rejected("invalid-host-result-reference");
+    };
+    if id.is_empty()
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return rejected("invalid-host-result-reference");
+    }
+    let directory = ".agentic-workspace/local/independent-review-host-results";
+    let parse =
+        |path: &str| -> Option<Value> { serde_json::from_slice(&read(root, path).ok()??).ok() };
+    let Some(index) = parse(&format!("{directory}/index.json")) else {
+        return rejected("host-result-index-unavailable");
+    };
+    if index["kind"] != "agentic-workspace/independent-review-host-result-index/v1" {
+        return rejected("host-result-index-invalid");
+    }
+    let entry = &index["results"][id];
+    if !entry.is_object() {
+        return rejected("host-result-not-indexed");
+    }
+    let default_path = format!("{id}.json");
+    let path = entry["path"].as_str().unwrap_or(&default_path);
+    if path.starts_with('.') || path.contains(['/', '\\', ':']) {
+        return rejected("host-result-index-path-invalid");
+    }
+    let Some(host) = parse(&format!("{directory}/{path}")) else {
+        return rejected("host-result-unavailable");
+    };
+    if let Some(expected) = entry["host_result_digest"]
+        .as_str()
+        .filter(|s| !s.is_empty())
+    {
+        let Ok(encoded) = crate::proof_subject::compact_json(&host) else {
+            return rejected("host-result-encoding-unproven");
+        };
+        if sha(encoded.as_bytes()) != expected {
+            return rejected("host-result-index-digest-mismatch");
+        }
+    }
+    // Git is optional host observation glue, never a product semantic fallback.
+    // Missing Git on a repository cannot be mistaken for a path-only identity.
+    let mut command = std::process::Command::new("git");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    command.args([
+        "-C",
+        &target.to_string_lossy(),
+        "config",
+        "--get",
+        "remote.origin.url",
+    ]);
+    let observed = bounded_git_output(&mut command, std::time::Duration::from_secs(2));
+    let remote = match observed {
+        Ok((status, bytes)) if status.success() => {
+            String::from_utf8_lossy(&bytes).trim().replace('\\', "/")
+        }
+        Ok((status, _)) if status.code() == Some(1) => String::new(),
+        Err(reason)
+            if reason == "git-observation-timeout"
+                || reason == "git-observation-output-exceeds-bound" =>
+        {
+            return rejected(&reason);
+        }
+        _ if target.ancestors().any(|path| path.join(".git").exists()) => {
+            return rejected("current-workspace-identity-observation-unavailable");
+        }
+        _ => String::new(),
+    };
+    let workspace = if remote.is_empty() {
+        let observed = target.to_string_lossy();
+        let path = if let Some(unc) = observed.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{unc}")
+        } else {
+            observed
+                .strip_prefix(r"\\?\")
+                .unwrap_or(&observed)
+                .to_owned()
+        };
+        format!("workspace:path:{path}")
+    } else {
+        let remote = remote.strip_suffix(".git").unwrap_or(&remote);
+        let normalized = if let Some((host, path)) =
+            remote.strip_prefix("git@").and_then(|v| v.split_once(':'))
+        {
+            format!("https://{host}/{path}")
+        } else {
+            remote.to_owned()
+        };
+        format!(
+            "workspace:git:{}",
+            normalized.trim_end_matches('/').to_lowercase()
+        )
+    };
+    let Ok(now) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) else {
+        return rejected("current-host-clock-unavailable");
+    };
+    let verdict = match crate::review_authentication::view(
+        json!({"host_result_ref":reference,"host_result":host,"workspace_ref":workspace,"now_unix_micros":now.as_micros() as i64,"public_keys":null}),
+    ) {
+        Ok(value) if value["status"] == "admitted" => value,
+        _ => return rejected("release-pinned-host-authentication-rejected"),
+    };
+    json!({"status":"authenticated","verdict":verdict,"authority_effect":"host-result-authentication-only",
+        "remaining_gaps":["current-assignment-and-proof-subject-admission-required","current-strategy-and-runtime-evidence-required"],
+        "claim_boundary":"Authentic signed host result does not itself establish current independent review or satisfy a claim."})
+}
+
 // Verification and instruction sources consume the same path selector semantics.
 pub(crate) fn matches(pattern: &str, path: &str) -> bool {
     crate::instruction_applicability::matches(pattern, path)
@@ -419,7 +583,7 @@ pub fn view(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration()]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
@@ -428,6 +592,12 @@ pub fn view(
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":"verification/claim/v1","owner":"verification",
         "owner_revision":owner_revision,"source_revision":source_revision,"capability_revision":contract["revision"],
         "task_identity":current_work,"request_kind":"verification/claim/v1","arguments":{"claim_class":"slice_complete","evidence_refs":[]}});
+    let mut authentication_request = template.clone();
+    authentication_request["id"] = json!("verification/authenticate-host-review/v1");
+    authentication_request["request_kind"] = json!("verification/authenticate-host-review/v1");
+    authentication_request["arguments"] =
+        json!({"host_result_ref":"independent-review-host-result:<current-indexed-ref>"});
+    let mut authentication = Value::Null;
     let mut evidence = Vec::new();
     let mut requested = false;
     if let Some(request) = request {
@@ -442,6 +612,12 @@ pub fn view(
             || request["source_revision"] != source_revision
         {
             gaps.push("verification-request-stale".into());
+        } else if request["request_kind"] == "verification/authenticate-host-review/v1" {
+            authentication = authenticate_review(
+                &root,
+                target,
+                request["arguments"]["host_result_ref"].as_str().unwrap(),
+            );
         } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
             evidence.extend(
                 refs.iter()
@@ -475,7 +651,7 @@ pub fn view(
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":strategy,"strategy_revision":strategy_revision,
-        "requests":[template],"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "requests":[template],"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers},
         "authority_effect":"read-only-no-claim-grants"}),
@@ -485,6 +661,26 @@ pub fn view(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "subprocess fixture for the bounded Git observation test"]
+    fn git_probe_slow_fixture() {
+        std::thread::sleep(std::time::Duration::from_secs(5));
+    }
+
+    #[test]
+    fn git_observation_times_out_and_reaps_the_child() {
+        let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+        command.args([
+            "--exact",
+            "native_verification::tests::git_probe_slow_fixture",
+            "--ignored",
+        ]);
+        let started = std::time::Instant::now();
+        let result = bounded_git_output(&mut command, std::time::Duration::from_millis(30));
+        assert_eq!(result.unwrap_err(), "git-observation-timeout");
+        assert!(started.elapsed() < std::time::Duration::from_secs(2));
+    }
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQUENCE: AtomicU64 = AtomicU64::new(0);
     struct Repo(std::path::PathBuf);

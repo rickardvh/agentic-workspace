@@ -226,3 +226,7 @@ def admit_assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
 
 def runtime_compatibility(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"runtime_compatibility": context})
+
+
+def review_authentication(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"review_authentication": context})

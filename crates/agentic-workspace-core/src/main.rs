@@ -11,6 +11,13 @@ fn main() {
     };
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("review_authentication"))
+    {
+        agentic_workspace_core::review_authentication::view(
+            request["review_authentication"].clone(),
+        )
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("verification_requirements"))
     {
         agentic_workspace_core::verification_requirements::view(

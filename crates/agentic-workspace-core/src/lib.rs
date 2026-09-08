@@ -17,6 +17,7 @@ mod native_verification;
 pub mod planning;
 pub mod proof_receipt;
 pub mod proof_subject;
+pub mod review_authentication;
 pub mod semantic_routes;
 pub mod separation_of_duty;
 pub mod task_judgment;
