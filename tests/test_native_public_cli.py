@@ -753,7 +753,12 @@ def test_native_current_schema_consumption_preserves_other_residuals(
     residual = consume(surface, shared_core_binary, native_cli, context)
     fields = {item["field"] for item in residual["configuration"]["residuals"]}
     assert fields == {"cli_compatibility.enforcement", "cli_compatibility.required_resources"}
-    assert residual["decision_packet"]["status"] != "direct"
+    assert residual["decision_packet"]["status"] == "direct"
+    assert all(
+        item["authority"] == "advisory" and item["satisfaction"] == "not-evidence" for item in residual["configuration"]["residuals"]
+    )
+    config.write_text(declaration + 'enforcement="blocking"\nrequired_resources=["agentic_workspace:unobserved-resource"]\n')
+    assert consume(surface, shared_core_binary, native_cli, context)["decision_packet"]["status"] == "blocked"
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

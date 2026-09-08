@@ -6,8 +6,35 @@ import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+@pytest.mark.parametrize(
+    "schema_root",
+    [
+        ".agentic-workspace",
+        "packages/planning/bootstrap/.agentic-workspace",
+        "generated/planning/python/_payload/.agentic-workspace",
+        "generated/planning/typescript/resources/_payload/.agentic-workspace",
+    ],
+)
+def test_native_update_observation_schema(schema_root: str) -> None:
+    schema = json.loads((ROOT / schema_root / "planning/schemas/planning-execplan.schema.json").read_text())
+    validator = Draft202012Validator(schema)
+    body = json.loads((ROOT / ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json").read_text())
+    validator.validate(body)
+    for version in ["v1", "v2"]:
+        body["update_provenance"]["kind"] = f"agentic-planning/update-provenance/{version}"
+        validator.validate(body)
+    body["update_provenance"]["kind"] = "agentic-planning/update-provenance/v3"
+    assert list(validator.iter_errors(body))
+    body["update_provenance"]["kind"] = "agentic-planning/update-provenance/v2"
+    body["update_provenance"]["outcome"] = "not-an-outcome"
+    assert list(validator.iter_errors(body))
+    del body["update_provenance"]["outcome"]
+    assert list(validator.iter_errors(body))
 
 
 def material() -> dict:
@@ -132,8 +159,53 @@ def test_real_former_owner_can_evolve_after_native_custody(
     updated = json.loads(path.read_bytes())
     assert updated["id"] == original["id"]
     assert "creation_provenance" not in updated
+    assert updated["update_provenance"]["kind"] == "agentic-planning/update-provenance/v2"
+    assert str(tmp_path) not in path.read_text()
+    assert all(ref["target"] == "." for ref in updated["update_provenance"]["custody"].values())
+    # A fresh checkout retains source identity/frontier, but must acquire its
+    # own native custody. Shared observations cannot impersonate a local writer.
+    clone = tmp_path / "fresh-checkout"
+    clone_path = clone / ref
+    clone_path.parent.mkdir(parents=True)
+    clone_path.write_bytes(path.read_bytes())
+    clone_state = clone / state.relative_to(tmp_path)
+    clone_state.write_bytes(state.read_bytes())
+    clone_context = {**context, "target": str(clone)}
+    observed = call(clone_context)
+    assert observed["planning"]["update_requests"] == []
+    changed = {**updated, "next_action": "Unadmitted observation drift"}
+    clone_path.write_text(json.dumps(changed))
+    with pytest.raises(AssertionError, match="portable Planning"):
+        changed_view = call(clone_context)
+        call({**clone_context, "request": changed_view["planning"]["requests"][0]})
+    clone_path.write_bytes(path.read_bytes())
+    malformed = json.loads(path.read_bytes())
+    malformed["update_provenance"]["outcome"] = "not-an-outcome"
+    clone_path.write_text(json.dumps(malformed))
+    with pytest.raises(AssertionError, match="invalid portable Planning"):
+        malformed_view = call(clone_context)
+        call({**clone_context, "request": malformed_view["planning"]["requests"][0]})
+    clone_path.write_bytes(path.read_bytes())
+    evidence = clone / updated["update_provenance"]["custody"]["attempt"]["path"]
+    evidence.parent.mkdir(parents=True)
+    evidence.write_text("{}")
+    with pytest.raises(AssertionError):
+        call({**clone_context, "request": observed["planning"]["requests"][0]})
+    evidence.unlink()
+    clone_action = call({**clone_context, "request": observed["planning"]["requests"][0]})["decision_packet"]["primary_action"]
+    assert clone_action["operation_id"] == "planning.reconcile"
+    call({**clone_context, "invocation": clone_action})
+    admitted_clone = call(clone_context)
+    assert admitted_clone["planning"]["update_requests"]
+    assert admitted_clone["planning"]["selected_owner"]["id"] == original["id"]
+    assert admitted_clone["planning"]["current_owner"]["reconciliation"]["subject"]["id"] != subject["id"], (
+        "custody subject remains target-bound"
+    )
+    assert value["next_action"] in str(admitted_clone)
+    assert admitted_clone["decision_packet"]["status"] != "terminal"
+    assert clone_path.read_bytes() == path.read_bytes()
     for key in original:
-        if key not in {"revision", "next_action", "goal", "intent_continuity"}:
+        if key not in {"revision", "next_action", "goal", "intent_continuity", "update_provenance"}:
             assert updated[key] == original[key], key
     assert call({**context, "invocation": action})["value"] == applied["value"]
     with pytest.raises(AssertionError):

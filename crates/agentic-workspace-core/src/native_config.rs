@@ -65,7 +65,7 @@ fn present(value: &Value) -> bool {
     }
 }
 
-fn residual(source: &str, field: &str, value: &Value) -> Value {
+fn residual(source: &str, field: &str, value: &Value, config: &Value) -> Value {
     // These existing controls describe rendering or replaceable methods. Keep
     // their current source meaning without turning persistence into authority.
     let advisory = if field == "workspace.optimization_bias" {
@@ -84,6 +84,24 @@ fn residual(source: &str, field: &str, value: &Value) -> Value {
         })
     {
         Some("recommended-stage-method")
+    } else if matches!(
+        field,
+        "cli_compatibility.enforcement"
+            | "cli_compatibility.source_classes"
+            | "cli_compatibility.target_relations"
+            | "cli_compatibility.minimum_version"
+            | "cli_compatibility.exact_version"
+            | "cli_compatibility.command"
+            | "cli_compatibility.required_resources"
+            | "cli_compatibility.required_capabilities"
+            | "cli_compatibility.resolution_policy"
+    ) && matches!(
+        config["cli_compatibility"]["enforcement"]
+            .as_str()
+            .unwrap_or("off"),
+        "off" | "advisory"
+    ) {
+        Some("nonblocking-runtime-expectation")
     } else {
         None
     };
@@ -100,19 +118,67 @@ fn residual(source: &str, field: &str, value: &Value) -> Value {
         "session_logging" => "maintainer-diagnostics",
         _ => "workspace-config",
     };
-    let affects = match owner {
-        "verification" => vec!["claim:complete"],
-        "assignment-delegation" => vec![
-            "effect:implementation",
-            "effect:delegation",
+    let affects = if field.starts_with("workflow_obligations.")
+        && value["force"] == "required-before-closeout"
+        && matches!(
+            value["stage"].as_str(),
+            Some("closeout" | "before-claiming-completion")
+        )
+        && value.as_object().is_some_and(|fields| {
+            fields.keys().all(|key| {
+                matches!(
+                    key.as_str(),
+                    "summary" | "stage" | "force" | "scope_tags" | "commands" | "review_hint"
+                )
+            })
+        }) {
+        vec![
             "claim:complete",
-        ],
-        "maintainer-diagnostics" => vec!["effect:session-logging"],
-        _ => vec!["task"],
+            "claim:claim-slice-complete",
+            "claim:claim-work-complete",
+            "claim:pr-complete",
+        ]
+    } else if field == "workspace.improvement_latitude" {
+        // Preserve the still-current initiative choice for #2648. It neither
+        // grants an initiative action nor blocks independently requested work.
+        vec!["effect:initiative"]
+    } else if matches!(
+        field,
+        "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
+    ) {
+        // Availability summaries are not proof of supported target execution.
+        vec![
+            "effect:delegation",
+            "effect:implementation",
+            "claim:complete",
+        ]
+    } else if field == "update.modules" {
+        vec!["effect:package-update"]
+    } else {
+        match owner {
+            "verification" => vec!["claim:complete"],
+            "assignment-delegation" => vec![
+                "effect:implementation",
+                "effect:delegation",
+                "claim:complete",
+            ],
+            "maintainer-diagnostics" => vec!["effect:session-logging"],
+            _ => vec!["task"],
+        }
     };
-    json!({"source":source, "field":field, "owner":owner,
+    let mut result = json!({"source":source, "field":field, "owner":owner,
         "value_revision":digest(value).expect("JSON value hashes"),
-        "affects":affects, "reason":"current-control-requires-native-owner"})
+        "affects":affects, "reason":"current-control-requires-native-owner"});
+    if field == "workspace.improvement_latitude"
+        || field.starts_with("workflow_obligations.")
+        || matches!(
+            field,
+            "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
+        )
+    {
+        result["value"] = value.clone();
+    }
+    result
 }
 
 /// Explicit repo enablement gates availability, never task relevance.
@@ -199,6 +265,14 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
             }
         }
     }
+    let payload = crate::native_payload::view(target, &shared["payload"])?;
+    blockers.extend(
+        payload["blockers"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .cloned(),
+    );
     let assignment_source = crate::native_assignment_policy::load(target);
     let mut assignment_policy = Value::Null;
     match assignment_source {
@@ -282,7 +356,23 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 | "delegation.manual_transport_policy"
                         ));
                 if !consumed && present(value) {
-                    residuals.push(residual(source, &field, value));
+                    if source == SHARED
+                        && matches!(
+                            field.as_str(),
+                            "payload.policy"
+                                | "payload.target_release"
+                                | "payload.minimum_capabilities"
+                                | "payload.dogfood_latest"
+                        )
+                    {
+                        continue;
+                    }
+                    residuals.push(residual(
+                        source,
+                        &field,
+                        value,
+                        if source == SHARED { &shared } else { &local },
+                    ));
                 }
             }
         }
@@ -327,7 +417,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
             .cloned(),
     );
     let revision = digest(
-        &json!({"sources":sources,"residuals":residuals,"artifact_profile":artifact_profile}),
+        &json!({"sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
     )?;
     // Restriction targets come only from the owner mappings above, never from
     // config-authored effect names. A ceiling grants no operation, effect or claim.
@@ -347,7 +437,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     capability_contract["revision"] = json!(digest(&capability_contract)?);
     Ok(
         json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
-        "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"enabled":enabled,"cli_invoke":cli_invoke,
+        "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"system_intent":shared["system_intent"],
         "assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),

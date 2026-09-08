@@ -12,8 +12,8 @@
   "additionalProperties": false,
   "properties": {
     "update_provenance": {
-      "type":"object", "description":"Latest native update producer only; immutable common attempts retain preceding material without nesting prior documents.",
-      "properties":{"kind":{"const":"agentic-planning/update-provenance/v1","description":"Native material update provenance."},"invocation_revision":{"type":"string","description":"Exact retained update invocation digest."},"custody":{"type":"object","description":"Common immutable attempt and prepared commit references."},"outcome":{"type":"object","description":"Exact planned bounded outcome validated against the retained invocation."}},
+      "type":"object", "description":"Native update observation only; Planning validates current material and local producer receipts. Schema validity does not confer mutation custody.",
+      "properties":{"kind":{"enum":["agentic-planning/update-provenance/v1","agentic-planning/update-provenance/v2"],"description":"Native material update provenance."},"invocation_revision":{"type":"string","description":"Exact retained update invocation digest."},"custody":{"type":"object","description":"Common immutable attempt and prepared commit references."},"outcome":{"type":"object","description":"Exact planned bounded outcome validated against the retained invocation."}},
       "required":["kind","invocation_revision","custody","outcome"],"additionalProperties":false
     },
     "creation_provenance": {

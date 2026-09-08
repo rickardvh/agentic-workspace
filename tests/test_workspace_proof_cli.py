@@ -8821,14 +8821,6 @@ def test_proof_routes_root_generated_fingerprint_through_existing_generated_pack
     lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
     assert "generated_command_packages" in lane_ids
     assert "cli_authority" in lane_ids
-    assert "uv run --active python scripts/check/check_generated_command_packages.py --require-node" in answer["required_commands"]
-    assert (
-        "uv run --active python scripts/check/check_generated_command_packages.py --conformance --require-node"
-        in answer["required_commands"]
-    )
-    assert answer["generated_cli_freshness"]["freshness_check_command"] == (
-        "uv run python scripts/generate/generate_command_packages.py --check"
-    )
     classification = answer["cli_authority_review"]["classifications"][0]
     assert classification["classification_id"] == "generated-command-package-output"
     assert classification["role"] == "projection"

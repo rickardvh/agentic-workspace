@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Preserve native configuration force, verify installed payload bytes, retain portable Planning update provenance, and use the source-built native repository path."
+issues = [2613, 2767, 2970, 3077, 2909]

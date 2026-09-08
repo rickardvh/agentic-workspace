@@ -102,12 +102,15 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
         "workspace.advanced_features",
         "workflow_obligations.commit_after_proof",
         "workflow_obligations.system_intent_refresh",
+        "cli_compatibility.enforcement",
+        "cli_compatibility.source_classes",
+        "cli_compatibility.target_relations",
+        "cli_compatibility.required_resources",
+        "cli_compatibility.resolution_policy",
     }
     blockers = workspace_blockers(result)
     for field in [
         "workspace.improvement_latitude",
-        "payload.policy",
-        "cli_compatibility.required_resources",
         "workflow_obligations.adapter_surface_refresh",
         "workflow_obligations.dogfooding_lane_closeout",
     ]:
@@ -116,7 +119,14 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
         blocker["code"] == "local-command-safety-ceiling" and blocker["affects"] == ["effect:execute-command"] for blocker in blockers
     )
     assert any(blocker["code"] == "local-human-review-required" and blocker["affects"] == ["claim:pr-complete"] for blocker in blockers)
-    assert len(blockers) == len(config["residuals"]) - 4 + 2
+    assert any(blocker["code"] == "native-payload-target-unproven" and blocker["affects"] == ["task"] for blocker in blockers)
+    assert any(
+        blocker["code"].endswith(":workspace.improvement_latitude") and blocker["affects"] == ["effect:initiative"] for blocker in blockers
+    )
+    for field in ("adapter_surface_refresh", "dogfooding_lane_closeout"):
+        boundary = next(blocker for blocker in blockers if blocker["code"].endswith(":" + "workflow_obligations." + field))
+        assert "task" not in boundary["affects"] and "claim:complete" in boundary["affects"]
+    assert len(blockers) == len(config["residuals"]) - len(advisory) + 3
     assert (source.read_bytes(), local.read_bytes()) == before
     assert not (tmp_path / ".agentic-workspace/local").exists()
 

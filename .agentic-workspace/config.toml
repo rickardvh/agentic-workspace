@@ -20,7 +20,7 @@ advanced_features = ["review_artifacts", "external_adapters"]
 # installation output.
 # --frozen/--no-sync prevents a mismatched active environment from being retargeted
 # before the launcher can verify its editable distribution origins.
-cli_invoke = "uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py"
+cli_invoke = "./target/debug/agentic-workspace"
 
 [assurance]
 # Repository-owner admission of binding checks/protect in this exact scoped
