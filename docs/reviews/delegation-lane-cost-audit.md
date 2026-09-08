@@ -373,6 +373,21 @@ Avoidable implementation-agent mistakes were an initially incomplete schema-vali
 
 Integration briefly retained conflict markers in an unpublished commit after an unqualified Python command was unavailable and the shell continued. A first merge-repair expression also consumed trailing text; JSON validation caught it. The implementation agent restored complete sources, corrected the merge and amended that unpublished commit before publication. This is avoidable implementation-agent command sequencing waste; no product or target-quality inference follows.
 
+### Material lifetime correction from integrated CI
+
+Linux CI on the native Planning update stack exposed a real Verification request
+lifetime regression: changing Planning's returned/integration-pending frontier
+invalidated an otherwise exact semantic request. The same failure reproduced
+locally. Assurance had hashed an entire Planning subject and physical owner
+context rather than the material identity and applicability facts it consumes.
+The correction recomputes that small semantic input; no memoisation is needed.
+Four native/Python/TypeScript/JSON creation-update-reconciliation cases passed in
+21.56 seconds, preserving requests across frontier updates and rejecting changed
+scope. The original failing Rust case passed. No proof or task completion is
+inferred from preserved request currentness; no provider calls were made.
+
+The integrated Rust boundary also caught an obsolete fixture expecting consumed transport authority to remain unsupported. Its replacement checks the actual Assignment policy and retained safety ceiling: automatic transport with safety false still forbids execution. The initial boundary had89 passes, one stale fixture failure and3 subprocess helpers ignored.
+
 ### Current policy precedence conformance
 
 Linux runtime CI on the comparative-assignment stack passed154 shared-core tests and found one old fixture expecting a deprecated manual-disabled alias to override canonical automatic transport authority. The fixture now verifies canonical precedence and retains a separate negative without canonical authority, plus the independent unsafe automatic-command ceiling. The CI failure remains recorded; this changes no product behavior or provider evidence.
