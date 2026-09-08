@@ -145,6 +145,9 @@ def _extract_tarball(tarball: Path, destination: Path) -> None:
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(source.read())
+            # Native payloads need their archived execute bits on Unix. Never
+            # restore setuid/setgid/sticky metadata from a package archive.
+            target.chmod(member.mode & 0o777)
 
 
 def _run_packed_conformance(*, artifact_dir: Path, receipt_out: Path | None, execution_context: str = "local") -> int:
