@@ -188,15 +188,29 @@ pub(crate) fn artifact_profile(target: &Path, profile: &Value) -> Result<Value, 
     }
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
-    let sources: Vec<Value> = if profile == "gemini" {
-        ["implementation_plan.md", "task.md", "walkthrough.md"]
-            .iter()
-            .map(|reference| crate::native_intent::observation(&root, reference))
-            .filter(|source| source["status"] != "missing")
-            .collect()
-    } else {
-        vec![]
-    };
+    let declaration: Value = serde_json::from_str(include_str!(
+        "../../../src/agentic_workspace/contracts/workflow_artifact_profiles.json"
+    ))
+    .map_err(|e| CoreError::new(e.to_string()))?;
+    let selected = declaration["profiles"]
+        .as_array()
+        .and_then(|profiles| profiles.iter().find(|item| item["profile"] == *profile))
+        .ok_or_else(|| {
+            CoreError::new("selected workflow artifact profile has no canonical declaration")
+        })?;
+    let artifacts = selected["native_artifacts"]
+        .as_array()
+        .ok_or_else(|| CoreError::new("canonical artifact profile is missing native_artifacts"))?;
+    let mut sources = vec![];
+    for reference in artifacts {
+        let reference = reference
+            .as_str()
+            .ok_or_else(|| CoreError::new("canonical native artifact reference must be text"))?;
+        let source = crate::native_intent::observation(&root, reference);
+        if source["status"] != "missing" {
+            sources.push(source);
+        }
+    }
     let blockers = if sources.is_empty() {
         vec![]
     } else {
@@ -209,7 +223,7 @@ pub(crate) fn artifact_profile(target: &Path, profile: &Value) -> Result<Value, 
     Ok(json!({"status":"current-owner-method","profile":profile,
         "canonical_owner":"planning","canonical_operation":"planning.reconcile",
         "source_rule":"Bounded repository-owned Planning state remains authoritative; local owner selection is not a cross-agent source of truth.",
-        "native_artifacts":if profile=="gemini"{"optional-runtime-scratchpads"}else{"not-relied-on"},
+        "native_artifacts":if artifacts.is_empty(){"not-relied-on"}else{"optional-runtime-scratchpads"},
         "handoff_rule":"Retain durable execution facts in the current Planning owner before handoff, review or session end; do not reconstruct retired aggregate record forests.",
         "sources":sources,"blockers":blockers,"transfer_status":if blockers.is_empty(){"not-required"}else{"unresolved-owner-update"},
         "authority_boundary":"Operational method only; profile selection, artifact recognition and Planning status confer no custody, proof or acceptance."}))
