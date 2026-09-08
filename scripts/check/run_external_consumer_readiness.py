@@ -16,7 +16,7 @@ from typing import Any, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests/fixtures/external_consumer"
-REQUIRED_OPERATIONS = ("start", "planning.create", "planning.update", "planning.reconcile", "configuration.write")
+REQUIRED_OPERATIONS = ("start", "planning.create", "planning.update", "planning.reconcile", "configuration.write", "proof.report")
 
 
 class ReadinessCheckError(RuntimeError):
@@ -285,6 +285,54 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     }
 
 
+def _verification_case(call: Any, target: Path) -> dict[str, str]:
+    """Positive replacement for the retired proof CLI: exact native invoke."""
+    target.mkdir(parents=True)
+    source = target / "a.txt"
+    source.write_text("current source")
+    command = "Add-Content -Path count.txt -Value executed" if os.name == "nt" else "echo executed >> count.txt"
+    manifest = target / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols.check]\napplies_to_paths=["a.txt"]\n[proof_routes.check]\nprotocol_refs=["check"]\ncommands=['
+        + json.dumps(command)
+        + "]\n"
+    )
+    context = {"target": str(target), "task": "Check the current source", "changed": ["a.txt"]}
+
+    def start(request=None):
+        return _ok(call({"action": "start", "context": {**context, **({"request": [request]} if request else {})}}), "Verification start")
+
+    request = start()["verification"]["execution_requests"][0]
+    action = start(request)["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "proof.report"
+    invocation = {"action": "invoke", "context": {**context, "invocation": action}}
+    value = _ok(call(invocation), "native proof execution")["value"]
+    assert value["process"]["status"] == "passed"
+    assert value["publication"]["status"] == "published"
+    assert value["claim_boundary"]["completion_claim_allowed"] is False
+    assert _ok(call(invocation), "idempotent proof recovery")["value"] == value
+    assert (target / "count.txt").read_text().splitlines() == ["executed"]
+    claim = start()["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [value["publication"]["reference"]]
+    evidence = start(claim)["verification"]["evidence"][0]
+    assert evidence["publication_admission"]["status"] == "admitted"
+    assert evidence["evidence_freshness"] == "reusable"
+    assert evidence["task_judgment"]["current_judgment_count"] == 0
+    source.write_text("material change")
+    before = _snapshot(target)
+    assert start(claim)["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
+    assert call(invocation)["status"] == "error"
+    assert _snapshot(target) == before
+    return {
+        "exact_command_publication": "passed",
+        "idempotent_recovery": "passed",
+        "current_evidence": "admitted",
+        "changed_source": "rejected",
+        "completion_authority": "not-granted",
+    }
+
+
 def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
     """Faithful artifact-byte fixtures; no claim of a native payload installer."""
     target.mkdir(parents=True)
@@ -404,6 +452,7 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
                 "lifecycle": lifecycle,
                 "configuration": _configuration_cases(call, temp_root / (language + "-config")),
                 "payload": _payload_cases(call, temp_root / (language + "-payload"), wheel),
+                "verification": _verification_case(call, temp_root / (language + "-proof")),
             }
             targets.append(target)
         retained = {target: _snapshot(target) for target in targets}

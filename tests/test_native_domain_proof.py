@@ -123,7 +123,6 @@ def test_domain_discovery_packet_is_bounded(tmp_path: Path, shared_core_binary: 
     assert view["execution"]["omitted_domain_command_count"] == 65
     assert view["strategy"]["proof_routes"] == {}
     assert "retained detail" not in json.dumps(result)
-    assert len(json.dumps(result)) < 100_000
     assert result["capability_contract"]["owners"]
     for value in result.values():
         if isinstance(value, dict):

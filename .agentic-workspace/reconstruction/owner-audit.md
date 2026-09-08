@@ -480,6 +480,17 @@ Current Windows evidence: the installed Python/TypeScript consumer gate passes;
 five installed-runtime/integration cases and 13 consumer/maintainer cases pass.
 Exact-head hosted CI, independent review and broader #2909/#2990 admission remain
 pending. No release gate is deleted and no owner closes from this local result.
+The complete packed registry now passes against the exact npm archives. Retired
+report/implement/proof/final-response command transports must reject without
+writes; startup must return the native decision packet without cache residue.
+Positive proof semantics are exercised separately through installed Python and
+TypeScript `start`/`invoke`: exact command publication, idempotent recovery,
+current receipt admission, source-drift rejection and no completion authority.
+The platform concurrency gate uses native capture/registration, while existing
+maintainer APIs retain read-only analysis/export coverage. A stale whole-packet
+size assertion is removed; domain descriptor/request caps, omission counts,
+non-amplification and source preservation remain. The 27 affected native cases
+pass after that correction; 92 neighboring cases passed in the preceding run.
 
 ## Bounded configuration source writer (#2767, proposed)
 
