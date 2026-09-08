@@ -24,3 +24,72 @@ owner reentry; the status grants neither task completion nor Verification.
 Closeout remains active, and unknown lifecycle values fail closed. Explicit
 selection of another live owner continues to require native selector custody;
 historical selectors gain no transfer authority from being closed.
+
+Native-created owners expose `planning/update/v1` through `planning.update_requests`.
+The caller supplies the canonical material and frontier fields; Rust preserves
+identity, path and creation custody and returns an exact `planning.update`
+invocation. Historical Plans without native creation custody remain read-only.
+The update shares Planning's existing lock and preserves the selector. A later
+current continuation reconciles the new source. Material changes stale dependent
+proof, while frontier-only changes preserve material identity. Reopening a closed
+or blocked owner requires explicit caller-authored frontier inputs and grants no
+proof or task completion.
+
+Only the latest update provenance is carried by the Plan; common immutable
+attempts retain the preceding invocations. Unknown bytes are preserved. A process
+exit after common admission but before the Plan retains its postimage leaves the
+original source intact and the attempt uncertain: neither an existing attempt
+filename nor retry grants custody. A process exit after the exact postimage is
+retained permits fresh `start` to return `planning.pending_update.invocation`;
+`invoke` still validates current task, capability and restrictions before it
+finishes the prepared commit. This is process-interruption evidence, not a
+power-loss durability claim or complete automatic recovery of the initial gap.
+
+Retained Python record, deletion and rollback paths and TypeScript Plan overwrite
+paths refuse native provenance carriers and route back to this owner. The marker
+is a restriction only; it cannot acquire custody. Native operations share the
+existing Planning lock and recheck exact bytes; arbitrary external editors are
+not participants in that cooperative protocol.
+
+The original invocation keeps its exact task identity, including wording and
+changed paths. A fresh caller with different wording can submit the returned
+`planning.update_recovery_requests` entry together with the existing current
+`continue-selected` request. This selects `planning.update-recover`, a new
+current re-entry action bound to the exact retained postimage, effect and
+selected owner. It cannot also change selection, admit historical custody or
+substitute the old task identity. Stale source, capability, continuation and
+unrelated work are rejected.
+
+Recovery has its own common admission and result. Under the existing Planning
+lock it finalizes only the original prepared outcome, returning original
+outcome/custody separately from its own. It writes no material Plan bytes and
+grants neither proof nor terminality. Interruption before its own result remains
+common attempt uncertainty; an independently observable committed original
+outcome does not fabricate completion of the re-entry attempt. No filename scan
+or additional recovery ledger supplies missing custody. The earlier original
+admission-before-postimage uncertainty remains unchanged.
+
+The Rust process test terminates the actual update writer after publication and
+recovers through fresh reworded current continuation. Four public consumers
+also exercise genuine producer bytes with the result deliberately withheld;
+that deterministic fixture is not another process-interruption observation.
+
+Current creation and update requests also accept the existing optional canonical
+`adaptive_assurance`, `risk_registry_refs` and `invariant_refs` declarations.
+Omitting them creates no defaults; omitting them from an update preserves the
+current owner's value. Explicit empty lists mean known empty, while absent
+fields remain unknown. Invalid declarations preserve the source and fail closed.
+The Planning owner retains these exact declarations in its existing material
+proof state. A change therefore stales dependent subject-bound proof even when
+scope and frontier stay unchanged. Verification applicability consumes only the
+declared profiles and exact risk/invariant references, never prose, successful
+process exits or Planning completion. These declarations grant no evidence.
+Verification strategy selects those same current profile IDs as Planning-owned
+requirements and exposes the configured command obligations. An unavailable
+profile remains an exact strategy gap. An explicit empty profile list removes
+no independently binding requirement and grants no proof or waiver.
+
+Strategy regression negatives inspect the composed public decision's pending
+and ready operations. Two inherited assertions previously read the removed
+private `verification.contribution`; their replacement preserves the stale-work
+and disallowed-command no-operation invariants across all four consumers.

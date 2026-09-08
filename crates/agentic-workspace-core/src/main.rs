@@ -9,13 +9,26 @@ fn main() {
         Ok(value) => value,
         Err(error) => fail("invalid-json", &error.to_string()),
     };
+    let started = std::time::Instant::now();
     let result = if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("session_logging_policy"))
+    {
+        agentic_workspace_core::maintainer_logging::policy(
+            request["session_logging_policy"].clone(),
+        )
+    } else if request
         .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("assurance_applicability"))
     {
         agentic_workspace_core::assurance_applicability::view(
             request["assurance_applicability"].clone(),
         )
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("assignment_packet"))
+    {
+        agentic_workspace_core::assignment_packet::view(request["assignment_packet"].clone())
     } else if request
         .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("native_route_discovery"))
@@ -96,6 +109,24 @@ fn main() {
         agentic_workspace_core::assignment::attribute_outcome(
             request["attribute_assignment_outcome"].clone(),
         )
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("assignment_policy"))
+    {
+        agentic_workspace_core::assignment_policy::resolve(&request["assignment_policy"])
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("local_source_overlay"))
+    {
+        Ok(agentic_workspace_core::assignment_policy::merge(
+            &request["local_source_overlay"]["base"],
+            &request["local_source_overlay"]["override"],
+        ))
+    } else if request
+        .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("transport_sources"))
+    {
+        agentic_workspace_core::transport_source::decode_sources(&request["transport_sources"])
     } else if request
         .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("execution_configurations"))
@@ -186,8 +217,9 @@ fn main() {
     {
         agentic_workspace_core::continuity::normalize(request["normalize_decision_record"].clone())
     } else {
-        agentic_workspace_core::compile_value(request)
+        agentic_workspace_core::compile_value(request.clone())
     };
+    agentic_workspace_core::maintainer_logging::capture(&request, &result, started.elapsed());
     match result {
         Ok(decision) => println!(
             "{}",

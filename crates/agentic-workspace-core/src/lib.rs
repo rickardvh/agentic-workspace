@@ -1,4 +1,5 @@
 pub mod assignment;
+pub mod assignment_packet;
 pub mod assurance_applicability;
 pub mod attempt;
 pub mod attempt_store;
@@ -7,12 +8,15 @@ pub mod decision_source;
 pub mod direct_task;
 pub mod instruction_applicability;
 pub mod instruction_source;
+pub mod maintainer_logging;
 mod native_config;
+pub(crate) mod native_handoff;
 mod native_instructions;
 mod native_intent;
 mod native_memory;
 mod native_planning;
 mod native_planning_create;
+mod native_planning_update;
 mod native_proof;
 pub mod native_public;
 mod native_requirements;
@@ -2183,3 +2187,10 @@ pub mod runtime_compatibility;
 pub(crate) mod proof_publication;
 
 pub(crate) mod verification_strategy;
+
+pub(crate) mod native_execution;
+pub mod transport_source;
+
+pub mod assignment_policy;
+pub(crate) mod native_assignment;
+pub(crate) mod native_assignment_policy;

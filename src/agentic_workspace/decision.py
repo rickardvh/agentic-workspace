@@ -171,6 +171,19 @@ def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"replace_assignment": context})
 
 
+def assignment_policy(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assignment_policy": context})
+
+
+def local_source_overlay(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"local_source_overlay": {"base": base, "override": override}})
+
+
+def transport_sources(profiles: Mapping[str, Any]) -> dict[str, Any]:
+    """Decode declarations only; no executable or provider capability authority."""
+    return _request({"transport_sources": profiles})
+
+
 def execution_configurations(context: Mapping[str, Any]) -> dict[str, Any]:
     """Trusted adapter facts, shared eligibility and revision-bound agent choice."""
     return _request({"execution_configurations": context})
@@ -239,3 +252,11 @@ def runtime_compatibility(context: Mapping[str, Any]) -> dict[str, Any]:
 
 def review_authentication(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"review_authentication": context})
+
+
+def session_logging_policy(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"session_logging_policy": context})
+
+
+def assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assignment_packet": context})

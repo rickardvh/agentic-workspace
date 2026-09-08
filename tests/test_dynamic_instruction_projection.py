@@ -320,7 +320,7 @@ def test_dynamic_instruction_scenario(scenario: dict[str, Any], tmp_path: Path, 
     assert actual_calls <= scenario["burden"]["max_public_or_owner_calls"]
 
 
-def test_generic_operating_loop_reaches_terminal_state_without_stale_continuation(tmp_path: Path, capsys) -> None:
+def test_generic_operating_loop_retains_unresolved_scope_after_real_execution(tmp_path: Path, capsys) -> None:
     target = _public_target(tmp_path, capsys)
     assert cli.main(["start", "--target", str(target), "--select", "installed_state_compatibility", "--format", "json"]) == 0
     compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
@@ -384,32 +384,15 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
     assert start_route["selected_owner_identity"] == implement_route["selected_owner_identity"]
     selected_proof_command = phases["proof"]["required_commands"][0]
     assert selected_proof_command == "uv run pytest tests/test_bounded.py -q"
-    subprocess.run(selected_proof_command, cwd=target, check=True, shell=True)
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--target",
-                str(target),
-                "--changed",
-                "src/bounded.py",
-                "tests/test_bounded.py",
-                "--record-receipt",
-                "--receipt-command",
-                selected_proof_command,
-                "--receipt-result",
-                "passed",
-                "--receipt-plan",
-                "generic-loop",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    recorded = json.loads(capsys.readouterr().out)["receipt"]
+    assert cli.main(["proof", *common, "--execute-selected"]) == 0
+    executed = json.loads(capsys.readouterr().out)
+    assert executed["status"] == "completed", executed
+    assert executed["coverage"]["passed_count"] == len(phases["proof"]["required_commands"])
+    # Use the real executor's local evidence, not an interoperability assertion.
+    recorded = json.loads((target / ".agentic-workspace/local/proof-receipts/last.json").read_text(encoding="utf-8"))
+    assert recorded.get("task_claim_judgment") is None
     assert recorded["command"] == selected_proof_command
-    assert recorded["plan_id"] == "generic-loop"
+    assert recorded["plan_id"] == "", "execution does not invent caller-supplied Planning annotations"
     assert recorded["proof_subject"]["identity_complete"] is True
     assert [item["path"] for item in recorded["proof_subject"]["source_inputs"]] == ["src/bounded.py", "tests/test_bounded.py"]
 
@@ -422,6 +405,8 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
     handoff = json.loads(capsys.readouterr().out)
     assert handoff.get("kind") != "agentic-workspace/planning-handoff-proof-route-gate/v1"
 
+    plan_path = target / ".agentic-workspace/planning/execplans/generic-loop.plan.json"
+    before_closeout = plan_path.read_bytes()
     assert (
         cli.main(
             [
@@ -449,12 +434,17 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
         == 0
     )
     closeout = json.loads(capsys.readouterr().out)
-    assert closeout["outcome"] == "applied"
-    assert "proof receipt" in json.dumps(closeout).lower()
+    # Legacy new-plan scaffolds have no filled scope. The former caller-supplied
+    # receipt plan_id bypassed that gap; process success must not fill it.
+    # Native typed Planning creation has scope input; this legacy path does not.
+    assert closeout["outcome"] == "blocked", closeout
+    assert "receipt changed paths must include" in json.dumps(closeout)
+    assert plan_path.read_bytes() == before_closeout
 
     assert cli.main(["summary", "--target", str(target), "--select", "planning_record", "--format", "json"]) == 0
     summary = json.loads(capsys.readouterr().out)
-    assert summary["values"]["planning_record"]["status"] == "unavailable"
+    assert summary["values"]["planning_record"]["status"] != "unavailable"
+    assert "generic-loop" in json.dumps(summary["values"]["planning_record"])
 
     assert (
         cli.main(
@@ -473,6 +463,6 @@ def test_generic_operating_loop_reaches_terminal_state_without_stale_continuatio
         == 0
     )
     resumed = json.loads(capsys.readouterr().out)["values"]["active_state_summary"]
-    assert resumed["planning_status"] == "unavailable"
-    assert not resumed["active_execplan"]
-    assert "continuation_capsule" not in resumed
+    assert resumed["planning_status"] != "unavailable"
+    assert resumed["active_execplan"]
+    assert plan_path.read_bytes() == before_closeout, "unrelated work cannot retire unresolved owner custody"

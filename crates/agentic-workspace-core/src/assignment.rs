@@ -506,3 +506,126 @@ pub fn admit(value: Value) -> Result<Value, CoreError> {
         json!({"status":"current","packet":packet,"implementation_allowed":false,"silent_local_fallback_allowed":false}),
     )
 }
+
+/// Admit one current acting-orchestrator comparison after owner feasibility.
+/// The judgment cannot create capability facts or erase unresolved alternatives.
+pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
+    let revision = hash(
+        &json!({"work":input["work"],"policy":input["policy"],"requirements":input["requirements"],"execution":input["execution"]}),
+    );
+    let execution = &input["execution"];
+    let rows = execution["configurations"]["candidates"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let mut alternatives = Vec::new();
+    for row in &rows {
+        if row["eligible"] == true {
+            alternatives.push(json!({"id":row["configuration"]["id"],"target":row["configuration"]["target"],"status":"eligible-configuration"}));
+        }
+    }
+    let mut unresolved = Vec::new();
+    for observation in execution["unavailable_adapters"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        unresolved.push(observation.clone());
+    }
+    for manual in execution["manual_targets"].as_array().into_iter().flatten() {
+        if manual["source_policy_eligible"] == true
+            && !alternatives.iter().any(|a| a["target"] == manual["target"])
+        {
+            unresolved.push(manual.clone());
+        }
+    }
+    for item in &unresolved {
+        let id = format!(
+            "unresolved-target:{}",
+            item["target"].as_str().unwrap_or("unknown")
+        );
+        if !alternatives.iter().any(|a| a["id"] == id) {
+            alternatives.push(json!({"id":id,"target":item["target"],"status":"unresolved-target","gap":"current-execution-or-handoff-owner-required"}));
+        }
+    }
+    let judgment = &input["judgment"];
+    if !judgment.is_null() {
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
+        ))
+        .expect("schema");
+        let mut shape = schema["$defs"]["assignment_comparative_judgment"].clone();
+        shape["$schema"] = schema["$schema"].clone();
+        crate::schema_validator(&shape, "assignment comparative judgment")?
+            .validate(judgment)
+            .map_err(|e| CoreError::new(e.to_string()))?;
+    }
+
+    let mut selected = Value::Null;
+    if !judgment.is_null() {
+        if judgment["revision"] != revision {
+            return Err(CoreError::new(
+                "assignment comparative judgment stale; current work, policy, requirements or candidates changed",
+            ));
+        }
+        selected = alternatives
+            .iter()
+            .find(|a| a["id"] == judgment["alternative"])
+            .cloned()
+            .ok_or_else(|| {
+                CoreError::new("assignment comparative alternative is not currently admitted")
+            })?;
+        if let Some(row) = rows
+            .iter()
+            .find(|r| r["configuration"]["id"] == selected["id"] && r["eligible"] == true)
+        {
+            selected["configuration"] = row["configuration"].clone();
+        }
+        let prior = &execution["configurations"]["selected"];
+        if !prior.is_null() && prior["id"] != selected["id"] {
+            return Err(CoreError::new(
+                "assignment comparison conflicts with current execution configuration choice",
+            ));
+        }
+        if judgment["reason"]
+            .as_str()
+            .is_none_or(|s| s.trim().is_empty())
+        {
+            return Err(CoreError::new("assignment comparative reason required"));
+        }
+    }
+    let binding = input["policy"]["binding"] == true;
+    let ready = input["requirements"]["status"] == "resolved"
+        && input["policy"]["enforceable"] == true
+        && execution["gaps"].as_array().is_some_and(Vec::is_empty)
+        && unresolved.is_empty();
+    // Comparative uncertainty is retained with the exact judgment, not a
+    // universal veto requiring false certainty. Unresolved capability, policy
+    // and task requirements above remain hard admission boundaries.
+    let local = selected["configuration"]["transport"] == "internal"
+        && selected["target"] == input["policy"]["current_profile"]["name"];
+    if !judgment.is_null() && input["policy"]["assignment_policy"] == "local-preferred" && !local {
+        return Err(CoreError::new(
+            "assignment comparison cannot override current local-preferred policy",
+        ));
+    }
+    let status = if judgment.is_null() {
+        "assessment-required"
+    } else if !ready || selected["status"] == "unresolved-target" {
+        "unresolved-assessment"
+    } else if local {
+        "assigned-current-target"
+    } else {
+        "assigned-nonlocal-handoff-required"
+    };
+    let assigned = matches!(
+        status,
+        "assigned-current-target" | "assigned-nonlocal-handoff-required"
+    );
+    Ok(
+        json!({"kind":"agentic-workspace/assignment-decision/v1","revision":revision,"status":status,"alternatives":alternatives,"unresolved_alternatives":unresolved,
+        "selected":selected,"judgment":judgment,"binding":binding,"local_assignment_satisfied":assigned&&local,
+        "assignment_identity":if assigned{json!({"work":input["work"],"requirements_revision":input["requirements"]["revision"],"policy_revision":input["policy"]["revision"],"configuration_revision":execution["configurations"]["revision"],"assignment_decision_revision":hash(&json!({"assessment_revision":revision,"judgment":judgment,"selected":selected})),"selected":selected})}else{Value::Null},
+        "claim_boundary":"Current comparative judgment only; no dispatch, sealed handoff, evidence, completion or override authority."}),
+    )
+}

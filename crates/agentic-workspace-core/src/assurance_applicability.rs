@@ -170,14 +170,30 @@ pub(crate) fn native_input(
             row
         })
         .collect();
-    // Only the currently reconciled subject is available here. Missing richer
-    // owner fields remain unknown, not authoritative empty arrays.
+    // Consume exact facts already validated and preserved by Planning. Missing
+    // owner declarations remain unknown, never guessed from prose or evidence.
     let absent = if context["planning"]["status"] == "direct" {
         json!({"refs":[],"proof_profiles":[],"risk_refs":[],"invariant_refs":[]})
     } else {
         json!({})
     };
-    let facts = planning.map_or(absent, |subject| json!({"refs":[subject["id"]]}));
+    let facts = planning.map_or(absent, |subject| {
+        let proof = &subject["state"]["proof"];
+        let mut facts = json!({"refs":[subject["id"]]});
+        for (field, value) in [
+            (
+                "proof_profiles",
+                &proof["adaptive_assurance"]["proof_profiles"],
+            ),
+            ("risk_refs", &proof["risk_registry_refs"]),
+            ("invariant_refs", &proof["invariant_refs"]),
+        ] {
+            if !value.is_null() {
+                facts[field] = value.clone();
+            }
+        }
+        facts
+    });
     // Applicability consumes material identity and these projected facts, not
     // an owner's attempt/frontier or physical source revision. Recompute the
     // small semantic input instead of expiring judgment on unrelated state.

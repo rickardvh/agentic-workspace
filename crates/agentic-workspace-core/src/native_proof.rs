@@ -295,7 +295,7 @@ pub(crate) fn freshness(
         );
         if comparison["status"] == "reusable" {
             return Ok(
-                json!({"status":if current["gaps"].as_array().is_some_and(Vec::is_empty) {"reusable"} else {"unproven"},"strategy_coverage":"selected-command-covered","comparison":comparison,
+                json!({"status":if current["gaps"].as_array().is_some_and(Vec::is_empty) {"reusable"} else {"unproven"},"strategy_coverage":"selected-command-covered","command_coverage":choice,"comparison":comparison,
                 "environment_scope":"producer-and-declared-shell","remaining_gaps":current["gaps"],"nested_tool_runtime":"unobserved"}),
             );
         }

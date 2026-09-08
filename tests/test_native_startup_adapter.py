@@ -13,6 +13,10 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def startup_blockers(packet: dict) -> list:
+    return [row for row in packet["decision_packet"]["blockers"] if row["owner"] == "startup-adapter"]
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_configured_startup_text_is_exact_lazy_and_not_custody(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
@@ -30,12 +34,13 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     assert "Human-owned" not in json.dumps(owner)
     assert len(json.dumps(owner)) < 6500
     assert not any(r["field"] == "workspace.agent_instructions_file" for r in result["configuration"]["residuals"])
-    assert {"effect:implementation", "claim:complete"} <= set(owner["contribution"]["blockers"][0]["affects"])
+    assert {"effect:implementation", "claim:complete"} <= set(startup_blockers(result)[0]["affects"])
     request = owner["requests"][0]
-    read = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["startup_adapter"]
+    read_packet = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    read = read_packet["startup_adapter"]
     assert read["response"]["text"] == original.decode("utf-8")
     assert read["status"] == "source-context-delivered"
-    assert read["contribution"]["blockers"] == []
+    assert startup_blockers(read_packet) == []
     assert "no rule satisfaction, proof, acceptance or mutation custody" in read["response"]["authority_boundary"]
     assert source.read_bytes() == original
     assert not (tmp_path / ".agentic-workspace/local").exists()
@@ -71,12 +76,11 @@ def test_missing_configured_source_is_scoped_and_absent_selection_quiet(
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
     config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="docs/agent.md"\n')
-    missing = consume(surface, shared_core_binary, native_cli, context)["startup_adapter"]
+    missing_packet = consume(surface, shared_core_binary, native_cli, context)
+    missing = missing_packet["startup_adapter"]
     assert missing["source"]["status"] == "missing"
     assert missing["requests"] == []
-    assert {"effect:implementation", "claim:complete", "effect:write:docs/agent.md"} <= set(
-        missing["contribution"]["blockers"][0]["affects"]
-    )
+    assert {"effect:implementation", "claim:complete", "effect:write:docs/agent.md"} <= set(startup_blockers(missing_packet)[0]["affects"])
     assert not (tmp_path / "docs/agent.md").exists()
     config.write_text(config.read_text().replace("docs/agent.md", "../outside.md"))
     invalid = consume(surface, shared_core_binary, native_cli, context)["startup_adapter"]

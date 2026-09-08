@@ -30,6 +30,8 @@ Bounded worker-facing projection mechanically derived from canonical assignment 
 | `inputs` | object | yes |  | Required inputs and exact lazy context acquisition routes. |  |  |
 | `inputs.required` | array of string | yes |  | Inputs required before work proceeds. |  |  |
 | `inputs.read_first` | array of string | yes |  | Exact references or selectors the worker reads before requesting deeper context. |  |  |
+| `inputs.capsule` | array of object | no |  | Exact currently observed input bodies selected by the acting agent for this read-only assignment. |  |  |
+| `inputs.task_requirements` | object | no |  | Unchanged current task requirement owner projection; this grants no capability or evidence authority. |  |  |
 | `inputs.lazy_expansion_rule` | string | yes |  | Rule preventing construction or transmission of unrelated context. |  |  |
 | `proof` | object | yes |  | Proof burden reference and worker proof-authority ceiling. |  |  |
 | `proof.obligation_id` | string | yes |  | Task proof obligation identity. |  |  |

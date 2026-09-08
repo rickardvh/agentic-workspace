@@ -308,3 +308,136 @@ search. Fixture integration detected and restored two accidentally re-encoded
 UTF-8 passages before publication. These are implementation costs, not provider
 or target-quality evidence. No new supported-host provider worker was launched;
 all previously incomplete workers remain censored, and monetary cost is unknown.
+
+### Follow-up report and Planning fixture audit (2026-09-08)
+
+Two exact follow-ups reproduced one failure and one pass in 45.67 seconds.
+The dynamic operating-loop fixture now uses actual selected execution and
+passes in 17.62 seconds. It preserves projection reuse and current Planning
+custody, while closeout remains blocked: the legacy new-plan scaffold still
+contains placeholder scope, and its former caller-supplied receipt plan ID
+bypassed that scope check. Native typed Planning creation already accepts scope;
+this is a legacy adapter/re-entry gap under #2970/#2334, not missing native
+creation. No task judgment or terminal acceptance is fabricated.
+
+The route-health test legitimately executes candidate and validation commands
+during guarded apply. However, a bounded counterexample changed the validated
+source after apply and before reported retirement; the old positive assertions
+still passed (28.15 seconds), declaring the finding retired and the route current.
+The probe was removed after preserving its log. Apply history records bind
+configuration revision and path names but not the executed source contents or
+runtime proof subject; retirement reads that JSONL as evidence. This remains
+counterevidence under #2334/#2647 and producer custody under #3000/#3001.
+Adding a fresh fingerprint only when reporting would not repair it. A genuine
+fix needs current, producer-admitted apply execution evidence rather than a
+reported pass or file-shaped validation record. No parent closure follows.
+
+
+### Legacy repair retirement admission subtraction (2026-09-08)
+
+The stale-source counterexample above is corrected by declining reuse at the
+existing retirement boundary. Legacy apply execution remains observed, but a
+reported pass and raw apply/history files cannot establish a current verified
+repair. Both report admission and subsequent history consumption now retain a
+stronger-owner-required gap; forged history cannot restore the removed shortcut.
+The current strategy and actual candidate/validation execution remain visible,
+with affected handoff/closeout claims blocked until the apply owner supplies
+producer-admitted execution bound to current sources. No new proof store,
+constant-result native API, authority flag, or generic learning layer was added.
+Full native apply migration remains #2334/#2647/#3000/#3001 work, not completed
+acceptance. This is the #2981 stronger-owner disposition rather than unsupported
+reuse or blind re-execution of a potentially effectful apply.
+
+The four focused safety cases passed in 71.22 seconds. Adding the fresh
+TypeScript forged-history replay initially failed after 24.89 seconds because
+the implementation agent omitted a test import; that avoidable rerun cost is
+separate from product friction. The failure log is retained.
+The corrected fresh Python/TypeScript forged-history case passed in 26.58 seconds.
+
+Integration of repair-retirement subtraction passed four cases and found one obsolete diagnostic assertion (77.82s). The updated negative covers both reported pass and failure, preserving zero publication when apply producer/source authority is unproven.
+
+### Native Planning update integration
+
+The cumulative native Planning update and proof interaction lane passed 62 tests
+in 119.35 seconds. Updates preserve exact creation custody and distinguish
+material revision from frontier changes. Interrupted postimage publication can
+resume its exact retained invocation; reworded same-semantic recovery remains an
+explicit owner-reentry implementation gap. No real provider work, target-quality
+observation or monetary saving is inferred from this deterministic run.
+
+### Native maintainer diagnostics (#2995)
+
+Native start/invoke now emits bounded metadata into the existing registered logical stream when current local policy enables capture and explicit identity is available. Actual native CLI capture was discovered by the existing public analysis/export commands; no private-path recovery was required. Nineteen native cases plus the shared forwarder guard passed in 5.70 seconds. A five-pair local timing sample observed median disabled-source startup of 58.38 ms versus 48.21 ms with the explicit disable override (10.16 ms difference); this is host timing, not claimed universal overhead or savings. Native no-identity and explicit-disable paths skip diagnostic source/state reads.
+
+Avoidable implementation-agent mistakes were an initially incomplete schema-validator envelope (nine failures), then a misspelled existing analysis flag (`--origin-scope` instead of `--origin`, one failure); corrected focused reruns passed. No provider inference was used. Existing-registry registration of a new logical identity is still skipped because safe registration custody is unimplemented. Native interruption/rotation and release-artifact acceptance remain separate gaps; diagnostic omissions and transport success never grant task or proof acceptance.
+
+Integration briefly retained conflict markers in an unpublished commit after an unqualified Python command was unavailable and the shell continued. A first merge-repair expression also consumed trailing text; JSON validation caught it. The implementation agent restored complete sources, corrected the merge and amended that unpublished commit before publication. This is avoidable implementation-agent command sequencing waste; no product or target-quality inference follows.
+
+### Material lifetime correction from integrated CI
+
+Linux CI on the native Planning update stack exposed a real Verification request
+lifetime regression: changing Planning's returned/integration-pending frontier
+invalidated an otherwise exact semantic request. The same failure reproduced
+locally. Assurance had hashed an entire Planning subject and physical owner
+context rather than the material identity and applicability facts it consumes.
+The correction recomputes that small semantic input; no memoisation is needed.
+Four native/Python/TypeScript/JSON creation-update-reconciliation cases passed in
+21.56 seconds, preserving requests across frontier updates and rejecting changed
+scope. The original failing Rust case passed. No proof or task completion is
+inferred from preserved request currentness; no provider calls were made.
+
+The integrated Rust boundary also caught an obsolete fixture expecting consumed transport authority to remain unsupported. Its replacement checks the actual Assignment policy and retained safety ceiling: automatic transport with safety false still forbids execution. The initial boundary had89 passes, one stale fixture failure and3 subprocess helpers ignored.
+
+### Native public projection subtraction (#3059/#2981)
+
+The first serialized configured-checkout audit packet contained 193,827 compact UTF-8 bytes. Owner-local contributions and repeated assurance source bodies accounted for 35,499 removable bytes; applying only those final-projection omissions leaves 158,328 bytes. This is a captured-packet measurement, not a claim that all current checkout packets fit a universal size.
+
+A separate real source read with the frozen logging parent and this candidate used the same exact checkout and task: 178,254 bytes before, 144,856 after (33,398 bytes removed). Removing only the identified duplicate fields from the before packet made the two decoded packets exactly equal. Full requirement bodies remain available once by requirement ID; composed blockers, capability declarations, request envelopes and currentness are unchanged. No cache or new detail protocol was introduced, and no 100 KB bound was increased.
+
+The four-consumer applicability/request composition regression passed after correcting an existing stale-source fixture expectation. Its baseline independently failed because current capability admission rejects source drift earlier than the old expected unresolved reply; the updated negative also checks fresh unresolved recovery. Neither these context savings nor deterministic constructibility closes #3059 or #2981.
+
+
+The public-consumer audit found four existing fixture files reading removed internal contributions. Their assertions now inspect owner-filtered composed blockers/pending actions instead. All 42 affected startup, advisory, domain execution and Verification requirement cases passed in 73.35 seconds; no safety or packet-size bound changed.
+
+### Current comparative assignment integration
+
+The integrated assignment/policy/configuration group passed38 tests in30.65 seconds. Review found an overrestrictive empty-uncertainty gate that would require false certainty for an otherwise eligible bounded choice. The correction retains comparative uncertainty in exact assignment identity while preserving hard unresolved owner/capability boundaries and nonlocal handoff requirements. No provider work or target-quality observation was produced.
+
+### Native diagnostic registration custody (#2995/#3000/#3001)
+
+New logical identities can now register in a registry originally created with exact native publication custody. Current bytes are tied to common immutable attempt/commit evidence, and cooperating native writers serialize through an OS owner lock. The legacy Python writer refuses that native carrier; historical registries remain preserved and do not become owned from their shape. The existing public analysis/export path successfully discovered the second registered identity.
+
+Twenty-two native cases passed in 6.57 seconds, followed by seven focused concurrent-registration/legacy-policy cases in 6.25 seconds. A real child-process exit at prepublication and postpublication boundaries, for both initial and subsequent registration, proved censored non-retry versus exact commit recovery (two Rust tests, 0.36 seconds excluding build). An avoidable test-only dependency assumption initially referenced unavailable tempfile; the test now uses existing standard-library temporary-directory conventions. No provider work or task acceptance was involved. File custody carries confined local path identities outside the shareable event stream; arbitrary noncooperating external-writer compare-and-swap is not claimed.
+
+### Current policy precedence conformance
+
+Linux runtime CI on the comparative-assignment stack passed154 shared-core tests and found one old fixture expecting a deprecated manual-disabled alias to override canonical automatic transport authority. The fixture now verifies canonical precedence and retains a separate negative without canonical authority, plus the independent unsafe automatic-command ceiling. The CI failure remains recorded; this changes no product behavior or provider evidence.
+
+### Legacy producer shapes are not target quality (#2209/#2334/#3001/#2909)
+
+A bounded configuration-fixture run found two stale positives (two failed, two passed in 18.51 seconds). More importantly, an independently constructed receipt plus matching editable index, with no command or producer execution, was accepted as high-confidence `aw-proof` and made its target preferred. The same generic loader covered human-review, retry, handoff and closeout families without current authentication/publication/causal admission. That acceptance shortcut is now removed; retained records remain visible unproven and source bytes are preserved. Local-operator controls and native Verification admission remain distinct.
+
+Thirteen corrected cluster cases passed in 17.72 seconds. Seven additional cases passed in 3.78 seconds: retained-family normalization, causal attribution without invented publication, and a real bounded native command whose current reusable proof cannot calibrate an unrelated target. No provider inference, human acceptance or target-quality success was fabricated. Legacy publication custody and positive current lifecycle-to-target learning remain existing-owner implementation residuals.
+
+The final focused outcome/configuration and causal-owner selection passed 32 cases in 22.51 seconds (210 unrelated cases deselected), including existing local-operator retention/compaction controls.
+
+
+### Native read-only handoff integration
+
+The integrated read-only handoff, comparative assignment and execution-configuration group passed 45 tests in 63.05 seconds. Explicit input observation and completeness judgment precede export; an exact return remains an unproven observation. Shared Rust packet projection/sealing replaces duplicated Python/TypeScript helper semantics. The isolated staged npm packet-owner check also passed with an empty PATH, no Python and no checkout dependency.
+
+Fixture corrections addressed explicit UTF-8 subprocess decoding, a commandless-worker guard that must permit the exact shared semantic-core executable, and an invented manual-only policy value. These are implementation/test friction, not provider or target failures. No provider inference was launched. Synthetic returns establish packet and currentness behavior only; durable lifecycle, automatic dispatch, mutation attribution and Verification/Planning reconciliation remain unresolved. Earlier incomplete workers remain censored. Token and monetary savings are unknown.
+
+### Refreshed blocking-comment repair sweep
+
+The refreshed reviews required publication fixtures at #3109, material Verification request lifetime at #3117, configuration counterevidence disposition at #3121, and canonical transport conformance at #3124. Existing later corrections were moved to those owners; their feature descendants retain their original deltas. The absorbed #3134 has no remaining patch. #3116 and #3135 retain historical audit notes; #3125 retains the Planning-update-dependent four-surface regression. No provider inference was launched, and previously incomplete workers remain censored.
+
+Current-head proof exposed a Windows fixture collision: clock-only temporary publication paths allowed parallel tests to share custody and delete each other's files. A process-local atomic suffix fixes test isolation while retaining parallel recovery/lock negatives. The repaired #3117 Rust library run passed 87 cases with two helpers ignored; its public owner selection passed 36 cases after relocating the existing fail-closed source-drift assertion. The #3124 Rust run passed 90 cases with three helpers ignored, and its public policy/configuration group passed 154 cases.
+
+Full configuration proof first returned 210 passes and five failures in legacy receipt fixtures. Moving #3135's already-reviewed admission correction eliminated those shortcuts; the next run found two further obsolete assumptions among 220 passes. Those now preserve historical unadmitted human-review observations as censored, exercise arithmetic under an explicitly synthetic local-operator control, and retain every uncertainty reason. All 222 configuration cases then passed in 66.76 seconds; 13 native configuration cases passed in 9.39 seconds. The final integrated Verification/publication/configuration group passed 280 cases in 198.78 seconds. These are deterministic/public-consumer proofs, not lifecycle success, target quality, domain acceptance or first-stable admission.
+
+Avoidable implementation-agent overhead included starting a local restack before commit hooks finished (Git rejected the ref update; edits were preserved and no remote changed), and invoking source-development generated conformance without the required explicit shared-core binary selection (it correctly refused an unstaged npm native artifact). Both failed attempts remain recorded. Restacking uses forward-only parent integrations, preserves previous PR heads, and changes no protected candidate, master or salvage ref. Token and monetary costs are unknown; no savings are claimed.
+
+Generated TypeScript/process/static conformance passed with the explicit source-development core selection. An additional maintainer diagnostic was initially given an unsupported quiet flag; its strict rerun reported existing Planning inventory pressure, startup/generated guidance drift, and two runtime-routing warnings. It is not recorded as a green strict maintainer gate, and these unrelated retained owner surfaces were not rewritten during review repair.
+
+Hosted semver validation caught an avoidable placement mistake: the moved patch notes retained patch bumps inside minor-labeled owner PRs. Both notes now match their receiving minor layer, with no additional package behavior change. The PR path classification and every changed changeset are checked against the repository's release rule before republishing; superseded hosted runs are canceled within this repair scope only. GitHub managed stacks reject individual base retargeting, so the empty #3134 ancestry bridge remains in its existing grouping; no stack was merged or unstacked.

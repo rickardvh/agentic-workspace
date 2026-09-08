@@ -80,13 +80,28 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             input
                 .invocation
                 .as_ref()
-                .filter(|i| i["operation_id"] == "planning.create")
+                .filter(|i| {
+                    matches!(
+                        i["operation_id"].as_str(),
+                        Some("planning.create" | "planning.update-recover")
+                    )
+                })
                 .and_then(|i| i["arguments"].get("planning_request"))
                 .filter(|r| r.is_object())
         });
     let creation_request = requests
         .iter()
         .find(|r| r["owner"] == "planning" && r["request_kind"] == "planning/create/v1");
+    let update_request = requests.iter().find(|r| {
+        r["owner"] == "planning"
+            && matches!(
+                r["request_kind"].as_str(),
+                Some(
+                    crate::native_planning_update::KIND
+                        | crate::native_planning_update::RECOVER_KIND
+                )
+            )
+    });
     let verification_request = |kind: &str| {
         requests
             .iter()
@@ -180,7 +195,9 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             &instructions["capability_contract"],
         ],
     )?;
+    let decision_read_contract = decision_source::read_contract()?;
     let contract = combined_contract(&[
+        &decision_read_contract,
         &configuration["capability_contract"],
         &system_intent["capability_contract"],
         &startup_adapter["capability_contract"],
@@ -275,6 +292,46 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     } else {
         contributions.push(planning["contribution"].clone());
     }
+    let update = crate::native_planning_update::view(
+        target,
+        &work,
+        &contract,
+        &planning,
+        update_request,
+        input.invocation.as_ref().filter(|i| {
+            executing
+                && matches!(
+                    i["operation_id"].as_str(),
+                    Some("planning.update" | "planning.update-recover")
+                )
+        }),
+        planning_request,
+    )?;
+    planning["update_requests"] = update["requests"].clone();
+    planning["update_retained"] = update["retained"].clone();
+    planning["pending_update"] = update["pending"].clone();
+    planning["update_recovery_requests"] = update["recovery_requests"].clone();
+    if update["pending"].is_object() {
+        let owner = contributions
+            .iter_mut()
+            .find(|c| c["owner"] == "planning")
+            .unwrap();
+        owner["blockers"] = json!([{"code":"planning-update-pending","message":"The exact native update postimage is retained but its outcome remains uncertain. Resume only the returned invocation against current authority.","affects":["task"]}]);
+        owner["settled"] = json!(false);
+    }
+    if update["action"].is_object() {
+        let owner = contributions
+            .iter_mut()
+            .find(|c| c["owner"] == "planning")
+            .unwrap();
+        // The explicit exact owner update resolves only Planning's own reentry
+        // decision. Independent source/safety/Verification restrictions survive.
+        owner["actions"] = json!([update["action"]]);
+        owner["decisions"] = json!([]);
+        owner["blockers"] = json!([]);
+        owner["settled"] = json!(false);
+        owner["revision"] = json!(digest(&json!([owner["revision"], update["action"]]))?);
+    }
     let mut creation = crate::native_planning_create::view(
         target,
         &work,
@@ -362,7 +419,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         verification_probe
     };
     contributions.push(verification["contribution"].clone());
-    let requirements = native_requirements::view(
+    let mut requirements = native_requirements::view(
         target,
         &input.task,
         &input.changed,
@@ -370,11 +427,44 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         subject,
         &configuration,
         &verification,
-        request_for("assignment"),
+        requests.iter().find(|r| {
+            r["owner"] == "assignment"
+                && r["request_kind"] == "assignment/judge-task-requirements/v1"
+        }),
         verification_request("verification/requirements/v1"),
+        requests.iter().find(|r| {
+            r["owner"] == "assignment"
+                && r["request_kind"] == "assignment/select-execution-configuration/v1"
+        }),
+        requests
+            .iter()
+            .find(|r| r["request_kind"] == "assignment/judge-readonly-inputs/v1"),
         &contract,
     )?;
     contributions.push(startup_adapter["contribution"].clone());
+    let mut assignment = crate::native_assignment::view(
+        &work,
+        &configuration,
+        &requirements,
+        requests.iter().find(|r| {
+            r["owner"] == "assignment" && r["request_kind"] == "assignment/assess-best-fit/v1"
+        }),
+        &requests,
+        &contract,
+    )?;
+    contributions.push(assignment["contribution"].clone());
+    assignment.as_object_mut().unwrap().remove("contribution");
+    requirements["assignment"] = assignment;
+    let handoff = crate::native_handoff::view(
+        target,
+        &input.task,
+        &input.changed,
+        &work,
+        &requirements,
+        &requests,
+        &contract,
+    )?;
+    requirements["handoff"] = handoff;
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.push(instructions["contribution"].clone());
@@ -430,15 +520,34 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             .last_mut()
             .unwrap() = instructions["contribution"].clone();
     }
+    let decision_context = owner_input["decision_context"].clone();
     let decision = compile_value(owner_input)?;
+    let decision_sources = decision_source::public_read(
+        target,
+        &decision_context,
+        &decision,
+        &work,
+        &contract,
+        request_for("decision-continuity"),
+    )?;
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
-    let mut public = json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
     // Requests bind the composed contract above. Owner-local fragments remain
     // internal composition inputs, not additional public authorities.
     for owner in public.as_object_mut().unwrap().values_mut() {
         if let Some(object) = owner.as_object_mut() {
             object.remove("capability_contract");
+            object.remove("contribution");
+        }
+    }
+    // Keep the full current source requirement once, in applicability detail.
+    // Evidence gaps identify that same row without copying its source body.
+    if let Some(gaps) = public["verification"]["assurance_owner_gaps"].as_array_mut() {
+        for gap in gaps {
+            if let Some(object) = gap.as_object_mut() {
+                object.remove("source_requirement");
+            }
         }
     }
     Ok(public)
@@ -490,10 +599,28 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                 | "assignment"
                 | "system-intent"
                 | "startup-adapter"
+                | "decision-continuity"
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
-        let key = if matches!(owner, "verification" | "planning") {
+        if owner == "assignment"
+            && !matches!(
+                request["request_kind"].as_str(),
+                Some(
+                    "assignment/judge-task-requirements/v1"
+                        | "assignment/select-execution-configuration/v1"
+                        | "assignment/assess-best-fit/v1"
+                        | "assignment/judge-readonly-inputs/v1"
+                        | "assignment/export-readonly/v1"
+                        | "assignment/observe-readonly-return/v1"
+                )
+            )
+        {
+            return Err(CoreError::new(
+                "requested Assignment request kind is not available",
+            ));
+        }
+        let key = if matches!(owner, "verification" | "planning" | "assignment") {
             format!("{owner}:{}", request["request_kind"].as_str().unwrap())
         } else {
             owner.to_owned()
@@ -536,6 +663,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     if invocation["operation_id"] != "planning.reconcile"
         && invocation["operation_id"] != "proof.report"
         && invocation["operation_id"] != "planning.create"
+        && invocation["operation_id"] != "planning.update"
+        && invocation["operation_id"] != "planning.update-recover"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -544,6 +673,55 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "planning.update-recover" {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        let executed = crate::native_planning_update::recover(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            &current["planning"]["update_retained"],
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
+    }
+    if invocation["operation_id"] == "planning.update" {
+        let retained = &current["planning"]["update_retained"];
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation,"previous_invocation":retained.get("invocation")}),
+        )?;
+        let executed = crate::native_planning_update::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            retained,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation,"previous_invocation":fresh["planning"]["update_retained"].get("invocation")}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     if invocation["operation_id"] == "planning.create" {
         let committed = &current["planning"]["creation_committed_operation"];

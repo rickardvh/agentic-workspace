@@ -92,6 +92,9 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     .is_some()
     {
         body.as_object_mut().unwrap().remove("creation_provenance");
+        body.as_object_mut()
+            .unwrap()
+            .remove(crate::native_planning_update::PROVENANCE);
     }
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
@@ -108,7 +111,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         .ok_or_else(|| error("former Planning subject identity missing"))?;
     // These are this representation's fields, not a general migration mapping.
     // No judgmental text classification or completion inference is performed.
-    let material = json!({
+    let mut material = json!({
         "outcome": {"intent": body["intent"], "goals": body["goal"]},
         "canonical_core": body["canonical_core"],
         "scope": {"declared": body["scope"], "paths": body["touched_paths"], "owner_level": body["owner_level"], "selection": body["relationships"]["selection"]},
@@ -119,6 +122,21 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         "handoff": {"delegation": body["relationships"]["delegation"], "assignment": body["relationships"]["assignment"], "returned": body["relationships"]["returned"], "integration_pending": body["relationships"]["integration_pending"], "contracts": body["specialist_contracts"]},
         "residual": {"continuation": body["continuation"], "intent_continuity": body["intent_continuity"]}
     });
+    // Consume the representation's existing typed assurance declarations only.
+    // Absence is unknown, not an authoritative empty list. Keep their complete
+    // values material, including constraints outside applicability selectors.
+    let canonical = crate::native_planning_create::canonical_schema();
+    let properties: serde_json::Map<String, Value> = crate::native_planning_create::ASSURANCE
+        .iter()
+        .map(|key| ((*key).to_owned(), canonical["properties"][key].clone()))
+        .collect();
+    crate::schema_validator(&json!({"$schema":canonical["$schema"],"$defs":canonical["$defs"],"type":"object","properties":properties}), "Planning assurance source")?
+        .validate(&body).map_err(|e| error(format!("invalid Planning assurance declaration; preserve source: {e}")))?;
+    for key in crate::native_planning_create::ASSURANCE {
+        if let Some(value) = body.get(*key) {
+            material["proof"][*key] = value.clone();
+        }
+    }
     let known = [
         "kind",
         "id",
@@ -153,7 +171,9 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         .ok_or_else(|| error("former source must be an object"))?
         .keys()
     {
-        if known.contains(&key.as_str()) {
+        if known.contains(&key.as_str())
+            || crate::native_planning_create::ASSURANCE.contains(&key.as_str())
+        {
             continue;
         }
         if input.irrelevant_history && key == "drift_log" {

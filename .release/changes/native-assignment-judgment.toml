@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Admit current comparative native assignment judgments without losing binding manual or provider uncertainty."
+issues = [2210, 2767, 2817]

@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import os
+import shutil
 import sys
 import tomllib
 from contextlib import contextmanager
@@ -1290,7 +1291,8 @@ owner = "host-test-owner"
     assert not (tmp_path / ".agentic-workspace/local/proof-receipts/last.json").exists()
 
 
-def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
+@pytest.mark.parametrize("retirement_input", ["reported", "stale-source", "forged-history"])
+def test_proof_route_health_requires_admitted_retirement_after_observed_route_repair(tmp_path: Path, capsys, retirement_input: str) -> None:
     _write_installed_host_proof_target(tmp_path)
     assert not (tmp_path / "scripts" / "run_agentic_workspace.py").exists()
     _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
@@ -1533,36 +1535,55 @@ owner = "workspace-cli-runtime"
     assert closeout_transition_before["proof_route_transition_gate"]["blocked_finding_ids"]
 
     focused_command = apply_payload["apply_receipt"]["validation_commands"][0]
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/config.py",
-                "--record-receipt",
-                "--receipt-command",
-                focused_command,
-                "--receipt-result",
-                "passed",
-                "--receipt-repair-finding-id",
-                execution_finding["id"],
-                "--receipt-repair-authority-revision",
-                post_authority_revision,
-                "--receipt-repair-disposition",
-                "fixed",
-                "--receipt-repair-idempotency-key",
-                execution_finding["repair_operation"]["apply_contract"]["idempotency_key"],
-                "--receipt-claim-sufficiency",
-                "sufficient",
-                "--format",
-                "json",
-            ]
+    if retirement_input == "stale-source":
+        (tmp_path / "src/agentic_workspace/config.py").write_text("# changed after validation\n", encoding="utf-8")
+    # Apply really executed its candidate and validation set. A later report
+    # still cannot supply missing execution-source identity or producer custody.
+    with pytest.raises(SystemExit, match="2"):
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    "src/agentic_workspace/config.py",
+                    "--record-receipt",
+                    "--receipt-command",
+                    focused_command,
+                    "--receipt-result",
+                    "passed",
+                    "--receipt-repair-finding-id",
+                    execution_finding["id"],
+                    "--receipt-repair-authority-revision",
+                    post_authority_revision,
+                    "--receipt-repair-disposition",
+                    "fixed",
+                    "--receipt-repair-idempotency-key",
+                    execution_finding["repair_operation"]["apply_contract"]["idempotency_key"],
+                    "--receipt-claim-sufficiency",
+                    "sufficient",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
         )
-        == 0
-    )
-    capsys.readouterr()
+    assert "stronger-owner admission" in capsys.readouterr().err
+    if retirement_input == "forged-history":
+        history = tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl"
+        forged = json.loads(history.read_text(encoding="utf-8").splitlines()[-1])
+        forged["command"] = focused_command
+        forged["result"] = "passed"
+        forged["execution"]["claim_sufficiency"] = "sufficient"
+        forged["proof_route_repair"] = {
+            "finding_id": execution_finding["id"],
+            "disposition": "fixed",
+            "authority_revision": post_authority_revision,
+            "idempotency_key": execution_finding["repair_operation"]["apply_contract"]["idempotency_key"],
+        }
+        with history.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(forged) + "\n")
 
     assert (
         cli.main(
@@ -1583,50 +1604,61 @@ owner = "workspace-cli-runtime"
 
     values = json.loads(capsys.readouterr().out)["values"]
     route_health = values["proof_route_maintenance"]["route_health"]
-    assert route_health["status"] == "quiet"
-    assert route_health["findings"] == []
-    assert route_health["retired_finding_count"] == 1
-    assert route_health["retired_findings"][0]["finding_id"] == execution_finding["id"]
-    assert route_health["retired_findings"][0]["verified_authority_revision"]
-    assert values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "current"
-
-    assert (
-        cli.main(
+    assert route_health["status"] == "attention"
+    assert route_health["retired_finding_count"] == 0
+    assert route_health["retirement_candidate_count"] == 1
+    if retirement_input == "forged-history":
+        assert "stronger-owner-required" in json.dumps(route_health["retirement_rejections"])
+        # Fresh TypeScript public consumption must not revive the forged cache.
+        node = shutil.which("node")
+        assert node, "public proof parity requires Node"
+        fresh = subprocess.run(
             [
-                "summary",
+                node,
+                str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+                "proof",
                 "--target",
                 str(tmp_path),
                 "--changed",
                 "src/agentic_workspace/config.py",
                 "--select",
-                "closeout_trust_inspection",
+                "proof_route_maintenance,proof_route_strategy_claim_gate",
                 "--format",
                 "json",
-            ]
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=60,
         )
-        == 0
-    )
-    closeout_after = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
-    assert closeout_after["proof_route_strategy_consumer_gate"]["status"] == "current"
-    assert "claim-proof-route-health-resolved" not in closeout_after["action_effect"]["blocked_until_reconciled"]
-
-    assert cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
-    handoff_transition_after = json.loads(capsys.readouterr().out)
-    assert handoff_transition_after.get("kind") != "agentic-workspace/planning-handoff-proof-route-gate/v1"
-
-    assert cli.main(["planning", "closeout", "--target", str(tmp_path), "--format", "json"]) == 0
-    closeout_transition_after = json.loads(capsys.readouterr().out)
-    assert closeout_transition_after.get("kind") != "agentic-workspace/planning-closeout-proof-route-gate/v1"
-    assert values["proof_route_strategy_preservation"]["proof_route_health"] == {
-        "status": "quiet",
-        "finding_count": 0,
-        "finding_ids": [],
-        "repair_packet_count": 0,
-        "repair_packet_ids": [],
-        "retired_finding_count": 1,
-        "execution_observation_status": "quiet",
-        "surface": "proof_route_maintenance.route_health",
-    }
+        assert fresh.returncode == 0, fresh.stdout + fresh.stderr
+        current = json.loads(fresh.stdout)["values"]
+        assert current["proof_route_maintenance"]["route_health"]["retired_finding_count"] == 0
+        assert current["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
+    assert values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
+    for operation in ("handoff", "closeout"):
+        assert (
+            cli.main(
+                [
+                    "planning",
+                    operation,
+                    "--target",
+                    str(tmp_path),
+                    "--changed-surfaces",
+                    "src/agentic_workspace/config.py",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        transition = json.loads(capsys.readouterr().out)
+        assert transition["status"] == "blocked"
+        assert transition["proof_route_transition_gate"]["blocked_finding_ids"]
+    # Current strategy/candidate execution remains observed; resolving the
+    # producer/currentness gap must happen in the actual apply owner (#2334).
+    assert apply_payload["apply_receipt"]["candidate_route_commands_complete"] is True
+    assert apply_payload["apply_receipt"]["validation_commands_complete"] is True
 
 
 def test_proof_route_repair_rejects_raw_append_delta(tmp_path: Path) -> None:
@@ -2383,7 +2415,8 @@ def test_proof_route_repair_audit_rejects_residual_ordinary_broad_proof() -> Non
         )
 
 
-def test_proof_route_repair_receipt_uses_aw_admission_not_caller_sufficiency(tmp_path: Path) -> None:
+@pytest.mark.parametrize("reported_result", ["passed", "failed"])
+def test_proof_route_repair_report_cannot_admit_unproven_apply_history(tmp_path: Path, reported_result: str) -> None:
     from agentic_workspace.config import WorkspaceUsageError
     from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
     from agentic_workspace.workspace_runtime_proof import (
@@ -2426,11 +2459,11 @@ def test_proof_route_repair_receipt_uses_aw_admission_not_caller_sufficiency(tmp
         },
     )
 
-    with pytest.raises(WorkspaceUsageError, match="passed validation receipt"):
+    with pytest.raises(WorkspaceUsageError, match="stronger-owner admission"):
         _record_proof_receipt_payload(
             target_root=tmp_path,
             command=command,
-            result="failed",
+            result=reported_result,
             changed_paths=["src/agentic_workspace/config.py"],
             receipt_repair_finding_id="finding-aw-sufficiency",
             receipt_repair_authority_revision=revision,

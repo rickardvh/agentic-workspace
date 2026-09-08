@@ -4502,29 +4502,14 @@ def _proof_route_apply_receipt_for_retirement(
     )
     if receipt is None:
         raise WorkspaceUsageError("proof-route repair receipt requires a matching guarded apply receipt.")
-    current_revision = _proof_route_current_authority_revision_for_receipt(target_root=target_root, receipt=receipt)
-    if current_revision != str(receipt.get("post_authority_revision") or ""):
-        raise WorkspaceUsageError("proof-route repair receipt rejected because the current authority revision is stale.")
-    validation_set = {str(command).strip() for command in _list_payload(receipt.get("validation_commands")) if str(command).strip()}
-    if validation_set and str(validation_command or "").strip() not in validation_set:
-        raise WorkspaceUsageError("proof-route repair receipt validation command is not in the guarded apply validation set.")
-    validation_results = [item for item in _list_payload(receipt.get("validation_results")) if isinstance(item, dict)]
-    validation_result_commands = {
-        str(item.get("command") or "").strip()
-        for item in validation_results
-        if str(item.get("command") or "").strip() and str(item.get("status") or "").strip() == "passed"
-    }
-    if validation_set and validation_result_commands != validation_set:
-        raise WorkspaceUsageError("proof-route repair retirement requires every guarded apply validation command to have passed.")
-    if receipt.get("validation_commands_complete") is not True or str(receipt.get("validation_status") or "") != "passed":
-        raise WorkspaceUsageError("proof-route repair retirement requires a complete passed guarded apply validation set.")
-    if not _proof_route_apply_receipt_candidate_results_complete(receipt):
-        raise WorkspaceUsageError("proof-route repair retirement requires complete passed candidate route execution results.")
-    if str(validation_result or "").strip() != "passed":
-        raise WorkspaceUsageError("proof-route repair retirement requires a passed validation receipt.")
-    if str(claim_sufficiency or "").strip() != "sufficient":
-        raise WorkspaceUsageError("proof-route repair retirement requires AW-owned claim sufficiency to be sufficient.")
-    return receipt
+    # This carrier records observed legacy apply execution; it does not retain
+    # admitted producer custody or the executed source/runtime proof subject.
+    # A reported pass cannot supply those missing owner facts after execution.
+    raise WorkspaceUsageError(
+        "proof-route repair retirement requires stronger-owner admission: legacy apply history "
+        "has unproven producer custody and executed source currentness. Preserve the observed "
+        "execution and resolve the current Verification/apply owner; do not report it as verified repair."
+    )
 
 
 def _improvement_consequence_record_event(*, target_root: Path | None, event: dict[str, Any]) -> None:
@@ -5683,93 +5668,18 @@ def _proof_route_health_payload(
     for receipt in repair_receipts:
         repair = _as_dict(receipt.get("proof_route_repair"))
         finding_id = str(repair.get("finding_id") or "")
-        disposition = str(repair.get("disposition") or "")
         if not finding_id or finding_id in active_finding_ids:
             continue
-        if disposition not in {"fixed", "superseded", "dismissed", "non-applicable"}:
-            continue
-        apply_receipt = (
-            _proof_route_find_apply_receipt(
-                target_root=target_root,
-                finding_id=finding_id,
-                idempotency_key=str(repair.get("idempotency_key") or ""),
-                post_authority_revision=str(repair.get("authority_revision") or ""),
-            )
-            if target_root is not None
-            else None
-        )
-        current_revision = (
-            _proof_route_current_authority_revision_for_receipt(target_root=target_root, receipt=apply_receipt)
-            if target_root is not None and isinstance(apply_receipt, dict)
-            else ""
-        )
-        validation_set = {
-            str(command).strip() for command in _list_payload(_as_dict(apply_receipt).get("validation_commands")) if str(command).strip()
-        }
-        validation_results = [item for item in _list_payload(_as_dict(apply_receipt).get("validation_results")) if isinstance(item, dict)]
-        validation_result_commands = {
-            str(item.get("command") or "").strip()
-            for item in validation_results
-            if str(item.get("command") or "").strip() and str(item.get("status") or "").strip() == "passed"
-        }
-        validation_command = str(receipt.get("command") or "")
-        validation_result = str(receipt.get("result") or "")
-        claim_sufficiency = str(_as_dict(receipt.get("execution")).get("claim_sufficiency") or "")
-        admission_errors = []
-        if apply_receipt is None:
-            admission_errors.append("missing-guarded-apply-receipt")
-        elif current_revision != str(apply_receipt.get("post_authority_revision") or ""):
-            admission_errors.append("stale-current-authority-revision")
-        if validation_set and validation_command not in validation_set:
-            admission_errors.append("validation-command-not-in-apply-validation-set")
-        if validation_set and validation_result_commands != validation_set:
-            admission_errors.append("guarded-apply-validation-set-incomplete")
-        if apply_receipt is not None and (
-            _as_dict(apply_receipt).get("validation_commands_complete") is not True
-            or str(_as_dict(apply_receipt).get("validation_status") or "") != "passed"
-        ):
-            admission_errors.append("guarded-apply-validation-not-passed")
-        if validation_result != "passed":
-            admission_errors.append("validation-result-not-passed")
-        if claim_sufficiency != "sufficient":
-            admission_errors.append("claim-sufficiency-not-sufficient")
-        if admission_errors:
-            retirement_rejections.append(
-                {
-                    "kind": "agentic-workspace/proof-route-retirement-rejection/v1",
-                    "finding_id": finding_id,
-                    "reason": ",".join(admission_errors),
-                    "receipt_ref": str(PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix()),
-                }
-            )
-            continue
-        retired = {
-            "kind": "agentic-workspace/proof-route-retired-finding/v1",
-            "status": disposition or "fixed",
-            "finding_id": finding_id,
-            "validation_command": validation_command,
-            "validation_result": validation_result,
-            "retirement_evidence": [
-                "matching guarded apply receipt resolved",
-                "current authority revision matches persisted post-apply revision",
-                "validation command/result and claim sufficiency admitted",
-            ],
-            "verified_authority_revision": str(repair.get("authority_revision") or ""),
-            "apply_receipt_id": str(_as_dict(apply_receipt).get("id") or ""),
-            "receipt_ref": str(PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix()),
-        }
-        retired_findings.append(retired)
-        _improvement_consequence_record_event(
-            target_root=target_root,
-            event={
-                "event": "retired",
+        # Re-reading raw history must not bypass the report admission boundary.
+        # Neither file shape nor a matching configuration revision authenticates
+        # the producer or establishes current executed-source evidence.
+        retirement_rejections.append(
+            {
+                "kind": "agentic-workspace/proof-route-retirement-rejection/v1",
                 "finding_id": finding_id,
-                "record_id": f"pressure-proof-route-{finding_id}",
-                "disposition": disposition or "fixed",
-                "authority_revision": str(repair.get("authority_revision") or ""),
-                "apply_receipt_id": retired["apply_receipt_id"],
-                "scope": _as_dict(_as_dict(apply_receipt).get("scope")),
-            },
+                "reason": "stronger-owner-required: legacy apply execution source and producer admission unproven",
+                "receipt_ref": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
+            }
         )
     repaired_finding_ids = {str(finding.get("finding_id") or "") for finding in retired_findings}
     retirement_candidates = [

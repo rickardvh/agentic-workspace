@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Preserve and publicly construct canonical Planning assurance declarations for exact Verification applicability and profile obligations."
+issues = [2970, 2334, 2986, 2981, 2909, 3077]

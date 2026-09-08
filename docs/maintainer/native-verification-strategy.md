@@ -7,11 +7,24 @@ The existing Verification owner exposes a typed `verification/strategy/v1` reque
 | `default_level` | Baseline guidance when no current assessment exists. | No inference that a baseline establishes task proof sufficiency. |
 | `agent_may_escalate` | Raising the baseline is refused when forbidden. | Permission does not select a level automatically. |
 | `agent_may_deescalate` | Lowering the baseline is refused when forbidden. | No source obligation is waived by level judgment. |
-| `proof_profiles` | Current binding requirements select profiles; recommended profiles remain optional. Agent selection adds known profiles. Required/optional/disallowed roles stay distinct. | Selected required commands retain claim obligations until current proof evidence is admitted. Planning subject alone cannot establish selected Planning profiles: `planning-assurance-profile-projection-unavailable` remains explicit. |
+| `proof_profiles` | Current binding requirements and exact typed Planning declarations select profiles; recommended profiles remain optional. Agent selection adds known profiles. Required/optional/disallowed roles stay distinct. | Each required command needs current admitted evidence for that exact profile route. Absent Planning profile declarations remain unknown. |
 | `domain_proof_lanes` | Existing path-scoped candidates remain available, subject to selected profile disallows. | Full composition, semantic scope and evidence sufficiency remain unresolved. |
 | `subsystem_profiles`, `strict_closeout` | Existing source owner restrictions remain. | No subsystem fact reconstruction or claim waiver is introduced. |
 
 A required profile cannot be omitted by an empty agent selection. Unknown selected profiles, unsupported profile fields, contradictory command roles and a required command forbidden by another selected profile refuse execution. Disallowed commands also restrict existing manifest and domain routes. Level changes and command availability do not satisfy independent review, task judgment or evidence lifetime.
+
+The ordinary claim request's `evidence_refs` can discharge a profile's command
+obligation when every required command has a current admitted native execution
+receipt for that exact profile route. Freshness re-derives task/work identity,
+selected strategy, runtime and source inputs; publication and exact execution
+artifact admission are also required. The obligation reports missing commands
+and supporting receipt refs. A manual report, failed command, matching command
+from another route, stale source or unrelated task does not count.
+
+This establishes only the configured command obligation. Task judgment,
+independent/domain review and other assurance obligations remain with their
+owners; no completion claim follows from command discharge. There is no new
+receipt format, evidence store or producer.
 
 Profile discovery is bounded to 32 descriptors and 16 command candidates. Selected profile metadata uses the existing 32 KiB selected-route bound; unselected profiles are not copied into the public strategy forest. Full source remains the current owner. Verification reads and validates the shared configuration once per owner view, then reuses that observation for applicability, domain candidates and strategy policy; no durable cache is added.
 

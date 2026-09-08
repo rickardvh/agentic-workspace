@@ -227,7 +227,11 @@ def test_native_start_composes_selected_verification_request_with_assignment(cur
     assert resolved["task_requirements"]["result"]["status"] == "resolved"
     assert resolved["task_requirements"]["result"]["requirements"]["independent_context"] is True
     assert resolved["verification"]["evidence"] == []
-    assert resolved["verification"]["contribution"] == offered["verification"]["contribution"]
+    assert resolved["verification"]["source"] == offered["verification"]["source"]
+    for field in ("blockers", "actions"):
+        assert [row for row in resolved["decision_packet"]["pending_consequences"][field] if row["owner"] == "verification"] == [
+            row for row in offered["decision_packet"]["pending_consequences"][field] if row["owner"] == "verification"
+        ]
     ordinary = verification_requirements({**current, "current_work": assignment["arguments"]["current_work"]})
     other_request = ordinary["request"]
     other_request["arguments"].update(request["arguments"])

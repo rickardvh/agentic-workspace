@@ -30,6 +30,86 @@ def setup(root: Path, *, binding: bool = False) -> dict:
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_exact_native_command_evidence_discharges_only_its_profile_obligation(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    context = setup(tmp_path, binding=True)
+    source = tmp_path / ".agentic-workspace/config.toml"
+    command = "Add-Content -Path marker.txt -Value executed" if os.name == "nt" else "echo executed >> marker.txt"
+    text = source.read_text().replace(
+        f"required_commands=[{json.dumps(command)}]", f'required_commands=[{json.dumps(command)},"echo second"]'
+    )
+    source.write_text(
+        text
+        + '[assurance.domain_proof_lanes.foreign]\npurpose="Different exact route"\napplies_to_paths=["a.txt"]\ncommands=['
+        + json.dumps(command)
+        + "]\n"
+    )
+
+    def call(value):
+        return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    def run(route, command, *, manual=False):
+        current = call(context)
+        requests = current["verification"]["record_requests" if manual else "execution_requests"]
+        request = next(r for r in requests if r["arguments"]["route_id"] == route and r["arguments"]["command"] == command)
+        if manual:
+            request["arguments"]["result"] = "passed"
+        action = call({**context, "request": request})["decision_packet"]["primary_action"]
+        return call({**context, "invocation": action})["value"]["publication"]["reference"]
+
+    def claim(refs, task=None):
+        current = {**context, "task": task or context["task"]}
+        request = call(current)["verification"]["requests"][0]
+        request["arguments"]["evidence_refs"] = refs
+        return call({**current, "request": request})
+
+    foreign = run("domain:foreign", command)
+    foreign_view = claim([foreign])
+    obligation = foreign_view["verification"]["strategy_control"]["obligations"][0]
+    assert obligation["missing_commands"] == [command, "echo second"]
+    first = run("profile:required", command)
+    manual = run("profile:required", "echo second", manual=True)
+    partial = claim([foreign, first, manual])
+    assert partial["verification"]["strategy_control"]["obligations"][0]["missing_commands"] == ["echo second"]
+    second = run("profile:required", "echo second")
+    refs = [first, second]
+    satisfied = claim(refs)
+    obligation = satisfied["verification"]["strategy_control"]["obligations"][0]
+    assert obligation["status"] == "current-command-evidence-satisfied"
+    assert obligation["missing_commands"] == [] and set(obligation["evidence_refs"]) == set(refs)
+    blockers = {b["code"] for b in satisfied["decision_packet"]["blockers"]}
+    assert "profile-proof-required:required" not in blockers
+    assert "assurance:current:applicable" in blockers and "verification-evidence-unresolved" in blockers
+    assert satisfied["decision_packet"]["claim_boundary"]["allowed"] == []
+    assert satisfied["decision_packet"]["status"] != "terminal"
+    assert claim(refs, "A different requested outcome")["verification"]["strategy_control"]["obligations"][0]["missing_commands"]
+    (tmp_path / "a.txt").write_text("material source changed")
+    assert claim(refs)["verification"]["strategy_control"]["obligations"][0]["missing_commands"] == [command, "echo second"]
+    assert (tmp_path / "marker.txt").read_text().splitlines() == ["executed", "executed"]
+
+
+def test_failed_native_command_cannot_discharge_profile(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+    context = setup(tmp_path, binding=True)
+    source = tmp_path / ".agentic-workspace/config.toml"
+    text = source.read_text()
+    begin = text.index("required_commands=")
+    end = text.index("\n", begin)
+    source.write_text(text[:begin] + 'required_commands=["exit 7"]' + text[end:])
+
+    def call(value):
+        return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    request = call(context)["verification"]["execution_requests"][0]
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    result = call({**context, "invocation": action})
+    assert result["value"]["process"]["status"] == "failed"
+    claim = call(context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
+    assert call({**context, "request": claim})["verification"]["strategy_control"]["obligations"][0]["missing_commands"] == ["exit 7"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_level_permissions_and_profiles_require_current_judgment(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
@@ -68,9 +148,10 @@ def test_level_permissions_and_profiles_require_current_judgment(
     assert result["value"]["claim_boundary"]["completion_claim_allowed"] is False
     assert call({**context, "invocation": invocation})["value"] == result["value"]
     assert (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
-    stale = call({**context, "task": "Unrelated outcome", "request": complete})["verification"]
-    assert "verification-request-stale" in stale["evidence_gaps"]
-    assert stale["contribution"]["actions"] == []
+    stale = call({**context, "task": "Unrelated outcome", "request": complete})
+    assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
+    assert not any(action["source_owner"] == "verification" for action in stale["decision_packet"]["pending_consequences"]["actions"])
+    assert not any(action["source_owner"] == "verification" for action in stale["decision_packet"]["ready_actions"])
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -100,9 +181,10 @@ def test_binding_profiles_and_cross_route_disallowed_commands(
     assert [row["id"] for row in selected["strategy_control"]["selected_profiles"]] == ["required"]
     for route_id in ["domain:denied", "manifest_denied"]:
         denied = next(item for item in first["execution_requests"] if item["arguments"]["route_id"] == route_id)
-        blocked = call({**context, "request": denied})["verification"]
-        assert blocked["execution"]["reason"] == "selected-proof-profile-disallows-command"
-        assert blocked["contribution"]["actions"] == []
+        blocked = call({**context, "request": denied})
+        assert blocked["verification"]["execution"]["reason"] == "selected-proof-profile-disallows-command"
+        assert not any(action["source_owner"] == "verification" for action in blocked["decision_packet"]["pending_consequences"]["actions"])
+        assert not any(action["source_owner"] == "verification" for action in blocked["decision_packet"]["ready_actions"])
     assert not (tmp_path / "marker.txt").exists()
     source.write_text(source.read_text().replace('force="required-before-closeout"', 'force="recommended"'))
     optional = call(context)["verification"]["strategy_control"]

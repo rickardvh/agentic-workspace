@@ -2868,49 +2868,9 @@ def _assignment_export_prompt(packet: Any) -> str:
 
 
 def _assignment_worker_context(packet: Mapping[str, Any]) -> dict[str, Any]:
-    """Project only worker-required semantics from canonical assignment authority."""
+    from agentic_workspace.decision import assignment_packet
 
-    identity = _assignment_mapping(packet.get("assignment_identity"))
-    return_contract = _assignment_mapping(packet.get("return_contract"))
-    return {
-        "kind": "agentic-workspace/assignment-worker-context/v1",
-        "assignment": {
-            "id": _optional_text(packet.get("assignment_id")),
-            "revision": _optional_text(packet.get("assignment_revision")) or _optional_text(identity.get("revision")),
-            "run_id": _optional_text(packet.get("run_id")),
-            "target": _optional_text(packet.get("target")) or _optional_text(identity.get("target")),
-        },
-        "intent": {
-            "outcome": _optional_text(identity.get("human_intent")),
-            "task_class": _optional_text(identity.get("task_class")),
-            "role": _optional_text(identity.get("role")),
-        },
-        "scope": {
-            "class": _optional_text(identity.get("scope_class")),
-            "allowed_paths": _assignment_list(identity.get("allowed_paths")),
-        },
-        "effects": {
-            "allowed": _assignment_list(identity.get("allowed_effects")),
-            "prohibited": _assignment_list(identity.get("prohibited_effects")),
-        },
-        "inputs": {
-            "required": _assignment_list(identity.get("required_inputs")),
-            "read_first": _assignment_list(identity.get("read_first")),
-            "lazy_expansion_rule": "Read only these exact references first; request or resolve deeper context only when the assignment requires it.",
-        },
-        "proof": {
-            "obligation_id": _optional_text(identity.get("proof_obligation_id")),
-            "obligation_revision": _optional_text(identity.get("proof_obligation_revision")),
-            "worker_authority": False,
-        },
-        "stop_conditions": _assignment_list(identity.get("stop_conditions")),
-        "authority": {
-            "semantic_source": "canonical-assignment-identity",
-            "claim_authority": _assignment_mapping(identity.get("claim_authority")),
-            "scope_widening_allowed": False,
-        },
-        "return_contract": return_contract,
-    }
+    return assignment_packet({"action": "worker-context", "packet": packet})
 
 
 def _assignment_dispatch_configuration(*, identity: Mapping[str, Any], transport: str) -> dict[str, Any]:
@@ -2946,39 +2906,15 @@ def _assignment_dispatch_configuration(*, identity: Mapping[str, Any], transport
 
 
 def _assignment_packet_integrity(packet: Mapping[str, Any]) -> str:
-    subject = json.loads(json.dumps(packet, default=str))
-    subject["packet_integrity"] = ""
-    for contract in (
-        _assignment_mapping(subject.get("return_contract")),
-        _assignment_mapping(_assignment_mapping(subject.get("worker_context")).get("return_contract")),
-    ):
-        if isinstance(contract.get("required_identity"), dict):
-            contract["required_identity"]["packet_integrity"] = ""
-    return _assignment_digest(subject)
+    from agentic_workspace.decision import assignment_packet
+
+    return str(assignment_packet({"action": "integrity", "packet": packet})["integrity"])
 
 
 def _assignment_seal_host_native_packet(packet: Mapping[str, Any]) -> dict[str, Any]:
-    sealed = json.loads(json.dumps(packet, default=str))
-    return_contract = _assignment_mapping(sealed.get("return_contract"))
-    return_contract["required_fields"] = list(
-        dict.fromkeys([*_assignment_list(return_contract.get("required_fields")), "assignment_id", "packet_integrity", "result_delivery"])
-    )
-    return_contract["required_identity"] = {
-        "assignment_id": sealed.get("assignment_id"),
-        "assignment_revision": sealed.get("assignment_revision"),
-        "run_id": sealed.get("run_id"),
-        "target": sealed.get("target"),
-        "packet_integrity": "",
-    }
-    sealed["return_contract"] = return_contract
-    sealed["worker_context"] = _assignment_worker_context(sealed)
-    integrity = _assignment_packet_integrity(sealed)
-    sealed["packet_integrity"] = integrity
-    sealed["return_contract"]["required_identity"]["packet_integrity"] = integrity
-    sealed["worker_context"] = _assignment_worker_context(sealed)
-    if _assignment_packet_integrity(sealed) != integrity:
-        raise PrimitiveExecutionError("host-native assignment packet integrity did not stabilize")
-    return sealed
+    from agentic_workspace.decision import assignment_packet
+
+    return assignment_packet({"action": "seal", "packet": packet})
 
 
 def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, target_root: Path, transport: str) -> dict[str, Any]:

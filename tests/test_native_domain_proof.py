@@ -57,7 +57,7 @@ def test_domain_source_executes_without_claim_and_rejects_drift(
     assert unrelated["verification"]["domain_proof_candidates"]["lanes"] == []
     stale = call({**context, "task": "Another requested outcome", "request": request})
     assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
-    assert stale["verification"]["contribution"]["actions"] == []
+    assert not any(row["owner"] == "verification" for row in stale["decision_packet"]["pending_consequences"]["actions"])
     (tmp_path / "rules.md").write_text("changed rule")
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": invocation})
@@ -138,6 +138,6 @@ def test_oversized_selected_domain_detail_is_explicitly_blocked(tmp_path: Path, 
     request = first["verification"]["execution_requests"][0]
     result = consume("json", shared_core_binary, native_cli, {**context, "request": request}, host_path=os.environ["PATH"])
     assert result["verification"]["execution"]["reason"] == "domain-lane-selected-detail-exceeds-native-bound"
-    assert result["verification"]["contribution"]["actions"] == []
+    assert not any(row["owner"] == "verification" for row in result["decision_packet"]["pending_consequences"]["actions"])
     assert "large detail" not in json.dumps(result)
     assert source.exists()
