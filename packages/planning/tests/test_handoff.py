@@ -7,7 +7,6 @@ import sys as _sys
 from pathlib import Path as _Path
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
-from agentic_workspace import cli as workspace_cli
 
 from planning_test_support import *
 from repo_planning_bootstrap import cli as planning_cli
@@ -1523,14 +1522,6 @@ def test_tightened_new_plan_handoff_uses_accepted_owner_contract_and_replays(tmp
     for field in ("next_action", "owned_write_scope", "proof_expectations"):
         assert package_handoff[field] == contract[field]
     assert package_handoff["ready_worker_prompt"]["copy_paste"] == prompt
-
-    assert workspace_cli.main(["planning", "handoff", "--target", str(tmp_path), "--format", "json"]) == 0
-    root_handoff = json.loads(capsys.readouterr().out)
-    assert root_handoff.get("kind") != "agentic-workspace/planning-handoff-proof-route-gate/v1"
-    root_contract = root_handoff["handoff_contract"]
-    for field in ("next_action", "owned_write_scope", "proof_expectations"):
-        assert root_contract[field] == contract[field]
-    assert root_contract["ready_worker_prompt"]["copy_paste"] == prompt
 
     bytes_before_replay = plan_path.read_bytes()
     replay = installer_mod.targeted_execplan_write(

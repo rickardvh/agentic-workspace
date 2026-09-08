@@ -134,14 +134,14 @@ fail_evidence_labels = [
   "missing_intent_satisfaction_review",
   "unrouted_closeout_residue",
 ]
-automation_hint = "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json"
+automation_hint = "uv run pytest tests/test_native_proof_producer.py -q"
 manual_boundary = "The agent decides whether the user intent is satisfied; Verification only records the repeatable review route."
 
 [scenarios.requirement_grounding_delegation_review]
 protocol_id = "requirement_grounding_delegation"
 title = "Requirement grounding and delegation review"
 steps = [
-  "Inspect implement or proof output for requirement_grounding, delegation_decision, and plan_delegation_packet fields.",
+  "Inspect the current native decision_packet and task_requirements for source grounding, Assignment and handoff requests; preserve the exact task and changed paths.",
   "Confirm requirement refs remain source observations and agent interpretation remains separate.",
   "Confirm delegation is surfaced as a route decision with evidence, not skipped silently when a plan or policy expects it.",
 ]
@@ -157,14 +157,14 @@ fail_evidence_labels = [
   "missing_requirement_grounding_review",
   "silent_delegation_skip",
 ]
-automation_hint = "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json"
+automation_hint = "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q"
 manual_boundary = "The agent decides fit and sufficiency; Verification only names the repeatable inspection route."
 
 [scenarios.test_evidence_decision_review]
 protocol_id = "test_evidence_decision"
 title = "Test evidence decision review"
 steps = [
-  "Run or inspect the Verification evidence_strategy report for changed test files.",
+  "Resolve native start for the current task and changed test paths; inspect verification strategy/requirements and answer exact owner requests through start --input.",
   "Record the trust question, evidence owner, durability, and prune or replacement condition when ordinary tests grow, shrink, or move.",
   "Confirm test-count changes are not used as a substitute for evidence ownership and replacement reasoning.",
 ]
@@ -180,8 +180,8 @@ fail_evidence_labels = [
   "missing_verification_proof_decision",
   "test_count_only_completion_claim",
 ]
-automation_hint = "uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"
-manual_boundary = "A live .agentic-workspace/verification/proof-decision.json should be agent-authored for the specific test-evidence change, not prefilled as standing policy."
+automation_hint = "uv run pytest tests/test_native_verification_strategy.py -q"
+manual_boundary = "The acting agent answers current Verification requests for the specific evidence change; an automated check does not decide sufficiency or confer completion authority."
 
 [protocols.generated_adapter_conformance]
 title = "Generated adapter conformance"
@@ -303,6 +303,10 @@ commands = [
 title = "Closeout intent satisfaction"
 purpose = "Make completion-honesty and residue-routing review repeatable for planning and closeout behavior without letting Verification decide semantic satisfaction."
 applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_proof.rs",
+  "crates/agentic-workspace-core/src/native_verification.rs",
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "tests/test_native_proof_producer.py",
   "packages/planning/src/**/archive*.py",
   "packages/planning/src/**/closeout*.py",
   "packages/planning/tests/**/test_archive*.py",
@@ -335,6 +339,10 @@ authority_refs = [
   ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
 ]
 stale_when = [
+  "crates/agentic-workspace-core/src/native_proof.rs",
+  "crates/agentic-workspace-core/src/native_verification.rs",
+  "crates/agentic-workspace-core/src/native_public.rs",
+  "tests/test_native_proof_producer.py",
   "packages/planning/src/**/archive*.py",
   "packages/planning/src/**/closeout*.py",
   "packages/planning/tests/**/test_archive*.py",
@@ -346,7 +354,7 @@ non_goals = [
   "Verification does not close parent lanes.",
 ]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
+  "uv run pytest tests/test_native_proof_producer.py -q",
 ]
 review_aids = [
   "Use this route when closeout, archive, continuation, or completion-honesty semantics changed.",
@@ -356,6 +364,12 @@ review_aids = [
 title = "Requirement grounding and delegation"
 purpose = "Keep requirement-grounding and delegation support inspectable without turning Verification into the decision maker."
 applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "crates/agentic-workspace-core/src/native_delegation.rs",
+  "crates/agentic-workspace-core/src/native_handoff.rs",
+  "crates/agentic-workspace-core/src/native_requirements.rs",
+  "tests/test_native_assignment_judgment.py",
+  "tests/test_native_readonly_handoff.py",
   ".agentic-workspace/config.toml",
   ".agentic-workspace/OWNERSHIP.toml",
   "src/agentic_workspace/workspace_runtime*.py",
@@ -387,6 +401,12 @@ authority_refs = [
   ".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime",
 ]
 stale_when = [
+  "crates/agentic-workspace-core/src/native_assignment.rs",
+  "crates/agentic-workspace-core/src/native_delegation.rs",
+  "crates/agentic-workspace-core/src/native_handoff.rs",
+  "crates/agentic-workspace-core/src/native_requirements.rs",
+  "tests/test_native_assignment_judgment.py",
+  "tests/test_native_readonly_handoff.py",
   ".agentic-workspace/config.toml",
   ".agentic-workspace/OWNERSHIP.toml",
   "src/agentic_workspace/workspace_runtime*.py",
@@ -397,7 +417,7 @@ non_goals = [
   "Verification does not promote source observations into requirements.",
 ]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
 ]
 review_aids = [
   "Use this route when requirement refs, subsystem assurance, delegation policy, or handoff packets changed.",
@@ -407,6 +427,8 @@ review_aids = [
 title = "Test evidence decision"
 purpose = "Make ordinary test growth, reduction, movement, and conformance conversion explainable by evidence ownership instead of raw test count."
 applies_to_paths = [
+  "crates/agentic-workspace-core/src/native_verification.rs",
+  "tests/test_native_verification_strategy.py",
   "tests/**",
   "packages/**/tests/**",
   "docs/maintainer/testing-strategy.md",
@@ -436,6 +458,8 @@ authority_refs = [
   "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 ]
 stale_when = [
+  "crates/agentic-workspace-core/src/native_verification.rs",
+  "tests/test_native_verification_strategy.py",
   "tests/**",
   "packages/**/tests/**",
   "docs/maintainer/testing-strategy.md",
@@ -448,7 +472,7 @@ non_goals = [
   "Verification does not infer host strategy from prose or filenames.",
 ]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json",
+  "uv run pytest tests/test_native_verification_strategy.py -q",
 ]
 review_aids = [
   "Use this route before claiming test-count reduction, pruning, conversion, or new regression tests are sufficient.",
@@ -477,7 +501,7 @@ reason = "Generated command package changes need repeatable local and Docker con
 protocol_refs = ["closeout_intent_satisfaction"]
 scenario_refs = ["closeout_intent_satisfaction_review"]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
+  "uv run pytest tests/test_native_proof_producer.py -q",
 ]
 review_aids = [
   "Compare proof success, delivered behavior, user intent, and remaining continuation before broad completion claims.",
@@ -489,7 +513,7 @@ reason = "Closeout and planning behavior changes need repeatable completion-hone
 protocol_refs = ["requirement_grounding_delegation"]
 scenario_refs = ["requirement_grounding_delegation_review"]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json",
+  "uv run pytest tests/test_native_assignment_judgment.py tests/test_native_readonly_handoff.py -q",
 ]
 review_aids = [
   "Confirm source observations, agent interpretation, and delegation route decisions remain separate.",
@@ -502,7 +526,7 @@ protocol_refs = ["test_evidence_decision"]
 scenario_refs = ["test_evidence_decision_review"]
 assurance_requirement_refs = ["test_evidence_change_decision"]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json",
+  "uv run pytest tests/test_native_verification_strategy.py -q",
 ]
 review_aids = [
   "Record a live proof-decision when ordinary test evidence materially changes.",
@@ -597,7 +621,7 @@ non_goals = [
   "The protocol does not replace domain-owned test or proof semantics.",
 ]
 commands = [
-  "uv run python scripts/run_agentic_workspace.py implement --target . --changed <paths> --select assurance_requirements --format json",
+  "uv run pytest tests/test_native_domain_proof.py -q",
 ]
 review_aids = [
   "Use the smallest focused route that proves the activated requirement and keep full evidence detail with its declared owner.",

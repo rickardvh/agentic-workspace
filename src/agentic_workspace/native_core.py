@@ -30,8 +30,8 @@ def core_binary() -> Path:
                         "--manifest-path",
                         str(source_root / "Cargo.toml"),
                         "--message-format=json",
-                        "-p",
-                        "agentic-workspace-core",
+                        "--workspace",
+                        "--bins",
                     ],
                     cwd=source_root,
                     text=True,
@@ -61,4 +61,12 @@ def core_binary() -> Path:
             "shared Agentic Workspace core is unavailable; install a supported native package "
             "or set AGENTIC_WORKSPACE_CORE_BINARY to the admitted core binary"
         )
+    return path
+
+
+def cli_binary() -> Path:
+    """Resolve the paired product executable without a PATH/semantic fallback."""
+    path = core_binary().with_name("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
+    if not path.is_file():
+        raise RuntimeError("native Agentic Workspace CLI is unavailable; install the paired native package or build both source binaries")
     return path

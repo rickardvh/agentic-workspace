@@ -377,7 +377,7 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
         [
             sys.executable,
             "-c",
-            "from agentic_workspace._generated_cli_package_impl import build_generated_parser",
+            "from agentic_workspace.cli import main; from agentic_workspace.native_core import cli_binary; assert callable(main); print(cli_binary())",
         ],
         cwd=tmp_path,
         env={**os.environ, "PYTHONPATH": str(install_root)},
@@ -387,6 +387,22 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
     )
 
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    native = Path(result.stdout.strip())
+    assert native.is_relative_to(install_root) and native.is_file()
+    # The wheel's actual product binary works without a language runtime or
+    # source-checkout helper on PATH; the Python entry point is optional.
+    clean_env = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
+    clean_env["PATH"] = ""
+    started = subprocess.run(
+        [str(native), "start", "--target", str(tmp_path), "--task", "Inspect the installed native artifact", "--format", "json"],
+        cwd=tmp_path,
+        env=clean_env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert started.returncode == 0, started.stderr
+    assert "decision_packet" in json.loads(started.stdout)
 
 
 def test_installed_workspace_wheel_exposes_public_external_client(workspace_wheel: Path, tmp_path: Path) -> None:
@@ -444,90 +460,45 @@ def test_release_root_wheel_installs_workspace_stack_from_same_release_assets(wo
 
 
 def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path, tmp_path: Path) -> None:
+    from tests.test_native_planning_create import material
+
     target = tmp_path / "repo"
     target.mkdir()
-    subprocess.run(["git", "init"], cwd=target, capture_output=True, text=True, check=True)
+    retained = target / "unrelated.txt"
+    retained.write_text("Preserve unrelated package-consumer work.")
+    task = "Maintain the native packaged Planning owner"
 
-    init_payload = _run_workspace_console_json(
-        workspace_exe,
-        tmp_path,
-        "init",
-        "--target",
-        str(target),
-        "--modules",
-        "planning,memory",
-        "--format",
-        "json",
-    )
-    start_payload = _run_workspace_console_json(
-        workspace_exe,
-        tmp_path,
-        "start",
-        "--target",
-        str(target),
-        "--task",
-        "fresh package proof",
-        "--select",
-        "invoked_cli_identity,active_state_summary,immediate_next_allowed_action",
-        "--format",
-        "json",
-    )
-    summary_payload = _run_workspace_console_json(
-        workspace_exe,
-        tmp_path,
-        "summary",
-        "--target",
-        str(target),
-        "--verbose",
-        "--format",
-        "json",
-    )
-    implement_payload = _run_workspace_console_json(
-        workspace_exe,
-        tmp_path,
-        "implement",
-        "--target",
-        str(target),
-        "--changed",
-        "README.md",
-        "--task",
-        "fresh package proof",
-        "--format",
-        "json",
-    )
-    proof_payload = _run_workspace_console_json(
-        workspace_exe,
-        tmp_path,
-        "proof",
-        "--target",
-        str(target),
-        "--changed",
-        "README.md",
-        "--format",
-        "json",
-    )
-    doctor_payload = _run_workspace_console_json(
-        workspace_exe,
-        tmp_path,
-        "doctor",
-        "--target",
-        str(target),
-        "--format",
-        "json",
-    )
+    def call(request=None, invocation=None):
+        args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--format", "json"]
+        if request is not None or invocation is not None:
+            packet = tmp_path / "native-request.json"
+            packet.write_text(json.dumps(invocation if invocation is not None else request))
+            args.extend(["--input", str(packet)])
+        return _run_workspace_console_json(workspace_exe, tmp_path, *args)
 
-    assert init_payload["command"] == "init"
-    assert init_payload["kind"] == "agentic-workspace/lifecycle-decision-envelope/v1"
-    assert init_payload["profile"] == "decision-envelope/v1"
-    assert init_payload["decision"]["mutation"] == "applied"
-    assert init_payload["modules"] == ["planning", "memory"]
-    assert start_payload["kind"] == "agentic-workspace/selected-output/v1"
-    assert start_payload["values"]["invoked_cli_identity"]["source_class"] == "installed-package"
-    assert summary_payload["kind"] == "planning-summary/v1"
-    assert summary_payload["profile"] == "full"
-    assert implement_payload["kind"] == "implementer-context-tiny/v1"
-    assert proof_payload["kind"] == "proof-next-decision/v1"
-    assert doctor_payload["health"] == "healthy"
+    initial = call()
+    create = initial["planning"]["creation_requests"][0]
+    create["arguments"] = {"material": material()}
+    created = call(invocation=call(create)["decision_packet"]["primary_action"])
+    selection = call()["planning"]["created_owner"]["selection_request"]
+    call(invocation=call(selection)["decision_packet"]["primary_action"])
+    current = call()
+    assert current["planning"]["current_owner"]["current"] is True
+    update = current["planning"]["update_requests"][0]
+    body = json.loads((target / created["value"]["owner_path"]).read_bytes())
+    update["arguments"]["material"] = {key: body[key] for key in material()}
+    update["arguments"]["material"].update(lifecycle=body["lifecycle"], phase=body["phase"])
+    update["arguments"]["material"]["continuation"]["frontier"] = "The installed native writer retained the next outcome."
+    call(invocation=call(update)["decision_packet"]["primary_action"])
+    recovery = call()["planning"]["requests"][0]
+    call(invocation=call(recovery)["decision_packet"]["primary_action"])
+    assert call()["planning"]["current_owner"]["current"] is True
+    path = target / created["value"]["owner_path"]
+    final = json.loads(path.read_bytes())
+    assert final["id"] == body["id"] and final["scope"] == body["scope"]
+    assert final["continuation"]["frontier"] == "The installed native writer retained the next outcome."
+    assert retained.read_text() == "Preserve unrelated package-consumer work."
+    assert not (target / ".agentic-workspace/local/cache/generated-cli-fingerprint.json").exists()
 
 
 def _build_workspace_wheelhouse(tmpdir: str, *, root_wheel: Path) -> list[Path]:
@@ -608,6 +579,7 @@ def _run_workspace_console_json(workspace_exe: Path, cwd: Path, *args: str) -> d
     result = subprocess.run(
         [str(workspace_exe), *args],
         cwd=cwd,
+        env={key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}},
         capture_output=True,
         text=True,
         check=False,

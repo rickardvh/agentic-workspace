@@ -14,3 +14,10 @@ Use this folder for:
 Keep runbooks symptom-driven, concrete, and easy to follow under time pressure.
 Use a runbook for entry conditions, symptoms, checks, boundaries, and verification.
 If a section is mostly reusable maintenance choreography, refresh cadence, or multi-step workflow prose, move that procedure into a skill instead of letting the runbook sprawl.
+
+The recurring-friction ledger is an optional repo-owned note, created only when
+repeated friction has useful evidence that does not already belong to an issue
+or active Planning owner. Its absence is valid and is not a missing package
+payload. Do not create an empty ledger to satisfy a check or duplicate a stronger
+owner. If present, its structure, current evidence and promotion boundaries are
+still checked by Memory.

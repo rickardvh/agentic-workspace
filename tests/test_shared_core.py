@@ -1766,72 +1766,6 @@ def test_native_supersession_uses_existing_contract_and_keeps_rationale(
     assert (tmp_path / "design/choice.md").is_file()
 
 
-@pytest.mark.parametrize("external_freshness", [False, True])
-def test_ordinary_start_uses_native_decision_and_rechecks_before_cache(
-    shared_core_binary: Path, tmp_path: Path, external_freshness: bool
-) -> None:
-    import sys
-
-    context, _ = _native_archive(tmp_path)
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text(
-        'schema_version = 1\n[modules]\nenabled = []\n[assurance]\ndecision_record_target = "design"\ndecision_record_revision = "'
-        + context["admitted_revision"]
-        + '"\n',
-        encoding="utf-8",
-    )
-
-    def start(path: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "from agentic_workspace.cli import main; raise SystemExit(main())",
-                "start",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                path,
-                "--task",
-                "bounded edit",
-                "--format",
-                "json",
-            ],
-            env={
-                **{key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
-                "AW_PROJECTION_EXTERNAL_STATE": "1" if external_freshness else "0",
-            },
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-
-    first = start("src/core.rs")
-    assert first.returncode == 0, first.stdout + first.stderr
-    packet = json.loads(first.stdout)["decision_packet"]
-    authority = packet["identity"]
-    assert authority["decision_id"].startswith("operating-decision:")
-    assert packet["decision_context"]["consequences"][0]["id"] == "architecture/shared-authority"
-    again = start("src/core.rs")
-    assert json.loads(again.stdout)["decision_packet"]["decision_context"] == packet["decision_context"]
-    assert json.loads(again.stdout)["decision_packet"]["identity"] == authority
-    quiet = start("unrelated.txt")
-    assert "decision_context" not in json.loads(quiet.stdout)["decision_packet"]
-    (tmp_path / "authority.md").write_text("Changed decisive authority", encoding="utf-8")
-    changed = start("src/core.rs")
-    changed_payload = json.loads(changed.stdout)
-    assert changed_payload["decision_packet"]["decision_context"]["states"][0]["status"] == "stale"
-    changed_authority = changed_payload["decision_packet"]["identity"]
-    assert changed_authority["decision_id"] != authority["decision_id"]
-    assert changed_authority["revision"] != authority["revision"]
-    (tmp_path / "design/choice.md").write_text("Unadmitted replacement", encoding="utf-8")
-    stale = start("src/core.rs")
-    assert stale.returncode != 0
-    assert "stale decision source" in stale.stdout + stale.stderr
-
-
 def test_native_exact_scope_does_not_depend_on_json_escaping(shared_core_binary: Path, tmp_path: Path) -> None:
     from agentic_workspace.decision import repository_decision_view
 
@@ -1965,99 +1899,6 @@ def test_fallback_source_cannot_choose_its_owner_or_widen_admission(shared_core_
     context["fallback"] = {"archive": "design", "admitted_revision": context["admitted_revision"], "owner": "human"}
     with pytest.raises(DecisionContractError, match="unknown field"):
         repository_decision_view(**context)
-
-
-def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_core_binary: Path, tmp_path: Path) -> None:
-    import hashlib
-    import sys
-
-    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
-    (tmp_path / "SYSTEM_INTENT.md").write_bytes((ROOT / "SYSTEM_INTENT.md").read_bytes())
-    archive = ".agentic-workspace/memory/repo/decisions"
-    source = tmp_path / archive / "source-admission.md"
-    source.parent.mkdir(parents=True)
-    # This test authors an isolated current-source instance. Reconcile its basis
-    # to the actual dependency copied above; do not advance any repository ADR
-    # admission or silently reuse the historical fixture's old intent hash.
-    fixture = (ROOT / "tests/fixtures/decision_fallback.md").read_text(encoding="utf-8")
-    prefix, body = fixture.split("```aw-decision\n", 1)
-    record_text, suffix = body.split("```", 1)
-    record = json.loads(record_text)
-    intent_bytes = (tmp_path / "SYSTEM_INTENT.md").read_bytes()
-    record["authority"]["basis"][0]["revision"] = "sha256:" + hashlib.sha256(intent_bytes.replace(b"\r\n", b"\n")).hexdigest()
-    with source.open("xb") as output:
-        output.write((prefix + "```aw-decision\n" + json.dumps(record, indent=2) + "\n```" + suffix).encode())
-    original = source.read_bytes()
-    revision = _commit_native(tmp_path)
-    config = tmp_path / ".agentic-workspace/config.toml"
-
-    def configure(native: str = "") -> None:
-        config.write_text(
-            "schema_version = 1\n[modules]\nenabled = []\n[assurance]\n"
-            + native
-            + '\n[assurance.decision_record_fallback]\narchive = "'
-            + archive
-            + '"\nadmitted_revision = "'
-            + revision
-            + '"\n',
-            encoding="utf-8",
-        )
-
-    def start() -> dict[str, Any]:
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "from agentic_workspace.cli import main; raise SystemExit(main())",
-                "start",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "crates/agentic-workspace-core/src/decision_source.rs",
-                "--task",
-                "bounded edit",
-                "--format",
-                "json",
-            ],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-            check=True,
-        )
-        return json.loads(result.stdout)["decision_packet"]
-
-    configure()
-    fallback_packet = start()
-    fallback = fallback_packet["decision_context"]
-    assert start()["identity"] == fallback_packet["identity"]
-    assert fallback["reconciliation"][0]["status"] == "fallback"
-    assert fallback["consequences"][0]["authority"]["actor"]["kind"] == "agent"
-    native_source = tmp_path / "docs/decisions/source-admission.md"
-    native_source.parent.mkdir(parents=True)
-    with native_source.open("xb") as output:
-        output.write(original)
-    configure('decision_record_target = "docs/decisions"\ndecision_record_revision = "' + revision + '"\n')
-    pending_packet = start()
-    assert pending_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
-    assert pending_packet["identity"] != fallback_packet["identity"]
-    admitted_native = _commit_native(tmp_path)
-    configure('decision_record_target = "docs/decisions"\ndecision_record_revision = "' + admitted_native + '"\n')
-    promoted_packet = start()
-    promoted = promoted_packet["decision_context"]
-    assert promoted_packet["identity"] != pending_packet["identity"]
-    assert start()["identity"] == promoted_packet["identity"]
-    assert promoted["reconciliation"][0]["status"] == "repo-native"
-    assert promoted["consequences"][0]["material_revision"] == fallback["consequences"][0]["material_revision"]
-    assert promoted["consequences"][0]["source"]["reference"] == "docs/decisions/source-admission.md"
-    (tmp_path / "SYSTEM_INTENT.md").write_bytes(intent_bytes + b"\nChanged current authority dependency.\n")
-    assert start()["decision_context"]["consequences"] == []
-    (tmp_path / "SYSTEM_INTENT.md").write_bytes(intent_bytes)
-    assert start()["decision_context"]["consequences"] == promoted["consequences"]
-    native_source.write_text("unadmitted replacement", encoding="utf-8")
-    lost_packet = start()
-    assert lost_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
-    assert lost_packet["identity"] != promoted_packet["identity"]
-    assert source.read_bytes() == original
 
 
 @pytest.mark.parametrize("selection_state", ["selected", "none", "missing", "stale-work", "stale-source", "other-route"])
@@ -2218,93 +2059,6 @@ def test_repo_decision_consumes_public_route_without_path_match(shared_core_bina
     assert repository_decision_view(**context, semantic_routes=host)["decision_context"]["consequences"]
 
 
-def test_ordinary_start_public_route_is_current_scoped_and_quiet(shared_core_binary: Path, tmp_path: Path) -> None:
-    import sys
-
-    context, record = _native_archive(tmp_path)
-    record["semantic_routes"] = ["architecture/authority"]
-    _write_native(tmp_path / "design/choice.md", record)
-    registry = tmp_path / "tools/skills/REGISTRY.json"
-    registry.parent.mkdir(parents=True)
-    registry.write_text(json.dumps({"skills": [{"id": "architecture", "semantic_routes": ["architecture/authority"]}]}), encoding="utf-8")
-    revision = _commit_native(tmp_path)
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text(
-        'schema_version = 1\n[modules]\nenabled = []\n[assurance]\ndecision_record_target = "design"\ndecision_record_revision = "'
-        + revision
-        + '"\n',
-        encoding="utf-8",
-    )
-
-    def start(*extra: str, task: str = "consider design") -> dict[str, Any]:
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "from agentic_workspace.cli import main; raise SystemExit(main())",
-                "start",
-                "--target",
-                str(tmp_path),
-                "--task",
-                task,
-                "--format",
-                "json",
-                *extra,
-            ],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-        )
-        assert result.returncode == 0, result.stdout + result.stderr
-        return json.loads(result.stdout)
-
-    quiet = start(task="architecture authority design")
-    assert "decision_context" not in quiet["decision_packet"]
-    assert "semantic_route_result" not in quiet["decision_packet"]
-    discovered = start("--select", "semantic_route_result")["values"]["semantic_route_result"]
-    request = discovered["requests"][1]
-    request["arguments"] = {"posture": "selected", "routes": ["architecture/authority"]}
-    selected = start("--request", json.dumps(request))["decision_packet"]
-    assert selected["decision_context"]["consequences"][0]["id"] == record["id"]
-    assert selected["identity"]["decision_id"].startswith("operating-decision:")
-    assert start("--request", json.dumps(request))["decision_packet"]["identity"] == selected["identity"]
-    (tmp_path / "unrelated.md").write_text("Editorial churn", encoding="utf-8")
-    _commit_native(tmp_path)
-    churned = start("--request", json.dumps(request))["decision_packet"]
-    assert churned["semantic_route_result"]["status"] == "current"
-    assert churned["decision_context"]["consequences"] == selected["decision_context"]["consequences"]
-    switched = start("--request", json.dumps(request), task="a different task")["decision_packet"]
-    assert switched["semantic_route_result"]["status"] == "stale"
-    assert "decision_context" not in switched
-    registry.write_text(registry.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-    stale = start("--request", json.dumps(request))["decision_packet"]
-    assert stale["semantic_route_result"]["status"] == "stale"
-    assert "decision_context" not in stale
-    exact = start("--request", json.dumps(request), "--changed", "src/core.rs")["decision_packet"]
-    assert exact["decision_context"]["consequences"][0]["id"] == record["id"]
-    assert not (tmp_path / ".agentic-workspace/local/current-task-routes.json").exists()
-    for request_json in ("null", '{"decision_context":{},"source":{"revision":"caller"}}'):
-        invalid = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "from agentic_workspace.cli import main; raise SystemExit(main())",
-                "start",
-                "--target",
-                str(tmp_path),
-                "--request",
-                request_json,
-                "--format",
-                "json",
-            ],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-        )
-        assert invalid.returncode != 0
-
-
 def test_generated_node_start_does_not_fake_host_route_admission(shared_core_binary: Path, tmp_path: Path) -> None:
     import os
     import shutil
@@ -2423,52 +2177,6 @@ def test_instruction_binding_scopes_are_distinct(shared_core_binary: Path, tmp_p
     assert instruction_source_admission(host)["sources"][0]["authority"]["effects"] == effects
 
 
-def test_real_instruction_transition_in_ordinary_start(shared_core_binary: Path, tmp_path: Path) -> None:
-    import sys
-
-    real_source = ROOT / ".agentic-workspace/instructions/workspace-operating.md"
-    text = real_source.read_text(encoding="utf-8")
-    host, source = _instruction_host(tmp_path, text)
-    config = tmp_path / ".agentic-workspace/config.toml"
-    base = "schema_version = 1\n[modules]\nenabled = []\n"
-    config.write_text(base, encoding="utf-8")
-    target = ".agentic-workspace/local/decision-point-intent/73a213e66cd48a33.json"
-
-    def start(path: str = target) -> dict[str, Any]:
-        result = subprocess.run(
-            [
-                sys.executable,
-                "-c",
-                "from agentic_workspace.cli import main; raise SystemExit(main())",
-                "start",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                path,
-                "--select",
-                "instruction_clause_projection",
-                "--format",
-                "json",
-            ],
-            cwd=ROOT,
-            text=True,
-            capture_output=True,
-        )
-        assert result.returncode == 0, result.stdout + result.stderr
-        return json.loads(result.stdout)["values"]["instruction_clause_projection"]
-
-    assert start()["effects"]["restrict"] == []
-    config.write_text(base + f'\n[assurance]\ninstruction_revision = "{host["admitted_revision"]}"\n', encoding="utf-8")
-    current = start()
-    assert current["effects"]["restrict"][0]["target"] == "effect:write:" + target
-    assert any(row["reason_code"] == "denied-effect" for row in current["blockers"])
-    assert start()["snapshot_revision"] == current["snapshot_revision"]
-    assert start("unrelated.txt")["effects"]["restrict"] == []
-    source.write_text(text + "\nUnadmitted edit\n", encoding="utf-8")
-    assert start()["effects"]["restrict"] == []
-    assert not (tmp_path / target).exists()
-
-
 def test_generated_node_instruction_declarations_are_not_binding(tmp_path: Path) -> None:
     source = tmp_path / ".agentic-workspace/instructions/lookalike.md"
     source.parent.mkdir(parents=True)
@@ -2488,12 +2196,33 @@ def test_generated_node_instruction_declarations_are_not_binding(tmp_path: Path)
 @pytest.mark.parametrize("transport", ["manual", "internal"])
 def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path: Path, shared_core_binary: Path, transport: str) -> None:
     """#2909: source-owner inputs are distinct from public request intention."""
-    from tests.test_external_operation_clients import _prepare_shared_worktree_assignment
+    from agentic_workspace.decision import admit_assignment_packet, assignment_packet, replace_assignment
 
-    from agentic_workspace.decision import admit_assignment_packet, replace_assignment
-
-    _prepare_shared_worktree_assignment(tmp_path, run_id="original-run")
-    packet = json.loads((tmp_path / ".agentic-workspace/local/assignment-runs/original-run/export/packet.json").read_text())
+    # This is packet replacement proof, not an execution lifecycle. Seal the
+    # fixture with its owner instead of invoking the retired Python CLI host.
+    packet = assignment_packet(
+        {
+            "action": "seal",
+            "packet": {
+                "kind": "agentic-workspace/assignment-export-packet/v1",
+                "assignment_id": "assignment-1",
+                "assignment_revision": "revision-1",
+                "run_id": "original-run",
+                "target": "original",
+                "transport": "manual",
+                "scope": ["src/**"],
+                "assignment_identity": {
+                    "slice_id": "slice-1",
+                    "plan_revision": "plan-rev-1",
+                    "allowed_paths": ["src/**"],
+                    "human_intent": "Inspect the bounded source",
+                    "scope_class": "read-only",
+                    "allowed_effects": ["return-observations"],
+                },
+                "return_contract": {"required_fields": ["summary", "changed_paths", "patch", "stop_conditions_hit"]},
+            },
+        }
+    )
     source = {"reference": "configured-human-source", "revision": "source-1"}
     work = {"id": "slice-1", "revision": "plan-rev-1"}
     execution = {

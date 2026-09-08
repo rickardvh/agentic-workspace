@@ -118,8 +118,8 @@ def test_native_logging_concurrent_append_preserves_valid_sequence(tmp_path, sha
     assert [r["sequence"] for r in rows] == list(range(1, len(rows) + 1))
 
 
-def test_native_logging_public_analysis_export_and_native_cli(tmp_path, shared_core_binary, native_cli, monkeypatch, capsys):
-    from agentic_workspace import cli as source_cli
+def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared_core_binary, native_cli, monkeypatch):
+    from agentic_workspace import session_logging
 
     configured(tmp_path)
     assert call(shared_core_binary, tmp_path, identity="prior-registered-session").returncode == 0
@@ -134,12 +134,11 @@ def test_native_logging_public_analysis_export_and_native_cli(tmp_path, shared_c
     assert result.returncode == 0, result.stderr
     assert len({row["logical_session_id"] for row in events(tmp_path)}) == 2
     monkeypatch.setenv("AW_SESSION_LOGGING_DISABLE", "1")
-    assert source_cli.main(["session-log", "--target", str(tmp_path), "analyze", "--origin", "all", "--format", "json"]) == 0
-    analysis = json.loads(capsys.readouterr().out)
+    state = session_logging.load_state_for_argv(["--target", str(tmp_path)])
+    analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
     assert analysis["status"] != "missing-log", analysis
     assert "agentic-workspace start" in json.dumps(analysis), analysis
-    assert source_cli.main(["session-log", "--target", str(tmp_path), "export", "--no-artifacts", "--format", "json"]) == 0
-    exported = json.loads(capsys.readouterr().out)
+    exported = session_logging.export_session_log(state=state, include_artifacts=False)
     assert exported["status"] == "exported", exported
     path = tmp_path / exported["path"]
     with gzip.open(path, "rt", encoding="utf-8") as stream:

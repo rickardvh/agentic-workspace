@@ -1302,7 +1302,7 @@ def test_generated_python_conformance_uses_contract_artifacts() -> None:
     memory_skills = registries["memory-bootstrap"]["memory.list-skills.process"]
     verification_report = registries["verification-cli"]["verification.report.process"]
 
-    assert "from agentic_workspace.cli import main" in checker._python_command_for_package("root-workspace")[-1]
+    assert "from generated.workspace.python.cli import main" in checker._python_command_for_package("root-workspace")[-1]
     assert "from repo_planning_bootstrap.cli import main" in checker._python_command_for_package("planning-bootstrap")[-1]
     assert "from repo_memory_bootstrap.cli import main" in checker._python_command_for_package("memory-bootstrap")[-1]
     assert "from repo_verification_bootstrap.cli import main" in checker._python_command_for_package("verification-cli")[-1]
@@ -2703,7 +2703,7 @@ def test_static_generated_package_proof_rejects_static_surface_regressions() -> 
         (
             "shipped-source-cli-backslide",
             r"""
-            backslid_source = "src/agentic_workspace/cli_backslide.py"
+            backslid_source = "src/agentic_workspace/cli.py"
             original_read_text = checker.Path.read_text
             original_is_file = checker.Path.is_file
 
@@ -3047,19 +3047,6 @@ def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywor
     )
 
     assert errors == []
-
-
-def test_static_generated_package_proof_accepts_inventory_backed_cli_evaluation_parser() -> None:
-    checker = _load_checker()
-
-    errors = checker._validate_python_shipped_source_executable_retirement()
-
-    assert not [error for error in errors if "src/agentic_workspace/cli.py" in error]
-    assert checker.PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS["src/agentic_workspace/cli.py"] == {
-        "parser construction": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
-        "command parsing": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
-        "subparser ownership": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
-    }
 
 
 def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None:

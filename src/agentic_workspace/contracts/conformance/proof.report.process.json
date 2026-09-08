@@ -28,35 +28,14 @@
   ],
   "expectations": {
     "exit": {
-      "code": 0
+      "code": 2
     },
     "stdout": {
-      "format": "json",
-      "field_assertions": [
-        {
-          "path": [
-            "kind"
-          ],
-          "equals": "proof-next-decision/v1"
-        },
-        {
-          "path": [
-            "next",
-            "action"
-          ],
-          "equals": "manual-verification"
-        },
-        {
-          "path": [
-            "detail_routes",
-            "verbose"
-          ],
-          "equals": "agentic-workspace proof --target . --changed <paths> --verbose --format json"
-        }
-      ]
+      "format": "text",
+      "field_assertions": []
     },
     "stderr": {
-      "allow_non_empty": false
+      "allow_non_empty": true
     },
     "filesystem": {
       "allowed_write_paths": [],
@@ -65,20 +44,10 @@
         "README.md",
         "Makefile"
       ],
-      "forbidden_paths": [],
-      "allowed_write_directories": [
-        ".agentic-workspace/local/improvement-pressure",
-        ".agentic-workspace/local/projection-cache"
-      ]
+      "forbidden_paths": []
     },
     "idempotency": {
-      "run_twice": true,
-      "ignored_stdout_json_paths": [
-        [
-          "projection_reuse",
-          "status"
-        ]
-      ]
+      "run_twice": true
     },
     "safety": {
       "no_writes_outside_repo_root": true

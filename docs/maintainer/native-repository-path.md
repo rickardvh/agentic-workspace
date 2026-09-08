@@ -9,6 +9,13 @@ The executable calls the shared Rust core. Python and TypeScript remain
 bindings. Repository generators and checks may use Python, but are not an
 alternate authority for ordinary product operations.
 
+The Python distribution's optional command entry point launches its paired native
+executable. The source runner resolves this checkout's native artifacts directly,
+without choosing an editable Python distribution or refreshing a generated CLI.
+Missing native artifacts fail closed. Older `init`, `summary`, `implement` and
+other former-host commands are not a compatibility fallback; use the current
+native request/action contract. Maintainer generators remain separate tooling.
+
 Start with the invocation in `AGENTS.md`, the current task and `--format json`.
 Include each known path with a separate `--changed`. Read the decision packet:
 source-read requests deliver current instructions, bounded answer requests carry
@@ -40,8 +47,8 @@ their distinct force, as do advisory compatibility and closeout obligations.
 
 This path has real former-owner transfer/update/recovery evidence and independent
 native, JSON, Python and TypeScript tests. It does not establish all native owner
-outcomes or release/platform admission. Configuration mutation, consequential
-delegation, positive lifecycle-derived target evidence and remaining owners stay
+outcomes or release/platform admission. Broader configuration mutation, complete
+delegation, longitudinal target evidence and remaining owners stay
 with #2613/#2767, #2947/#2817/#2818/#2210, #2209 and the #2983 frontier. #2909
 aggregates conformance; #2990 admits one exact release-equivalent candidate.
 
@@ -63,3 +70,31 @@ that provenance. Transport provenance still grants no task acceptance or target
 quality. The existing context-cost contract records process-input bytes and
 elapsed time; provider framing, tokens, internal retries and downstream burden
 remain unknown when the adapter cannot observe them.
+
+Assignment offers a bounded use/repair/reject judgment for that current execution.
+Planning may retain the admitted summary through its existing writer into the
+selected owner's continuation frontier. Fresh re-entry is still required; proof
+execution carries the exact Planning continuation. One current retained result
+and selected-command check may supply contextual evidence for the matching
+eligible configuration. Source drift or native Planning supersession de-adopts
+that signal; it grants no target eligibility, task-success or completion authority.
+
+For a bounded correction to an existing `workspace.cli_invoke` control, choose
+its source from `configuration_write.requests`, supply the intended value, and
+submit that exact request. The ordinary decision packet asks for a bounded human
+answer to the source/value proposal; only that answer can produce the write
+operation. A same-value request is a quiet no-op. Deferral writes nothing.
+Other keys, missing controls, redirected shared sources, and shared/local
+conflicts remain unsupported and fail closed. The writer does not select a new
+command from task wording or infer a policy decision from its own proposal.
+
+The write preserves every byte outside the selected TOML string literal,
+including comments and line endings. Both source revisions, effective policy
+and capability identity are revalidated before publication. Repo/human source
+ownership remains unchanged. Immutable attempt/result evidence under the
+existing local effects area attests only this exact edit; it grants no continuing
+custody or other owner authority. If source publication succeeds before receipt
+publication, fresh entry offers an exact `configuration_write.recovery_requests`
+request which finalizes the retained receipt without rewriting configuration.
+An old write action is stale after success; use fresh resolution for a new edit.
+This bounded writer does not satisfy #2767's broader configure-once outcome.

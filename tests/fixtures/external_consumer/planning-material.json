@@ -1,0 +1,44 @@
+{
+  "title": "Installed consumer continuity proof",
+  "owner_level": "slice",
+  "intent": {
+    "outcome": "Preserve a bounded owner across installed native consumer processes.",
+    "non_goals": [
+      "No completion claim or external execution."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Preserve a bounded owner across installed native consumer processes.",
+    "closure_boundary": "fixture only"
+  },
+  "scope": {
+    "owned": [
+      "example.txt"
+    ],
+    "effects": [
+      "Planning continuity only"
+    ]
+  },
+  "relationships": {
+    "dependencies": {
+      "refs": []
+    }
+  },
+  "next_action": "Retain the next frontier through the native writer.",
+  "proof": {
+    "claims": [],
+    "requirements": [],
+    "refs": []
+  },
+  "continuation": {
+    "frontier": "Await the next bounded owner update."
+  },
+  "canonical_core": {
+    "hard_constraints": "Preserve unrelated work; retain no completion or execution claim.",
+    "agent_may_decide": "Construct the exact bounded Planning frontier update.",
+    "escalate_when": "Current owner authority or source bytes disagree."
+  },
+  "references": [],
+  "blockers": []
+}

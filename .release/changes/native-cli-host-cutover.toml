@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Replace the former Python-hosted command surface with a thin launcher for the paired native CLI and remove its parser exceptions; add revision-bound native writes for existing invocation configuration without acquiring source custody."
+issues = [3077, 2987, 2909, 2767]

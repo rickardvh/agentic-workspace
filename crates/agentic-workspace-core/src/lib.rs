@@ -10,6 +10,7 @@ pub mod instruction_applicability;
 pub mod instruction_source;
 pub mod maintainer_logging;
 mod native_config;
+mod native_config_write;
 mod native_delegation;
 pub(crate) mod native_handoff;
 mod native_instructions;

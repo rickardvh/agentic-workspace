@@ -25,27 +25,14 @@
   ],
   "expectations": {
     "exit": {
-      "code": 0
+      "code": 2
     },
     "stdout": {
-      "format": "json",
-      "field_assertions": [
-        {
-          "path": [
-            "kind"
-          ],
-          "equals": "workspace-report-router/v1"
-        },
-        {
-          "path": [
-            "command"
-          ],
-          "equals": "report"
-        }
-      ]
+      "format": "text",
+      "field_assertions": []
     },
     "stderr": {
-      "allow_non_empty": false
+      "allow_non_empty": true
     },
     "filesystem": {
       "allowed_write_paths": [],

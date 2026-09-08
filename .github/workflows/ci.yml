@@ -50,8 +50,8 @@ jobs:
         run: uv lock --check
       - name: Sync the workspace once
         run: make sync-all
-      - name: Run root generated CLI smoke tests
-        run: uv run pytest tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts[modules.report.process] tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts[defaults.root-cli-authority.process] -q
+      - name: Run native root CLI and thin-launcher admission
+        run: uv run pytest tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness tests/test_native_public_cli.py::test_current_public_route_survives_fresh_process_but_not_source_change tests/test_native_public_cli.py::test_real_instruction_protection_and_source_drift -q
       - name: Run routed workspace CLI and proof contracts
         run: uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q
       - name: Run shared operating-decision core proof
@@ -181,7 +181,7 @@ jobs:
           cargo +stable test --workspace
           uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
           uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
-          uv run pytest tests/test_workspace_session_logging.py::test_session_log_concurrent_analyzers_complete_without_index_warning -q
+          uv run pytest tests/test_native_maintainer_logging.py::test_native_logging_concurrent_append_preserves_valid_sequence tests/test_native_maintainer_logging.py::test_native_logging_concurrent_registration_preserves_existing_identities -q
           uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   support-bearing-promotion:

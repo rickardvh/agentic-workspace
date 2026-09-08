@@ -235,16 +235,6 @@ PYTHON_SHIPPED_MODULE_SOURCE_ROOTS = (
     "packages/memory/src/repo_memory_bootstrap/",
     "packages/verification/src/repo_verification_bootstrap/",
 )
-PYTHON_SOURCE_RUNTIME_FIRST_CLI_OPERATION_CONTRACTS = (
-    "operations/evaluation.register.json",
-    "operations/evaluation.observe.json",
-    "operations/evaluation.status.json",
-    "operations/evaluation.transition.json",
-)
-PYTHON_SOURCE_RUNTIME_FIRST_CLI_EXECUTABLE_CATEGORIES = {
-    "command parsing",
-    "subparser ownership",
-}
 PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS = (
     "workspace_runtime_cli.py",
     "planning_runtime_cli.py",
@@ -278,13 +268,6 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
     "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 )
-PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS = {
-    "src/agentic_workspace/cli.py": {
-        "parser construction": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
-        "command parsing": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
-        "subparser ownership": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
-    },
-}
 RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS = (
     "existing-primitive-bugfix",
     "new-primitive-implementation",
@@ -670,7 +653,9 @@ def _generated_runtime_module_for_package(package_id: str):
 
 def _python_command_for_package(package_id: str) -> list[str]:
     module_by_package = {
-        "root-workspace": "agentic_workspace.cli",
+        # This checker exercises the retained generated artifact. The product
+        # command has separate native black-box/package admission.
+        "root-workspace": "generated.workspace.python.cli",
         "planning-bootstrap": "repo_planning_bootstrap.cli",
         "memory-bootstrap": "repo_memory_bootstrap.cli",
         "verification-cli": "repo_verification_bootstrap.cli",
@@ -3883,24 +3868,6 @@ def _python_executable_behavior_categories(text: str) -> list[str]:
     return sorted(categories)
 
 
-def _operation_declares_source_runtime_first(relative_path: str) -> bool:
-    operation = _load_json(relative_path)
-    ir_plan = operation.get("ir_plan", {})
-    return (
-        operation.get("migration_status") == "runtime-backed-source-command"
-        and isinstance(ir_plan, dict)
-        and ir_plan.get("status") == "source-runtime-first"
-    )
-
-
-def _allowed_source_runtime_first_cli_exception(relative_path: str, matched_categories: list[str]) -> bool:
-    if relative_path != "src/agentic_workspace/cli.py":
-        return False
-    if not set(matched_categories) <= PYTHON_SOURCE_RUNTIME_FIRST_CLI_EXECUTABLE_CATEGORIES:
-        return False
-    return all(_operation_declares_source_runtime_first(path) for path in PYTHON_SOURCE_RUNTIME_FIRST_CLI_OPERATION_CONTRACTS)
-
-
 def _validate_python_shipped_source_executable_retirement() -> list[str]:
     errors: list[str] = []
     tracked_sources = _tracked_python_source_files()
@@ -3914,12 +3881,7 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         matched_categories = _python_executable_behavior_categories(text)
-        exceptions = PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS.get(relative_path, {})
-        if exceptions:
-            matched_categories = [category for category in matched_categories if category not in exceptions]
         if matched_categories:
-            if _allowed_source_runtime_first_cli_exception(relative_path, matched_categories):
-                continue
             errors.append(
                 "tracked shipped Python source must stay retired from generated CLI executable ownership; "
                 f"{relative_path} contains retired executable markers: {matched_categories!r}"

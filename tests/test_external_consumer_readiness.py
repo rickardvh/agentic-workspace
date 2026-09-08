@@ -30,15 +30,6 @@ def test_consumers_use_only_public_package_entrypoints() -> None:
         assert "tests/fixtures" not in source
 
 
-def test_semantic_projection_normalizes_only_environment_roots(tmp_path: Path) -> None:
-    module = _module()
-    left = tmp_path / "necessary"
-    right = tmp_path / "full-mirror"
-    left_payload = {"target": left.as_posix(), "nested": [f"{left.as_posix()}/.agentic-workspace", "stable"]}
-    right_payload = {"target": right.as_posix(), "nested": [f"{right.as_posix()}/.agentic-workspace", "stable"]}
-    assert module._semantic_projection(left_payload, [left]) == module._semantic_projection(right_payload, [right])
-
-
 def test_workspace_has_no_reverse_dependency_on_external_consumers() -> None:
     assert _module()._reverse_dependency_violations() == []
 

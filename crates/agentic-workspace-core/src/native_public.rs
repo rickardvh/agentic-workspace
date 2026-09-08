@@ -65,6 +65,8 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     if executing
         && input.invocation.as_ref().is_none_or(|i| {
             i["operation_id"] != "delegation.dispatch"
+                && i["operation_id"] != "configuration.write"
+                && i["operation_id"] != "configuration.recover-write"
                 && !(i["operation_id"] == "planning.update"
                     && i["arguments"]["consumed_return"].is_object())
         })
@@ -146,6 +148,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             "invoked owner is disabled by current module enablement",
         ));
     }
+    let config_write_contract = crate::native_config_write::contract()?;
     let mut startup_adapter =
         crate::native_startup::view(target, &work, &configuration, None, None)?;
     let mut system_intent = crate::native_intent::view(target, &work, &configuration, None, None)?;
@@ -200,6 +203,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     crate::native_startup::restrict_operations(
         &mut startup_adapter,
         &[
+            &config_write_contract,
             &planning_probe["capability_contract"],
             &verification_probe["capability_contract"],
             &memory["capability_contract"],
@@ -208,6 +212,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     )?;
     let decision_read_contract = decision_source::read_contract()?;
     let contract = combined_contract(&[
+        &config_write_contract,
         &decision_read_contract,
         &configuration["capability_contract"],
         &system_intent["capability_contract"],
@@ -282,7 +287,17 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     if let Some(request) = planning["selector_transfer"].get_mut("request") {
         request["capability_revision"] = contract["revision"].clone();
     }
-    let mut contributions = vec![configuration["contribution"].clone()];
+    let config_write = crate::native_config_write::view(
+        target,
+        &work,
+        &configuration,
+        &contract,
+        request_for("configuration"),
+    )?;
+    let mut contributions = vec![
+        configuration["contribution"].clone(),
+        config_write["contribution"].clone(),
+    ];
     let mut planning_detail = Value::Null;
     if !planning["planning_input"].is_null() {
         let mut context = planning["planning_input"].clone();
@@ -647,7 +662,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     )?;
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
-    let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
     // Requests bind the composed contract above. Owner-local fragments remain
     // internal composition inputs, not additional public authorities.
     for owner in public.as_object_mut().unwrap().values_mut() {
@@ -708,6 +723,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         if !matches!(
             owner,
             "planning"
+                | "configuration"
                 | "semantic-routes"
                 | "verification"
                 | "memory"
@@ -793,6 +809,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
         && invocation["operation_id"] != "delegation.dispatch"
+        && invocation["operation_id"] != "configuration.write"
+        && invocation["operation_id"] != "configuration.recover-write"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -801,6 +819,32 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if matches!(
+        invocation["operation_id"].as_str(),
+        Some("configuration.write" | "configuration.recover-write")
+    ) {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        let executed = crate::native_config_write::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     if invocation["operation_id"] == "delegation.dispatch" {
         let executed = crate::native_delegation::execute(

@@ -1,31 +1,22 @@
 from __future__ import annotations
 
 import hashlib
-import importlib.metadata
+import importlib.util
 import json
 import os
-import re
 import subprocess
 import sys
 import time
-import tomllib
 import uuid
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import unquote, urlparse
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CACHE_PATH = REPO_ROOT / ".agentic-workspace" / "local" / "cache" / "generated-cli-fingerprint.json"
 SOURCE_MANIFEST_NAME = ".agentic-workspace-cli-fingerprint.json"
 GENERATOR_SCRIPT = REPO_ROOT / "scripts" / "generate" / "generate_command_packages.py"
 CACHE_SCHEMA = "generated-cli-fingerprint/v1"
-RUNTIME_DISTRIBUTION_PATHS = {
-    "agentic-workspace": Path("."),
-    "agentic-workspace-memory": Path("packages/memory"),
-    "agentic-workspace-planning": Path("packages/planning"),
-    "agentic-workspace-verification": Path("packages/verification"),
-}
 CODEX_SESSION_IDENTITY_ENV = "CODEX_THREAD_ID"
 AW_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
 
@@ -292,9 +283,7 @@ def source_cli_fingerprint_manifest_path(*, repo_root: Path, owner: str) -> Path
     return repo_root / "generated" / owner / SOURCE_MANIFEST_NAME
 
 
-def _source_cli_fingerprint_manifest_payload_status(
-    *, repo_root: Path, owner: str, payload: dict[str, object]
-) -> dict[str, str]:
+def _source_cli_fingerprint_manifest_payload_status(*, repo_root: Path, owner: str, payload: dict[str, object]) -> dict[str, str]:
     domains = _generation_dependency_domains(repo_root=repo_root)
     files = domains.get(owner)
     if files is None:
@@ -340,9 +329,7 @@ def source_cli_fingerprint_manifest_status(
     manifests = source_cli_fingerprint_manifests(repo_root=repo_root)
     if not manifests:
         return {"status": "invalid", "reason": "no-owner-domains", "auxiliary_witness": "not-evaluated"}
-    actual_owners = {
-        path.parent.name for path in (repo_root / "generated").glob(f"*/{SOURCE_MANIFEST_NAME}") if path.is_file()
-    }
+    actual_owners = {path.parent.name for path in (repo_root / "generated").glob(f"*/{SOURCE_MANIFEST_NAME}") if path.is_file()}
     if actual_owners != set(manifests):
         return {"status": "stale", "reason": "owner-manifest-set-drift", "auxiliary_witness": "not-evaluated"}
     statuses = []
@@ -476,66 +463,20 @@ def ensure_generated_cli_current(
     return True
 
 
-def _powershell_command(parts: Sequence[str]) -> str:
-    def quote(part: str) -> str:
-        return part if re.fullmatch(r"[A-Za-z0-9_./:-]+", part) else "'" + part.replace("'", "''") + "'"
-
-    return " ".join(quote(part) for part in parts)
-
-
-def _missing_runtime_dependency_result(*, missing_module: str, argv: Sequence[str]) -> int:
-    sync_argv = ["uv", "sync", "--frozen", "--project", REPO_ROOT.as_posix()]
-    retry_argv = [
-        "uv",
-        "run",
-        "--project",
-        REPO_ROOT.as_posix(),
-        "--frozen",
-        "--active",
-        "--no-sync",
-        "python",
-        "scripts/run_agentic_workspace.py",
-        *argv,
-    ]
-    payload = {
-        "kind": "agentic-workspace/source-runtime-recovery/v1",
-        "outcome": "blocked",
-        "reason_code": "unsynchronized-source-runtime",
-        "missing_module": missing_module,
-        "message": "The source-checkout runtime is missing a required dependency; synchronize this checkout before retrying.",
-        "recovery_command": _powershell_command(sync_argv),
-        "recovery_argv": sync_argv,
-        "retry_command": _powershell_command(retry_argv),
-        "retry_argv": retry_argv,
-    }
-    json_requested = any(
-        arg == "--format=json" or (arg == "json" and index > 0 and argv[index - 1] == "--format")
-        for index, arg in enumerate(argv)
-    )
-    if json_requested:
-        print(json.dumps(payload, indent=2))
-    else:
-        print(payload["message"], file=sys.stderr)
-        print(f"Missing module: {missing_module}", file=sys.stderr)
-        print(f"Recovery: {payload['recovery_command']}", file=sys.stderr)
-        print(f"Retry: {payload['retry_command']}", file=sys.stderr)
-    return 2
-
-
 def _dispatch_to_source_cli(argv: Sequence[str]) -> int:
-    source_root = REPO_ROOT / "src"
-    for path in (str(source_root), str(REPO_ROOT)):
-        if path not in sys.path:
-            sys.path.insert(0, path)
+    # Load only this checkout's artifact resolver. Installed/editable Python
+    # package identity cannot choose the product implementation for this source.
+    path = REPO_ROOT / "src/agentic_workspace/native_core.py"
+    spec = importlib.util.spec_from_file_location("aw_source_native_artifacts", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("source native artifact resolver unavailable")
+    resolver = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(resolver)
     try:
-        from agentic_workspace.cli import main as cli_main
-    except ModuleNotFoundError as exc:
-        missing_module = str(exc.name or "").strip()
-        if not missing_module or missing_module == "agentic_workspace" or missing_module.startswith("agentic_workspace."):
-            raise
-        return _missing_runtime_dependency_result(missing_module=missing_module, argv=argv)
-
-    return int(cli_main(list(argv)))
+        return subprocess.call([str(resolver.cli_binary()), *argv])
+    except (OSError, RuntimeError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
 
 def _bridge_codex_session_identity() -> bool:
@@ -550,122 +491,9 @@ def _bridge_codex_session_identity() -> bool:
     return True
 
 
-def _editable_distribution_origin(distribution: importlib.metadata.Distribution) -> Path | None:
-    raw = distribution.read_text("direct_url.json")
-    if not raw:
-        return None
-    try:
-        direct_url = json.loads(raw)
-    except json.JSONDecodeError:
-        return None
-    dir_info = direct_url.get("dir_info") if isinstance(direct_url, dict) else None
-    if not isinstance(dir_info, dict) or not bool(dir_info.get("editable")):
-        return None
-    parsed = urlparse(str(direct_url.get("url") or ""))
-    if parsed.scheme != "file":
-        return None
-    path_text = unquote(parsed.path)
-    if os.name == "nt" and re.match(r"^/[A-Za-z]:/", path_text):
-        path_text = path_text[1:]
-    return Path(path_text).resolve()
-
-
-def _source_distribution_version(*, repo_root: Path, relative_project: Path) -> str | None:
-    pyproject_path = repo_root / relative_project / "pyproject.toml"
-    try:
-        document = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError):
-        return None
-    project = document.get("project")
-    if not isinstance(project, dict):
-        return None
-    version = project.get("version")
-    return str(version).strip() if isinstance(version, str) and version.strip() else None
-
-
-def runtime_identity_admission(
-    *,
-    repo_root: Path = REPO_ROOT,
-    distribution_lookup: Callable[[str], importlib.metadata.Distribution] = importlib.metadata.distribution,
-) -> dict[str, object]:
-    target_root = repo_root.resolve()
-    observed: list[dict[str, str]] = []
-    mismatches: list[dict[str, str]] = []
-    for name, relative_expected in RUNTIME_DISTRIBUTION_PATHS.items():
-        try:
-            distribution = distribution_lookup(name)
-        except importlib.metadata.PackageNotFoundError:
-            continue
-        origin = _editable_distribution_origin(distribution)
-        if origin is None:
-            continue
-        expected = (target_root / relative_expected).resolve()
-        item = {"distribution": name, "origin": origin.as_posix(), "expected": expected.as_posix()}
-        observed.append(item)
-        if origin != expected:
-            mismatches.append(item)
-            continue
-        source_version = _source_distribution_version(repo_root=target_root, relative_project=relative_expected)
-        installed_version = str(getattr(distribution, "version", "") or "").strip()
-        if source_version is not None and installed_version and installed_version != source_version:
-            mismatches.append(
-                {
-                    **item,
-                    "mismatch": "stale-editable-metadata",
-                    "source_version": source_version,
-                    "installed_version": installed_version,
-                }
-            )
-    status = "mismatch" if mismatches else "matched" if observed else "no-editable-runtime"
-    return {
-        "kind": "agentic-workspace/runtime-identity/v1",
-        "status": status,
-        "target_root": target_root.as_posix(),
-        "executable": Path(sys.executable).resolve().as_posix(),
-        "environment": Path(os.environ["VIRTUAL_ENV"]).resolve().as_posix() if os.environ.get("VIRTUAL_ENV") else "",
-        "editable_distributions": observed,
-        "mismatches": mismatches,
-    }
-
-
-def _admit_runtime_identity() -> bool:
-    identity = runtime_identity_admission()
-    os.environ["AW_RUNTIME_IDENTITY"] = json.dumps(identity, sort_keys=True, separators=(",", ":"))
-    if identity["status"] != "mismatch":
-        return True
-    stale_metadata = any(
-        mismatch.get("mismatch") == "stale-editable-metadata" for mismatch in identity.get("mismatches", [])
-    )
-    if stale_metadata:
-        message = "Agentic Workspace refused stale editable distribution metadata before command effects."
-        recovery = f'uv sync --frozen --project "{REPO_ROOT.as_posix()}"'
-        recovery_suffix = ""
-    else:
-        message = "Agentic Workspace refused a runtime from another checkout before command effects."
-        recovery = f'uv run --project "{REPO_ROOT.as_posix()}" --no-sync python scripts/run_agentic_workspace.py'
-        recovery_suffix = " <command arguments>"
-    print(message, file=sys.stderr)
-    print(f"Runtime identity: {json.dumps(identity, sort_keys=True)}", file=sys.stderr)
-    print(f"Recovery: {recovery}{recovery_suffix}", file=sys.stderr)
-    return False
-
-
-def _should_refresh_generated_cli_for_argv(argv: Sequence[str]) -> bool:
-    if os.environ.get("AW_SKIP_GENERATED_CLI_REFRESH") == "1":
-        return False
-    if os.environ.get("AW_FORCE_GENERATED_CLI_REFRESH") == "1":
-        return True
-    args = [arg for arg in argv if arg != "--"]
-    return not args or args[0] != "start"
-
-
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     _bridge_codex_session_identity()
-    if not _admit_runtime_identity():
-        return 2
-    if _should_refresh_generated_cli_for_argv(args):
-        ensure_generated_cli_current()
     return _dispatch_to_source_cli(args)
 
 

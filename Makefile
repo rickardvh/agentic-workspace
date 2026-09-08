@@ -30,9 +30,38 @@ PACKED_ARTIFACT_RECEIPT ?= $(PACKED_ARTIFACT_DIR)/generated-command-conformance-
 PACKED_ARTIFACT_CONTEXT ?= local
 
 WORKSPACE_TEST_CLI = \
+	tests/test_assignment_burden.py \
+	tests/test_assignment_no_change_prompt.py \
+	tests/test_assignment_override_policy.py \
+	tests/test_assignment_planning_requirements.py \
 	tests/test_bounded_external_issue_route.py \
+	tests/test_direct_task_identity.py \
 	tests/test_dynamic_instruction_projection.py \
+	tests/test_native_advisory_config.py \
+	tests/test_native_assignment_judgment.py \
+	tests/test_native_assignment_policy.py \
+	tests/test_native_config_admission.py \
+	tests/test_native_execution_configurations.py \
+	tests/test_native_former_routes.py \
+	tests/test_native_maintainer_logging.py \
+	tests/test_native_npm_routes.py \
+	tests/test_native_planning_create.py \
+	tests/test_native_public_cli.py \
+	tests/test_native_readonly_handoff.py \
+	tests/test_native_startup_adapter.py \
+	tests/test_native_system_intent.py \
+	tests/test_native_transport.py \
+	tests/test_native_workflow_artifact_profile.py \
+	tests/test_operating_decision.py \
 	tests/test_operating_projection_receipt.py \
+	tests/test_ordinary_public_owner.py \
+	tests/test_planning_selection_custody.py \
+	tests/test_resolved_decision_reuse.py \
+	tests/test_source_request_dependencies.py \
+	tests/test_summary_exact_selector_performance.py \
+	tests/test_task_judgment_candidates.py \
+	tests/test_typescript_config_policy_cleanup.py \
+	tests/test_typescript_owner_interpreter.py \
 	tests/test_workspace_cli.py \
 	tests/test_workspace_cli_blackbox.py \
 	tests/test_workspace_config_cli.py \
@@ -42,7 +71,6 @@ WORKSPACE_TEST_CLI = \
 	tests/test_workspace_implement_cli.py \
 	tests/test_workspace_intent_cli.py \
 	tests/test_workspace_modules_cli.py \
-	tests/test_operating_decision.py \
 	tests/test_workspace_ownership_cli.py \
 	tests/test_workspace_planning_help_cli.py \
 	tests/test_workspace_projection_reuse.py \
@@ -51,10 +79,19 @@ WORKSPACE_TEST_CLI = \
 	tests/test_workspace_summary_cli.py
 
 WORKSPACE_TEST_PROOF = \
+	tests/test_assurance_applicability.py \
 	tests/test_assurance_authority.py \
 	tests/test_generated_command_package_proof_runner.py \
+	tests/test_native_domain_proof.py \
+	tests/test_native_proof_producer.py \
+	tests/test_native_verification_strategy.py \
 	tests/test_output_profile_budgets.py \
+	tests/test_proof_publication.py \
+	tests/test_proof_receipt_owner.py \
 	tests/test_proof_subject.py \
+	tests/test_proof_subject_batch.py \
+	tests/test_verification_public_owner.py \
+	tests/test_verification_requirements.py \
 	tests/test_workspace_proof_cli.py \
 	tests/test_workspace_proof_generated_packages_cli.py
 
@@ -63,6 +100,7 @@ WORKSPACE_TEST_SESSION_REVIEW = \
 	tests/test_codex_session_identity_agent_aid.py \
 	tests/test_github_check_inspection.py \
 	tests/test_pr_comment_delta.py \
+	tests/test_review_authentication.py \
 	tests/test_review_merge_gate.py \
 	tests/test_review_stack_ops.py \
 	tests/test_review_stack_transitions.py \
@@ -79,15 +117,21 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_intent_feedback.py \
 	tests/test_module_contract.py \
 	tests/test_no_absolute_paths.py \
+	tests/test_open_issues_closure_evidence.py \
 	tests/test_package_artifact_duplicates.py \
 	tests/test_prompt_semantic_markers.py \
+	tests/test_reconstruction_disposition_map.py \
 	tests/test_review_scale_extracted_boundaries.py \
 	tests/test_runtime_compatibility.py \
 	tests/test_runtime_implementation_ownership.py \
-	tests/test_shared_core.py \
 	tests/test_schema_reference_docs.py \
-	tests/test_security_supply_chain.py \
 	tests/test_scoped_instructions.py \
+	tests/test_security_supply_chain.py \
+	tests/test_separation_of_duty.py \
+	tests/test_shared_core.py \
+	tests/test_structured_executor_contracts.py \
+	tests/test_structured_executor_replay.py \
+	tests/test_structured_executor_safety.py \
 	tests/test_structured_file_inventory.py \
 	tests/test_trusted_execution.py \
 	tests/test_validation_runtime_plan.py \
@@ -109,29 +153,36 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_adaptation.py \
 	tests/test_agentic_workspace_launcher.py \
 	tests/test_compact_command_runner.py \
-	tests/test_composed_operation_scenarios.py \
 	tests/test_completion_cost_json_corpus.py \
 	tests/test_completion_cost_lane_evidence.py \
 	tests/test_completion_cost_live_behavior_proof.py \
 	tests/test_completion_cost_schema_analysis.py \
+	tests/test_composed_operation_scenarios.py \
+	tests/test_consequential_learning_integration.py \
 	tests/test_cross_drive_target_paths.py \
+	tests/test_execution_guarantees.py \
 	tests/test_external_agent_evaluation_lane.py \
 	tests/test_external_consumer_profile.py \
 	tests/test_external_consumer_readiness.py \
 	tests/test_external_integration_boundary.py \
 	tests/test_external_operation_clients.py \
+	tests/test_future_learning.py \
 	tests/test_git_hooks.py \
 	tests/test_lazy_discovery_measurements.py \
+	tests/test_learning_effectiveness.py \
+	tests/test_learning_promotion.py \
 	tests/test_lifecycle_smoke.py \
 	tests/test_long_horizon_episode.py \
 	tests/test_maintainer_surfaces.py \
 	tests/test_memory_effectiveness.py \
 	tests/test_module_extension_scenario_matrix.py \
+	tests/test_orchestration.py \
 	tests/test_planning_delegation.py \
 	tests/test_reconciliation.py \
-	tests/test_repository_scanning.py \
 	tests/test_repo_evolution_scenario.py \
 	tests/test_repo_improvement_effectiveness.py \
+	tests/test_repository_scanning.py \
+	tests/test_self_configuration_lifecycle.py \
 	tests/test_source_payload_operational_install.py \
 	tests/test_v1_contract.py
 
@@ -345,7 +396,7 @@ format-check-nosync: format-check-workspace format-check-memory format-check-pla
 format-check: sync-all format-check-nosync
 
 verify-workspace:
-	@$(COMPACT_RUN) --label "workspace verify" -- uv run agentic-workspace modules --format json
+	@$(COMPACT_RUN) --label "workspace native command admission" -- uv run pytest tests/test_workspace_cli_blackbox.py -q
 
 verify-memory:
 	@$(COMPACT_RUN) --label "memory verify-payload" --cwd packages/memory -- uv run agentic-memory verify-payload --target .
@@ -361,13 +412,13 @@ verify-nosync: verify-workspace verify-memory verify-planning verify-verificatio
 verify: sync-all verify-nosync
 
 memory-freshness:
-	@$(COMPACT_RUN) --label "memory doctor" -- uv run agentic-workspace doctor --target . --format json
+	@$(COMPACT_RUN) --label "memory freshness" -- uv run python scripts/check/check_memory_freshness.py
 
 memory-freshness-strict:
-	@$(COMPACT_RUN) --label "memory report" -- uv run agentic-workspace report --target . --format json
+	@$(COMPACT_RUN) --label "memory freshness strict" -- uv run python scripts/check/check_memory_freshness.py --strict
 
 recurring-friction-ledger:
-	@$(COMPACT_RUN) --label "recurring friction ledger" -- uv run agentic-workspace report --target . --format json
+	@$(COMPACT_RUN) --label "recurring friction ledger" -- uv run python scripts/check/check_recurring_friction_ledger.py
 
 planning-surfaces:
 	@$(COMPACT_RUN) --label "planning surfaces" -- uv run python scripts/check/check_planning_surfaces.py
