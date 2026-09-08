@@ -3,19 +3,23 @@ use std::{
     fs,
     path::PathBuf,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+static NEXT_TARGET: AtomicU64 = AtomicU64::new(0);
 
 struct Target(PathBuf);
 impl Target {
     fn empty() -> Self {
         let path = std::env::temp_dir().join(format!(
-            "aw-native-cli-{}-{}",
+            "aw-native-cli-{}-{}-{}",
             std::process::id(),
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT_TARGET.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
         Self(path)

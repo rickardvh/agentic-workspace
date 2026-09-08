@@ -201,7 +201,7 @@ def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, sh
 
 
 @pytest.mark.parametrize("consumer", ["json", "python", "typescript"])
-def test_native_producer_other_binary_requires_exact_runtime_compatibility(
+def test_native_producer_reused_by_fresh_adapters_through_same_core(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, consumer: str
 ) -> None:
     context = fixture(tmp_path)
@@ -216,10 +216,10 @@ def test_native_producer_other_binary_requires_exact_runtime_compatibility(
     request["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
     evidence = call(consumer, {**context, "request": request})["verification"]["evidence"][0]
     assert evidence["publication_admission"]["status"] == "admitted"
-    assert evidence["runtime_admission"]["reason"] == "native-producer-binary-compatibility-unproven"
-    assert evidence["evidence_freshness"] != "reusable"
-    with pytest.raises(AssertionError, match="stale"):
-        call(consumer, {**context, "invocation": action})
+    assert evidence["evidence_freshness"] == "reusable"
+    assert evidence["task_judgment"]["current_judgment_count"] == 0
+    replay = call(consumer, {**context, "invocation": action})
+    assert replay["value"] == result["value"]
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
 
 
@@ -402,3 +402,64 @@ def test_native_proof_uses_actual_reconciled_planning_subject(tmp_path: Path, sh
     evidence = call({**context, "request": claim})["verification"]["evidence"][0]
     assert evidence["evidence_freshness"] == "reusable"
     assert evidence["task_judgment"]["current_judgment_count"] == 0
+
+
+def test_native_cli_colocated_core_is_required_without_path_or_env_fallback(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path
+) -> None:
+    import shutil
+    import subprocess
+
+    installed = tmp_path / "installed"
+    installed.mkdir()
+    launcher = installed / native_cli.name
+    shutil.copy2(native_cli, launcher)
+    target = tmp_path / "target"
+    target.mkdir()
+    command = [str(launcher), "start", "--target", str(target), "--task", "Explain this source"]
+    environment = {**os.environ, "PATH": "", "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)}
+    absent = subprocess.run(command, env=environment, capture_output=True, text=True, timeout=15)
+    assert absent.returncode == 2
+    assert json.loads(absent.stderr)["error"]["code"] == "core-unavailable"
+    assert list(target.iterdir()) == []
+    shutil.copy2(shared_core_binary, installed / shared_core_binary.name)
+    admitted = subprocess.run(command, env=environment, capture_output=True, text=True, timeout=15)
+    assert admitted.returncode == 0, admitted.stderr
+    assert json.loads(admitted.stdout)["decision_packet"]
+    assert list(target.iterdir()) == []
+
+
+def test_native_core_byte_drift_and_other_location_do_not_reuse_proof(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+    import shutil
+
+    installed = tmp_path / "installed"
+    installed.mkdir()
+    launcher = installed / native_cli.name
+    core = installed / shared_core_binary.name
+    shutil.copy2(native_cli, launcher)
+    shutil.copy2(shared_core_binary, core)
+    target = tmp_path / "target"
+    target.mkdir()
+    context = fixture(target)
+
+    def call(binary: Path, value: dict) -> dict:
+        return consume("native", core, binary, value, host_path=os.environ["PATH"])
+
+    request = call(launcher, context)["verification"]["execution_requests"][0]
+    action = call(launcher, {**context, "request": request})["decision_packet"]["primary_action"]
+    result = call(launcher, {**context, "invocation": action})
+    claim = call(launcher, context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
+    assert call(launcher, {**context, "request": claim})["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+    relocated = call(native_cli, {**context, "request": claim})["verification"]["evidence"][0]
+    assert relocated["evidence_freshness"] != "reusable"
+    # A valid executable with appended diagnostic bytes still executes, but its
+    # actual full-binary identity changed at the SAME path.
+    with core.open("ab") as output:
+        output.write(b"\nAW proof runtime drift fixture\n")
+    drifted = call(launcher, {**context, "request": claim})["verification"]["evidence"][0]
+    assert drifted["runtime_admission"]["reason"] == "native-producer-binary-compatibility-unproven"
+    assert drifted["evidence_freshness"] != "reusable"
+    with pytest.raises(AssertionError, match="stale"):
+        call(launcher, {**context, "invocation": action})
+    assert (target / "count.txt").read_text().splitlines() == ["executed"]
