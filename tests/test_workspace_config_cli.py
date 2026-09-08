@@ -412,6 +412,7 @@ transports = [{ kind = "internal" }]
     assert first["transport"]["execution_permitted"] is True
     assert first["current_target"]["automatic_methods"] == ["internal"]
     assert first["repair"] == {"status": "not-required"}
+    assert all(payload["decision_packet"]["effects"]["implementation_allowed"] is False for payload in payloads)
 
 
 def test_config_rejects_overlapping_assurance_level_owners_with_structural_repair(tmp_path: Path) -> None:
