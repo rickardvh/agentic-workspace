@@ -5,6 +5,9 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
+import shlex
+import sys
 
 import pytest
 from tests.test_native_npm_routes import packed as packed
@@ -12,6 +15,290 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 BASE = 'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nstrength="strong"\ntransports=[{kind="manual"}]\n'
+
+
+@pytest.mark.parametrize(
+    "surface,fault",
+    [
+        ("native", None),
+        ("json", None),
+        ("python", None),
+        ("typescript", None),
+        ("native", "identity"),
+        ("native", "malformed"),
+        ("native", "truncated"),
+        ("native", "source-drift"),
+        ("native", "stopped"),
+    ],
+)
+def test_current_process_handoff_executes_once_without_admitting_worker_claims(tmp_path, shared_core_binary, native_cli, surface, fault):
+    worker = tmp_path / "worker.py"
+    worker.write_text(
+        "import json,sys\nfrom pathlib import Path\n"
+        "packet=json.load(sys.stdin)\n"
+        "with Path('launches.txt').open('a') as f: f.write('launched\\n')\n"
+        "print(json.dumps({**packet['return_contract']['required_identity'],"
+        "'kind':'agentic-workspace/delegated-return/v1','result_delivery':'unapplied-patch',"
+        "'changed_paths':[],'patch':'','summary':packet['worker_context']['inputs']['capsule'][0]['content'],"
+        "'stop_conditions_hit':[]}))\n"
+    )
+    if fault == "identity":
+        worker.write_text(
+            worker.read_text().replace(
+                "packet=json.load(sys.stdin)",
+                "packet=json.load(sys.stdin); packet['return_contract']['required_identity']['target']='different-target'",
+            )
+        )
+    elif fault == "malformed":
+        worker.write_text(
+            worker.read_text().replace("'summary':packet['worker_context']['inputs']['capsule'][0]['content']", "'summary':None")
+        )
+    elif fault == "truncated":
+        worker.write_text(
+            worker.read_text().replace("'summary':packet['worker_context']['inputs']['capsule'][0]['content']", "'summary':'x'*100000")
+        )
+    elif fault == "source-drift":
+        worker.write_text(
+            worker.read_text().replace(
+                "packet=json.load(sys.stdin)",
+                "packet=json.load(sys.stdin); Path('dependency.md').write_text('Changed during worker execution.')",
+            )
+        )
+    elif fault == "stopped":
+        worker.write_text(worker.read_text().replace("'stop_conditions_hit':[]", "'stop_conditions_hit':['required input unavailable']"))
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    config = BASE.replace("[delegation]", "[safety]\nsafe_to_auto_run_commands=true\n[delegation]")
+    config = config.replace('transport_authority="manual"', 'transport_authority="automatic"')
+    config = config.replace(
+        'transports=[{kind="manual"}]',
+        'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]",
+    )
+    source.write_text(config)
+    dependency = tmp_path / "dependency.md"
+    dependency.write_text("A bounded source observation.\n")
+    unrelated = tmp_path / "unrelated.txt"
+    unrelated.write_text("Preserve concurrent work.\n")
+    context = {"target": str(tmp_path), "task": "Return the supplied source observation", "changed": []}
+
+    def call(request=None, **updates):
+        return consume(surface, shared_core_binary, native_cli, {**context, **updates, **({"request": request} if request else {})})
+
+    if fault is None:
+        from tests.test_native_planning_create import material
+
+        creation = call()["planning"]["creation_requests"][0]
+        creation["arguments"] = {"material": material()}
+        created = call(invocation=call(creation)["decision_packet"]["primary_action"])
+        plan_path = tmp_path / created["value"]["owner_path"]
+        selection = call()["planning"]["created_owner"]["selection_request"]
+        call(invocation=call(selection)["decision_packet"]["primary_action"])
+        original_plan = json.loads(plan_path.read_bytes())
+        plan_ref = plan_path.relative_to(tmp_path).as_posix()
+        (tmp_path / "verify_frontier.py").write_text(
+            "import json\nfrom pathlib import Path\np=json.loads(Path(" + repr(plan_ref) + ").read_bytes())\n"
+            "assert p['continuation']['frontier'] == Path('dependency.md').read_bytes().decode()\nprint('Exact source frontier retained')\n"
+        )
+        executable = "& '" + sys.executable.replace("'", "''") + "'" if os.name == "nt" else shlex.quote(sys.executable)
+        manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(
+            'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols.frontier]\napplies_to_paths=['
+            + json.dumps(plan_ref)
+            + ',"dependency.md","verify_frontier.py"]\n[proof_routes.frontier]\nprotocol_refs=["frontier"]\ncommands=['
+            + json.dumps(executable + " verify_frontier.py")
+            + "]\n"
+        )
+
+    task = call()["task_requirements"]["requests"][0]
+    task["arguments"]["required_result_classes"] = ["read-only"]
+    inputs = call(task)["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(
+        input_refs=["dependency.md"], complete=False, reason="The one source is sufficient for this bounded task."
+    )
+    inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"]["complete"] = True
+    assessment = call(inputs)["task_requirements"]["assignment"]["requests"][0]
+    assessment[-1]["arguments"].update(
+        alternative="expert:cli", reason="Use the configured independent process for the bounded observation."
+    )
+    local_assessment = copy.deepcopy(assessment)
+    local_assessment[-1]["arguments"].update(
+        alternative="local:internal", reason="Matched retained-local feasibility control for the same bounded task."
+    )
+    local = call(local_assessment)
+    assert local["task_requirements"]["assignment"]["result"]["status"] == "assigned-current-target"
+    assert local["task_requirements"]["delegation"]["requests"] == []
+    assert not (tmp_path / ".agentic-workspace/local/delegation-runs").exists()
+    export = call(assessment)["task_requirements"]["handoff"]["requests"][0]
+    dispatch = call(export)["task_requirements"]["delegation"]["requests"][0]
+    action = call(dispatch)["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "delegation.dispatch"
+    assert not (tmp_path / "launches.txt").exists()
+    result = call(invocation=action)
+    cost = result["value"]["context_cost"]
+    assert cost["assignment_packet_bytes"] == len(
+        json.dumps(action["arguments"]["packet"], ensure_ascii=False, separators=(",", ":")).encode()
+    )
+    assert cost["rendered_prompt_bytes"] == cost["assignment_packet_bytes"]
+    assert cost["elapsed_ms"] == result["value"]["process"]["duration_ms"]
+    assert all(cost[field] is None for field in ("effective_input_tokens", "cached_input_tokens", "output_tokens", "retry_count"))
+    assert "provider_prompt_framing" in cost["unknown_fields"]
+    if fault:
+        assert result["value"]["status"] == "censored-or-invalid-return"
+        assert result["value"]["returned"] is None and result["value"]["reentry"] is None
+        assert not any(result["value"]["claim_boundary"].values())
+        if fault == "source-drift":
+            with pytest.raises(AssertionError, match="changed|stale"):
+                call(invocation=action)
+        else:
+            assert call(invocation=action)["value"] == result["value"]
+        assert (tmp_path / "launches.txt").read_text() == "launched\n"
+        assert unrelated.read_text() == "Preserve concurrent work.\n"
+        return
+    assert result["value"]["status"] == "returned-unproven"
+    assert result["value"]["returned"]["summary"] == dependency.read_bytes().decode()
+    assert result["value"]["claim_boundary"] == {"proof": False, "planning_progress": False, "completion": False}
+    assert call(invocation=action)["value"] == result["value"]
+    if surface == "native":
+        runs = tmp_path / ".agentic-workspace/local/delegation-runs"
+        completion = next(runs.glob("*.completed.json"))
+        terminal = next(runs.glob("*.terminal.json"))
+        held = json.loads(terminal.read_text())
+        commit = tmp_path / held["custody"]["committed"]["path"]
+        # Fresh invocation recovers both publication boundaries without another
+        # external worker. These deletions model an interrupted fixture writer.
+        completion.unlink()
+        assert call(invocation=action)["value"] == result["value"]
+        completion.unlink()
+        commit.unlink()
+        assert call(invocation=action)["value"] == result["value"]
+        completion.unlink()
+        original = terminal.read_bytes()
+        held["outcome"]["value"]["returned"]["summary"] = "invented recovery"
+        terminal.write_text(json.dumps(held))
+        with pytest.raises(AssertionError, match="custody|differs"):
+            call(invocation=action)
+        assert not completion.exists()
+        terminal.write_bytes(original)
+        assert call(invocation=action)["value"] == result["value"]
+    assert (tmp_path / "launches.txt").read_text() == "launched\n"
+    reentry = result["value"]["reentry"]
+    assert reentry["request"][-2]["arguments"]["returned"] == result["value"]["returned"]
+    observed = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
+    assert observed["task_requirements"]["handoff"]["observation"]["proof_current"] is False
+    execution = observed["task_requirements"]["delegation"]["observation"]
+    assert execution["status"] == "current-executed-observation"
+    assert execution["returned"] == result["value"]["returned"]
+    assert execution["context_cost"] == cost
+    assert not any(execution["claim_boundary"].values())
+    judgment = observed["task_requirements"]["assignment"]["result_admission"]["requests"][0]
+    judgment[-1]["arguments"] = {"answer": "use-result", "reason": "The returned observation exactly matches the supplied source."}
+    admitted = call(judgment)
+    admission = admitted["task_requirements"]["assignment"]["result_admission"]
+    assert admission["status"] == "admitted-for-use" and admission["result_use_allowed"] is True
+    assert not any(admission["claim_boundary"].values())
+    assert not any(b["code"] == "current-nonlocal-assignment-handoff-required" for b in admitted["decision_packet"]["blockers"])
+    assert not (tmp_path / ".agentic-workspace/delegation-outcomes.json").exists()
+    assert admitted["task_requirements"]["bounded_outcome_evidence"] == []
+    for answer, status in [("repair-required", "repair-required"), ("reject-result", "rejected")]:
+        negative = copy.deepcopy(judgment)
+        negative[-1]["arguments"] = {"answer": answer, "reason": "The orchestrator has not accepted this result for use."}
+        rejected = call(negative)
+        assert rejected["task_requirements"]["assignment"]["result_admission"]["status"] == status
+        assert any(b["code"] == "current-nonlocal-assignment-handoff-required" for b in rejected["decision_packet"]["blockers"])
+    missing_provenance = [r for r in judgment if r["request_kind"] != "delegation/read-result/v1"]
+    with pytest.raises(AssertionError, match="executed result required"):
+        call(missing_provenance)
+    forged = copy.deepcopy(reentry)
+    forged["request"][-2]["arguments"]["returned"]["summary"] = "Worker text cannot manufacture a retained outcome."
+    with pytest.raises(AssertionError, match="retained execution"):
+        consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **forged})
+    adoption = admitted["planning"]["adoption_requests"][0]
+    adopt_action = call(adoption)["decision_packet"]["primary_action"]
+    assert adopt_action["operation_id"] == "planning.update"
+    assert adopt_action["arguments"]["document"]["continuation"]["frontier"] == result["value"]["returned"]["summary"]
+    tampered = copy.deepcopy(adopt_action)
+    tampered["arguments"]["document"]["continuation"]["frontier"] = "A caller-substituted result"
+    before_adoption = plan_path.read_bytes()
+    with pytest.raises(AssertionError):
+        call(invocation=tampered)
+    assert plan_path.read_bytes() == before_adoption
+    applied = call(invocation=adopt_action)
+    assert applied["status"] == "applied"
+    adopted_plan = json.loads(plan_path.read_bytes())
+    assert adopted_plan["continuation"]["frontier"] == result["value"]["returned"]["summary"]
+    for field in ["id", "scope", "relationships", "proof", "intent", "next_action"]:
+        assert adopted_plan[field] == original_plan[field]
+    fresh = call()
+    call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+    assert call()["planning"]["current_owner"]["current"] is True
+    proof_context = {**context, "changed": [plan_ref, "dependency.md", "verify_frontier.py"]}
+    proof_start = consume(surface, shared_core_binary, native_cli, proof_context, host_path=os.environ["PATH"])
+    continuation = proof_start["planning"]["requests"][0]
+    continuation["arguments"]["answer"] = "continue-selected"
+    proof_ready = consume(surface, shared_core_binary, native_cli, {**proof_context, "request": continuation}, host_path=os.environ["PATH"])
+    proof_request = proof_ready["verification"]["execution_requests"][0]
+    proof_action = consume(
+        surface, shared_core_binary, native_cli, {**proof_context, "request": [continuation, proof_request]}, host_path=os.environ["PATH"]
+    )["decision_packet"]["primary_action"]
+    assert proof_action["operation_id"] == "proof.report" and continuation in proof_action["source_requests"]
+    checked = consume(surface, shared_core_binary, native_cli, {**proof_context, "invocation": proof_action}, host_path=os.environ["PATH"])
+    assert checked["value"]["process"]["status"] == "passed" and checked["value"]["publication"]["status"] == "published"
+    assert checked["value"]["claim_boundary"]["completion_claim_allowed"] is False
+
+    def proof_view(request=continuation, **updates):
+        return consume(
+            surface, shared_core_binary, native_cli, {**proof_context, "request": request, **updates}, host_path=os.environ["PATH"]
+        )
+
+    claim = proof_view()["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [checked["value"]["publication"]["reference"]]
+    evidence_requests = [continuation, claim]
+    current = proof_view(evidence_requests)
+    evidence = current["task_requirements"]["bounded_outcome_evidence"]
+    assert len(evidence) == 1 and evidence[0]["claim"] == "result-retained-and-selected-command-passed"
+    assert evidence[0]["support"]["observed_outcomes"] == 1 and not any(evidence[0]["claim_boundary"].values())
+    assert proof_view(evidence_requests)["task_requirements"]["bounded_outcome_evidence"] == evidence
+    requirements = current["task_requirements"]["requests"][0]
+    requirements["arguments"]["required_result_classes"] = ["read-only"]
+    comparison = proof_view([*evidence_requests, requirements])["task_requirements"]["assignment"]
+    alternatives = comparison["result"]["alternatives"]
+    assert next(a for a in alternatives if a["target"] == "expert")["contextual_evidence"] == evidence
+    assert next(a for a in alternatives if a["target"] == "local")["contextual_evidence"] == []
+    assert comparison["result"]["selected"] is None
+    comparison_request = comparison["requests"][0]
+    comparison_request[-1]["arguments"].update(
+        alternative="expert:cli",
+        reason="This exact eligible configuration has one current retained-and-checked outcome; broader suitability remains uncertain.",
+    )
+    assert proof_view(comparison_request)["task_requirements"]["assignment"]["result"]["selected"]["target"] == "expert"
+    unrelated_task = consume(
+        surface, shared_core_binary, native_cli, {**proof_context, "task": "An unrelated outcome"}, host_path=os.environ["PATH"]
+    )
+    assert unrelated_task["task_requirements"]["bounded_outcome_evidence"] == []
+    assert not (tmp_path / ".agentic-workspace/delegation-outcomes.json").exists()
+    with pytest.raises(AssertionError, match="changed|stale"):
+        call(adoption)
+    dependency.write_text("Changed after execution.\n")
+    assert proof_view(evidence_requests)["task_requirements"]["bounded_outcome_evidence"] == []
+    with pytest.raises(AssertionError, match="source changed|stale"):
+        proof_view(comparison_request)
+    with pytest.raises(AssertionError, match="changed|stale"):
+        call(invocation=action)
+    with pytest.raises(AssertionError, match="changed|stale"):
+        consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
+    with pytest.raises(AssertionError, match="changed|stale"):
+        call(judgment)
+    supersede = call()["planning"]["update_requests"][0]
+    supersede["arguments"]["material"] = copy.deepcopy(adopt_action["arguments"]["request"]["arguments"]["material"])
+    supersede["arguments"]["material"]["next_action"] = "The owner now continues beyond the consumed result."
+    call(invocation=call(supersede)["decision_packet"]["primary_action"])
+    recovery = call()["planning"]["requests"][0]
+    call(invocation=call(recovery)["decision_packet"]["primary_action"])
+    assert call()["planning"]["consumed_result"] is None
+    assert (tmp_path / "launches.txt").read_text() == "launched\n"
+    assert unrelated.read_text() == "Preserve concurrent work.\n"
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

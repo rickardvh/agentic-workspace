@@ -4,6 +4,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 pub(crate) const KIND: &str = "planning/update/v1";
+pub(crate) const ADOPT: &str = "planning/adopt-return/v1";
 pub(crate) const RECOVER_KIND: &str = "planning/update-recovery/v1";
 pub(crate) const PROVENANCE: &str = "update_provenance";
 fn error(value: impl ToString) -> CoreError {
@@ -42,7 +43,106 @@ pub(crate) fn declaration() -> Value {
     json!({"kind":KIND,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":schema["$schema"],"$defs":schema["$defs"],"type":"object","properties":{"owner_ref":{"type":"string"},"material":{"type":"object","properties":properties,"required":fields,"additionalProperties":false}},"required":["owner_ref","material"],"additionalProperties":false}})
 }
 pub(crate) fn operation() -> Value {
-    json!({"id":"planning.update","semantic_revision":"planning-update-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"prior_revision":{"type":"string"},"document":{"type":"object"},"provenance_format":{"const":"repo-relative-v2"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","prior_revision","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/update-result/v1","effects":["planning-state"],"reads":["planning"]})
+    let mut operation = json!({"id":"planning.update","semantic_revision":"planning-update-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"prior_revision":{"type":"string"},"document":{"type":"object"},"provenance_format":{"const":"repo-relative-v2"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","prior_revision","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/update-result/v1","effects":["planning-state"],"reads":["planning"]});
+    operation["input_schema"]["properties"]["consumed_return"] = json!({"type":"object","properties":{"request":{"type":"object"},"result_revision":{"type":"string"},"judgment_revision":{"type":"string"},"assignment_identity":{"type":"object"},"execution_custody":{"type":"object"}},"required":["request","result_revision","judgment_revision","assignment_identity","execution_custody"],"additionalProperties":false});
+    operation["input_schema"]["properties"]["consumed_return"]["properties"]["context"] =
+        json!({"type":"object"});
+    operation
+}
+pub(crate) fn adoption_declaration() -> Value {
+    json!({"kind":ADOPT,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"owner_ref":{"type":"string"},"destination":{"const":"continuation.frontier"}},"required":["owner_ref","destination"],"additionalProperties":false}})
+}
+
+/// Consume the public Assignment admission. Only Planning reads/writes its own
+/// material; the caller cannot substitute a worker result or widen this effect.
+pub(crate) fn adopt_return(
+    target: &Path,
+    work: &Value,
+    contract: &Value,
+    planning: &Value,
+    admission: &Value,
+    submitted: &[Value],
+) -> Result<Value, CoreError> {
+    let request = submitted.iter().find(|r| r["request_kind"] == ADOPT);
+    let mut result = json!({"requests":[],"action":null});
+    let template = &planning["update_requests"][0];
+    if admission["result_use_allowed"] != true
+        || planning["status"] != "current"
+        || !template.is_object()
+    {
+        if request.is_some() {
+            return Err(error(
+                "current selected Planning custody and admitted result required",
+            ));
+        }
+        return Ok(result);
+    }
+    let reference = template["arguments"]["owner_ref"]
+        .as_str()
+        .ok_or_else(|| error("Planning adoption destination missing"))?;
+    if planning["selected_owner"]["ref"] != reference {
+        if request.is_some() {
+            return Err(error("Planning adoption must use the selected owner"));
+        }
+        return Ok(result);
+    }
+    let mut adoption = template.clone();
+    adoption["id"] = json!(ADOPT);
+    adoption["request_kind"] = json!(ADOPT);
+    adoption["source_revision"] = json!(digest(
+        &json!({"owner":template["source_revision"],"admission":admission["source_revision"],"judgment":admission["judgment"]})
+    )?);
+    adoption["arguments"] = json!({"owner_ref":reference,"destination":"continuation.frontier"});
+    let mut prerequisites = submitted
+        .iter()
+        .filter(|r| r["request_kind"] != ADOPT)
+        .cloned()
+        .collect::<Vec<_>>();
+    prerequisites.push(adoption.clone());
+    result["requests"] = json!([prerequisites]);
+    let Some(request) = request else {
+        return Ok(result);
+    };
+    prepare_request_value(
+        json!({"request":request,"current_work":work,"capability_contract":contract}),
+    )?;
+    if *request != adoption
+        || submitted
+            .iter()
+            .any(|r| r["request_kind"] == KIND || r["request_kind"] == RECOVER_KIND)
+    {
+        return Err(error(
+            "Planning return adoption is stale or conflicts with another material request",
+        ));
+    }
+    let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
+    let mut material = serde_json::Map::new();
+    for field in fields()
+        .iter()
+        .chain(crate::native_planning_create::ASSURANCE)
+        .chain(OPTIONAL_MATERIAL)
+    {
+        if let Some(value) = body.get(*field) {
+            material.insert((*field).to_owned(), value.clone());
+        }
+    }
+    let mut material = json!(material);
+    if !material["continuation"].is_object() {
+        return Err(error("Planning continuation is not an object"));
+    }
+    material["continuation"]["frontier"] = admission["returned"]["summary"].clone();
+    let mut update = template.clone();
+    update["arguments"]["material"] = material;
+    let mut action =
+        view(target, work, contract, planning, Some(&update), None, None)?["action"].clone();
+    if !action.is_object() {
+        return Err(error("Planning did not admit the bounded return update"));
+    }
+    action["arguments"]["consumed_return"] = json!({"request":adoption,"result_revision":digest(&admission["returned"])? ,"judgment_revision":admission["source_revision"],"assignment_identity":admission["assignment_identity"],"execution_custody":admission["execution_custody"]});
+    action["arguments"]["consumed_return"]["context"] = admission["context"].clone();
+    action["source_requests"] = json!(submitted);
+    result["action"] = action;
+    Ok(result)
 }
 pub(crate) fn recovery_declaration() -> Value {
     let canonical: Value = serde_json::from_str(include_str!(
@@ -273,6 +373,16 @@ pub(crate) fn view(
         return Ok(result);
     }
     let current_revision = revision(&bytes);
+    // Only this owner inspects its producer records. A transported observation,
+    // pending publication or later material edit is not a current consumed result.
+    if planning["status"] == "current"
+        && let Some(retained) = &retained
+        && retained["committed"] == true
+        && retained["invocation"]["arguments"]["consumed_return"].is_object()
+        && payload(&retained["invocation"], &retained["custody"])? == body
+    {
+        result["consumed_result"] = json!({"kind":"agentic-planning/consumed-result/v1","status":"current","owner_ref":reference,"source_revision":current_revision,"custody":retained["custody"],"consumption":retained["invocation"]["arguments"]["consumed_return"]});
+    }
     result["requests"] = json!([{"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"planning","owner_revision":owner["revision"],"source_revision":current_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"owner_ref":reference}}]);
     let recovery_request = effective.filter(|r| r["request_kind"] == RECOVER_KIND);
     if let Some(retained) = &retained

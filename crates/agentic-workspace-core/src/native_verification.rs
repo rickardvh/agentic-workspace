@@ -487,7 +487,21 @@ fn receipt_view(
     } else {
         gaps.push("nested-tool-runtime-unobserved".into());
     }
-    json!({"reference":reference,"status":"unadmitted","publication_admission":publication,"receipt_admission":admission,
+    let checked_scope = if publication["status"] == "admitted"
+        && admission["proof_sufficient"] == true
+        && admission["result_class"] == "passed"
+        && freshness["status"] == "reusable"
+        && detail["status"] == "current"
+        && subject["runtime"]["implementation"] == "native-aw-proof"
+        && !gaps
+            .iter()
+            .any(|gap| gap.starts_with("proof-semantic-input"))
+    {
+        json!({"task":task,"source_inputs":subject["source_inputs"],"claim":"selected-command-passed","completion_authority":false})
+    } else {
+        Value::Null
+    };
+    json!({"reference":reference,"status":"unadmitted","publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
         "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }

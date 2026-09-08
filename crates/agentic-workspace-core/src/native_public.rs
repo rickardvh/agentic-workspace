@@ -63,9 +63,20 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         input.request.as_ref()
     })?;
     if executing
+        && input.invocation.as_ref().is_none_or(|i| {
+            i["operation_id"] != "delegation.dispatch"
+                && !(i["operation_id"] == "planning.update"
+                    && i["arguments"]["consumed_return"].is_object())
+        })
         && requests.iter().any(|request| {
-            request["owner"] != "startup-adapter"
-                || request["request_kind"] != "startup-adapter/read-current-source/v1"
+            !(request["owner"] == "startup-adapter"
+                && request["request_kind"] == "startup-adapter/read-current-source/v1"
+                || input
+                    .invocation
+                    .as_ref()
+                    .is_some_and(|i| i["operation_id"] == "proof.report")
+                    && request["owner"] == "planning"
+                    && request["request_kind"] == "planning/continuation/v1")
         })
     {
         return Err(CoreError::new(
@@ -206,6 +217,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &instructions["capability_contract"],
         &memory["capability_contract"],
         &native_requirements::contract()?,
+        &crate::native_delegation::contract()?,
     ])?;
     if let Some(request) = request_for("startup-adapter") {
         startup_adapter = crate::native_startup::view(
@@ -312,6 +324,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     )?;
     planning["update_requests"] = update["requests"].clone();
     planning["update_retained"] = update["retained"].clone();
+    planning["consumed_result"] = update["consumed_result"].clone();
     planning["pending_update"] = update["pending"].clone();
     planning["update_recovery_requests"] = update["recovery_requests"].clone();
     if update["pending"].is_object() {
@@ -322,7 +335,13 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         owner["blockers"] = json!([{"code":"planning-update-pending","message":"The exact native update postimage is retained but its outcome remains uncertain. Resume only the returned invocation against current authority.","affects":["task"]}]);
         owner["settled"] = json!(false);
     }
-    if update["action"].is_object() {
+    if update["action"].is_object()
+        && !input.invocation.as_ref().is_some_and(|i| {
+            executing
+                && i["operation_id"] == "planning.update"
+                && i["arguments"]["consumed_return"].is_object()
+        })
+    {
         let owner = contributions
             .iter_mut()
             .find(|c| c["owner"] == "planning")
@@ -445,6 +464,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &contract,
     )?;
     contributions.push(startup_adapter["contribution"].clone());
+    requirements["bounded_outcome_evidence"] =
+        if configuration["assignment_requirements"]["configured"] == true {
+            crate::native_assignment::outcome_evidence(&input.task, &planning, &verification)?
+        } else {
+            json!([])
+        };
     let mut assignment = crate::native_assignment::view(
         &work,
         &configuration,
@@ -455,7 +480,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &requests,
         &contract,
     )?;
-    contributions.push(assignment["contribution"].clone());
+    let mut assignment_contribution = assignment["contribution"].clone();
     assignment.as_object_mut().unwrap().remove("contribution");
     requirements["assignment"] = assignment;
     let handoff = crate::native_handoff::view(
@@ -467,12 +492,92 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &requests,
         &contract,
     )?;
+    let mut delegation = crate::native_delegation::view(
+        target,
+        &work,
+        &requirements,
+        &handoff,
+        &requests,
+        &contract,
+    )?;
+    if !delegation["observed_invocation"].is_null() {
+        let original = delegation["observed_invocation"].clone();
+        let original_input = Input {
+            target: input.target.clone(),
+            task: input.task.clone(),
+            changed: input.changed.clone(),
+            request: None,
+            invocation: Some(original.clone()),
+        };
+        let fresh = resolve(&original_input, target, true)?;
+        crate::admit_invocation_value(
+            json!({"decision":fresh["decision_packet"],"invocation":original}),
+        )?;
+    }
+    delegation
+        .as_object_mut()
+        .unwrap()
+        .remove("observed_invocation");
+    let admission =
+        crate::native_handoff::admission(&work, &delegation["observation"], &requests, &contract)?;
+    if admission["result_use_allowed"] == true {
+        assignment_contribution["blockers"]
+            .as_array_mut()
+            .unwrap()
+            .retain(|b| b["code"] != "current-nonlocal-assignment-handoff-required");
+        assignment_contribution["revision"] = json!(digest(&json!([
+            assignment_contribution["revision"],
+            admission["source_revision"],
+            admission["judgment"]
+        ]))?);
+    }
+    contributions.push(assignment_contribution);
+    let adopted = crate::native_planning_update::adopt_return(
+        target, &work, &contract, &planning, &admission, &requests,
+    )?;
+    planning["adoption_requests"] = adopted["requests"].clone();
+    if adopted["action"].is_object() {
+        let owner = contributions
+            .iter_mut()
+            .find(|c| c["owner"] == "planning")
+            .ok_or_else(|| CoreError::new("Planning owner unavailable for result adoption"))?;
+        owner["actions"] = json!([adopted["action"]]);
+        owner["decisions"] = json!([]);
+        owner["blockers"] = json!([]);
+        owner["settled"] = json!(false);
+        owner["revision"] = json!(digest(&json!([owner["revision"], adopted["action"]]))?);
+    }
+    requirements["assignment"]["result_admission"] = admission;
+    contributions.push(delegation["contribution"].clone());
+    delegation.as_object_mut().unwrap().remove("contribution");
+    requirements["delegation"] = delegation;
     requirements["handoff"] = handoff;
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.push(instructions["contribution"].clone());
     owner_input["contributions"] = json!(contributions);
     owner_input["capability_contract"] = contract.clone();
+    if let Some(continuation) = planning_request {
+        for owner in owner_input["contributions"].as_array_mut().unwrap() {
+            for action in owner
+                .get_mut("actions")
+                .and_then(Value::as_array_mut)
+                .into_iter()
+                .flatten()
+            {
+                if action["operation_id"] == "proof.report" {
+                    let mut dependencies = action["source_requests"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !dependencies.contains(continuation) {
+                        dependencies.push(continuation.clone());
+                    }
+                    action["source_requests"] = json!(dependencies);
+                }
+            }
+        }
+    }
     if startup_adapter["status"] == "source-context-delivered" {
         let source_request =
             request_for("startup-adapter").expect("delivery requires explicit request");
@@ -488,7 +593,14 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                     .as_array()
                     .is_some_and(|effects| !effects.is_empty())
                 {
-                    action["source_requests"] = json!([source_request]);
+                    let mut dependencies = action["source_requests"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !dependencies.contains(source_request) {
+                        dependencies.push(source_request.clone());
+                    }
+                    action["source_requests"] = json!(dependencies);
                 }
             }
         }
@@ -603,8 +715,19 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                 | "system-intent"
                 | "startup-adapter"
                 | "decision-continuity"
+                | "delegation"
         ) {
             return Err(CoreError::new("requested native owner is not available"));
+        }
+        if owner == "delegation"
+            && !matches!(
+                request["request_kind"].as_str(),
+                Some("delegation/dispatch/v1" | "delegation/read-result/v1")
+            )
+        {
+            return Err(CoreError::new(
+                "requested Delegation request kind is not available",
+            ));
         }
         if owner == "assignment"
             && !matches!(
@@ -616,6 +739,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                         | "assignment/judge-readonly-inputs/v1"
                         | "assignment/export-readonly/v1"
                         | "assignment/observe-readonly-return/v1"
+                        | "assignment/judge-return/v1"
                 )
             )
         {
@@ -668,6 +792,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "planning.create"
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
+        && invocation["operation_id"] != "delegation.dispatch"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -676,6 +801,28 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "delegation.dispatch" {
+        let executed = crate::native_delegation::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        result["value"]["reentry"] =
+            crate::native_delegation::result_reentry(&executed, invocation)?;
+        return Ok(result);
     }
     if invocation["operation_id"] == "planning.update-recover" {
         crate::admit_invocation_value(

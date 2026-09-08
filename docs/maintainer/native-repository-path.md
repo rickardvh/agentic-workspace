@@ -44,3 +44,22 @@ outcomes or release/platform admission. Configuration mutation, consequential
 delegation, positive lifecycle-derived target evidence and remaining owners stay
 with #2613/#2767, #2947/#2817/#2818/#2210, #2209 and the #2983 frontier. #2909
 aggregates conformance; #2990 admits one exact release-equivalent candidate.
+
+For a current read-only assignment with a configured automatic process transport,
+the native handoff returns a `delegation/dispatch/v1` request. Submit that exact
+request bundle and invoke its returned action. Execution sends the sealed packet
+on stdin, bounds process lifetime/output and returns the complete re-entry
+request. A returned observation establishes no proof, Planning progress or
+completion. Invalid, stopped, incomplete and stale returns remain excluded.
+Repeating the exact current action reuses its terminal result; interrupted
+terminal publication recovers without launching the worker again. An interrupted
+worker without retained terminal evidence remains uncertain and cannot relaunch
+under the same action. This process route does not claim native provider
+continuation, shared-worktree mutation or complete lifecycle admission.
+The returned re-entry bundle includes `delegation/read-result/v1`: the execution
+owner checks its exact committed result and revalidates the original action
+before exposing execution provenance. A caller-edited observation cannot acquire
+that provenance. Transport provenance still grants no task acceptance or target
+quality. The existing context-cost contract records process-input bytes and
+elapsed time; provider framing, tokens, internal retries and downstream burden
+remain unknown when the adapter cannot observe them.

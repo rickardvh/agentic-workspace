@@ -39,7 +39,7 @@ The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The real selected owner is now native-authored revision 6 with concrete scope/proof, current merged frontier and dependencies, and no obsolete three-PR cap. Native re-entry and fresh-process recovery report current custody; stale update requests fail without mutation. Full owner-specific cumulative conformance and independent acceptance remain under #2909; no parent closure is inferred. |
+| #2970 | evidence/conformance gap | The real selected owner is now native-authored revision 7 with concrete scope/proof, current merged frontier and dependencies, and no obsolete three-PR cap. Native re-entry and fresh-process recovery report current custody; stale update requests fail without mutation. Full owner-specific cumulative conformance and independent acceptance remain under #2909; no parent closure is inferred. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -47,7 +47,7 @@ The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections
 | #2767 | bounded implementation gap | Native config reads and preserves sources, but ordinary native requests do not include the setup/config owner mutation journey. Current unresolved configuration must not silently become defaults. |
 | #2916 | candidate-complete | Existing independent #3138 acceptance. Typed policy/currentness/override authority is distinct from the unresolved execution and return lifecycle. |
 | #2210 | bounded implementation gap | Comparative judgment and configuration binding exist; the ordinary native path lacks the complete consequential assignment lifecycle consuming those identities. |
-| #2209 | bounded implementation gap | Current target quality cannot be earned through a native admitted consequential lifecycle. Attribution and rejecting editable evidence are useful negative slices, not the required positive outcome path. |
+| #2209 | bounded implementation gap | The base lacks the positive native outcome path. #3167 proposes a current retained-and-checked contextual signal; explicit human/evaluation ingress, failure/dispute handling and repeated selection convergence remain unresolved. No general target quality is inferred. |
 | #2818 | bounded implementation gap | Bounded read-only capsule and burden semantics exist. Complete supported non-local and matched local successful-completion burden is absent; prior incomplete workers are counterevidence, not successes. |
 | #2947 | bounded implementation gap | `native_handoff.rs` seals read-only export/return; native ingress does not provide the required mutation attribution, consequential admission, execution/recovery and Planning/Verification re-entry lifecycle. |
 | #2817 | bounded implementation gap | Native best-fit can keep a non-local decision binding, but cannot complete the configured consequential lifecycle. Manual-only winners and retained-local controls must remain honest. |
@@ -319,3 +319,101 @@ summary/report/skills/reconcile loop from the repo-local dogfooding skill. It
 uses the configured native request/action route, keeps unsupported owner effects
 explicit, and compresses overlapping evidence/cost checklists into one existing
 owner record. No shipped payload, runtime behavior or new test surface changes.
+
+## Native process lifecycle continuation (#3167, proposed)
+
+The native ordinary route executes the exact sealed read-only process handoff,
+admits its committed execution provenance, and asks the acting orchestrator for
+a bounded use/repair/reject judgment. Planning can consume the admitted summary
+through its existing writer into the selected owner's continuation frontier.
+Identity, scope, dependencies, constraints, proof posture and other material are
+preserved. Fresh Planning re-entry and selected Verification execution remain
+separate effects. A continuation answer now travels with its exact proof action;
+changing proof scope cannot silently lose the selected Planning subject.
+
+Dispatch binds current source, configuration and Assignment identity; input,
+output and process lifetime are bounded. Terminal publication interruptions
+recover without relaunch. Missing terminal outcomes stay uncertain. Wrong
+identity, malformed/truncated output, source drift, stopped workers and forged
+return/adoption material fail closed. These do not count as successful evidence.
+The existing process runner and Planning writer are reused; there is no new
+result ledger, transcript archive or completion authority.
+
+The real Codex CLI 0.153.4 matched case extracted the exact continuation frontier
+from the real revision-7 owner (11,006 bytes; SHA-256
+`40ec4d1633fd4ceb12e45d2857a229909015fa79647d98dafbb4028efbfeb798`).
+Both independent native-owned fixtures retained that exact text, recovered current
+Planning custody and published a reusable selected-command check against public
+source and output. Unrelated files and the remaining Planning material survived.
+The non-local worker ran ephemeral/read-only in an isolated directory with its
+sealed context; no parent conversation or former AW Python semantic host was used.
+
+| Matched case | End-to-end elapsed | Native calls | Worker measurement |
+| --- | --- | --- | --- |
+| Retained local | 7,463 ms | 20 | No worker or delegation artifacts |
+| Configured non-local process | 26,204 ms | 24 | 15,189 ms; 41,508 actual input bytes |
+
+This is a completed bounded extraction/Planning/check lifecycle. The selected
+check is admitted proof of exact retained text, not task-completion judgment,
+independent review or general target quality. Provider tokens, framing, retries
+and review/integration cost remain unknown. Local elapsed time is lower for this
+case; no general delegation advantage or full economic admission is claimed.
+Earlier real process observations (21,933 and 20,965 ms) remain historical
+transport evidence. The bad executable-path attempt failed before provider
+launch and is excluded. No raw transcript is checked in.
+
+Proof: 167 focused Planning/startup/handoff/configuration/Assignment/proof cases
+passed in 454.51 seconds before the proof-dependency correction; the final nine
+dispatch cases then passed in 74.66 seconds across native/Python/TypeScript/JSON,
+including the exact Planning-to-Verification continuation. The existing Rust
+suite passed 95 tests (three helpers ignored). Focused final proof-producer
+validation is recorded in the PR, separately from historical totals.
+
+#2947/#2817/#2818/#2210 remain bounded implementation gaps: unapplied or shared
+worktree delta admission, host-native continuation, live pause/resume/worker-loss
+recovery and broader matched lifecycle economics remain unproved. #2209 still
+needs current, attributable positive outcome evidence and de-adoption; process
+exit, worker text or this selected check alone cannot earn general standing.
+No parent issue closes. #2909 retains cumulative conformance and independent
+admission; #2990 and #3138 remain gated.
+
+The real selected reconstruction owner was separately maintained through native
+update/reconcile as revision 7. Fresh processes report current custody; the old
+request fails with exit 2 and unchanged bytes. Its checked-in copy is the native
+writer output; local custody receipts and unrelated original-checkout work are
+not transported. The isolated implementation worktree does not acquire custody
+over that copied selector: bounded source work remains direct there.
+
+## Positive contextual outcome evidence (#2209, proposed in #3167)
+
+Planning now projects its own exact committed consumption only while its produced
+material remains current. Verification separately projects the current source
+scope of an admitted native selected-command check. Assignment joins those typed
+facts into one narrow `result-retained-and-selected-command-passed` observation.
+It appears beside the matching currently eligible configuration for an agent's
+comparison. Neither target eligibility nor a winner is inferred. Confidence is
+one current outcome; task success, general quality, independent review and
+completion authority remain false. Process input/elapsed measurements are retained
+with unknown provider/review costs, rather than converted into a score.
+
+This projection uses existing owner custody and proof, with no new evidence store,
+history scan, record-injection endpoint or direct-work read. Repeated projection
+does not multiply support. Source drift, changed task/configuration, or native
+Planning supersession de-adopts the signal; stale comparisons must resolve again.
+The historical result remains with its producing owner and cannot confer current
+standing. The existing integration cases cover these boundaries instead of adding
+another test family.
+
+A fresh real matched lifecycle on this extension again retained and checked the
+exact revision-7 source frontier. Local: 7,806 ms and 21 native calls. Non-local:
+28,343 ms and 25 calls, including 16,790 ms worker time and 41,508 process-input
+bytes. Native Assignment derived one contextual signal for the executed worker,
+none for the local control, and no automatic selection. No final evidence record
+was hand-authored. The 64-case handoff/Assignment/native-proof matrix passed in
+215.40 seconds, including native/Python/TypeScript/JSON. The last stale-comparison
+assertions and final Rust results are recorded separately in the PR.
+
+This serves the requested smallest positive path, not all of #2209: failure-heavy
+real learning, explicit human/evaluation ingress, dispute/contradiction handling,
+and repeated outcome convergence remain missing. The conservative live-owner
+projection is not a durable cross-owner quality database or a completion claim.

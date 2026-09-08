@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "#3164/#3165 are integrated at 384473617acd395ebf66b3d449d7bd28bbe5bea9; this real owner is being reconciled through existing native custody, without new legacy adoption permission.",
+    "frontier": "This #3167 checkpoint includes the native dispatch, result-use judgment, Planning adoption, Verification continuation and current retained-and-checked target signal implemented at 6af7d1945. These bounded outcomes are implemented and tested, not future work. The real matched Codex process and retained-local case reached Planning/Verification. Broader host-native/shared-worktree and longitudinal learning outcomes remain open. #3168 is a separate proposed successor, not implementation claimed by this checkpoint; merged base remains 384473617acd395ebf66b3d449d7bd28bbe5bea9.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Prove fresh-session recovery of this reconciled real owner under #2970 and route the regression to #2909; then complete the earliest remaining native ordinary-path and consequential delegation gaps under #3077/#2947/#2817/#2818/#2210, followed by positive #2209 target evidence.",
+  "next_action": "Review and integrate #3167 native process execution, admitted return, Planning/Verification re-entry and bounded contextual evidence. Continue only the remaining supported host-native/shared-worktree lifecycle, live pause/resume/recovery, failure/dispute/longitudinal learning and exact cumulative conformance. #3168 separately carries the proposed native command-host/configuration cutover and its integration fixes.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -56,14 +56,22 @@
   "phase": "implementation",
   "proof": {
     "claims": [
-      "Native former-owner transfer and material-update capability is integrated; complete first-stable intent is not yet satisfied."
+      "#3167 exact-head CI, Security and Semver passed at 6af7d19458780f59ad74a4c541ae5ef73006856e; independent review accepted the mechanisms and requested this Planning reconciliation only.",
+      "64 native/Python/TypeScript/JSON handoff/Assignment/proof cases passed, plus the final stale-comparison case and 95 Rust tests with three ignored helpers. Proof covers execution/currentness, return judgment, Planning adoption, Verification re-entry and current contextual evidence without automatic target selection.",
+      "The matched real Codex lifecycle retained and checked the exact frontier: local 7806 ms/21 native calls; non-local 28343 ms/25 calls, worker 16790 ms and 41508 input bytes. Tokens and general quality/economics remain unknown. Failed/censored workers are excluded.",
+      "Remaining #2947/#2817/#2818/#2210 work is supported host-native and mutation attribution, live pause/resume/recovery and complete lifecycle cost; #2209 retains failure/dispute/human-evaluation ingress and repeated selection convergence. No parent or release gate closes."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587513916",
       "tests/test_native_planning_create.py",
       "tests/test_native_startup_adapter.py",
-      ".agentic-workspace/reconstruction/owner-audit.md"
+      ".agentic-workspace/reconstruction/owner-audit.md",
+      "https://github.com/rickardvh/agentic-workspace/pull/3166",
+      "https://github.com/rickardvh/agentic-workspace/pull/3167",
+      "https://github.com/rickardvh/agentic-workspace/pull/3168",
+      "https://github.com/rickardvh/agentic-workspace/issues/2909#issuecomment-5589567494",
+      "https://github.com/rickardvh/agentic-workspace/issues/2767#issuecomment-5590211138"
     ],
     "requirements": [
       "Prove this real owner is materially current through native update, fresh-session recovery, source-drift rejection and preservation of unrelated work.",
@@ -121,7 +129,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 6,
+  "revision": 10,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -173,18 +181,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4b1878369fc534452600318158d3e0cb81b6ab014159f1df4a3a04bc44ec12ee.attempt.json",
-        "revision": "sha256:cd8d725665f51aded2f0793e7aff445371d7a1a6e65e45458824cb6c959b24ea",
+        "path": ".agentic-workspace/local/effects/094afdc6632c1a07c61f90149bf56932764aa052bf0cd23c1da782d99ba1f944.attempt.json",
+        "revision": "sha256:11851d4b080b43b74a096db11efc80fe55013054d6f336d230eb09d3e1e9248f",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4b1878369fc534452600318158d3e0cb81b6ab014159f1df4a3a04bc44ec12ee.result.json",
-        "revision": "sha256:a73b0adf856f6fbc7a507d662aa17b90362ec755b113986528ae8c0b77ee3c37",
+        "path": ".agentic-workspace/local/effects/094afdc6632c1a07c61f90149bf56932764aa052bf0cd23c1da782d99ba1f944.result.json",
+        "revision": "sha256:0fac0a9ee7ed0ce8a67a55bec03d6ff1a190bfa78d84c703fa1f98608480d6b1",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:187b75b31b2f4f8c9336edfafb82edb5d97c3e7d74028a745ccddff3842c6c64",
+    "invocation_revision": "sha256:f69098b13e960c02f86f29fe274feb3ea55b4a99c87527527b26bcfbd74bded7",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -192,7 +200,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:7b41e413ed3cced6e0c094600eefdc2921fb618559d52690979b85ad43da2857",
+        "document_revision": "sha256:29143ac91b7375b5010363fe194469c9065afa3c018dea45667d0c8d2d65c024",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
