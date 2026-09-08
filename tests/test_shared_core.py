@@ -208,6 +208,28 @@ def test_ordinary_route_feasibility_keeps_manual_peer_and_safety_independent(tmp
     blocked = assignment_decision_from_policy(
         assignment_policy={}, runtime_resolution={"profile_recommendations": profiles}, target_evidence={}
     )
+    # Canonical authority still wins over the deprecated disabled alias.
+    assert blocked["candidate_scores"][0]["eligible"] is True
+    assert unavailable["candidates"][1]["eligible"] is True
+    # Without canonical authority, the former explicit disabled setting retains
+    # its own boundary. Automatic execution remains independently unsafe above.
+    policy.transport_authority = None
+    unavailable = current_route_configurations(
+        tmp_path,
+        profiles,
+        policy,
+        {"id": "work", "revision": "1"},
+        requirements={
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "required_execution_guarantees": [],
+        },
+    )
+    profiles[0]["execution_configurations"] = unavailable["candidates"]
+    blocked = assignment_decision_from_policy(
+        assignment_policy={}, runtime_resolution={"profile_recommendations": profiles}, target_evidence={}
+    )
     assert not blocked["candidate_scores"][0]["eligible"]
 
 

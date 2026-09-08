@@ -398,3 +398,7 @@ The four-consumer applicability/request composition regression passed after corr
 
 
 The public-consumer audit found four existing fixture files reading removed internal contributions. Their assertions now inspect owner-filtered composed blockers/pending actions instead. All 42 affected startup, advisory, domain execution and Verification requirement cases passed in 73.35 seconds; no safety or packet-size bound changed.
+
+### Current policy precedence conformance
+
+Linux runtime CI on the comparative-assignment stack passed154 shared-core tests and found one old fixture expecting a deprecated manual-disabled alias to override canonical automatic transport authority. The fixture now verifies canonical precedence and retains a separate negative without canonical authority, plus the independent unsafe automatic-command ceiling. The CI failure remains recorded; this changes no product behavior or provider evidence.
