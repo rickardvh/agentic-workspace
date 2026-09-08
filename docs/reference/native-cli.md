@@ -78,3 +78,12 @@ requires a current role-specific Verification obligation; the native owner does
 not yet supply that obligation and reports the gap. Source-bound requirements
 do not by themselves complete native capability discovery, best-fit choice or
 replace the older ordinary assignment adapter's generic defaults.
+
+
+The final native packet exposes composed authority through `decision_packet` and
+one global `capability_contract`. Owner details omit internal `contribution`
+objects; inspect composed blockers or pending actions by their `owner` field.
+Verification assurance gaps retain `requirement_id`, status and rule. Their full
+current source body appears once in `assurance_applicability.requirements`, joined
+by `id`. Request declarations and exact current envelopes remain inline and
+constructible; this projection change adds no cache or deferred-detail protocol.

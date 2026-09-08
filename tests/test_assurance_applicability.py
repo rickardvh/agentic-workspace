@@ -22,6 +22,17 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
     result = consume(surface, shared_core_binary, native_cli, context)
     row = result["verification"]["assurance_applicability"]["requirements"][0]
     assert row["status"] == "unresolved"
+    # Final projection exposes one composed authority and one requirement body;
+    # the ordinary current request below still round-trips across all consumers.
+    assert all("contribution" not in owner for owner in result.values() if isinstance(owner, dict))
+    assert row["source_requirement"]["required_evidence"] == ["domain-review"]
+    gap = result["verification"]["assurance_owner_gaps"][0]
+    assert gap["requirement_id"] == row["id"]
+    assert gap["status"] == "owner-evidence-not-admitted"
+    assert "source_requirement" not in gap
+    assert result["decision_packet"]["blockers"] == result["decision_packet"]["pending_consequences"]["blockers"]
+    owner = next(owner for owner in result["capability_contract"]["owners"] if owner["owner"] == "verification")
+    assert any(request["kind"] == "verification/assurance-applicability/v1" and request["input_schema"] for request in owner["requests"])
     assert not row["applies_because"]
     assert not any(r["field"] == "assurance.requirements" for r in result["configuration"]["residuals"])
     assert any(b["affects"] == ["claim:claim-work-complete"] for b in result["decision_packet"]["blockers"])
@@ -56,8 +67,10 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
     with pytest.raises(AssertionError, match="unknown requirement"):
         consume(surface, shared_core_binary, native_cli, {**context, "request": forged})
     source.write_text(source.read_text() + "# current source changes\n", encoding="utf-8")
-    stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
-    assert stale["verification"]["assurance_applicability"]["requirements"][0]["status"] == "unresolved"
+    with pytest.raises(AssertionError, match="stale for the current capability contract revision"):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    fresh = consume(surface, shared_core_binary, native_cli, context)
+    assert fresh["verification"]["assurance_applicability"]["requirements"][0]["status"] == "unresolved"
     assert not (tmp_path / ".agentic-workspace/local").exists()
 
 

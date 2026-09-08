@@ -13,6 +13,10 @@ from tests.test_native_public_cli import native_cli as native_cli
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def workspace_blockers(packet: dict) -> list:
+    return [row for row in packet["decision_packet"]["blockers"] if row["owner"] == "workspace"]
+
+
 def write_config(target: Path, bias: str, obligation: dict) -> Path:
     source = target / ".agentic-workspace/config.toml"
     source.parent.mkdir(exist_ok=True)
@@ -36,7 +40,7 @@ def test_actual_recommended_source_preserved_without_task_veto(
     original = source.read_bytes()
     result = consume(surface, shared_core_binary, native_cli, context)
     config = result["configuration"]
-    assert config["contribution"]["blockers"] == []
+    assert workspace_blockers(result) == []
     assert result["decision_packet"]["status"] == "direct"
     fields = {item["field"]: item for item in config["residuals"]}
     assert fields["workspace.optimization_bias"]["value"] == bias
@@ -51,17 +55,17 @@ def test_actual_recommended_source_preserved_without_task_veto(
     write_config(tmp_path, bias, obligation)
     changed = consume(surface, shared_core_binary, native_cli, context)
     assert changed["configuration"]["revision"] != config["revision"]
-    assert changed["configuration"]["contribution"]["blockers"] == []
+    assert workspace_blockers(changed) == []
     for force in ["blocking", "required-before-closeout"]:
         write_config(tmp_path, bias, {**obligation, "force": force})
         hard = consume(surface, shared_core_binary, native_cli, context)
-        blockers = hard["configuration"]["contribution"]["blockers"]
+        blockers = workspace_blockers(hard)
         assert len(blockers) == 1
         assert blockers[0]["affects"] == ["task"]
         assert "workflow_obligations.commit_after_proof" in blockers[0]["code"]
     write_config(tmp_path, bias, {**obligation, "unknown_future_constraint": "must remain unresolved"})
     unknown = consume(surface, shared_core_binary, native_cli, context)
-    assert len(unknown["configuration"]["contribution"]["blockers"]) == 1
+    assert len(workspace_blockers(unknown)) == 1
     assert not (tmp_path / ".agentic-workspace/local").exists()
 
 
@@ -98,7 +102,7 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
         "workflow_obligations.commit_after_proof",
         "workflow_obligations.system_intent_refresh",
     }
-    blockers = config["contribution"]["blockers"]
+    blockers = workspace_blockers(result)
     for field in [
         "workspace.improvement_latitude",
         "payload.policy",

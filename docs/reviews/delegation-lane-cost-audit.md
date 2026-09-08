@@ -387,3 +387,14 @@ scope. The original failing Rust case passed. No proof or task completion is
 inferred from preserved request currentness; no provider calls were made.
 
 The integrated Rust boundary also caught an obsolete fixture expecting consumed transport authority to remain unsupported. Its replacement checks the actual Assignment policy and retained safety ceiling: automatic transport with safety false still forbids execution. The initial boundary had89 passes, one stale fixture failure and3 subprocess helpers ignored.
+
+### Native public projection subtraction (#3059/#2981)
+
+The first serialized configured-checkout audit packet contained 193,827 compact UTF-8 bytes. Owner-local contributions and repeated assurance source bodies accounted for 35,499 removable bytes; applying only those final-projection omissions leaves 158,328 bytes. This is a captured-packet measurement, not a claim that all current checkout packets fit a universal size.
+
+A separate real source read with the frozen logging parent and this candidate used the same exact checkout and task: 178,254 bytes before, 144,856 after (33,398 bytes removed). Removing only the identified duplicate fields from the before packet made the two decoded packets exactly equal. Full requirement bodies remain available once by requirement ID; composed blockers, capability declarations, request envelopes and currentness are unchanged. No cache or new detail protocol was introduced, and no 100 KB bound was increased.
+
+The four-consumer applicability/request composition regression passed after correcting an existing stale-source fixture expectation. Its baseline independently failed because current capability admission rejects source drift earlier than the old expected unresolved reply; the updated negative also checks fresh unresolved recovery. Neither these context savings nor deterministic constructibility closes #3059 or #2981.
+
+
+The public-consumer audit found four existing fixture files reading removed internal contributions. Their assertions now inspect owner-filtered composed blockers/pending actions instead. All 42 affected startup, advisory, domain execution and Verification requirement cases passed in 73.35 seconds; no safety or packet-size bound changed.

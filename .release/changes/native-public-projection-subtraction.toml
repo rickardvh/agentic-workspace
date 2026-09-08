@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Remove duplicate owner contribution and assurance source bodies from native public projection while retaining composed authority and constructible requests."

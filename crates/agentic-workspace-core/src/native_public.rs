@@ -495,6 +495,16 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     for owner in public.as_object_mut().unwrap().values_mut() {
         if let Some(object) = owner.as_object_mut() {
             object.remove("capability_contract");
+            object.remove("contribution");
+        }
+    }
+    // Keep the full current source requirement once, in applicability detail.
+    // Evidence gaps identify that same row without copying its source body.
+    if let Some(gaps) = public["verification"]["assurance_owner_gaps"].as_array_mut() {
+        for gap in gaps {
+            if let Some(object) = gap.as_object_mut() {
+                object.remove("source_requirement");
+            }
         }
     }
     Ok(public)
