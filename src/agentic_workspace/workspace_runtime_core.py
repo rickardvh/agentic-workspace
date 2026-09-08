@@ -45789,13 +45789,13 @@ def _current_assignment_selection(
                 completed_packet=completed_packet,
                 requirements=task_requirements["requirements"],
             )
-        for profile in runtime_resolution["profile_recommendations"]:
-            profile["execution_configurations"] = [
-                row for row in configurations.get("candidates", []) if row["configuration"]["target"] == profile["name"]
-            ]
-            eligible_configurations = [row["configuration"] for row in profile["execution_configurations"] if row["eligible"]]
-            profile["execution_methods"] = list(dict.fromkeys(row["transport"] for row in eligible_configurations))
-            profile["transports"] = [row["execution"]["adapter"] for row in eligible_configurations]
+            for profile in runtime_resolution["profile_recommendations"]:
+                profile["execution_configurations"] = [
+                    row for row in configurations.get("candidates", []) if row["configuration"]["target"] == profile["name"]
+                ]
+                eligible_configurations = [row["configuration"] for row in profile["execution_configurations"] if row["eligible"]]
+                profile["execution_methods"] = list(dict.fromkeys(row["transport"] for row in eligible_configurations))
+                profile["transports"] = [row["execution"]["adapter"] for row in eligible_configurations]
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
     if execution_choice is not None and not configurations and not task_requirements:
         raise ValueError("assignment-configuration-source-unavailable")
