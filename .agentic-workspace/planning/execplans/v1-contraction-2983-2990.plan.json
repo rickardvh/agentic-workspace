@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "#3164/#3165 are integrated at 384473617acd395ebf66b3d449d7bd28bbe5bea9; this real owner is being reconciled through existing native custody, without new legacy adoption permission.",
+    "frontier": "Merged base remains 384473617acd395ebf66b3d449d7bd28bbe5bea9. #3166 proposes real-owner material/currentness and guidance correction. #3167 proposes sealed native process execution, terminal recovery, current committed-result provenance and measured process burden at 1ea739c02. Neither PR is integrated. All larger lifecycle and release gates remain open.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Prove fresh-session recovery of this reconciled real owner under #2970 and route the regression to #2909; then complete the earliest remaining native ordinary-path and consequential delegation gaps under #3077/#2947/#2817/#2818/#2210, followed by positive #2209 target evidence.",
+  "next_action": "Continue #2947/#2817/#2818/#2210 from the proposed native process execution and current committed-return provenance in #3167: complete consequential return admission and typed Planning/Verification use, supported host-native continuation/recovery and a completed matched local case; only admitted consequential outcomes may support #2209. Keep #3166/#3167 independent review and #2909 cumulative acceptance distinct from implementation evidence.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -56,14 +56,19 @@
   "phase": "implementation",
   "proof": {
     "claims": [
-      "Native former-owner transfer and material-update capability is integrated; complete first-stable intent is not yet satisfied."
+      "Real selected owner revision 6 was maintained and recovered through native custody; #3166 awaits independent acceptance.",
+      "#3167 focused execution matrix: 77 tests passed; 95 Rust tests passed (three helper tests ignored). The later provenance/cost extension passed nine native/Python/TypeScript/JSON dispatch cases including forged/stale returns.",
+      "One real Codex CLI process returned an unproven sealed observation in 21,933 ms; its earlier failed executable lookup is excluded. Matched retained-local routing feasibility is not a completed economic comparison.",
+      "Current first-stable intent is not satisfied: consequential admission, native host continuation, positive target evidence, cumulative conformance and exact release admission remain open."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587513916",
       "tests/test_native_planning_create.py",
       "tests/test_native_startup_adapter.py",
-      ".agentic-workspace/reconstruction/owner-audit.md"
+      ".agentic-workspace/reconstruction/owner-audit.md",
+      "https://github.com/rickardvh/agentic-workspace/pull/3166",
+      "https://github.com/rickardvh/agentic-workspace/pull/3167"
     ],
     "requirements": [
       "Prove this real owner is materially current through native update, fresh-session recovery, source-drift rejection and preservation of unrelated work.",
@@ -121,7 +126,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 6,
+  "revision": 7,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -173,18 +178,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4b1878369fc534452600318158d3e0cb81b6ab014159f1df4a3a04bc44ec12ee.attempt.json",
-        "revision": "sha256:cd8d725665f51aded2f0793e7aff445371d7a1a6e65e45458824cb6c959b24ea",
+        "path": ".agentic-workspace/local/effects/eaf36cbe49b4a1f3b9a2a7c05d244af1410159cfc158b2bf629c3791899c2c50.attempt.json",
+        "revision": "sha256:f616a4119828b2b91de622abc5a9ee8fed525c2623cef8c8d24836d0c0668dc3",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4b1878369fc534452600318158d3e0cb81b6ab014159f1df4a3a04bc44ec12ee.result.json",
-        "revision": "sha256:a73b0adf856f6fbc7a507d662aa17b90362ec755b113986528ae8c0b77ee3c37",
+        "path": ".agentic-workspace/local/effects/eaf36cbe49b4a1f3b9a2a7c05d244af1410159cfc158b2bf629c3791899c2c50.result.json",
+        "revision": "sha256:49028a535eefe8b0cab35022374092e05c53b318e6b1785fb27a8ebe406ed4f9",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:187b75b31b2f4f8c9336edfafb82edb5d97c3e7d74028a745ccddff3842c6c64",
+    "invocation_revision": "sha256:0d1d8a45d68f66342167f4de2e19d282a77b918fb55ab9b0b0b0c815733b0e58",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -192,7 +197,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:7b41e413ed3cced6e0c094600eefdc2921fb618559d52690979b85ad43da2857",
+        "document_revision": "sha256:ccfb364ff0d77353ba401f2997d9e69d2ff322baa3cd2962fa91fda9ea1cc8fd",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

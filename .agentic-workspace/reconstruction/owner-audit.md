@@ -335,8 +335,9 @@ An opt-in real Codex CLI 0.153.4 process run consumed the sealed current revisio
 reconstruction owner in an isolated ephemeral, read-only worker directory. The
 configured host command supplied the packet; no parent conversation or former AW
 Python host supplied semantics. It returned a valid 1,936-byte observation in
-21,933 ms (22.51 seconds including native invocation). The rendered packet was
-39,853 bytes over a 9,883-byte source. Fresh native re-entry classified it as a
+21,933 ms (22.51 seconds including native invocation) over a 9,883-byte source.
+The original diagnostic packet size included serializer whitespace and was not
+an observation of transmitted input bytes. Fresh native re-entry classified it as a
 current unproven observation. Effective/cached/output tokens, host framing cost,
 review/integration burden and total successful-completion savings are unknown.
 An earlier incorrect executable path failed before provider launch (664 ms) and
@@ -367,3 +368,16 @@ contract receives measured process-input bytes and elapsed time; absent provider
 and downstream metrics remain unknown. This supplies source facts for later
 admission, not task acceptance or a target-quality update. Its nine focused
 dispatch cases pass across native/Python/TypeScript/JSON (25.25 seconds).
+
+A fresh real run on the provenance extension consumed the real revision-7 owner
+(11,006 source bytes). Native measurements were 41,507 process-input bytes,
+2,026 stdout bytes and 20,965 ms; fresh re-entry admitted current executed
+observation provenance while retaining every false claim-authority flag. The
+earlier real success/failure artifacts remain separate. No provider token or
+successful-completion savings claim follows from the process-byte measurement.
+
+The real selected Planning owner now records this frontier as native-authored
+revision 7 (`40ec4d1633fd4ceb12e45d2857a229909015fa79647d98dafbb4028efbfeb798`).
+Exact native update/reconcile and a fresh process report current custody. The
+old material request fails with exit 2 and the same bytes. Its tracked copy is
+the native writer output; no local receipts or unrelated work are transported.
