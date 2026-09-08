@@ -1109,9 +1109,14 @@ def test_material_planning_source_change_reopens_but_keeps_subject(shared_core_b
     original = planning_view(context)
     operation = original["primary_action"]
     result = reconcile_planning({**context, "invocation": operation})
-    unrelated = deepcopy(context)
-    unrelated["capability_contract"]["revision"] = "sha256:" + "9" * 64
-    assert planning_view(unrelated)["primary_action"] == operation
+    availability_changed = deepcopy(context)
+    availability_changed["capability_contract"]["revision"] = "sha256:" + "9" * 64
+    refreshed_action = planning_view(availability_changed)["primary_action"]
+    # Availability changes the executable commitment, never material work identity.
+    assert refreshed_action != operation
+    assert refreshed_action["arguments"]["reconciliation"] == operation["arguments"]["reconciliation"]
+    with pytest.raises(DecisionContractError):
+        reconcile_planning({**availability_changed, "invocation": operation})
     source = tmp_path / context["source"]["path"]
     body = json.loads(source.read_text())
     body["next_action"] = "Reconcile returned verification evidence"
