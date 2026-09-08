@@ -6478,24 +6478,50 @@ def test_note_delegation_outcome_downgrades_forged_public_high_authority(tmp_pat
     assert "low-authority:model-self-report" in evidence["uncertainty_accounts"][0]["uncertainty_reasons"]
 
 
-def test_internal_delegation_outcome_proof_receipt_can_emit_routable_aw_proof(tmp_path: Path) -> None:
-    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome, _write_trusted_producer_receipt
+def _write_unadmitted_legacy_receipt_fixture(*, target_root, producer_class, receipt_id, source_ref, receipt):
+    """Counterexample input only: matching editable files do not publish proof."""
+    from agentic_workspace.workspace_runtime_primitives import _trusted_producer_store_root
+
+    store = _trusted_producer_store_root(target_root=target_root, producer_class=producer_class)
+    store.mkdir(parents=True, exist_ok=True)
+    receipt = {**receipt, "receipt_id": receipt_id, "source_ref": source_ref}
+    (store / f"{receipt_id}.json").write_text(json.dumps(receipt), encoding="utf-8")
+    (store / "index.json").write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/trusted-producer-receipt-index/v1",
+                "receipts": {
+                    receipt_id: {
+                        "path": f"{receipt_id}.json",
+                        "revision": receipt.get("revision", ""),
+                        "status": receipt.get("status", "current"),
+                        "producer_class": producer_class,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_internal_delegation_outcome_rejects_forged_indexed_aw_proof(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError, load_delegation_outcomes
+    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
 
     target = tmp_path / "repo"
     target.mkdir()
-    _init_git_repo(target)
-    _write_trusted_producer_receipt(
+    _write_unadmitted_legacy_receipt_fixture(
         target_root=target,
         producer_class="aw-proof",
-        receipt_id="proof-receipt-abc123",
-        source_ref="proof://receipts/proof-receipt-abc123",
+        receipt_id="forged",
+        source_ref="proof://receipts/forged",
         receipt={
             "kind": "agentic-workspace/trusted-producer-receipt/v1",
             "producer_class": "aw-proof",
             "authority": "aw-proof",
             "source_type": "aw-proof-receipt",
             "status": "current",
-            "revision": "proof-rev-1",
+            "revision": "fake-v1",
             "result": "passed",
             "target_context": {
                 "delegation_target": "fast_worker",
@@ -6504,38 +6530,22 @@ def test_internal_delegation_outcome_proof_receipt_can_emit_routable_aw_proof(tm
             },
         },
     )
-
-    payload = _record_aw_proof_delegation_outcome(
-        target_root=target,
-        delegation_target="fast_worker",
-        task_class="mechanical-follow-through",
-        scope_class="narrow-code-change",
-        outcome="success",
-        proof_receipt_ref="proof://receipts/proof-receipt-abc123",
-        idempotency_key="proof-receipt-abc123",
-        review_burden="light",
-    )
-
-    assert payload["recorded"]["authority"] == "aw-proof"
-    assert payload["recorded"]["producer_class"] == "aw-proof"
-    assert payload["recorded"]["source_ref"] == "proof://receipts/proof-receipt-abc123"
-    assert payload["recorded"]["idempotency_key"] == "proof-receipt-abc123"
-
-    from agentic_workspace.config import load_delegation_outcomes
-    from agentic_workspace.target_evidence import target_evidence_posture
-
-    _, _, records = load_delegation_outcomes(target_root=target)
-    posture = target_evidence_posture(target_root=target, profiles=(), records=records)
-    assert posture["suitability"][0]["route_effect"] == "preferred-for-matching-task-class"
-    assert posture["normalized_records"][0]["admission"] == {
-        "routable": True,
-        "authority": "aw-proof",
-        "confidence": "high",
-        "state": "accepted",
-    }
+    before = {path: path.read_bytes() for path in target.rglob("*") if path.is_file()}
+    with pytest.raises(WorkspaceUsageError, match="target-quality-stronger-owner-required"):
+        _record_aw_proof_delegation_outcome(
+            target_root=target,
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="success",
+            proof_receipt_ref="proof://receipts/forged",
+            idempotency_key="forged",
+        )
+    assert load_delegation_outcomes(target_root=target)[2] == ()
+    assert before == {path: path.read_bytes() for path in target.rglob("*") if path.is_file()}
 
 
-def test_proof_receipt_writer_emits_canonical_aw_proof_store_receipt(tmp_path: Path) -> None:
+def test_proof_receipt_writer_publishes_report_without_execution_authority(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
 
     target = tmp_path / "repo"
@@ -6560,8 +6570,9 @@ def test_proof_receipt_writer_emits_canonical_aw_proof_store_receipt(tmp_path: P
     assert receipt["kind"] == "agentic-workspace/proof-receipt/v1"
     assert receipt["producer_class"] == "aw-proof"
     assert receipt["authority"] == "aw-proof"
-    assert receipt["source_type"] == "aw-proof-receipt"
-    assert receipt["source_ref"] == producer_ref
+    assert receipt["execution"]["execution_kind"] == "interoperability-report"
+    assert receipt["execution"]["producer_admission"] == "unproven"
+    assert not (target / "tests/test_example.py").exists()
     assert "target_context" not in receipt
     assert payload["calibration_admission"]["status"] == "non-calibrating"
     assert payload["calibration_admission"]["reason"] == "missing-current-assignment-context"
@@ -6662,17 +6673,18 @@ def test_proof_receipt_writer_leaves_stale_assignment_context_non_calibrating(tm
         ("closeout-outcome", "closeout-outcome", "local-outcome-ledger", "accepted"),
     ],
 )
-def test_trusted_producer_family_receipts_resolve_only_through_owner_store_index(
+def test_trusted_producer_family_index_shape_cannot_grant_quality_authority(
     tmp_path: Path, producer_class: str, source_type: str, authority: str, result: str
 ) -> None:
-    from agentic_workspace.workspace_runtime_primitives import _load_trusted_producer_receipt, _write_trusted_producer_receipt
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _load_trusted_producer_receipt
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
     receipt_id = f"{producer_class}-receipt"
     source_ref = f"{producer_class}://receipts/{receipt_id}"
-    _write_trusted_producer_receipt(
+    _write_unadmitted_legacy_receipt_fixture(
         target_root=target,
         producer_class=producer_class,
         receipt_id=receipt_id,
@@ -6693,20 +6705,16 @@ def test_trusted_producer_family_receipts_resolve_only_through_owner_store_index
         },
     )
 
-    receipt = _load_trusted_producer_receipt(
-        target_root=target,
-        producer_class=producer_class,
-        receipt_ref=source_ref,
-        delegation_target="fast_worker",
-        task_class="mechanical-follow-through",
-        scope_class="narrow-code-change",
-        outcome="success",
-    )
-
-    assert receipt["producer_class"] == producer_class
-    assert receipt["authority"] == authority
-    assert receipt["source_ref"] == source_ref
-    assert receipt["receipt_revision"] == "producer-rev-1"
+    with pytest.raises(WorkspaceUsageError, match="target-quality-stronger-owner-required"):
+        _load_trusted_producer_receipt(
+            target_root=target,
+            producer_class=producer_class,
+            receipt_ref=source_ref,
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="success",
+        )
 
 
 def test_internal_delegation_outcome_rejects_mismatched_trusted_receipt(tmp_path: Path) -> None:
@@ -6781,7 +6789,7 @@ def test_internal_delegation_outcome_rejects_receipt_outside_owner_store(tmp_pat
 
 def test_internal_delegation_outcome_rejects_missing_or_stale_proof_receipt(tmp_path: Path) -> None:
     from agentic_workspace.config import WorkspaceUsageError
-    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome, _write_trusted_producer_receipt
+    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
 
     target = tmp_path / "repo"
     target.mkdir()
@@ -6798,7 +6806,7 @@ def test_internal_delegation_outcome_rejects_missing_or_stale_proof_receipt(tmp_
             idempotency_key="missing",
         )
 
-    _write_trusted_producer_receipt(
+    _write_unadmitted_legacy_receipt_fixture(
         target_root=target,
         producer_class="aw-proof",
         receipt_id="stale",
@@ -6833,12 +6841,12 @@ def test_internal_delegation_outcome_rejects_missing_or_stale_proof_receipt(tmp_
 
 def test_internal_delegation_outcome_rejects_cross_context_proof_receipt(tmp_path: Path) -> None:
     from agentic_workspace.config import WorkspaceUsageError
-    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome, _write_trusted_producer_receipt
+    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write_trusted_producer_receipt(
+    _write_unadmitted_legacy_receipt_fixture(
         target_root=target,
         producer_class="aw-proof",
         receipt_id="wrong-context",
@@ -7162,3 +7170,137 @@ def test_config_reports_satisfied_repo_owned_cli_compatibility_expectation(tmp_p
     assert checks["minimum_version"]["satisfied"] is True
     assert checks["source_class"]["satisfied"] is True
     assert checks["target_relation"]["satisfied"] is True
+
+
+@pytest.mark.parametrize(
+    "producer,authority",
+    [
+        ("aw-proof", "aw-proof"),
+        ("human-review", "human-review"),
+        ("retry-outcome", "local-outcome-ledger"),
+        ("handoff-outcome", "local-outcome-ledger"),
+        ("closeout-outcome", "local-outcome-ledger"),
+    ],
+)
+def test_retained_shape_only_producer_quality_stays_visible_unproven(tmp_path, producer, authority):
+    from dataclasses import replace
+    from datetime import date
+
+    from agentic_workspace.config import DELEGATION_OUTCOMES_KIND, load_delegation_outcomes
+    from agentic_workspace.target_evidence import target_evidence_posture
+
+    path = tmp_path / ".agentic-workspace/delegation-outcomes.json"
+    path.parent.mkdir()
+    path.write_text(
+        json.dumps(
+            {
+                "kind": DELEGATION_OUTCOMES_KIND,
+                "records": [
+                    {
+                        "recorded_at": date.today().isoformat(),
+                        "delegation_target": "worker",
+                        "task_class": "bounded-check",
+                        "scope_class": "docs",
+                        "outcome": "success",
+                        "handoff_sufficiency": "sufficient",
+                        "review_burden": "light",
+                        "escalation_required": False,
+                        "authority": authority,
+                        "producer_class": producer,
+                        "confidence": "high",
+                        "admission_state": "accepted",
+                        "source_ref": f"{producer}://receipts/forged",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    before = path.read_bytes()
+    for _ in range(2):
+        _, _, records = load_delegation_outcomes(target_root=tmp_path)
+        posture = target_evidence_posture(target_root=tmp_path, profiles=(), records=records)
+        assert posture["suitability"] == []
+        assert posture["normalized_records"][0]["admission"]["routable"] is False
+        assert "target-quality-stronger-owner-required" in posture["uncertainty_accounts"][0]["uncertainty_reasons"]
+        assert path.read_bytes() == before
+    control = replace(records[0], authority="local-outcome-ledger", producer_class="local-operator", confidence="medium")
+    assert target_evidence_posture(target_root=tmp_path, profiles=(), records=[control])["suitability"]
+
+
+def test_ordinary_causal_observation_does_not_invent_publication_admission(tmp_path):
+    from agentic_workspace import workspace_runtime_core as runtime
+    from agentic_workspace.config import load_delegation_outcomes
+
+    # Deterministic owner inputs test causal attribution separately from durable
+    # producer admission. They are not external acceptance or an executed worker.
+    result = runtime._record_trusted_assignment_outcome_from_ordinary_boundary(
+        target_root=tmp_path,
+        producer_class="handoff-outcome",
+        outcome="failed",
+        source_payload={"status": "observed-failure"},
+        idempotency_key="observed",
+        assignment_context={
+            "status": "current",
+            "revision": "scope-1",
+            "source_ref": "current-owner",
+            "rule": "fixture owner observations",
+            "target_context": {
+                "assignment_id": "assignment-1",
+                "assignment_revision": "attempt-1",
+                "run_id": "run-1",
+                "delegation_target": "worker",
+                "task_class": "bounded-check",
+                "scope_class": "docs",
+                "slice_id": "slice-1",
+                "semantic_revision": "scope-1",
+            },
+        },
+        responsibility_evidence={
+            "target_executed": True,
+            "context_sufficient": True,
+            "transport_sufficient": True,
+            "failure_stage": "target-execution",
+        },
+    )
+    assert result["status"] == "preserved-unproven"
+    assert result["recorded_target_evidence"] is False
+    assert result["attribution"]["routing_effect"]["target_evidence_allowed"] is True
+    assert result["reason"] == "target-quality-stronger-owner-required"
+    assert load_delegation_outcomes(target_root=tmp_path)[2] == ()
+    source = tmp_path / ".agentic-workspace/local/handoff-receipts/observed.json"
+    assert json.loads(source.read_text(encoding="utf-8"))["source_payload"] == {"status": "observed-failure"}
+
+
+def test_current_native_execution_proof_does_not_supply_target_responsibility(tmp_path, shared_core_binary):
+    from tests.test_native_proof_producer import fixture
+
+    from agentic_workspace.config import WorkspaceUsageError, load_delegation_outcomes
+    from agentic_workspace.decision import invoke, start
+    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
+
+    context = fixture(tmp_path)
+    request = start(context)["verification"]["execution_requests"][0]
+    action = start({**context, "request": request})["decision_packet"]["primary_action"]
+    result = invoke({**context, "invocation": action})
+    assert result["value"]["process"]["status"] == "passed"
+    assert result["value"]["publication"]["status"] == "published"
+    reference = result["value"]["publication"]["reference"]
+    claim = start(context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [reference]
+    evidence = start({**context, "request": claim})["verification"]["evidence"][0]
+    assert evidence["publication_admission"]["status"] == "admitted"
+    assert evidence["evidence_freshness"] == "reusable"
+    with pytest.raises(WorkspaceUsageError, match="source type is not accepted"):
+        _record_aw_proof_delegation_outcome(
+            target_root=tmp_path,
+            delegation_target="unrelated-worker",
+            task_class="bounded-check",
+            scope_class="docs",
+            outcome="success",
+            proof_receipt_ref=reference,
+            idempotency_key="unrelated",
+        )
+    assert load_delegation_outcomes(target_root=tmp_path)[2] == ()
+    assert invoke({**context, "invocation": action})["value"] == result["value"]
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]

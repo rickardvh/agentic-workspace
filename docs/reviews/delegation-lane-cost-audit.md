@@ -412,3 +412,11 @@ Twenty-two native cases passed in 6.57 seconds, followed by seven focused concur
 ### Current policy precedence conformance
 
 Linux runtime CI on the comparative-assignment stack passed154 shared-core tests and found one old fixture expecting a deprecated manual-disabled alias to override canonical automatic transport authority. The fixture now verifies canonical precedence and retains a separate negative without canonical authority, plus the independent unsafe automatic-command ceiling. The CI failure remains recorded; this changes no product behavior or provider evidence.
+
+### Legacy producer shapes are not target quality (#2209/#2334/#3001/#2909)
+
+A bounded configuration-fixture run found two stale positives (two failed, two passed in 18.51 seconds). More importantly, an independently constructed receipt plus matching editable index, with no command or producer execution, was accepted as high-confidence `aw-proof` and made its target preferred. The same generic loader covered human-review, retry, handoff and closeout families without current authentication/publication/causal admission. That acceptance shortcut is now removed; retained records remain visible unproven and source bytes are preserved. Local-operator controls and native Verification admission remain distinct.
+
+Thirteen corrected cluster cases passed in 17.72 seconds. Seven additional cases passed in 3.78 seconds: retained-family normalization, causal attribution without invented publication, and a real bounded native command whose current reusable proof cannot calibrate an unrelated target. No provider inference, human acceptance or target-quality success was fabricated. Legacy publication custody and positive current lifecycle-to-target learning remain existing-owner implementation residuals.
+
+The final focused outcome/configuration and causal-owner selection passed 32 cases in 22.51 seconds (210 unrelated cases deselected), including existing local-operator retention/compaction controls.
