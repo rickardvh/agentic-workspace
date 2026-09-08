@@ -630,7 +630,7 @@ pub(crate) fn view_with_applicability(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration()]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
@@ -656,6 +656,11 @@ pub(crate) fn view_with_applicability(
     let mut proof_choice = applicability
         .invocation
         .map(|i| i["arguments"]["selection"]["choice"].clone());
+    let mut reported_observation = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"].get("reported_observation"))
+        .filter(|v| !v.is_null())
+        .cloned();
     let mut authentication = Value::Null;
     let mut evidence = Vec::new();
     let mut requested = false;
@@ -685,6 +690,11 @@ pub(crate) fn view_with_applicability(
             gaps.push("verification-request-stale".into());
         } else if request["request_kind"] == "verification/execute-selected/v1" {
             proof_choice = Some(request["arguments"].clone());
+        } else if request["request_kind"] == "verification/record-receipt/v1" {
+            proof_choice = Some(
+                json!({"route_id":request["arguments"]["route_id"],"command":request["arguments"]["command"]}),
+            );
+            reported_observation = Some(request["arguments"].clone());
         } else if request["request_kind"] == "verification/authenticate-host-review/v1" {
             authentication = authenticate_review(
                 &root,
@@ -705,13 +715,14 @@ pub(crate) fn view_with_applicability(
             }));
         }
     }
-    let execution = crate::native_proof::selected(
+    let execution = crate::native_proof::select_mode(
         target,
         task,
         changed,
         subject,
         &strategy,
         proof_choice.as_ref(),
+        reported_observation.as_ref(),
     )?;
     let execution_actions = crate::native_proof::action(
         target,
@@ -732,6 +743,22 @@ pub(crate) fn view_with_applicability(
             request
         })
         .collect();
+    let mut record_requests: Vec<Value> = execution_requests
+        .iter()
+        .map(|request| {
+            let mut request = request.clone();
+            request["request_kind"] = json!("verification/record-receipt/v1");
+            request["id"] = json!("verification/record-receipt/v1");
+            request["arguments"]["result"] = json!("failed");
+            request
+        })
+        .collect();
+    let mut report_request = template.clone();
+    report_request["id"] = json!("verification/record-receipt/v1");
+    report_request["request_kind"] = json!("verification/record-receipt/v1");
+    report_request["arguments"] =
+        json!({"route_id":"unresolved","command":"<reported-command>","result":"failed"});
+    record_requests.push(report_request);
     let applicable = requested || !protocols.is_empty() || !gaps.is_empty();
     if applicable {
         gaps.extend(selector_gaps.clone());
@@ -788,7 +815,7 @@ pub(crate) fn view_with_applicability(
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":strategy,"strategy_revision":strategy_revision,
-        "execution":execution,"execution_requests":execution_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "execution":execution,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),

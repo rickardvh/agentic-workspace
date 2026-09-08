@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Publish proof observations through current Verification authority and shared retained custody, with serialized index updates and scoped interruption recovery; manual pass assertions remain unproven."
+issues = [2334, 2986, 3000, 3001]

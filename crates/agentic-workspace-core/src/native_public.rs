@@ -227,6 +227,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                                 "verification/claim/v1"
                                     | "verification/authenticate-host-review/v1"
                                     | "verification/execute-selected/v1"
+                                    | "verification/record-receipt/v1"
                             )
                         ))
                     .cloned()
@@ -326,6 +327,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                 Some(
                     "verification/claim/v1"
                         | "verification/execute-selected/v1"
+                        | "verification/record-receipt/v1"
                         | "verification/requirements/v1"
                         | "verification/authenticate-host-review/v1"
                         | "verification/assurance-applicability/v1"
