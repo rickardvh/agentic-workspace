@@ -256,3 +256,27 @@ The Planning vertical added five public cases (22.05s) and strengthened the actu
 Current module CI exposed an obsolete assertion that capability changes preserve an executable Planning commitment. The correction proves unchanged semantic reconciliation, changed action identity and stale-action refusal; the declared shared-core route passed 141 cases (75.71s). Four subsequent stack layers rebased without semantic conflicts. These are implementation/review costs, not target-quality evidence.
 
 Domain-proof integration initially passed 32 cases and failed four packet-size assertions (96.71s): canonical Planning construction increased duplicated public capability fragments, pushing a 41-lane fixture to 103136 bytes. Public composition now exposes its full contract once, retaining request constructibility and the existing discovery bound. The integrated domain, creation and producer group passed 66 cases (117.02s). No byte bound was raised, provider inference was added, or monetary saving inferred. One incorrect patch context and a briefly changed worktree branch were avoidable implementation-agent mistakes; source bytes were preserved and the branch restored before further edits.
+
+### Current proof fixture correction (2026-09-08)
+
+The #3110 workspace check retained three failures (462 passed, one skipped):
+old upgrade/identity/PR-cache fixtures reported `passed` without execution and
+expected publication or task completion. This was fixture counterevidence, not
+permission to bypass current Verification availability or source admission.
+The correction executes the existing bounded selected commands and preserves
+upgrade/no-Planning and fresh PR-cache reuse/invalidation coverage. Disabled
+publication remains a zero-receipt-delta refusal. Source changes stale execution;
+restoring exact source permits execution reuse without creating task judgment.
+
+The public exact-task judgment admission positive remains unresolved under
+#2334 for this path: selected execution publishes local execution evidence, and
+an interoperability report does not establish task sufficiency. Explicit shared
+semantic-owner test observations prove exact task/change/fingerprint matching
+and manual/independent obligations separately; they are not public acceptance,
+human review, or independent Verification evidence. No provider calls or monetary
+estimates were used. The first focused two cases took 91.67 seconds including a
+source-host Cargo currentness checks; the PR-cache case took 15.92 seconds.
+The final focused three-case group passed in 104.67 seconds. The editable
+source adapter invokes Cargo to establish current core availability on each
+resolution; repeated short Cargo children were observed during this run. This
+cost is not attributed to provider inference or task execution quality.
