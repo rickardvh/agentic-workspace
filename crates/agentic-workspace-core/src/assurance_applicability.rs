@@ -152,24 +152,14 @@ pub(crate) fn declaration() -> Value {
 }
 
 pub(crate) fn native_input(
-    target: &std::path::Path,
+    config: &Value,
+    revision: &str,
     task: &str,
     changed: &[String],
     work: &Value,
     planning: Option<&Value>,
     context: &Value,
 ) -> Result<Value, CoreError> {
-    let root = cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
-        .map_err(|e| CoreError::new(e.to_string()))?;
-    let source = crate::native_config::load(
-        &root,
-        ".agentic-workspace/config.toml",
-        include_str!(
-            "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
-        ),
-    )
-    .map_err(CoreError::new)?;
-    let (config, revision) = source.unwrap_or((json!({}), "absent".into()));
     let requirements: Vec<Value> = config["assurance"]["requirements"]
         .as_object()
         .into_iter()
