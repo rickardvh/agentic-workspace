@@ -165,6 +165,146 @@ fn lock<'a>(root: &'a Dir, path: String) -> Result<Lock<'a>, String> {
     Ok(Lock { root, path })
 }
 
+const CUSTODY: &str = "native_registration_custody";
+const PUBLICATION_LOCK: &str = ".agentic-workspace/local/session-logging/.native-publication.lock";
+
+fn publication_lock(root: &Dir) -> Result<std::fs::File, String> {
+    // Bridge the historical directory lock only while establishing the stable
+    // process lock. Retained Python writers refuse this native carrier.
+    let entry = lock(root, format!("{ROOT}/.sessions.lock"))?;
+    safe(root, PUBLICATION_LOCK)?;
+    let file = root
+        .open_with(
+            PUBLICATION_LOCK,
+            OpenOptions::new().write(true).create(true),
+        )
+        .map_err(|e| e.to_string())?
+        .into_std();
+    file.try_lock().map_err(|e| e.to_string())?;
+    drop(entry);
+    Ok(file)
+}
+fn body_revision(registry: &Value) -> Result<String, String> {
+    let mut body = registry.clone();
+    body.as_object_mut()
+        .ok_or("invalid registry")?
+        .remove(CUSTODY);
+    Ok(hash(&serde_json::to_vec(&body).map_err(|e| e.to_string())?))
+}
+fn registration_invocation(target: &str, previous: &Value, desired: &str) -> Value {
+    let effect = hash(format!("{target}\0{previous}").as_bytes());
+    json!({"kind":"agentic-workspace/operation-invocation/v1", "operation_id":"session-logging.register",
+        "operation_revision":"native-session-registration/v1", "source_owner":"session-logging",
+        "idempotency_key":effect,"arguments":{"target":target,"previous_revision":previous,"registry_revision":desired},
+        "effects":["local-session-registration"]})
+}
+fn registration_outcome(revision: &str) -> Value {
+    json!({"status":"applied","effects":["local-session-registration"],"value":{"registry_revision":revision}})
+}
+fn admit_registry(target: &str, registry: &Value) -> Result<(), String> {
+    let retained = &registry[CUSTODY];
+    let revision = body_revision(registry)?;
+    let invocation = registration_invocation(
+        target,
+        &retained["invocation"]["arguments"]["previous_revision"],
+        &revision,
+    );
+    if retained["kind"] != "agentic-workspace/session-registration-custody/v1"
+        || retained["invocation"] != invocation
+    {
+        return Err("registry has no exact native publication custody".into());
+    }
+    let outcome = registration_outcome(&revision);
+    let planned =
+        crate::attempt_store::prepare_commit(target, retained["custody"].clone(), outcome.clone())
+            .map_err(|e| e.to_string())?;
+    if planned["custody"] != retained["custody"] || planned["record"]["invocation"] != invocation {
+        return Err("registry differs from retained publication".into());
+    }
+    // Exact published bytes can finish the immutable commit after interruption.
+    // Missing or conflicting prepublication state cannot reach this point.
+    if crate::attempt_store::inspect_committed(target, retained["custody"].clone()).is_err() {
+        let mut pending = retained["custody"].clone();
+        pending["committed"] = Value::Null;
+        let committed = crate::attempt_store::commit(
+            json!({"target":target,"custody":pending,"outcome":outcome}),
+        )
+        .map_err(|e| e.to_string())?;
+        if committed["custody"] != retained["custody"] {
+            return Err("publication commit mismatch".into());
+        }
+    }
+    Ok(())
+}
+fn publish_registry(
+    root: &Dir,
+    target: &str,
+    previous: Option<&[u8]>,
+    registry: &mut Value,
+    session: &Value,
+) -> Result<(), String> {
+    let previous_revision = previous
+        .map(|bytes| json!(hash(bytes)))
+        .unwrap_or(Value::Null);
+    let revision = body_revision(registry)?;
+    let invocation = registration_invocation(target, &previous_revision, &revision);
+    let admission = crate::attempt_store::admit(
+        json!({"target":target,"decision":{"ready_actions":[invocation]},"invocation":invocation}),
+    )
+    .map_err(|e| e.to_string())?;
+    registration_stage("admitted");
+    let outcome = registration_outcome(&revision);
+    let planned =
+        crate::attempt_store::prepare_commit(target, admission["custody"].clone(), outcome.clone())
+            .map_err(|e| e.to_string())?;
+    registry[CUSTODY] = json!({"kind":"agentic-workspace/session-registration-custody/v1","invocation":invocation,"custody":planned["custody"]});
+    let bytes = serde_json::to_vec(registry).map_err(|e| e.to_string())?;
+    if bytes.len() > LIMIT as usize {
+        return Err("registry publication bound".into());
+    }
+    let log = session["log_path"].as_str().ok_or("session path absent")?;
+    let folder = Path::new(log).parent().unwrap().to_str().unwrap();
+    dirs(root, folder)?;
+    create(
+        root,
+        log,
+        b"# Native maintainer diagnostics\n\nCanonical events contain bounded metadata only.\n",
+    )?;
+    create(root,&format!("{folder}/index.json"),serde_json::to_string(&json!({"kind":"agentic-workspace/session-log-index/v2","session_id":session["session_id"],"log_path":log,"entries":[],"notes":[],"records":{},"local_only":true,"authoritative":false})).unwrap().as_bytes())?;
+    if read(root, REGISTRY)?.as_deref() != previous {
+        return Err("registry changed before publication".into());
+    }
+    match previous {
+        None => create(root, REGISTRY, &bytes)?,
+        Some(_) => {
+            let temporary = format!(
+                "{ROOT}/registration-{}.tmp",
+                invocation["idempotency_key"].as_str().unwrap()
+            );
+            create(root, &temporary, &bytes)?;
+            if read(root, REGISTRY)?.as_deref() != previous {
+                return Err("registry changed before replacement; temporary preserved".into());
+            }
+            // All admitted native writers hold the stable OS owner lock;
+            // historical writers refuse this carrier. No external-writer CAS is claimed.
+            root.rename(&temporary, root, REGISTRY)
+                .map_err(|e| e.to_string())?;
+        }
+    }
+    registration_stage("published");
+    crate::attempt_store::commit(
+        json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+fn registration_stage(_stage: &str) {
+    #[cfg(test)]
+    if std::env::var("AW_TEST_REGISTRATION_CRASH").ok().as_deref() == Some(_stage) {
+        std::process::exit(73);
+    }
+}
+
 /// Invoked only by the native executable's public transport, after resolution.
 /// Errors are diagnostic omissions and cannot modify the operation result.
 pub fn capture(request: &Value, result: &Result<Value, CoreError>, elapsed: std::time::Duration) {
@@ -201,7 +341,11 @@ fn capture_inner(
         return Ok(());
     }
     dirs(&root, ROOT)?;
-    let _registry_lock = lock(&root, format!("{ROOT}/.sessions.lock"))?;
+    let _registry_lock = publication_lock(&root)?;
+    let canonical_target = std::fs::canonicalize(target)
+        .map_err(|e| e.to_string())?
+        .to_string_lossy()
+        .into_owned();
     let existing = read(&root, REGISTRY)?;
     let mut registry = match &existing {
         Some(bytes) => serde_json::from_slice::<Value>(bytes).map_err(|_| "invalid registry")?,
@@ -218,6 +362,9 @@ fn capture_inner(
     {
         return Err("unknown registry".into());
     }
+    if existing.is_some() {
+        admit_registry(&canonical_target, &registry)?;
+    }
     let key = hash(
         format!(
             "{}\0{}",
@@ -228,7 +375,7 @@ fn capture_inner(
     );
     let logical = format!("logical-{}", &key[..24]);
     let stream = format!("{ROOT}/logical-sessions/{logical}/events.jsonl");
-    let session = if existing.is_none() {
+    let session = if registry["sessions"][&key].is_null() {
         let parent = related_identity(
             registry["salt"].as_str().unwrap(),
             "AW_SESSION_LOG_PARENT_LOGICAL_IDENTITY",
@@ -243,15 +390,14 @@ fn capture_inner(
         let folder = format!(".agentic-workspace/local/logs/aw-session-{physical}");
         let log = format!("{folder}/session.md");
         let session = json!({"kind":"agentic-workspace/session-logging-record/v1","session_id":physical,"created_at":now(),"log_path":log,"logical_session_id":logical,"parent_logical_session_id":parent,"correlation_id":correlation,"prior_session_id":"","event_stream_path":stream});
-        dirs(&root, &folder)?;
-        create(&root,&log,b"# Native maintainer diagnostics\n\nCanonical events contain bounded metadata only; no task, argv or result bodies.\n")?;
-        create(&root,&format!("{folder}/index.json"),serde_json::to_string(&json!({"kind":"agentic-workspace/session-log-index/v2","session_id":physical,"log_path":log,"entries":[],"notes":[],"records":{},"local_only":true,"authoritative":false})).unwrap().as_bytes())?;
         registry["sessions"][&key] = session.clone();
         registry["logical_sessions"][&key] = json!({"kind":"agentic-workspace/logical-session-record/v1","logical_session_id":logical,"parent_logical_session_id":parent,"correlation_id":correlation,"event_stream_path":stream,"sessions":[session],"created_at":now()});
-        create(
+        publish_registry(
             &root,
-            REGISTRY,
-            serde_json::to_string(&registry).unwrap().as_bytes(),
+            &canonical_target,
+            existing.as_deref(),
+            &mut registry,
+            &session,
         )?;
         session
     } else {
@@ -319,7 +465,7 @@ fn capture_inner(
             .display()
             .to_string(),
     };
-    let entry = json!({"id":id,"timestamp":timestamp,"duration_ms":elapsed.as_millis().min(u64::MAX as u128) as u64,"command":format!("agentic-workspace {operation}"),"argv":[],"target":normalized_target,"exit_status":if result.is_ok(){0}else{2},"exit_class":if result.is_ok(){"success"}else{"failure"},"origin":{"classification":"unknown","source":"native-transport"},"output_bytes":result_measure.0,"output_digest":result_measure.1,"request_bytes":input_measure.0,"request_sha256":input_measure.1,"storage_mode":"metadata-only","omissions":["argv","task","operation arguments","result body","stdout/stderr","caller origin","process interruption before completion","unregistered logical identities"],"path_mode":policy["path_mode"]});
+    let entry = json!({"id":id,"timestamp":timestamp,"duration_ms":elapsed.as_millis().min(u64::MAX as u128) as u64,"command":format!("agentic-workspace {operation}"),"argv":[],"target":normalized_target,"exit_status":if result.is_ok(){0}else{2},"exit_class":if result.is_ok(){"success"}else{"failure"},"origin":{"classification":"unknown","source":"native-transport"},"output_bytes":result_measure.0,"output_digest":result_measure.1,"request_bytes":input_measure.0,"request_sha256":input_measure.1,"storage_mode":"metadata-only","omissions":["argv","task","operation arguments","result body","stdout/stderr","caller origin","process interruption before completion","unadmitted historical registry"],"path_mode":policy["path_mode"]});
     let event = json!({"kind":"agentic-workspace/session-log-event/v1","schema_version":1,"event_id":id,"event_type":"command.completed","timestamp":timestamp,"sequence":next_sequence,"logical_session_id":logical,"physical_session_id":session["session_id"],"parent_logical_session_id":session["parent_logical_session_id"],"correlation_id":session["correlation_id"],"payload":{"entry":entry},"local_only":true,"authoritative":false});
     let mut line = serde_json::to_vec(&event).unwrap();
     line.push(b'\n');
@@ -330,4 +476,92 @@ fn capture_inner(
     root.open_with(&stream, OpenOptions::new().append(true).create(true))
         .and_then(|mut f| f.write_all(&line))
         .map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn registration_child() {
+        let Ok(target) = std::env::var("AW_TEST_REGISTRATION_TARGET") else {
+            return;
+        };
+        capture(
+            &json!({"start":{"target":target}}),
+            &Ok(json!({"status":"direct"})),
+            std::time::Duration::ZERO,
+        );
+    }
+    #[test]
+    fn registration_process_interruption_preserves_exact_publication() {
+        for (stage, incumbent) in [
+            ("admitted", false),
+            ("published", false),
+            ("admitted", true),
+            ("published", true),
+        ] {
+            let repo = std::env::temp_dir().join(format!("aw-log-custody-{}", random().unwrap()));
+            std::fs::create_dir(&repo).unwrap();
+            std::fs::create_dir(repo.as_path().join(".agentic-workspace")).unwrap();
+            std::fs::write(
+                repo.as_path().join(".agentic-workspace/config.local.toml"),
+                "schema_version=1\n[session_logging]\nenabled=true\npath_mode=\"redacted\"\n",
+            )
+            .unwrap();
+            let run = |crash: &str, identity: &str| {
+                std::process::Command::new(std::env::current_exe().unwrap())
+                    .args([
+                        "--exact",
+                        "maintainer_logging::tests::registration_child",
+                        "--nocapture",
+                    ])
+                    .env("AW_TEST_REGISTRATION_TARGET", repo.as_path())
+                    .env("AW_TEST_REGISTRATION_CRASH", crash)
+                    .env("AW_SESSION_LOGICAL_IDENTITY", identity)
+                    .env_remove("AW_SESSION_LOGGING_DISABLE")
+                    .output()
+                    .unwrap()
+            };
+            if incumbent {
+                assert!(run("", "incumbent").status.success());
+            }
+            let path = repo.as_path().join(REGISTRY);
+            let prior = std::fs::read(&path).ok();
+            assert_eq!(run(stage, "current-test-identity").status.code(), Some(73));
+            let before = std::fs::read(&path).ok();
+            assert!(run("", "current-test-identity").status.success());
+            if stage == "admitted" {
+                assert!(
+                    std::fs::read(&path).ok() == prior,
+                    "an unknown prepublication attempt cannot be retried"
+                );
+            } else {
+                assert_eq!(std::fs::read(&path).unwrap(), before.unwrap());
+                let registry: Value =
+                    serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+                let committed = registry[CUSTODY]["custody"]["committed"]["path"]
+                    .as_str()
+                    .unwrap();
+                assert!(
+                    repo.as_path().join(committed).exists(),
+                    "exact published outcome finishes its commit"
+                );
+                let stream = registry["sessions"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .next()
+                    .unwrap()["event_stream_path"]
+                    .as_str()
+                    .unwrap();
+                assert_eq!(
+                    std::fs::read_to_string(repo.as_path().join(stream))
+                        .unwrap()
+                        .lines()
+                        .count(),
+                    1
+                );
+            }
+        }
+    }
 }

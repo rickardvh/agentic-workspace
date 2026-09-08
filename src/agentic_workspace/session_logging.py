@@ -1163,6 +1163,9 @@ def _capture_status_payload(*, state: SessionLoggingState, logical_identity: str
 
 @contextlib.contextmanager
 def _session_registry_lock(*, target_root: Path) -> Iterator[None]:
+    native_lock = target_root / SESSION_REGISTRY_PATH.parent / ".native-publication.lock"
+    if native_lock.exists():
+        raise RuntimeError("native session registry publication requires its current owner; legacy writer preserved it")
     lock_path = target_root / SESSION_REGISTRY_LOCK_PATH
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     deadline = time.perf_counter() + 5
@@ -1186,6 +1189,8 @@ def _session_registry_lock(*, target_root: Path) -> Iterator[None]:
                 raise TimeoutError(f"timed out waiting for session registry lock: {lock_path}")
             time.sleep(0.01)
     try:
+        if native_lock.exists():
+            raise RuntimeError("native session registry publication requires its current owner; legacy writer preserved it")
         yield
     finally:
         with contextlib.suppress(OSError):

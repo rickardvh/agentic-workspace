@@ -402,3 +402,9 @@ The public-consumer audit found four existing fixture files reading removed inte
 ### Current comparative assignment integration
 
 The integrated assignment/policy/configuration group passed38 tests in30.65 seconds. Review found an overrestrictive empty-uncertainty gate that would require false certainty for an otherwise eligible bounded choice. The correction retains comparative uncertainty in exact assignment identity while preserving hard unresolved owner/capability boundaries and nonlocal handoff requirements. No provider work or target-quality observation was produced.
+
+### Native diagnostic registration custody (#2995/#3000/#3001)
+
+New logical identities can now register in a registry originally created with exact native publication custody. Current bytes are tied to common immutable attempt/commit evidence, and cooperating native writers serialize through an OS owner lock. The legacy Python writer refuses that native carrier; historical registries remain preserved and do not become owned from their shape. The existing public analysis/export path successfully discovered the second registered identity.
+
+Twenty-two native cases passed in 6.57 seconds, followed by seven focused concurrent-registration/legacy-policy cases in 6.25 seconds. A real child-process exit at prepublication and postpublication boundaries, for both initial and subsequent registration, proved censored non-retry versus exact commit recovery (two Rust tests, 0.36 seconds excluding build). An avoidable test-only dependency assumption initially referenced unavailable tempfile; the test now uses existing standard-library temporary-directory conventions. No provider work or task acceptance was involved. File custody carries confined local path identities outside the shareable event stream; arbitrary noncooperating external-writer compare-and-swap is not claimed.

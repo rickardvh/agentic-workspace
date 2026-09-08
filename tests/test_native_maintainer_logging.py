@@ -77,19 +77,32 @@ def test_native_logging_paths_large_input_and_stable_identity(tmp_path, shared_c
     assert rows[0]["payload"]["entry"]["omissions"]
 
 
-@pytest.mark.parametrize("damage", ["registry", "stream", "lock", "new-identity"])
+@pytest.mark.parametrize("damage", ["registry", "stream", "lock", "historical", "body", "custody"])
 def test_native_logging_preserves_unknown_or_torn_existing_state(tmp_path, shared_core_binary, damage):
     configured(tmp_path)
     call(shared_core_binary, tmp_path)
     local = tmp_path / ".agentic-workspace/local"
     if damage == "registry":
         (local / "session-logging/sessions.json").write_bytes(b'{"unowned":')
+    if damage in {"body", "custody"}:
+        path = local / "session-logging/sessions.json"
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if damage == "body":
+            value["salt"] = "changed-salt"
+        else:
+            value["native_registration_custody"]["custody"]["attempt"]["revision"] = "sha256:" + "0" * 64
+        path.write_text(json.dumps(value), encoding="utf-8")
+    if damage == "historical":
+        path = local / "session-logging/sessions.json"
+        value = json.loads(path.read_text(encoding="utf-8"))
+        value.pop("native_registration_custody")
+        path.write_text(json.dumps(value), encoding="utf-8")
     if damage == "stream":
         next(local.glob("session-logging/logical-sessions/*/events.jsonl")).write_bytes(b'{"partial":')
     if damage == "lock":
         (local / "session-logging/.sessions.lock").mkdir()
     before = {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
-    result = call(shared_core_binary, tmp_path, identity="new-session" if damage == "new-identity" else "private-session-secret")
+    result = call(shared_core_binary, tmp_path, identity="private-session-secret")
     assert result.returncode == 0
     assert before == {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
 
@@ -109,6 +122,7 @@ def test_native_logging_public_analysis_export_and_native_cli(tmp_path, shared_c
     from agentic_workspace import cli as source_cli
 
     configured(tmp_path)
+    assert call(shared_core_binary, tmp_path, identity="prior-registered-session").returncode == 0
     monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "private-session-secret")
     monkeypatch.delenv("AW_SESSION_LOGGING_DISABLE", raising=False)
     result = subprocess.run(
@@ -118,6 +132,7 @@ def test_native_logging_public_analysis_export_and_native_cli(tmp_path, shared_c
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
+    assert len({row["logical_session_id"] for row in events(tmp_path)}) == 2
     monkeypatch.setenv("AW_SESSION_LOGGING_DISABLE", "1")
     assert source_cli.main(["session-log", "--target", str(tmp_path), "analyze", "--origin", "all", "--format", "json"]) == 0
     analysis = json.loads(capsys.readouterr().out)
@@ -213,3 +228,41 @@ def test_native_logging_correlation_uses_existing_salted_identity(tmp_path, shar
         expected = prefix + "-" + hashlib.sha256((registry["salt"] + "\0" + value).encode()).hexdigest()[:24]
         assert all(row[field] == expected for row in rows)
         assert value not in json.dumps(rows)
+
+
+def test_native_logging_new_identity_registration_replay_and_legacy_refusal(tmp_path, shared_core_binary, monkeypatch):
+    from agentic_workspace.session_logging import _session_registry_lock
+
+    configured(tmp_path)
+    assert call(shared_core_binary, tmp_path, identity="first").returncode == 0
+    registry_path = tmp_path / ".agentic-workspace/local/session-logging/sessions.json"
+    first = json.loads(registry_path.read_text(encoding="utf-8"))
+    assert call(shared_core_binary, tmp_path, identity="second").returncode == 0
+    current_bytes = registry_path.read_bytes()
+    current = json.loads(current_bytes)
+    assert len(current["sessions"]) == 2
+    assert current["salt"] == first["salt"]
+    assert all(current["sessions"][key] == value for key, value in first["sessions"].items())
+    assert current["native_registration_custody"] != first["native_registration_custody"]
+    assert call(shared_core_binary, tmp_path, identity="second").returncode == 0
+    assert registry_path.read_bytes() == current_bytes
+    assert len(events(tmp_path)) == 3
+    with pytest.raises(RuntimeError, match="current owner"):
+        with _session_registry_lock(target_root=tmp_path):
+            pytest.fail("legacy write must remain unavailable")
+    assert registry_path.read_bytes() == current_bytes
+
+
+def test_native_logging_concurrent_registration_preserves_existing_identities(tmp_path, shared_core_binary):
+    configured(tmp_path)
+    assert call(shared_core_binary, tmp_path, identity="incumbent").returncode == 0
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda identity: call(shared_core_binary, tmp_path, identity=identity), ["new-a", "new-b"]))
+    assert all(result.returncode == 0 for result in results)
+    # Diagnostic contention may omit a capture. A subsequent independent command
+    # registers the omitted identity without replaying any task effect.
+    for identity in ["new-a", "new-b"]:
+        assert call(shared_core_binary, tmp_path, identity=identity).returncode == 0
+    registry = json.loads((tmp_path / ".agentic-workspace/local/session-logging/sessions.json").read_text(encoding="utf-8"))
+    assert len(registry["sessions"]) == 3
+    assert len({row["logical_session_id"] for row in events(tmp_path)}) == 3
