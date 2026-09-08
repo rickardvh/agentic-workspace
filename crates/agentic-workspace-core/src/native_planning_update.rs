@@ -1,4 +1,4 @@
-//! Exact material replacement of a native-created Planning owner.
+//! Exact material replacement under acquired Planning creation or reconciliation custody.
 use crate::{CoreError, attempt_store, digest, prepare_request_value};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -14,15 +14,29 @@ fn schema() -> Value {
 }
 fn fields() -> Vec<&'static str> {
     let mut fields = crate::native_planning_create::MATERIAL.to_vec();
+    fields.retain(|field| *field != "canonical_core");
     fields.extend(["lifecycle", "phase"]);
     fields
 }
+const OPTIONAL_MATERIAL: &[&str] = &[
+    "canonical_core",
+    "goal",
+    "non_goals",
+    "intent_continuity",
+    "execution_bounds",
+    "touched_paths",
+    "validation_commands",
+    "completion_criteria",
+    "stop_conditions",
+    "required_continuation",
+];
 pub(crate) fn declaration() -> Value {
     let schema = schema();
     let fields = fields();
     let properties: serde_json::Map<String, Value> = fields
         .iter()
         .chain(crate::native_planning_create::ASSURANCE)
+        .chain(OPTIONAL_MATERIAL)
         .map(|k| (k.to_string(), schema["properties"][k].clone()))
         .collect();
     json!({"kind":KIND,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":schema["$schema"],"$defs":schema["$defs"],"type":"object","properties":{"owner_ref":{"type":"string"},"material":{"type":"object","properties":properties,"required":fields,"additionalProperties":false}},"required":["owner_ref","material"],"additionalProperties":false}})
@@ -146,17 +160,28 @@ pub(crate) fn view(
     }
     let bytes = read(target, reference)?;
     let body: Value = serde_json::from_slice(&bytes).map_err(error)?;
-    if crate::native_planning_create::inspect_origin(target, reference, &body)?.is_none() {
+    let origin = crate::native_planning_create::inspect_origin(target, reference, &body)?;
+    let retained = inspect(target, reference, &body)?;
+    let acquired = if origin.is_none() && selected["ref"] == reference {
+        crate::native_planning::update_custody(target, reference)?.filter(|custody| {
+            custody["source"] == selected["source"]
+                || retained.as_ref().is_some_and(|r| {
+                    payload(&r["invocation"], &r["custody"]).is_ok_and(|p| p == body)
+                })
+        })
+    } else {
+        None
+    };
+    if origin.is_none() && acquired.is_none() {
         if effective.is_some() {
             return Err(error(
-                "Planning update requires native creation custody; historical owner preserved",
+                "Planning update requires acquired creation or reconciliation custody; historical owner preserved",
             ));
         }
         return Ok(result);
     }
     let current_revision = revision(&bytes);
     result["requests"] = json!([{"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"planning","owner_revision":owner["revision"],"source_revision":current_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"owner_ref":reference}}]);
-    let retained = inspect(target, reference, &body)?;
     let recovery_request = effective.filter(|r| r["request_kind"] == RECOVER_KIND);
     if let Some(retained) = &retained
         && (retained["committed"] != true || recovery_request.is_some())
@@ -241,7 +266,10 @@ pub(crate) fn view(
         for key in fields() {
             document[key] = request["arguments"]["material"][key].clone();
         }
-        for key in crate::native_planning_create::ASSURANCE {
+        for key in crate::native_planning_create::ASSURANCE
+            .iter()
+            .chain(OPTIONAL_MATERIAL)
+        {
             if let Some(value) = request["arguments"]["material"].get(*key) {
                 document[*key] = value.clone();
             }
@@ -654,7 +682,7 @@ mod tests {
             invoke(&target, action)
                 .unwrap_err()
                 .to_string()
-                .contains("native creation custody")
+                .contains("acquired creation or reconciliation custody")
         );
         assert_eq!(
             serde_json::from_slice::<Value>(&read(&target, &relative).unwrap()).unwrap(),

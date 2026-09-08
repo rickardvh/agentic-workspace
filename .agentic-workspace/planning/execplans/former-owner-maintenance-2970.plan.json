@@ -1,0 +1,99 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "former-owner-maintenance-2970",
+  "title": "Make selected former Planning custody maintainable through native updates",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 3,
+  "intent": {
+    "non_goals": [
+      "No promotion or inferred ownership from familiar local files"
+    ],
+    "outcome": "Make current former Planning custody maintainable without losing identity, constraints, dependencies, proof or frontier"
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Make selected former Planning custody maintainable through native updates.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "effects": [
+      "planning-state"
+    ],
+    "owned": [
+      "crates/agentic-workspace-core/src/native_planning.rs",
+      "crates/agentic-workspace-core/src/native_planning_update.rs",
+      "crates/agentic-workspace-core/src/planning.rs",
+      "tests/test_native_planning_create.py",
+      ".agentic-workspace/reconstruction/owner-audit.md"
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "former-owner-maintenance-2970"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [],
+  "next_action": "Resolve the pending exact former-selector transfer authority choice under #2970, then continue native owner convergence",
+  "blockers": [
+    "Existing local former selector lacks retained native producer custody; human transfer versus former-producer authority choice remains pending"
+  ],
+  "proof": {
+    "claims": [
+      "Make selected former Planning custody maintainable through native updates is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "residual_intent": "Occupied former-selector transfer; then #3077 and the remaining owner audit in .agentic-workspace/reconstruction/owner-audit.md",
+    "owner": "#2970"
+  },
+  "specialist_contracts": [],
+  "completion_criteria": [
+    "Real former owner fresh-session material maintenance preserves identity, future-useful context and unrelated work",
+    "Stale or unadmitted custody and substituted actions cannot mutate",
+    "Native Python TypeScript JSON parity; #2909 owns aggregate conformance"
+  ],
+  "validation_commands": [
+    "cargo test --locked -p agentic-workspace-core native_planning",
+    "uv run pytest tests/test_native_planning_create.py tests/test_planning_selection_custody.py -q"
+  ],
+  "execution_bounds": {
+    "required validation commands": "cargo test --locked -p agentic-workspace-core native_planning; uv run pytest tests/test_native_planning_create.py tests/test_planning_selection_custody.py -q",
+    "max changed files": "10",
+    "stop before touching": "master, release admission, unrelated working trees",
+    "allowed paths": "crates/agentic-workspace-core/src/; tests/test_native_planning_create.py; tests/test_planning_selection_custody.py; .agentic-workspace/planning/execplans/former-owner-maintenance-2970.plan.json; docs/reviews/",
+    "ask-before-refactor threshold": "Change outside current former-owner maintenance boundary"
+  },
+  "goal": [
+    "Make a real former Planning owner maintainable through exact native custody and material update while preserving identity and currentness"
+  ],
+  "non_goals": [
+    "No master promotion, no new epic, no transcript archive, no self review approval"
+  ],
+  "intent_continuity": {
+    "this slice completes the larger intended outcome": "no",
+    "larger intended outcome": "First-stable reconstruction under #2983",
+    "continuation surface": "#2970 then #3077, #2909 and #2990"
+  },
+  "touched_paths": [
+    "crates/agentic-workspace-core/src/native_planning.rs",
+    "crates/agentic-workspace-core/src/native_planning_update.rs",
+    "crates/agentic-workspace-core/src/planning.rs",
+    "tests/test_native_planning_create.py",
+    "tests/test_planning_selection_custody.py"
+  ]
+}

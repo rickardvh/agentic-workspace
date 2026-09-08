@@ -105,6 +105,31 @@ fn inspect_carrier(
     Ok(retained.clone())
 }
 
+/// Material mutation needs an acquired, committed owner relation, not a path
+/// or a former selector that merely looks familiar. Source currentness is
+/// checked separately so a genuine owner can reconcile later material edits.
+pub(crate) fn update_custody(target: &Path, reference: &str) -> Result<Option<Value>, CoreError> {
+    let root =
+        Dir::open_ambient_dir(target, ambient_authority()).map_err(|e| error(SELECTION, e))?;
+    let Some(bytes) = read(&root, SELECTION)? else {
+        return Ok(None);
+    };
+    let selection = parsed(SELECTION, &bytes)?;
+    if selection["selected_owner"]["ref"] != reference || selection.get(RETAINED).is_none() {
+        return Ok(None);
+    }
+    let retained = inspect_carrier(target, &selection, false)?;
+    if crate::attempt_store::inspect_committed(
+        target.to_str().unwrap(),
+        retained["custody"].clone(),
+    )
+    .is_err()
+    {
+        return Ok(None);
+    }
+    Ok(Some(retained))
+}
+
 fn retained_transition(target: &Path, selection: &Value) -> Result<Option<Value>, CoreError> {
     let Some(transition) =
         selection[RETAINED]["invocation"]["arguments"].get("selection_transition")
