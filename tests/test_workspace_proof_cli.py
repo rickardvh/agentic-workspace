@@ -2415,7 +2415,8 @@ def test_proof_route_repair_audit_rejects_residual_ordinary_broad_proof() -> Non
         )
 
 
-def test_proof_route_repair_receipt_uses_aw_admission_not_caller_sufficiency(tmp_path: Path) -> None:
+@pytest.mark.parametrize("reported_result", ["passed", "failed"])
+def test_proof_route_repair_report_cannot_admit_unproven_apply_history(tmp_path: Path, reported_result: str) -> None:
     from agentic_workspace.config import WorkspaceUsageError
     from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
     from agentic_workspace.workspace_runtime_proof import (
@@ -2458,11 +2459,11 @@ def test_proof_route_repair_receipt_uses_aw_admission_not_caller_sufficiency(tmp
         },
     )
 
-    with pytest.raises(WorkspaceUsageError, match="passed validation receipt"):
+    with pytest.raises(WorkspaceUsageError, match="stronger-owner admission"):
         _record_proof_receipt_payload(
             target_root=tmp_path,
             command=command,
-            result="failed",
+            result=reported_result,
             changed_paths=["src/agentic_workspace/config.py"],
             receipt_repair_finding_id="finding-aw-sufficiency",
             receipt_repair_authority_revision=revision,
