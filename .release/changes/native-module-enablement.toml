@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Consume explicit native module enablement without losing existing sources or independent proof obligations; stale actions against current capability availability."

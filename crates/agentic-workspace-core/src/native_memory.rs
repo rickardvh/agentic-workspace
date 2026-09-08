@@ -404,6 +404,15 @@ pub(crate) fn public_view(
     Ok(view)
 }
 
+pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
+    crate::native_config::disabled_owner(
+        target,
+        "memory",
+        &[MANIFEST],
+        &["effect:memory-state", "claim:complete"],
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

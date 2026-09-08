@@ -1,4 +1,5 @@
 pub mod assignment;
+pub mod assurance_applicability;
 pub mod attempt;
 pub mod attempt_store;
 pub mod continuity;
@@ -8,15 +9,20 @@ pub mod instruction_applicability;
 pub mod instruction_source;
 mod native_config;
 mod native_instructions;
+mod native_intent;
 mod native_memory;
 mod native_planning;
+mod native_planning_create;
+mod native_proof;
 pub mod native_public;
 mod native_requirements;
-mod native_routes;
+pub mod native_routes;
+mod native_startup;
 mod native_verification;
 pub mod planning;
 pub mod proof_receipt;
 pub mod proof_subject;
+pub mod review_authentication;
 pub mod semantic_routes;
 pub mod separation_of_duty;
 pub mod task_judgment;
@@ -183,6 +189,8 @@ struct RequestResponseInput {
 
 #[derive(Debug, Deserialize)]
 struct ActionInput {
+    #[serde(default)]
+    source_requests: Vec<Value>,
     dependency_revision: String,
     #[serde(default)]
     effect_generation: String,
@@ -369,6 +377,8 @@ struct NormalizedRequestResponse {
 
 #[derive(Debug, Clone, Serialize)]
 struct NormalizedAction {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    source_requests: Vec<Value>,
     consequence_id: String,
     dependency_revision: String,
     logical_effect_id: String,
@@ -774,7 +784,26 @@ fn normalize_contribution(
         .actions
         .into_iter()
         .enumerate()
-        .map(|(index, action)| normalize_action(action, &owner, capability, index))
+        .map(|(index, action)| {
+            if action.source_requests.len() > 16 {
+                return Err(CoreError::new(
+                    "source request dependencies exceed bounded limit",
+                ));
+            }
+            let mut keys = BTreeSet::new();
+            for request in &action.source_requests {
+                let mut context =
+                    json!({"current_work":intent["current_work"], "public_request":request});
+                normalize_public_request(&mut context, capabilities)?;
+                if !keys.insert((
+                    request["owner"].clone().to_string(),
+                    request["request_kind"].clone().to_string(),
+                )) {
+                    return Err(CoreError::new("duplicate source request dependency"));
+                }
+            }
+            normalize_action(action, &owner, capability, index)
+        })
         .collect::<Result<Vec<_>, _>>()?;
     actions.sort_by(|left, right| left.consequence_id.cmp(&right.consequence_id));
     if let Some(capability) = capability {
@@ -998,8 +1027,13 @@ fn normalize_action(
     let logical_effect_id = digest(&identity)?;
     // The operation contract and its effect custody are material; unrelated
     // owner descriptors and aggregate contract revisions are not dependencies.
+    let source_dependency_revision = if input.source_requests.is_empty() {
+        dependency_revision
+    } else {
+        digest(&json!({"revision":dependency_revision,"source_requests":input.source_requests}))?
+    };
     let dependency_revision = digest(&json!({
-        "source_dependencies": dependency_revision,
+        "source_dependencies": source_dependency_revision,
         "operation": capability.and_then(|item| item.operations.get(&operation_id)),
         "effect_custody": effects.iter().map(|effect| (effect, capability.and_then(|item| item.effects.get(effect)))).collect::<BTreeMap<_, _>>(),
     }))?;
@@ -1010,6 +1044,7 @@ fn normalize_action(
         )?
     );
     Ok(NormalizedAction {
+        source_requests: input.source_requests,
         consequence_id,
         dependency_revision,
         logical_effect_id,
@@ -1797,7 +1832,7 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         available_actions
             .iter()
             .map(|selected| {
-                json!({
+                let mut invocation = json!({
                     "kind": INVOCATION_KIND,
                     "consequence_id": selected.action.consequence_id,
                     "operation_id": selected.action.operation_id,
@@ -1808,7 +1843,11 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
                     "expected_dependency_revision": selected.action.dependency_revision,
                     "operation_revision": selected.action.operation_revision,
                     "idempotency_key": selected.action.logical_effect_id,
-                })
+                });
+                if !selected.action.source_requests.is_empty() {
+                    invocation["source_requests"] = json!(selected.action.source_requests);
+                }
+                invocation
             })
             .collect::<Vec<_>>()
     } else {
@@ -2140,3 +2179,7 @@ fn terminal_authority(
 }
 
 pub mod runtime_compatibility;
+
+pub(crate) mod proof_publication;
+
+pub(crate) mod verification_strategy;

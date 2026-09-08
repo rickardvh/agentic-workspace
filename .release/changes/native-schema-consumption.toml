@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Consume the already validated native reader schema without duplicating its configuration blocker; preserve unresolved runtime and source controls."

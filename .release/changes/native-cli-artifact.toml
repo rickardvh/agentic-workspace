@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Include the canonical native CLI beside the shared Rust transport in host-platform wheels and prove isolated execution without Python, Node or a source checkout."
+issues = [3077, 2985]

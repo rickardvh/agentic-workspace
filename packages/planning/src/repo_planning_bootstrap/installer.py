@@ -4,6 +4,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import shlex
 import shutil
@@ -16896,6 +16897,13 @@ def select_existing_owner(
     before_planning = planning_revision(target_root)
     selection_path = target_root / PLANNING_OWNER_SELECTION_PATH
     receipt_path = target_root / PLANNING_OWNER_SELECTION_RECEIPT_PATH
+    try:
+        for path in (selection_path, receipt_path):
+            _planning_path_without_links(target_root, path)
+    except ValueError as exc:
+        result.add("manual review", selection_path, str(exc))
+        result.reason_code = "owner-selection-path-unadmitted"
+        return result
     before_current_work = _owner_selection_revision(selection_path)
     if mode not in {"local", "shared"}:
         result.add("manual review", selection_path, "--mode must be local or shared")
@@ -17015,6 +17023,17 @@ def select_existing_owner(
         result.mutation_expected = False
         result.add("no-op", owner_path, "requested owner is already selected; no file was rewritten")
         return result
+    for path in (selection_path, receipt_path):
+        if path.exists():
+            result.add(
+                "manual review",
+                path,
+                "Existing selection or receipt is preserved: this owner-select operation has no admitted custody for its first overwrite. "
+                "An exact source-owner/human-authorized acquisition or transfer is required; matching JSON, revision, or continuation intent is not authority. "
+                "Current native reconciliation custody must remain with planning.reconcile.",
+            )
+            result.reason_code = "owner-selection-acquisition-required"
+            return result
     preview_receipt = build_receipt(
         outcome="dry-run" if dry_run else "selected",
         after_planning=before_planning,
@@ -17036,10 +17055,16 @@ def select_existing_owner(
         return result
 
     receipt_box: dict[str, Any] = {}
+    acquired_paths: list[Path] = []
 
     def write_selection() -> None:
         selection_path.parent.mkdir(parents=True, exist_ok=True)
-        selection_path.write_text(json.dumps(selection, indent=2) + "\n", encoding="utf-8", newline="\n")
+        _planning_path_without_links(target_root, selection_path)
+        with selection_path.open("x", encoding="utf-8", newline="\n") as stream:
+            acquired_paths.append(selection_path)
+            stream.write(json.dumps(selection, indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
         after_planning = planning_revision(target_root)
         after_current_work = _owner_selection_revision(selection_path)
         receipt = build_receipt(outcome="selected", after_planning=after_planning, after_current_work=after_current_work)
@@ -17047,15 +17072,29 @@ def select_existing_owner(
         if findings:
             raise OSError(f"receipt validation failed: {'; '.join(findings)}")
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
-        receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
+        _planning_path_without_links(target_root, receipt_path)
+        with receipt_path.open("x", encoding="utf-8", newline="\n") as stream:
+            acquired_paths.append(receipt_path)
+            stream.write(json.dumps(receipt, indent=2) + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
         receipt_box.update(receipt)
 
     touched = [receipt_path, selection_path]
     try:
-        _apply_planning_writes_atomically(touched, write_selection)
-    except OSError as exc:
-        result.add("manual review", touched[-1], f"owner selection rolled back after write failure: {exc}")
-        result.reason_code = "owner-selection-rolled-back"
+        write_selection()
+    except (OSError, ValueError) as exc:
+        # A snapshot rollback could overwrite/delete another producer's race
+        # winner. Preserve all observed state, including incomplete own writes.
+        for path in acquired_paths:
+            result.add("created", path, "exclusive acquisition created this carrier; completion is unresolved and bytes are preserved")
+        result.add(
+            "manual review",
+            touched[-1],
+            f"Exclusive owner selection acquisition did not complete; current selection/receipt are preserved for exact owner recovery: {exc}",
+        )
+        result.reason_code = "owner-selection-acquisition-incomplete"
+        result.operation_receipt = {}
         return result
     result.operation_receipt = receipt_box
     result.add("updated", touched[-1], f"selected existing owner '{selection['selected_owner']['id']}' in {mode} mode")
@@ -17518,7 +17557,6 @@ def _promote_decomposition_lane_to_execplan(
         return result
 
     _write_execplan_record(record_path=record_path, record=plan_record)
-    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8")
     selection_result = select_existing_owner(
         slug,
         target=target_root,
@@ -17527,8 +17565,12 @@ def _promote_decomposition_lane_to_execplan(
         expected_planning_revision=str(planning_revision(target_root).get("revision_id") or ""),
     )
     if selection_result.reason_code:
-        result.add("manual review", record_path, f"local owner selection failed: {selection_result.reason_code}")
+        result.reason_code = selection_result.reason_code
+        result.recovery_command = selection_result.recovery_command
+        record_path.unlink()
+        result.add("manual review", record_path, f"local owner selection failed; promotion rolled back: {selection_result.reason_code}")
         return result
+    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8")
     result.add("created", record_path, "scaffolded canonical execplan record from decomposition lane")
     result.add("updated", target_root / PLANNING_OWNER_SELECTION_PATH, f"selected '{slug}' for the local work context")
     result.add("updated", matched_path, f"marked decomposition lane '{item_id}' as promoted")
@@ -17876,6 +17918,8 @@ def create_execplan_scaffold(
                 expected_planning_revision=str(planning_revision(target_root).get("revision_id") or ""),
             )
             if selection_result.reason_code:
+                result.reason_code = selection_result.reason_code
+                result.recovery_command = selection_result.recovery_command
                 raise OSError(f"local owner selection failed: {selection_result.reason_code}")
     except OSError as exc:
         if original_record is None:
@@ -24094,6 +24138,16 @@ def _restore_planning_archive_transaction(target_root: Path, snapshot: dict[Path
         path.write_bytes(content)
 
 
+def _planning_path_without_links(target_root: Path, candidate: Path) -> None:
+    """Existing Planning path confinement check shared by bounded local writers."""
+    for parent in (candidate, *candidate.parents):
+        if parent == target_root.parent:
+            break
+        is_junction = getattr(parent, "is_junction", lambda: False)
+        if parent.is_symlink() or is_junction():
+            raise ValueError(f"Planning path crosses a link or junction: {parent}")
+
+
 def _planning_archive_export_root(*, target_root: Path, export_dir: str | Path | None) -> Path:
     requested = Path(export_dir) if export_dir else Path(".agentic-workspace/local/planning-archive-exports")
     candidate = requested if requested.is_absolute() else target_root / requested
@@ -24101,12 +24155,7 @@ def _planning_archive_export_root(*, target_root: Path, export_dir: str | Path |
     managed_root = (target_root / ".agentic-workspace" / "planning").resolve(strict=False)
     if resolved == target_root.resolve() or resolved == managed_root or managed_root in resolved.parents:
         raise ValueError("archive export must be outside checked-in .agentic-workspace/planning state")
-    for parent in (candidate, *candidate.parents):
-        if parent == target_root.parent:
-            break
-        is_junction = getattr(parent, "is_junction", lambda: False)
-        if parent.exists() and (parent.is_symlink() or is_junction()):
-            raise ValueError(f"archive export path crosses a link or junction: {parent}")
+    _planning_path_without_links(target_root, candidate)
     return resolved
 
 
@@ -28216,7 +28265,6 @@ def _migrate_legacy_planning_state(*, target_root: Path, result: InstallResult, 
         result.add("would remove", state_path, "retire planning-state/v1 after bounded-owner disposition")
         return receipt
 
-    state_path.unlink()
     if owner_id:
         current_revision = str(planning_revision(target_root).get("revision_id") or "")
         selection_result = select_existing_owner(
@@ -28227,13 +28275,19 @@ def _migrate_legacy_planning_state(*, target_root: Path, result: InstallResult, 
             expected_planning_revision=current_revision,
         )
         if selection_result.reason_code:
-            # The owner file remains canonical even when local attention cannot
-            # be inferred.  Do not recreate the aggregate to preserve a hint.
+            result.reason_code = selection_result.reason_code
+            result.recovery_command = selection_result.recovery_command
+            receipt["status"] = "blocked"
+            receipt["reason_code"] = selection_result.reason_code
             receipt["preserved_owner"]["selection_status"] = "not-selected"
             receipt["preserved_owner"]["reason_code"] = selection_result.reason_code
+            receipt["result"]["legacy_state_present"] = True
             receipt["result"]["local_selection_written"] = False
+            result.add("manual review", state_path, f"legacy source preserved: {selection_result.reason_code}")
+            return receipt
         else:
             receipt["preserved_owner"]["selection_status"] = "selected-local"
+    state_path.unlink()
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
     result.add("removed", state_path, "retired repository-global Planning aggregate after bounded-owner migration")

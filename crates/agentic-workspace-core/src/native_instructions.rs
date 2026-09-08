@@ -51,9 +51,14 @@ pub fn resolve(
     let documents = instruction_source::current_sources(target)?;
     let mut rows = Vec::new();
     let mut blockers = Vec::new();
-    let mut scopes: BTreeSet<String> = ["task", "claim:complete", "effect:planning-state"]
-        .map(str::to_owned)
-        .into();
+    let mut scopes: BTreeSet<String> = [
+        "task",
+        "claim:complete",
+        "effect:planning-state",
+        "effect:proof-execution",
+    ]
+    .map(str::to_owned)
+    .into();
     for document in documents {
         let reference = document["source"]["reference"].as_str().unwrap();
         let metadata = &document["metadata"];
@@ -142,10 +147,43 @@ pub fn restrict_pending(
     route: &Value,
 ) -> Result<(), CoreError> {
     let mut additions = Vec::new();
-    for action in pending.iter().filter(|action| {
-        action["source_owner"] == "planning" && action["operation_id"] == "planning.reconcile"
+    if pending.iter().any(|action| {
+        action["source_owner"] == "verification" && action["operation_id"] == "proof.report"
     }) {
-        let writes = native_planning::write_scope(action)?;
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            if source["valid"] == true
+                && applicability(metadata, &[], route)?["route_applies"] == true
+                && (!strings(&metadata["protect"]).is_empty()
+                    || !strings(&metadata["checks"]).is_empty())
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"proof-execution-scope-unresolved",
+                    "The declared shell command has no bounded write scope proving these current protections and checks are preserved.",vec!["effect:proof-execution".into()]));
+            }
+        }
+    }
+
+    for action in pending.iter().filter(|action| {
+        action["source_owner"] == "planning"
+            && matches!(
+                action["operation_id"].as_str(),
+                Some("planning.reconcile" | "planning.create")
+            )
+    }) {
+        let writes = if action["operation_id"] == "planning.create" {
+            let mut writes = crate::attempt_store::write_paths(
+                &json!({"idempotency_key":action["logical_effect_id"]}),
+            )?;
+            writes.push(
+                action["arguments"]["owner_path"]
+                    .as_str()
+                    .ok_or_else(|| CoreError::new("Planning creation path missing"))?
+                    .to_owned(),
+            );
+            writes
+        } else {
+            native_planning::write_scope(action)?
+        };
         for source in view["sources"].as_array().into_iter().flatten() {
             let metadata = &source["metadata"];
             let patterns = strings(&metadata["paths"]);

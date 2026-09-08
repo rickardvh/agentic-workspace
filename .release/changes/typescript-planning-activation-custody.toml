@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Route TypeScript plan activation through existing Planning selection admission and preserve existing selector custody. Invalid historical scaffolds remain unselected drafts rather than claiming successful activation."
+issues = [3001, 2970, 2984]

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Run route discovery through the shared source-owning Rust core in Python and packed workspace npm consumers; package the current host artifact with version/platform/digest checks and explicitly refuse the unmigrated legacy TypeScript selection write."
+issues = [2930, 2985, 2987]

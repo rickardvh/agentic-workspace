@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Independent review authentication predicate",
+  "description": "Portable signature and provenance checks. Caller-supplied facts at the pure seam cannot establish ordinary trust authority.",
+  "x-agentic-workspace-doc-role": "schema-reference",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "host_result_ref",
+    "host_result",
+    "workspace_ref",
+    "now_unix_micros",
+    "public_keys"
+  ],
+  "properties": {
+    "host_result_ref": {
+      "type": "string",
+      "description": "Exact existing indexed host-result reference."
+    },
+    "host_result": {
+      "type": "object",
+      "description": "Observed signed host result; its body is covered by the signature."
+    },
+    "workspace_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Workspace identity observed by the host adapter."
+    },
+    "now_unix_micros": {
+      "type": "integer",
+      "description": "Current host clock observation in Unix microseconds."
+    },
+    "public_keys": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Already-authoritative key facts for the pure host seam, or null for unchanged release-pinned keys. Never accepted by ordinary native ingress."
+    }
+  },
+  "$defs": {
+    "native_arguments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "host_result_ref"
+      ],
+      "properties": {
+        "host_result_ref": {
+          "type": "string",
+          "pattern": "^independent-review-host-result:[A-Za-z0-9_-]+$",
+          "maxLength": 256
+        }
+      }
+    }
+  }
+}

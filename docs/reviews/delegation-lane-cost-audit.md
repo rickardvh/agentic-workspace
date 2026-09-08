@@ -215,3 +215,96 @@ Selected proof `e9e56e4398ca50c99a11` passed three commands and stopped at stale
 Revalidation `8e3e55fda9ad6f706093` at `a650edbb841cfc47b02d2e3888b0e0236f682472` passed eleven selected commands, including all 263 instruction/configuration cases. Its next public-owner group failed 12 cases with 56 passing in 135.66 seconds; five commands remained unrun. Updating the old fixtures to consume the current public task judgment exposed a real defect: ordinary manual export lacked the existing packet seal required for valid source-authorized reassignment. The correction reuses that seal. Public Python/TypeScript tests now exercise preview, exact judgment, manual export, reassignment and tamper rejection; the combined 24-case group passed in 201.45 seconds. This repairs deterministic handoff integrity, not supported-host worker execution or independent acceptance.
 
 The later native Verification requirement layer passed 15 focused cases, and the reader-compatibility integration passed 110 cases in 38.33 seconds. CI passed their package/artifact checks and Windows/Ubuntu runtime jobs. An initially incorrect patch label on the minor Verification requirement changeset was corrected to the single matching minor label. Other avoidable implementation costs included fixture setup retries, Windows search-glob mistakes, and repeated discovery of command argument shape. These are implementation-agent costs, distinct from product friction and target quality; monetary cost remains unknown. No new provider worker was launched. Previous incomplete workers remain censored.
+
+The manual handoff/authentication integration at `17e3712c1935c27d5eed1dd136cca5e397ea07e5` revalidated all seven selected follow-up commands: 33 authentication cases (5.645s command), 70 public-owner cases (293.539s), focused shared-core Planning (4.067s), upgrade/direct-claim controls (137.408s), proof-route controls (8.724s), contract tooling (31.211s), and structured inventory (8.438s). This resolves the observed manual-seal regression without rewriting the earlier failed receipt or supplying aggregate/independent acceptance. Authentication inspection also corrected malformed key-lifecycle timestamp handling and bounded optional Git observation to two seconds and 4096 bytes; authentication remains separate from proof sufficiency.
+
+The native artifact layer packages the canonical executable alongside the shared core in host-platform wheels. Two extracted-artifact controls passed in 20.78s, including native operation with empty PATH and no language hosts or checkout, plus fail-closed reader compatibility. Full selected proof `4c3edf2ebb6e782f498c` at `925cac7dbf6d3934d06652f5131a57a0ae8a23ed` stopped with 17 packaging cases passing and one failing in 25.53s: the legacy TypeScript instruction route still preferred a source-checkout Python script. Six commands remained unrun. Passing CI artifact/runtime jobs do not erase this declared-route counterevidence. Native wheel payload availability is not native dogfood cutover or a successful supported-host delegation lifecycle.
+
+Planning custody CI exposed two failures with 428 passing. Caller repair now propagates exact refusal, preserves former Planning state before unsuccessful selection, and leaves decomposition source status unchanged on refused promotion. The final package group passed 432 cases in 73.64s and custody controls passed 16 in 3.97s. An earlier fixture depended on ambient generated-package imports (six failures); using the public Python facade removed that dependence. Independent branch fixtures now use independent worktrees rather than sharing ignored local selection state. General transfer authority and crash-safe promotion remain unresolved.
+
+Avoidable implementation costs in this continuation included attempting to reuse another checkout's virtual environment (correctly rejected by runtime identity before using a freshly synchronized local environment), guessing file paths after discovering the actual filename, repeated Windows search-glob errors, and reading unstaged diffs of staged work. These are implementation-agent orientation costs, not product target-quality observations. No new provider worker was launched. All previously incomplete workers remain censored; implementation-agent inference and local proof have costs, but monetary amounts and savings remain unknown.
+
+The former-route/assurance integration passed the declared native public group (116 cases, 35.11s). CI then caught missing descriptions/doc-role and generated reference for the new assurance schema; proper annotations and `make schema-reference-docs` fixed that omission. Thirty composed cases passed after restacking (13.48s). A new absent-to-unreadable former-source counterexample showed that availability changes must stale earlier route selection; all 24 former-route cases passed after correction (8.20s). A missed Rust formatting step blocked one commit before normal hooks passed. These are proof/implementation costs, not successful delegation evidence.
+
+One read-only native startup using the candidate executable against the actual configured root returned a 182066-byte unresolved packet with 39 Workspace configuration and 12 Verification scope blockers, plus unresolved Planning custody. This is current-checkout execution and context-burden evidence; it does not justify native dogfood cutover or running another provider worker. The first diagnostic print expanded every blocker and was truncated; a compact owner/count projection recovered the relevant finding. The overbroad print was avoidable implementation-agent output cost.
+
+Native route discovery now runs through the same Rust source reader in Python and the existing workspace npm artifact. The full packaging group passed 18 cases in 48.92s, resolving the observed TypeScript source-Python oracle failure without rewriting receipt `4c3edf2ebb6e782f498c`. Thirty-one focused source/packed-consumer cases passed before restacking; the post-rebase combined group passed 43 and failed one fixture import in 30.30s. Loading the maintainer script by its explicit file path removed the ambient-import assumption; that case then passed in 0.08s. The npm consumer works offline with empty PATH; missing/tampered/version/platform artifacts fail closed, and an explicit Rust host target prevents cross-target environment settings from mislabelling the payload. Current-host packaging is not the final platform release matrix.
+
+Avoidable npm implementation work included initially omitting an isolated consumer package.json (npm searched an ancestor), the fixture import assumption above, and a missing capability metadata assertion that exposed and corrected a real discovery port omission. The old persistent TypeScript route write is explicitly unavailable with native request recovery; it is not counted as a successful selection. No provider inference was used to repeat protocol mechanics. Incomplete workers remain censored and monetary cost remains unknown.
+
+CI exact packed-artifact conformance exposed a staging omission: its fallback npm pack still used the generated source directory without the native payload. The proof runner now calls the existing host artifact staging utility. The blocked legacy selection response now uses the declared blocked status/exit mapping while preserving explicit unavailability, no mutation and native request recovery. The complete packed-artifact regression plus focused npm cases passed 12 checks in 61.42s. The earlier CI failure remains counterevidence for its old head. More overbroad CI output, a Windows search glob and an absent scratch-output directory were avoidable implementation-agent costs; no provider work or monetary saving is claimed.
+Native selected-proof execution passed 21 bounded producer cases at fc54098c (47.08s), then 29 producer/advisory cases after restacking (50.53s). Legacy publication identity and Unicode cases passed nine checks (7.33s); fixing explicit UTF-8 transport corrected the earlier locale-dependent bridge failure. Immutable output artifacts preserve bounded detail while ordinary results expose sizes and hashes. Existing-index custody and cross-adapter executable compatibility remain explicit implementation gaps; process exit does not grant task judgment or independent acceptance. No provider worker was launched.
+
+An unpublished shared-library build-input identity experiment passed 17 identity/runtime tests (5.42s) and an extracted-wheel control (26.04s), but audit found omitted profile/configuration inputs, dependency-feature unification and wrapper rebuild invalidation. It is not adopted as proof equivalence or shipped as product machinery. Those local build/test and implementation-agent costs bought counterevidence, not proof reuse or target-quality observations. Monetary cost remains unknown.
+
+The dedicated native CLI now forwards canonical JSON to its exact colocated core executable instead of linking a second executable copy of owner semantics. Native-produced current proof is reusable by Python, Node and JSON consumers of that same core without repeating the command. The integrated public/producer group passed 107 cases after restacking (83.43s); the actual extracted wheel passed the no-language-host/no-checkout control (25.99s). Windows interruption, missing sibling, same-path binary drift and separate-location incompatibility are exercised; actual Unix execution remains a platform proof gap. The semantic-regrowth guard now forbids linking the core into the CLI adapter and retains its bounded transport-function inventory (one focused check, 0.19s). A parallel test temporary-name collision was corrected with an atomic suffix; repeated guessed file reads were avoidable orientation cost. No provider work, arbitrary cross-installation equivalence or net proof-cost saving is claimed.
+
+The schema-only native configuration correction passed all 100 public native cases after restacking (33.15s); it removes one redundant already-enforced schema blocker, not the unresolved module/payload/intent semantics. TypeScript activation custody passed 18 cases after restacking (10.63s). Its initial 16-pass/two-failure result exposed an obsolete scaffold missing current canonical fields; acquisition was not weakened. Existing native selection is preserved before draft/state writes, while a rejected absent-carrier activation remains an explicit unselected draft. Canonical Rust creation remains subsequent work.
+
+Linux hosted packed conformance still rejected route discovery after native staging was corrected. Inspection found the custom proof extractor discarded executable mode bits; it now preserves ordinary archive permissions while excluding special bits. The prior Windows 12-case run did not establish Unix extraction behavior. Hosted Linux validation remains the decisive follow-up; no provider capability or target-quality conclusion follows from this maintainer-harness defect. Repeated stack rebases and CI runs are implementation/review costs, with monetary cost unknown.
+
+Explicit native module enablement now gates owner availability without interpreting disabled state. The combined run passed 147 cases and failed four assertions expecting a later error message; those assertions were corrected for earlier capability-currentness rejection and passed (3.42s). A real stale Planning-action counterexample first acquired state after an availability change; current action dependency binding now rejects it without changing semantic work identity. Four restored-owner positives passed (3.88s), and 17 Rust Planning cases passed. Follow-through found a case-sensitive proof-index anchor typo and added the independent-review index to disabled-source observation; 32 focused cases passed after correction (14.46s). This does not establish generic external-module admission, historical transfer or configured-checkout completion.
+
+The later Linux artifact investigation found an additional upstream cause: external-consumer readiness packed the TypeScript source tree into `dist` before conformance reused that archive. Readiness now uses the same native staging utility. The exact readiness-archive/reuse regression passed (25.19s), four readiness contracts passed (0.14s), and the Linux package-artifact job passed at 52d3befd (run 34182678511, job 101924763076). The earlier executable-permission correction remains valid but was insufficient by itself. The declared runtime jobs also passed at that head; these are CI observations, not first-stable or independent acceptance.
+
+Shared publication custody passed 20 affected public cases (65.64s) and nine Rust interruption/boundedness cases (2.13s) after integration. The preceding integrated run passed 38 cases, including all 12 publication and 21 native producer cases, before exposing a Python adapter KeyError when Verification was disabled. That path now returns the current owner blocker without mutation. Audit also caught index-capacity overflow and an insufficient recovery inventory bound; publication now refuses at capacity before receipt/index writes, with separate bounded exceptional recovery. Process-crash recovery is proven; power-loss durability, cleanup and compaction are not. The old manually asserted pass remains an unproven observation, never task proof.
+
+System-intent source ingress passed 16 four-consumer cases (6.77s). A read-only native start against the actual configured checkout emitted 184397 bytes in 2133ms and retained 32 Workspace blockers, 12 Verification blockers and one stale governing-interpretation gap. This measures local diagnostic/context burden; it is not a successful configured lifecycle or provider observation. Repeated guessed paths, an unquoted PowerShell Git revision expression, and mixed-object table rendering were avoidable implementation-agent orientation costs. No new provider workers were launched, earlier incomplete workers remain censored, and monetary cost remains unknown.
+
+The Planning vertical added five public cases (22.05s) and strengthened the actual Planning-bound producer admission/staleness assertions (one affected case, 11.44s). Controlled returned/integration-pending fixture updates remain distinct from actual provider returns. The earlier eight historical-judgment fixtures were corrected in the publication parent without weakening exact-subject/currentness assertions; current manually reported exact judgments remain nested and unproven. A fixture-wrapper selection mistake required one focused rerun (four cases, 5.73s).
+
+Current module CI exposed an obsolete assertion that capability changes preserve an executable Planning commitment. The correction proves unchanged semantic reconciliation, changed action identity and stale-action refusal; the declared shared-core route passed 141 cases (75.71s). Four subsequent stack layers rebased without semantic conflicts. These are implementation/review costs, not target-quality evidence.
+
+Domain-proof integration initially passed 32 cases and failed four packet-size assertions (96.71s): canonical Planning construction increased duplicated public capability fragments, pushing a 41-lane fixture to 103136 bytes. Public composition now exposes its full contract once, retaining request constructibility and the existing discovery bound. The integrated domain, creation and producer group passed 66 cases (117.02s). No byte bound was raised, provider inference was added, or monetary saving inferred. One incorrect patch context and a briefly changed worktree branch were avoidable implementation-agent mistakes; source bytes were preserved and the branch restored before further edits.
+
+### Current proof fixture correction (2026-09-08)
+
+The #3110 workspace check retained three failures (462 passed, one skipped):
+old upgrade/identity/PR-cache fixtures reported `passed` without execution and
+expected publication or task completion. This was fixture counterevidence, not
+permission to bypass current Verification availability or source admission.
+The correction executes the existing bounded selected commands and preserves
+upgrade/no-Planning and fresh PR-cache reuse/invalidation coverage. Disabled
+publication remains a zero-receipt-delta refusal. Source changes stale execution;
+restoring exact source permits execution reuse without creating task judgment.
+
+The public exact-task judgment admission positive remains unresolved under
+#2334 for this path: selected execution publishes local execution evidence, and
+an interoperability report does not establish task sufficiency. Explicit shared
+semantic-owner test observations prove exact task/change/fingerprint matching
+and manual/independent obligations separately; they are not public acceptance,
+human review, or independent Verification evidence. No provider calls or monetary
+estimates were used. The first focused two cases took 91.67 seconds including a
+source-host Cargo currentness checks; the PR-cache case took 15.92 seconds.
+The final focused three-case group passed in 104.67 seconds. The editable
+source adapter invokes Cargo to establish current core availability on each
+resolution; repeated short Cargo children were observed during this run. This
+cost is not attributed to provider inference or task execution quality.
+
+
+### Native owner integration follow-through (2026-09-08)
+
+The startup source and canonical artifact-profile layers passed their focused
+consumer checks; they do not establish instruction compliance or task proof.
+The Planning selector-switch integration preserved both retained invocation and
+explicit startup-source dependencies: 70 focused cases passed (81.80s), four
+additional switch-with-startup consumer cases passed (16.65s), and three Rust
+staleness/interruption cases passed (0.95s). The latter includes actual process
+exit and fresh-process recovery, not power-loss durability. Historical selector
+acquisition remains unavailable.
+
+Verification strategy integration passed 50 strategy/domain/producer cases
+(125.69s), resolving the earlier 106202-byte pre-integration discovery failure
+through the existing single-contract projection. A further startup-source,
+strategy and scope replay case passed (4.07s). No byte bound increased. Full
+receipt-index capacity now refuses a new process before it incurs execution
+cost; no numerical saving is inferred. Human/domain judgment still needs a
+current Assignment-owned review identity as well as actual returned evidence.
+
+Avoidable implementation-agent cost included attempting the ordinary wrapper
+while a cherry-pick still contained Rust conflict markers, a new-worktree
+runtime dependency synchronization, and another unsupported PowerShell glob
+search. Fixture integration detected and restored two accidentally re-encoded
+UTF-8 passages before publication. These are implementation costs, not provider
+or target-quality evidence. No new supported-host provider worker was launched;
+all previously incomplete workers remain censored, and monetary cost is unknown.

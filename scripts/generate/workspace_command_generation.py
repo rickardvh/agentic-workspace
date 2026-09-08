@@ -1116,16 +1116,16 @@ def render_workspace_command_package_outputs(
                                 _patch_python_operation_exit_status(
                                     _patch_workspace_python_operation_inputs(
                                         _patch_python_structured_usage_errors(
-                                        _patch_planning_python_runtime_values(
-                                            _patch_typescript_structured_usage_errors(
-                                                _normalize_releaseable_typescript_package_json(
-                                                    output, release_metadata=release_metadata, repo_root=repo_root
+                                            _patch_planning_python_runtime_values(
+                                                _patch_typescript_structured_usage_errors(
+                                                    _normalize_releaseable_typescript_package_json(
+                                                        output, release_metadata=release_metadata, repo_root=repo_root
+                                                    ),
+                                                    repo_root=repo_root,
                                                 ),
                                                 repo_root=repo_root,
                                             ),
                                             repo_root=repo_root,
-                                        ),
-                                        repo_root=repo_root,
                                         ),
                                         repo_root=repo_root,
                                     ),
@@ -1146,7 +1146,12 @@ def render_workspace_command_package_outputs(
         )
         for output in outputs
     ]
-    return [*normalized_outputs, *_typescript_license_outputs(release_metadata=release_metadata, repo_root=repo_root)]
+    binding = (repo_root / "bindings/node/semantic-decision.mjs").read_text(encoding="utf-8")
+    native_bindings = [
+        GeneratedOutput(repo_root / Path(package).parent / "src/native/semantic-decision.mjs", binding)
+        for package in sorted(release_metadata)
+    ]
+    return [*normalized_outputs, *native_bindings, *_typescript_license_outputs(release_metadata=release_metadata, repo_root=repo_root)]
 
 
 def _patch_external_consumer_exports(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
@@ -1205,6 +1210,7 @@ from ..cli import build_generated_parser
     payload = json.loads(output.content)
     payload["exports"] = {
         ".": "./src/client.mjs",
+        "./native": "./src/native/semantic-decision.mjs",
         "./contracts": "./external_contract_bundle.json",
         "./profile": "./external_consumer_profile.json",
         "./conformance-receipts": "./external_operation_conformance_receipts.json",

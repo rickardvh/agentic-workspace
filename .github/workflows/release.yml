@@ -199,8 +199,13 @@ jobs:
             --dist-dir dist \
             --version "${RELEASE_TAG#v}" \
             --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
+          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm"
           for package in generated/*/typescript; do
-            (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+            if [ "$package" = "generated/workspace/typescript" ]; then
+              (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+            else
+              (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+            fi
           done
           uv run python scripts/check/check_package_identity.py \
             --artifact-dir dist \

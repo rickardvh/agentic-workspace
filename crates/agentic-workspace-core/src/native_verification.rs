@@ -9,7 +9,7 @@ use std::{io::Read, path::Path};
 const MANIFEST: &str = ".agentic-workspace/verification/manifest.toml";
 const RECEIPTS: &str = ".agentic-workspace/proof/receipts";
 
-fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
+pub(crate) fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
     if path.is_empty()
         || path.contains('\\')
         || path
@@ -52,6 +52,170 @@ fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
 
 fn sha(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
+}
+
+fn bounded_git_output(
+    command: &mut std::process::Command,
+    budget: std::time::Duration,
+) -> Result<(std::process::ExitStatus, Vec<u8>), String> {
+    use std::process::Stdio;
+    let deadline = std::time::Instant::now() + budget;
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| "git-observation-unavailable")?;
+    let stdout = child.stdout.take().expect("piped stdout");
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    std::thread::spawn(move || {
+        let mut bytes = Vec::new();
+        let result = stdout.take(4097).read_to_end(&mut bytes).map(|_| bytes);
+        let _ = sender.send(result);
+    });
+    let result = loop {
+        if std::time::Instant::now() >= deadline {
+            break Err("git-observation-timeout".into());
+        }
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                break match receiver
+                    .recv_timeout(deadline.saturating_duration_since(std::time::Instant::now()))
+                {
+                    Ok(Ok(bytes)) if bytes.len() <= 4096 => Ok((status, bytes)),
+                    Ok(Ok(_)) => Err("git-observation-output-exceeds-bound".into()),
+                    Ok(Err(_)) => Err("git-observation-read-failed".into()),
+                    Err(_) => Err("git-observation-timeout".into()),
+                };
+            }
+            Err(_) => break Err("git-observation-process-state-unavailable".into()),
+            Ok(None) => std::thread::sleep(
+                std::time::Duration::from_millis(10)
+                    .min(deadline.saturating_duration_since(std::time::Instant::now())),
+            ),
+        }
+    };
+    if result.is_err() {
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    result
+}
+
+fn authenticate_review(root: &Dir, target: &Path, reference: &str) -> Value {
+    let rejected =
+        |reason: &str| json!({"status":"unadmitted","reason":reason,"authority_effect":"none"});
+    let Some(id) = reference.strip_prefix("independent-review-host-result:") else {
+        return rejected("invalid-host-result-reference");
+    };
+    if id.is_empty()
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return rejected("invalid-host-result-reference");
+    }
+    let directory = ".agentic-workspace/local/independent-review-host-results";
+    let parse =
+        |path: &str| -> Option<Value> { serde_json::from_slice(&read(root, path).ok()??).ok() };
+    let Some(index) = parse(&format!("{directory}/index.json")) else {
+        return rejected("host-result-index-unavailable");
+    };
+    if index["kind"] != "agentic-workspace/independent-review-host-result-index/v1" {
+        return rejected("host-result-index-invalid");
+    }
+    let entry = &index["results"][id];
+    if !entry.is_object() {
+        return rejected("host-result-not-indexed");
+    }
+    let default_path = format!("{id}.json");
+    let path = entry["path"].as_str().unwrap_or(&default_path);
+    if path.starts_with('.') || path.contains(['/', '\\', ':']) {
+        return rejected("host-result-index-path-invalid");
+    }
+    let Some(host) = parse(&format!("{directory}/{path}")) else {
+        return rejected("host-result-unavailable");
+    };
+    if let Some(expected) = entry["host_result_digest"]
+        .as_str()
+        .filter(|s| !s.is_empty())
+    {
+        let Ok(encoded) = crate::proof_subject::compact_json(&host) else {
+            return rejected("host-result-encoding-unproven");
+        };
+        if sha(encoded.as_bytes()) != expected {
+            return rejected("host-result-index-digest-mismatch");
+        }
+    }
+    // Git is optional host observation glue, never a product semantic fallback.
+    // Missing Git on a repository cannot be mistaken for a path-only identity.
+    let mut command = std::process::Command::new("git");
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    command.args([
+        "-C",
+        &target.to_string_lossy(),
+        "config",
+        "--get",
+        "remote.origin.url",
+    ]);
+    let observed = bounded_git_output(&mut command, std::time::Duration::from_secs(2));
+    let remote = match observed {
+        Ok((status, bytes)) if status.success() => {
+            String::from_utf8_lossy(&bytes).trim().replace('\\', "/")
+        }
+        Ok((status, _)) if status.code() == Some(1) => String::new(),
+        Err(reason)
+            if reason == "git-observation-timeout"
+                || reason == "git-observation-output-exceeds-bound" =>
+        {
+            return rejected(&reason);
+        }
+        _ if target.ancestors().any(|path| path.join(".git").exists()) => {
+            return rejected("current-workspace-identity-observation-unavailable");
+        }
+        _ => String::new(),
+    };
+    let workspace = if remote.is_empty() {
+        let observed = target.to_string_lossy();
+        let path = if let Some(unc) = observed.strip_prefix(r"\\?\UNC\") {
+            format!(r"\\{unc}")
+        } else {
+            observed
+                .strip_prefix(r"\\?\")
+                .unwrap_or(&observed)
+                .to_owned()
+        };
+        format!("workspace:path:{path}")
+    } else {
+        let remote = remote.strip_suffix(".git").unwrap_or(&remote);
+        let normalized = if let Some((host, path)) =
+            remote.strip_prefix("git@").and_then(|v| v.split_once(':'))
+        {
+            format!("https://{host}/{path}")
+        } else {
+            remote.to_owned()
+        };
+        format!(
+            "workspace:git:{}",
+            normalized.trim_end_matches('/').to_lowercase()
+        )
+    };
+    let Ok(now) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) else {
+        return rejected("current-host-clock-unavailable");
+    };
+    let verdict = match crate::review_authentication::view(
+        json!({"host_result_ref":reference,"host_result":host,"workspace_ref":workspace,"now_unix_micros":now.as_micros() as i64,"public_keys":null}),
+    ) {
+        Ok(value) if value["status"] == "admitted" => value,
+        _ => return rejected("release-pinned-host-authentication-rejected"),
+    };
+    json!({"status":"authenticated","verdict":verdict,"authority_effect":"host-result-authentication-only",
+        "remaining_gaps":["current-assignment-and-proof-subject-admission-required","current-strategy-and-runtime-evidence-required"],
+        "claim_boundary":"Authentic signed host result does not itself establish current independent review or satisfy a claim."})
 }
 
 // Verification and instruction sources consume the same path selector semantics.
@@ -176,47 +340,33 @@ fn publication_admission(root: &Dir, id: &str, receipt: &Value) -> Value {
     if receipt["kind"] != "agentic-workspace/proof-receipt/v1" {
         return rejected("publication-contract-invalid");
     }
-    let mut identity = serde_json::Map::new();
-    for field in ["command", "result", "changed_paths", "proof_subject"] {
-        identity.insert(field.into(), receipt[field].clone());
-    }
-    identity.insert(
-        "target_context".into(),
-        receipt.get("target_context").cloned().unwrap_or(json!({})),
-    );
-    identity.insert(
-        "proof_commands".into(),
-        receipt.get("proof_commands").cloned().unwrap_or(json!([])),
-    );
-    for field in [
-        "task_claim_judgment",
-        "assignment_proof_obligation",
-        "assignment_proof_binding",
-        "assignment_closeout_lineage",
-    ] {
-        if let Some(value) = receipt.get(field) {
-            identity.insert(field.into(), value.clone());
-        }
-    }
-    let rendered = match publication_json(&Value::Object(identity)) {
-        Ok(text) => text,
-        Err(reason) => return rejected(reason),
+    let expected = match publication_identity(receipt) {
+        Ok(value) => value,
+        Err(error) => return rejected(&error.to_string()),
     };
-    let expected = sha(rendered.as_bytes());
     if &expected[..16] != id || receipt["publication_id"] != id {
         return rejected("publication-content-identity-mismatch");
     }
     json!({"status":"admitted","reason":"current-indexed-owner-publication","authority_effect":"publication-only"})
 }
 
+pub(crate) fn publication_identity(receipt: &Value) -> Result<String, CoreError> {
+    let identity = crate::proof_receipt::publication_identity(receipt);
+    let rendered = publication_json(&identity).map_err(CoreError::new)?;
+    Ok(sha(rendered.as_bytes())[..16].to_owned())
+}
+
 fn receipt_view(
     root: &Dir,
+    target: &Path,
+    strategy: &Value,
     reference: &str,
     task: &str,
     changed: &[String],
-    work_ref: &Value,
-    work_revision: &Value,
+    work: &Value,
 ) -> Value {
+    let work_ref = &work["id"];
+    let work_revision = &work["revision"];
     let mut gaps = Vec::<String>::new();
     let id = reference.strip_prefix("proof://receipts/").unwrap_or("");
     if id.is_empty()
@@ -266,10 +416,32 @@ fn receipt_view(
     if receipt["kind"] != "agentic-workspace/proof-receipt/v1" {
         gaps.push("receipt-contract-invalid".into());
     }
+    let freshness_started = std::time::Instant::now();
+    let mut freshness = crate::native_proof::freshness(target,task,changed,&json!({"id":work_ref,"revision":work_revision}),strategy,&receipt)
+        .unwrap_or_else(|error| json!({"status":"unproven","strategy_coverage":"unproven","reason":error.to_string()}));
+    let mut detail = json!({"status":"not-required"});
+    if receipt["proof_subject"]["runtime"]["implementation"] == "native-aw-proof" {
+        let artifact = &receipt["execution_artifact"];
+        let current = publication["status"] == "admitted"
+            && artifact["path"].as_str().is_some_and(|path| {
+                path.starts_with(".agentic-workspace/local/proof-receipts/runs/native-")
+                    && path.ends_with("/run.json.command.json")
+                    && read(root, path)
+                        .ok()
+                        .flatten()
+                        .is_some_and(|bytes| artifact["sha256"] == sha(&bytes))
+            });
+        detail = json!({"status":if current {"current"} else {"unavailable-or-stale"},"artifact":artifact});
+        if !current {
+            freshness["status"] = json!("unproven");
+            gaps.push("native-proof-detail-unavailable-or-stale".into());
+        }
+    }
+    freshness["validation_duration_us"] = json!(freshness_started.elapsed().as_micros());
     let judgment = crate::task_judgment::view(json!({
         "action":"classify", "task":task, "changed_paths":changed, "work_ref":work_ref, "work_revision":work_revision,
         "observations":[{"receipt":receipt, "publication_current":publication["status"] == "admitted",
-            "proof_sufficient":admission["proof_sufficient"] == true, "evidence_freshness":"unproven"}],
+            "proof_sufficient":admission["proof_sufficient"] == true, "evidence_freshness":freshness["status"]}],
         "manual_required":false,"manual_status":"", "independent_required":false,"independent_status":""
     }));
     let judgment = match judgment {
@@ -309,16 +481,81 @@ fn receipt_view(
     }
     // A current indexed publication still does not establish its runtime,
     // strategy coverage, or independent judgment producer.
-    gaps.extend(
-        [
-            "proof-runtime-compatibility-unproven",
-            "current-strategy-coverage-unproven",
-        ]
-        .map(str::to_owned),
-    );
+    if freshness["status"] != "reusable" {
+        gaps.push("proof-runtime-compatibility-unproven".into());
+        gaps.push("current-strategy-coverage-unproven".into());
+    } else {
+        gaps.push("nested-tool-runtime-unobserved".into());
+    }
     json!({"reference":reference,"status":"unadmitted","publication_admission":publication,"receipt_admission":admission,
-        "task_judgment":judgment,"evidence_freshness":"unproven","strategy_coverage":"unproven","independent_review":"not-established-by-publication",
+        "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
+}
+
+/// Current domain-lane commands are execution candidates, not proof sufficiency.
+/// Source metadata stays on the selected route; discovery uses bounded descriptors.
+fn domain_routes(config: &Value, changed: &[String]) -> Result<(Value, Value), CoreError> {
+    let mut routes = serde_json::Map::new();
+    let mut descriptors = Vec::new();
+    let mut omitted = 0;
+    for (id, lane) in config["assurance"]["domain_proof_lanes"]
+        .as_object()
+        .into_iter()
+        .flatten()
+    {
+        let matched: Vec<&String> = changed
+            .iter()
+            .filter(|path| {
+                lane["applies_to_paths"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .any(|pattern| matches(pattern, path))
+            })
+            .collect();
+        let unresolved = lane["applies_to_task_markers"]
+            .as_array()
+            .is_some_and(|items| !items.is_empty());
+        if matched.is_empty() && !unresolved {
+            continue;
+        }
+        let source_ref =
+            format!(".agentic-workspace/config.toml#assurance.domain_proof_lanes.{id}");
+        let revision = digest(lane)?;
+        let descriptor = json!({"route_id":format!("domain:{id}"),"source_ref":source_ref,"source_revision":revision,"applicability":if matched.is_empty(){"current-task-judgment-unresolved"}else{"path-matched"},"command_count":lane["commands"].as_array().map_or(0,Vec::len),"metadata":"retained-in-source-and-selected-strategy","claim_boundary":"candidate-not-strategy-sufficiency"});
+        if descriptors.len() < 32
+            && serde_json::to_vec(&descriptor).is_ok_and(|bytes| bytes.len() <= 2048)
+        {
+            descriptors.push(descriptor);
+        } else {
+            omitted += 1;
+        }
+        if !matched.is_empty() {
+            let mut route = lane.clone();
+            route["source_kind"] = json!("config-domain-lane");
+            route["source_ref"] = json!(source_ref);
+            route["source_revision"] = json!(revision);
+            route["matched_paths"] = json!(matched);
+            routes.insert(format!("domain:{id}"), route);
+        }
+    }
+    Ok((
+        json!(routes),
+        json!({"lanes":descriptors,"omitted_descriptor_count":omitted,"source":".agentic-workspace/config.toml#assurance.domain_proof_lanes","boundary":"Exact path matches offer source commands. Semantic applicability, lane composition, escalation, manual evidence and claim sufficiency remain current owner obligations."}),
+    ))
+}
+fn visible_strategy(strategy: &Value, selected: Option<&Value>) -> Value {
+    let mut result = strategy.clone();
+    if let Some(routes) = result["proof_routes"].as_object_mut() {
+        routes.retain(|id, route| {
+            !matches!(
+                route["source_kind"].as_str(),
+                Some("config-domain-lane" | "config-proof-profile")
+            ) || selected.is_some_and(|choice| choice["route_id"] == *id)
+        });
+    }
+    result
 }
 
 /// Host-only inputs are supplied by the current-work and Planning owners. A
@@ -331,8 +568,58 @@ pub fn view(
     planning_subject: Option<&Value>,
     request: Option<Value>,
 ) -> Result<Value, CoreError> {
+    view_with_applicability(
+        target,
+        task,
+        changed,
+        current_work,
+        planning_subject,
+        request,
+        ApplicabilityContext {
+            facts: &Value::Null,
+            request: None,
+            contract: None,
+            invocation: None,
+        },
+    )
+}
+
+pub(crate) struct ApplicabilityContext<'a> {
+    pub facts: &'a Value,
+    pub request: Option<Value>,
+    pub contract: Option<&'a Value>,
+    pub invocation: Option<&'a Value>,
+}
+
+pub(crate) fn view_with_applicability(
+    target: &Path,
+    task: &str,
+    changed: &[String],
+    current_work: &Value,
+    planning_subject: Option<&Value>,
+    request: Option<Value>,
+    applicability: ApplicabilityContext<'_>,
+) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
+    let (config, config_revision) = crate::native_config::load(
+        &root,
+        ".agentic-workspace/config.toml",
+        include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+        ),
+    )
+    .map_err(CoreError::new)?
+    .unwrap_or((json!({}), "absent".into()));
+    let mut assurance_input = crate::assurance_applicability::native_input(
+        &config,
+        &config_revision,
+        task,
+        changed,
+        current_work,
+        planning_subject,
+        applicability.facts,
+    )?;
     let mut gaps = Vec::<String>::new();
     let (manifest, manifest_revision) = match read(&root, MANIFEST) {
         Ok(Some(bytes)) => {
@@ -360,8 +647,13 @@ pub fn view(
     {
         gaps.push("verification-manifest-owner-sections-invalid".into());
     }
-    let source_revision = digest(&json!({"manifest_revision":manifest_revision,
-        "planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}))?;
+    let strategy_policy = crate::verification_strategy::policy(&config)?;
+    let (domain, domain_descriptors) = domain_routes(&config, changed)?;
+    let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
+    let source_revision = digest(
+        &json!({"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
+        "planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
+    )?;
     let mut protocols = serde_json::Map::new();
     let mut selector_gaps = Vec::new();
     if let Some(all) = manifest["protocols"].as_object() {
@@ -406,8 +698,14 @@ pub fn view(
             }
         }
     }
-    let strategy = json!({"source":MANIFEST,"protocols":protocols,"proof_routes":routes,"scenarios":scenarios});
-    let strategy_revision = digest(&strategy)?;
+    for (id, route) in domain.as_object().unwrap() {
+        if routes.insert(id.clone(), route.clone()).is_some() {
+            return Err(CoreError::new(
+                "domain proof route identity collides with manifest route",
+            ));
+        }
+    }
+    let mut strategy = json!({"source":MANIFEST,"protocols":protocols,"proof_routes":routes,"scenarios":scenarios});
     let direct_subject = crate::direct_task::subject(task, changed)?;
     let subject = planning_subject.unwrap_or(&direct_subject);
     let work_ref = subject["id"].clone();
@@ -419,36 +717,213 @@ pub fn view(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration()]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
-        "restriction_authorities":[{"owner":"verification","affects":["claim:complete"]}]});
+        "restriction_authorities":[{"owner":"verification","affects":["claim:complete","claim:claim-slice-complete","claim:claim-work-complete","claim:close-parent-lane"]}]});
+    contract["owners"][0]["domains"] = json!(["verification"]);
+    contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
+    contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
     contract["revision"] = json!(digest(&contract)?);
+    let admission_contract = applicability.contract.unwrap_or(&contract);
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":"verification/claim/v1","owner":"verification",
-        "owner_revision":owner_revision,"source_revision":source_revision,"capability_revision":contract["revision"],
+        "owner_revision":owner_revision,"source_revision":source_revision,"capability_revision":admission_contract["revision"],
         "task_identity":current_work,"request_kind":"verification/claim/v1","arguments":{"claim_class":"slice_complete","evidence_refs":[]}});
+    let mut authentication_request = template.clone();
+    authentication_request["id"] = json!("verification/authenticate-host-review/v1");
+    authentication_request["request_kind"] = json!("verification/authenticate-host-review/v1");
+    authentication_request["arguments"] =
+        json!({"host_result_ref":"independent-review-host-result:<current-indexed-ref>"});
+    let mut assurance_request = template.clone();
+    assurance_request["id"] = json!("verification/assurance-applicability/v1");
+    assurance_request["request_kind"] = json!("verification/assurance-applicability/v1");
+    assurance_request["source_revision"] = assurance_input["source_revision"].clone();
+    assurance_request["arguments"] = json!({"decisions":{}});
+    let mut strategy_assessment = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"]["strategy"].get("assessment"))
+        .filter(|v| !v.is_null())
+        .cloned();
+    let retained_scope = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"]["strategy"].get("assurance_request"))
+        .filter(|v| !v.is_null())
+        .cloned();
+    let mut current_scope_request = Value::Null;
+    let mut evidence_refs = Vec::<String>::new();
+    let mut proof_choice = applicability
+        .invocation
+        .map(|i| i["arguments"]["selection"]["choice"].clone());
+    let mut reported_observation = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"].get("reported_observation"))
+        .filter(|v| !v.is_null())
+        .cloned();
+    let mut authentication = Value::Null;
     let mut evidence = Vec::new();
     let mut requested = false;
-    if let Some(request) = request {
+    for request in request
+        .into_iter()
+        .flat_map(|value| value.as_array().cloned().unwrap_or_else(|| vec![value]))
+        .chain(applicability.request)
+        .chain(retained_scope)
+    {
         prepare_request_value(
-            json!({"request":request,"current_work":request["task_identity"],"capability_contract":contract}),
+            json!({"request":request,"current_work":request["task_identity"],"capability_contract":admission_contract}),
         )?;
         if request["owner"] != "verification" {
             return Err(CoreError::new("Verification request names another owner"));
         }
-        requested = true;
-        if request["task_identity"] != *current_work
+        let scope_request = request["request_kind"] == "verification/assurance-applicability/v1";
+        let claim_request = !scope_request && request["request_kind"] != "verification/strategy/v1";
+        requested |= claim_request;
+        if scope_request {
+            current_scope_request = request.clone();
+            assurance_input["judgment"] = json!({"source_revision":request["source_revision"],
+                "task_identity":if request["task_identity"]==*current_work {assurance_input["task_identity"].clone()} else {request["task_identity"].clone()},
+                "current_work":request["task_identity"],"decisions":request["arguments"]["decisions"]});
+        }
+        if scope_request {
+            // The shared applicability owner validates its separately bound source.
+        } else if request["task_identity"] != *current_work
             || request["source_revision"] != source_revision
         {
             gaps.push("verification-request-stale".into());
-        } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
-            evidence.extend(
-                refs.iter()
-                    .filter_map(Value::as_str)
-                    .map(|r| receipt_view(&root, r, task, changed, &work_ref, &work_revision)),
+        } else if request["request_kind"] == "verification/strategy/v1" {
+            strategy_assessment = Some(request["arguments"].clone());
+        } else if request["request_kind"] == "verification/execute-selected/v1" {
+            proof_choice = Some(request["arguments"].clone());
+        } else if request["request_kind"] == "verification/record-receipt/v1" {
+            proof_choice = Some(
+                json!({"route_id":request["arguments"]["route_id"],"command":request["arguments"]["command"]}),
             );
+            reported_observation = Some(request["arguments"].clone());
+        } else if request["request_kind"] == "verification/authenticate-host-review/v1" {
+            authentication = authenticate_review(
+                &root,
+                target,
+                request["arguments"]["host_result_ref"].as_str().unwrap(),
+            );
+        } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
+            evidence_refs.extend(refs.iter().filter_map(Value::as_str).map(str::to_owned));
         }
+    }
+    let assurance = crate::assurance_applicability::view(assurance_input.clone())?;
+    let strategy_control = crate::verification_strategy::view(
+        &strategy_policy,
+        &assurance,
+        planning_subject,
+        strategy_assessment.as_ref(),
+    )?;
+    for (id, route) in strategy_control["routes"].as_object().unwrap() {
+        if strategy["proof_routes"]
+            .as_object_mut()
+            .unwrap()
+            .insert(id.clone(), route.clone())
+            .is_some()
+        {
+            return Err(CoreError::new(
+                "profile proof route collides with source route",
+            ));
+        }
+    }
+    strategy["assessment"] = json!(strategy_assessment);
+    strategy["assurance_request"] = current_scope_request;
+    strategy["disallowed_commands"] = strategy_control["disallowed_commands"].clone();
+    strategy["selection_blocked"] = strategy_control["execution_blocked"].clone();
+    strategy["selected_profile_identity"] = strategy_control["selected_profiles"].clone();
+    let strategy_revision = digest(&strategy)?;
+    evidence.extend(evidence_refs.iter().map(|reference| {
+        receipt_view(
+            &root,
+            target,
+            &strategy,
+            reference,
+            task,
+            changed,
+            &json!({"id":work_ref,"revision":work_revision}),
+        )
+    }));
+    let mut strategy_request = template.clone();
+    strategy_request["id"] = json!("verification/strategy/v1");
+    strategy_request["request_kind"] = json!("verification/strategy/v1");
+    strategy_request["arguments"] = json!({"level":strategy_policy["baseline"],"profile_ids":[],"reason":"Assess the current task's sufficient proof strategy without waiving source obligations."});
+    if let Some(assessment) = strategy_assessment.as_ref() {
+        strategy_request["arguments"] = assessment.clone();
+    }
+    let execution = crate::native_proof::select_mode(
+        target,
+        task,
+        changed,
+        subject,
+        &strategy,
+        proof_choice.as_ref(),
+        reported_observation.as_ref(),
+    )?;
+    let execution_actions = crate::native_proof::action(
+        target,
+        task,
+        changed,
+        &execution,
+        &admission_contract["revision"],
+    )?;
+    let execution_requests: Vec<Value> = execution["choices"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|choice| {
+            let mut request = template.clone();
+            request["request_kind"] = json!("verification/execute-selected/v1");
+            request["id"] = json!("verification/execute-selected/v1");
+            request["arguments"] = choice.clone();
+            request
+        })
+        .collect();
+    let mut record_requests: Vec<Value> = execution_requests
+        .iter()
+        .map(|request| {
+            let mut request = request.clone();
+            request["request_kind"] = json!("verification/record-receipt/v1");
+            request["id"] = json!("verification/record-receipt/v1");
+            request["arguments"]["result"] = json!("failed");
+            request
+        })
+        .collect();
+    let mut report_request = template.clone();
+    report_request["id"] = json!("verification/record-receipt/v1");
+    report_request["request_kind"] = json!("verification/record-receipt/v1");
+    report_request["arguments"] =
+        json!({"route_id":"unresolved","command":"<reported-command>","result":"failed"});
+    record_requests.push(report_request);
+    let mut prerequisite_requests = Vec::new();
+    if strategy_assessment.is_some() {
+        prerequisite_requests.push(strategy_request.clone());
+    }
+    if !strategy["assurance_request"].is_null() {
+        prerequisite_requests.push(strategy["assurance_request"].clone());
+    }
+    let with_context = |request: Value| -> Value {
+        if prerequisite_requests.is_empty() {
+            return request;
+        }
+        let mut requests = prerequisite_requests.clone();
+        requests.push(request);
+        json!(requests)
+    };
+    let execution_requests: Vec<Value> =
+        execution_requests.into_iter().map(&with_context).collect();
+    let record_requests: Vec<Value> = record_requests.into_iter().map(with_context).collect();
+    let visible_strategy = visible_strategy(
+        &strategy,
+        if execution["status"] == "selected" {
+            proof_choice.as_ref()
+        } else {
+            None
+        },
+    );
+    if !domain.as_object().unwrap().is_empty() {
+        gaps.push("domain-lane-strategy-sufficiency-unresolved".into());
     }
     let applicable = requested || !protocols.is_empty() || !gaps.is_empty();
     if applicable {
@@ -461,30 +936,108 @@ pub fn view(
     let packet = applicable.then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
         "task_identity":current_work,"task_claim_identity":direct_subject,"work_ref":work_ref,"work_revision":work_revision,"planning_subject":planning_subject,
         "acceptance_source":{"source":"current-task","requested_outcome":task},
-        "strategy":strategy,"strategy_revision":strategy_revision,
+        "strategy":visible_strategy,"strategy_revision":strategy_revision,
         "judgment_required":"Does this exact requested outcome and changed scope satisfy the current claim and applicable strategy?",
-        "admitted_automated_evidence":[],"candidate_evidence":evidence,"known_uncertainty":gaps,
+        "admitted_automated_evidence":evidence.iter().filter(|item| item["publication_admission"]["status"] == "admitted" && item["receipt_admission"]["proof_sufficient"] == true && item["evidence_freshness"] == "reusable").collect::<Vec<_>>(),"candidate_evidence":evidence,"known_uncertainty":gaps,
         "required_authority":"Use each selected protocol's review_owner and authority_refs; authenticate any independent producer through the existing Verification owner.",
         "judgment_ingress":"Existing Verification receipt admission; this read-only native view does not admit returned judgments.",
         "returned_judgment_requirements":["exact claim and current work/subject","current strategy and evidence references","judgment and unresolved reasons","required producer authority and independence"]}));
-    let blockers = if applicable {
+    let mut blockers = if applicable {
         json!([{"code":"verification-evidence-unresolved","message":"Current Verification obligations require admitted task-bound evidence and judgment.","affects":["claim:complete"]}])
     } else {
         json!([])
     };
+    for gap in strategy_control["gaps"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        blockers.as_array_mut().unwrap().push(json!({"code":gap,"message":"Current Verification strategy control remains unresolved; no profile or evidence waiver is inferred.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+    }
+    for obligation in strategy_control["obligations"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        blockers.as_array_mut().unwrap().push(json!({"code":format!("profile-proof-required:{}",obligation["profile_id"].as_str().unwrap()),"message":"Selected proof profile requires current admitted command evidence; selection is not proof.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+    }
+    let mut decisions = serde_json::Map::new();
+    for row in assurance["requirements"].as_array().unwrap() {
+        if row["status"] == "unresolved" {
+            decisions.insert(row["id"].as_str().unwrap().into(), json!("unresolved"));
+        }
+        if row["status"] != "not-applicable"
+            && matches!(
+                row["force"].as_str(),
+                Some("blocking" | "required-before-closeout")
+            )
+        {
+            let affects: Vec<String> = row["blocking_claims"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(|claim| format!("claim:{claim}"))
+                .collect();
+            if !affects.is_empty() {
+                blockers.as_array_mut().unwrap().push(json!({"code":format!("assurance:{}:{}",row["id"].as_str().unwrap(),row["status"].as_str().unwrap()),
+                "message":if row["status"]=="unresolved" {"Current source assurance applicability needs agent judgment; evidence cannot resolve scope."} else {"Current assurance evidence/measurement/review admission remains required; applicability does not prove satisfaction."},"affects":affects}));
+            }
+        }
+    }
+    if decisions.is_empty() {
+        assurance_request = Value::Null;
+    } else {
+        assurance_request["arguments"]["decisions"] = json!(decisions);
+    }
+    let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row|json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":row["source_requirement"],"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})).collect();
     Ok(
-        json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable {"unresolved"} else {"not-applicable"},
-        "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":strategy,"strategy_revision":strategy_revision,
-        "requests":[template],"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
+        "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
+        "strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"execution":execution,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
-        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers},
+        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),
+    )
+}
+
+pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
+    crate::native_config::disabled_owner(
+        target,
+        "verification",
+        &[
+            MANIFEST,
+            &format!("{RECEIPTS}/index.json"),
+            ".agentic-workspace/local/independent-review-host-results/index.json",
+        ],
+        &["effect:proof-execution", "claim:complete"],
     )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[ignore = "subprocess fixture for the bounded Git observation test"]
+    fn git_probe_slow_fixture() {
+        std::thread::sleep(std::time::Duration::from_secs(5));
+    }
+
+    #[test]
+    fn git_observation_times_out_and_reaps_the_child() {
+        let mut command = std::process::Command::new(std::env::current_exe().unwrap());
+        command.args([
+            "--exact",
+            "native_verification::tests::git_probe_slow_fixture",
+            "--ignored",
+        ]);
+        let started = std::time::Instant::now();
+        let result = bounded_git_output(&mut command, std::time::Duration::from_millis(30));
+        assert_eq!(result.unwrap_err(), "git-observation-timeout");
+        assert!(started.elapsed() < std::time::Duration::from_secs(2));
+    }
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQUENCE: AtomicU64 = AtomicU64::new(0);
     struct Repo(std::path::PathBuf);
@@ -691,11 +1244,12 @@ mod tests {
         let reference = format!("proof://receipts/{id}");
         let result = receipt_view(
             &root,
+            &repo.0,
+            &Value::Null,
             &reference,
             "Current fixture task",
             &["a.txt".into()],
-            &json!("planning:current"),
-            &json!("semantic-one"),
+            &json!({"id":"planning:current","revision":"semantic-one"}),
         );
         assert_eq!(result["publication_admission"]["status"], "admitted");
         assert_eq!(result["status"], "unadmitted");
@@ -705,11 +1259,12 @@ mod tests {
         assert_eq!(result["strategy_coverage"], "unproven");
         let unrelated = receipt_view(
             &root,
+            &repo.0,
+            &Value::Null,
             &reference,
             "Current fixture task",
             &["a.txt".into()],
-            &json!("other-task"),
-            &json!("semantic-one"),
+            &json!({"id":"other-task","revision":"semantic-one"}),
         );
         assert_eq!(unrelated["publication_admission"]["status"], "admitted");
         assert!(
@@ -721,11 +1276,12 @@ mod tests {
         repo.write("a.txt", "changed");
         let stale = receipt_view(
             &root,
+            &repo.0,
+            &Value::Null,
             &reference,
             "Current fixture task",
             &["a.txt".into()],
-            &json!("planning:current"),
-            &json!("semantic-one"),
+            &json!({"id":"planning:current","revision":"semantic-one"}),
         );
         assert_eq!(stale["publication_admission"]["status"], "admitted");
         assert!(

@@ -12,6 +12,10 @@ class DecisionContractError(ValueError):
     """Raised when the shared core rejects a source-decision request."""
 
 
+def route_discovery(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"native_route_discovery": context})
+
+
 def start(context: Mapping[str, Any]) -> dict[str, Any]:
     """Consume repository sources through the native public owner boundary."""
     return _request({"start": context})
@@ -25,6 +29,10 @@ def invoke(context: Mapping[str, Any]) -> dict[str, Any]:
 def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
     """Use the shared owner's established direct-task semantic identity."""
     return _request({"direct_task_subject": {"task": task, "paths": paths}})
+
+
+def assurance_applicability(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assurance_applicability": context})
 
 
 def task_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
@@ -66,6 +74,7 @@ def _request(payload: Mapping[str, Any]) -> dict[str, Any]:
         [str(binary)],
         input=json.dumps(payload, separators=(",", ":")),
         text=True,
+        encoding="utf-8",
         capture_output=True,
         check=False,
     )
@@ -226,3 +235,7 @@ def admit_assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
 
 def runtime_compatibility(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"runtime_compatibility": context})
+
+
+def review_authentication(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"review_authentication": context})

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Share signed-review authentication across Rust and language adapters using unchanged release-pinned keys; expose read-only native indexed-result authentication without granting current proof or accepting caller trust roots."
+issues = [2334, 3077]

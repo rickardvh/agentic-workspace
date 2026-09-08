@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve existing Planning selection carriers without admitted overwrite custody; retained Python and TypeScript selectors acquire only absent carriers exclusively and preserve competing or incomplete writes for owner recovery. Native reconciliation custody remains unchanged."
+issues = [3001, 2970]
