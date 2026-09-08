@@ -650,6 +650,8 @@ def test_native_explicit_empty_modules_stays_quiet_without_sources(
         ("planning", ".agentic-workspace/local/planning/owner-selection.json"),
         ("memory", ".agentic-workspace/memory/repo/manifest.toml"),
         ("verification", ".agentic-workspace/verification/manifest.toml"),
+        ("verification", ".agentic-workspace/proof/receipts/index.json"),
+        ("verification", ".agentic-workspace/local/independent-review-host-results/index.json"),
     ],
 )
 def test_native_disabled_owner_preserves_uninterpreted_source(
