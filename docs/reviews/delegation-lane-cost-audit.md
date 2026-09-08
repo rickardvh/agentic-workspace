@@ -398,3 +398,7 @@ The four-consumer applicability/request composition regression passed after corr
 
 
 The public-consumer audit found four existing fixture files reading removed internal contributions. Their assertions now inspect owner-filtered composed blockers/pending actions instead. All 42 affected startup, advisory, domain execution and Verification requirement cases passed in 73.35 seconds; no safety or packet-size bound changed.
+
+### Current comparative assignment integration
+
+The integrated assignment/policy/configuration group passed38 tests in30.65 seconds. Review found an overrestrictive empty-uncertainty gate that would require false certainty for an otherwise eligible bounded choice. The correction retains comparative uncertainty in exact assignment identity while preserving hard unresolved owner/capability boundaries and nonlocal handoff requirements. No provider work or target-quality observation was produced.

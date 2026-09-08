@@ -598,10 +598,10 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
     let ready = input["requirements"]["status"] == "resolved"
         && input["policy"]["enforceable"] == true
         && execution["gaps"].as_array().is_some_and(Vec::is_empty)
-        && unresolved.is_empty()
-        && judgment["uncertainties"]
-            .as_array()
-            .is_some_and(Vec::is_empty);
+        && unresolved.is_empty();
+    // Comparative uncertainty is retained with the exact judgment, not a
+    // universal veto requiring false certainty. Unresolved capability, policy
+    // and task requirements above remain hard admission boundaries.
     let local = selected["configuration"]["transport"] == "internal"
         && selected["target"] == input["policy"]["current_profile"]["name"];
     if !judgment.is_null() && input["policy"]["assignment_policy"] == "local-preferred" && !local {

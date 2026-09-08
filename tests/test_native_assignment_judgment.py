@@ -96,8 +96,15 @@ def test_nonlocal_assignment_keeps_exact_handoff_gap_and_uncertainty(tmp_path, s
     assert any(b["code"] == "current-nonlocal-assignment-handoff-required" for b in current["decision_packet"]["blockers"])
     assert current["decision_packet"].get("primary_action") is None
     uncertain = copy.deepcopy(request)
-    uncertain[-1]["arguments"]["uncertainties"] = ["Current evaluator comparison remains unresolved."]
-    assert call(uncertain)["task_requirements"]["assignment"]["result"]["assignment_identity"] is None
+    uncertain[-1]["arguments"]["uncertainties"] = [
+        "Comparative elapsed cost is sparsely observed; this bounded choice retains that uncertainty."
+    ]
+    observation = call(uncertain)["task_requirements"]["assignment"]["result"]
+    assert observation["status"] == "assigned-nonlocal-handoff-required"
+    assert observation["judgment"]["uncertainties"] == uncertain[-1]["arguments"]["uncertainties"]
+    assert (
+        observation["assignment_identity"]["assignment_decision_revision"] != result["assignment_identity"]["assignment_decision_revision"]
+    )
     executable.write_text("changed executable")
     with pytest.raises(AssertionError, match="stale|changed"):
         call(request)
