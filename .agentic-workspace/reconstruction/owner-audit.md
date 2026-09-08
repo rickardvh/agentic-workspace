@@ -417,3 +417,36 @@ This serves the requested smallest positive path, not all of #2209: failure-heav
 real learning, explicit human/evaluation ingress, dispute/contradiction handling,
 and repeated outcome convergence remain missing. The conservative live-owner
 projection is not a durable cross-owner quality database or a completion claim.
+
+## Canonical CLI host subtraction (#3077, proposed)
+
+The Python command entry point now forwards arguments and streams to the paired
+native executable. Its former compatibility decisions, generated-parser loader,
+semantic fallback and logging wrapper are removed. The source runner resolves
+its own checkout's artifact helper; another installed/editable Python package
+cannot choose its product implementation. Source resolution builds both binaries.
+Missing pairs fail closed, with no generation, dependency sync or state fallback.
+
+The old root parser exceptions are removed from the source-retirement checker.
+Tests for editable-host selection, retired root commands and old output snapshots
+are deleted; existing native reader/source/route/instruction cases preserve their
+meaningful admission coverage. Assignment replacement still has its cross-surface
+authority/currentness proof, now using a native-sealed packet fixture instead of
+a retired CLI setup journey. Retained generated-artifact conformance explicitly
+targets that artifact as maintainer tooling, not the ordinary product command.
+
+Current proof: 47 launcher/reader/generator-custody cases; 150 shared-core/v1 cases;
+three static conformance/regrowth cases; 18 native product/source/route/instruction
+and retained-tool smoke cases; and three actual built-wheel cases pass. The wheel
+journey creates, selects, updates and recovers a native Planning owner in fresh
+processes while preserving unrelated work. Its actual native executable also
+starts with an empty PATH and no source/core override. Installed Python metadata
+does not supply product semantics. Final release-equivalent multi-platform and
+independent admission remain under #2990/#2909; these Windows artifact results do
+not claim that broader gate.
+
+The source/API migration still has the separate native owner gaps in the table,
+and retained generated tooling/legacy operation APIs are not advertised as native
+owner completion. This cutover removes a competing command host and over a
+thousand obsolete lines rather than restoring aliases. It is a breaking command
+surface change, recorded by one major changeset; no parent is closed here.

@@ -9,6 +9,13 @@ The executable calls the shared Rust core. Python and TypeScript remain
 bindings. Repository generators and checks may use Python, but are not an
 alternate authority for ordinary product operations.
 
+The Python distribution's optional command entry point launches its paired native
+executable. The source runner resolves this checkout's native artifacts directly,
+without choosing an editable Python distribution or refreshing a generated CLI.
+Missing native artifacts fail closed. Older `init`, `summary`, `implement` and
+other former-host commands are not a compatibility fallback; use the current
+native request/action contract. Maintainer generators remain separate tooling.
+
 Start with the invocation in `AGENTS.md`, the current task and `--format json`.
 Include each known path with a separate `--changed`. Read the decision packet:
 source-read requests deliver current instructions, bounded answer requests carry
@@ -63,3 +70,11 @@ that provenance. Transport provenance still grants no task acceptance or target
 quality. The existing context-cost contract records process-input bytes and
 elapsed time; provider framing, tokens, internal retries and downstream burden
 remain unknown when the adapter cannot observe them.
+
+Assignment offers a bounded use/repair/reject judgment for that current execution.
+Planning may retain the admitted summary through its existing writer into the
+selected owner's continuation frontier. Fresh re-entry is still required; proof
+execution carries the exact Planning continuation. One current retained result
+and selected-command check may supply contextual evidence for the matching
+eligible configuration. Source drift or native Planning supersession de-adopts
+that signal; it grants no target eligibility, task-success or completion authority.
