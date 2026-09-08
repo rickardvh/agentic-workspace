@@ -173,7 +173,8 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                         || (source == SHARED
                             && matches!(
                                 field.as_str(),
-                                "cli_compatibility.minimum_reader_epoch"
+                                "cli_compatibility.contract_schema"
+                                    | "cli_compatibility.minimum_reader_epoch"
                                     | "cli_compatibility.required_reader_capabilities"
                                     | "assurance.decision_record_target"
                                     | "assurance.decision_record_revision"
