@@ -9,7 +9,7 @@ use std::{io::Read, path::Path};
 const MANIFEST: &str = ".agentic-workspace/verification/manifest.toml";
 const RECEIPTS: &str = ".agentic-workspace/proof/receipts";
 
-fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
+pub(crate) fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
     if path.is_empty()
         || path.contains('\\')
         || path
@@ -340,47 +340,33 @@ fn publication_admission(root: &Dir, id: &str, receipt: &Value) -> Value {
     if receipt["kind"] != "agentic-workspace/proof-receipt/v1" {
         return rejected("publication-contract-invalid");
     }
-    let mut identity = serde_json::Map::new();
-    for field in ["command", "result", "changed_paths", "proof_subject"] {
-        identity.insert(field.into(), receipt[field].clone());
-    }
-    identity.insert(
-        "target_context".into(),
-        receipt.get("target_context").cloned().unwrap_or(json!({})),
-    );
-    identity.insert(
-        "proof_commands".into(),
-        receipt.get("proof_commands").cloned().unwrap_or(json!([])),
-    );
-    for field in [
-        "task_claim_judgment",
-        "assignment_proof_obligation",
-        "assignment_proof_binding",
-        "assignment_closeout_lineage",
-    ] {
-        if let Some(value) = receipt.get(field) {
-            identity.insert(field.into(), value.clone());
-        }
-    }
-    let rendered = match publication_json(&Value::Object(identity)) {
-        Ok(text) => text,
-        Err(reason) => return rejected(reason),
+    let expected = match publication_identity(receipt) {
+        Ok(value) => value,
+        Err(error) => return rejected(&error.to_string()),
     };
-    let expected = sha(rendered.as_bytes());
     if &expected[..16] != id || receipt["publication_id"] != id {
         return rejected("publication-content-identity-mismatch");
     }
     json!({"status":"admitted","reason":"current-indexed-owner-publication","authority_effect":"publication-only"})
 }
 
+pub(crate) fn publication_identity(receipt: &Value) -> Result<String, CoreError> {
+    let identity = crate::proof_receipt::publication_identity(receipt);
+    let rendered = publication_json(&identity).map_err(CoreError::new)?;
+    Ok(sha(rendered.as_bytes())[..16].to_owned())
+}
+
 fn receipt_view(
     root: &Dir,
+    target: &Path,
+    strategy: &Value,
     reference: &str,
     task: &str,
     changed: &[String],
-    work_ref: &Value,
-    work_revision: &Value,
+    work: &Value,
 ) -> Value {
+    let work_ref = &work["id"];
+    let work_revision = &work["revision"];
     let mut gaps = Vec::<String>::new();
     let id = reference.strip_prefix("proof://receipts/").unwrap_or("");
     if id.is_empty()
@@ -430,10 +416,32 @@ fn receipt_view(
     if receipt["kind"] != "agentic-workspace/proof-receipt/v1" {
         gaps.push("receipt-contract-invalid".into());
     }
+    let freshness_started = std::time::Instant::now();
+    let mut freshness = crate::native_proof::freshness(target,task,changed,&json!({"id":work_ref,"revision":work_revision}),strategy,&receipt)
+        .unwrap_or_else(|error| json!({"status":"unproven","strategy_coverage":"unproven","reason":error.to_string()}));
+    let mut detail = json!({"status":"not-required"});
+    if receipt["proof_subject"]["runtime"]["implementation"] == "native-aw-proof" {
+        let artifact = &receipt["execution_artifact"];
+        let current = publication["status"] == "admitted"
+            && artifact["path"].as_str().is_some_and(|path| {
+                path.starts_with(".agentic-workspace/local/proof-receipts/runs/native-")
+                    && path.ends_with("/run.json.command.json")
+                    && read(root, path)
+                        .ok()
+                        .flatten()
+                        .is_some_and(|bytes| artifact["sha256"] == sha(&bytes))
+            });
+        detail = json!({"status":if current {"current"} else {"unavailable-or-stale"},"artifact":artifact});
+        if !current {
+            freshness["status"] = json!("unproven");
+            gaps.push("native-proof-detail-unavailable-or-stale".into());
+        }
+    }
+    freshness["validation_duration_us"] = json!(freshness_started.elapsed().as_micros());
     let judgment = crate::task_judgment::view(json!({
         "action":"classify", "task":task, "changed_paths":changed, "work_ref":work_ref, "work_revision":work_revision,
         "observations":[{"receipt":receipt, "publication_current":publication["status"] == "admitted",
-            "proof_sufficient":admission["proof_sufficient"] == true, "evidence_freshness":"unproven"}],
+            "proof_sufficient":admission["proof_sufficient"] == true, "evidence_freshness":freshness["status"]}],
         "manual_required":false,"manual_status":"", "independent_required":false,"independent_status":""
     }));
     let judgment = match judgment {
@@ -473,15 +481,14 @@ fn receipt_view(
     }
     // A current indexed publication still does not establish its runtime,
     // strategy coverage, or independent judgment producer.
-    gaps.extend(
-        [
-            "proof-runtime-compatibility-unproven",
-            "current-strategy-coverage-unproven",
-        ]
-        .map(str::to_owned),
-    );
+    if freshness["status"] != "reusable" {
+        gaps.push("proof-runtime-compatibility-unproven".into());
+        gaps.push("current-strategy-coverage-unproven".into());
+    } else {
+        gaps.push("nested-tool-runtime-unobserved".into());
+    }
     json!({"reference":reference,"status":"unadmitted","publication_admission":publication,"receipt_admission":admission,
-        "task_judgment":judgment,"evidence_freshness":"unproven","strategy_coverage":"unproven","independent_review":"not-established-by-publication",
+        "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }
 
@@ -506,6 +513,7 @@ pub fn view(
             facts: &Value::Null,
             request: None,
             contract: None,
+            invocation: None,
         },
     )
 }
@@ -514,6 +522,7 @@ pub(crate) struct ApplicabilityContext<'a> {
     pub facts: &'a Value,
     pub request: Option<Value>,
     pub contract: Option<&'a Value>,
+    pub invocation: Option<&'a Value>,
 }
 
 pub(crate) fn view_with_applicability(
@@ -621,11 +630,14 @@ pub(crate) fn view_with_applicability(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration()]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
         "restriction_authorities":[{"owner":"verification","affects":["claim:complete","claim:claim-slice-complete","claim:claim-work-complete","claim:close-parent-lane"]}]});
+    contract["owners"][0]["domains"] = json!(["verification"]);
+    contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
+    contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
     contract["revision"] = json!(digest(&contract)?);
     let admission_contract = applicability.contract.unwrap_or(&contract);
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":"verification/claim/v1","owner":"verification",
@@ -641,6 +653,9 @@ pub(crate) fn view_with_applicability(
     assurance_request["request_kind"] = json!("verification/assurance-applicability/v1");
     assurance_request["source_revision"] = assurance_input["source_revision"].clone();
     assurance_request["arguments"] = json!({"decisions":{}});
+    let mut proof_choice = applicability
+        .invocation
+        .map(|i| i["arguments"]["selection"]["choice"].clone());
     let mut authentication = Value::Null;
     let mut evidence = Vec::new();
     let mut requested = false;
@@ -668,6 +683,8 @@ pub(crate) fn view_with_applicability(
             || request["source_revision"] != source_revision
         {
             gaps.push("verification-request-stale".into());
+        } else if request["request_kind"] == "verification/execute-selected/v1" {
+            proof_choice = Some(request["arguments"].clone());
         } else if request["request_kind"] == "verification/authenticate-host-review/v1" {
             authentication = authenticate_review(
                 &root,
@@ -675,13 +692,40 @@ pub(crate) fn view_with_applicability(
                 request["arguments"]["host_result_ref"].as_str().unwrap(),
             );
         } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
-            evidence.extend(
-                refs.iter()
-                    .filter_map(Value::as_str)
-                    .map(|r| receipt_view(&root, r, task, changed, &work_ref, &work_revision)),
-            );
+            evidence.extend(refs.iter().filter_map(Value::as_str).map(|r| {
+                receipt_view(
+                    &root,
+                    target,
+                    &strategy,
+                    r,
+                    task,
+                    changed,
+                    &json!({"id":work_ref,"revision":work_revision}),
+                )
+            }));
         }
     }
+    let execution = crate::native_proof::selected(
+        target,
+        task,
+        changed,
+        subject,
+        &strategy,
+        proof_choice.as_ref(),
+    )?;
+    let execution_actions = crate::native_proof::action(target, task, changed, &execution)?;
+    let execution_requests: Vec<Value> = execution["choices"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|choice| {
+            let mut request = template.clone();
+            request["request_kind"] = json!("verification/execute-selected/v1");
+            request["id"] = json!("verification/execute-selected/v1");
+            request["arguments"] = choice.clone();
+            request
+        })
+        .collect();
     let applicable = requested || !protocols.is_empty() || !gaps.is_empty();
     if applicable {
         gaps.extend(selector_gaps.clone());
@@ -695,7 +739,7 @@ pub(crate) fn view_with_applicability(
         "acceptance_source":{"source":"current-task","requested_outcome":task},
         "strategy":strategy,"strategy_revision":strategy_revision,
         "judgment_required":"Does this exact requested outcome and changed scope satisfy the current claim and applicable strategy?",
-        "admitted_automated_evidence":[],"candidate_evidence":evidence,"known_uncertainty":gaps,
+        "admitted_automated_evidence":evidence.iter().filter(|item| item["publication_admission"]["status"] == "admitted" && item["receipt_admission"]["proof_sufficient"] == true && item["evidence_freshness"] == "reusable").collect::<Vec<_>>(),"candidate_evidence":evidence,"known_uncertainty":gaps,
         "required_authority":"Use each selected protocol's review_owner and authority_refs; authenticate any independent producer through the existing Verification owner.",
         "judgment_ingress":"Existing Verification receipt admission; this read-only native view does not admit returned judgments.",
         "returned_judgment_requirements":["exact claim and current work/subject","current strategy and evidence references","judgment and unresolved reasons","required producer authority and independence"]}));
@@ -738,9 +782,9 @@ pub(crate) fn view_with_applicability(
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":strategy,"strategy_revision":strategy_revision,
-        "requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "execution":execution,"execution_requests":execution_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
-        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers},
+        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),
     )
 }
@@ -974,11 +1018,12 @@ mod tests {
         let reference = format!("proof://receipts/{id}");
         let result = receipt_view(
             &root,
+            &repo.0,
+            &Value::Null,
             &reference,
             "Current fixture task",
             &["a.txt".into()],
-            &json!("planning:current"),
-            &json!("semantic-one"),
+            &json!({"id":"planning:current","revision":"semantic-one"}),
         );
         assert_eq!(result["publication_admission"]["status"], "admitted");
         assert_eq!(result["status"], "unadmitted");
@@ -988,11 +1033,12 @@ mod tests {
         assert_eq!(result["strategy_coverage"], "unproven");
         let unrelated = receipt_view(
             &root,
+            &repo.0,
+            &Value::Null,
             &reference,
             "Current fixture task",
             &["a.txt".into()],
-            &json!("other-task"),
-            &json!("semantic-one"),
+            &json!({"id":"other-task","revision":"semantic-one"}),
         );
         assert_eq!(unrelated["publication_admission"]["status"], "admitted");
         assert!(
@@ -1004,11 +1050,12 @@ mod tests {
         repo.write("a.txt", "changed");
         let stale = receipt_view(
             &root,
+            &repo.0,
+            &Value::Null,
             &reference,
             "Current fixture task",
             &["a.txt".into()],
-            &json!("planning:current"),
-            &json!("semantic-one"),
+            &json!({"id":"planning:current","revision":"semantic-one"}),
         );
         assert_eq!(stale["publication_admission"]["status"], "admitted");
         assert!(
