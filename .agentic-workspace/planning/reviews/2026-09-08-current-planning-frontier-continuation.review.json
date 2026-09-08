@@ -1,0 +1,106 @@
+{
+  "kind": "planning-review/v1",
+  "title": "Current Planning frontier should remain maintainable across source transition",
+  "date": "2026-09-08",
+  "summary": "The first-stable reconstruction had extensive durable Planning and GitHub residue, but a fresh agent still had to synthesize the current convergence frontier manually. Diagnostic inspection found that the selected real Planning owner is materially stale and cannot currently be updated or transferred through the native custody boundary.",
+  "classification": "dogfooding-friction",
+  "scope": [
+    "Current first-stable reconstruction continuation from a fresh agent/process.",
+    "Real selected Planning owner .agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json.",
+    "Native Planning reconciliation, update, selection-transfer, and fresh-session projection boundaries."
+  ],
+  "goal": [
+    "Determine whether the observed continuation cost is repo-local misuse, an existing #2970 gap, or a distinct product issue.",
+    "Route only the future-useful finding to the smallest existing owner."
+  ],
+  "non_goals": [
+    "Do not create a project-status database, critical-path solver, roadmap mirror, or new first-line command.",
+    "Do not infer semantic priority mechanically from GitHub issues, PR numbers, labels, or task text.",
+    "Do not edit the stale Planning owner directly to bypass the custody boundary being evaluated."
+  ],
+  "review_mode": {
+    "mode": "dogfooding-diagnostic",
+    "review question": "Can current Planning keep a real former selected owner materially current and project its actionable frontier cheaply to a fresh agent?",
+    "inputs inspected first": "#2983 current convergence frontier; #3138 promotion ledger; selected real Planning execplan; current native Planning reconcile/update/selection code"
+  },
+  "review_method": {
+    "evidence sources": "GitHub #2983/#2970/#3138; .agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json; crates/agentic-workspace-core/src/planning.rs; native_planning.rs; native_planning_update.rs",
+    "diagnostic boundary": "Static current-candidate contract/source inspection plus real checked-in Planning state. No synthetic replacement owner was used."
+  },
+  "references": [
+    {
+      "kind": "issue",
+      "target": "#2970",
+      "label": "Real Planning custody transition",
+      "role": "promotion target",
+      "locator": "dogfooding recheck comment 5584191843"
+    },
+    {
+      "kind": "issue",
+      "target": "#2983",
+      "label": "First-stable reconstruction",
+      "role": "current larger intent",
+      "locator": "Current first-stable convergence frontier"
+    },
+    {
+      "kind": "source",
+      "target": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json",
+      "label": "Selected real reconstruction Planning owner",
+      "role": "dogfood evidence",
+      "locator": "revision 3"
+    },
+    {
+      "kind": "issue",
+      "target": "#2909",
+      "label": "Reconstruction conformance",
+      "role": "regression owner",
+      "locator": "fresh-thread/real-source continuation proof"
+    }
+  ],
+  "findings": [
+    {
+      "title": "The selected real Planning frontier is materially stale",
+      "summary": "The live selected v1-contraction-2983-2990 owner still describes the earlier contraction plan, says the work should fit in three or fewer PRs, has external_posture unobserved, claims this slice completes the larger outcome, and tells the agent to fill execution bounds that are already present.",
+      "evidence": "Current checked-in selected Planning owner on reconstruct/first-stable compared with the current #2983 convergence frontier and #3138 promotion boundary.",
+      "risk if unchanged": "Fresh agents can receive honestly preserved but obsolete Planning continuation and must reconstruct the true frontier from GitHub/issues/history.",
+      "confidence": "high",
+      "source": "current-checkout"
+    },
+    {
+      "title": "Current native semantics preserve the frontier but cannot yet keep this former owner materially current",
+      "summary": "The Rust reconciliation model already retains outcome, scope, dependencies, constraints, frontier.next_action/blockers, proof, handoff, and residual continuation. The public planning.update route, however, requires native creation custody and refuses historical owners; selected-owner transfer likewise requires retained current native producer custody.",
+      "evidence": "crates/agentic-workspace-core/src/planning.rs, native_planning.rs, and native_planning_update.rs on the current #3137 stack head.",
+      "risk if unchanged": "The migration can preserve real former Planning intent without providing an authority-correct way for that intent to evolve as work materially changes.",
+      "confidence": "high",
+      "source": "current-candidate-contract"
+    }
+  ],
+  "recommendation": {
+    "promote": "Existing GitHub issue #2970; no new issue.",
+    "reason": "The missing outcome is already #2970's requirement that real established Planning work continue with current outcome, scope, dependencies, constraints, proof and frontier across the representation transition.",
+    "required correction": "Provide one bounded authority-correct route from a selected real former Planning owner to a materially current owner, by admitted material update or exact transfer into native custody, then prove fresh-session current-frontier projection from the actual reconstruction owner.",
+    "regression": "Add the resulting real-source fresh-agent continuation case to #2909 after the #2970 repair lands.",
+    "new issue": "no"
+  },
+  "promotion_gate": {
+    "status": "promoted-to-existing-owner",
+    "decision": "#2970 is not candidate-complete until this current-checkout counterevidence is repaired and independently re-reviewed.",
+    "next owner": "#2970",
+    "next action": "Implement and prove authority-correct material evolution/transfer of the selected real former Planning owner; do not patch its bytes directly as a substitute."
+  },
+  "retention": {
+    "closeout shape": "shrink",
+    "trigger": "After #2970 repair and #2909 regression are accepted, retain only the finding, disposition, and proof refs if they still prevent rediscovery.",
+    "proof surface": "#2970 dogfooding recheck plus current-checkout reconstruction continuation regression",
+    "fields intentionally omitted": [
+      "full chat transcript",
+      "broad PR history",
+      "hidden reasoning",
+      "duplicate copy of #2983 roadmap"
+    ]
+  },
+  "drift_log": [
+    "2026-09-08: Finding surfaced while checking whether #3138's remaining roadmap was clear to implementing agents.",
+    "2026-09-08: Diagnostic found the selected real Planning owner stale and native update/transfer unavailable for that historical custody; promoted to existing owner #2970 instead of creating a new issue."
+  ]
+}
