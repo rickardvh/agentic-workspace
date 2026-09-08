@@ -14,7 +14,7 @@ def former_repository(target: Path) -> tuple[Path, Path]:
     manifest = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
     refs = [*manifest["payload_files"], ".agentic-workspace/payload-provenance.json", ".agentic-workspace/config.toml", "AGENTS.md"]
     plan_ref = ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
-    for ref in [*refs, plan_ref, ".agentic-workspace/verification/manifest.toml", ".agentic-workspace/OWNERSHIP.toml"]:
+    for ref in [*refs, plan_ref, ".agentic-workspace/verification/manifest.toml"]:
         path = target / ref
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes((ROOT / ref).read_bytes())

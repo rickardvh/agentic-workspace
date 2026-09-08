@@ -1469,18 +1469,19 @@ source_intent_current = true
 preference_target = "operation:repair-strongest-deterministic-owner"
 notes = "Prefer making recurring deterministic failures impossible in their owning contract, operation, or test over adding permanent compensating guidance."
 
-[assurance.subsystem_profiles.workspace-cli-runtime]
-assurance_level = "high"
-scope_refs = ["ownership.subsystems.workspace-cli-runtime"]
+[assurance.requirements."subsystem:workspace-cli-runtime"]
 requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
 required_evidence = ["workspace_runtime_proof", "tiny_surface_compatibility_review"]
 proof_profile = "workspace_behavior"
 workflow_obligation_refs = ["adapter_surface_refresh"]
 review_owner = "maintainer"
 force = "required-before-closeout"
-blocked_without_evidence = ["claim-work-complete"]
 claim_boundary = "workspace-runtime-routing"
-notes = "Workspace runtime routing changes need focused runtime proof and compact-output compatibility review before broad completion claims."
+notes = "Workspace runtime routing changes need focused runtime proof and compact-output compatibility review before broad completion claims. Scope transferred from the current Ownership declaration; maintain future proof scope in this Verification requirement."
+level = "high"
+blocking_claims = ["claim-work-complete"]
+applies_to_paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
+authority_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
 
 [assurance.requirements.model_harness_evidence]
 level = "high"

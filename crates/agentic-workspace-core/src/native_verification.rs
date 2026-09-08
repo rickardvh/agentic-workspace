@@ -1324,10 +1324,6 @@ mod tests {
             MANIFEST,
             include_str!("../../../.agentic-workspace/verification/manifest.toml"),
         );
-        repo.write(
-            ".agentic-workspace/OWNERSHIP.toml",
-            include_str!("../../../.agentic-workspace/OWNERSHIP.toml"),
-        );
         let result = get(&repo, &["AGENTS.md"], None);
         assert_eq!(result["status"], "unresolved");
         let packet = &result["judgment_request"];

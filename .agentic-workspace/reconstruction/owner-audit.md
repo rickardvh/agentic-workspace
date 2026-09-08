@@ -41,7 +41,7 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 19, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 20, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -174,10 +174,13 @@ source-owner method maintenance, distinct from the earlier byte-preserving move.
 The subsystem/migration parity cases execute and admit current command evidence,
 then prove action rejection and receipt de-adoption on Ownership drift. Retained
 former config profiles use the same owner; unrelated malformed Ownership is not
-read when no subsystem profile requires it. The actual dogfood Ownership file is
-preserved: modifying its repo-specific scope currently conflicts with managed
-payload integrity, a remaining source-boundary finding for #2613/#2767, not a
-reason to waive payload admission or ship more repository policy as defaults.
+read when no subsystem profile requires it. The live dogfood profile is merged
+into the existing Verification requirement `subsystem:workspace-cli-runtime`,
+preserving its exact paths, level, force, evidence and review obligations. Future
+proof-scope maintenance now belongs to that requirement without editing the
+package-managed Ownership file. The former-source transition reader remains;
+Ownership bytes and payload integrity remain unchanged. This resolves the live
+indirection, not the broader mixed-source payload lifecycle under #2613/#2767.
 
 ## Integrated children and later gates
 
