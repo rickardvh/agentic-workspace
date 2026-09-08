@@ -140,12 +140,17 @@ pub(crate) fn view(
         .find(|r| r["request_kind"] == "assignment/observe-readonly-return/v1");
     let inputs = &requirements["handoff_inputs"];
     let available = assessment["status"] == "assigned-nonlocal-handoff-required"
-        && selected["transport"] == "manual"
-        && inputs["status"] == "ready";
+        && (selected["transport"] == "manual"
+            || selected["transport"] == "cli"
+                && selected["execution"]["adapter"]["kind"] == "process")
+        && inputs["status"] == "ready"
+        && requirements["result"]["requirements"]["required_result_classes"]
+            .as_array()
+            .is_some_and(|classes| classes.iter().all(|class| class == "read-only"));
     if !available {
         if export.is_some() || returned.is_some() {
             return Err(CoreError::new(
-                "current eligible read-only manual assignment required before handoff",
+                "current eligible read-only assignment required before handoff",
             ));
         }
         return Ok(
@@ -160,7 +165,11 @@ pub(crate) fn view(
         .filter(|r| {
             !matches!(
                 r["request_kind"].as_str(),
-                Some("assignment/export-readonly/v1" | "assignment/observe-readonly-return/v1")
+                Some(
+                    "assignment/export-readonly/v1"
+                        | "assignment/observe-readonly-return/v1"
+                        | "delegation/dispatch/v1"
+                )
             )
         })
         .cloned()
@@ -201,7 +210,7 @@ pub(crate) fn view(
     let mut reentry = prerequisites.clone();
     reentry.push(return_request);
     let packet = crate::assignment_packet::seal(
-        &json!({"kind":"agentic-workspace/assignment-export-packet/v1","assignment_id":format!("assignment:{assignment_revision}"),"assignment_revision":assignment_revision,"run_id":format!("readonly:{assignment_revision}"),"target":selected["target"],"transport":"manual","scope":changed,
+        &json!({"kind":"agentic-workspace/assignment-export-packet/v1","assignment_id":format!("assignment:{assignment_revision}"),"assignment_revision":assignment_revision,"run_id":format!("readonly:{assignment_revision}"),"target":selected["target"],"transport":selected["transport"],"scope":changed,
     "assignment_identity":{"revision":assignment_revision,"human_intent":task,"task_class":"","role":requirements["result"]["role"].as_str().unwrap_or("executor"),"scope_class":"read-only","allowed_paths":changed,"allowed_effects":["read-provided-inputs","return-observations"],"prohibited_effects":["write-files","execute-commands","grant-proof","claim-completion"],"required_inputs":inputs["judgment"]["input_refs"],"read_first":inputs["judgment"]["input_refs"],"input_capsule":capsule,"task_requirements":requirements["result"],"proof_obligation_id":requirements["result"]["verification_identity"]["id"].as_str().unwrap_or(""),"proof_obligation_revision":requirements["result"]["verification_identity"]["revision"].as_str().unwrap_or(""),"stop_conditions":["Necessary input absent or ambiguous: return a blocker; do not infer missing parent context.","No file mutation or proof/authority claim is permitted."],"claim_authority":{"proof":false,"completion":false},"current_assignment":identity},
     "return_contract":{"kind":"agentic-workspace/delegated-return/v1","required_fields":["assignment_revision","run_id","target","changed_paths","patch","summary","stop_conditions_hit"],"result_delivery":{"field":"result_delivery","modes":["unapplied-patch"],"default":"unapplied-patch"},"worker_proof_authority":false,"worker_completion_authority":false,"rule":"Return observations with empty changed_paths and patch. Identity matching is not reviewer authentication or evidence sufficiency.","reentry":{"task":task,"changed":changed,"request":reentry}},"packet_integrity":""}),
     )?;

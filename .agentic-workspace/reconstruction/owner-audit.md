@@ -319,3 +319,42 @@ summary/report/skills/reconcile loop from the repo-local dogfooding skill. It
 uses the configured native request/action route, keeps unsupported owner effects
 explicit, and compresses overlapping evidence/cost checklists into one existing
 owner record. No shipped payload, runtime behavior or new test surface changes.
+
+## Native process execution continuation (proposed)
+
+The cumulative branch now executes the sealed read-only process handoff through
+the source-built native runtime. Assignment selection, transport execution,
+return observation, Verification and completion remain separate. Exact source
+requests bind dispatch; input/output and process-tree lifetime are bounded.
+Fresh-session replay recovers a retained terminal publication without another
+worker. A missing terminal outcome stays uncertain. Stale, malformed, truncated,
+wrong-identity and stopped workers are excluded from successful return evidence.
+The existing proof process runner is shared rather than duplicated.
+
+An opt-in real Codex CLI 0.153.4 process run consumed the sealed current revision-6
+reconstruction owner in an isolated ephemeral, read-only worker directory. The
+configured host command supplied the packet; no parent conversation or former AW
+Python host supplied semantics. It returned a valid 1,936-byte observation in
+21,933 ms (22.51 seconds including native invocation). The rendered packet was
+39,853 bytes over a 9,883-byte source. Fresh native re-entry classified it as a
+current unproven observation. Effective/cached/output tokens, host framing cost,
+review/integration burden and total successful-completion savings are unknown.
+An earlier incorrect executable path failed before provider launch (664 ms) and
+is excluded. Both outcomes remain in local bounded evidence; no transcript is
+checked in. This is process transport evidence, not host-native adapter admission.
+
+The same task/input selected the retained-local configuration without dispatch
+or delegation artifacts. That proves routing feasibility only, not a completed
+matched local lifecycle or economic advantage. The current 77-case focused
+handoff/configuration/assignment/proof matrix passed in 150.39 seconds; 95 Rust
+tests passed (three helper tests ignored). The dispatch cases cover both terminal
+publication interruptions and tampered recovery rejection across the current
+native/Python/TypeScript/JSON boundary. Final cumulative release proof remains
+separate from these explicitly scoped results.
+
+#2947/#2817/#2818/#2210 remain bounded implementation gaps: consequential delta
+admission, typed Planning/Verification return, real host-native continuation and
+pause/resume, matched completed local comparison and observed full lifecycle cost
+are not established. #2209 remains blocked on admitted consequential evidence;
+process exit or worker success text never improves target standing. No issue
+closes from this execution correction. #2909 retains cumulative conformance.

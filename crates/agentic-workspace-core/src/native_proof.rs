@@ -10,8 +10,8 @@ use sha2::{Digest, Sha256};
 use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
-    time::{Duration, Instant},
+    process::Command,
+    time::Duration,
 };
 
 const RUNS: &str = ".agentic-workspace/local/proof-receipts/runs";
@@ -431,26 +431,12 @@ pub(crate) fn committed_publication(
     }
     Ok(Some(committed))
 }
-struct ProcessGuard(Box<dyn process_wrap::std::ChildWrapper>);
-impl Drop for ProcessGuard {
-    fn drop(&mut self) {
-        let _ = self.0.kill();
-        let until = Instant::now() + Duration::from_millis(250);
-        while Instant::now() < until {
-            if !matches!(self.0.try_wait(), Ok(None)) {
-                break;
-            }
-            std::thread::sleep(Duration::from_millis(10));
-        }
-    }
-}
 fn process(
     command: &str,
     target: &Path,
     executable: &Path,
     budget: Duration,
 ) -> Result<Value, CoreError> {
-    use process_wrap::std::*;
     let mut cmd = Command::new(executable);
     if cfg!(windows) {
         cmd.args([
@@ -463,93 +449,10 @@ fn process(
     } else {
         cmd.args(["-c", command]);
     }
-    cmd.current_dir(target)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    let mut cmd = CommandWrap::from(cmd);
-    #[cfg(windows)]
-    {
-        cmd.wrap(CreationFlags(
-            windows::Win32::System::Threading::CREATE_NO_WINDOW,
-        ))
-        .wrap(JobObject);
-    }
-    #[cfg(unix)]
-    {
-        cmd.wrap(ProcessGroup::leader());
-    }
-    let started = Instant::now();
-    let mut guard = ProcessGuard(cmd.spawn().map_err(err)?);
-    let child = &mut guard.0;
-    let (sender, receiver) = std::sync::mpsc::channel();
-    for (name, stream) in [
-        (
-            "stdout",
-            child
-                .stdout()
-                .take()
-                .map(|v| Box::new(v) as Box<dyn Read + Send>),
-        ),
-        (
-            "stderr",
-            child
-                .stderr()
-                .take()
-                .map(|v| Box::new(v) as Box<dyn Read + Send>),
-        ),
-    ] {
-        let sender = sender.clone();
-        std::thread::spawn(move || {
-            let mut tail = Vec::new();
-            let mut total = 0usize;
-            let mut chunk = [0; 4096];
-            if let Some(mut stream) = stream {
-                while let Ok(n) = stream.read(&mut chunk) {
-                    if n == 0 {
-                        break;
-                    }
-                    total = total.saturating_add(n);
-                    tail.extend_from_slice(&chunk[..n]);
-                    if tail.len() > 65536 {
-                        tail.drain(..tail.len() - 65536);
-                    }
-                }
-            }
-            let _ = sender.send((name, total, tail));
-        });
-    }
-    let mut timed_out = false;
-    let status = loop {
-        if started.elapsed() >= budget {
-            timed_out = true;
-            child.kill().map_err(err)?;
-            break child.wait().map_err(err)?;
-        }
-        if let Some(status) = child.try_wait().map_err(err)? {
-            break status;
-        }
-        std::thread::sleep(Duration::from_millis(10));
-    };
-    // A command leaving descendants behind cannot extend the evidence lifetime.
-    let _ = child.kill();
-    let mut output = serde_json::Map::new();
-    for _ in 0..2 {
-        match receiver.recv_timeout(Duration::from_secs(2)) {
-            Ok((name, count, bytes)) => {
-                output.insert(name.into(),json!({"bytes":count,"tail":String::from_utf8_lossy(&bytes),"truncated":count>bytes.len()}));
-            }
-            Err(_) => {
-                return Err(err(
-                    "proof output drain incomplete; execution outcome requires owner recovery",
-                ));
-            }
-        }
-    }
-    Ok(
-        json!({"status":if timed_out {"timeout"}else if status.success(){"passed"}else{"failed"},"exit_code":status.code(),
-        "duration_ms":started.elapsed().as_millis(),"output":output,"execution_kind":"trusted-shell"}),
-    )
+    cmd.current_dir(target);
+    let mut result = crate::process_execution::run(cmd, None, budget)?;
+    result["execution_kind"] = json!("trusted-shell");
+    Ok(result)
 }
 pub(crate) fn execute(
     target: &Path,

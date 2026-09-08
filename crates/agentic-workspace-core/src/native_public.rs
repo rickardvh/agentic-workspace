@@ -63,6 +63,10 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         input.request.as_ref()
     })?;
     if executing
+        && input
+            .invocation
+            .as_ref()
+            .is_none_or(|i| i["operation_id"] != "delegation.dispatch")
         && requests.iter().any(|request| {
             request["owner"] != "startup-adapter"
                 || request["request_kind"] != "startup-adapter/read-current-source/v1"
@@ -206,6 +210,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &instructions["capability_contract"],
         &memory["capability_contract"],
         &native_requirements::contract()?,
+        &crate::native_delegation::contract()?,
     ])?;
     if let Some(request) = request_for("startup-adapter") {
         startup_adapter = crate::native_startup::view(
@@ -467,6 +472,17 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &requests,
         &contract,
     )?;
+    let mut delegation = crate::native_delegation::view(
+        target,
+        &work,
+        &requirements,
+        &handoff,
+        &requests,
+        &contract,
+    )?;
+    contributions.push(delegation["contribution"].clone());
+    delegation.as_object_mut().unwrap().remove("contribution");
+    requirements["delegation"] = delegation;
     requirements["handoff"] = handoff;
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
@@ -488,7 +504,14 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                     .as_array()
                     .is_some_and(|effects| !effects.is_empty())
                 {
-                    action["source_requests"] = json!([source_request]);
+                    let mut dependencies = action["source_requests"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_default();
+                    if !dependencies.contains(source_request) {
+                        dependencies.push(source_request.clone());
+                    }
+                    action["source_requests"] = json!(dependencies);
                 }
             }
         }
@@ -603,8 +626,14 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                 | "system-intent"
                 | "startup-adapter"
                 | "decision-continuity"
+                | "delegation"
         ) {
             return Err(CoreError::new("requested native owner is not available"));
+        }
+        if owner == "delegation" && request["request_kind"] != "delegation/dispatch/v1" {
+            return Err(CoreError::new(
+                "requested Delegation request kind is not available",
+            ));
         }
         if owner == "assignment"
             && !matches!(
@@ -668,6 +697,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "planning.create"
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
+        && invocation["operation_id"] != "delegation.dispatch"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -676,6 +706,26 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "delegation.dispatch" {
+        let executed = crate::native_delegation::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     if invocation["operation_id"] == "planning.update-recover" {
         crate::admit_invocation_value(

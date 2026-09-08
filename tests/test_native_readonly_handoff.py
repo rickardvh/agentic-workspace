@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import sys
 
 import pytest
 from tests.test_native_npm_routes import packed as packed
@@ -12,6 +13,149 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 BASE = 'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nstrength="strong"\ntransports=[{kind="manual"}]\n'
+
+
+@pytest.mark.parametrize(
+    "surface,fault",
+    [
+        ("native", None),
+        ("json", None),
+        ("python", None),
+        ("typescript", None),
+        ("native", "identity"),
+        ("native", "malformed"),
+        ("native", "truncated"),
+        ("native", "source-drift"),
+        ("native", "stopped"),
+    ],
+)
+def test_current_process_handoff_executes_once_without_admitting_worker_claims(tmp_path, shared_core_binary, native_cli, surface, fault):
+    worker = tmp_path / "worker.py"
+    worker.write_text(
+        "import json,sys\nfrom pathlib import Path\n"
+        "packet=json.load(sys.stdin)\n"
+        "with Path('launches.txt').open('a') as f: f.write('launched\\n')\n"
+        "print(json.dumps({**packet['return_contract']['required_identity'],"
+        "'kind':'agentic-workspace/delegated-return/v1','result_delivery':'unapplied-patch',"
+        "'changed_paths':[],'patch':'','summary':packet['worker_context']['inputs']['capsule'][0]['content'],"
+        "'stop_conditions_hit':[]}))\n"
+    )
+    if fault == "identity":
+        worker.write_text(
+            worker.read_text().replace(
+                "packet=json.load(sys.stdin)",
+                "packet=json.load(sys.stdin); packet['return_contract']['required_identity']['target']='different-target'",
+            )
+        )
+    elif fault == "malformed":
+        worker.write_text(
+            worker.read_text().replace("'summary':packet['worker_context']['inputs']['capsule'][0]['content']", "'summary':None")
+        )
+    elif fault == "truncated":
+        worker.write_text(
+            worker.read_text().replace("'summary':packet['worker_context']['inputs']['capsule'][0]['content']", "'summary':'x'*100000")
+        )
+    elif fault == "source-drift":
+        worker.write_text(
+            worker.read_text().replace(
+                "packet=json.load(sys.stdin)",
+                "packet=json.load(sys.stdin); Path('dependency.md').write_text('Changed during worker execution.')",
+            )
+        )
+    elif fault == "stopped":
+        worker.write_text(worker.read_text().replace("'stop_conditions_hit':[]", "'stop_conditions_hit':['required input unavailable']"))
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    config = BASE.replace("[delegation]", "[safety]\nsafe_to_auto_run_commands=true\n[delegation]")
+    config = config.replace('transport_authority="manual"', 'transport_authority="automatic"')
+    config = config.replace(
+        'transports=[{kind="manual"}]',
+        'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]",
+    )
+    source.write_text(config)
+    dependency = tmp_path / "dependency.md"
+    dependency.write_text("A bounded source observation.\n")
+    unrelated = tmp_path / "unrelated.txt"
+    unrelated.write_text("Preserve concurrent work.\n")
+    context = {"target": str(tmp_path), "task": "Return the supplied source observation", "changed": []}
+
+    def call(request=None, **updates):
+        return consume(surface, shared_core_binary, native_cli, {**context, **updates, **({"request": request} if request else {})})
+
+    task = call()["task_requirements"]["requests"][0]
+    task["arguments"]["required_result_classes"] = ["read-only"]
+    inputs = call(task)["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(
+        input_refs=["dependency.md"], complete=False, reason="The one source is sufficient for this bounded task."
+    )
+    inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"]["complete"] = True
+    assessment = call(inputs)["task_requirements"]["assignment"]["requests"][0]
+    assessment[-1]["arguments"].update(
+        alternative="expert:cli", reason="Use the configured independent process for the bounded observation."
+    )
+    local_assessment = copy.deepcopy(assessment)
+    local_assessment[-1]["arguments"].update(
+        alternative="local:internal", reason="Matched retained-local feasibility control for the same bounded task."
+    )
+    local = call(local_assessment)
+    assert local["task_requirements"]["assignment"]["result"]["status"] == "assigned-current-target"
+    assert local["task_requirements"]["delegation"]["requests"] == []
+    assert not (tmp_path / ".agentic-workspace/local/delegation-runs").exists()
+    export = call(assessment)["task_requirements"]["handoff"]["requests"][0]
+    dispatch = call(export)["task_requirements"]["delegation"]["requests"][0]
+    action = call(dispatch)["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "delegation.dispatch"
+    assert not (tmp_path / "launches.txt").exists()
+    result = call(invocation=action)
+    if fault:
+        assert result["value"]["status"] == "censored-or-invalid-return"
+        assert result["value"]["returned"] is None and result["value"]["reentry"] is None
+        assert not any(result["value"]["claim_boundary"].values())
+        if fault == "source-drift":
+            with pytest.raises(AssertionError, match="changed|stale"):
+                call(invocation=action)
+        else:
+            assert call(invocation=action)["value"] == result["value"]
+        assert (tmp_path / "launches.txt").read_text() == "launched\n"
+        assert unrelated.read_text() == "Preserve concurrent work.\n"
+        return
+    assert result["value"]["status"] == "returned-unproven"
+    assert result["value"]["returned"]["summary"] == dependency.read_bytes().decode()
+    assert result["value"]["claim_boundary"] == {"proof": False, "planning_progress": False, "completion": False}
+    assert call(invocation=action)["value"] == result["value"]
+    if surface == "native":
+        runs = tmp_path / ".agentic-workspace/local/delegation-runs"
+        completion = next(runs.glob("*.completed.json"))
+        terminal = next(runs.glob("*.terminal.json"))
+        held = json.loads(terminal.read_text())
+        commit = tmp_path / held["custody"]["committed"]["path"]
+        # Fresh invocation recovers both publication boundaries without another
+        # external worker. These deletions model an interrupted fixture writer.
+        completion.unlink()
+        assert call(invocation=action)["value"] == result["value"]
+        completion.unlink()
+        commit.unlink()
+        assert call(invocation=action)["value"] == result["value"]
+        completion.unlink()
+        original = terminal.read_bytes()
+        held["outcome"]["value"]["returned"]["summary"] = "invented recovery"
+        terminal.write_text(json.dumps(held))
+        with pytest.raises(AssertionError, match="custody|differs"):
+            call(invocation=action)
+        assert not completion.exists()
+        terminal.write_bytes(original)
+        assert call(invocation=action)["value"] == result["value"]
+    assert (tmp_path / "launches.txt").read_text() == "launched\n"
+    reentry = result["value"]["reentry"]
+    assert reentry["request"][-1]["arguments"]["returned"] == result["value"]["returned"]
+    observed = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
+    assert observed["task_requirements"]["handoff"]["observation"]["proof_current"] is False
+    dependency.write_text("Changed after execution.\n")
+    with pytest.raises(AssertionError, match="changed|stale"):
+        call(invocation=action)
+    assert (tmp_path / "launches.txt").read_text() == "launched\n"
+    assert unrelated.read_text() == "Preserve concurrent work.\n"
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
