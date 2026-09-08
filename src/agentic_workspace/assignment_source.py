@@ -19,14 +19,74 @@ from agentic_workspace.decision import replace_assignment
 SOURCE = ".agentic-workspace/config.local.toml"
 
 
-def configuration_requirements(policy: Any) -> dict[str, Any]:
-    """Project current human constraints into the shared feasibility contract."""
-    return {
-        "required_result_classes": [],
-        "required_proof_classes": [],
-        "independent_context": False,
-        "required_execution_guarantees": list(getattr(policy, "required_execution_guarantees", ())),
+def configuration_requirements(
+    policy: Any,
+    *,
+    task_identity: dict[str, Any],
+    work: dict[str, Any],
+    judgment: dict[str, Any] | None,
+    target_root: Path | None = None,
+    task: str = "",
+    changed_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    """Current owner projection; absent task judgment never means no constraints."""
+    from agentic_workspace.decision import task_requirements, verification_requirements
+
+    current_judgment = dict(judgment) if judgment is not None else None
+    request = current_judgment.pop("verification_request", None) if current_judgment is not None else None
+    verification_owner = None
+    verification = None
+    if target_root is not None and current_judgment is not None and (current_judgment.get("role") == "evaluator" or request is not None):
+        verification_owner = verification_requirements(
+            {
+                "target": str(target_root),
+                "task": task,
+                "changed_paths": changed_paths or [],
+                "current_work": work,
+                "role": current_judgment["role"],
+                "request": request,
+            }
+        )
+        verification = verification_owner["verification"]
+        # The exact submitted owner request already binds this judgment's
+        # source. Derive its identity from the owner, never from caller facts.
+        if verification is not None and current_judgment.get("verification_identity") is None:
+            current_judgment["verification_identity"] = {"id": verification["id"], "revision": verification["revision"]}
+
+    result = task_requirements(
+        {
+            "kind": "agentic-workspace/task-requirements-input/v1",
+            "task_identity": task_identity,
+            "current_work": work,
+            "judgment": current_judgment,
+            "verification": verification,
+            "required_execution_guarantees": list(getattr(policy, "required_execution_guarantees", ())),
+        }
+    )
+    schema = json.loads((Path(__file__).parent / "contracts/schemas/source_decision_input.schema.json").read_text(encoding="utf-8"))
+    result["judgment_request"] = {
+        "argument_name": "task_judgment_json",
+        "encoding": "json",
+        "arguments": {
+            "task_identity": task_identity,
+            "current_work": work,
+            "role": "executor",
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "verification_identity": None,
+        },
+        "input_schema": {
+            "$schema": schema["$schema"],
+            "$defs": {key: schema["$defs"][key] for key in ("task_requirements_identity", "task_requirements_judgment")},
+            "$ref": "#/$defs/task_requirements_judgment",
+        },
+        "rule": "Supply only current task judgment through assignment preview/export/dispatch; this does not grant policy, proof or transport authority.",
     }
+    if verification_owner is not None and current_judgment is not None:
+        result["verification_requirements"] = verification_owner
+        result["judgment_request"]["arguments"]["role"] = current_judgment["role"]
+        result["judgment_request"]["arguments"]["verification_request"] = verification_owner["request"]
+    return result
 
 
 def current_route_configurations(
@@ -37,12 +97,15 @@ def current_route_configurations(
     selection: dict[str, str] | None = None,
     *,
     completed_packet: dict[str, Any] | None = None,
+    requirements: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """One bounded capability evaluation across eligible transport peers."""
     from agentic_workspace.native_transport import discovery_scope
 
     with discovery_scope():
-        return _current_route_configurations(root, profiles, policy, work, selection, completed_packet=completed_packet)
+        return _current_route_configurations(
+            root, profiles, policy, work, selection, completed_packet=completed_packet, requirements=requirements
+        )
 
 
 def _current_route_configurations(
@@ -53,6 +116,7 @@ def _current_route_configurations(
     selection: dict[str, str] | None = None,
     *,
     completed_packet: dict[str, Any] | None = None,
+    requirements: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Host facts for process/manual routes and discovered native peers.
 
@@ -61,6 +125,8 @@ def _current_route_configurations(
     """
     from agentic_workspace.decision import execution_configurations
 
+    if requirements is None:
+        raise ValueError("current-task-requirements-required")
     candidates: list[dict[str, Any]] = []
     for profile in profiles:
         name = profile["name"]
@@ -133,7 +199,7 @@ def _current_route_configurations(
     return execution_configurations(
         {
             "work": work,
-            **configuration_requirements(policy),
+            **requirements,
             "candidates": candidates,
             "selection": selection,
         }
@@ -358,7 +424,10 @@ def replace_from_source(root: Path, packet: dict[str, Any], work: dict[str, Any]
         changed_paths=identity["allowed_paths"],
         task_text=identity["human_intent"],
         work_identity=identity,
+        task_judgment=identity.get("task_judgment"),
     )
+    if decision.get("task_requirements", {}).get("status") != "resolved":
+        raise ValueError("current-task-requirements-unresolved")
     eligibility = replacement_eligibility(decision=decision, work=work, execution=execution, packet_integrity=packet["packet_integrity"])
     return replace_assignment(
         {
@@ -419,8 +488,11 @@ def replace_after_repair(
         changed_paths=identity["allowed_paths"],
         task_text=identity["human_intent"],
         execution_choice=choice,
+        task_judgment=identity.get("task_judgment"),
         completed_packet=completed_packet,
     )
+    if decision.get("task_requirements", {}).get("status") != "resolved":
+        raise ValueError("current-task-requirements-unresolved")
     if choice is None:
         return {"status": "repair-choice-required", "execution_configurations": decision["execution_configurations"], "work": work}
     selected = decision["selected_execution_configuration"]

@@ -663,6 +663,17 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     choice_revision = _optional_text(values.get("configuration_revision"))
     choice_id = _optional_text(values.get("configuration_id"))
     choice_parameters = values.get("configuration_parameters_json")
+    task_judgment = values.get("task_judgment")
+    encoded_judgment = values.get("task_judgment_json")
+    if encoded_judgment is not None:
+        if task_judgment is not None or not isinstance(encoded_judgment, str) or len(encoded_judgment) > 16384:
+            raise PrimitiveExecutionError("task-judgment-requires-one-bounded-typed-input")
+        try:
+            task_judgment = json.loads(encoded_judgment)
+        except ValueError as error:
+            raise PrimitiveExecutionError("task-judgment-invalid-json") from error
+    if task_judgment is not None and (not isinstance(task_judgment, dict) or transition not in {"export", "dispatch"} or assignment_id):
+        raise PrimitiveExecutionError("task-judgment-only-for-current-new-assignment")
     execution_choice: dict[str, Any] | None = None
     if choice_revision or choice_id or choice_parameters is not None:
         if (
@@ -695,18 +706,25 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             target_root=target_root,
             materialize_assignment=not dry_run,
             execution_choice=execution_choice,
+            task_judgment=task_judgment,
             requested_transport=_optional_text(values.get("transport")),
         )
         materialization = _assignment_mapping(posture.get("assignment_materialization"))
         assignment_id = _optional_text(materialization.get("assignment_id"))
         assignment_revision = _optional_text(materialization.get("assignment_revision"))
-        if dry_run and not assignment_id:
+        if not assignment_id and (
+            dry_run
+            or _assignment_mapping(_assignment_mapping(posture.get("assignment_decision")).get("task_requirements")).get("status")
+            == "unresolved"
+        ):
             decision = _assignment_mapping(posture.get("assignment_decision"))
             return {
                 "kind": "agentic-workspace/assignment-lifecycle-result/v1",
                 "operation_id": operation_id,
                 "transition": transition,
-                "status": "selection-preview",
+                "status": "requirements-required"
+                if _assignment_mapping(decision.get("task_requirements")).get("status") == "unresolved"
+                else "selection-preview",
                 "outcome": "noop",
                 "mutation_applied": False,
                 "assignment_id": None,
@@ -720,6 +738,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 },
                 "failures": [],
                 "preview": {
+                    "task_requirements": decision.get("task_requirements"),
+                    "execution_configurations": decision.get("execution_configurations"),
                     "selected_configuration": decision.get("selected_execution_configuration"),
                     "assignment_gate": posture.get("assignment_gate"),
                     "assignment_materialized": False,
@@ -999,7 +1019,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             packet["worker_context"] = _assignment_worker_context(packet)
         transport = _optional_text(values.get("transport")) or "manual"
         dispatch_configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
-        if not canonical_packet and dispatch_configuration.get("kind") in {"host-native", "native"}:
+        if not canonical_packet and (transport == "manual" or dispatch_configuration.get("kind") in {"host-native", "native"}):
             packet = _assignment_seal_host_native_packet(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
@@ -2073,13 +2093,19 @@ def _assignment_current_authorities_from_store(
                 from agentic_workspace.config import load_workspace_config
                 from agentic_workspace.workspace_runtime_core import _current_assignment_selection
 
-                _current_assignment_selection(
+                *_, current_decision = _current_assignment_selection(
                     config=load_workspace_config(target_root=target_root),
                     changed_paths=_assignment_list(identity.get("allowed_paths")),
                     task_text=_optional_text(identity.get("human_intent")),
                     execution_choice=choice,
+                    task_judgment=identity.get("task_judgment"),
                     completed_packet=dict(_assignment_mapping(state.get("assignment"))),
                 )
+                requirements = current_decision.get("task_requirements", {})
+                if requirements.get("status") != "resolved":
+                    raise ValueError("current-task-requirements-unresolved")
+                if requirements.get("revision") != identity.get("task_requirements_revision"):
+                    raise ValueError("assignment-task-requirements-stale")
         except (ValueError, OSError, KeyError) as error:
             failures.append(
                 {
@@ -2359,6 +2385,9 @@ def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, An
             "completion": "orchestrator-owned",
         },
     }
+    if assignment_gate.get("task_judgment") is not None:
+        identity["task_judgment"] = assignment_gate["task_judgment"]
+        identity["task_requirements_revision"] = assignment_gate.get("task_requirements_revision")
     required_fields = [
         "target",
         "target_identity_ref",

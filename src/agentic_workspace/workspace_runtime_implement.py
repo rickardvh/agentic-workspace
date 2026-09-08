@@ -398,6 +398,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
                     _as_dict(full_payload.get("delegation_decision")), include_manual_handoff_detail=False
                 ),
                 "execution_configurations": copy.deepcopy(_as_dict(assignment.get("execution_configurations"))),
+                "task_requirements": copy.deepcopy(_as_dict(assignment.get("task_requirements"))),
             }
         if test_strategy_check_selected:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
@@ -2035,6 +2036,10 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
             for key in ("operation_id", "contract_version", "arguments", "expected_transition", "idempotency_key")
             if typed_invocation.get(key) not in (None, "", [], {})
         }
+    assignment_action = _as_dict(selected.get("assignment_action"))
+    if assignment_action.get("status") == "requirements-required" and action["summary"] == assignment_action.get("action"):
+        action["operation"] = copy.deepcopy(_as_dict(assignment_action.get("operation_invocation")))
+        action["required_inputs"] = ["assignment.export.preview.task_requirements.judgment_request"]
     if memory_pull.get("status") == "relevant_notes_found" and memory_routes:
         action["read_first"] = list(dict.fromkeys(memory_routes))[:3]
 

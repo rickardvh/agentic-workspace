@@ -496,3 +496,80 @@ def test_malformed_advisory_memory_cannot_veto_direct_work(
     assert not observed["decision_packet"]["blockers"]
     assert manifest.read_bytes() == original
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_reader_admission_precedes_every_domain_source(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=2\nrequired_reader_capabilities=["future-reader"]\n')
+    poisoned = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    poisoned.parent.mkdir(parents=True)
+    poisoned.write_text("not JSON and never admitted")
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text("invalid route JSON")
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    context = {"target": str(tmp_path), "task": "Continue current work"}
+    blocked = consume(surface, shared_core_binary, native_cli, context)
+    assert blocked["failed_checks"] == ["minimum_reader_epoch", "required_reader_capabilities"]
+    assert blocked["managed_state_interpreted"] is False
+    assert "decision_packet" not in blocked
+    invoked = consume(surface, shared_core_binary, native_cli, {**context, "invocation": {"operation_id": "planning.reconcile"}})
+    assert invoked["status"] == "blocked"
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_current_reader_proceeds_with_product_identity_and_retains_installed_residuals(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        'schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=1\nrequired_reader_capabilities=["pre-state-runtime-compatibility-v1"]\nexact_version="99.0"\n'
+    )
+    context = {"target": str(tmp_path), "task": "Inspect current work"}
+    result = consume(surface, shared_core_binary, native_cli, context)
+    assert result["runtime_compatibility"]["status"] == "admitted"
+    from agentic_workspace import __version__
+
+    assert result["runtime_compatibility"]["observed_runtime"]["version"] == __version__
+    residuals = result["configuration"]["residuals"]
+    assert any(r["field"] == "cli_compatibility.exact_version" for r in residuals)
+    assert not any(
+        r["field"] in {"cli_compatibility.minimum_reader_epoch", "cli_compatibility.required_reader_capabilities"} for r in residuals
+    )
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize(
+    "declaration,failed_check",
+    [
+        ('cli_compatibility="invalid"', "compatibility_contract_shape"),
+        ('cli_compatibility=["invalid"]', "compatibility_contract_shape"),
+        ('[cli_compatibility]\ncontract_schema=""', "compatibility_contract_shape"),
+        ("[cli_compatibility]\nrequired_reader_capabilities=[1]", "compatibility_contract_shape"),
+        ('[cli_compatibility]\ncontract_schema="agentic-workspace/future-contract/v99"', "contract_schema"),
+    ],
+)
+def test_native_reader_rejects_invalid_or_unknown_contract_before_domain_parsing(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, declaration: str, failed_check: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("schema_version=1\n" + declaration + "\n")
+    plan = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    plan.parent.mkdir(parents=True)
+    plan.write_text("unreadable domain state")
+    routes = tmp_path / "tools/skills/REGISTRY.json"
+    routes.parent.mkdir(parents=True)
+    routes.write_text("unreadable route state")
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Continue current work"})
+    assert result["status"] == "blocked"
+    assert result["failed_checks"] == [failed_check]
+    assert result["managed_state_interpreted"] is False
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}

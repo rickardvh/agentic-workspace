@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Require known independent-review identities and ship the Rust semantic core in host-platform wheels."
+issues = [2334, 2987, 3077]

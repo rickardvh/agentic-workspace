@@ -2118,6 +2118,10 @@ function assignmentIdentity(authorities) {
     dispatch_adapter: isObject(gate.dispatch_adapter) ? gate.dispatch_adapter : {},
     claim_authority: { worker_result: 'evidence-only', proof: 'orchestrator-owned', integration: 'orchestrator-owned', completion: 'orchestrator-owned' },
   };
+  if (gate.task_judgment !== undefined && gate.task_judgment !== null) {
+    identity.task_judgment = gate.task_judgment;
+    identity.task_requirements_revision = gate.task_requirements_revision ?? null;
+  }
   const required = ['target', 'target_identity_ref', 'task_class', 'scope_class', 'plan_ref', 'plan_revision', 'slice_id', 'slice_revision', 'assignment_decision_revision', 'handoff_run_id', 'role', 'allowed_effects', 'allowed_paths', 'return_schema', 'proof_obligation_id', 'proof_obligation_revision', 'stop_conditions', 'mutation_baseline'];
   identity.missing_required_fields = required.filter((key) => Array.isArray(identity[key]) ? !identity[key].length : !assignmentText(identity[key]));
   identity.complete = identity.missing_required_fields.length === 0;
@@ -2474,8 +2478,9 @@ function assignmentLifecycleApply(values, operationId) {
     } catch {}
   }
   const hasConfigurationChoice = values.configuration_revision !== undefined || values.configuration_id !== undefined || values.configuration_parameters_json !== undefined;
+  const requiresTaskOwner = ['assignment.export','assignment.dispatch'].includes(operationId) && !replacementId;
   const requiresProofOwner = operationId === 'assignment.close';
-  if (requiresProofOwner || operationId === 'assignment.reassign' || hasReplacement || hasConfigurationChoice || hasConfigurationAuthority) {
+  if (requiresTaskOwner || requiresProofOwner || operationId === 'assignment.reassign' || hasReplacement || hasConfigurationChoice || hasConfigurationAuthority) {
     const sourceHost = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
     const sourceRoot = resolve(dirname(sourceHost), '..');
     const python = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
@@ -2484,6 +2489,8 @@ function assignmentLifecycleApply(values, operationId) {
       for (const key of ['assignment_id','assignment_revision','run_id','target_name','transport','reason','scope','expires_at','return_json','return_id','artifact_ref','task_proof_receipt_ref','configuration_revision','configuration_id','configuration_parameters_json','task']) {
         if (values[key] !== undefined && values[key] !== null && values[key] !== '') args.push(`--${key.replaceAll('_','-')}`, typeof values[key] === 'object' ? JSON.stringify(values[key]) : String(values[key]));
       }
+      if (values.task_judgment !== undefined && values.task_judgment_json !== undefined) throw new Error('task-judgment-requires-one-bounded-typed-input');
+      if (values.task_judgment !== undefined || values.task_judgment_json !== undefined) args.push('--task-judgment-json', values.task_judgment_json ?? JSON.stringify(values.task_judgment));
       const changedPaths = values.changed_paths ?? values.changed ?? [];
       for (const changed of Array.isArray(changedPaths) ? changedPaths : [changedPaths]) args.push('--changed', String(changed));
       if (values.dry_run) args.push('--dry-run');
@@ -2496,6 +2503,7 @@ function assignmentLifecycleApply(values, operationId) {
       return JSON.parse(result.stdout);
     }
     if (requiresProofOwner) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:'close',status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'proof-currentness-owner-unavailable',failures:[{reason:'proof-currentness-owner-unavailable',field:'host',recovery:'Use the configured proof-owner host to resolve complete subject currentness before assignment close.'}] };
+    if (requiresTaskOwner) throw new RuntimeError('current-task-requirements-owner-unavailable');
     if (hasConfigurationChoice || hasConfigurationAuthority) throw new RuntimeError('configuration-choice-source-host-unavailable');
     if (hasReplacement) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:operationId.split('.').at(-1),status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'replacement-source-host-unavailable',failures:[{reason:'replacement-source-host-unavailable',field:'host',recovery:'Use the configured source-owner host; do not fall back to the former target.'}] };
   }
@@ -2573,7 +2581,7 @@ function assignmentLifecycleApply(values, operationId) {
     let effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport, scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, structural_proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, dispatch_contract: { transport, adapter_authority: 'execution-only', semantic_authority: 'assignment_identity', dispatch_input: 'this exact packet', silent_local_fallback_allowed: false }, return_contract: { required_fields: ['assignment_revision', 'run_id', 'target', 'changed_paths', 'summary', 'stop_conditions_hit', ...(identity.role === 'implementer' ? ['patch'] : [])], result_delivery: { field: 'result_delivery', modes: ['unapplied-patch', 'already-materialized'], default: 'unapplied-patch', already_materialized_requires: ['mutation_baseline'] }, worker_proof_authority: false, worker_completion_authority: false } };
     effectivePacket.worker_context = assignmentWorkerContext(effectivePacket);
     const dispatchConfiguration = assignmentDispatchConfiguration(identity, transport);
-    if (transition === 'dispatch' && dispatchConfiguration.kind === 'host-native' && !dispatchConfiguration.command.length) effectivePacket = assignmentSealHostNativePacket(effectivePacket);
+    if (transport === 'manual' || (transition === 'dispatch' && dispatchConfiguration.kind === 'host-native' && !dispatchConfiguration.command.length)) effectivePacket = assignmentSealHostNativePacket(effectivePacket);
     const packetPath = artifact('export/packet.json');
     const promptPath = artifact('export/prompt.md');
     const manifestPath = artifact('export/manifest.json');

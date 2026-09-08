@@ -18,8 +18,10 @@ pub mod planning;
 pub mod proof_receipt;
 pub mod proof_subject;
 pub mod semantic_routes;
+pub mod separation_of_duty;
 pub mod task_judgment;
 pub mod task_requirements;
+pub mod verification_requirements;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
@@ -2136,3 +2138,5 @@ fn terminal_authority(
         "required_claims": outcome.required_claims,
     }))
 }
+
+pub mod runtime_compatibility;

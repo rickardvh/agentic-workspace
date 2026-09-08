@@ -9,7 +9,11 @@ use std::{io::Read, path::Path};
 const SHARED: &str = ".agentic-workspace/config.toml";
 const LOCAL: &str = ".agentic-workspace/config.local.toml";
 
-fn load(root: &Dir, path: &str, schema: &str) -> Result<Option<(Value, String)>, String> {
+pub(crate) fn load(
+    root: &Dir,
+    path: &str,
+    schema: &str,
+) -> Result<Option<(Value, String)>, String> {
     let mut current = std::path::PathBuf::new();
     for part in path.split('/') {
         current.push(part);
@@ -144,7 +148,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                         || (source == SHARED
                             && matches!(
                                 field.as_str(),
-                                "assurance.decision_record_target"
+                                "cli_compatibility.minimum_reader_epoch"
+                                    | "cli_compatibility.required_reader_capabilities"
+                                    | "assurance.decision_record_target"
                                     | "assurance.decision_record_revision"
                                     | "assurance.instruction_revision"
                             ))

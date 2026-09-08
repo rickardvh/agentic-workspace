@@ -22,6 +22,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn view(
+    target: &std::path::Path,
     task: &str,
     changed: &[String],
     transport_work: &Value,
@@ -29,10 +30,11 @@ pub(crate) fn view(
     configuration: &Value,
     verification: &Value,
     request: Option<&Value>,
+    verification_request: Option<&Value>,
     contract: &Value,
 ) -> Result<Value, CoreError> {
     if configuration["assignment_requirements"]["configured"] != true {
-        if request.is_some() {
+        if request.is_some() || verification_request.is_some() {
             return Err(CoreError::new(
                 "task requirements require current configured assignment scope",
             ));
@@ -63,17 +65,44 @@ pub(crate) fn view(
             ));
         }
     }
-    // The native Verification owner has not yet admitted a role-specific
-    // evaluator obligation. Never turn its strategy document into one here.
+    let mut judgment = request
+        .map(|r| r["arguments"].clone())
+        .unwrap_or(Value::Null);
+    let nested = judgment
+        .as_object_mut()
+        .and_then(|j| j.remove("verification_request"));
+    if nested.is_some() && verification_request.is_some() {
+        return Err(CoreError::new(
+            "supply one current Verification requirements request",
+        ));
+    }
+    let selected_request = verification_request
+        .or(nested.as_ref())
+        .filter(|v| !v.is_null());
+    let mut obligation = Value::Null;
+    if judgment["role"] == "evaluator" || selected_request.is_some() {
+        obligation = crate::verification_requirements::resolve(
+            json!({"target":target,"task":task,"changed_paths":changed,
+            "current_work":current_work,"role":judgment["role"].as_str().unwrap_or("evaluator"),"request":selected_request}),
+            Some(transport_work),
+            Some(contract),
+        )?;
+        if !obligation["verification"].is_null()
+            && judgment["verification_identity"].is_null()
+            && !judgment.is_null()
+        {
+            judgment["verification_identity"] = json!({"id":obligation["verification"]["id"],"revision":obligation["verification"]["revision"]});
+        }
+    }
     let result = task_requirements::view(
         json!({"kind":"agentic-workspace/task-requirements-input/v1",
         "task_identity":task_identity,"current_work":current_work,
-        "judgment":request.map(|r|r["arguments"].clone()),"verification":null,
+        "judgment":judgment,"verification":obligation["verification"],
         "required_execution_guarantees":configuration["assignment_requirements"]["required_execution_guarantees"]}),
     )?;
     Ok(
-        json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,
-        "remaining_owner_contracts":["current-native-execution-capability-feasibility","role-specific-verification-obligation"],
+        json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,"verification_requirements":obligation,
+        "remaining_owner_contracts":["current-native-execution-capability-feasibility"],
         "claim_boundary":"Current task judgment only; no assignment choice, local implementation, launch or proof authority."}),
     )
 }

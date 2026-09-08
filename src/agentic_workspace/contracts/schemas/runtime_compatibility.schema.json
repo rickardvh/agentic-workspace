@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target",
+    "config_present",
+    "repo_config",
+    "local_config",
+    "observed_runtime",
+    "source_errors"
+  ],
+  "properties": {
+    "target": {
+      "type": "string",
+      "description": "Canonical repository target observed by the host before any managed state is interpreted."
+    },
+    "config_present": {
+      "type": "boolean",
+      "description": "Whether the canonical shared configuration source exists; absence selects repository defaults."
+    },
+    "repo_config": {
+      "type": "object",
+      "description": "Decoded shared configuration observed at the canonical source; only compatibility and invocation fields affect this admission."
+    },
+    "local_config": {
+      "type": "object",
+      "description": "Decoded local configuration used solely to identify the established recovery invocation."
+    },
+    "source_errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Host source-read failures that must prevent successful admission."
+    },
+    "observed_runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "package",
+        "version",
+        "reader_epoch",
+        "reader_capabilities"
+      ],
+      "properties": {
+        "package": {
+          "const": "agentic-workspace",
+          "description": "Product package whose reader is being admitted."
+        },
+        "version": {
+          "type": "string",
+          "description": "Product release identity observed from its package authority, distinct from the Rust crate version."
+        },
+        "reader_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Reader contract epoch implemented by this executing artifact."
+        },
+        "reader_capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Reader features implemented by this executing artifact, compared with current repository requirements."
+        }
+      },
+      "description": "Identity and supported reader capabilities observed from the executing package, never supplied by ordinary start callers."
+    }
+  },
+  "x-runtime-reader": {
+    "reader_epoch": 1,
+    "reader_capabilities": [
+      "pre-state-runtime-compatibility-v1"
+    ],
+    "contract_schema": "agentic-workspace/installed-state-compatibility/v1"
+  },
+  "$id": "agentic-workspace/runtime_compatibility.schema.json",
+  "description": "Trusted pre-state configuration and reader observations; not public authority input.",
+  "title": "Pre-state reader compatibility observations",
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

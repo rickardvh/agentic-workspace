@@ -167,7 +167,18 @@ def test_ordinary_route_feasibility_keeps_manual_peer_and_safety_independent(tmp
     policy = SimpleNamespace(
         current_target="orchestrator", manual_transport_policy="allowed", transport_authority="automatic", safe_to_auto_run_commands=False
     )
-    routes = current_route_configurations(tmp_path, profiles, policy, {"id": "work", "revision": "1"})
+    routes = current_route_configurations(
+        tmp_path,
+        profiles,
+        policy,
+        {"id": "work", "revision": "1"},
+        requirements={
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "required_execution_guarantees": [],
+        },
+    )
     assert routes["candidates"][0]["eligible"] is False
     assert "independent-safety-ceiling" in routes["candidates"][0]["reasons"]
     assert routes["candidates"][1]["eligible"] is True
@@ -181,7 +192,18 @@ def test_ordinary_route_feasibility_keeps_manual_peer_and_safety_independent(tmp
     assert decision["selected_target"] == "worker"
     assert decision["selected_transport"] == "manual"
     policy.manual_transport_policy = "disabled"
-    unavailable = current_route_configurations(tmp_path, profiles, policy, {"id": "work", "revision": "1"})
+    unavailable = current_route_configurations(
+        tmp_path,
+        profiles,
+        policy,
+        {"id": "work", "revision": "1"},
+        requirements={
+            "required_result_classes": [],
+            "required_proof_classes": [],
+            "independent_context": False,
+            "required_execution_guarantees": [],
+        },
+    )
     profiles[0]["execution_configurations"] = unavailable["candidates"]
     blocked = assignment_decision_from_policy(
         assignment_policy={}, runtime_resolution={"profile_recommendations": profiles}, target_evidence={}

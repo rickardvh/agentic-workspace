@@ -31,6 +31,14 @@ def task_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"task_requirements": context})
 
 
+def verification_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"verification_requirements": context})
+
+
+def separation_of_duty(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"separation_of_duty": context})
+
+
 def task_judgment(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"task_judgment": context})
 
@@ -214,3 +222,7 @@ def repository_decision_view(
 
 def admit_assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"admit_assignment_packet": context})
+
+
+def runtime_compatibility(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"runtime_compatibility": context})

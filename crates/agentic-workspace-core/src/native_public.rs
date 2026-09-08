@@ -47,6 +47,10 @@ pub fn start(value: Value) -> Result<Value, CoreError> {
 }
 
 fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<Value, CoreError> {
+    let compatibility = crate::runtime_compatibility::native(target)?;
+    if compatibility["status"] == "blocked" {
+        return Ok(compatibility);
+    }
     let work = json!({"kind":"current-work", "id":digest(&json!({
         "target":target, "task":input.task, "changed":input.changed
     }))?});
@@ -140,10 +144,13 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &input.changed,
         &work,
         subject,
-        request_for("verification").cloned(),
+        request_for("verification")
+            .filter(|r| r["request_kind"] == "verification/claim/v1")
+            .cloned(),
     )?;
     contributions.push(verification["contribution"].clone());
     let requirements = native_requirements::view(
+        target,
         &input.task,
         &input.changed,
         &work,
@@ -151,6 +158,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &configuration,
         &verification,
         request_for("assignment"),
+        request_for("verification").filter(|r| r["request_kind"] == "verification/requirements/v1"),
         &contract,
     )?;
     contributions.push(memory["contribution"].clone());
@@ -191,7 +199,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     Ok(
-        json!({"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
+        json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
     )
 }
 
@@ -214,6 +222,16 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
         let owner = request["owner"].as_str().unwrap();
+        if owner == "verification"
+            && !matches!(
+                request["request_kind"].as_str(),
+                Some("verification/claim/v1" | "verification/requirements/v1")
+            )
+        {
+            return Err(CoreError::new(
+                "requested Verification request kind is not available",
+            ));
+        }
         if !matches!(
             owner,
             "planning" | "semantic-routes" | "verification" | "memory" | "assignment"
@@ -261,6 +279,9 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         ));
     }
     let current = resolve(&input, &target, true)?;
+    if current["status"] == "blocked" {
+        return Ok(current);
+    }
     let committed = &current["planning"]["current_owner"]["committed_operation"];
     crate::admit_invocation_value(
         json!({"decision":current["decision_packet"], "invocation":invocation,

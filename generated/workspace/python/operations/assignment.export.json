@@ -21,6 +21,11 @@
   "id": "assignment.export",
   "inputs": [
     {
+      "name": "task_judgment_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "configuration_parameters_json",
       "required": false,
       "source": "cli-option"

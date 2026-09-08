@@ -8752,6 +8752,13 @@ const commandDefinitions = [
           "options": [
             {
               "flags": [
+                "--task-judgment-json"
+              ],
+              "help": "Current typed task judgment from the assignment requirement request; no proof or transport authority.",
+              "name": "task_judgment_json"
+            },
+            {
+              "flags": [
                 "--configuration-parameters-json"
               ],
               "help": "Adapter-owned JSON parameter choices for the paired current configuration offer.",
@@ -8864,6 +8871,13 @@ const commandDefinitions = [
             "path": "operations/assignment.export.json"
           },
           "options": [
+            {
+              "flags": [
+                "--task-judgment-json"
+              ],
+              "help": "Current typed task judgment from the assignment requirement request; no proof or transport authority.",
+              "name": "task_judgment_json"
+            },
             {
               "flags": [
                 "--configuration-parameters-json"
