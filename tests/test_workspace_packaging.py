@@ -245,6 +245,8 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
     executable = "agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core"
     with ZipFile(workspace_wheel) as wheel:
         assert f"agentic_workspace/_native/{executable}" in wheel.namelist()
+        native = "agentic-workspace.exe" if os.name == "nt" else "agentic-workspace"
+        assert f"agentic_workspace/_native/{native}" in wheel.namelist()
         metadata = wheel.read(next(name for name in wheel.namelist() if name.endswith(".dist-info/WHEEL"))).decode()
         assert "Root-Is-Purelib: false" in metadata
         assert "Tag: py3-none-" in metadata
@@ -261,6 +263,76 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
         "generated/workspace/python/external_contract_bundle.json",
     ):
         assert any(name.endswith(f"/{path}") for name in inventory), path
+
+
+def test_wheel_native_cli_runs_without_language_hosts_or_checkout(workspace_wheel: Path, tmp_path: Path) -> None:
+    binary_dir = tmp_path / "bin"
+    binary_dir.mkdir()
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    suffix = ".exe" if os.name == "nt" else ""
+    with ZipFile(workspace_wheel) as wheel:
+        metadata = wheel.read(next(name for name in wheel.namelist() if name.endswith(".dist-info/METADATA"))).decode()
+        version_match = re.search(r"^Version: (.+)$", metadata, re.MULTILINE)
+        assert version_match is not None
+        version = version_match.group(1)
+        for name in ("agentic-workspace", "agentic-workspace-core"):
+            entry = wheel.getinfo(f"agentic_workspace/_native/{name}{suffix}")
+            binary = binary_dir / f"{name}{suffix}"
+            binary.write_bytes(wheel.read(entry))
+            if os.name != "nt":
+                mode = entry.external_attr >> 16
+                assert mode & 0o111, "native wheel payload must preserve executable permission"
+                binary.chmod(mode)
+    environment = {**os.environ, "PATH": "", "PYTHONHOME": str(tmp_path / "absent-python")}
+    # Only the extracted binaries and empty target are available to the process;
+    # neither language package, the source checkout, nor Cargo supplies semantics.
+    context = {"target": str(repository), "task": "Inspect the repository"}
+    native = subprocess.run(
+        [str(binary_dir / f"agentic-workspace{suffix}"), "start", "--target", str(repository), "--task", context["task"]],
+        cwd=repository,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=20,
+    )
+    native_result = json.loads(native.stdout)
+    assert native_result["decision_packet"]["status"] == "direct"
+    assert native_result["runtime_compatibility"]["observed_runtime"]["version"] == version
+    transport = subprocess.run(
+        [str(binary_dir / f"agentic-workspace-core{suffix}")],
+        input=json.dumps({"start": context}),
+        cwd=repository,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=20,
+    )
+    assert json.loads(transport.stdout) == native_result
+    assert list(repository.iterdir()) == []
+    config = repository / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    epoch = native_result["runtime_compatibility"]["observed_runtime"]["reader_epoch"]
+    config.write_text(f"schema_version=1\n[cli_compatibility]\nminimum_reader_epoch={epoch + 1}\n", encoding="utf-8")
+    selection = repository / ".agentic-workspace/local/planning/owner-selection.json"
+    selection.parent.mkdir(parents=True)
+    selection.write_bytes(b"unknown content must not be interpreted or rewritten")
+    blocked = subprocess.run(
+        [str(binary_dir / f"agentic-workspace{suffix}"), "start", "--target", str(repository), "--task", context["task"]],
+        cwd=repository,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=20,
+    )
+    rejected = json.loads(blocked.stdout)
+    assert rejected["status"] == "blocked"
+    assert rejected["failed_checks"] == ["minimum_reader_epoch"]
+    assert rejected["managed_state_interpreted"] is False
+    assert selection.read_bytes() == b"unknown content must not be interpreted or rewritten"
 
 
 def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_wheel: Path) -> None:
