@@ -2036,6 +2036,10 @@ def _ordinary_implement_decision_payload(*, selected: dict[str, Any], source_pay
             for key in ("operation_id", "contract_version", "arguments", "expected_transition", "idempotency_key")
             if typed_invocation.get(key) not in (None, "", [], {})
         }
+    assignment_action = _as_dict(selected.get("assignment_action"))
+    if assignment_action.get("status") == "requirements-required" and action["summary"] == assignment_action.get("action"):
+        action["operation"] = copy.deepcopy(_as_dict(assignment_action.get("operation_invocation")))
+        action["required_inputs"] = ["assignment.export.preview.task_requirements.judgment_request"]
     if memory_pull.get("status") == "relevant_notes_found" and memory_routes:
         action["read_first"] = list(dict.fromkeys(memory_routes))[:3]
 

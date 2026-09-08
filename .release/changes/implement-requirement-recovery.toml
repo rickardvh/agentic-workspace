@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve the exact current task-requirement recovery operation in ordinary implement output."
+issues = [2210, 2986]
