@@ -14,6 +14,7 @@
     "rule"
   ],
   "properties": {
+    "source_requests": {"type": "array", "maxItems": 16, "items": {"$ref": "source_decision_input.schema.json#/$defs/public_request"}, "description": "Explicit current source-owner request dependencies retained for exact invocation revalidation; not proof or mutation authority."},
     "kind": {
       "const": "agentic-workspace/operation-invocation/v1",
       "description": "Schema discriminator for typed operation invocations."

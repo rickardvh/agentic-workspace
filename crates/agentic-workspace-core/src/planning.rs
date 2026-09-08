@@ -8,6 +8,8 @@ use serde_json::{Value, json};
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
+    #[serde(default)]
+    source_requests: Vec<Value>,
     target: String,
     relevant: bool,
     source: Option<attempt_store::Evidence>,
@@ -193,7 +195,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
 }
 
 fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Value, CoreError> {
-    let actions = if !current && reconciled["coverage"]["complete"] == true {
+    let mut actions = if !current && reconciled["coverage"]["complete"] == true {
         json!([{
             "operation_id": "planning.reconcile",
             "dependency_revision": if let Some(contract) = &input.capability_contract {
@@ -205,6 +207,11 @@ fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Va
     } else {
         json!([])
     };
+    if !input.source_requests.is_empty() {
+        for action in actions.as_array_mut().unwrap() {
+            action["source_requests"] = json!(input.source_requests);
+        }
+    }
     let mut value = json!({"contributions": [{
         "owner": "planning", "revision": digest(reconciled)?,
         "facts": {"reconciliation": reconciled, "current": current},
@@ -285,7 +292,10 @@ pub(crate) fn compose_input(value: Value) -> Result<(Value, Value), CoreError> {
         ));
     }
     if let Some(custody) = &input.custody {
-        let action = &pending["primary_action"];
+        let action = input
+            .invocation
+            .as_ref()
+            .unwrap_or(&pending["primary_action"]);
         let admission = attempt_store::admit(
             json!({"target": input.target, "decision": pending, "invocation": action, "custody": custody}),
         )?;

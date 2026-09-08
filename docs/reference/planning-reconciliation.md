@@ -11,6 +11,7 @@ Trusted Planning host boundary. Source custody is admitted outside this payload;
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Trusted Planning host boundary. Source custody is admitted outside this payload; shape, names and hashes cannot establish it. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| `source_requests` | array of ref `source_decision_input.schema.json#/$defs/public_request` | no |  | Explicit current source-owner request dependencies retained for exact invocation revalidation; not proof or mutation authority. |  |  |
 | `target` | string | yes |  | Host-selected target root. |  |  |
 | `relevant` | boolean | yes |  | Agent/human-owned Planning applicability; false does not read sources or create files. |  |  |
 | `source` | anyOf | no |  | Established Planning source custody, not caller-created authority. |  |  |

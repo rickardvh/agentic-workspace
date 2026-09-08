@@ -380,7 +380,7 @@ fn resolve_context(
         && retained["source"] == selected["source"]
     {
         status = "current";
-        planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work},"custody":retained["custody"]});
+        planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work},"custody":retained["custody"],"invocation":retained["invocation"]});
     }
     if let Some(request) = request {
         prepare_request_value(
@@ -407,6 +407,7 @@ fn resolve_context(
             // source-current custody; a fresh unrelated task never gets this.
             if retained["source"] == selected["source"] && !retained.is_null() {
                 planning_input["custody"] = retained["custody"].clone();
+                planning_input["invocation"] = retained["invocation"].clone();
             }
         }
     }
@@ -467,6 +468,7 @@ pub(crate) fn resolve_for_execution(
         validate_retained(retained)?;
         if retained["source"] == view["selected_owner"]["source"] {
             view["planning_input"]["custody"] = retained["custody"].clone();
+            view["planning_input"]["invocation"] = retained["invocation"].clone();
         }
     }
     view["planning_input"]["capability_contract"] = current_full_contract.clone();
@@ -613,6 +615,9 @@ fn execute_checked(
     });
     let source = view["selected_owner"]["source"].clone();
     let mut input = json!({"target":target,"relevant":true,"source":source,"intent":{"current_work":current_work},"capability_contract":current_full_contract,"invocation":invocation});
+    if let Some(requests) = invocation.get("source_requests") {
+        input["source_requests"] = requests.clone();
+    }
     if !view["planning_input"]["custody"].is_null() {
         input["custody"] = view["planning_input"]["custody"].clone();
     }
