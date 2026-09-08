@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Freshly fetched merged base remains 384473617acd395ebf66b3d449d7bd28bbe5bea9. #3166 proposes current real-owner material/guidance. #3167 at 6af7d1945 proposes native process execution, terminal recovery, typed result-use/Planning/Verification and a bounded positive contextual outcome signal. #3168 at 34b22e90f proposes removal of the Python command host and obsolete tests. All three remain unmerged; no parent or release gate is closed.",
+    "frontier": "Merged base remains 384473617acd395ebf66b3d449d7bd28bbe5bea9. Cumulative #3168 at 58770439f includes #3166/#3167 and the human-authorized #2767 configuration writer for existing workspace.cli_invoke. Shared/local sources remain repo/human-owned; no generic custody, optional enablement or completion authority is acquired. Three PRs remain unmerged; no release admission or promotion is claimed.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Continue the remaining native P0/P1 owner gaps: host-native/shared-worktree delta lifecycle and live recovery under #2947/#2817/#2818/#2210; failure-heavy learning, human/evaluation ingress and dispute/convergence under #2209; other native owner gaps in the current audit. Obtain independent review of #3166/#3167/#3168 without treating pending work as integrated. Then aggregate #2909, finalize #2616 and admit exact #2990 before #3014/#3138.",
+  "next_action": "Obtain independent review of #3166/#3167/#3168. Continue remaining native P0/P1 owners from the current cumulative audit: broader configuration, host-native/shared-worktree lifecycle, Memory/correction, and failure/dispute/convergence learning. Keep #2767 open beyond the bounded invocation writer; aggregate #2909 and exact #2990 only after owner outcomes are admitted.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -56,11 +56,11 @@
   "phase": "implementation",
   "proof": {
     "claims": [
-      "The real selected owner was natively maintained/recovered at revision 7; this update continues the same identity/custody and preserves unrelated work.",
-      "#3167: 64 current handoff/Assignment/proof cases passed across native/Python/TypeScript/JSON; final stale-comparison case passed; 95 Rust tests passed with three helpers ignored.",
-      "A fresh real Codex CLI matched lifecycle retained the exact source frontier through native Planning and published its selected check: local 7806 ms/21 native calls; non-local 28343 ms/25 calls, including worker 16790 ms and 41508 input bytes. One contextual retained-and-checked signal was derived; tokens, broader quality and economics remain unknown. Failed or censored workers are excluded.",
-      "#3168: 47 launcher/reader/generator-custody, 150 shared-core/v1, 3 static guard, 18 smoke and 3 built-wheel cases passed. Installed native Planning create/update/recovery and raw wheel binary with empty PATH passed. Over 1200 net lines of obsolete host/test code removed.",
-      "These are bounded implementation/validation results, not independent review, parent completion, complete supported-host lifecycle, final platform conformance or release admission."
+      "The real selected owner was natively maintained/recovered at revision 8. This update preserves the same identity, scope, relationships and unrelated original-checkout work.",
+      "#3167 evidence remains bounded: native process execution and return admission reach Planning/Verification; matched real Codex and retained-local extraction demonstrate one current retained-and-checked contextual signal, not host-native/shared-worktree completion or general target quality.",
+      "#3168 configuration writer: 21 current advisory/configuration cases passed across native, Python, TypeScript and JSON; one Windows file-symlink case skipped, directory-junction rejection passed. Byte-preserving shared/local writes, bounded human answer/defer, source/policy drift, forged action, unsupported key, stale replay and consumed-authorization ABA rejection passed.",
+      "96 Rust tests passed, with three ignored helpers. The new interruption test covers pre-publication retry, post-publication receipt recovery without rewriting, and last-moment policy drift. An earlier neighboring native run passed 119 cases with one file-symlink skip. Commit format/lint/type checks passed.",
+      "External-consumer/runtime readiness and retained Python runtime ownership ratchets remain failing or unadmitted under #2909. The supported writer is one existing control, not general setup/configuration, package lifecycle, independent acceptance or release proof."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -71,7 +71,8 @@
       "https://github.com/rickardvh/agentic-workspace/pull/3166",
       "https://github.com/rickardvh/agentic-workspace/pull/3167",
       "https://github.com/rickardvh/agentic-workspace/pull/3168",
-      "https://github.com/rickardvh/agentic-workspace/issues/2909#issuecomment-5589567494"
+      "https://github.com/rickardvh/agentic-workspace/issues/2909#issuecomment-5589567494",
+      "https://github.com/rickardvh/agentic-workspace/issues/2767#issuecomment-5590211138"
     ],
     "requirements": [
       "Prove this real owner is materially current through native update, fresh-session recovery, source-drift rejection and preservation of unrelated work.",
@@ -129,7 +130,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 8,
+  "revision": 9,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -181,18 +182,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/fe4f4202dedcf70766f9b56470ff5206f2ec0d1a03428651ae4b4c69dc98a7b6.attempt.json",
-        "revision": "sha256:57e29816b8116188b05c068ecf3e845841a46e14493d5106f509f6028da78ac8",
+        "path": ".agentic-workspace/local/effects/cd97a1c191600b18fe73e370d369f68cd2cd9a5a756dc1f0752ec7099a41aef0.attempt.json",
+        "revision": "sha256:52cc73931896a7db468dfb36d18b89acfe936e410b27d1df850b2a735196ef31",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/fe4f4202dedcf70766f9b56470ff5206f2ec0d1a03428651ae4b4c69dc98a7b6.result.json",
-        "revision": "sha256:db742185f5de002b0995e729ac07b2252a3589464501cc26a5eba75af0fe910e",
+        "path": ".agentic-workspace/local/effects/cd97a1c191600b18fe73e370d369f68cd2cd9a5a756dc1f0752ec7099a41aef0.result.json",
+        "revision": "sha256:4c69ab62aacc67d5c5849783b5e238488a0ecb0a0d3998b58421b6b16f712fe6",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:1ae7672fa2a8398d02bdeebe069fc0504c9c1787d6145b0a49986e2d0c6edaa0",
+    "invocation_revision": "sha256:7d72c2de3ca479b620440270e940968dd46f66ef515c70760bae12201442a759",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -200,7 +201,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:00f9ab0cf55ec00d82bd55a3b557ae7263160169bbf0b798975406352683405e",
+        "document_revision": "sha256:7acc08521c1248b3715c78fc1d136fc4454c3c24dc807d586559118e09ebe441",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

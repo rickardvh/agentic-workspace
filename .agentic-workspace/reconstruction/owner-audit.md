@@ -19,7 +19,7 @@ an implementation gap even when the former Python host supplies that behavior.
 ## P0/P1 dispositions
 
 Each owner has exactly one disposition against cumulative implementation candidate
-`cdd374600` (#3168), including #3166 and #3167. Those three PRs remain open;
+`58770439f` (#3168), including #3166 and #3167. Those three PRs remain open;
 classifying candidate behavior does not assert integration or independent
 admission. Historical evidence below retains its tested subject.
 
@@ -37,16 +37,16 @@ admission. Historical evidence below retains its tested subject.
 | #2985 | bounded implementation gap | Final artifact topology includes the canonical native CLI; #3077 is not satisfied. Package-count or binding tests alone cannot close this owner. |
 | #3077 | evidence/conformance gap | The paired native executable is the ordinary source and package command; the Python host is subtracted. Real former-owner recovery and isolated Windows/Linux wheel journeys pass. Exact supported-platform artifact identity and cumulative native/binding conformance remain unadmitted. Missing domain behavior remains with its semantic owners. |
 | #2606 | bounded implementation gap | Core capability effect/claim checks exist, but `native_public::owner_requests` has a fixed owner allowlist. A future independent module cannot use ordinary native ingress without core changes. |
-| #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include configuration mutation, Memory promotion/retirement and correction; former operation names are not an ordinary native interface. |
+| #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include broader configuration mutation, Memory promotion/retirement and correction; former operation names are not an ordinary native interface. |
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 8, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 9, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
 | #2981 | evidence/conformance gap | Current reusable-conclusion tests exist under `test_resolved_decision_reuse.py`; native ordinary producer-lifetime and later-equivalent-work cost evidence remains to be established. |
-| #2767 | bounded implementation gap | Native config reads and preserves sources, but ordinary native requests do not include the setup/config owner mutation journey. Current unresolved configuration must not silently become defaults. |
+| #2767 | bounded implementation gap | The authorized native writer can edit an existing workspace.cli_invoke in either canonical TOML source through an exact human-bound proposal. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
 | #2916 | candidate-complete | Existing independent #3138 acceptance. Typed policy/currentness/override authority is distinct from the unresolved execution and return lifecycle. |
 | #2210 | bounded implementation gap | Comparative judgment, exact execution identity, admitted return and a retained-and-checked contextual signal exist. Supported host-native/mutation lifecycles and complete consequential comparison remain unresolved; no inferred target winner or completion authority. |
 | #2209 | bounded implementation gap | The candidate derives one current retained-and-checked contextual target signal from admitted Planning consumption and native Verification. Task/source/config drift de-adopts it. Human/evaluation ingress, failure/dispute handling and repeated selection convergence remain unresolved; no general target quality is inferred. |
@@ -477,3 +477,37 @@ The real selected owner is native-authored revision 8, SHA-256
 Exact update/reconcile, fresh-process currentness and stale-update rejection pass;
 identity, scope, relationships and unrelated original-checkout files remain intact.
 The copied tracked bytes carry the observation only, not transported local custody.
+
+## Bounded configuration source writer (#2767, proposed)
+
+The human explicitly authorized the boundary proposed in #2767 comment
+5590211138. Candidate `58770439f` adds one existing control: `workspace.cli_invoke`
+in canonical shared/local TOML. The ordinary decision packet presents the exact
+source/value proposal for a bounded human answer. Same-value requests are quiet
+no-ops; deferral creates no state. Other keys, missing controls, redirected shared
+sources and conflicting shared/local policy fail closed. No policy inference,
+optional enablement, generic source adoption or continuing custody is added.
+
+The writer changes only the selected literal's bytes, preserving comments, line
+endings and unrelated content. It binds both complete source revisions, effective
+policy, capability and exact value; revalidation immediately precedes publication.
+Immutable evidence in the existing local effects area supports interrupted-write
+recovery. Post-publication recovery finalizes the receipt without rewriting the
+source. Returning to old bytes cannot revive a consumed authorization.
+
+Proof: 21 advisory/configuration cases pass, including independent native,
+Python, TypeScript and JSON shared/local writes and admission negatives. One
+Windows file-symlink case is skipped; the directory-junction case passes. All
+96 Rust tests pass, with three ignored helpers; the new interruption test covers
+pre-publication retry, post-publication recovery and last-moment policy drift.
+An earlier neighboring native run passed 119 cases with one file-symlink skip.
+Commit lint/type/format checks pass. The separate runtime-ownership checker still
+fails inherited retained-Python ratchets; broader external-consumer/runtime
+readiness is not admitted. No assertion or ratchet is weakened to hide those gaps.
+
+The actual selected Plan was updated by its native writer to revision 9,
+SHA-256 `d9d54de3e3c77abf2558d96446c9b61aa036e4a342e061347494cf6230533f63`.
+Fresh-process recovery and stale-update rejection pass with identity, scope,
+relationships and unrelated work preserved. Its copied tracked bytes are
+continuation evidence, not transferred local custody. #2767 remains open for its
+broader outcome; #2909/#2990 and independent review retain their admission gates.
