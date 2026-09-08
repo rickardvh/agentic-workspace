@@ -810,7 +810,7 @@ pub(crate) fn view_with_applicability(
         }
     }
     let assurance = crate::assurance_applicability::view(assurance_input.clone())?;
-    let strategy_control = crate::verification_strategy::view(
+    let mut strategy_control = crate::verification_strategy::view(
         &strategy_policy,
         &assurance,
         planning_subject,
@@ -956,10 +956,34 @@ pub(crate) fn view_with_applicability(
         blockers.as_array_mut().unwrap().push(json!({"code":gap,"message":"Current Verification strategy control remains unresolved; no profile or evidence waiver is inferred.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
     }
     for obligation in strategy_control["obligations"]
-        .as_array()
+        .as_array_mut()
         .into_iter()
         .flatten()
     {
+        let route = format!("profile:{}", obligation["profile_id"].as_str().unwrap());
+        let mut missing = Vec::new();
+        let mut references = std::collections::BTreeSet::new();
+        for command in obligation["required_commands"].as_array().unwrap() {
+            let supporting = evidence.iter().find(|item| {
+                item["publication_admission"]["status"] == "admitted"
+                    && item["receipt_admission"]["proof_sufficient"] == true
+                    && item["evidence_freshness"] == "reusable"
+                    && item["detail"]["status"] == "current"
+                    && item["runtime_admission"]["command_coverage"]["route_id"] == route
+                    && item["runtime_admission"]["command_coverage"]["command"] == *command
+            });
+            if let Some(item) = supporting {
+                references.insert(item["reference"].as_str().unwrap());
+            } else {
+                missing.push(command.clone());
+            }
+        }
+        obligation["missing_commands"] = json!(missing);
+        obligation["evidence_refs"] = json!(references);
+        if missing.is_empty() {
+            obligation["status"] = json!("current-command-evidence-satisfied");
+            continue;
+        }
         blockers.as_array_mut().unwrap().push(json!({"code":format!("profile-proof-required:{}",obligation["profile_id"].as_str().unwrap()),"message":"Selected proof profile requires current admitted command evidence; selection is not proof.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
     }
     let mut decisions = serde_json::Map::new();
