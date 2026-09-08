@@ -56,6 +56,7 @@ jobs:
         run: uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q
       - name: Run shared operating-decision core proof
         run: |
+          cargo +stable build --locked --workspace --bins
           cargo +stable test --workspace
           uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
       - name: Run workspace lint
@@ -176,6 +177,7 @@ jobs:
           uv sync --locked --all-groups
       - name: Prove path, subprocess, install, and semantic behavior
         run: |
+          cargo +stable build --locked --workspace --bins
           cargo +stable test --workspace
           uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
           uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
