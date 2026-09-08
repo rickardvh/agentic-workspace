@@ -420,3 +420,10 @@ A bounded configuration-fixture run found two stale positives (two failed, two p
 Thirteen corrected cluster cases passed in 17.72 seconds. Seven additional cases passed in 3.78 seconds: retained-family normalization, causal attribution without invented publication, and a real bounded native command whose current reusable proof cannot calibrate an unrelated target. No provider inference, human acceptance or target-quality success was fabricated. Legacy publication custody and positive current lifecycle-to-target learning remain existing-owner implementation residuals.
 
 The final focused outcome/configuration and causal-owner selection passed 32 cases in 22.51 seconds (210 unrelated cases deselected), including existing local-operator retention/compaction controls.
+
+
+### Native read-only handoff integration
+
+The integrated read-only handoff, comparative assignment and execution-configuration group passed 45 tests in 63.05 seconds. Explicit input observation and completeness judgment precede export; an exact return remains an unproven observation. Shared Rust packet projection/sealing replaces duplicated Python/TypeScript helper semantics. The isolated staged npm packet-owner check also passed with an empty PATH, no Python and no checkout dependency.
+
+Fixture corrections addressed explicit UTF-8 subprocess decoding, a commandless-worker guard that must permit the exact shared semantic-core executable, and an invented manual-only policy value. These are implementation/test friction, not provider or target failures. No provider inference was launched. Synthetic returns establish packet and currentness behavior only; durable lifecycle, automatic dispatch, mutation attribution and Verification/Planning reconciliation remain unresolved. Earlier incomplete workers remain censored. Token and monetary savings are unknown.
