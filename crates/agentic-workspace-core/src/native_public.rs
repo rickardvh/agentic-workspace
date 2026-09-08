@@ -68,6 +68,26 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         "request":request_for("semantic-routes")
     });
     let configuration = native_config::view(target)?;
+    let available = |owner: &str| native_config::module_enabled(&configuration, owner);
+    for request in &requests {
+        if matches!(
+            request["owner"].as_str(),
+            Some("planning" | "memory" | "verification")
+        ) && !available(request["owner"].as_str().unwrap())
+        {
+            return Err(CoreError::new(
+                "requested owner is disabled by current module enablement",
+            ));
+        }
+    }
+    if input.invocation.as_ref().is_some_and(|invocation| {
+        (invocation["operation_id"] == "planning.reconcile" && !available("planning"))
+            || (invocation["operation_id"] == "proof.report" && !available("verification"))
+    }) {
+        return Err(CoreError::new(
+            "invoked owner is disabled by current module enablement",
+        ));
+    }
     let admissions = &configuration["admissions"];
     let (mut owner_input, mut routes) = decision_source::resolve(json!({
         "target":target,
@@ -101,11 +121,21 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &route_fact,
         admissions["instruction_revision"].as_str().unwrap_or(""),
     )?;
-    let mut memory =
-        native_memory::public_view(target, &input.changed, &route_fact, &work, None, None)?;
-    let planning_probe = native_planning::resolve(target, &work, None)?;
-    let verification_probe =
-        native_verification::view(target, &input.task, &input.changed, &work, None, None)?;
+    let mut memory = if available("memory") {
+        native_memory::public_view(target, &input.changed, &route_fact, &work, None, None)?
+    } else {
+        native_memory::disabled(target)?
+    };
+    let planning_probe = if available("planning") {
+        native_planning::resolve(target, &work, None)?
+    } else {
+        native_planning::disabled(target)?
+    };
+    let verification_probe = if available("verification") {
+        native_verification::view(target, &input.task, &input.changed, &work, None, None)?
+    } else {
+        native_verification::disabled(target)?
+    };
     let contract = combined_contract(&[
         &configuration["capability_contract"],
         &planning_probe["capability_contract"],
@@ -165,37 +195,41 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     let subject = planning_detail
         .get("reconciliation")
         .and_then(|value| value.get("subject"));
-    let verification = native_verification::view_with_applicability(
-        target,
-        &input.task,
-        &input.changed,
-        &work,
-        subject,
-        Some(json!(
-            requests
-                .iter()
-                .filter(|r| r["owner"] == "verification"
-                    && matches!(
-                        r["request_kind"].as_str(),
-                        Some(
-                            "verification/claim/v1"
-                                | "verification/authenticate-host-review/v1"
-                                | "verification/execute-selected/v1"
-                        )
-                    ))
-                .cloned()
-                .collect::<Vec<_>>()
-        )),
-        native_verification::ApplicabilityContext {
-            facts: &json!({"route_fact":route_fact,"planning":{"status":planning["status"],"source_revision":planning["source_revision"]}}),
-            request: verification_request("verification/assurance-applicability/v1").cloned(),
-            contract: Some(&contract),
-            invocation: input
-                .invocation
-                .as_ref()
-                .filter(|i| i["operation_id"] == "proof.report"),
-        },
-    )?;
+    let verification = if available("verification") {
+        native_verification::view_with_applicability(
+            target,
+            &input.task,
+            &input.changed,
+            &work,
+            subject,
+            Some(json!(
+                requests
+                    .iter()
+                    .filter(|r| r["owner"] == "verification"
+                        && matches!(
+                            r["request_kind"].as_str(),
+                            Some(
+                                "verification/claim/v1"
+                                    | "verification/authenticate-host-review/v1"
+                                    | "verification/execute-selected/v1"
+                            )
+                        ))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            )),
+            native_verification::ApplicabilityContext {
+                facts: &json!({"route_fact":route_fact,"planning":{"status":planning["status"],"source_revision":planning["source_revision"]}}),
+                request: verification_request("verification/assurance-applicability/v1").cloned(),
+                contract: Some(&contract),
+                invocation: input
+                    .invocation
+                    .as_ref()
+                    .filter(|i| i["operation_id"] == "proof.report"),
+            },
+        )?
+    } else {
+        verification_probe
+    };
     contributions.push(verification["contribution"].clone());
     let requirements = native_requirements::view(
         target,

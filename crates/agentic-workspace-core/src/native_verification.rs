@@ -713,7 +713,13 @@ pub(crate) fn view_with_applicability(
         &strategy,
         proof_choice.as_ref(),
     )?;
-    let execution_actions = crate::native_proof::action(target, task, changed, &execution)?;
+    let execution_actions = crate::native_proof::action(
+        target,
+        task,
+        changed,
+        &execution,
+        &admission_contract["revision"],
+    )?;
     let execution_requests: Vec<Value> = execution["choices"]
         .as_array()
         .into_iter()
@@ -786,6 +792,15 @@ pub(crate) fn view_with_applicability(
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),
+    )
+}
+
+pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
+    crate::native_config::disabled_owner(
+        target,
+        "verification",
+        &[MANIFEST, ".agentic-workspace/proof/receipts/INDEX.json"],
+        &["effect:proof-execution", "claim:complete"],
     )
 }
 

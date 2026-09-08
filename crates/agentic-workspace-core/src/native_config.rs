@@ -113,6 +113,49 @@ fn residual(source: &str, field: &str, value: &Value) -> Value {
         "affects":affects, "reason":"current-control-requires-native-owner"})
 }
 
+/// Explicit repo enablement gates availability, never task relevance.
+pub(crate) fn module_enabled(configuration: &Value, owner: &str) -> bool {
+    configuration["modules"]
+        .as_array()
+        .is_none_or(|modules| modules.iter().any(|module| module == owner))
+}
+
+/// Shared transport/projection only: each owner supplies its own source anchors
+/// and restriction scopes. Bytes are observed without interpreting domain state.
+pub(crate) fn disabled_owner(
+    target: &Path,
+    owner: &str,
+    paths: &[&str],
+    affects: &[&str],
+) -> Result<Value, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let mut sources = Vec::new();
+    for path in paths {
+        match crate::native_verification::read(&root, path) {
+            Ok(None) => (),
+            Ok(Some(bytes)) => sources.push(json!({"reference":path,"revision":format!("sha256:{:x}",Sha256::digest(bytes)),"status":"present-uninterpreted"})),
+            Err(reason) => sources.push(json!({"reference":path,"status":"unavailable-uninterpreted","reason":reason.to_string()})),
+        }
+    }
+    let revision = digest(&json!({"owner":owner,"availability":"disabled","sources":sources}))?;
+    let blockers = if sources.is_empty() {
+        json!([])
+    } else {
+        json!([{"code":"disabled-owner-source-reconciliation-required",
+        "message":"The owner is disabled but recognized sources remain. Preserve them; source presence does not establish live custody, retirement or transfer. Responsible-owner reconciliation remains unresolved.","affects":affects}])
+    };
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
+        "owners":[{"owner":owner,"revision":"disabled-source-observation/v1"}],
+        "restriction_authorities":if sources.is_empty(){json!([])}else{json!([{"owner":owner,"affects":affects}])}});
+    contract["revision"] = json!(digest(&contract)?);
+    Ok(
+        json!({"status":"disabled","source_revision":revision,"sources":sources,"requests":[],"planning_input":null,
+        "capability_contract":contract,"contribution":{"owner":owner,"revision":revision,"blockers":blockers,"settled":sources.is_empty()},
+        "claim_boundary":"Disabled availability supplies no operations, judgment, custody transfer or proof."}),
+    )
+}
+
 /// Fields here are existing owner contracts, not a new authoring surface.
 /// The native facade consumes admission selectors and constraints; it must retain
 /// `contribution` until the named residual owners genuinely supply their effects.
@@ -173,13 +216,13 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                         || (source == SHARED
                             && matches!(
                                 field.as_str(),
-                                "cli_compatibility.contract_schema"
+                                "modules.enabled"
+                                    | "cli_compatibility.contract_schema"
                                     | "cli_compatibility.minimum_reader_epoch"
                                     | "cli_compatibility.required_reader_capabilities"
                                     | "assurance.decision_record_target"
                                     | "assurance.decision_record_revision"
                                     | "assurance.instruction_revision"
-                                    | "assurance.requirements"
                             ))
                         || (source == LOCAL
                             && matches!(
@@ -187,6 +230,12 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 "safety.safe_to_auto_run_commands"
                                     | "safety.requires_human_verification_on_pr"
                             ));
+                let consumed = consumed
+                    || (source == SHARED
+                        && field == "assurance.requirements"
+                        && shared["modules"]["enabled"]
+                            .as_array()
+                            .is_none_or(|modules| modules.iter().any(|m| m == "verification")));
                 if !consumed && present(value) {
                     residuals.push(residual(source, &field, value));
                 }
@@ -235,7 +284,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         json!([{"owner":"workspace","affects":affects}])
     };
     let mut capability_contract = json!({"kind":"agentic-workspace/capability-contract/v1",
-        "revision":"pending", "owners":[{"owner":"workspace","revision":"native-configuration-source/v1"}],
+        "revision":"pending", "owners":[{"owner":"workspace","revision":revision}],
         "restriction_authorities":restrictions});
     capability_contract["revision"] = json!(digest(&capability_contract)?);
     Ok(

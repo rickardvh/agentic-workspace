@@ -223,12 +223,13 @@ pub(crate) fn action(
     task: &str,
     changed: &[String],
     view: &Value,
+    capability_revision: &Value,
 ) -> Result<Value, CoreError> {
     if view["status"] != "selected" {
         return Ok(json!([]));
     }
     Ok(
-        json!([{"operation_id":"proof.report","dependency_revision":digest(&view["selection"])?,
+        json!([{"operation_id":"proof.report","dependency_revision":digest(&json!({"selection":view["selection"],"capability_revision":capability_revision}))?,
         "arguments":{"target":target,"task":task,"changed":changed,"execute_selected":true,"selection":view["selection"]},
         "effects":["proof-execution"]}]),
     )

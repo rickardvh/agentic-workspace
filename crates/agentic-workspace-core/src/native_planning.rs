@@ -412,6 +412,19 @@ pub(crate) fn resolve_for_execution(
     Ok(view)
 }
 
+pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
+    crate::native_config::disabled_owner(
+        target,
+        "planning",
+        &[SELECTION, THREADS, STATE],
+        &[
+            "effect:planning-state",
+            "effect:implementation",
+            "claim:complete",
+        ],
+    )
+}
+
 #[cfg(test)]
 pub(crate) fn execute(
     target: &Path,
