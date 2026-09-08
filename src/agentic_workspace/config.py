@@ -1994,6 +1994,9 @@ def load_delegation_target_profiles(
 ) -> tuple[tuple[DelegationTargetProfile, ...], list[str]]:
     profiles: list[DelegationTargetProfile] = []
     warnings: list[str] = []
+    from agentic_workspace.decision import transport_sources
+
+    decoded_sources = transport_sources(raw_targets)["sources"] if raw_targets else {}
     for target_name in sorted(raw_targets):
         raw_profile = raw_targets[target_name]
         target_path = Path(f"{config_path.as_posix()} delegation_targets.{target_name}")
@@ -2099,99 +2102,12 @@ def load_delegation_target_profiles(
             dispatch_adapter_kind = "process"
         if raw_transports is None and dispatch_adapter_kind is not None and not dispatch_command:
             raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_command is required when dispatch_adapter_kind is configured.")
-        transports: list[dict[str, Any]] = []
-        if raw_transports is not None:
-            if not isinstance(raw_transports, list) or not raw_transports:
-                raise WorkspaceUsageError(f"{target_path.as_posix()} transports must be a non-empty array of transport tables.")
-            if legacy_execution_methods or dispatch_command or dispatch_adapter_kind is not None:
-                warnings.append(
-                    f"{target_path.as_posix()} canonical transports override legacy execution_methods/dispatch_adapter_* fields."
-                )
-            seen_methods: set[str] = set()
-            for index, raw_transport in enumerate(raw_transports):
-                transport_path = Path(f"{target_path.as_posix()} transports[{index}]")
-                if not isinstance(raw_transport, dict):
-                    raise WorkspaceUsageError(f"{transport_path.as_posix()} must be a table.")
-                transport_payload: dict[str, Any] = {str(key): value for key, value in raw_transport.items()}
-                transport_fields = {"kind", "command", "output_mode", "timeout_seconds"}
-                if transport_payload.get("kind") == "native":
-                    transport_fields = {"kind", "adapter", "parameters", "timeout_seconds"}
-                unknown_transport = sorted(set(transport_payload) - transport_fields)
-                if unknown_transport:
-                    raise WorkspaceUsageError(f"{transport_path.as_posix()} contains unsupported field(s): {', '.join(unknown_transport)}.")
-                kind = require_required_enum(
-                    payload=transport_payload,
-                    key="kind",
-                    config_path=transport_path,
-                    allowed=("internal", "process", "api", "manual", "native"),
-                )
-                method = {"internal": "internal", "process": "cli", "api": "api", "manual": "manual", "native": "cli"}[kind]
-                transport_key = f"native:{transport_payload.get('adapter')}" if kind == "native" else method
-                if transport_key in seen_methods:
-                    raise WorkspaceUsageError(f"{target_path.as_posix()} transports may configure method {method!r} only once.")
-                seen_methods.add(transport_key)
-                command = require_optional_string_list(payload=transport_payload, key="command", config_path=transport_path)
-                if kind in {"process", "api"} and not command:
-                    raise WorkspaceUsageError(f"{transport_path.as_posix()} command is required for {kind} transport.")
-                if kind in {"internal", "manual"} and command:
-                    raise WorkspaceUsageError(f"{transport_path.as_posix()} command is not allowed for {kind} transport.")
-                if kind == "native" and (
-                    not isinstance(transport_payload.get("adapter"), str)
-                    or not transport_payload["adapter"]
-                    or not isinstance(transport_payload.get("parameters"), dict)
-                ):
-                    raise WorkspaceUsageError(
-                        f"{transport_path.as_posix()} native transport requires adapter identity and parameter object."
-                    )
-                output_mode = require_optional_enum(
-                    payload=transport_payload,
-                    key="output_mode",
-                    config_path=transport_path,
-                    allowed=SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES,
-                    default="stdout",
-                )
-                raw_timeout = transport_payload.get("timeout_seconds", 1800)
-                if not isinstance(raw_timeout, int) or isinstance(raw_timeout, bool) or raw_timeout <= 0:
-                    raise WorkspaceUsageError(f"{transport_path.as_posix()} timeout_seconds must be a positive integer.")
-                transports.append(
-                    {
-                        "kind": kind,
-                        "method": method,
-                        "command": list(command),
-                        "output_mode": output_mode,
-                        "timeout_seconds": raw_timeout,
-                        "readiness": "runtime-required" if kind == "internal" else "configured",
-                        "source": "canonical-transports",
-                        **(
-                            {"adapter": transport_payload["adapter"], "parameters": transport_payload["parameters"]}
-                            if kind == "native"
-                            else {}
-                        ),
-                    }
-                )
-        else:
-            if not legacy_execution_methods:
-                raise WorkspaceUsageError(
-                    f"{target_path.as_posix()} transports or legacy execution_methods must configure at least one method."
-                )
-            for method in legacy_execution_methods:
-                kind = {"internal": "internal", "cli": "process", "api": "api", "manual": "manual"}[method]
-                configured = method in {"internal", "manual"} or bool(dispatch_command)
-                transports.append(
-                    {
-                        "kind": kind,
-                        "method": method,
-                        "command": list(dispatch_command) if method in {"cli", "api"} and dispatch_command else [],
-                        "output_mode": dispatch_output_mode,
-                        "timeout_seconds": raw_dispatch_timeout,
-                        "readiness": "runtime-required"
-                        if method == "internal"
-                        else "configured"
-                        if configured
-                        else "declared-unconfigured",
-                        "source": "legacy-compatibility-decoder",
-                    }
-                )
+        if raw_transports is not None and (legacy_execution_methods or dispatch_command or dispatch_adapter_kind is not None):
+            warnings.append(f"{target_path.as_posix()} canonical transports override legacy execution_methods/dispatch_adapter_* fields.")
+        decoded = decoded_sources[target_name]
+        if "error" in decoded:
+            raise WorkspaceUsageError(f"{target_path.as_posix()} {decoded['error']}")
+        transports = decoded["transports"]
         execution_methods = tuple(dict.fromkeys(str(item["method"]) for item in transports))
         configured_adapter = next(
             (item for item in transports if item["method"] in {"cli", "api"} and item["readiness"] == "configured"),

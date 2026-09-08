@@ -98,6 +98,11 @@ fn main() {
         )
     } else if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("transport_sources"))
+    {
+        agentic_workspace_core::transport_source::decode_sources(&request["transport_sources"])
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("execution_configurations"))
     {
         agentic_workspace_core::assignment::configurations(

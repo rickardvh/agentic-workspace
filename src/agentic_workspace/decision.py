@@ -171,6 +171,11 @@ def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"replace_assignment": context})
 
 
+def transport_sources(profiles: Mapping[str, Any]) -> dict[str, Any]:
+    """Decode declarations only; no executable or provider capability authority."""
+    return _request({"transport_sources": profiles})
+
+
 def execution_configurations(context: Mapping[str, Any]) -> dict[str, Any]:
     """Trusted adapter facts, shared eligibility and revision-bound agent choice."""
     return _request({"execution_configurations": context})

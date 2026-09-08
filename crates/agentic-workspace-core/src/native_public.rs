@@ -370,8 +370,15 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         subject,
         &configuration,
         &verification,
-        request_for("assignment"),
+        requests.iter().find(|r| {
+            r["owner"] == "assignment"
+                && r["request_kind"] == "assignment/judge-task-requirements/v1"
+        }),
         verification_request("verification/requirements/v1"),
+        requests.iter().find(|r| {
+            r["owner"] == "assignment"
+                && r["request_kind"] == "assignment/select-execution-configuration/v1"
+        }),
         &contract,
     )?;
     contributions.push(startup_adapter["contribution"].clone());
@@ -493,7 +500,20 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
-        let key = if matches!(owner, "verification" | "planning") {
+        if owner == "assignment"
+            && !matches!(
+                request["request_kind"].as_str(),
+                Some(
+                    "assignment/judge-task-requirements/v1"
+                        | "assignment/select-execution-configuration/v1"
+                )
+            )
+        {
+            return Err(CoreError::new(
+                "requested Assignment request kind is not available",
+            ));
+        }
+        let key = if matches!(owner, "verification" | "planning" | "assignment") {
             format!("{owner}:{}", request["request_kind"].as_str().unwrap())
         } else {
             owner.to_owned()

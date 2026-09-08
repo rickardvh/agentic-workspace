@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose native source-current executor configurations and typed current selection through the shared Assignment feasibility owner without dispatch or reviewer authority."
+issues = [2210, 2767, 2986]

@@ -15,7 +15,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let declaration = json!({"kind":"assignment/judge-task-requirements/v1",
         "result_kind":"agentic-workspace/task-requirements/v1","input_schema":arguments});
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
-        "owners":[{"owner":"assignment","revision":digest(&declaration)?,"requests":[declaration]}]});
+        "owners":[{"owner":"assignment","revision":digest(&json!([declaration,crate::native_execution::declaration()]))?,"requests":[declaration,crate::native_execution::declaration()]}]});
     contract["revision"] = json!(digest(&contract)?);
     Ok(contract)
 }
@@ -31,10 +31,11 @@ pub(crate) fn view(
     verification: &Value,
     request: Option<&Value>,
     verification_request: Option<&Value>,
+    execution_request: Option<&Value>,
     contract: &Value,
 ) -> Result<Value, CoreError> {
     if configuration["assignment_requirements"]["configured"] != true {
-        if request.is_some() || verification_request.is_some() {
+        if request.is_some() || verification_request.is_some() || execution_request.is_some() {
             return Err(CoreError::new(
                 "task requirements require current configured assignment scope",
             ));
@@ -100,9 +101,29 @@ pub(crate) fn view(
         "judgment":judgment,"verification":obligation["verification"],
         "required_execution_guarantees":configuration["assignment_requirements"]["required_execution_guarantees"]}),
     )?;
+    let mut execution = crate::native_execution::view(
+        target,
+        &current_work,
+        &result,
+        execution_request,
+        contract,
+        transport_work,
+    )?;
+    if let Some(task_request) = request
+        && let Some(choices) = execution["requests"].as_array_mut()
+    {
+        for choice in choices {
+            let mut prerequisites = vec![task_request.clone()];
+            if let Some(obligation_request) = verification_request {
+                prerequisites.push(obligation_request.clone());
+            }
+            prerequisites.push(choice.clone());
+            *choice = json!(prerequisites);
+        }
+    }
     Ok(
         json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,"verification_requirements":obligation,
-        "remaining_owner_contracts":["current-native-execution-capability-feasibility"],
+        "execution_configurations":execution,"remaining_owner_contracts":["current-native-best-fit-assignment-and-execution"],
         "claim_boundary":"Current task judgment only; no assignment choice, local implementation, launch or proof authority."}),
     )
 }

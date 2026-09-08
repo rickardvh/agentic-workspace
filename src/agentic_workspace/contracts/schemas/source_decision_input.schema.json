@@ -59,6 +59,29 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "execution_configuration_choice": {
+      "description": "Current feasible execution configuration choice; neither assignment nor launch authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "candidate"
+      ],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Exact current execution configuration inventory revision."
+        },
+        "candidate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Exact eligible configuration ID returned by the owner."
+        }
+      }
+    },
     "verification_strategy_request": {
       "type": "object",
       "additionalProperties": false,
