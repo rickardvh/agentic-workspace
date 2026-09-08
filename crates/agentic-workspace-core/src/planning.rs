@@ -8,6 +8,8 @@ use serde_json::{Value, json};
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Input {
+    #[serde(default)]
+    source_requests: Vec<Value>,
     target: String,
     relevant: bool,
     source: Option<attempt_store::Evidence>,
@@ -18,6 +20,7 @@ struct Input {
     capability_contract: Option<Value>,
     custody: Option<Value>,
     invocation: Option<Value>,
+    selection_transition: Option<Value>,
 }
 
 fn error(message: impl ToString) -> CoreError {
@@ -80,7 +83,16 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
             "former source is not admitted as Planning-owned; preserve and route its disposition",
         ));
     }
-    let body = attempt_store::read_source(&input.target, source)?;
+    let mut body = attempt_store::read_source(&input.target, source)?;
+    if crate::native_planning_create::inspect_origin(
+        &std::fs::canonicalize(&input.target).map_err(error)?,
+        &source.path,
+        &body,
+    )?
+    .is_some()
+    {
+        body.as_object_mut().unwrap().remove("creation_provenance");
+    }
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
     ))
@@ -184,7 +196,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
 }
 
 fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Value, CoreError> {
-    let actions = if !current && reconciled["coverage"]["complete"] == true {
+    let mut actions = if !current && reconciled["coverage"]["complete"] == true {
         json!([{
             "operation_id": "planning.reconcile",
             "dependency_revision": if let Some(contract) = &input.capability_contract {
@@ -196,6 +208,29 @@ fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Va
     } else {
         json!([])
     };
+    if !input.source_requests.is_empty() {
+        for action in actions.as_array_mut().unwrap() {
+            action["source_requests"] = json!(input.source_requests);
+        }
+    }
+    if let Some(transition) = &input.selection_transition {
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
+        ))
+        .map_err(error)?;
+        let mut shape = schema["$defs"]["selection_transition"].clone();
+        shape["$schema"] = schema["$schema"].clone();
+        shape["$defs"] = schema["$defs"].clone();
+        crate::schema_validator(&shape, "Planning selection transition")?
+            .validate(transition)
+            .map_err(error)?;
+        for action in actions.as_array_mut().unwrap() {
+            action["dependency_revision"] = json!(digest(
+                &json!({"reconciliation_dependency":action["dependency_revision"],"selection_transition":transition})
+            )?);
+            action["arguments"]["selection_transition"] = transition.clone();
+        }
+    }
     let mut value = json!({"contributions": [{
         "owner": "planning", "revision": digest(reconciled)?,
         "facts": {"reconciliation": reconciled, "current": current},
@@ -276,7 +311,10 @@ pub(crate) fn compose_input(value: Value) -> Result<(Value, Value), CoreError> {
         ));
     }
     if let Some(custody) = &input.custody {
-        let action = &pending["primary_action"];
+        let action = input
+            .invocation
+            .as_ref()
+            .unwrap_or(&pending["primary_action"]);
         let admission = attempt_store::admit(
             json!({"target": input.target, "decision": pending, "invocation": action, "custody": custody}),
         )?;

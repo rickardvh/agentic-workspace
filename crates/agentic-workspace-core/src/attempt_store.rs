@@ -292,3 +292,67 @@ pub fn commit(value: Value) -> Result<Value, CoreError> {
         json!({"record": record, "custody": Custody { attempt: input.custody.attempt, committed: Some(committed) }}),
     )
 }
+
+/// Retain the exact future immutable commit identity before an owner publication.
+/// This does not assert the result exists or that its effects have happened.
+pub(crate) fn prepare_commit(
+    target: &str,
+    custody: Value,
+    outcome: Value,
+) -> Result<Value, CoreError> {
+    let custody: Custody = serde_json::from_value(custody).map_err(error)?;
+    let root = root(target)?;
+    let admitted = read(&root, &custody.attempt)?;
+    bound_root(target, &admitted["invocation"])?;
+    let (attempt_path, result_path) = names(&admitted["invocation"])?;
+    if custody.attempt.path != attempt_path {
+        return Err(error("custody belongs to a different effect"));
+    }
+    let record = attempt::commit(json!({"record":admitted,"outcome":outcome}))?;
+    let expected = Evidence {
+        target: root.path.to_string_lossy().into_owned(),
+        path: result_path,
+        owner: custody.attempt.owner.clone(),
+        revision: hash(&serde_json::to_vec(&record).map_err(error)?),
+    };
+    if root
+        .dir
+        .symlink_metadata(checked(&root, &expected.path, false)?)
+        .is_ok()
+        && read(&root, &expected)? != record
+    {
+        return Err(error("existing commit differs from planned outcome"));
+    }
+    if let Some(existing) = custody.committed
+        && serde_json::to_value(&existing).map_err(error)?
+            != serde_json::to_value(&expected).map_err(error)?
+    {
+        return Err(error(
+            "planned commit differs from retained committed custody",
+        ));
+    }
+    Ok(
+        json!({"record":record,"custody":Custody {attempt:custody.attempt,committed:Some(expected)}}),
+    )
+}
+
+/// Inspect retained committed truth without granting a historical continuation.
+pub(crate) fn inspect_committed(target: &str, custody: Value) -> Result<Value, CoreError> {
+    let custody: Custody = serde_json::from_value(custody).map_err(error)?;
+    let root = root(target)?;
+    let admitted = read(&root, &custody.attempt)?;
+    bound_root(target, &admitted["invocation"])?;
+    let (attempt_path, result_path) = names(&admitted["invocation"])?;
+    let committed = custody
+        .committed
+        .ok_or_else(|| error("committed custody missing"))?;
+    if custody.attempt.path != attempt_path || committed.path != result_path {
+        return Err(error("committed custody belongs to a different effect"));
+    }
+    let record = read(&root, &committed)?;
+    let expected = attempt::commit(json!({"record":admitted,"outcome":record["outcome"]}))?;
+    if record != expected {
+        return Err(error("committed result differs from its retained attempt"));
+    }
+    Ok(record)
+}

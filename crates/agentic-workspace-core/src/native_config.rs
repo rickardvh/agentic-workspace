@@ -216,7 +216,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                         || (source == SHARED
                             && matches!(
                                 field.as_str(),
-                                "system_intent.sources"
+                                "workspace.workflow_artifact_profile"
+                                    | "workspace.agent_instructions_file"
+                                    | "system_intent.sources"
                                     | "system_intent.preferred_source"
                                     | "modules.enabled"
                                     | "cli_compatibility.contract_schema"
@@ -272,7 +274,20 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     if human_review {
         blockers.push(json!({"code":"local-human-review-required","message":"PR/review closeout requires current human verification.","affects":["claim:pr-complete"]}));
     }
-    let revision = digest(&json!({"sources":sources,"residuals":residuals}))?;
+    let artifact_profile = crate::native_planning::artifact_profile(
+        target,
+        &shared["workspace"]["workflow_artifact_profile"],
+    )?;
+    blockers.extend(
+        artifact_profile["blockers"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .cloned(),
+    );
+    let revision = digest(
+        &json!({"sources":sources,"residuals":residuals,"artifact_profile":artifact_profile}),
+    )?;
     // Restriction targets come only from the owner mappings above, never from
     // config-authored effect names. A ceiling grants no operation, effect or claim.
     let affects = blockers
@@ -291,9 +306,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     capability_contract["revision"] = json!(digest(&capability_contract)?);
     Ok(
         json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
-        "sources":sources,"residuals":residuals,"enabled":enabled,"cli_invoke":cli_invoke,
+        "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
-        "modules":shared["modules"]["enabled"],"system_intent":shared["system_intent"],
+        "agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"system_intent":shared["system_intent"],
         "assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
             "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose source-current domain proof command candidates through the existing native Verification selection and producer while preserving unresolved strategy and claim obligations."
+issues = [2334, 2613, 2981]

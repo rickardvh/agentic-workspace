@@ -15,7 +15,6 @@ use std::{
 };
 
 const RUNS: &str = ".agentic-workspace/local/proof-receipts/runs";
-const INDEX: &str = ".agentic-workspace/proof/receipts/index.json";
 const REVISION: &str = "native-selected-proof-v1";
 fn err(e: impl std::fmt::Display) -> CoreError {
     CoreError::new(e.to_string())
@@ -34,6 +33,9 @@ fn schema(name: &str) -> Value {
 }
 pub(crate) fn declaration() -> Value {
     json!({"kind":"verification/execute-selected/v1","result_kind":"agentic-workspace/proof-execution-result/v1","input_schema":schema("verification_execute_request")})
+}
+pub(crate) fn record_declaration() -> Value {
+    json!({"kind":"verification/record-receipt/v1","result_kind":"agentic-workspace/proof-execution-result/v1","input_schema":schema("verification_record_request")})
 }
 pub(crate) fn operation() -> Value {
     json!({"id":"proof.report","semantic_revision":REVISION,"input_schema":schema("native_proof_arguments"),"result_kind":"agentic-workspace/proof-execution-result/v1","effects":["proof-execution"],"reads":["verification"]})
@@ -86,7 +88,27 @@ pub(crate) fn selected(
     strategy: &Value,
     choice: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    select_mode(target, task, changed, work, strategy, choice, None)
+}
+pub(crate) fn select_mode(
+    target: &Path,
+    task: &str,
+    changed: &[String],
+    work: &Value,
+    strategy: &Value,
+    choice: Option<&Value>,
+    report: Option<&Value>,
+) -> Result<Value, CoreError> {
+    if report
+        .is_some_and(|value| serde_json::to_vec(value).map_or(true, |bytes| bytes.len() > 262144))
+    {
+        return Ok(
+            json!({"status":"blocked","reason":"interoperability-report-exceeds-native-bound","choices":[]}),
+        );
+    }
     let mut available = Vec::new();
+    let mut domain_count = 0usize;
+    let mut omitted_domain_commands = 0usize;
     if let Some(routes) = strategy["proof_routes"].as_object() {
         for (id, route) in routes {
             for command in route["commands"]
@@ -95,14 +117,33 @@ pub(crate) fn selected(
                 .flatten()
                 .filter_map(Value::as_str)
             {
+                if route["source_kind"] == "config-domain-lane" {
+                    if domain_count >= 16
+                        || serde_json::to_vec(&json!({"route_id":id,"command":command}))
+                            .map_or(true, |bytes| bytes.len() > 4096)
+                    {
+                        omitted_domain_commands += 1;
+                        continue;
+                    }
+                    domain_count += 1;
+                }
                 available.push(json!({"route_id":id,"command":command}));
             }
         }
     }
     let Some(choice) = choice else {
-        return Ok(json!({"status":"selection-required","choices":available}));
+        return Ok(
+            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"candidate_boundary":"Domain candidates are bounded; remaining exact commands stay at their current source-field reference. No automatic selection or proof sufficiency."}),
+        );
     };
-    if !available.iter().any(|item| item == choice) {
+    let source_selected = strategy["proof_routes"]
+        .get(choice["route_id"].as_str().unwrap_or(""))
+        .is_some_and(|route| {
+            route["commands"]
+                .as_array()
+                .is_some_and(|commands| commands.contains(&choice["command"]))
+        });
+    if !source_selected && report.is_none() {
         return Err(err(
             "proof selection is not a current source-declared command",
         ));
@@ -112,11 +153,25 @@ pub(crate) fn selected(
     if admission["admitted"] != true {
         return Ok(json!({"status":"blocked","reason":admission["reason"],"choices":available}));
     }
-    let route = &strategy["proof_routes"][choice["route_id"].as_str().unwrap()];
+    let route = if source_selected {
+        &strategy["proof_routes"][choice["route_id"].as_str().unwrap()]
+    } else {
+        &Value::Null
+    };
+    if route["source_kind"] == "config-domain-lane"
+        && serde_json::to_vec(route).map_or(true, |bytes| bytes.len() > 32768)
+    {
+        return Ok(
+            json!({"status":"blocked","reason":"domain-lane-selected-detail-exceeds-native-bound","source_ref":route["source_ref"],"source_revision":route["source_revision"],"choices":available}),
+        );
+    }
     let mut protocols = serde_json::Map::new();
     let mut dependencies = serde_json::Map::new();
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let mut gaps = Vec::new();
+    if !source_selected {
+        gaps.push("interoperability-strategy-selection-unproven".into());
+    }
     for id in route["protocol_refs"]
         .as_array()
         .into_iter()
@@ -128,8 +183,13 @@ pub(crate) fn selected(
             gaps.push(format!("proof-protocol-unavailable:{id}"));
         }
         protocols.insert(id.into(), protocol.clone());
+    }
+    for authority in protocols
+        .values()
+        .chain((route["source_kind"] == "config-domain-lane").then_some(route))
+    {
         for field in ["authority_refs", "stale_when"] {
-            for reference in protocol[field]
+            for reference in authority[field]
                 .as_array()
                 .into_iter()
                 .flatten()
@@ -148,8 +208,12 @@ pub(crate) fn selected(
             }
         }
     }
-    let semantic_strategy = json!({"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies});
-    let observed = runtime(&semantic_strategy)?;
+    let semantic_strategy = json!({"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies,"source_strategy_revision":digest(strategy)?,"strategy_coverage":if source_selected{"selected-command-covered"}else{"unproven"}});
+    let observed = if report.is_some() {
+        json!({"implementation":"interoperability-report","strategy_revision":digest(&semantic_strategy)?,"producer_admission":"unproven","environment_scope":"unobserved"})
+    } else {
+        runtime(&semantic_strategy)?
+    };
     let subject = proof_subject::build(target, changed, command, None, None, &[], &observed)?;
     if subject["identity_complete"] != true {
         gaps.push("proof-subject-incomplete".into());
@@ -171,7 +235,7 @@ pub(crate) fn selected(
     };
     Ok(
         json!({"status":"selected","selection":{"choice":choice,"task_identity":crate::direct_task::subject(task,changed)?,
-        "work":{"id":work["id"],"revision":work["revision"]},"strategy":semantic_strategy,"proof_subject":subject,"timeout_seconds":timeout},"choices":available,
+        "work":{"id":work["id"],"revision":work["revision"]},"strategy":semantic_strategy,"proof_subject":subject,"timeout_seconds":timeout,"reported_observation":report},"choices":available,
         "gaps":gaps,"environment_boundary":"Native producer and launched shell observed; nested tool environments remain unproven."}),
     )
 }
@@ -228,9 +292,16 @@ pub(crate) fn action(
     if view["status"] != "selected" {
         return Ok(json!([]));
     }
+    let mut arguments =
+        json!({"target":target,"task":task,"changed":changed,"selection":view["selection"]});
+    arguments[if view["selection"]["reported_observation"].is_null() {
+        "execute_selected"
+    } else {
+        "record_receipt"
+    }] = json!(true);
     Ok(
         json!([{"operation_id":"proof.report","dependency_revision":digest(&json!({"selection":view["selection"],"capability_revision":capability_revision}))?,
-        "arguments":{"target":target,"task":task,"changed":changed,"execute_selected":true,"selection":view["selection"]},
+        "arguments":arguments,
         "effects":["proof-execution"]}]),
     )
 }
@@ -251,7 +322,7 @@ fn create(root: &Dir, path: &str, value: &Value) -> Result<Vec<u8>, CoreError> {
     file.sync_all().map_err(err)?;
     Ok(bytes)
 }
-fn run_path(invocation: &Value) -> Result<String, CoreError> {
+pub(crate) fn run_path(invocation: &Value) -> Result<String, CoreError> {
     Ok(format!(
         "{RUNS}/native-{}/run.json",
         digest(&invocation["idempotency_key"])?.replace(':', "-")
@@ -285,6 +356,53 @@ fn retained(root: &Dir, path: &str, invocation: &Value) -> Result<Option<Value>,
         return Ok(Some(complete));
     }
     Ok(Some(run))
+}
+/// Read a prior native producer's exact committed publication relationship.
+/// This is historical effect custody, never current proof or continuation.
+pub(crate) fn committed_publication(
+    target: &Path,
+    receipt: &Value,
+) -> Result<Option<Value>, CoreError> {
+    let Some(reference) = receipt["source_ref"].as_str() else {
+        return Ok(None);
+    };
+    if !reference.starts_with(&format!("{RUNS}/native-sha256-"))
+        || !reference.ends_with("/run.json")
+    {
+        return Ok(None);
+    }
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let Some(bytes) = read(&root, reference)? else {
+        return Ok(None);
+    };
+    let initial: Value = serde_json::from_slice(&bytes).map_err(err)?;
+    let invocation = &initial["invocation"];
+    if invocation["source_owner"] != "verification"
+        || invocation["operation_id"] != "proof.report"
+        || run_path(invocation)? != reference
+        || receipt["proof_subject"] != invocation["arguments"]["selection"]["proof_subject"]
+        || receipt["command"] != invocation["arguments"]["selection"]["choice"]["command"]
+    {
+        return Ok(None);
+    }
+    let Some(held) = retained(&root, reference, invocation)? else {
+        return Ok(None);
+    };
+    let committed = crate::attempt_store::inspect_committed(
+        &target.to_string_lossy(),
+        held["custody"].clone(),
+    )?;
+    if committed["invocation"] != *invocation
+        || committed["outcome"]["value"]["proof_subject"] != receipt["proof_subject"]
+        || committed["outcome"]["value"]["publication"]["reference"]
+            != format!(
+                "proof://receipts/{}",
+                receipt["receipt_id"].as_str().unwrap_or("")
+            )
+    {
+        return Ok(None);
+    }
+    Ok(Some(committed))
 }
 struct ProcessGuard(Box<dyn process_wrap::std::ChildWrapper>);
 impl Drop for ProcessGuard {
@@ -420,10 +538,8 @@ pub(crate) fn execute(
             "unowned proof completion carrier exists; preserved before launch",
         ));
     }
-    if old.is_none() && read(&root, INDEX)?.is_some() {
-        return Err(err(
-            "proof-publication-index-custody-required; existing index preserved",
-        ));
+    if old.is_none() {
+        crate::proof_publication::check(target)?;
     }
     let admission = crate::attempt_store::admit(
         json!({"target":target,"decision":current["decision_packet"],"invocation":invocation,"custody":old.as_ref().map(|v|&v["custody"])}),
@@ -434,6 +550,13 @@ pub(crate) fn execute(
         );
     }
     if admission["disposition"] != "execute" {
+        if let Some(committed) =
+            crate::proof_publication::recover(target, invocation, &mut revalidate)?
+        {
+            return Ok(
+                json!({"status":committed["record"]["outcome"]["status"],"effects":committed["record"]["outcome"]["effects"],"value":committed["record"]["outcome"]["value"],"custody":committed["custody"]}),
+            );
+        }
         return Err(err(
             "proof-execution-uncertain; do not replay the possibly non-idempotent command",
         ));
@@ -445,15 +568,20 @@ pub(crate) fn execute(
     let command = selection["choice"]["command"]
         .as_str()
         .ok_or_else(|| err("missing selected command"))?;
+    let manual = invocation["arguments"]["record_receipt"] == true;
     let executable = selection["proof_subject"]["runtime"]["shell"]["path"]
         .as_str()
-        .ok_or_else(|| err("missing current shell observation"))?;
-    let mut result = process(
-        command,
-        target,
-        Path::new(executable),
-        Duration::from_secs(selection["timeout_seconds"].as_u64().unwrap()),
-    )?;
+        .unwrap_or("");
+    let mut result = if manual {
+        json!({"status":selection["reported_observation"]["result"],"execution_kind":"interoperability-report","producer_admission":"unproven","reported_observation":selection["reported_observation"],"output":{}})
+    } else {
+        process(
+            command,
+            target,
+            Path::new(executable),
+            Duration::from_secs(selection["timeout_seconds"].as_u64().unwrap()),
+        )?
+    };
     let detail_path = format!("{path}.command.json");
     let detail_bytes = create(&root, &detail_path, &result)?;
     let streams: serde_json::Map<String, Value> = result["output"]
@@ -487,27 +615,30 @@ pub(crate) fn execute(
     receipt["publication_id"] = json!(id);
     receipt["revision"] = json!(timestamp);
     receipt["source_ref"] = json!(path);
-    let mut publication =
+    let publication =
         json!({"status":"unpublished","reason":"proof-source-changed-during-execution"});
-    if still_current {
-        let receipt_path = format!(".agentic-workspace/proof/receipts/{id}.json");
-        create(&root, &receipt_path, &receipt)?;
-        let mut next =
-            json!({"kind":"agentic-workspace/trusted-producer-receipt-index/v1","receipts":{}});
-        next["receipts"][&id] = json!({"path":format!("{id}.json"),"producer_class":"aw-proof","revision":timestamp,"source_ref":path,"status":"current"});
-        if create(&root, INDEX, &next).is_ok() {
-            publication = json!({"status":"published","reference":format!("proof://receipts/{id}"),"index_sha256":sha(&serde_json::to_vec_pretty(&next).map_err(err)?)});
-        } else {
-            publication = json!({"status":"unpublished","reason":"proof-publication-index-collision-preserved","receipt_path":receipt_path});
-        }
-    }
     let value = json!({"kind":"agentic-workspace/proof-execution-result/v1","process":result,"publication":publication,
         "proof_subject":selection["proof_subject"],"strategy":selection["strategy"],"source_current":still_current,
         "claim_boundary":{"completion_claim_allowed":false,"task_judgment":"not-produced","independent_review":"not-produced"},
-        "environment_scope":"producer-and-declared-shell","nested_tool_runtime":"unobserved"});
-    let committed = crate::attempt_store::commit(
-        json!({"target":target,"custody":admission["custody"],"outcome":{"status":"applied","effects":["proof-execution"],"value":value}}),
-    )?;
+        "producer_admission":if manual {"unproven-interoperability-observation"}else{"retained-native-execution"},
+        "strategy_coverage":selection["strategy"]["strategy_coverage"],
+        "environment_scope":if manual {"unobserved"}else{"producer-and-declared-shell"},"nested_tool_runtime":"unobserved"});
+    let outcome = json!({"status":"applied","effects":["proof-execution"],"value":value});
+    let committed = if still_current {
+        crate::proof_publication::publish(
+            target,
+            &receipt,
+            invocation,
+            &admission["custody"],
+            outcome,
+            &mut revalidate,
+        )?
+    } else {
+        crate::attempt_store::commit(
+            json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
+        )?
+    };
+    let value = committed["record"]["outcome"]["value"].clone();
     let mut final_run = run;
     final_run["custody"] = committed["custody"].clone();
     create(&root, &format!("{path}.completed.json"), &final_run)?;

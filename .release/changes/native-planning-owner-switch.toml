@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Allow an exact explicit destination choice to switch an already native-owned Planning selector through its existing reconciliation custody."
+issues = [2970, 3001, 3000, 2984, 2987, 2909, 3077]

@@ -80,13 +80,46 @@
       },
       "description": "Choose one exact command already offered by the current Verification strategy; this request supplies no command or proof authority."
     },
+    "verification_record_request": {
+      "type": "object",
+      "required": [
+        "route_id",
+        "command",
+        "result"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "route_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Reported route hint or unresolved; only matching current source declarations establish strategy coverage."
+        },
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "description": "Bounded reported command text; retaining it does not authorize execution."
+        },
+        "result": {
+          "enum": [
+            "passed",
+            "failed"
+          ],
+          "description": "Reported result, not authenticated execution evidence."
+        },
+        "reported_observation": {
+          "type": "object",
+          "description": "Preserved interoperability receipt fields, unproven by native producer admission."
+        }
+      },
+      "description": "Record an explicit interoperability observation against the exact current task and proof subject. The observation supplies no native execution, proof sufficiency or independent-review authority."
+    },
     "native_proof_arguments": {
       "type": "object",
       "required": [
         "target",
         "task",
         "changed",
-        "execute_selected",
         "selection"
       ],
       "additionalProperties": false,
@@ -114,9 +147,35 @@
         "selection": {
           "type": "object",
           "description": "Current owner-derived command, strategy, subject, work, runtime observations and bounded timeout; public clients cannot supply selection authority."
+        },
+        "record_receipt": {
+          "const": true,
+          "description": "Publish the current owner-derived interoperability observation without executing a command."
         }
       },
-      "description": "Owner-derived selected proof process and receipt publication effect, sealed to the current native subject and strategy."
+      "description": "Owner-derived selected proof process and receipt publication effect, sealed to the current native subject and strategy.",
+      "oneOf": [
+        {
+          "required": [
+            "execute_selected"
+          ],
+          "not": {
+            "required": [
+              "record_receipt"
+            ]
+          }
+        },
+        {
+          "required": [
+            "record_receipt"
+          ],
+          "not": {
+            "required": [
+              "execute_selected"
+            ]
+          }
+        }
+      ]
     },
     "proof_receipt_input": {
       "description": "Existing deterministic proof receipt shape and binding checks. The timestamp observation is host-decoded timezone validity only; none of these operations authenticate a producer or establish freshness, coverage, task sufficiency or independence.",
@@ -857,6 +916,7 @@
       "properties": {
         "operation_id": {"type": "string", "minLength": 1},
         "dependency_revision": {"type": "string", "minLength": 1, "description": "Owner-derived revision of material action dependencies, excluding unrelated source changes."},
+        "source_requests": {"type": "array", "maxItems": 16, "items": {"$ref": "#/$defs/public_request"}, "description": "Exact current source-owner requests retained as invocation dependencies; delivery is not proof or mutation authority."},
         "effect_generation": {"type": "string", "description": "Owner-authorized repeat boundary; absent means the initial logical effect, never ambient revision churn."},
         "arguments": {"type": "object"},
         "effects": {"type": "array", "items": {"type": "string", "minLength": 1}},
@@ -1256,10 +1316,10 @@
     },
     "system_intent_read_arguments": {
       "type": "object",
-      "description": "Exact current governing source read; no interpretation or acceptance authority.",
+      "description": "Exact current owner-selected source read; no interpretation, mutation or acceptance authority.",
       "x-doc-role": "internal",
       "properties": {
-        "reference": {"type": "string", "minLength": 1, "description": "Reference returned by the current system-intent owner."},
+        "reference": {"type": "string", "minLength": 1, "description": "Reference returned by the current source owner."},
         "revision": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$", "description": "Exact current source byte identity."}
       },
       "required": ["reference", "revision"],

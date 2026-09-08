@@ -6,13 +6,13 @@ use sha2::{Digest, Sha256};
 use std::path::Path;
 const MIRROR: &str = ".agentic-workspace/system-intent/intent.toml";
 
-fn bytes(root: &Dir, reference: &str) -> Result<Option<Vec<u8>>, CoreError> {
+pub(crate) fn bytes(root: &Dir, reference: &str) -> Result<Option<Vec<u8>>, CoreError> {
     crate::native_verification::read(root, reference).map_err(CoreError::new)
 }
-fn hash(bytes: &[u8]) -> String {
+pub(crate) fn hash(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
 }
-fn observation(root: &Dir, reference: &str) -> Value {
+pub(crate) fn observation(root: &Dir, reference: &str) -> Value {
     match bytes(root, reference) {
         Ok(Some(bytes)) => {
             json!({"reference":reference,"revision":hash(&bytes),"bytes":bytes.len(),"status":"present"})

@@ -397,11 +397,37 @@ def test_native_proof_uses_actual_reconciled_planning_subject(tmp_path: Path, sh
     action = selected["decision_packet"]["primary_action"]
     assert action["arguments"]["selection"]["work"] == {"id": subject["id"], "revision": subject["revision"]}
     result = call({**context, "invocation": action})
-    claim = call(context)["verification"]["requests"][0]
-    claim["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
-    evidence = call({**context, "request": claim})["verification"]["evidence"][0]
-    assert evidence["evidence_freshness"] == "reusable"
-    assert evidence["task_judgment"]["current_judgment_count"] == 0
+
+    def evidence_for(consumer: str):
+        current = consume(consumer, shared_core_binary, native_cli, context, host_path=os.environ["PATH"])
+        claim = current["verification"]["requests"][0]
+        claim["arguments"]["evidence_refs"] = [result["value"]["publication"]["reference"]]
+        checked = consume(consumer, shared_core_binary, native_cli, {**context, "request": claim}, host_path=os.environ["PATH"])
+        assert checked["verification"]["judgment_request"]["work_ref"] == subject["id"]
+        assert checked["decision_packet"]["status"] != "terminal"
+        evidence = checked["verification"]["evidence"][0]
+        assert evidence["publication_admission"]["status"] == "admitted"
+        assert evidence["task_judgment"]["current_judgment_count"] == 0
+        return evidence
+
+    for consumer in ["native", "json", "python", "typescript"]:
+        assert evidence_for(consumer)["evidence_freshness"] == "reusable"
+    original = (tmp_path / "a.txt").read_bytes()
+    (tmp_path / "a.txt").write_text("changed proof input")
+    for consumer in ["native", "json", "python", "typescript"]:
+        assert evidence_for(consumer)["evidence_freshness"] == "stale"
+    (tmp_path / "a.txt").write_bytes(original)
+    body = json.loads(plan.read_bytes())
+    body["canonical_core"]["hard_constraints"] = "New material Planning boundary"
+    plan.write_text(json.dumps(body))
+    request = call(context)["decision_packet"]["decision_request"]["response_request"]
+    request["arguments"]["answer"] = "continue-selected"
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    call({**context, "invocation": action})
+    assert call(context)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != subject["revision"]
+    for consumer in ["native", "json", "python", "typescript"]:
+        assert evidence_for(consumer)["evidence_freshness"] == "stale"
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
 
 
 def test_native_cli_colocated_core_is_required_without_path_or_env_fallback(

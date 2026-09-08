@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Carry exact source-owner requests through public action dependencies without adopting source mutation custody."
