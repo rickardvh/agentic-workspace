@@ -30,6 +30,7 @@ import {
 } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { routeDiscovery } from './native/semantic-decision.mjs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -3048,135 +3049,18 @@ function instructionsExecute(values, operationId) {
 }
 
 function instructionsRouteOperation(targetRoot, values, operationId, blocked) {
-  const scriptPath = resolve(targetRoot, 'scripts/run_agentic_workspace.py');
-  if (!existsSync(scriptPath)) {
-    return instructionsRouteOperationNative(targetRoot, values, operationId);
+  if (operationId === 'instructions.route-select') {
+    const result = blocked('native-persistent-route-selection-unavailable', 'Legacy route selection mutation is unavailable in this adapter. Use native agentic-workspace start --target <repository> --task <current task> --format json; inspect semantic_routes.requests and return the current semantic-routes/select/v1 request with your posture/routes via start --input. This is current applicability judgment, not a persisted legacy write.');
+    result.mutation_applied = false;
+    result.authority_effect = 'none';
+    result.recovery = { api: '@agentic-workspace/workspace-cli/native', method: 'start', target: targetRoot, required_input: 'task: exact current task', select_request_kind: 'semantic-routes/select/v1', effect: 'current request only; no legacy write' };
+    return result;
   }
-  const subcommand = operationId === 'instructions.routes' ? 'routes' : 'select-route';
-  const args = ['run', '--frozen', '--active', '--no-sync', 'python', scriptPath, 'instructions', subcommand, '--target', targetRoot, '--format', 'json'];
-  for (const [key, value] of Object.entries(values)) {
-    if (['target', 'target_root', 'format', 'operation_id'].includes(key) || key.startsWith('_') || key.endsWith('_command') || value === undefined || value === null || value === '' || value === false) continue;
-    const flag = `--${key === 'expected_source_revision' ? 'expect-source-revision' : key.replaceAll('_', '-')}`;
-    if (Array.isArray(value)) {
-      for (const item of value) args.push(flag, String(item));
-    } else if (value === true) args.push(flag);
-    else args.push(flag, String(value));
-  }
-  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-  const output = completed.stdout || completed.stderr || '';
   try {
-    const payload = JSON.parse(output);
-    return completed.status === 0 ? payload : blocked('authoritative-route-boundary-failed', JSON.stringify(payload).slice(0, 500));
-  } catch {
-    return blocked('authoritative-route-boundary-non-json', output.slice(0, 500) || 'Install uv/python and retry through AW.');
+    return routeDiscovery({ target: targetRoot, parent: String(values.parent ?? ''), exact: String(values.exact ?? '') });
+  } catch (error) {
+    return blocked('native-route-discovery-unavailable', error.message);
   }
-}
-
-function semanticRouteRegistryPaths(targetRoot) {
-  const paths = [];
-  const rootRegistry = resolveInside(targetRoot, 'tools/skills/REGISTRY.json');
-  if (existsSync(rootRegistry)) paths.push(rootRegistry);
-  const workspace = resolveInside(targetRoot, '.agentic-workspace');
-  const visit = (directory) => {
-    if (!existsSync(directory)) return;
-    for (const entry of readdirSync(directory, { withFileTypes: true })) {
-      const child = join(directory, entry.name);
-      if (entry.isDirectory()) visit(child);
-      else if (entry.name === 'REGISTRY.json' && dirname(child).endsWith(`${join('', 'skills')}`)) paths.push(child);
-    }
-  };
-  visit(workspace);
-  return [...new Set(paths.map((path) => resolve(path)))].sort();
-}
-
-function semanticRouteCatalogueNative(targetRoot) {
-  const declarations = new Map();
-  const diagnostics = [];
-  const sourceMaterial = [];
-  for (const registryPath of semanticRouteRegistryPaths(targetRoot)) {
-    const sourceRef = relative(targetRoot, registryPath).replaceAll('\\', '/');
-    try {
-      const rawText = readText(registryPath);
-      const payload = JSON.parse(rawText);
-      sourceMaterial.push(`${sourceRef}\0sha256:${createHash('sha256').update(rawText).digest('hex')}`);
-      for (const skill of Array.isArray(payload.skills) ? payload.skills : []) {
-        if (!skill || typeof skill !== 'object') continue;
-        for (const rawRoute of Array.isArray(skill.semantic_routes) ? skill.semantic_routes : []) {
-          const route = typeof rawRoute === 'string' ? { id: rawRoute } : rawRoute && typeof rawRoute === 'object' ? rawRoute : {};
-          const id = String(route.id ?? '').trim();
-          const match = String(route.match ?? 'exact').trim();
-          if (!/^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)+$/.test(id) || !['exact', 'subtree'].includes(match)) {
-            diagnostics.push({ source_ref: sourceRef, code: 'invalid-semantic-route', message: `skill '${skill.id ?? ''}' has invalid route '${id}' or match '${match}'` });
-            continue;
-          }
-          const current = declarations.get(id) ?? { id, description: String(route.description ?? skill.summary ?? '').trim(), match, capability_bindings: [], sources: [] };
-          if (current.match !== match) { diagnostics.push({ source_ref: sourceRef, code: 'route-match-conflict', message: `route '${id}' is declared with conflicting exact/subtree semantics` }); continue; }
-          const capability = `skill:${String(skill.id ?? '').trim()}`;
-          if (!current.capability_bindings.some((item) => item.capability === capability)) {
-            const priorityValue = route.priority ?? 100;
-            current.capability_bindings.push({ capability, priority: /^\d+$/.test(String(priorityValue)) ? Number(priorityValue) : 100 });
-          }
-          current.sources.push({ source_ref: sourceRef, skill_id: String(skill.id ?? '').trim() });
-          declarations.set(id, current);
-        }
-      }
-    } catch (error) { diagnostics.push({ source_ref: sourceRef, code: 'invalid-registry', message: error instanceof Error ? error.message : String(error) }); }
-  }
-  const routes = [...declarations.values()].sort((left, right) => left.id.localeCompare(right.id)).map((route) => {
-    route.capability_bindings.sort((left, right) => left.priority - right.priority || left.capability.localeCompare(right.capability));
-    route.sources.sort((left, right) => left.source_ref.localeCompare(right.source_ref) || left.skill_id.localeCompare(right.skill_id));
-    return { ...route, capabilities: route.capability_bindings.map((item) => item.capability) };
-  });
-  return { status: diagnostics.length ? 'invalid' : 'current', source_revision: `sha256:${createHash('sha256').update(sourceMaterial.join('\n')).digest('hex')}`, routes, diagnostics };
-}
-
-function instructionsRouteOperationNative(targetRoot, values, operationId) {
-  const catalogue = semanticRouteCatalogueNative(targetRoot);
-  if (operationId === 'instructions.routes') {
-    const exact = String(values.exact ?? '').trim().replace(/^\/+|\/+$/g, '');
-    const parent = String(values.parent ?? '').trim().replace(/^\/+|\/+$/g, '');
-    let routes;
-    let level;
-    if (exact) { routes = catalogue.routes.filter((route) => route.id === exact); level = 'exact'; }
-    else {
-      const prefix = parent ? `${parent}/` : '';
-      const children = new Map();
-      for (const route of catalogue.routes) {
-        if (prefix && !route.id.startsWith(prefix)) continue;
-        const suffix = route.id.slice(prefix.length);
-        const child = suffix.split('/', 1)[0];
-        if (!child) continue;
-        const id = `${prefix}${child}`.replace(/^\/+|\/+$/g, '');
-        const current = children.get(id) ?? { id, leaf: false, child_count: 0 };
-        current.leaf ||= route.id === id;
-        current.child_count += suffix.includes('/') ? 1 : 0;
-        children.set(id, current);
-      }
-      routes = [...children.values()].sort((left, right) => left.id.localeCompare(right.id));
-      level = parent ? 'branch' : 'roots';
-    }
-    return { kind: 'agentic-workspace/semantic-task-route-discovery/v1', operation_id: operationId, status: catalogue.status, level, parent, exact, source_revision: catalogue.source_revision, routes, route_count: routes.length, full_catalogue_emitted: Boolean(exact), diagnostics: catalogue.diagnostics, authority_effect: 'applicability-only', message: routes.map((item) => item.id).join('\n') };
-  }
-  const posture = String(values.posture ?? '');
-  const routes = [...new Set((Array.isArray(values.route) ? values.route : []).map((item) => String(item).replace(/^\/+|\/+$/g, '')).filter(Boolean))].sort();
-  const currentWorkId = createHash('sha256').update(`${targetRoot.replaceAll('\\', '/')}\0semantic-task-routes`).digest('hex').slice(0, 16);
-  const failures = [];
-  if (!['selected', 'none', 'unresolved'].includes(posture)) failures.push('unsupported-posture');
-  if (String(values.expected_source_revision ?? '') !== catalogue.source_revision) failures.push('route-source-revision-mismatch');
-  if (values.current_work_id && String(values.current_work_id) !== currentWorkId) failures.push('current-work-mismatch');
-  if (posture === 'selected' && !routes.length) failures.push('selected-routes-required');
-  if (posture === 'none' && routes.length) failures.push('none-posture-rejects-routes');
-  const known = new Set(catalogue.routes.map((route) => route.id));
-  if (routes.some((route) => !known.has(route))) failures.push('unknown-route');
-  if (failures.length) return { kind: 'agentic-workspace/semantic-task-route-selection/v1', operation_id: operationId, status: 'blocked', reason_codes: [...new Set(failures)].sort(), current_work_id: currentWorkId, source_revision: catalogue.source_revision, mutation_applied: false, authority_effect: 'none', message: 'Semantic task route selection: blocked' };
-  const fact = { kind: 'agentic-workspace/semantic-task-route-fact/v1', posture, routes, task_identity: { kind: 'current-work', id: currentWorkId }, current_work_id: currentWorkId, source_revision: catalogue.source_revision, provenance: 'agent-selected', authority_effect: 'applicability-only' };
-  const destination = resolveInside(targetRoot, '.agentic-workspace/local/current-task-routes.json');
-  const rendered = `${JSON.stringify(fact, null, 2)}\n`;
-  const existing = existsSync(destination) ? readText(destination) : '';
-  const dryRun = Boolean(values.dry_run);
-  const status = existing === rendered ? 'already-current' : dryRun ? 'preview' : { selected: 'selected', none: 'classified-none', unresolved: 'classified-unresolved' }[posture];
-  if (!dryRun && existing !== rendered) { mkdirSync(dirname(destination), { recursive: true }); writeFileSync(destination, rendered, 'utf8'); }
-  return { kind: 'agentic-workspace/semantic-task-route-selection/v1', operation_id: operationId, status, fact, path: '.agentic-workspace/local/current-task-routes.json', mutation_applied: !dryRun && existing !== rendered, authority_effect: 'none', message: `Semantic task route selection: ${status}` };
 }
 
 function validInstructionPattern(value) {

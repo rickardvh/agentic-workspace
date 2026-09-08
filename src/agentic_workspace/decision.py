@@ -12,6 +12,10 @@ class DecisionContractError(ValueError):
     """Raised when the shared core rejects a source-decision request."""
 
 
+def route_discovery(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"native_route_discovery": context})
+
+
 def start(context: Mapping[str, Any]) -> dict[str, Any]:
     """Consume repository sources through the native public owner boundary."""
     return _request({"start": context})

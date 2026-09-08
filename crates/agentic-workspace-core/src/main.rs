@@ -18,6 +18,11 @@ fn main() {
         )
     } else if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("native_route_discovery"))
+    {
+        agentic_workspace_core::native_routes::discovery(request["native_route_discovery"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("review_authentication"))
     {
         agentic_workspace_core::review_authentication::view(
