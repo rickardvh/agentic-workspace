@@ -80,6 +80,7 @@ pub(crate) fn view(
         }
         observed_invocation = invocation.clone();
         observation = json!({"kind":"agentic-workspace/delegation-result-observation/v1","status":"current-executed-observation","assignment_identity":requirements["assignment"]["result"]["assignment_identity"],"returned":value["returned"],"process":value["process"],"context_cost":value["context_cost"],"custody":request["arguments"]["custody"],"claim_boundary":value["claim_boundary"]});
+        observation["context"] = json!({"task":packet["assignment_identity"]["human_intent"],"role":packet["assignment_identity"]["role"],"scope_class":"read-only","context_cost":value["context_cost"]});
     } else if ready {
         let template = json!({"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"delegation","owner_revision":owner["revision"],"source_revision":source,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"handoff_revision":digest(packet)?}});
         if let Some(request) = submitted_request {

@@ -45,6 +45,8 @@ pub(crate) fn declaration() -> Value {
 pub(crate) fn operation() -> Value {
     let mut operation = json!({"id":"planning.update","semantic_revision":"planning-update-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"prior_revision":{"type":"string"},"document":{"type":"object"},"provenance_format":{"const":"repo-relative-v2"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","prior_revision","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/update-result/v1","effects":["planning-state"],"reads":["planning"]});
     operation["input_schema"]["properties"]["consumed_return"] = json!({"type":"object","properties":{"request":{"type":"object"},"result_revision":{"type":"string"},"judgment_revision":{"type":"string"},"assignment_identity":{"type":"object"},"execution_custody":{"type":"object"}},"required":["request","result_revision","judgment_revision","assignment_identity","execution_custody"],"additionalProperties":false});
+    operation["input_schema"]["properties"]["consumed_return"]["properties"]["context"] =
+        json!({"type":"object"});
     operation
 }
 pub(crate) fn adoption_declaration() -> Value {
@@ -137,6 +139,7 @@ pub(crate) fn adopt_return(
         return Err(error("Planning did not admit the bounded return update"));
     }
     action["arguments"]["consumed_return"] = json!({"request":adoption,"result_revision":digest(&admission["returned"])? ,"judgment_revision":admission["source_revision"],"assignment_identity":admission["assignment_identity"],"execution_custody":admission["execution_custody"]});
+    action["arguments"]["consumed_return"]["context"] = admission["context"].clone();
     action["source_requests"] = json!(submitted);
     result["action"] = action;
     Ok(result)
@@ -370,6 +373,16 @@ pub(crate) fn view(
         return Ok(result);
     }
     let current_revision = revision(&bytes);
+    // Only this owner inspects its producer records. A transported observation,
+    // pending publication or later material edit is not a current consumed result.
+    if planning["status"] == "current"
+        && let Some(retained) = &retained
+        && retained["committed"] == true
+        && retained["invocation"]["arguments"]["consumed_return"].is_object()
+        && payload(&retained["invocation"], &retained["custody"])? == body
+    {
+        result["consumed_result"] = json!({"kind":"agentic-planning/consumed-result/v1","status":"current","owner_ref":reference,"source_revision":current_revision,"custody":retained["custody"],"consumption":retained["invocation"]["arguments"]["consumed_return"]});
+    }
     result["requests"] = json!([{"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"planning","owner_revision":owner["revision"],"source_revision":current_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"owner_ref":reference}}]);
     let recovery_request = effective.filter(|r| r["request_kind"] == RECOVER_KIND);
     if let Some(retained) = &retained

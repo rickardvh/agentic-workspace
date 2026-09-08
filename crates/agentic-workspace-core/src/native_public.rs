@@ -324,6 +324,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     )?;
     planning["update_requests"] = update["requests"].clone();
     planning["update_retained"] = update["retained"].clone();
+    planning["consumed_result"] = update["consumed_result"].clone();
     planning["pending_update"] = update["pending"].clone();
     planning["update_recovery_requests"] = update["recovery_requests"].clone();
     if update["pending"].is_object() {
@@ -463,6 +464,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &contract,
     )?;
     contributions.push(startup_adapter["contribution"].clone());
+    requirements["bounded_outcome_evidence"] =
+        if configuration["assignment_requirements"]["configured"] == true {
+            crate::native_assignment::outcome_evidence(&input.task, &planning, &verification)?
+        } else {
+            json!([])
+        };
     let mut assignment = crate::native_assignment::view(
         &work,
         &configuration,

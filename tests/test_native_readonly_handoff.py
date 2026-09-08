@@ -200,6 +200,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     assert not any(admission["claim_boundary"].values())
     assert not any(b["code"] == "current-nonlocal-assignment-handoff-required" for b in admitted["decision_packet"]["blockers"])
     assert not (tmp_path / ".agentic-workspace/delegation-outcomes.json").exists()
+    assert admitted["task_requirements"]["bounded_outcome_evidence"] == []
     for answer, status in [("repair-required", "repair-required"), ("reject-result", "rejected")]:
         negative = copy.deepcopy(judgment)
         negative[-1]["arguments"] = {"answer": answer, "reason": "The orchestrator has not accepted this result for use."}
@@ -245,15 +246,57 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     checked = consume(surface, shared_core_binary, native_cli, {**proof_context, "invocation": proof_action}, host_path=os.environ["PATH"])
     assert checked["value"]["process"]["status"] == "passed" and checked["value"]["publication"]["status"] == "published"
     assert checked["value"]["claim_boundary"]["completion_claim_allowed"] is False
+
+    def proof_view(request=continuation, **updates):
+        return consume(
+            surface, shared_core_binary, native_cli, {**proof_context, "request": request, **updates}, host_path=os.environ["PATH"]
+        )
+
+    claim = proof_view()["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [checked["value"]["publication"]["reference"]]
+    evidence_requests = [continuation, claim]
+    current = proof_view(evidence_requests)
+    evidence = current["task_requirements"]["bounded_outcome_evidence"]
+    assert len(evidence) == 1 and evidence[0]["claim"] == "result-retained-and-selected-command-passed"
+    assert evidence[0]["support"]["observed_outcomes"] == 1 and not any(evidence[0]["claim_boundary"].values())
+    assert proof_view(evidence_requests)["task_requirements"]["bounded_outcome_evidence"] == evidence
+    requirements = current["task_requirements"]["requests"][0]
+    requirements["arguments"]["required_result_classes"] = ["read-only"]
+    comparison = proof_view([*evidence_requests, requirements])["task_requirements"]["assignment"]
+    alternatives = comparison["result"]["alternatives"]
+    assert next(a for a in alternatives if a["target"] == "expert")["contextual_evidence"] == evidence
+    assert next(a for a in alternatives if a["target"] == "local")["contextual_evidence"] == []
+    assert comparison["result"]["selected"] is None
+    comparison_request = comparison["requests"][0]
+    comparison_request[-1]["arguments"].update(
+        alternative="expert:cli",
+        reason="This exact eligible configuration has one current retained-and-checked outcome; broader suitability remains uncertain.",
+    )
+    assert proof_view(comparison_request)["task_requirements"]["assignment"]["result"]["selected"]["target"] == "expert"
+    unrelated_task = consume(
+        surface, shared_core_binary, native_cli, {**proof_context, "task": "An unrelated outcome"}, host_path=os.environ["PATH"]
+    )
+    assert unrelated_task["task_requirements"]["bounded_outcome_evidence"] == []
+    assert not (tmp_path / ".agentic-workspace/delegation-outcomes.json").exists()
     with pytest.raises(AssertionError, match="changed|stale"):
         call(adoption)
     dependency.write_text("Changed after execution.\n")
+    assert proof_view(evidence_requests)["task_requirements"]["bounded_outcome_evidence"] == []
+    with pytest.raises(AssertionError, match="source changed|stale"):
+        proof_view(comparison_request)
     with pytest.raises(AssertionError, match="changed|stale"):
         call(invocation=action)
     with pytest.raises(AssertionError, match="changed|stale"):
         consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
     with pytest.raises(AssertionError, match="changed|stale"):
         call(judgment)
+    supersede = call()["planning"]["update_requests"][0]
+    supersede["arguments"]["material"] = copy.deepcopy(adopt_action["arguments"]["request"]["arguments"]["material"])
+    supersede["arguments"]["material"]["next_action"] = "The owner now continues beyond the consumed result."
+    call(invocation=call(supersede)["decision_packet"]["primary_action"])
+    recovery = call()["planning"]["requests"][0]
+    call(invocation=call(recovery)["decision_packet"]["primary_action"])
+    assert call()["planning"]["consumed_result"] is None
     assert (tmp_path / "launches.txt").read_text() == "launched\n"
     assert unrelated.read_text() == "Preserve concurrent work.\n"
 

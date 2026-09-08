@@ -47,7 +47,7 @@ The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections
 | #2767 | bounded implementation gap | Native config reads and preserves sources, but ordinary native requests do not include the setup/config owner mutation journey. Current unresolved configuration must not silently become defaults. |
 | #2916 | candidate-complete | Existing independent #3138 acceptance. Typed policy/currentness/override authority is distinct from the unresolved execution and return lifecycle. |
 | #2210 | bounded implementation gap | Comparative judgment and configuration binding exist; the ordinary native path lacks the complete consequential assignment lifecycle consuming those identities. |
-| #2209 | bounded implementation gap | Current target quality cannot be earned through a native admitted consequential lifecycle. Attribution and rejecting editable evidence are useful negative slices, not the required positive outcome path. |
+| #2209 | bounded implementation gap | The base lacks the positive native outcome path. #3167 proposes a current retained-and-checked contextual signal; explicit human/evaluation ingress, failure/dispute handling and repeated selection convergence remain unresolved. No general target quality is inferred. |
 | #2818 | bounded implementation gap | Bounded read-only capsule and burden semantics exist. Complete supported non-local and matched local successful-completion burden is absent; prior incomplete workers are counterevidence, not successes. |
 | #2947 | bounded implementation gap | `native_handoff.rs` seals read-only export/return; native ingress does not provide the required mutation attribution, consequential admission, execution/recovery and Planning/Verification re-entry lifecycle. |
 | #2817 | bounded implementation gap | Native best-fit can keep a non-local decision binding, but cannot complete the configured consequential lifecycle. Manual-only winners and retained-local controls must remain honest. |
@@ -383,3 +383,37 @@ request fails with exit 2 and unchanged bytes. Its checked-in copy is the native
 writer output; local custody receipts and unrelated original-checkout work are
 not transported. The isolated implementation worktree does not acquire custody
 over that copied selector: bounded source work remains direct there.
+
+## Positive contextual outcome evidence (#2209, proposed in #3167)
+
+Planning now projects its own exact committed consumption only while its produced
+material remains current. Verification separately projects the current source
+scope of an admitted native selected-command check. Assignment joins those typed
+facts into one narrow `result-retained-and-selected-command-passed` observation.
+It appears beside the matching currently eligible configuration for an agent's
+comparison. Neither target eligibility nor a winner is inferred. Confidence is
+one current outcome; task success, general quality, independent review and
+completion authority remain false. Process input/elapsed measurements are retained
+with unknown provider/review costs, rather than converted into a score.
+
+This projection uses existing owner custody and proof, with no new evidence store,
+history scan, record-injection endpoint or direct-work read. Repeated projection
+does not multiply support. Source drift, changed task/configuration, or native
+Planning supersession de-adopts the signal; stale comparisons must resolve again.
+The historical result remains with its producing owner and cannot confer current
+standing. The existing integration cases cover these boundaries instead of adding
+another test family.
+
+A fresh real matched lifecycle on this extension again retained and checked the
+exact revision-7 source frontier. Local: 7,806 ms and 21 native calls. Non-local:
+28,343 ms and 25 calls, including 16,790 ms worker time and 41,508 process-input
+bytes. Native Assignment derived one contextual signal for the executed worker,
+none for the local control, and no automatic selection. No final evidence record
+was hand-authored. The 64-case handoff/Assignment/native-proof matrix passed in
+215.40 seconds, including native/Python/TypeScript/JSON. The last stale-comparison
+assertions and final Rust results are recorded separately in the PR.
+
+This serves the requested smallest positive path, not all of #2209: failure-heavy
+real learning, explicit human/evaluation ingress, dispute/contradiction handling,
+and repeated outcome convergence remain missing. The conservative live-owner
+projection is not a durable cross-owner quality database or a completion claim.

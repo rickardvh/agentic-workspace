@@ -1,6 +1,62 @@
 //! Source-owned current comparative Assignment judgment; no persistent preference.
 use crate::{CoreError, digest};
 use serde_json::{Value, json};
+
+fn configuration_key(value: &Value) -> Result<String, CoreError> {
+    digest(&json!([
+        value["id"],
+        value["target"],
+        value["transport"],
+        value["capability_revision"],
+        value["execution"]["adapter"],
+        value["execution"]["observed_executable"]
+    ]))
+}
+
+/// A sparse projection of two current source-owner outcomes, not another store.
+/// Replacing the Planning result or losing its checked sources de-adopts it.
+pub(crate) fn outcome_evidence(
+    task: &str,
+    planning: &Value,
+    verification: &Value,
+) -> Result<Value, CoreError> {
+    let used = &planning["consumed_result"];
+    let consumption = &used["consumption"];
+    if used["status"] != "current"
+        || consumption["context"]["task"] != task
+        || consumption["context"]["scope_class"] != "read-only"
+    {
+        return Ok(json!([]));
+    }
+    let Some(proof) = verification["evidence"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|proof| {
+            proof["checked_scope"]["task"] == task
+                && proof["checked_scope"]["source_inputs"]
+                    .as_array()
+                    .is_some_and(|inputs| {
+                        inputs.iter().any(|input| {
+                            input["path"] == used["owner_ref"]
+                                && used["source_revision"]
+                                    .as_str()
+                                    .and_then(|r| r.strip_prefix("sha256:"))
+                                    == input["sha256"].as_str()
+                        })
+                    })
+        })
+    else {
+        return Ok(json!([]));
+    };
+    let configuration = &consumption["assignment_identity"]["selected"]["configuration"];
+    if !configuration.is_object() {
+        return Ok(json!([]));
+    }
+    let mut observation = json!({"kind":"agentic-workspace/contextual-target-outcome/v1","status":"current-owner-derived","claim":"result-retained-and-selected-command-passed","target":configuration["target"],"configuration_key":configuration_key(configuration)?,"context":{"task":task,"role":consumption["context"]["role"],"scope_class":"read-only","owner_ref":used["owner_ref"],"source_revision":used["source_revision"]},"support":{"observed_outcomes":1,"confidence":"single-current-outcome","proof_ref":proof["reference"],"proof_subject":proof["proof_subject"],"planning_custody":used["custody"],"execution_custody":consumption["execution_custody"],"result_revision":consumption["result_revision"],"judgment_revision":consumption["judgment_revision"],"result_use_authority":"acting-orchestrator","check_authority":"native-verification"},"context_cost":consumption["context"]["context_cost"],"routing_effect":"context-for-agent-comparison-among-eligible-configurations","claim_boundary":{"task_success":false,"general_target_quality":false,"eligibility":false,"completion":false,"independent_review":false}});
+    observation["revision"] = json!(digest(&observation)?);
+    Ok(json!([observation]))
+}
 pub(crate) fn declaration() -> Value {
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
@@ -21,7 +77,7 @@ pub(crate) fn view(
     let policy = &configuration["assignment_policy"];
     let execution = &requirements["execution_configurations"];
     let source = digest(
-        &json!({"work":work,"configuration":configuration["revision"],"requirements":requirements["result"],"execution":execution}),
+        &json!({"work":work,"configuration":configuration["revision"],"requirements":requirements["result"],"execution":execution,"outcome_evidence":requirements["bounded_outcome_evidence"]}),
     )?;
     let owner = contract["owners"]
         .as_array()
@@ -49,9 +105,28 @@ pub(crate) fn view(
             ));
         }
     }
-    let result = crate::assignment::comparative_assessment(
+    let mut result = crate::assignment::comparative_assessment(
         json!({"work":work,"policy":policy,"requirements":requirements["result"],"execution":execution,"judgment":request.map(|r|&r["arguments"])}),
     )?;
+    for alternative in result["alternatives"].as_array_mut().into_iter().flatten() {
+        let candidate = execution["configurations"]["candidates"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|row| row["eligible"] == true && row["configuration"]["id"] == alternative["id"]);
+        if let Some(candidate) = candidate {
+            let key = configuration_key(&candidate["configuration"])?;
+            alternative["contextual_evidence"] = json!(
+                requirements["bounded_outcome_evidence"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|e| e["configuration_key"] == key
+                        && e["context"]["role"] == requirements["result"]["role"])
+                    .collect::<Vec<_>>()
+            );
+        }
+    }
     let mut requests = Vec::new();
     if requirements["result"]["status"] == "resolved"
         && !result["alternatives"].as_array().unwrap().is_empty()

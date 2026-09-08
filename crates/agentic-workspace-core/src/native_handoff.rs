@@ -61,7 +61,7 @@ pub(crate) fn admission(
         contract,
     ));
     Ok(
-        json!({"kind":"agentic-workspace/assignment-result-admission/v1","status":status,"source_revision":source,"assignment_identity":execution["assignment_identity"],"result_use_allowed":status=="admitted-for-use","judgment":{"source":"acting-orchestrator","reason":reason},"execution_custody":execution["custody"],"returned":execution["returned"],"requests":[prerequisites],"claim_boundary":{"proof":false,"independent_review":false,"completion":false,"target_quality":false}}),
+        json!({"kind":"agentic-workspace/assignment-result-admission/v1","status":status,"source_revision":source,"assignment_identity":execution["assignment_identity"],"context":execution["context"],"result_use_allowed":status=="admitted-for-use","judgment":{"source":"acting-orchestrator","reason":reason},"execution_custody":execution["custody"],"returned":execution["returned"],"requests":[prerequisites],"claim_boundary":{"proof":false,"independent_review":false,"completion":false,"target_quality":false}}),
     )
 }
 fn request(kind: &str, args: Value, work: &Value, source: &str, contract: &Value) -> Value {
