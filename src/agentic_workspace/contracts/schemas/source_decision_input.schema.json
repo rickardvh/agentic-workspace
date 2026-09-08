@@ -1076,6 +1076,10 @@
             "maxLength": 128
           }
         },
+        "verification_request": {
+          "type": ["object", "null"],
+          "description": "Optional current public Verification requirements request; the source owner revalidates it before projection. Never a caller-supplied Verification contribution."
+        },
         "verification_identity": {
           "anyOf": [
             {

@@ -419,7 +419,7 @@ pub fn view(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
