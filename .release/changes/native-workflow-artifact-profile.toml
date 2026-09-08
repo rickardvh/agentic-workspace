@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Apply artifact profile intent through current Planning custody and preserve unresolved scratchpad transfer."

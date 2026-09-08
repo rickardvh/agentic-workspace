@@ -305,6 +305,10 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             creation["contribution"]["revision"]
         ]))?);
     }
+    let mut artifact_profile = configuration["artifact_profile"].clone();
+    if artifact_profile["status"] != "absent" {
+        artifact_profile["current_owner"] = json!({"status":planning["status"],"selected_owner":{"id":planning["selected_owner"]["id"],"ref":planning["selected_owner"]["ref"]},"source_revision":planning["source_revision"],"custody_status":planning["custody_status"],"subject":{"id":planning_detail["reconciliation"]["subject"]["id"],"revision":planning_detail["reconciliation"]["subject"]["revision"]},"current":planning_detail["current"]});
+    }
     let subject = planning_detail
         .get("reconciliation")
         .and_then(|value| value.get("subject"));
@@ -416,7 +420,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     let decision = compile_value(owner_input)?;
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
-    let mut public = json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent,"startup_adapter":startup_adapter, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    let mut public = json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
     // Requests bind the composed contract above. Owner-local fragments remain
     // internal composition inputs, not additional public authorities.
     for owner in public.as_object_mut().unwrap().values_mut() {
