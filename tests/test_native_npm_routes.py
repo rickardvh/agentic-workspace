@@ -96,7 +96,8 @@ def test_legacy_persistent_selection_remains_an_explicit_nonmutating_gap(packed:
     carrier.parent.mkdir(parents=True)
     carrier.write_bytes(b"existing route intent must remain")
     result = run(packed, tmp_path, "select-route", "--posture", "none", "--expect-source-revision", "sha256:" + "a" * 64)
-    assert result["status"] == "failed", result
+    assert result["status"] == "blocked", result
+    assert result["exit_status"] == 0
     assert result["mutation_applied"] is False
     assert "native-persistent-route-selection-unavailable" in str(result)
     assert "semantic-routes/select/v1" in str(result)

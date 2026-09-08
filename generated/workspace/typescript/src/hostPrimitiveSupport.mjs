@@ -3051,6 +3051,8 @@ function instructionsExecute(values, operationId) {
 function instructionsRouteOperation(targetRoot, values, operationId, blocked) {
   if (operationId === 'instructions.route-select') {
     const result = blocked('native-persistent-route-selection-unavailable', 'Legacy route selection mutation is unavailable in this adapter. Use native agentic-workspace start --target <repository> --task <current task> --format json; inspect semantic_routes.requests and return the current semantic-routes/select/v1 request with your posture/routes via start --input. This is current applicability judgment, not a persisted legacy write.');
+    result.status = 'blocked';
+    result.exit_status = 0;
     result.mutation_applied = false;
     result.authority_effect = 'none';
     result.recovery = { api: '@agentic-workspace/workspace-cli/native', method: 'start', target: targetRoot, required_input: 'task: exact current task', select_request_kind: 'semantic-routes/select/v1', effect: 'current request only; no legacy write' };
