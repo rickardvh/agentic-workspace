@@ -353,3 +353,5 @@ TypeScript forged-history replay initially failed after 24.89 seconds because
 the implementation agent omitted a test import; that avoidable rerun cost is
 separate from product friction. The failure log is retained.
 The corrected fresh Python/TypeScript forged-history case passed in 26.58 seconds.
+
+Integration of repair-retirement subtraction passed four cases and found one obsolete diagnostic assertion (77.82s). The updated negative covers both reported pass and failure, preserving zero publication when apply producer/source authority is unproven.
