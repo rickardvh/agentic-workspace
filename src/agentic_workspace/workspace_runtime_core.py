@@ -53126,13 +53126,9 @@ def _proof_receipt_publication_transaction(*, target_root: Path, producer_receip
 
 
 def _proof_publication_identity(receipt: dict[str, Any]) -> dict[str, Any]:
-    identity = {key: receipt.get(key) for key in ("command", "result", "changed_paths", "proof_subject", "target_context")}
-    identity["target_context"] = receipt.get("target_context", {})
-    identity["proof_commands"] = receipt.get("proof_commands", [])
-    for field in ("task_claim_judgment", "assignment_proof_obligation", "assignment_proof_binding", "assignment_closeout_lineage"):
-        if field in receipt:
-            identity[field] = receipt[field]
-    return identity
+    from agentic_workspace.decision import proof_receipt
+
+    return proof_receipt({"action": "publication-identity", "receipt": receipt})["identity"]
 
 
 def _existing_proof_publication_receipt(

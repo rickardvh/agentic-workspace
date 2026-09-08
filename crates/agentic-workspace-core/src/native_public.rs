@@ -128,7 +128,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             request["capability_revision"] = contract["revision"].clone();
         }
     }
-    let mut planning = if executing {
+    let mut planning = if executing
+        && input
+            .invocation
+            .as_ref()
+            .is_some_and(|i| i["operation_id"] == "planning.reconcile")
+    {
         native_planning::resolve_for_execution(target, &work, &contract)?
     } else if request_for("planning").is_some() {
         native_planning::resolve_with_contract(
@@ -172,7 +177,11 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                 .filter(|r| r["owner"] == "verification"
                     && matches!(
                         r["request_kind"].as_str(),
-                        Some("verification/claim/v1" | "verification/authenticate-host-review/v1")
+                        Some(
+                            "verification/claim/v1"
+                                | "verification/authenticate-host-review/v1"
+                                | "verification/execute-selected/v1"
+                        )
                     ))
                 .cloned()
                 .collect::<Vec<_>>()
@@ -181,6 +190,10 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             facts: &json!({"route_fact":route_fact,"planning":{"status":planning["status"],"source_revision":planning["source_revision"]}}),
             request: verification_request("verification/assurance-applicability/v1").cloned(),
             contract: Some(&contract),
+            invocation: input
+                .invocation
+                .as_ref()
+                .filter(|i| i["operation_id"] == "proof.report"),
         },
     )?;
     contributions.push(verification["contribution"].clone());
@@ -262,6 +275,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                 request["request_kind"].as_str(),
                 Some(
                     "verification/claim/v1"
+                        | "verification/execute-selected/v1"
                         | "verification/requirements/v1"
                         | "verification/authenticate-host-review/v1"
                         | "verification/assurance-applicability/v1"
@@ -318,7 +332,9 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         ));
     }
     let invocation = input.invocation.as_ref().unwrap();
-    if invocation["operation_id"] != "planning.reconcile" {
+    if invocation["operation_id"] != "planning.reconcile"
+        && invocation["operation_id"] != "proof.report"
+    {
         return Err(CoreError::new(
             "requested native operation is not available",
         ));
@@ -326,6 +342,24 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "proof.report" {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        let executed = crate::native_proof::execute(&target, &current, invocation, || {
+            let fresh = resolve(&input, &target, true)?;
+            crate::admit_invocation_value(
+                json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+            )?;
+            Ok(())
+        })?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|view| &view["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     let committed = &current["planning"]["current_owner"]["committed_operation"];
     crate::admit_invocation_value(
