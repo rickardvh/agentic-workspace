@@ -58,7 +58,7 @@ fn error(path: &str, reason: impl std::fmt::Display) -> CoreError {
         "Planning source {path}: {reason}; reconcile the current Planning owner"
     ))
 }
-fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, CoreError> {
+pub(crate) fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, CoreError> {
     decision_source::relative(path)?;
     let mut current = PathBuf::new();
     for part in path.split('/') {
@@ -186,6 +186,32 @@ pub(crate) fn resolve_with_contract(
     request: Option<&Value>,
     current_full_contract: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    resolve_context(
+        target,
+        current_work,
+        request,
+        current_full_contract,
+        request.and_then(|r| r["arguments"]["owner_ref"].as_str()),
+    )
+}
+
+/// Exact source choice for a producer-returned current affordance. This is a
+/// private read-only projection, never a public request with validation skipped.
+pub(crate) fn candidate(
+    target: &Path,
+    current_work: &Value,
+    reference: &str,
+    contract: &Value,
+) -> Result<Value, CoreError> {
+    resolve_context(target, current_work, None, Some(contract), Some(reference))
+}
+fn resolve_context(
+    target: &Path,
+    current_work: &Value,
+    request: Option<&Value>,
+    current_full_contract: Option<&Value>,
+    reference: Option<&str>,
+) -> Result<Value, CoreError> {
     let target = std::fs::canonicalize(target).map_err(|e| error("target", e))?;
     let root =
         Dir::open_ambient_dir(&target, ambient_authority()).map_err(|e| error("target", e))?;
@@ -289,6 +315,25 @@ pub(crate) fn resolve_with_contract(
             selected = owner(&root, &target, candidate, STATE)?;
         }
     }
+    if let Some(reference) = reference {
+        if selected.is_null() {
+            let bytes = read(&root, reference)?
+                .ok_or_else(|| error(reference, "requested owner missing"))?;
+            let body = parsed(reference, &bytes)?;
+            crate::native_planning_create::inspect_origin(&target, reference, &body)?;
+            selected = owner(
+                &root,
+                &target,
+                &json!({"id":body["id"],"ref":reference}),
+                "explicit-current-owner",
+            )?;
+        } else if selected["ref"] != reference {
+            return Err(error(
+                SELECTION,
+                "existing selection is preserved; owner transfer is required",
+            ));
+        }
+    }
     let revision = digest(&json!({"sources":sources,"selected":selected}))?;
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
@@ -297,9 +342,10 @@ pub(crate) fn resolve_with_contract(
     let mut shape = schema["$defs"]["continuation_request"].clone();
     shape["$schema"] = schema["$schema"].clone();
     let declaration = json!({"kind":"planning/continuation/v1","result_kind":"agentic-workspace/planning-continuation-result/v1","input_schema":shape});
-    let owner_revision = digest(&declaration)?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
-    if !selected.is_null() {
+    let creation_declaration = crate::native_planning_create::declaration();
+    let owner_revision = digest(&json!([declaration, creation_declaration]))?;
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
+    {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);
         let mut arguments = schema["$defs"]["operation_arguments"].clone();
@@ -307,9 +353,21 @@ pub(crate) fn resolve_with_contract(
         arguments["$defs"] = schema["$defs"].clone();
         contract["owners"][0]["operations"] = json!([{"id":"planning.reconcile","semantic_revision":"planning-reconciliation-v1","input_schema":arguments,"result_kind":"agentic-planning/reconciliation-result/v1","effects":["planning-state"],"reads":["planning"]}]);
     }
+    contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
+    contract["owners"][0]["domains"] = json!(["planning"]);
+    if contract["owners"][0]["operations"].is_null() {
+        contract["owners"][0]["operations"] = json!([]);
+    }
+    contract["owners"][0]["operations"]
+        .as_array_mut()
+        .unwrap()
+        .push(crate::native_planning_create::operation());
     contract["revision"] = json!(digest(&contract)?);
     let validation_contract = current_full_contract.unwrap_or(&contract);
-    let template = json!({"kind":"agentic-workspace/public-request/v1","id":"planning/continuation/v1","owner":"planning","owner_revision":owner_revision,"source_revision":revision,"capability_revision":validation_contract["revision"],"task_identity":current_work,"request_kind":"planning/continuation/v1","arguments":{"answer":"continue-selected"}});
+    let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":"planning/continuation/v1","owner":"planning","owner_revision":owner_revision,"source_revision":revision,"capability_revision":validation_contract["revision"],"task_identity":current_work,"request_kind":"planning/continuation/v1","arguments":{"answer":"continue-selected"}});
+    if let Some(reference) = reference {
+        template["arguments"]["owner_ref"] = json!(reference);
+    }
     let mut status = if selected.is_null() {
         "direct"
     } else {
@@ -384,6 +442,12 @@ pub(crate) fn resolve_for_execution(
     current_full_contract: &Value,
 ) -> Result<Value, CoreError> {
     let mut view = resolve_with_contract(target, current_work, None, Some(current_full_contract))?;
+    if view["selected_owner"].is_null()
+        && let Some(reference) =
+            crate::native_planning_create::created_reference(target, current_work)?
+    {
+        view = candidate(target, current_work, &reference, current_full_contract)?;
+    }
     if view["selected_owner"].is_null() {
         return Err(error(
             SELECTION,
@@ -563,8 +627,12 @@ fn execute_checked(
                     "selection changed during reconciliation; retained files preserved",
                 ));
             }
-            let fresh =
-                resolve_with_contract(&target, current_work, None, Some(current_full_contract))?;
+            let fresh = candidate(
+                &target,
+                current_work,
+                source["path"].as_str().unwrap(),
+                current_full_contract,
+            )?;
             if fresh["selected_owner"]["source"] != source {
                 return Err(error(
                     SELECTION,

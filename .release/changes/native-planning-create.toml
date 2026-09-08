@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose agent-authored canonical Planning creation through the shared native public request, with absent-only source acquisition, exact durable creation custody and separate owner selection."
+issues = [2970, 2986, 2987, 3001, 3000, 3077]

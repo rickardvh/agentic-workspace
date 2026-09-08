@@ -84,6 +84,7 @@
       "type": "object",
       "description": "Agent intention concerning the current source-selected Planning owner; grants neither source authority nor completion.",
       "properties": {
+        "owner_ref": {"type":"string","description":"Explicit source-owner selection intention; cannot replace an existing local selector."},
         "answer": {"type": "string", "enum": ["continue-selected", "unrelated-direct"], "description": "Explicit current-task relationship to the selected owner."}
       },
       "required": ["answer"],

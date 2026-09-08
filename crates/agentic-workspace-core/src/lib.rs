@@ -12,6 +12,7 @@ mod native_instructions;
 mod native_intent;
 mod native_memory;
 mod native_planning;
+mod native_planning_create;
 mod native_proof;
 pub mod native_public;
 mod native_requirements;
