@@ -171,6 +171,14 @@ def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"replace_assignment": context})
 
 
+def assignment_policy(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assignment_policy": context})
+
+
+def local_source_overlay(base: Mapping[str, Any], override: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"local_source_overlay": {"base": base, "override": override}})
+
+
 def transport_sources(profiles: Mapping[str, Any]) -> dict[str, Any]:
     """Decode declarations only; no executable or provider capability authority."""
     return _request({"transport_sources": profiles})

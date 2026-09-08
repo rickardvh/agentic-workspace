@@ -43478,23 +43478,36 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
     )
 
 
-def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
-    configured_mode = (
-        "auto"
-        if local_override.transport_authority == "automatic"
-        else "manual"
-        if local_override.transport_authority == "manual"
-        else local_override.delegation_mode or "suggest"
+def _resolved_delegation_policy(local_override: MixedAgentLocalOverride, profiles: list[dict[str, Any]]) -> dict[str, Any]:
+    from agentic_workspace.decision import assignment_policy
+
+    return assignment_policy(
+        {
+            "policy": {
+                "assignment_policy": local_override.assignment_policy,
+                "transport_authority": local_override.transport_authority,
+                "mode": local_override.delegation_mode,
+                "current_target": local_override.current_target,
+                "human_override_policy": local_override.human_override_policy,
+                "manual_transport_policy": local_override.manual_transport_policy,
+            },
+            "profiles": profiles,
+            "safe_to_auto_run_commands": local_override.safe_to_auto_run_commands,
+        }
     )
-    safe_to_auto = bool(local_override.safe_to_auto_run_commands)
-    if configured_mode == "auto" and (not safe_to_auto):
-        effective_mode = "suggest"
-        execution_permitted = False
-        disabled_reason = "delegation.mode is auto, but safety.safe_to_auto_run_commands is not true"
-    else:
-        effective_mode = configured_mode
-        execution_permitted = configured_mode == "auto" and safe_to_auto
-        disabled_reason = None
+
+
+def _delegation_control_payload(local_override: MixedAgentLocalOverride, resolved_policy: dict[str, Any] | None = None) -> dict[str, Any]:
+    resolved = resolved_policy if resolved_policy is not None else _resolved_delegation_policy(local_override, [])
+    configured_mode = resolved["configured_mode"]
+    safe_to_auto = resolved["safe_to_auto_run_commands"]
+    effective_mode = resolved["effective_mode"]
+    execution_permitted = resolved["execution_permitted"]
+    disabled_reason = (
+        "delegation.mode is auto, but safety.safe_to_auto_run_commands is not true"
+        if configured_mode == "auto" and not safe_to_auto
+        else None
+    )
     if effective_mode == "off":
         next_action = "Do not use local delegation targets; stay direct unless another checked-in workflow surface requires escalation."
     elif effective_mode == "manual":
@@ -43526,26 +43539,17 @@ def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict
     }
 
 
-def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    configured_policy = local_override.assignment_policy or "local-preferred"
+def _assignment_policy_payload(
+    local_override: MixedAgentLocalOverride, profile_payloads: list[dict[str, Any]], resolved_policy: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    resolved = resolved_policy if resolved_policy is not None else _resolved_delegation_policy(local_override, profile_payloads)
+    configured_policy = resolved["assignment_policy"]
     configured_role = "orchestrator" if configured_policy != "local-preferred" else "ordinary-executor"
-    configured_target = local_override.current_target
-    target_matches = [
-        profile
-        for profile in profile_payloads
-        if isinstance(profile, dict)
-        and configured_target
-        and configured_target
-        in {
-            str(profile.get("name") or ""),
-            str(profile.get("target_id") or ""),
-            *(str(alias) for alias in profile.get("aliases", []) if isinstance(profile.get("aliases"), list)),
-        }
-    ]
-    current_target_known = len({str(profile.get("target_id") or profile.get("name") or "") for profile in target_matches}) == 1
-    resolved_current_target = target_matches[0] if current_target_known else {}
-    binding_requested = configured_policy == "required-best-fit"
-    enforceable = not binding_requested or bool(current_target_known)
+    configured_target = resolved["current_target"]
+    current_target_known = resolved["current_target_status"] == "known-profile"
+    resolved_current_target = resolved["current_profile"] or {}
+    binding_requested = resolved["binding"]
+    enforceable = resolved["enforceable"]
     status = "configured" if local_override.assignment_policy is not None else "default-quiet"
     if binding_requested and not current_target_known:
         status = "blocked-unknown-current-target"
@@ -43592,11 +43596,7 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             else "default",
         ),
         "manual_transport_policy": _sourced_value(
-            "required-when-no-automatic-method"
-            if local_override.transport_authority == "automatic"
-            else "allowed"
-            if local_override.transport_authority == "manual"
-            else local_override.manual_transport_policy or "allowed",
+            resolved["manual_transport_policy"],
             source="derived:delegation.transport_authority"
             if local_override.transport_authority is not None
             else "compatibility-alias"
@@ -62796,7 +62796,8 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "closeout_gate": _delegation_target_closeout_gate(profile=profile, advisory=advisory, outcome_evidence=outcome_evidence),
             }
         )
-    assignment_policy = _assignment_policy_payload(local_override, profile_payloads)
+    resolved_policy = _resolved_delegation_policy(local_override, profile_payloads)
+    assignment_policy = _assignment_policy_payload(local_override, profile_payloads, resolved_policy)
     identity_posture = target_identity_posture(local_override=local_override, target_root=config.target_root)
     target_evidence = target_evidence_posture(
         target_root=config.target_root,
@@ -62844,11 +62845,11 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             },
             "rule": "local-only machine/runtime posture; may override local-advisory invocation and routing fields, not repo-owned product semantics",
         },
-        "delegation_control": _delegation_control_payload(local_override),
+        "delegation_control": _delegation_control_payload(local_override, resolved_policy),
         "assignment_policy": assignment_policy,
         "effective_orchestration": _effective_orchestration_posture_payload(
             assignment_policy=assignment_policy,
-            delegation_control=_delegation_control_payload(local_override),
+            delegation_control=_delegation_control_payload(local_override, resolved_policy),
             profile_payloads=profile_payloads,
             cli_invoke=config.cli_invoke,
         ),

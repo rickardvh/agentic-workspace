@@ -1,6 +1,5 @@
 //! Read-only source/executable observations for the existing feasibility owner.
 use crate::{CoreError, digest};
-use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::io::Read;
@@ -102,36 +101,22 @@ pub(crate) fn view(
     contract: &Value,
     transport_work: &Value,
 ) -> Result<Value, CoreError> {
-    let root = Dir::open_ambient_dir(target, ambient_authority())
-        .map_err(|e| CoreError::new(e.to_string()))?;
-    let (local, local_revision) = crate::native_config::load(
-        &root,
-        ".agentic-workspace/config.local.toml",
-        include_str!(
-            "../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"
-        ),
-    )
-    .map_err(CoreError::new)?
-    .unwrap_or((json!({}), "absent".into()));
-    let (shared, shared_revision) = crate::native_config::load(
-        &root,
-        ".agentic-workspace/config.toml",
-        include_str!(
-            "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
-        ),
-    )
-    .map_err(CoreError::new)?
-    .unwrap_or((json!({}), "absent".into()));
+    let observed = match crate::native_assignment_policy::load(target) {
+        Ok(value) => value,
+        Err(error) => {
+            return Ok(
+                json!({"status":"unresolved","gaps":[error.to_string()],"requests":[],"candidates":[]}),
+            );
+        }
+    };
+    let local = observed.effective;
+    let source_policy = observed.policy;
     let mut gaps = Vec::new();
-    if shared.get("delegation").is_some() || shared.get("delegation_targets").is_some() {
-        gaps.push("former-shared-assignment-source-reconciliation-required");
-    }
-    let policy = &local["delegation"];
-    if policy.get("mode").is_some() || policy.get("execution_role").is_some() {
-        gaps.push("former-delegation-control-reconciliation-required");
+    if source_policy["enforceable"] != true {
+        gaps.push("binding-policy-current-target-unresolved");
     }
     let source_revision = digest(
-        &json!({"local":local_revision,"shared":shared_revision,"requirements":requirements["revision"],"work":work}),
+        &json!({"sources":observed.revision,"requirements":requirements["revision"],"work":work}),
     )?;
     if requirements["status"] != "resolved" {
         return Ok(
@@ -156,13 +141,14 @@ pub(crate) fn view(
                 continue;
             }
         };
-        let current = policy["current_target"].as_str().is_some_and(|id| {
-            id == name
-                || profile["target_id"] == id
-                || profile["aliases"]
-                    .as_array()
-                    .is_some_and(|a| a.iter().any(|v| v == id))
-        });
+        let current = source_policy["current_target_status"] == "known-profile"
+            && source_policy["current_profile"]["name"] == *name;
+        if profile["forbidden_task_classes"]
+            .as_array()
+            .is_some_and(|v| !v.is_empty())
+        {
+            unavailable.push(json!({"target":name,"source_ref":format!("delegation_targets.{name}.forbidden_task_classes"),"gap":"current-target-task-scope-judgment-required","claim_boundary":"Unknown current task taxonomy does not establish target failure or waive a source prohibition."}));
+        }
         let mut transports = transports;
         if current {
             transports.retain(|v| v["kind"] != "internal");
@@ -170,7 +156,7 @@ pub(crate) fn view(
                 0,
                 json!({"kind":"current-host","method":"internal","command":[]}),
             );
-        } else if policy["manual_transport_policy"] != "disabled"
+        } else if source_policy["manual_transport_policy"] != "disabled"
             && !transports.iter().any(|v| v["method"] == "manual")
         {
             transports.push(json!({"kind":"manual","method":"manual","command":[]}));
@@ -196,12 +182,14 @@ pub(crate) fn view(
                 .and_then(|v| v.first())
                 .and_then(Value::as_str)
                 .and_then(|s| executable(target, s, &mut observed_paths));
-            let authority = gaps.is_empty()
+            let authority = source_policy["effective_mode"] != "off"
+                && gaps.is_empty()
                 && (retained
                     || if manual {
-                        policy["manual_transport_policy"] != "disabled"
+                        source_policy["manual_transport_policy"] != "disabled"
                     } else {
-                        policy["transport_authority"] == "automatic"
+                        source_policy["transport_authority"] == "automatic"
+                            && source_policy["effective_mode"] != "off"
                     });
             let profile_safe = (profile["identity_status"].is_null()
                 || profile["identity_status"] == "active")
@@ -247,6 +235,6 @@ pub(crate) fn view(
         .unwrap();
     let requests:Vec<Value>=preview["candidates"].as_array().into_iter().flatten().filter(|r|r["eligible"]==true).map(|r|json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/execution-configuration","owner":"assignment","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":transport_work,"request_kind":"assignment/select-execution-configuration/v1","arguments":{"revision":preview["revision"],"candidate":r["configuration"]["id"]}})).collect();
     Ok(
-        json!({"status":"observed","source_revision":source_revision,"configurations":result,"requests":requests,"unavailable_adapters":unavailable,"manual_targets":manual_targets,"gaps":gaps,"claim_boundary":"Feasibility and exact choice only; no best-fit assignment, dispatch, human authority, proof or completion. Provider adapter discovery remains separate."}),
+        json!({"status":"observed","source_revision":source_revision,"configurations":result,"requests":requests,"unavailable_adapters":unavailable,"manual_targets":manual_targets,"policy":source_policy,"gaps":gaps,"claim_boundary":"Feasibility and exact choice only; no best-fit assignment, dispatch, human authority, proof or completion. Provider adapter discovery remains separate."}),
     )
 }

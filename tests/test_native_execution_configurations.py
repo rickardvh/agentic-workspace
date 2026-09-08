@@ -92,7 +92,7 @@ def test_missing_capability_safety_manual_and_former_source_preserved(tmp_path, 
     assert "execution-return-unconstructible" in rows["worker:manual"]["reasons"]
     source.write_text(
         source.read_text()
-        .replace('transport_authority="automatic"', 'transport_authority="automatic"\nmanual_transport_policy="disabled"')
+        .replace('transport_authority="automatic"', 'manual_transport_policy="disabled"')
         .replace("safe_to_auto_run_commands=true", "safe_to_auto_run_commands=false")
     )
     rows = {r["configuration"]["id"]: r for r in preview()["configurations"]["candidates"]}
@@ -101,9 +101,13 @@ def test_missing_capability_safety_manual_and_former_source_preserved(tmp_path, 
     former = tmp_path / ".agentic-workspace/config.toml"
     former.write_text('schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\n')
     before = former.read_bytes()
-    pending = preview()
-    assert "former-shared-assignment-source-reconciliation-required" in pending["gaps"]
-    assert pending["requests"] == []
+    preview()
+    observed = consume(surface, shared_core_binary, native_cli, context)
+    assert any(
+        row["field"] == "delegation.assignment_policy" and row["source"] == ".agentic-workspace/config.toml"
+        for row in observed["configuration"]["residuals"]
+    )
+    assert any("effect:implementation" in row["affects"] for row in observed["decision_packet"]["blockers"])
     assert former.read_bytes() == before
 
 

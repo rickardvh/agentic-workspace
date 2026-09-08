@@ -2458,13 +2458,13 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
 
 
 def _merge_local_config_payloads(*, base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-    merged = dict(base)
-    for key, value in override.items():
-        if isinstance(value, dict) and isinstance(merged.get(key), dict):
-            merged[key] = _merge_local_config_payloads(base=merged[key], override=value)
-        else:
-            merged[key] = value
-    return merged
+    if not base:
+        return dict(override)
+    if not override:
+        return dict(base)
+    from agentic_workspace.decision import local_source_overlay
+
+    return local_source_overlay(base, override)
 
 
 def _local_config_table(payload: dict[str, Any] | None, table: str) -> dict[str, Any]:

@@ -127,6 +127,31 @@ def _current_route_configurations(
 
     if requirements is None:
         raise ValueError("current-task-requirements-required")
+    from types import SimpleNamespace
+
+    from agentic_workspace.decision import assignment_policy
+
+    resolved_policy = assignment_policy(
+        {
+            "policy": {
+                "assignment_policy": getattr(policy, "assignment_policy", None),
+                "transport_authority": policy.transport_authority,
+                "mode": getattr(policy, "delegation_mode", None),
+                "current_target": policy.current_target,
+                "human_override_policy": getattr(policy, "human_override_policy", None),
+                "manual_transport_policy": policy.manual_transport_policy,
+            },
+            "profiles": profiles,
+            "safe_to_auto_run_commands": policy.safe_to_auto_run_commands,
+        }
+    )
+    policy_enabled = resolved_policy["effective_mode"] != "off"
+    policy = SimpleNamespace(
+        current_target=(resolved_policy["current_profile"] or {}).get("name"),
+        transport_authority=resolved_policy["transport_authority"],
+        manual_transport_policy=resolved_policy["manual_transport_policy"],
+        safe_to_auto_run_commands=resolved_policy["safe_to_auto_run_commands"],
+    )
     candidates: list[dict[str, Any]] = []
     for profile in profiles:
         name = profile["name"]
@@ -140,7 +165,8 @@ def _current_route_configurations(
             # The established manual owner can export any bounded target packet.
             transports.append({"method": "manual", "kind": "manual"})
         native_allowed = (
-            policy.transport_authority == "automatic"
+            policy_enabled
+            and policy.transport_authority == "automatic"
             and policy.safe_to_auto_run_commands is True
             and not profile.get("capability_mismatch")
             and profile.get("required_action") != "escalate-before-execution"
@@ -183,8 +209,10 @@ def _current_route_configurations(
                     "transport": method,
                     "capability_revision": revision(facts),
                     "current": True,
-                    "authorized": retained
-                    or (policy.manual_transport_policy != "disabled" if manual else policy.transport_authority == "automatic"),
+                    "authorized": policy_enabled
+                    and (
+                        retained or (policy.manual_transport_policy != "disabled" if manual else policy.transport_authority == "automatic")
+                    ),
                     "safe": retained or manual or policy.safe_to_auto_run_commands is True,
                     "constructible": constructible,
                     "result_classes": ["read-only", "unapplied-patch"],

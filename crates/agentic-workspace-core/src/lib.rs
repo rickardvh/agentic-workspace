@@ -2188,3 +2188,6 @@ pub(crate) mod verification_strategy;
 
 pub(crate) mod native_execution;
 pub mod transport_source;
+
+pub mod assignment_policy;
+pub(crate) mod native_assignment_policy;
