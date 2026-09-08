@@ -87,6 +87,9 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     let creation_request = requests
         .iter()
         .find(|r| r["owner"] == "planning" && r["request_kind"] == "planning/create/v1");
+    let update_request = requests.iter().find(|r| {
+        r["owner"] == "planning" && r["request_kind"] == crate::native_planning_update::KIND
+    });
     let verification_request = |kind: &str| {
         requests
             .iter()
@@ -274,6 +277,41 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         planning_detail = detail;
     } else {
         contributions.push(planning["contribution"].clone());
+    }
+    let update = crate::native_planning_update::view(
+        target,
+        &work,
+        &contract,
+        &planning["selected_owner"],
+        update_request,
+        input
+            .invocation
+            .as_ref()
+            .filter(|i| executing && i["operation_id"] == "planning.update"),
+    )?;
+    planning["update_requests"] = update["requests"].clone();
+    planning["update_retained"] = update["retained"].clone();
+    planning["pending_update"] = update["pending"].clone();
+    if update["pending"].is_object() {
+        let owner = contributions
+            .iter_mut()
+            .find(|c| c["owner"] == "planning")
+            .unwrap();
+        owner["blockers"] = json!([{"code":"planning-update-pending","message":"The exact native update postimage is retained but its outcome remains uncertain. Resume only the returned invocation against current authority.","affects":["task"]}]);
+        owner["settled"] = json!(false);
+    }
+    if update["action"].is_object() {
+        let owner = contributions
+            .iter_mut()
+            .find(|c| c["owner"] == "planning")
+            .unwrap();
+        // The explicit exact owner update resolves only Planning's own reentry
+        // decision. Independent source/safety/Verification restrictions survive.
+        owner["actions"] = json!([update["action"]]);
+        owner["decisions"] = json!([]);
+        owner["blockers"] = json!([]);
+        owner["settled"] = json!(false);
+        owner["revision"] = json!(digest(&json!([owner["revision"], update["action"]]))?);
     }
     let mut creation = crate::native_planning_create::view(
         target,
@@ -556,6 +594,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     if invocation["operation_id"] != "planning.reconcile"
         && invocation["operation_id"] != "proof.report"
         && invocation["operation_id"] != "planning.create"
+        && invocation["operation_id"] != "planning.update"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -564,6 +603,31 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "planning.update" {
+        let retained = &current["planning"]["update_retained"];
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation,"previous_invocation":retained.get("invocation")}),
+        )?;
+        let executed = crate::native_planning_update::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            retained,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation,"previous_invocation":fresh["planning"]["update_retained"].get("invocation")}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     if invocation["operation_id"] == "planning.create" {
         let committed = &current["planning"]["creation_committed_operation"];

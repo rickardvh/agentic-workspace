@@ -167,10 +167,13 @@ pub fn restrict_pending(
         action["source_owner"] == "planning"
             && matches!(
                 action["operation_id"].as_str(),
-                Some("planning.reconcile" | "planning.create")
+                Some("planning.reconcile" | "planning.create" | "planning.update")
             )
     }) {
-        let writes = if action["operation_id"] == "planning.create" {
+        let writes = if matches!(
+            action["operation_id"].as_str(),
+            Some("planning.create" | "planning.update")
+        ) {
             let mut writes = crate::attempt_store::write_paths(
                 &json!({"idempotency_key":action["logical_effect_id"]}),
             )?;
@@ -180,6 +183,13 @@ pub fn restrict_pending(
                     .ok_or_else(|| CoreError::new("Planning creation path missing"))?
                     .to_owned(),
             );
+            if action["operation_id"] == "planning.update" {
+                writes.push(".agentic-workspace/local/planning/owner-selection.lock".to_owned());
+                writes.push(format!(
+                    "{}.*.tmp",
+                    action["arguments"]["owner_path"].as_str().unwrap()
+                ));
+            }
             writes
         } else {
             native_planning::write_scope(action)?

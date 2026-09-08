@@ -24,3 +24,29 @@ owner reentry; the status grants neither task completion nor Verification.
 Closeout remains active, and unknown lifecycle values fail closed. Explicit
 selection of another live owner continues to require native selector custody;
 historical selectors gain no transfer authority from being closed.
+
+Native-created owners expose `planning/update/v1` through `planning.update_requests`.
+The caller supplies the canonical material and frontier fields; Rust preserves
+identity, path and creation custody and returns an exact `planning.update`
+invocation. Historical Plans without native creation custody remain read-only.
+The update shares Planning's existing lock and preserves the selector. A later
+current continuation reconciles the new source. Material changes stale dependent
+proof, while frontier-only changes preserve material identity. Reopening a closed
+or blocked owner requires explicit caller-authored frontier inputs and grants no
+proof or task completion.
+
+Only the latest update provenance is carried by the Plan; common immutable
+attempts retain the preceding invocations. Unknown bytes are preserved. A process
+exit after common admission but before the Plan retains its postimage leaves the
+original source intact and the attempt uncertain: neither an existing attempt
+filename nor retry grants custody. A process exit after the exact postimage is
+retained permits fresh `start` to return `planning.pending_update.invocation`;
+`invoke` still validates current task, capability and restrictions before it
+finishes the prepared commit. This is process-interruption evidence, not a
+power-loss durability claim or complete automatic recovery of the initial gap.
+
+Retained Python record, deletion and rollback paths and TypeScript Plan overwrite
+paths refuse native provenance carriers and route back to this owner. The marker
+is a restriction only; it cannot acquire custody. Native operations share the
+existing Planning lock and recheck exact bytes; arbitrary external editors are
+not participants in that cooperative protocol.

@@ -414,3 +414,153 @@ def test_quiescent_disposition_never_acquires_historical_selector(
         assert continued["planning"]["status"] == ("reentry-required" if state == "closed" else "custody-required")
         assert continued["decision_packet"]["status"] != "terminal"
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+    import os
+
+    from tests.test_native_proof_producer import fixture
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    context = fixture(tmp_path)
+    request = call(context)["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    created = call({**context, "invocation": call({**context, "request": request})["decision_packet"]["primary_action"]})
+    selected = call({**context, "request": created["value"]["selection_request"]})
+    call({**context, "invocation": selected["decision_packet"]["primary_action"]})
+    old = call(context)
+    proof_request = old["verification"]["execution_requests"][0]
+    proof_action = call({**context, "request": proof_request})["decision_packet"]["primary_action"]
+    proof_result = call({**context, "invocation": proof_action})
+    proof_ref = proof_result["value"]["publication"]["reference"]
+    claim = call(context)["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [proof_ref]
+    assert call({**context, "request": claim})["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+    selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    selector_bytes = selector.read_bytes()
+    path = tmp_path / created["value"]["owner_path"]
+    body = json.loads(path.read_bytes())
+    request = old["planning"]["update_requests"][0]
+    changed_material = material()
+    changed_material.update({"lifecycle": "live", "phase": "implementation"})
+    changed_material["scope"] = {"allowed": "One exact revised component"}
+    request["arguments"]["material"] = changed_material
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.update"
+    result = call({**context, "invocation": action})
+    assert result["status"] == "applied", result
+    updated = json.loads(path.read_bytes())
+    assert updated["scope"] == changed_material["scope"]
+    assert updated["id"] == body["id"] and updated["creation_provenance"] == body["creation_provenance"]
+    assert selector.read_bytes() == selector_bytes
+    assert call({**context, "invocation": action})["value"] == result["value"]
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "request": request})
+    current = call(context)
+    continuation = current["planning"]["requests"][0]
+    reconciled = call({**context, "request": continuation})
+    action = reconciled["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.reconcile", reconciled
+    call({**context, "invocation": action})
+    fresh = call(context)
+    previous_subject = old["planning"]["current_owner"]["reconciliation"]["subject"]
+    subject = fresh["planning"]["current_owner"]["reconciliation"]["subject"]
+    assert subject["id"] == previous_subject["id"]
+    assert subject["revision"] != previous_subject["revision"]
+    assert fresh["decision_packet"]["status"] != "terminal"
+    claim = fresh["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [proof_ref]
+    evidence = call({**context, "request": claim})["verification"]["evidence"][0]
+    assert evidence["publication_admission"]["status"] == "admitted"
+    assert evidence["evidence_freshness"] == "stale"
+    assert evidence["task_judgment"]["current_judgment_count"] == 0
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+    # Frontier-only closure/reentry remains the same material work. The caller
+    # supplies reopening judgment; closed status itself grants no proof.
+    for lifecycle, phase in [("closed", "complete"), ("blocked", "validation"), ("live", "validation")]:
+        update_request = call(context)["planning"]["update_requests"][0]
+        changed_material.update({"lifecycle": lifecycle, "phase": phase})
+        update_request["arguments"]["material"] = changed_material
+        update_action = call({**context, "request": update_request})["decision_packet"]["primary_action"]
+        assert update_action["operation_id"] == "planning.update"
+        call({**context, "invocation": update_action})
+        current = call(context)
+        if lifecycle in {"closed", "blocked"}:
+            assert current["planning"]["status"] == "reentry-required"
+        else:
+            continuation = current["planning"]["requests"][0]
+            action = call({**context, "request": continuation})["decision_packet"]["primary_action"]
+            call({**context, "invocation": action})
+            current = call(context)
+        assert current["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] == subject["revision"]
+        assert current["decision_packet"]["status"] != "terminal"
+        assert "update_provenance" not in json.loads(path.read_bytes())["update_provenance"]
+
+
+@pytest.mark.parametrize("attempt", ["mutation", "typescript-overwrite", "rollback-existing", "rollback-arrival"])
+def test_retained_planning_adapter_preserves_native_plan(tmp_path: Path, shared_core_binary: Path, native_cli: Path, attempt: str) -> None:
+    from repo_planning_bootstrap import installer
+
+    context = {"target": str(tmp_path), "task": "Create one native owner for retained-adapter boundaries"}
+
+    def call(value: dict) -> dict:
+        return consume("native", shared_core_binary, native_cli, value)
+
+    request = call(context)["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    path = tmp_path / action["arguments"]["owner_path"]
+    if attempt == "rollback-arrival":
+
+        def legacy_operation() -> None:
+            call({**context, "invocation": action})
+            raise RuntimeError("legacy operation interrupted after native arrival")
+
+        with pytest.raises(ValueError, match="Native Planning owner preserved"):
+            installer._apply_planning_writes_atomically([path], legacy_operation)
+        assert call(context)["planning"]["created_owner"]["path"] == action["arguments"]["owner_path"]
+        return
+    created = call({**context, "invocation": action})
+    before = path.read_bytes()
+    if attempt == "typescript-overwrite":
+        import shutil
+        import subprocess
+
+        process = subprocess.run(
+            [
+                shutil.which("node"),
+                str(ROOT / "generated/planning/typescript/src/cli.mjs"),
+                "new-plan",
+                "--id",
+                json.loads(before)["id"],
+                "--title",
+                "Legacy overwrite",
+                "--target",
+                str(tmp_path),
+                "--overwrite",
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert process.returncode != 0
+        assert "Native Planning owner preserved" in process.stderr + process.stdout
+    elif attempt == "mutation":
+        refused = installer.targeted_execplan_write(target=tmp_path, plan=str(path), patch={"next_action": "legacy overwrite"}, apply=True)
+        assert refused["status"] == "native-owner-required", refused
+        with pytest.raises(ValueError, match="Native Planning owner preserved"):
+            installer._write_execplan_record(record_path=path, record=json.loads(before))
+    else:
+
+        def legacy_operation() -> None:
+            pytest.fail("existing native custody must refuse before the old writer runs")
+
+        with pytest.raises(ValueError, match="Native Planning owner preserved"):
+            installer._apply_planning_writes_atomically([path], legacy_operation)
+    assert path.read_bytes() == before
+    assert call(context)["planning"]["created_owner"]["path"] == created["value"]["owner_path"]

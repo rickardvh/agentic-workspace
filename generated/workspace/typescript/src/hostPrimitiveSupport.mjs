@@ -1038,6 +1038,14 @@ function existingPlanningSelectionCarrier(targetRoot) {
     .map((path) => join(targetRoot, path)).find((path) => existsSync(path));
 }
 
+function refuseNativePlanningWrite(path) {
+  if (!existsSync(path)) return;
+  const record = readJson(path);
+  if (isObject(record) && ('creation_provenance' in record || 'update_provenance' in record)) {
+    throw new Error('Native Planning owner preserved; use its current planning/update/v1 request through agentic-workspace start/invoke.');
+  }
+}
+
 function planningNewPlanResult(values, operationId) {
   const result = lifecycleResult(values, operationId);
   const slug = String(values.id ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -1117,6 +1125,7 @@ function planningNewPlanResult(values, operationId) {
     return finalizeMutationOutcome(result);
   }
   const recordExisted = existsSync(recordPath);
+  refuseNativePlanningWrite(recordPath);
   if (recordExisted && values.overwrite !== true) {
     result.reason_code = 'target-already-exists';
     result.conflict_owner = owner;
@@ -1206,6 +1215,7 @@ function planningNewPlanResult(values, operationId) {
       const displacedSurface = String(item.surface ?? '');
       const displacedPath = displacedSurface ? join(result.target_root, displacedSurface) : '';
       if (displacedPath && existsSync(displacedPath)) {
+        refuseNativePlanningWrite(displacedPath);
         const displacedPlan = readJson(displacedPath);
         if (isObject(displacedPlan.active_milestone)) displacedPlan.active_milestone.status = 'planned';
         writeFileSync(displacedPath, `${JSON.stringify(displacedPlan, null, 2)}\n`, 'utf8');
@@ -1238,6 +1248,7 @@ function planningNewPlanResult(values, operationId) {
   // Activation must use the same absent-only selection owner as owner-select.
   // Preserve a created draft on incomplete admission: a later read/check/delete
   // could remove another writer's replacement and cannot prove rollback custody.
+  refuseNativePlanningWrite(recordPath);
   writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, { encoding: 'utf8', flag: recordExisted ? 'w' : 'wx' });
   if (activate) {
     const selected = planningOwnerSelectResult({

@@ -11,6 +11,11 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "update_provenance": {
+      "type":"object", "description":"Latest native update producer only; immutable common attempts retain preceding material without nesting prior documents.",
+      "properties":{"kind":{"const":"agentic-planning/update-provenance/v1","description":"Native material update provenance."},"invocation_revision":{"type":"string","description":"Exact retained update invocation digest."},"custody":{"type":"object","description":"Common immutable attempt and prepared commit references."},"outcome":{"type":"object","description":"Exact planned bounded outcome validated against the retained invocation."}},
+      "required":["kind","invocation_revision","custody","outcome"],"additionalProperties":false
+    },
     "creation_provenance": {
       "type": "object", "description": "Exact native producer invocation and immutable custody; validated by Planning before exclusion from semantic identity.",
       "properties": {"kind":{"const":"agentic-planning/creation-provenance/v1","description":"Versioned native creation producer record."},"invocation_revision":{"type":"string","description":"Exact invocation digest; its payload is retained once by the common immutable effect owner."},"custody":{"type":"object","description":"Prepared immutable attempt and commit references validated by the common effect owner."}},

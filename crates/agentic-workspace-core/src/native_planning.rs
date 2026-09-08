@@ -208,6 +208,7 @@ fn owner(
     if body["id"] != id {
         return Err(error(path, "owner identity mismatch"));
     }
+    let blocked = body["lifecycle"] == "blocked";
     let quiescent = matches!(
         body["lifecycle"].as_str(),
         Some("closed" | "complete" | "completed" | "archived")
@@ -217,8 +218,8 @@ fn owner(
     );
     if !matches!(
         body["lifecycle"].as_str(),
-        Some("live" | "planned" | "closed" | "complete" | "completed" | "archived")
-    ) || (quiescent && !incumbent)
+        Some("live" | "planned" | "blocked" | "closed" | "complete" | "completed" | "archived")
+    ) || ((quiescent || blocked) && !incumbent)
     {
         return Err(error(path, "selected owner is not live"));
     }
@@ -252,6 +253,9 @@ fn owner(
         "target":target,"path":path,"owner":"planning","revision":format!("sha256:{:x}",Sha256::digest(&bytes))}});
     if quiescent {
         result["quiescent"] = json!(true);
+    }
+    if blocked {
+        result["blocked"] = json!(true);
     }
     Ok(result)
 }
@@ -513,8 +517,13 @@ fn resolve_context(
     shape["$schema"] = schema["$schema"].clone();
     let declaration = json!({"kind":"planning/continuation/v1","result_kind":"agentic-workspace/planning-continuation-result/v1","input_schema":shape});
     let creation_declaration = crate::native_planning_create::declaration();
-    let owner_revision = digest(&json!([declaration, creation_declaration]))?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
+    let update_declaration = crate::native_planning_update::declaration();
+    let owner_revision = digest(&json!([
+        declaration,
+        creation_declaration,
+        update_declaration
+    ]))?;
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration,update_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
     {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);
@@ -531,7 +540,10 @@ fn resolve_context(
     contract["owners"][0]["operations"]
         .as_array_mut()
         .unwrap()
-        .push(crate::native_planning_create::operation());
+        .extend([
+            crate::native_planning_create::operation(),
+            crate::native_planning_update::operation(),
+        ]);
     contract["revision"] = json!(digest(&contract)?);
     let validation_contract = current_full_contract.unwrap_or(&contract);
     let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":"planning/continuation/v1","owner":"planning","owner_revision":owner_revision,"source_revision":revision,"capability_revision":validation_contract["revision"],"task_identity":current_work,"request_kind":"planning/continuation/v1","arguments":{"answer":"continue-selected"}});
@@ -592,14 +604,14 @@ fn resolve_context(
             }
         }
     }
-    if quiescent && status != "stale" {
+    if (quiescent || selected["blocked"] == true) && status != "stale" {
         let continuing = retained["current_work"] == *current_work
             || request.is_some_and(|r| r["arguments"]["answer"] == "continue-selected");
         let unrelated = request.is_some_and(|r| r["arguments"]["answer"] == "unrelated-direct");
         if continuing && !unrelated {
             status = "reentry-required";
             planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work}});
-        } else {
+        } else if quiescent || unrelated {
             status = "direct";
             planning_input = Value::Null;
         }
@@ -778,6 +790,39 @@ pub(crate) fn execute_revalidating(
     )
 }
 
+/// All native Planning mutations share the existing owner carrier lock.
+pub(crate) fn owner_lock(root: &Dir) -> Result<std::fs::File, CoreError> {
+    use cap_std::fs::OpenOptions;
+    root.create_dir_all(".agentic-workspace/local/planning")
+        .map_err(|e| error(SELECTION, e))?;
+    let lock_path = ".agentic-workspace/local/planning/owner-selection.lock";
+    if let Ok(metadata) = root.symlink_metadata(lock_path) {
+        #[cfg(windows)]
+        let linked = {
+            use cap_std::fs::MetadataExt;
+            metadata.file_attributes() & 0x400 != 0
+        };
+        #[cfg(not(windows))]
+        let linked = metadata.is_symlink();
+        if linked {
+            return Err(error(lock_path, "linked lock is not admitted"));
+        }
+    }
+    let lock = root
+        .open_with(
+            lock_path,
+            OpenOptions::new().read(true).write(true).create(true),
+        )
+        .map_err(|e| error(lock_path, e))?
+        .into_std();
+    if lock.metadata().map_err(|e| error(lock_path, e))?.len() != 0 {
+        return Err(error(lock_path, "unrecognized nonempty lock preserved"));
+    }
+    lock.try_lock()
+        .map_err(|e| error(lock_path, format!("selected owner is busy: {e}")))?;
+    Ok(lock)
+}
+
 fn execute_checked(
     target: &Path,
     current_work: &Value,
@@ -812,31 +857,7 @@ fn execute_checked(
     if read(&root, SELECTION)? != expected {
         return Err(error(SELECTION, "selection changed before lock admission"));
     }
-    let lock_path = ".agentic-workspace/local/planning/owner-selection.lock";
-    if let Ok(metadata) = root.symlink_metadata(lock_path) {
-        #[cfg(windows)]
-        let linked = {
-            use cap_std::fs::MetadataExt;
-            metadata.file_attributes() & 0x400 != 0
-        };
-        #[cfg(not(windows))]
-        let linked = metadata.is_symlink();
-        if linked {
-            return Err(error(lock_path, "linked lock is not admitted"));
-        }
-    }
-    let lock = root
-        .open_with(
-            lock_path,
-            OpenOptions::new().read(true).write(true).create(true),
-        )
-        .map_err(|e| error(lock_path, e))?
-        .into_std();
-    if lock.metadata().map_err(|e| error(lock_path, e))?.len() != 0 {
-        return Err(error(lock_path, "unrecognized nonempty lock preserved"));
-    }
-    lock.try_lock()
-        .map_err(|e| error(lock_path, format!("selected owner is busy: {e}")))?;
+    let _lock = owner_lock(&root)?;
     if read(&root, SELECTION)? != expected {
         return Err(error(SELECTION, "selection changed before lock admission"));
     }

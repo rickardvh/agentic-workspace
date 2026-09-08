@@ -92,6 +92,9 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     .is_some()
     {
         body.as_object_mut().unwrap().remove("creation_provenance");
+        body.as_object_mut()
+            .unwrap()
+            .remove(crate::native_planning_update::PROVENANCE);
     }
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
