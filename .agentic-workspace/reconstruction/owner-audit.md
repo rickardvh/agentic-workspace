@@ -252,6 +252,15 @@ The same field is present at the fetched cumulative candidate. This patch does
 not rewrite that separately owned review or widen its schema to hide the error.
 Inventory conformance is not green; final release admission remains blocked.
 
+The #3165 review follow-up also found a delta-owned schema mismatch: the
+installed Execplan schema omitted update provenance, while the package and
+generated Python/TypeScript copies recognized only v1. All four now recognize
+the existing v1/v2 observation envelope. Regression coverage validates the real
+native-authored v2 plan and rejects unknown versions, missing outcomes and
+malformed outcomes. Native currentness/digest/local-receipt checks remain the
+custody authority; schema validity supplies none. The inventory checker now
+reports only the inherited review finding above, not a native-plan failure.
+
 The maintainer checker also reports inherited
 `RUNTIME_VERIFICATION_ROUTING_DRIFT` for `closeout_intent_satisfaction` and
 `requirement_grounding_delegation`. Their verification manifest, ownership file

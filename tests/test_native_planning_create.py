@@ -6,8 +6,35 @@ import json
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
+
+
+@pytest.mark.parametrize(
+    "schema_root",
+    [
+        ".agentic-workspace",
+        "packages/planning/bootstrap/.agentic-workspace",
+        "generated/planning/python/_payload/.agentic-workspace",
+        "generated/planning/typescript/resources/_payload/.agentic-workspace",
+    ],
+)
+def test_native_update_observation_schema(schema_root: str) -> None:
+    schema = json.loads((ROOT / schema_root / "planning/schemas/planning-execplan.schema.json").read_text())
+    validator = Draft202012Validator(schema)
+    body = json.loads((ROOT / ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json").read_text())
+    validator.validate(body)
+    for version in ["v1", "v2"]:
+        body["update_provenance"]["kind"] = f"agentic-planning/update-provenance/{version}"
+        validator.validate(body)
+    body["update_provenance"]["kind"] = "agentic-planning/update-provenance/v3"
+    assert list(validator.iter_errors(body))
+    body["update_provenance"]["kind"] = "agentic-planning/update-provenance/v2"
+    body["update_provenance"]["outcome"] = "not-an-outcome"
+    assert list(validator.iter_errors(body))
+    del body["update_provenance"]["outcome"]
+    assert list(validator.iter_errors(body))
 
 
 def material() -> dict:
