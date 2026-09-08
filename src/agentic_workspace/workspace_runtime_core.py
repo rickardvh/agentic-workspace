@@ -61511,21 +61511,9 @@ def _record_delegation_outcome(
     if trusted_producer_receipt is not None and not normalized_trusted_producer_receipt:
         raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt must be resolved by its owning store before writing.")
     if normalized_trusted_producer_receipt:
-        normalized_authority = str(normalized_trusted_producer_receipt.get("authority") or "").strip()
-        normalized_confidence = str(normalized_trusted_producer_receipt.get("confidence") or "high").strip()
-        normalized_source_type = str(normalized_trusted_producer_receipt.get("source_type") or "").strip()
-        normalized_source_ref = str(normalized_trusted_producer_receipt.get("source_ref") or "").strip()
-        normalized_producer_class = str(normalized_trusted_producer_receipt.get("producer_class") or "").strip()
-        normalized_idempotency_key = (
-            normalized_idempotency_key
-            or str(
-                normalized_trusted_producer_receipt.get("idempotency_key") or normalized_trusted_producer_receipt.get("receipt_id") or ""
-            ).strip()
+        raise WorkspaceUsageError(
+            "target-quality-stronger-owner-required: historical producer records do not establish current publication, target responsibility or lifecycle admission; evidence is preserved unproven."
         )
-        proof_observation = proof_observation or str(normalized_trusted_producer_receipt.get("proof_observation") or "")
-        review_observation = review_observation or str(normalized_trusted_producer_receipt.get("review_observation") or "")
-        if not normalized_source_ref:
-            raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt requires a stable source reference.")
     elif normalized_authority in {"aw-proof", "human-review"} or normalized_producer_class in {"aw-proof", "human-review"}:
         normalized_authority = "model-self-report"
         normalized_producer_class = "agent-self-observation"
@@ -62010,7 +61998,6 @@ def _load_trusted_producer_receipt(
     authority = str(receipt.get("authority") or "").strip()
     receipt_producer = str(receipt.get("producer_class") or receipt.get("producer") or "").strip()
     source_type = str(receipt.get("source_type") or "").strip()
-    source_ref = str(receipt.get("source_ref") or receipt_ref).strip()
     status = str(receipt.get("status") or receipt.get("freshness_status") or "current").strip()
     result = str(receipt.get("result") or "").strip()
     context = _as_dict(receipt.get("target_context") or receipt.get("context"))
@@ -62047,22 +62034,9 @@ def _load_trusted_producer_receipt(
         receipt_path=receipt_path,
         receipt=receipt,
     )
-    return {
-        "receipt_id": receipt_id,
-        "authority": authority,
-        "confidence": str(receipt.get("confidence") or "high").strip(),
-        "source_type": source_type,
-        "source_ref": source_ref,
-        "producer_class": producer_class,
-        "idempotency_key": str(receipt.get("idempotency_key") or receipt_id).strip(),
-        "proof_observation": "passed"
-        if producer_class == "aw-proof" and outcome == "success"
-        else "failed"
-        if producer_class == "aw-proof"
-        else "",
-        "review_observation": "verified" if producer_class == "human-review" else "",
-        "receipt_revision": str(receipt.get("revision") or "").strip(),
-    }
+    raise WorkspaceUsageError(
+        "target-quality-stronger-owner-required: historical producer records do not establish current publication, target responsibility or lifecycle admission; evidence is preserved unproven."
+    )
 
 
 def _record_aw_proof_delegation_outcome(
@@ -62296,6 +62270,17 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
             context_cost=context_cost,
         )
     except WorkspaceUsageError as exc:
+        if "target-quality-stronger-owner-required" in str(exc):
+            return {
+                "status": "preserved-unproven",
+                "producer_class": producer_class,
+                "source_ref": source_ref,
+                "target_context": target_context,
+                "attribution": attribution,
+                "recorded_target_evidence": False,
+                "reason": "target-quality-stronger-owner-required",
+                "rule": "The observation remains in its source store; current lifecycle publication and causal binding must be independently admitted before calibration.",
+            }
         if "duplicate evidence" not in str(exc):
             raise
         return {

@@ -15,6 +15,7 @@ from agentic_workspace.config import (
 
 CURRENT_ADMISSION_STATES = {"accepted", "accepted-normalized", "recovered", "compacted-summary"}
 ROUTABLE_AUTHORITIES = {"aw-proof", "human-review", "local-outcome-ledger"}
+UNADMITTED_LEGACY_PRODUCERS = {"aw-proof", "human-review", "retry-outcome", "handoff-outcome", "closeout-outcome"}
 ROUTABLE_CONFIDENCE = {"high", "medium"}
 INACTIVE_ADMISSION_STATES = {"disputed", "superseded", "stale", "compacted-raw", "rejected"}
 ROUTABLE_RECORD_MAX_AGE_DAYS = 180
@@ -117,6 +118,8 @@ def _record_identity(record: DelegationOutcomeRecord, index: int) -> str:
 
 
 def _record_routable(record: DelegationOutcomeRecord) -> bool:
+    if record.producer_class in UNADMITTED_LEGACY_PRODUCERS or record.authority in {"aw-proof", "human-review"}:
+        return False
     if record.admission_state not in CURRENT_ADMISSION_STATES:
         return False
     if record.authority not in ROUTABLE_AUTHORITIES:
@@ -144,6 +147,8 @@ def _record_is_stale(record: DelegationOutcomeRecord) -> bool:
 
 def _record_uncertainty_reasons(record: DelegationOutcomeRecord) -> list[str]:
     reasons: list[str] = []
+    if record.producer_class in UNADMITTED_LEGACY_PRODUCERS or record.authority in {"aw-proof", "human-review"}:
+        reasons.append("target-quality-stronger-owner-required")
     if record.admission_state in INACTIVE_ADMISSION_STATES:
         reasons.append(f"inactive:{record.admission_state}")
     elif record.admission_state not in CURRENT_ADMISSION_STATES:

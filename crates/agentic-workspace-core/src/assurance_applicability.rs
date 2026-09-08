@@ -178,8 +178,12 @@ pub(crate) fn native_input(
         json!({})
     };
     let facts = planning.map_or(absent, |subject| json!({"refs":[subject["id"]]}));
-    let source_revision =
-        digest(&json!({"source":revision,"planning":planning,"owner_context":context}))?;
+    // Applicability consumes material identity and these projected facts, not
+    // an owner's attempt/frontier or physical source revision. Recompute the
+    // small semantic input instead of expiring judgment on unrelated state.
+    let source_revision = digest(&json!({"source":revision,
+        "planning":planning.map(|p| json!({"id":p["id"],"revision":p["revision"]})),
+        "planning_facts":facts,"route_fact":context["route_fact"]}))?;
     Ok(
         json!({"requirements":requirements,"changed_paths":changed,"planning_facts":facts,"route_fact":context["route_fact"],
         "source_revision":source_revision,"task_identity":crate::direct_task::subject(task,changed)?,"current_work":work}),
