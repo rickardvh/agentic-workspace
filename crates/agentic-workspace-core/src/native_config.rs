@@ -228,7 +228,6 @@ pub(crate) fn assignment_consumption(
                                         | "confidence_source"
                                         | "current_economic_evidence"
                                         | "identity_status"
-                                        | "human_control_modes"
                                 )
                             })
                         })

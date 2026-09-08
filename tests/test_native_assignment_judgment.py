@@ -231,6 +231,18 @@ def test_current_target_scope_and_known_manual_result_mismatch(tmp_path, shared_
         b["code"].endswith("delegation_targets.bounded") and "effect:implementation" in b["affects"]
         for b in retained["decision_packet"]["blockers"]
     ), "Unconsumed lifecycle policy is not cleared by Assignment"
+    source.write_text(original.replace('strength="weak"', 'strength="weak"\nhuman_control_modes=["auto"]'))
+    mode_task = call()["task_requirements"]["requests"][0]
+    mode_task["arguments"].update(
+        required_result_classes=["unapplied-patch"],
+        target_scope={"bounded": {"status": "applies", "reason": "The boundary-shaping restriction applies."}},
+    )
+    mode_choice = call(mode_task)["task_requirements"]["assignment"]["requests"][0]
+    mode_choice[-1]["arguments"].update(alternative="local:internal", reason="A preference cannot consume unhandled mode policy.")
+    assert any(
+        b["code"].endswith("delegation_targets.local") and "effect:implementation" in b["affects"]
+        for b in call(mode_choice)["decision_packet"]["blockers"]
+    )
     source.write_text(original)
     assert source.read_text() == original
     assert not (tmp_path / ".agentic-workspace/local").exists()
