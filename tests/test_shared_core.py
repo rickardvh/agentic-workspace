@@ -1872,6 +1872,7 @@ def test_fallback_source_cannot_choose_its_owner_or_widen_admission(shared_core_
 
 
 def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_core_binary: Path, tmp_path: Path) -> None:
+    import hashlib
     import sys
 
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
@@ -1879,8 +1880,17 @@ def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_
     archive = ".agentic-workspace/memory/repo/decisions"
     source = tmp_path / archive / "source-admission.md"
     source.parent.mkdir(parents=True)
+    # This test authors an isolated current-source instance. Reconcile its basis
+    # to the actual dependency copied above; do not advance any repository ADR
+    # admission or silently reuse the historical fixture's old intent hash.
+    fixture = (ROOT / "tests/fixtures/decision_fallback.md").read_text(encoding="utf-8")
+    prefix, body = fixture.split("```aw-decision\n", 1)
+    record_text, suffix = body.split("```", 1)
+    record = json.loads(record_text)
+    intent_bytes = (tmp_path / "SYSTEM_INTENT.md").read_bytes()
+    record["authority"]["basis"][0]["revision"] = "sha256:" + hashlib.sha256(intent_bytes.replace(b"\r\n", b"\n")).hexdigest()
     with source.open("xb") as output:
-        output.write((ROOT / "tests/fixtures/decision_fallback.md").read_bytes())
+        output.write((prefix + "```aw-decision\n" + json.dumps(record, indent=2) + "\n```" + suffix).encode())
     original = source.read_bytes()
     revision = _commit_native(tmp_path)
     config = tmp_path / ".agentic-workspace/config.toml"
@@ -1943,6 +1953,10 @@ def test_known_agent_decision_survives_memory_to_native_ordinary_journey(shared_
     assert promoted["reconciliation"][0]["status"] == "repo-native"
     assert promoted["consequences"][0]["material_revision"] == fallback["consequences"][0]["material_revision"]
     assert promoted["consequences"][0]["source"]["reference"] == "docs/decisions/source-admission.md"
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(intent_bytes + b"\nChanged current authority dependency.\n")
+    assert start()["decision_context"]["consequences"] == []
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(intent_bytes)
+    assert start()["decision_context"]["consequences"] == promoted["consequences"]
     native_source.write_text("unadmitted replacement", encoding="utf-8")
     lost_packet = start()
     assert lost_packet["decision_context"]["reconciliation"][0]["status"] == "pending"
