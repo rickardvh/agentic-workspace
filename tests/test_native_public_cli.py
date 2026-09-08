@@ -213,6 +213,73 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_real_former_planning_returned_continuation_preserves_semantic_owner(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    # Real former owner, with controlled owner-authored return observations.
+    # This proves continuation, not an actual delegated worker or admitted result.
+    reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+    body = json.loads((ROOT / reference).read_bytes())
+    body["relationships"].update(
+        dependencies={"subject": "verification", "revision": "fixture-obligation"},
+        assignment={"subject": "bounded-work", "owner": "fixture-worker", "attempt": 1},
+        returned={"subject": "bounded-work"},
+        integration_pending={"subject": "bounded-work"},
+    )
+    plan = tmp_path / reference
+    plan.parent.mkdir(parents=True)
+    plan.write_text(json.dumps(body))
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+        f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
+    )
+    context = {"target": str(tmp_path), "task": "Continue the current reconstruction owner"}
+
+    def call(value):
+        return consume(surface, shared_core_binary, native_cli, value)
+
+    def reconcile():
+        initial = call(context)
+        answer = initial["decision_packet"]["decision_request"]["response_request"]
+        answer["arguments"]["answer"] = "continue-selected"
+        action = call({**context, "request": answer})["decision_packet"]["primary_action"]
+        assert action["operation_id"] == "planning.reconcile"
+        call({**context, "invocation": action})
+        fresh = call(context)
+        assert fresh["planning"]["current_owner"]["current"] is True
+        assert fresh["decision_packet"]["status"] != "terminal"
+        return fresh["planning"]["current_owner"]["reconciliation"]["subject"], action
+
+    initial, _ = reconcile()
+    for phase in ["returned", "integration-pending"]:
+        body["phase"] = phase
+        body["relationships"]["assignment"].update(attempt=2, status=phase)
+        body["relationships"]["returned"].update(result="fixture-result", status="awaiting-admission")
+        body["relationships"]["integration_pending"].update(result="fixture-result", status=phase)
+        body["proof"]["refs"] = ["proof://unadmitted-return-observation"]
+        raw = json.dumps(body).encode()
+        plan.write_bytes(raw)
+        current, prior_action = reconcile()
+        assert (current["id"], current["revision"]) == (initial["id"], initial["revision"])
+        state = current["state"]
+        assert state["frontier"]["phase"] == phase
+        assert state["scope"]["declared"] == body["scope"]
+        assert state["canonical_core"] == body["canonical_core"]
+        assert state["dependencies"]["declared"] == body["relationships"]["dependencies"]
+        assert state["proof"]["declared"] == body["proof"]
+        assert state["residual"]["continuation"] == body["continuation"]
+        for field in ["assignment", "returned", "integration_pending"]:
+            assert state["handoff"][field] == body["relationships"][field]
+        assert plan.read_bytes() == raw
+    body["canonical_core"]["hard_constraints"] = "Stop before changing the newly protected material scope"
+    plan.write_text(json.dumps(body))
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": prior_action})
+    revised, _ = reconcile()
+    assert revised["id"] == initial["id"]
+    assert revised["revision"] != initial["revision"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_unrelated_claim_request_keeps_planning_quiet_without_chat_state(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
