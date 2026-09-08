@@ -80,7 +80,16 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
             "former source is not admitted as Planning-owned; preserve and route its disposition",
         ));
     }
-    let body = attempt_store::read_source(&input.target, source)?;
+    let mut body = attempt_store::read_source(&input.target, source)?;
+    if crate::native_planning_create::inspect_origin(
+        &std::fs::canonicalize(&input.target).map_err(error)?,
+        &source.path,
+        &body,
+    )?
+    .is_some()
+    {
+        body.as_object_mut().unwrap().remove("creation_provenance");
+    }
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
     ))

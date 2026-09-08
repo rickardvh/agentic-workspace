@@ -56,6 +56,20 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     }))?});
     let requests = owner_requests(input.request.as_ref())?;
     let request_for = |owner: &str| requests.iter().find(|request| request["owner"] == owner);
+    let planning_request = requests
+        .iter()
+        .find(|r| r["owner"] == "planning" && r["request_kind"] == "planning/continuation/v1")
+        .or_else(|| {
+            input
+                .invocation
+                .as_ref()
+                .filter(|i| i["operation_id"] == "planning.create")
+                .and_then(|i| i["arguments"].get("planning_request"))
+                .filter(|r| r.is_object())
+        });
+    let creation_request = requests
+        .iter()
+        .find(|r| r["owner"] == "planning" && r["request_kind"] == "planning/create/v1");
     let verification_request = |kind: &str| {
         requests
             .iter()
@@ -81,8 +95,9 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         }
     }
     if input.invocation.as_ref().is_some_and(|invocation| {
-        (invocation["operation_id"] == "planning.reconcile" && !available("planning"))
-            || (invocation["operation_id"] == "proof.report" && !available("verification"))
+        invocation["source_owner"].as_str().is_some_and(|owner| {
+            matches!(owner, "planning" | "memory" | "verification") && !available(owner)
+        })
     }) {
         return Err(CoreError::new(
             "invoked owner is disabled by current module enablement",
@@ -180,13 +195,8 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             .is_some_and(|i| i["operation_id"] == "planning.reconcile")
     {
         native_planning::resolve_for_execution(target, &work, &contract)?
-    } else if request_for("planning").is_some() {
-        native_planning::resolve_with_contract(
-            target,
-            &work,
-            request_for("planning"),
-            Some(&contract),
-        )?
+    } else if planning_request.is_some() {
+        native_planning::resolve_with_contract(target, &work, planning_request, Some(&contract))?
     } else {
         planning_probe
     };
@@ -206,6 +216,48 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         planning_detail = detail;
     } else {
         contributions.push(planning["contribution"].clone());
+    }
+    let mut creation = crate::native_planning_create::view(
+        target,
+        &work,
+        &contract,
+        creation_request,
+        input
+            .invocation
+            .as_ref()
+            .filter(|i| i["operation_id"] == "planning.create"),
+    )?;
+    if let Some(actions) = creation["contribution"]["actions"].as_array_mut() {
+        for action in actions {
+            action["arguments"]["planning_request"] =
+                planning_request.cloned().unwrap_or(Value::Null);
+        }
+    }
+    planning["created_owner"] = creation["created_owner"].clone();
+    if let Some(reference) = creation["created_owner"]["path"].as_str() {
+        let candidate = native_planning::candidate(target, &work, reference, &contract);
+        match candidate {
+            Ok(candidate) => {
+                planning["created_owner"]["selection_request"] = candidate["requests"][0].clone()
+            }
+            Err(error) => planning["created_owner"]["selection_gap"] = json!(error.to_string()),
+        }
+    }
+    planning["creation_requests"] = creation["requests"].clone();
+    planning["creation_committed_operation"] = creation["committed_operation"].clone();
+    if let Some(actions) = creation["contribution"]["actions"].as_array() {
+        let owner = contributions
+            .iter_mut()
+            .find(|c| c["owner"] == "planning")
+            .unwrap();
+        let mut combined = owner["actions"].as_array().cloned().unwrap_or_default();
+        combined.extend(actions.iter().cloned());
+        owner["actions"] = json!(combined);
+        owner["settled"] = json!(false);
+        owner["revision"] = json!(digest(&json!([
+            owner["revision"],
+            creation["contribution"]["revision"]
+        ]))?);
     }
     let subject = planning_detail
         .get("reconciliation")
@@ -349,7 +401,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
-        let key = if owner == "verification" {
+        let key = if matches!(owner, "verification" | "planning") {
             format!("{owner}:{}", request["request_kind"].as_str().unwrap())
         } else {
             owner.to_owned()
@@ -391,6 +443,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let invocation = input.invocation.as_ref().unwrap();
     if invocation["operation_id"] != "planning.reconcile"
         && invocation["operation_id"] != "proof.report"
+        && invocation["operation_id"] != "planning.create"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -399,6 +452,48 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "planning.create" {
+        let committed = &current["planning"]["creation_committed_operation"];
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation,"previous_invocation":committed.get("invocation")}),
+        )?;
+        let executed = if committed.is_object() {
+            let mut result = committed["outcome"].clone();
+            result["custody"] = committed["custody"].clone();
+            result
+        } else {
+            crate::native_planning_create::execute(
+                &target,
+                &current["decision_packet"],
+                invocation,
+                || {
+                    let fresh = resolve(&input, &target, true)?;
+                    crate::admit_invocation_value(
+                        json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                    )?;
+                    Ok(())
+                },
+            )?
+        };
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        // Reuse the post-result owner projection instead of another source read.
+        if let Some(next) = next {
+            for key in ["selection_request", "selection_gap"] {
+                if let Some(value) = next["planning"]["created_owner"].get(key) {
+                    result["value"][key] = value.clone();
+                }
+            }
+        } else {
+            result["value"]["selection_gap"] = json!(
+                "Post-creation owner resolution unavailable; fresh current entry is required"
+            );
+        }
+        return Ok(result);
     }
     if invocation["operation_id"] == "proof.report" {
         crate::admit_invocation_value(
