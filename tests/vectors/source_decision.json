@@ -1,0 +1,3113 @@
+{
+  "schema_version": 1,
+  "cases": [
+{
+  "id": "restriction-survives-unavailable-target-grant-owner",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": [
+        {
+          "owner": "policy",
+          "affects": [
+            "claim:release-complete",
+            "effect:external-publish"
+          ]
+        }
+      ]
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "blocked": [
+            "release-complete"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expect": {
+    "claim_boundary.allowed": [],
+    "claim_boundary.blocked": [
+      "release-complete"
+    ],
+    "primary_action": null,
+    "ready_actions": []
+  }
+},
+{
+  "id": "open-answer-returns-owner-request-and-schema",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {}
+            },
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "expect": {
+    "pending_consequences.decisions.0.choices": [],
+    "pending_consequences.decisions.0.response_request.arguments": {},
+    "pending_consequences.decisions.0.response_schema.required": [
+      "answer"
+    ]
+  }
+},
+    {
+      "id": "request-specific-response-with-unrelated-owner-action",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"
+              ],
+              "status": "action"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "request_resolution.consequence_ids": [
+          "action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"
+        ],
+        "pending_consequences.actions.1.operation_id": "example.finish"
+      }
+    },
+    {
+      "id": "request-settled-is-not-owner-quiescence",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [],
+              "status": "settled"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "request_resolution.status": "settled",
+        "request_resolution.consequence_ids": [],
+        "owner_states.0.settled": false
+      }
+    },
+    {
+      "id": "complete-outcome-with-optional-action",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "primary_action": null,
+        "ready_actions.0.operation_id": "workspace.edit",
+        "pending_consequences.actions.0.operation_id": "workspace.edit",
+        "terminal_authority.id": "ship"
+      }
+    },
+    {
+      "id": "optional-conflict-does-not-block-selected-outcome",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              },
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "optional.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "primary_action": null,
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions",
+        "terminal_authority.id": "ship"
+      }
+    },
+    {
+      "id": "missing-required-claim-owner-does-not-waive-proof",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "required_claims": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "actionable",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "required-claim-evidence-completes-selected-outcome",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "required_claims": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "release-owner",
+            "revision": "proof-1",
+            "claims": {
+              "allowed": [
+                "release"
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "terminal_authority.required_claims": [
+          "release"
+        ]
+      }
+    },
+    {
+      "id": "blocked-required-claim-prevents-terminal",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "required_claims": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "release-owner",
+            "revision": "proof-1",
+            "claims": {
+              "allowed": [
+                "release"
+              ]
+            }
+          },
+          {
+            "owner": "verification",
+            "revision": "v1",
+            "claims": {
+              "blocked": [
+                "release"
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": "actionable",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "required-residual-work-prevents-terminal",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2",
+              "residual_work": [
+                "required implementation is unfinished"
+              ]
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "actionable",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "admitted-task-blocker-prevents-outcome-terminal",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "repository",
+            "revision": "r2",
+            "blockers": [
+              {
+                "code": "stop",
+                "message": "required task-wide gate",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "status": "blocked",
+        "terminal_authority": null
+      }
+    },
+    {
+      "id": "unrelated-claim-gap-does-not-block-outcome",
+      "input": {
+        "intent": {
+          "outcome": {
+            "id": "ship",
+            "owner": "planning",
+            "claim": "complete"
+          }
+        },
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "p2",
+            "settled": true,
+            "claims": {
+              "allowed": [
+                "complete"
+              ]
+            },
+            "outcome": {
+              "id": "ship",
+              "status": "complete",
+              "claim": "complete",
+              "evidence_revision": "p2"
+            }
+          },
+          {
+            "owner": "workspace",
+            "revision": "w1",
+            "actions": [
+              {
+                "operation_id": "workspace.edit",
+                "dependency_revision": "w1",
+                "arguments": {
+                  "path": "README.md"
+                },
+                "effects": [
+                  "workspace-files"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "verification",
+            "revision": "v1",
+            "claims": {
+              "blocked": [
+                "release"
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": "terminal",
+        "terminal_authority.id": "ship"
+      }
+    },
+    {
+      "id": "two-independent-ready-actions",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "b",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "b.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "b-write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "semantic_revision": "v1",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                 "semantic_revision": "v1",
+                  "semantic_revision": "v1",
+                  "reads": [],
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "actionable",
+        "primary_action": null,
+        "blockers": [],
+        "ready_actions.0.operation_id": "a.write",
+        "ready_actions.1.operation_id": "b.write"
+      }
+    },
+    {
+      "id": "unknown-read-footprint",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "b",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "b.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "b-write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "semantic_revision": "v1",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                  "semantic_revision": "v1",
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "blocked",
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions"
+      }
+    },
+    {
+      "id": "conflicting-read-write-footprints",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              }
+            ]
+          },
+          {
+            "owner": "b",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "b.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "b-write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "semantic_revision": "v1",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                 "semantic_revision": "v1",
+                  "semantic_revision": "v1",
+                  "reads": [
+                    "a"
+                  ],
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "blocked",
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions"
+      }
+    },
+    {
+      "id": "conflicting-writes-in-one-domain",
+      "input": {
+        "contributions": [
+          {
+            "owner": "a",
+            "revision": "1",
+            "actions": [
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ]
+              },
+              {
+                "operation_id": "a.write",
+                "dependency_revision": "subject-1",
+                "effects": [
+                  "a-write"
+                ],
+                "arguments": {
+                  "target": "other"
+                }
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "owners": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "domains": [
+                "a"
+              ],
+              "effects": [
+                {
+                  "id": "a-write",
+                  "domain": "a"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "a.write",
+                  "semantic_revision": "v1",
+                  "reads": [],
+                  "effects": [
+                    "a-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "domains": [
+                "b"
+              ],
+              "effects": [
+                {
+                  "id": "b-write",
+                  "domain": "b"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "b.write",
+                 "semantic_revision": "v1",
+                  "semantic_revision": "v1",
+                  "reads": [],
+                  "effects": [
+                    "b-write"
+                  ],
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "write-result/v1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "blocked",
+        "ready_actions": [],
+        "blockers.0.code": "multiple-actions"
+      }
+    },
+    {
+      "id": "action-material-dependencies",
+      "input": {
+        "contributions": [
+          {
+            "owner": "planning",
+            "revision": "owner-1",
+            "actions": [
+              {
+                "operation_id": "planning.advance",
+                "arguments": {
+                  "item": "a"
+                },
+                "effects": [
+                  "planning-state"
+                ],
+                "dependency_revision": "proof-1"
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "expect": {
+        "status": "actionable",
+        "primary_action.arguments": {
+          "item": "a"
+        }
+      }
+    },
+    {
+      "id": "admitted-policy-restricts-without-owning-effect-or-claim",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:write"
+                ]
+              }
+            ],
+            "claims": {
+              "blocked": [
+                "done"
+              ]
+            }
+          },
+          {
+            "owner": "producer",
+            "revision": "p1",
+            "actions": [
+              {"dependency_revision": "p1", 
+                "operation_id": "produce",
+                "effects": [
+                  "write"
+                ]
+              }
+            ],
+            "claims": {
+              "allowed": [
+                "done"
+              ]
+            }
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "semantic_revision": "v1",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "expect": {
+        "status": "direct",
+        "primary_action": null,
+        "claim_boundary.allowed": [],
+        "claim_boundary.blocked": [
+          "done"
+        ],
+        "pending_consequences.actions.0.operation_id": "produce"
+      }
+    },
+    {
+      "id": "owner-settled-is-not-terminal",
+      "input": {"contributions": [{"owner": "memory", "revision": "m1", "settled": true}], "intent": {}},
+      "expect": {"status": "direct", "terminal_authority": null, "owner_states.0.settled": true}
+    },
+    {
+      "id": "typed-public-request-returns-an-exact-owner-action",
+      "input": {
+        "contributions": [{
+          "owner": "example.external",
+          "revision": "ext1",
+          "actions": [{"dependency_revision": "ext1", "operation_id": "example.finish", "arguments": {"subject": "case-17"}, "effects": ["external-state"]}],
+          "request_response": {"request_identity":"request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2","consequence_ids":["action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"],"status":"action"}
+        }],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-17"},
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {"kind": "current-work", "id": "work-17"},
+            "arguments": {"subject": {"name": "case-17", "mode": "finish"}}
+          }
+        }
+      },
+      "expect": {
+        "status": "actionable",
+        "primary_action.operation_id": "example.finish",
+        "request_resolution.status": "action",
+        "request_resolution.result_kind": "example/finish-result/v1",
+        "request_resolution.consequence_ids.0": "action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"
+      }
+    },
+    {
+      "id": "agent-selected-route-is-current-applicability-only",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-17"},
+          "semantic_route_source": {
+            "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "routes": ["github/pulls/review", "github/issues/create"]
+          },
+          "semantic_task_routes": {
+            "posture": "selected",
+            "routes": ["github/pulls/review"],
+            "task_identity": {"kind": "current-work", "id": "work-17"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected",
+            "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {
+        "status": "direct",
+        "semantic_task_routes.routes.0": "github/pulls/review",
+        "semantic_task_routes.task_identity.id": "work-17",
+        "semantic_task_routes.authority_effect": "applicability-only"
+      }
+    },
+    {
+      "id": "explicit-current-outcome-is-terminal",
+      "input": {
+        "intent": {"outcome": {"id": "ship", "owner": "planning", "claim": "complete"}},
+        "contributions": [{
+          "owner": "planning", "revision": "p2", "settled": true,
+          "claims": {"allowed": ["complete"]},
+          "outcome": {"id": "ship", "status": "complete", "claim": "complete", "evidence_revision": "p2"}
+        }]
+      },
+      "expect": {"status": "terminal", "terminal_authority.owner": "planning", "terminal_authority.revision": "p2"}
+    },
+    {
+      "id": "stale-outcome-evidence-is-not-terminal",
+      "input": {
+        "intent": {"outcome": {"id": "ship", "owner": "planning", "claim": "complete"}},
+        "contributions": [{
+          "owner": "planning", "revision": "p2", "settled": true,
+          "claims": {"allowed": ["complete"]},
+          "outcome": {"id": "ship", "status": "complete", "claim": "complete", "evidence_revision": "p1"}
+        }]
+      },
+      "expect": {"status": "direct", "terminal_authority": null}
+    },
+    {
+      "id": "claim-blocker-preserves-independent-action",
+      "input": {"intent": {}, "contributions": [
+        {"owner": "verification", "revision": "v1", "blockers": [{"code": "proof-missing", "message": "release proof is missing", "recovery": "run verification.release", "affects": ["claim:release"]}], "claims": {"blocked": ["release"]}},
+        {"owner": "workspace", "revision": "w1", "actions": [{"dependency_revision": "w1", "operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["workspace-files"]}]}
+      ]},
+      "expect": {"status": "actionable", "primary_action.operation_id": "workspace.edit", "blockers.0.recovery": "run verification.release"}
+    },
+    {
+      "id": "exact-same-operation-action-scope",
+      "input": {"contributions": [{
+        "owner": "planning", "revision": "one",
+        "blockers": [{"code": "subject-blocked", "message": "only action a is blocked", "affects": ["action:planning:sha256:af9d1ddb17ae8cd5c66a6c9ab17c2ca4a863c83444a0080faa0f7d0b1c20cb63"]}],
+        "actions": [
+          {"dependency_revision": "one", "operation_id": "planning.advance", "arguments": {"item": "a"}, "effects": ["plan-a"]},
+          {"dependency_revision": "one", "operation_id": "planning.advance", "arguments": {"item": "b"}, "effects": ["plan-b"]}
+        ]
+      }], "intent": {}},
+      "expect": {"status": "actionable", "primary_action.arguments.item": "b", "primary_action.effects.0": "plan-b", "pending_consequences.actions.0.arguments.item": "a", "pending_consequences.actions.1.arguments.item": "b"}
+    },
+    {
+      "id": "task-decision-is-current-and-bounded",
+      "input": {"contributions": [{"owner": "repository", "revision": "r2", "decisions": [{"id": "license", "question": "Choose a license", "response_request": {"request_kind": "repository/answer/v1", "arguments": {}}, "choices": [{"id": "mit", "label": "MIT"}], "affects": ["task"]}]}], "intent": {"current_work": {"kind": "current-work", "id": "answer-work"}}},
+      "expect": {"status": "decision", "decision_request.owner": "repository", "decision_request.revision": "r2", "decision_request.choices.0.id": "mit"}
+    },
+    {
+      "id": "incomparable-actions-fail-closed-losslessly",
+      "input": {"contributions": [
+        {"owner": "zeta", "revision": "z1", "actions": [{"dependency_revision": "z1", "operation_id": "zeta.act", "arguments": {"value": "z"}}]},
+        {"owner": "alpha", "revision": "a1", "actions": [{"dependency_revision": "a1", "operation_id": "alpha.act", "arguments": {"value": "a"}}]}
+      ], "intent": {}},
+      "expect": {"status": "blocked", "blockers.0.code": "multiple-actions", "blockers.0.alternatives.0.source_owner": "alpha", "blockers.0.alternatives.1.source_owner": "zeta"}
+    },
+    {
+      "id": "stale-agent-route-task-is-scoped",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/issues/create"],
+            "task_identity": {"kind": "current-work", "id": "work-stale"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {"semantic_task_routes.status": "stale", "semantic_task_routes.routes": [], "blockers": []}
+    },
+    {
+      "id": "stale-agent-route-source-is-scoped",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/issues/create"],
+            "task_identity": {"kind": "current-work", "id": "work-current"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {"semantic_task_routes.status": "stale", "semantic_task_routes.routes": [], "blockers": []}
+    },
+    {
+      "id": "unknown-agent-route-is-scoped",
+      "input": {
+        "contributions": [],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-current"},
+          "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create"]},
+          "semantic_task_routes": {
+            "posture": "selected", "routes": ["github/pulls/review"],
+            "task_identity": {"kind": "current-work", "id": "work-current"},
+            "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "provenance": "agent-selected", "authority_effect": "applicability-only"
+          }
+        }
+      },
+      "expect": {"semantic_task_routes.status": "stale", "semantic_task_routes.routes": [], "blockers": []}
+    },
+{
+  "id": "semantic-route-contributes-current-decision",
+  "input": {
+    "contributions": [],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "work-1"
+      },
+      "semantic_route_source": {
+        "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "routes": [
+          "architecture/authority"
+        ]
+      },
+      "semantic_task_routes": {
+        "posture": "selected",
+        "routes": [
+          "architecture/authority"
+        ],
+        "task_identity": {
+          "kind": "current-work",
+          "id": "work-1"
+        },
+        "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "provenance": "agent-selected",
+        "authority_effect": "applicability-only"
+      }
+    },
+    "decision_context": {
+      "records": [
+        {
+          "authority": {
+            "actor": {
+              "id": "implementer",
+              "kind": "agent"
+            },
+            "basis": [
+              {
+                "owner": "assignment",
+                "reference": "bounded-implementation",
+                "revision": "authority-1"
+              }
+            ]
+          },
+          "authors": [
+            {
+              "id": "implementer",
+              "kind": "agent"
+            }
+          ],
+          "consequence": "Python and Node transport owner facts to the shared reducer",
+          "context": [
+            {
+              "owner": "memory",
+              "reference": "prior-cost-evidence",
+              "revision": "evidence-1"
+            }
+          ],
+          "contributors": [],
+          "decision": "Use one Rust executable semantic authority",
+          "dependencies": [
+            {
+              "owner": "repository",
+              "reference": "SYSTEM_INTENT",
+              "revision": "intent-1"
+            }
+          ],
+          "id": "architecture/shared-authority",
+          "material_revision": "sha256:fbeae994b739cb1b68a2198479c33129df41f063f9b9927e6d8319273c6f0411",
+          "rationale_reference": "decisions/shared-authority#rationale-and-alternatives",
+          "scope": [
+            "contract:operation-result",
+            "owner:planning"
+          ],
+          "semantic_routes": [
+            "architecture/authority"
+          ],
+          "source": {
+            "owner": "repository",
+            "reference": "decisions/shared-authority",
+            "revision": "source-1"
+          },
+          "supersedes": []
+        }
+      ],
+      "admissions": [
+        {
+          "id": "architecture/shared-authority",
+          "material_revision": "sha256:fbeae994b739cb1b68a2198479c33129df41f063f9b9927e6d8319273c6f0411",
+          "source": {
+            "owner": "repository",
+            "reference": "decisions/shared-authority",
+            "revision": "source-1"
+          },
+          "rationale_reference": "decisions/shared-authority#rationale-and-alternatives"
+        }
+      ],
+      "current_dependencies": [
+        {
+          "owner": "assignment",
+          "reference": "bounded-implementation",
+          "revision": "authority-1"
+        },
+        {
+          "owner": "repository",
+          "reference": "SYSTEM_INTENT",
+          "revision": "intent-1"
+        },
+        {
+          "owner": "memory",
+          "reference": "prior-cost-evidence",
+          "revision": "evidence-1"
+        }
+      ],
+      "applicable_scope": []
+    }
+  },
+  "expect": {
+    "decision_context.consequences.0.id": "architecture/shared-authority",
+    "decision_context.states.0.status": "current",
+    "blockers": [],
+    "claim_boundary.allowed": []
+  }
+}
+  ],
+  "error_cases": [
+{
+  "id": "restriction-does-not-grant-unavailable-claim",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": [
+        {
+          "owner": "policy",
+          "affects": [
+            "claim:release-complete",
+            "effect:external-publish"
+          ]
+        }
+      ]
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "allowed": [
+            "release-complete"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "without exclusive claim authority"
+},
+{
+  "id": "restriction-does-not-widen-to-another-claim",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": [
+        {
+          "owner": "policy",
+          "affects": [
+            "claim:release-complete",
+            "effect:external-publish"
+          ]
+        }
+      ]
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "blocked": [
+            "other-claim"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "without admitted restriction authority"
+},
+{
+  "id": "unavailable-target-still-requires-restriction-admission",
+  "input": {
+    "intent": {},
+    "capability_contract": {
+      "kind": "agentic-workspace/capability-contract/v1",
+      "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "owners": [
+        {
+          "owner": "policy",
+          "revision": "p1",
+          "domains": [
+            "repository-policy"
+          ]
+        }
+      ],
+      "restriction_authorities": []
+    },
+    "contributions": [
+      {
+        "owner": "policy",
+        "revision": "p1",
+        "claims": {
+          "blocked": [
+            "release-complete"
+          ]
+        },
+        "blockers": [
+          {
+            "code": "review-required",
+            "message": "Independent review is still required.",
+            "affects": [
+              "effect:external-publish"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "without admitted restriction authority"
+},
+{
+  "id": "answer-cannot-prefill-human-choice",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {
+                "answer": "mit"
+              }
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "error_contains": "cannot prefill"
+},
+{
+  "id": "answer-request-must-be-admitted",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "hidden/answer",
+              "arguments": {}
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "error_contains": "undeclared response request"
+},
+{
+  "id": "answer-fixed-fields-must-fit-schema",
+  "input": {
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {
+                "hidden_target": "other"
+              }
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ],
+    "intent": {
+      "current_work": {
+        "kind": "current-work",
+        "id": "answer-work"
+      }
+    }
+  },
+  "error_contains": "violate input_schema"
+},
+{
+  "id": "answer-requires-current-work",
+  "input": {
+    "intent": {},
+    "contributions": [
+      {
+        "owner": "repository",
+        "revision": "r2",
+        "decisions": [
+          {
+            "id": "license",
+            "question": "Choose a license",
+            "response_request": {
+              "request_kind": "repository/answer/v1",
+              "arguments": {}
+            },
+            "choices": [
+              {
+                "id": "mit",
+                "label": "MIT"
+              }
+            ],
+            "affects": [
+              "task"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "error_contains": "requires current_work"
+},
+    {
+      "id": "same-request-id-changed-valid-arguments-rejects-old-response",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"
+              ],
+              "status": "action"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "other-valid-subject",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "error_contains": "references a different request"
+    },
+    {
+      "id": "response-cannot-name-an-absent-consequence",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:absent"
+              ],
+              "status": "action"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "error_contains": "exact current owner consequences"
+    },
+    {
+      "id": "response-kind-must-match-selected-consequence",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "actions": [
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "case-17"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              },
+              {
+                "dependency_revision": "ext1",
+                "operation_id": "example.finish",
+                "arguments": {
+                  "subject": "unrelated"
+                },
+                "effects": [
+                  "external-state"
+                ]
+              }
+            ],
+            "request_response": {
+              "request_identity": "request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2",
+              "consequence_ids": [
+                "action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"
+              ],
+              "status": "blocked"
+            }
+          }
+        ],
+        "intent": {
+          "current_work": {
+            "kind": "current-work",
+            "id": "work-17"
+          },
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/finish-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {
+              "kind": "current-work",
+              "id": "work-17"
+            },
+            "arguments": {
+              "subject": {
+                "name": "case-17",
+                "mode": "finish"
+              }
+            }
+          }
+        }
+      },
+      "error_contains": "exact current owner consequences"
+    },
+    {
+      "id": "ungranted-known-claim-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "claims": {
+              "blocked": [
+                "complete"
+              ]
+            }
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "claim-grant-does-not-grant-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "claims": {
+              "blocked": [
+                "external-complete"
+              ]
+            }
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "ungranted-task-global-blocker",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "effect-ownership-does-not-grant-restriction",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:external-state"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "ungranted-cross-domain-effect-restriction",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:planning-state"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "ungranted-outcome-restriction",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "outcome:work-1"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "task-grant-is-not-a-wildcard",
+      "input": {
+        "contributions": [
+          {
+            "owner": "repository",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "claim:complete"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "bounded-question-cannot-self-grant-task-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "decisions": [
+              {
+                "id": "wait",
+                "question": "Proceed?",
+                "response_request": {"request_kind": "example.external/answer/v1", "arguments": {}},
+                "choices": [
+                  {
+                    "id": "yes",
+                    "label": "Yes"
+                  }
+                ],
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {"current_work": {"kind": "current-work", "id": "answer-work"}}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "contribution-cannot-self-grant-restrictions",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ]
+              }
+            ],
+            "restriction_authorities": [
+              {
+                "owner": "example.external",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "restriction-cannot-spoof-admitted-owner",
+      "input": {
+        "contributions": [
+          {
+            "owner": "example.external",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ],
+                "owner": "repository"
+              }
+            ]
+          }
+        ],
+        "intent": {}
+      },
+      "error_contains": "blocker cannot claim owner"
+    },
+    {
+      "id": "effect-restriction-does-not-grant-task-veto",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "task"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "semantic_revision": "v1",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "restriction-does-not-grant-claim-even-when-also-blocked",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "r1",
+            "claims": {
+              "allowed": [
+                "done"
+              ],
+              "blocked": [
+                "done"
+              ]
+            }
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "semantic_revision": "v1",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "without exclusive claim authority"
+    },
+    {
+      "id": "restriction-does-not-grant-operation-or-effect",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:write"
+                ]
+              }
+            ],
+            "actions": [
+              {"dependency_revision": "ext1", 
+                "operation_id": "produce",
+                "effects": [
+                  "write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "semantic_revision": "v1",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "policy",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "not declared by its capability owner"
+    },
+    {
+      "id": "removed-restriction-grant-fails-closed",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "ext1",
+            "blockers": [
+              {
+                "code": "policy",
+                "message": "not admitted",
+                "affects": [
+                  "effect:write"
+                ]
+              }
+            ]
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "semantic_revision": "v1",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": []
+        }
+      },
+      "error_contains": "without admitted restriction authority"
+    },
+    {
+      "id": "restriction-grant-requires-admitted-owner",
+      "input": {
+        "contributions": [
+          {
+            "owner": "policy",
+            "revision": "r1"
+          }
+        ],
+        "intent": {},
+        "capability_contract": {
+          "kind": "agentic-workspace/capability-contract/v1",
+          "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "owners": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "domains": [
+                "output"
+              ],
+              "effects": [
+                {
+                  "id": "write",
+                  "domain": "output"
+                }
+              ],
+              "operations": [
+                {
+                  "id": "produce",
+                  "semantic_revision": "v1",
+                  "input_schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "type": "object"
+                  },
+                  "result_kind": "output/v1",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "policy",
+              "revision": "r1"
+            }
+          ],
+          "claim_authorities": [
+            {
+              "owner": "producer",
+              "claim": "done"
+            }
+          ],
+          "restriction_authorities": [
+            {
+              "owner": "absent",
+              "affects": [
+                "effect:write",
+                "claim:done"
+              ]
+            }
+          ]
+        }
+      },
+      "error_contains": "restriction authority names unknown owner"
+    },
+    {"id":"owner-schema-cannot-widen-public-envelope","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["unresolved-consequence"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":17}},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/finish-request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"integer"},"result_kind":"example/finish-result/v1"}]}]}},"error_contains":"arguments must be an object"},
+    {"id":"invalid-json-schema-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"not-a-json-schema-type"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
+    {"id":"external-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"https://example.invalid/hidden-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
+    {"id":"file-schema-reference-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","$ref":"file:///unavailable-schema.json"},"result_kind":"example/result/v1"}]}]}},"error_contains":"input_schema is invalid"},
+    {"id":"wrong-schema-dialect-is-rejected","input":{"contributions":[],"intent":{},"capability_contract":{"kind":"agentic-workspace/capability-contract/v1","revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","owners":[{"owner":"example.external","revision":"ext1","requests":[{"kind":"example/request/v1","input_schema":{"$schema":"http://json-schema.org/draft-07/schema#","type":"object"},"result_kind":"example/result/v1"}]}]}},"error_contains":"must declare JSON Schema Draft 2020-12"},
+    {"id":"nested-hidden-command-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish","command":"delete"}}}}},"error_contains":"violate input_schema"},
+    {"id":"nested-enum-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"execute-private-command"}}}}},"error_contains":"violate input_schema"},
+    {"id":"caller-operation-selection-is-rejected","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"unbound","consequence_ids":["action:example.external:sha256:578e314ef7bae48c9d982c0d2e0459ebbd4e27e3569819a4d50a68f635ce4d03"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}},"operation_id":"example.finish"}}},"error_contains":"unknown field `operation_id`"},
+    {"id":"owner-derived-action-schema-is-enforced","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"example.finish","arguments":{"subject":{"command":"delete"}},"effects":["external-state"]}],"request_response":{"request_identity":"request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2","consequence_ids":["unresolved-consequence"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"violate input_schema"},
+    {"id":"owner-cannot-derive-undeclared-operation","input":{"contributions":[{"owner":"example.external","revision":"ext1","actions":[{"dependency_revision": "ext1", "operation_id":"workspace.edit","arguments":{"subject":"case-17"},"effects":["external-state"]}],"request_response":{"request_identity":"request:sha256:6bc874d685d02eff4be06a8cf21e632fff951bb3d67ebd2ed851ae4005a9c7f2","consequence_ids":["unresolved-consequence"],"status":"action"}}],"intent":{"current_work":{"kind":"current-work","id":"work-17"},"public_request":{"kind":"agentic-workspace/public-request/v1","id":"finish-17","owner":"example.external","owner_revision":"ext1","source_revision":"ext1","request_kind":"example/finish-request/v1","capability_revision":"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","task_identity":{"kind":"current-work","id":"work-17"},"arguments":{"subject":{"name":"case-17","mode":"finish"}}}}},"error_contains":"not declared by its capability owner"},
+    {
+      "id": "hidden-owner-intent-union-is-rejected",
+      "input": {"contributions": [], "intent": {"planning": {"operation": "complete"}}},
+      "error_contains": "unsupported public request field planning"
+    },
+    {
+      "id": "cross-owner-effect-is-rejected",
+      "input": {"contributions": [{"owner": "workspace", "revision": "w1", "actions": [{"dependency_revision": "w1", "operation_id": "workspace.edit", "arguments": {"path": "README.md"}, "effects": ["external-state"]}]}], "intent": {}},
+      "error_contains": "advertises undeclared effect external-state"
+    },
+    {
+      "id": "self-declared-claim-authority-is-rejected",
+      "input": {"contributions": [{"owner": "workspace", "revision": "w1", "claims": {"allowed": ["complete"]}}], "intent": {}},
+      "error_contains": "allows claim complete without exclusive claim authority"
+    },
+    {
+      "id": "unknown-public-request-kind-is-rejected",
+      "input": {
+        "contributions": [{"owner": "example.external", "revision": "ext1", "request_response": {"request_identity":"unbound","consequence_ids":[],"status":"settled"}, "settled": true}],
+        "intent": {
+          "current_work": {"kind": "current-work", "id": "work-17"},
+          "public_request": {
+            "kind": "agentic-workspace/public-request/v1",
+            "id": "finish-17",
+            "owner": "example.external",
+            "owner_revision": "ext1",
+            "source_revision": "ext1",
+            "request_kind": "example/unknown-request/v1",
+            "capability_revision": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "task_identity": {"kind": "current-work", "id": "work-17"},
+            "arguments": {}
+          }
+        }
+      },
+      "error_contains": "undeclared request kind example/unknown-request/v1"
+    },
+    {
+      "id": "numeric-priority-is-rejected",
+      "input": {"contributions": [{"owner": "module", "revision": "one", "actions": [{"dependency_revision": "one", "operation_id": "module.act", "priority": 1}]}], "intent": {}},
+      "error_contains": "priority is obsolete"
+    },
+    {
+      "id": "unscoped-blocker-is-rejected",
+      "input": {"contributions": [{"owner": "module", "revision": "one", "blockers": [{"code": "gap", "message": "gap"}]}], "intent": {}},
+      "error_contains": "must name at least one affected consequence"
+    }
+
+  ],
+  "equivalent_inputs": [
+    {
+      "id": "ready-set-permutation-is-stable",
+      "inputs": [
+        {
+          "contributions": [
+            {
+              "owner": "a",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "a.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "a-write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "b",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "b.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "b-write"
+                  ]
+                }
+              ]
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "owners": [
+              {
+                "owner": "a",
+                "revision": "1",
+                "domains": [
+                  "a"
+                ],
+                "effects": [
+                  {
+                    "id": "a-write",
+                    "domain": "a"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "a.write",
+                    "semantic_revision": "v1",
+                    "reads": [],
+                    "effects": [
+                      "a-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              },
+              {
+                "owner": "b",
+                "revision": "1",
+                "domains": [
+                  "b"
+                ],
+                "effects": [
+                  {
+                    "id": "b-write",
+                    "domain": "b"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "b.write",
+                   "semantic_revision": "v1",
+                    "semantic_revision": "v1",
+                    "reads": [],
+                    "effects": [
+                      "b-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "contributions": [
+            {
+              "owner": "b",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "b.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "b-write"
+                  ]
+                }
+              ]
+            },
+            {
+              "owner": "a",
+              "revision": "1",
+              "actions": [
+                {
+                  "operation_id": "a.write",
+                  "dependency_revision": "subject-1",
+                  "effects": [
+                    "a-write"
+                  ]
+                }
+              ]
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "owners": [
+              {
+                "owner": "b",
+                "revision": "1",
+                "domains": [
+                  "b"
+                ],
+                "effects": [
+                  {
+                    "id": "b-write",
+                    "domain": "b"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "b.write",
+                   "semantic_revision": "v1",
+                    "semantic_revision": "v1",
+                    "reads": [],
+                    "effects": [
+                      "b-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              },
+              {
+                "owner": "a",
+                "revision": "1",
+                "domains": [
+                  "a"
+                ],
+                "effects": [
+                  {
+                    "id": "a-write",
+                    "domain": "a"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "a.write",
+                    "semantic_revision": "v1",
+                    "reads": [],
+                    "effects": [
+                      "a-write"
+                    ],
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "write-result/v1"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "restriction-grant-and-contribution-order-is-immaterial",
+      "inputs": [
+        {
+          "contributions": [
+            {
+              "owner": "policy",
+              "revision": "ext1",
+              "blockers": [
+                {
+                  "code": "policy",
+                  "message": "not admitted",
+                  "affects": [
+                    "effect:write"
+                  ]
+                }
+              ],
+              "claims": {
+                "blocked": [
+                  "done"
+                ]
+              }
+            },
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "actions": [
+                {"dependency_revision": "p1", 
+                  "operation_id": "produce",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ],
+              "claims": {
+                "allowed": [
+                  "done"
+                ]
+              }
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "owners": [
+              {
+                "owner": "producer",
+                "revision": "p1",
+                "domains": [
+                  "output"
+                ],
+                "effects": [
+                  {
+                    "id": "write",
+                    "domain": "output"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "produce",
+                    "semantic_revision": "v1",
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "output/v1",
+                    "effects": [
+                      "write"
+                    ]
+                  }
+                ]
+              },
+              {
+                "owner": "policy",
+                "revision": "r1"
+              }
+            ],
+            "claim_authorities": [
+              {
+                "owner": "producer",
+                "claim": "done"
+              }
+            ],
+            "restriction_authorities": [
+              {
+                "owner": "policy",
+                "affects": [
+                  "effect:write",
+                  "claim:done"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "contributions": [
+            {
+              "owner": "producer",
+              "revision": "p1",
+              "actions": [
+                {"dependency_revision": "p1", 
+                  "operation_id": "produce",
+                  "effects": [
+                    "write"
+                  ]
+                }
+              ],
+              "claims": {
+                "allowed": [
+                  "done"
+                ]
+              }
+            },
+            {
+              "owner": "policy",
+              "revision": "ext1",
+              "blockers": [
+                {
+                  "code": "policy",
+                  "message": "not admitted",
+                  "affects": [
+                    "effect:write"
+                  ]
+                }
+              ],
+              "claims": {
+                "blocked": [
+                  "done"
+                ]
+              }
+            }
+          ],
+          "intent": {},
+          "capability_contract": {
+            "kind": "agentic-workspace/capability-contract/v1",
+            "revision": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "owners": [
+              {
+                "owner": "producer",
+                "revision": "p1",
+                "domains": [
+                  "output"
+                ],
+                "effects": [
+                  {
+                    "id": "write",
+                    "domain": "output"
+                  }
+                ],
+                "operations": [
+                  {
+                    "id": "produce",
+                    "semantic_revision": "v1",
+                    "input_schema": {
+                      "$schema": "https://json-schema.org/draft/2020-12/schema",
+                      "type": "object"
+                    },
+                    "result_kind": "output/v1",
+                    "effects": [
+                      "write"
+                    ]
+                  }
+                ]
+              },
+              {
+                "owner": "policy",
+                "revision": "r1"
+              }
+            ],
+            "claim_authorities": [
+              {
+                "owner": "producer",
+                "claim": "done"
+              }
+            ],
+            "restriction_authorities": [
+              {
+                "owner": "policy",
+                "affects": [
+                  "claim:done",
+                  "effect:write"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "contribution-and-action-permutation",
+      "inputs": [
+        {"contributions": [
+          {"owner": "zeta", "revision": "z1", "actions": [{"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "b"}}, {"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "a"}}]},
+          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["alpha-progress"]}}
+        ], "intent": {}},
+        {"contributions": [
+          {"owner": "alpha", "revision": "a1", "claims": {"allowed": ["alpha-progress"]}},
+          {"owner": "zeta", "revision": "z1", "actions": [{"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "a"}}, {"dependency_revision": "z1", "operation_id": "same", "arguments": {"value": "b"}}]}
+        ], "intent": {}}
+      ]
+    },
+    {
+      "id": "semantic-route-order-is-not-authority",
+      "inputs": [
+        {
+          "contributions": [],
+          "intent": {
+            "current_work": {"kind": "current-work", "id": "work-current"},
+            "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/pulls/review", "github/issues/create"]},
+            "semantic_task_routes": {
+              "posture": "selected", "routes": ["github/pulls/review", "github/issues/create"],
+              "task_identity": {"kind": "current-work", "id": "work-current"},
+              "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "provenance": "agent-selected", "authority_effect": "applicability-only"
+            }
+          }
+        },
+        {
+          "contributions": [],
+          "intent": {
+            "current_work": {"kind": "current-work", "id": "work-current"},
+            "semantic_route_source": {"revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "routes": ["github/issues/create", "github/pulls/review"]},
+            "semantic_task_routes": {
+              "posture": "selected", "routes": ["github/issues/create", "github/pulls/review"],
+              "task_identity": {"kind": "current-work", "id": "work-current"},
+              "source_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "provenance": "agent-selected", "authority_effect": "applicability-only"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -36,7 +36,7 @@
     "idempotency_key": {"type": "string", "description": "Stable idempotency key supplied by the producer."},
     "outcome": {"enum": ["success", "mixed", "failed"], "description": "Observed delegation outcome."},
     "handoff_sufficiency": {"enum": ["sufficient", "borderline", "insufficient"], "description": "Handoff sufficiency classification."},
-    "review_burden": {"enum": ["light", "normal", "high"], "description": "Review burden classification."},
+    "review_burden": {"enum": ["light", "normal", "high", "unknown"], "description": "Observed review burden classification, or unknown when review burden was not measured."},
     "escalation_required": {"type": "boolean", "description": "Whether execution required escalation."}
   },
   "additionalProperties": false

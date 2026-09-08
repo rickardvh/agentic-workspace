@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Construct finite and open human answers from current owner-bound public requests in the shared core."
+issues = [2986]

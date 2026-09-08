@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Project admitted material decisions through the shared compiler with distinct semantic identity, provenance, dependencies and scoped supersession."
+issues = [3040, 2987, 2909]

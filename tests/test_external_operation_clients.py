@@ -49,6 +49,8 @@ from agentic_workspace.generated_operations import (
     assignment_import,
     assignment_integrate,
     assignment_override,
+    assignment_reassign,
+    assignment_repair,
     assignment_status,
     config_report,
     correction_event_prune_compact,
@@ -67,6 +69,445 @@ from agentic_workspace.workspace_runtime_proof import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _install_metadata_only_codex(root: Path, monkeypatch) -> Path:
+    """Cross-host synthetic CLI: discovery only, never a supported-host claim."""
+    directory = root / "fixture-bin"
+    directory.mkdir()
+    script = directory / "metadata_codex.py"
+    audit = directory / "methods.txt"
+    script.write_text(
+        """import json, sys
+from pathlib import Path
+if "--version" in sys.argv:
+    with Path(__file__).with_name("methods.txt").open("a") as log:
+        log.write("version\\n")
+    print("fixture-codex-1")
+elif "generate-json-schema" in sys.argv:
+    directory = Path(sys.argv[sys.argv.index("--out") + 1]) / "v2"
+    directory.mkdir(parents=True)
+    fields = {
+        "ThreadStartParams": ["cwd", "model", "sandbox", "approvalPolicy", "ephemeral"],
+        "ThreadResumeParams": ["cwd", "model", "sandbox", "approvalPolicy", "excludeTurns", "threadId"],
+        "TurnStartParams": ["threadId", "input", "outputSchema", "model", "approvalPolicy", "effort"],
+        "ConfigReadParams": ["cwd", "includeLayers"],
+    }
+    for name, keys in fields.items():
+        (directory / (name + ".json")).write_text(json.dumps({"properties": dict.fromkeys(keys, {})}))
+else:
+    for line in sys.stdin:
+        request = json.loads(line)
+        method = request["method"]
+        with Path(__file__).with_name("methods.txt").open("a") as log:
+            log.write(method + "\\n")
+        if "id" not in request:
+            continue
+        if method == "initialize":
+            result = {}
+        elif method == "model/list":
+            result = {"data": [{"model": "fixture-model", "defaultReasoningEffort": "low", "supportedReasoningEfforts": [{"reasoningEffort": "low"}, {"reasoningEffort": "medium"}]}]}
+        elif method == "config/read":
+            assert request["params"]["cwd"]
+            result = {"config": {"model_reasoning_effort": "medium", "unrelated_secret": "must-not-be-retained"}}
+        else:
+            raise RuntimeError("No worker execution in this fixture: " + method)
+        print(json.dumps({"id": request["id"], "result": result}), flush=True)
+""",
+        encoding="utf-8",
+    )
+    executable = directory / ("codex.cmd" if os.name == "nt" else "codex")
+    executable.write_text(
+        f'@"{sys.executable}" "{script}" %*\n' if os.name == "nt" else "#!/usr/bin/env python3\n" + script.read_text(),
+        encoding="utf-8",
+    )
+    executable.chmod(0o755)
+    monkeypatch.setenv("PATH", str(directory) + os.pathsep + os.environ.get("PATH", ""))
+    return audit
+
+
+def test_native_discovery_scope_reuses_metadata_but_rechecks_the_next_operation(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import native_transport as native
+
+    audit = _install_metadata_only_codex(tmp_path, monkeypatch)
+    with native.discovery_scope():
+        first = native.discover(tmp_path)
+        assert native.discover(tmp_path) == first
+    methods = audit.read_text().splitlines()
+    assert methods.count("version") == 1
+    assert methods.count("model/list") == 1
+    assert native.discover(tmp_path) == first
+    methods = audit.read_text().splitlines()
+    assert methods.count("version") == 2
+    assert methods.count("model/list") == 1
+    with native.discovery_scope():
+        refreshed = native.discover(tmp_path, refresh=True)
+        assert native.discover(tmp_path) == refreshed
+    methods = audit.read_text().splitlines()
+    assert methods.count("version") == 3
+    assert methods.count("model/list") == 2
+    for path in (audit.parent / "metadata_codex.py", audit.parent / "codex"):
+        if path.exists():
+            path.write_text(path.read_text().replace("fixture-codex-1", "fixture-codex-2"))
+    changed = native.discover(tmp_path)
+    assert changed["identity"] != first["identity"]
+    assert changed["revision"] != first["revision"]
+    assert audit.read_text().splitlines().count("version") == 4
+
+
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+@pytest.mark.parametrize("native_parameters", [False, True])
+def test_ordinary_configuration_choice_persists_and_source_change_blocks(
+    tmp_path: Path, runtime: str, native_parameters: bool, capsys, monkeypatch
+) -> None:
+    from agentic_workspace.config import load_workspace_config
+    from agentic_workspace.workspace_runtime_core import _execution_posture_payload
+
+    _, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="unrelated")
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.write_text("""schema_version = 1
+[delegation]
+assignment_policy = "required-best-fit"
+current_target = "orchestrator"
+transport_authority = "manual"
+[delegation_targets.orchestrator]
+target_id = "host:orchestrator"
+target_revision = "1"
+strength = "strong"
+location = "local"
+transports = [{kind = "internal"}]
+[delegation_targets.worker]
+target_id = "host:worker"
+target_revision = "1"
+strength = "strong"
+location = "external"
+transports = [{kind = "manual"}]
+""")
+    audit = None
+    if native_parameters:
+        audit = _install_metadata_only_codex(tmp_path, monkeypatch)
+        source.write_text(
+            source.read_text()
+            .replace('transport_authority = "manual"', 'transport_authority = "automatic"')
+            .replace(
+                'transports = [{kind = "manual"}]',
+                'provider = "openai"\nmodel_family = "fixture-model"\ntransports = [{kind = "native", adapter = "codex-app-server/v1", parameters = {model = "fixture-model"}}]',
+            )
+            + "\n[safety]\nsafe_to_auto_run_commands = true\n"
+        )
+    with source.open("a") as handle:
+        for index in range(8):
+            handle.write(
+                f'\n[delegation_targets.peer_{index}]\ntarget_id = "peer:{index}"\ntarget_revision = "1"\nstrength = "strong"\nlocation = "external"\ntransports = [{{kind = "manual"}}]\n'
+            )
+    task = "Repair the bounded feature calculation."
+    from repo_planning_bootstrap import installer as planning_installer
+
+    plan = planning_installer._build_execplan_record_from_todo_item(
+        title=task,
+        item_id="feature",
+        status="in-progress",
+        why_now=task,
+        next_action="repair the calculation",
+        done_when="calculation is correct with proof",
+    )
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/feature.plan.json"
+    plan_path.parent.mkdir(parents=True)
+    plan_path.write_text(json.dumps(plan))
+    (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+        '[todo]\nactive_items = [{id = "feature", status = "in-progress", surface = ".agentic-workspace/planning/execplans/feature.plan.json"}]\nqueued_items = []\n'
+    )
+
+    def ordinary():
+        return _execution_posture_payload(
+            config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=task, changed_paths=["src/feature.py"]
+        )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/feature.py",
+                "--task",
+                task,
+                "--select",
+                "context.delegation_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    public_selection = json.loads(capsys.readouterr().out)
+    assert not public_selection.get("missing")
+    offers = public_selection["values"]["context.delegation_decision"]["execution_configurations"]
+    assert any(row["configuration"]["target"] == "peer_7" for row in offers["candidates"])
+    assert all("configuration" in row for row in offers["candidates"])
+    assert offers["revision"] == ordinary()["assignment_decision"]["execution_configurations"]["revision"]
+    chosen = next(row["configuration"] for row in offers["candidates"] if row["configuration"]["target"] == "worker")
+    if native_parameters:
+        from agentic_workspace import native_transport as native
+
+        execution = chosen["execution"]
+        native._write(
+            native._lineage_path(tmp_path, {"name": "worker", "target_id": execution["target_identity"]}, execution["adapter"]),
+            {
+                "reference": "fixture-opaque",
+                "target_revision": execution["target_revision"],
+                "semantic_scope": execution["semantic_scope"],
+                "semantic_revision": execution["semantic_revision"],
+                "capability_revision": chosen["capability_revision"],
+                "origin_run_id": "prior-native",
+            },
+        )
+        native._write(tmp_path / ".agentic-workspace/local/assignment-runs/prior-native/state.json", {"current_state": "closed"})
+        offers = ordinary()["assignment_decision"]["execution_configurations"]
+        chosen = next(
+            row["configuration"]
+            for row in offers["candidates"]
+            if row["configuration"]["target"] == "worker" and row["configuration"]["execution"]["continuity"]["mode"] == "resume"
+        )
+    values = {
+        "task": task,
+        "changed": ["src/feature.py"],
+        "transport": "cli" if native_parameters else "manual",
+        "configuration_revision": offers["revision"],
+        "configuration_id": chosen["id"],
+    }
+    if native_parameters:
+        assert chosen["execution"]["continuity"]["parameters"]["reasoning_effort"] == "medium"
+        values["configuration_parameters_json"] = json.dumps({"reasoning_effort": "low", "timeout_seconds": 90})
+
+    def export(arguments):
+        try:
+            return (
+                _run_typescript_assignment(tmp_path, "export", arguments)
+                if runtime == "typescript"
+                else assignment_export(arguments, target=tmp_path, invocation=invocation)
+            )
+        except AWClientError as error:
+            pytest.fail(json.dumps(error.details))
+
+    before_dry_run = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
+    dry = export({**values, "dry_run": True})
+    assert dry["mutation_applied"] is False
+    assert dry["status"] == "selection-preview"
+    selected = dry["preview"]["selected_configuration"]
+    if native_parameters:
+        assert selected["id"] != chosen["id"]
+        assert selected["execution"]["comparison_context"] != chosen["execution"]["comparison_context"]
+        assert selected["execution"]["continuity"]["parameters"] == {
+            "model": "fixture-model",
+            "ephemeral": False,
+            "reasoning_effort": "low",
+            "timeout_seconds": 90,
+        }
+        assert selected["execution"]["history"] == chosen["execution"]["history"]
+        assert selected["target"] == chosen["target"]
+    else:
+        assert selected == chosen
+    assert dry["preview"]["assignment_materialized"] is False
+    assert before_dry_run == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
+    exported = export(values)
+    assert exported["status"] == "handoff-prepared", json.dumps(exported.get("failures"))
+    packet_ref = next(ref for ref in exported["artifact_refs"] if str(ref).endswith("packet.json"))
+    packet = json.loads((tmp_path / packet_ref).read_text())
+    assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"] == selected
+    assert ordinary()["assignment_decision"]["selected_execution_configuration"] == selected
+    resumed = _execution_posture_payload(
+        config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=None, changed_paths=[]
+    )
+    assert resumed["assignment_decision"]["selected_execution_configuration"] == selected
+    unrelated = _execution_posture_payload(
+        config=load_workspace_config(target_root=tmp_path), target_root=tmp_path, task_text=None, changed_paths=["src/other.py"]
+    )
+    assert unrelated["assignment_decision"]["selected_execution_configuration"]["target"] == "orchestrator"
+    if native_parameters:
+
+        def complete(*args, **kwargs):
+            kwargs["on_thread"]("fixture-opaque")
+            kwargs["on_history"](False)
+            kwargs["on_closed"]()
+            return {"continuation": {"reference": "fixture-opaque", "ephemeral": False}, "returned_work": {}, "metrics": {}}
+
+        monkeypatch.setattr(native, "execute", complete)
+        assert native.dispatch_packet(tmp_path, packet, "synthetic completed result")["status"] == "returned"
+        state_path = native._custody_path(tmp_path, packet["run_id"]).with_name("state.json")
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        native._write(state_path, {**state, "current_state": "awaiting-admission"})
+        assert ordinary()["assignment_decision"]["selected_execution_configuration"] == selected
+
+        def lifecycle(transition, arguments):
+            return (
+                _run_typescript_assignment(tmp_path, transition, arguments)
+                if runtime == "typescript"
+                else {"repair": assignment_repair, "reassign": assignment_reassign, "status": assignment_status}[transition](
+                    arguments, target=tmp_path, invocation=invocation
+                )
+            )
+
+        native._write(state_path, {**state, "current_state": "dispatch-failed"})
+        prior_identity = {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id")}
+        prior_work = {key: packet["assignment_identity"][key] for key in ("slice_id", "plan_revision", "human_intent", "allowed_paths")}
+        repaired = lifecycle("repair", {**prior_identity, "reason": "The same bounded work needs another attempt."})
+        assert repaired["status"] == "repair-requested", repaired
+        assert repaired["next_current_continuation"]["action"] == "inspect-current-repair-configurations"
+        preview = lifecycle("reassign", {**prior_identity, "dry_run": True})
+        assert preview["status"] == "selection-preview", preview
+        repair_offers = preview["preview"]["execution_configurations"]
+        assert any(
+            row["eligible"] and row["configuration"]["execution"]["continuity"].get("mode") == "resume"
+            for row in repair_offers["candidates"]
+        )
+        fresh = next(
+            row["configuration"]
+            for row in repair_offers["candidates"]
+            if row["eligible"]
+            and row["configuration"]["target"] == "worker"
+            and row["configuration"]["execution"]["continuity"].get("mode") == "fresh"
+        )
+        repair_choice = {
+            **prior_identity,
+            "configuration_revision": repair_offers["revision"],
+            "configuration_id": fresh["id"],
+            "transport": "cli",
+        }
+        stale_choice = lifecycle("reassign", {**repair_choice, "configuration_revision": "stale-choice"})
+        assert stale_choice["status"] == "blocked"
+        assert any(row["reason"] == "assignment-configuration-choice-stale" for row in stale_choice["failures"])
+        custody_path = native._custody_path(tmp_path, packet["run_id"])
+        custody_bytes = custody_path.read_bytes()
+        custody = json.loads(custody_bytes)
+        native._write(custody_path, {**custody, "live": True})
+        live = lifecycle("reassign", repair_choice)
+        assert any(row["reason"] == "assignment-repair-worker-release-unconfirmed" for row in live["failures"])
+        custody_path.write_bytes(custody_bytes)
+        repair_state = json.loads(state_path.read_text(encoding="utf-8"))
+        repair_receipt_path = tmp_path / repair_state["repair_admission_ref"]
+        receipt_bytes = repair_receipt_path.read_bytes()
+        repair_receipt = json.loads(receipt_bytes)
+        repair_receipt["repair_binding"]["packet_integrity"] = "other-packet"
+        native._write(repair_receipt_path, repair_receipt)
+        tampered = lifecycle("reassign", repair_choice)
+        assert any(row["reason"] == "assignment-repair-admission-stale" for row in tampered["failures"])
+        repair_receipt_path.write_bytes(receipt_bytes)
+        source_bytes = source.read_bytes()
+        answer = {
+            "assignment_id": packet["assignment_id"],
+            "assignment_revision": packet["assignment_revision"],
+            "work_id": prior_work["slice_id"],
+            "work_revision": prior_work["plan_revision"],
+            "target": "worker",
+            "transport": "cli",
+            "execution_revision": "explicit-source-answer",
+            "packet_integrity": packet["packet_integrity"],
+        }
+        with source.open("a", encoding="utf-8") as handle:
+            handle.write("\n[delegation.replacement]\n" + "\n".join(f"{key} = {json.dumps(value)}" for key, value in answer.items()) + "\n")
+        explicit_answer = lifecycle("reassign", repair_choice)
+        assert any(row["reason"] == "assignment-repair-explicit-source-answer-pending" for row in explicit_answer["failures"])
+        source.write_bytes(source_bytes)
+        previous_plan = plan_path.read_bytes()
+        changed_plan = json.loads(previous_plan)
+        changed_plan["title"] = "Updated display title for the same work"
+        plan_path.write_text(json.dumps(changed_plan), encoding="utf-8")
+        from agentic_workspace.workspace_runtime_core import _live_assignment_plan_binding
+
+        assert (
+            _live_assignment_plan_binding(target_root=tmp_path, task_text=task, changed_paths=["src/feature.py"])["plan_revision"]
+            == prior_work["plan_revision"]
+        )
+        changed_plan["intent"]["outcome"] = "Materially different work"
+        plan_path.write_text(json.dumps(changed_plan), encoding="utf-8")
+        stale_repair = lifecycle("reassign", repair_choice)
+        assert stale_repair["status"] == "blocked", stale_repair
+        assert any(row["reason"] == "assignment-repair-semantic-source-stale" for row in stale_repair["failures"])
+        plan_path.write_bytes(previous_plan)
+        owner_files = list((tmp_path / ".agentic-workspace/planning/assignments").glob("*.json")) + [state_path]
+        before_preview = {path: path.read_bytes() for path in owner_files}
+        selected_preview = lifecycle("reassign", {**repair_choice, "dry_run": True})
+        assert selected_preview["status"] == "selection-preview"
+        assert selected_preview["next_current_continuation"]["action"] == "apply-current-repair-selection"
+        assert not selected_preview["mutation_applied"]
+        assert {path: path.read_bytes() for path in owner_files} == before_preview
+        reassigned = lifecycle("reassign", repair_choice)
+        assert reassigned["status"] == "replaced", reassigned
+        assert reassigned["next_current_continuation"]["action"] == "export-current-replacement"
+        replacement = reassigned["replacement_packet"]
+        assert replacement["assignment_id"] == packet["assignment_id"]
+        assert replacement["assignment_revision"] != packet["assignment_revision"]
+        assert replacement["run_id"] != packet["run_id"]
+        next_export = export({key: replacement[key] for key in ("assignment_id", "assignment_revision", "run_id", "transport")})
+        assert next_export["status"] == "handoff-prepared", next_export
+        packet = json.loads(
+            (tmp_path / next(ref for ref in next_export["artifact_refs"] if ref.endswith("packet.json"))).read_text(encoding="utf-8")
+        )
+        assert {key: packet["assignment_identity"][key] for key in prior_work} == prior_work
+        assert packet["replacement"]["source"]["kind"] == "assignment-repair-source/v1"
+        assert plan_path.read_bytes() == previous_plan
+        assert ordinary()["assignment_decision"]["selected_execution_configuration"]["id"] == fresh["id"]
+        # A refusal before launch also permits another exact attempt; the actor
+        # can now choose the still-current persisted lineage instead of fresh.
+        with monkeypatch.context() as prelaunch:
+            prelaunch.setattr(native, "_source_revision", lambda *args, **kwargs: "changed-before-launch")
+            refusal = native.dispatch_packet(tmp_path, packet, "must not launch")
+        assert refusal["status"] == "blocked" and refusal["worker_launch_attempted"] is False
+        second_state_path = native._custody_path(tmp_path, packet["run_id"]).with_name("state.json")
+        second_state = json.loads(second_state_path.read_text(encoding="utf-8"))
+        native._write(second_state_path.parent / "dispatch/receipt.json", refusal)
+        native._write(second_state_path, {**second_state, "current_state": "dispatch-failed"})
+        second_identity = {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id")}
+        assert (
+            lifecycle("repair", {**second_identity, "reason": "Retry the same work after a pre-launch refusal."})["status"]
+            == "repair-requested"
+        )
+        second_offers = lifecycle("reassign", {**second_identity, "dry_run": True})["preview"]["execution_configurations"]
+        resume = next(
+            row["configuration"]
+            for row in second_offers["candidates"]
+            if row["eligible"]
+            and row["configuration"]["target"] == "worker"
+            and row["configuration"]["execution"]["continuity"].get("mode") == "resume"
+        )
+        second_replacement = lifecycle(
+            "reassign",
+            {**second_identity, "configuration_revision": second_offers["revision"], "configuration_id": resume["id"], "transport": "cli"},
+        )
+        assert second_replacement["status"] == "replaced", second_replacement.get("failures")
+        replacement = second_replacement["replacement_packet"]
+        second_export = export({key: replacement[key] for key in ("assignment_id", "assignment_revision", "run_id", "transport")})
+        assert second_export["status"] == "handoff-prepared", second_export.get("failures")
+        packet = second_replacement["replacement_packet"]
+        assert {key: packet["assignment_identity"][key] for key in prior_work} == prior_work
+        assert packet["assignment_identity"]["dispatch_adapter"]["execution_configuration"]["execution"]["continuity"]["mode"] == "resume"
+        assert plan_path.read_bytes() == previous_plan
+        burden_status = lifecycle("status", {key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id")})
+        burden = burden_status["attempt_burden"]
+        assert burden["observed_attempt_count"] == 3, burden
+        assert burden["admitted_repair_count"] == 2
+        assert burden["metric_totals"] is None
+        assert burden["attempts"][0]["continuity_mode"] == "resume"
+        assert not any(item["target_quality_evidence_allowed"] for item in burden["attempts"])
+    source.write_text(source.read_text().replace('target_revision = "1"', 'target_revision = "2"'))
+    before = {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
+    blocked = export(
+        {
+            "assignment_id": packet["assignment_id"],
+            "assignment_revision": packet["assignment_revision"],
+            "run_id": packet["run_id"],
+            "transport": values["transport"],
+        },
+    )
+    assert blocked["status"] == "blocked", blocked
+    assert any(item["reason"] == "assignment-configuration-source-stale" for item in blocked["failures"])
+    assert before == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local/assignment-runs").rglob("*") if p.is_file()}
+    if audit is not None:
+        assert set(audit.read_text().splitlines()) <= {"version", "initialize", "initialized", "model/list", "config/read"}
+        capabilities = tmp_path / ".agentic-workspace/local/transport-capabilities"
+        assert all("must-not-be-retained" not in path.read_text() for path in capabilities.glob("*.json"))
 
 
 def test_assignment_status_is_exact_read_only_and_reports_current_stale_missing_and_cleaned_up_runs(tmp_path: Path) -> None:
@@ -1870,7 +2311,13 @@ def test_assignment_dispatch_public_operation_rejects_missing_current_authority(
 
 
 def _prepare_shared_worktree_assignment(
-    target: Path, *, run_id: str, dispatch_runtime: str = "python", allowed_paths: list[str] | None = None
+    target: Path,
+    *,
+    run_id: str,
+    dispatch_runtime: str = "python",
+    allowed_paths: list[str] | None = None,
+    target_name: str = "worker",
+    task_class: str = "implementation",
 ) -> tuple[dict[str, object], list[str], dict[str, object]]:
     from agentic_workspace import workspace_runtime_core
 
@@ -1891,10 +2338,10 @@ def _prepare_shared_worktree_assignment(
     assignment_gate = {
         "status": "handoff-required",
         "assignment_policy": "required-best-fit",
-        "selected_target": "worker",
+        "selected_target": target_name,
         "required_next_action": "dispatch-assigned-target",
-        "target_identity_ref": "target:worker",
-        "task_class": "implementation",
+        "target_identity_ref": f"target:{target_name}",
+        "task_class": task_class,
         "scope_class": "narrow-code-change",
         "plan_ref": ".agentic-workspace/planning/execplans/plan.plan.json",
         "plan_revision": "plan-rev-1",
@@ -1957,12 +2404,12 @@ def _prepare_shared_worktree_assignment(
                 "assignment_id": "assign-shared",
                 "current_revision": identity["revision"],
                 "status": "current",
-                "target_name": "worker",
+                "target_name": target_name,
                 "assignment_gate": assignment_gate,
                 "assignment_policy": assignment_policy,
                 "delegation_decision": delegation_decision,
                 "structural_proof_receipt_ref": proof_ref,
-                "current_attempt": {"run_id": run_id, "owner": "worker", "status": "handoff-prepared"},
+                "current_attempt": {"run_id": run_id, "owner": target_name, "status": "handoff-prepared"},
             }
         ),
         encoding="utf-8",
@@ -1971,7 +2418,7 @@ def _prepare_shared_worktree_assignment(
     dispatch_values = {
         "assignment_id": "assign-shared",
         "assignment_revision": identity["revision"],
-        "target_name": "worker",
+        "target_name": target_name,
         "run_id": run_id,
         "transport": "internal",
     }
@@ -1985,9 +2432,116 @@ def _prepare_shared_worktree_assignment(
     return identity, invocation, state["host_execution"]
 
 
+def test_existing_assignment_dry_run_never_calls_transport(tmp_path: Path, monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from agentic_workspace.contracts import python_primitive_support as primitive
+
+    identity, _, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="dry-run")
+    before = {path.relative_to(tmp_path): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file() and ".git" not in path.parts}
+    monkeypatch.setattr(primitive, "_dispatch_assignment_packet", lambda **kwargs: pytest.fail("dry run launched a worker"))
+    result = primitive._assignment_lifecycle_apply(
+        values={
+            "operation_id": "assignment.dispatch",
+            "target_root": str(tmp_path),
+            "assignment_id": "assign-shared",
+            "assignment_revision": identity["revision"],
+            "run_id": "dry-run",
+            "target_name": "worker",
+            "transport": "internal",
+            "dry_run": True,
+        },
+        arguments={},
+        context=SimpleNamespace(cwd=str(tmp_path)),
+    )
+    assert result["outcome"] == "noop", result
+    assert result["mutation_applied"] is False
+    after = {path.relative_to(tmp_path): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file() and ".git" not in path.parts}
+    assert after == before
+
+    for transition, dry_run in (("dispatch", True), ("export", False)):
+        node = _run_typescript_assignment(
+            tmp_path,
+            transition,
+            {
+                "assignment_id": "assign-shared",
+                "assignment_revision": identity["revision"],
+                "run_id": "dry-run",
+                "target_name": "worker",
+                "transport": "internal",
+                "dry_run": dry_run,
+            },
+        )
+        assert node["status"] == "handoff-prepared", node
+        assert node["outcome"] == ("noop" if dry_run else "applied")
+
+
+def test_failed_dispatch_preserves_attempt_and_worker_entry(tmp_path: Path, monkeypatch) -> None:
+    from types import SimpleNamespace
+
+    from agentic_workspace.contracts import python_primitive_support as primitive
+
+    identity, _, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="failed-run")
+    state_path = tmp_path / ".agentic-workspace/local/assignment-runs/failed-run/state.json"
+
+    def fail(**kwargs):
+        state = json.loads(state_path.read_text())
+        assert state["assignment"]["assignment_id"] == "assign-shared"
+        assert state["current_state"] == "handoff-prepared"
+        return {"status": "blocked", "reason": "fixture-worker-failed", "context_cost": {"elapsed_ms": 12}}
+
+    monkeypatch.setattr(primitive, "_dispatch_assignment_packet", fail)
+    result = primitive._assignment_lifecycle_apply(
+        values={
+            "operation_id": "assignment.dispatch",
+            "target_root": str(tmp_path),
+            "assignment_id": "assign-shared",
+            "assignment_revision": identity["revision"],
+            "run_id": "failed-run",
+            "target_name": "worker",
+            "transport": "internal",
+        },
+        arguments={},
+        context=SimpleNamespace(cwd=str(tmp_path)),
+    )
+    assert result["status"] == "blocked" and result["mutation_applied"] is True
+    assert json.loads(state_path.read_text())["current_state"] == "dispatch-failed"
+    observation = json.loads(state_path.with_name("dispatch").joinpath("receipt.json").read_text())
+    assert observation["context_cost"]["elapsed_ms"] == 12
+    state_path.with_name("transport-custody.json").write_text("{}")
+    before = state_path.read_bytes()
+    monkeypatch.setattr(primitive, "_assignment_dispatch_configuration", lambda **kwargs: {"kind": "native"})
+    monkeypatch.setattr(primitive, "_dispatch_assignment_packet", lambda **kwargs: pytest.fail("repeated attempt launched"))
+    repeated = primitive._assignment_lifecycle_apply(
+        values={
+            "operation_id": "assignment.dispatch",
+            "target_root": str(tmp_path),
+            "assignment_id": "assign-shared",
+            "assignment_revision": identity["revision"],
+            "run_id": "failed-run",
+            "target_name": "worker",
+            "transport": "internal",
+        },
+        arguments={},
+        context=SimpleNamespace(cwd=str(tmp_path)),
+    )
+    assert repeated["reason_code"] == "native-run-already-attempted"
+    assert repeated["mutation_applied"] is False
+    assert state_path.read_bytes() == before
+    assert json.loads(state_path.with_name("dispatch").joinpath("receipt.json").read_text()) == observation
+
+
 def _run_typescript_assignment(target: Path, transition: str, values: dict[str, object]) -> dict[str, object]:
     arguments: list[str] = []
     for name, value in values.items():
+        if name == "dry_run":
+            if value:
+                arguments.append("--dry-run")
+            continue
+        if name == "changed" and isinstance(value, list):
+            for path in value:
+                arguments.extend(["--changed", str(path)])
+            continue
         arguments.extend([f"--{name.replace('_', '-')}", json.dumps(value) if isinstance(value, (dict, list)) else str(value)])
     completed = subprocess.run(
         [
@@ -2404,7 +2958,8 @@ def test_assignment_import_large_return_file_through_session_logged_cli(tmp_path
     assert (tmp_path / ".agentic-workspace/local/logs").exists()
 
 
-def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path) -> None:
+@pytest.mark.parametrize("corrupt_evidence", [False, True])
+def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path, corrupt_evidence: bool) -> None:
     from agentic_workspace import workspace_runtime_core
     from agentic_workspace.contracts.python_primitive_support import _emit_output
 
@@ -2695,12 +3250,106 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         invocation=invocation,
     )
     assert wrong_proof_close["status"] == "blocked"
+    # An indexed passed receipt cannot close files changed since that proof.
+    integrated_file = tmp_path / "src/feature.py"
+    proved_bytes = integrated_file.read_bytes()
+    integrated_file.write_bytes(proved_bytes + b"\n# material change after proof\n")
+    stale_proof_close = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": task_proof_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert stale_proof_close["status"] == "blocked"
+    assert stale_proof_close["reason_code"] == "assignment-task-proof-not-current"
+    typescript_stale_close = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "assignment",
+            "close",
+            "--target",
+            str(tmp_path),
+            "--run-id",
+            "run-1",
+            "--task-proof-receipt-ref",
+            task_proof_ref,
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert typescript_stale_close.returncode == 0, typescript_stale_close.stderr
+    typescript_stale_payload = json.loads(typescript_stale_close.stdout)
+    assert typescript_stale_payload["status"] == "blocked"
+    assert typescript_stale_payload["reason_code"] == "assignment-task-proof-not-current"
+    integrated_file.write_bytes(proved_bytes)
+    # The same host owner also rejects an otherwise current receipt produced
+    # under a different runtime; TypeScript must not reduce this to file hashes.
+    from unittest.mock import patch
+
+    with patch("agentic_workspace.proof_subject.platform.python_version", return_value="0.0.0"):
+        old_runtime_proof = workspace_runtime_core._record_proof_receipt_payload(
+            target_root=tmp_path,
+            command=proof_command,
+            result="passed",
+            changed_paths=["src/feature.py"],
+            task_text="Implement the bounded feature change",
+        )
+    old_runtime_ref = old_runtime_proof["trusted_producer_receipt_ref"]
+    old_runtime_close = assignment_close(
+        {"run_id": "run-1", "task_proof_receipt_ref": old_runtime_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert old_runtime_close["reason_code"] == "assignment-task-proof-not-current"
+    typescript_old_runtime = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "assignment",
+            "close",
+            "--target",
+            str(tmp_path),
+            "--run-id",
+            "run-1",
+            "--task-proof-receipt-ref",
+            old_runtime_ref,
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert typescript_old_runtime.returncode == 0, typescript_old_runtime.stderr
+    assert json.loads(typescript_old_runtime.stdout)["reason_code"] == "assignment-task-proof-not-current"
+    from agentic_workspace.config import load_delegation_outcomes
+
+    evidence_path, _, _ = load_delegation_outcomes(target_root=tmp_path)
+    if corrupt_evidence:
+        evidence_path.parent.mkdir(parents=True, exist_ok=True)
+        evidence_path.write_text("{", encoding="utf-8")
     closed = assignment_close(
         {"run_id": "run-1", "task_proof_receipt_ref": task_proof_ref},
         target=tmp_path,
         invocation=invocation,
     )
     assert closed["status"] == "closed"
+    if corrupt_evidence:
+        assert closed["outcome_evidence"] == {"status": "non-calibrating", "reason": "evidence-admission-unavailable"}
+        assert evidence_path.read_text(encoding="utf-8") == "{"
+    else:
+        assert closed["outcome_evidence"]["status"] == "recorded"
+        _, _, learned = load_delegation_outcomes(target_root=tmp_path)
+        assert len(learned) == 1
+        assert learned[0].outcome == "success"
+        assert learned[0].review_burden == "unknown"
+        assert learned[0].producer_class == "closeout-outcome"
+        assert learned[0].context_cost is None  # Manual transport did not measure token use.
     closed_full_state = _assignment_full_state(tmp_path, closed)
     reopened_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
     reopened_assignment["status"] = "current"
@@ -2767,11 +3416,11 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     closed_assignment = json.loads((assignment_dir / "assign-1.assignment.json").read_text(encoding="utf-8"))
     assert closed_assignment["status"] == "closed"
     assert closed_assignment["current_attempt"]["status"] == "closed"
-    assert override["status"] == "override-recorded"
+    assert override["status"] == "blocked"
+    assert override["reason_code"] == "assignment-override-authority-unavailable"
+    assert override["mutation_applied"] is False
+    assert override["artifact_refs"] == []
     assert (tmp_path / ".agentic-workspace/local/assignment-runs/run-1/received/awaiting-admission").is_dir()
-    override_ref = next(ref for ref in override["artifact_refs"] if ref.endswith("override/override.json"))
-    override_receipt = json.loads((tmp_path / override_ref).read_text())
-    assert override_receipt["claim_effect"] == "downgrade-until-revalidated"
     packet_ref = next(ref for ref in export["artifact_refs"] if ref.endswith("export/packet.json"))
     packet = json.loads((tmp_path / packet_ref).read_text())
     assert packet["authority_refs"]["planning_assignment"] == ".agentic-workspace/planning/assignments/assign-1.assignment.json"
@@ -3934,6 +4583,7 @@ def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_pa
         "kind": "agentic-workspace/assignment-context-cost/v1",
         "transport": "cli",
         "adapter_revision": "sha256:adapter",
+        "configuration_context": "sha256:" + "e" * 64,
         "assignment_packet_bytes": 3662,
         "rendered_prompt_bytes": 3913,
         "effective_input_tokens": 81752,
@@ -3952,6 +4602,7 @@ def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_pa
         "task_class": "implementation",
         "scope_class": "bounded",
         "outcome": "success",
+        "review_burden": "unknown",
         "context_cost_json": json.dumps(context_cost),
     }
 
@@ -3964,6 +4615,7 @@ def test_public_delegation_outcome_append_persists_validated_context_cost(tmp_pa
     )
 
     assert payload["recorded"]["context_cost"] == context_cost
+    assert payload["recorded"]["review_burden"] == "unknown"
     stored_path = tmp_path / ".agentic-workspace/delegation-outcomes.json"
     stored = json.loads(stored_path.read_text(encoding="utf-8"))
     assert stored["records"][0]["context_cost"] == context_cost
@@ -4181,3 +4833,346 @@ try {{ invokeOperation('delegation-outcome.append', {json.dumps(values)}, {{ tar
     assert python_error.value.kind == "malformed"
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == "malformed"
+
+
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+@pytest.mark.parametrize("transition", ["reassign", "override"])
+@pytest.mark.parametrize("revision", ["current", "stale"])
+def test_assignment_override_intent_cannot_mint_authority(tmp_path: Path, runtime: str, transition: str, revision: str) -> None:
+    """#2909: public intent never creates source-owner override authority."""
+    if runtime == "typescript" and shutil.which("node") is None:
+        pytest.skip("Node is required for the generated host parity case")
+    identity, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="override-negative")
+    owned = tmp_path / ".agentic-workspace"
+    before = {path.relative_to(owned).as_posix(): path.read_bytes() for path in owned.rglob("*") if path.is_file()}
+    values = {
+        "assignment_id": "assign-shared",
+        "assignment_revision": identity["revision"] if revision == "current" else "stale-revision",
+        "run_id": "override-negative",
+        "target_name": "codex_sol",
+        "transport": "internal",
+        "reason": "human-authorized replacement",  # A label is not admission.
+        "scope": "src/feature.py",
+        "expires_at": "2099-01-01T00:00:00Z",
+    }
+    result = (
+        _run_typescript_assignment(tmp_path, transition, values)
+        if runtime == "typescript"
+        else (assignment_reassign if transition == "reassign" else assignment_override)(values, target=tmp_path, invocation=invocation)
+    )
+    assert result["status"] == "blocked"
+    assert result["reason_code"] == "assignment-override-authority-unavailable"
+    assert result["mutation_applied"] is False
+    assert result["artifact_refs"] == []
+    after = {path.relative_to(owned).as_posix(): path.read_bytes() for path in owned.rglob("*") if path.is_file()}
+    assert after == before
+
+
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+@pytest.mark.parametrize("ineligible", ["", "capability", "forbidden"])
+def test_source_owned_replacement_manual_packet_is_current_and_exact(tmp_path: Path, runtime: str, ineligible: str) -> None:
+    """#2909: local owner answer, Rust replacement, canonical public export."""
+    from agentic_workspace.assignment_source import revision
+
+    identity, invocation, _ = _prepare_shared_worktree_assignment(
+        tmp_path, run_id="old-run", target_name="codex_terra", task_class="boundary-shaping"
+    )
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/plan.plan.json"
+    plan_path.parent.mkdir(parents=True)
+    plan_path.write_text(json.dumps({"revision": "plan-rev-1"}))
+    old_path = tmp_path / ".agentic-workspace/local/assignment-runs/old-run/export/packet.json"
+    old_bytes = old_path.read_bytes()
+    execution = {
+        "target": "codex_sol",
+        "target_identity_ref": "user-local:codex-sol",
+        "target_revision": "gpt-5.6-sol",
+        "transport": "manual",
+        "adapter": {"kind": "manual", "execution_methods": ["manual"], "transports": [{"kind": "manual", "method": "manual"}]},
+    }
+    # This fixture is the independent local configuration owner, not command
+    # input or a claimed actor label. The source grants just this exact answer.
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        f'''schema_version = 1
+[delegation]
+human_override_policy = "explicit-only"
+[delegation.replacement]
+assignment_id = "assign-shared"
+assignment_revision = "{identity["revision"]}"
+work_id = "slice-1"
+work_revision = "plan-rev-1"
+target = "codex_sol"
+transport = "manual"
+execution_revision = "{revision(execution)}"
+packet_integrity = "{json.loads(old_bytes)["packet_integrity"]}"
+[delegation_targets.codex_sol]
+target_id = "user-local:codex-sol"
+target_revision = "gpt-5.6-sol"
+strength = "strong"
+location = "external"
+transports = [{{kind = "manual"}}]
+''',
+        encoding="utf-8",
+    )
+    config_path = tmp_path / ".agentic-workspace/config.local.toml"
+    if ineligible == "capability":
+        config_path.write_text(config_path.read_text().replace('strength = "strong"', 'strength = "weak"'))
+    if ineligible == "forbidden":
+        config_path.write_text(
+            config_path.read_text().replace('strength = "strong"', 'strength = "strong"\nforbidden_task_classes = ["boundary-shaping"]')
+        )
+    proof_path = tmp_path / ".agentic-workspace/proof/receipts/proof-feature.json"
+    predecessor_proof = json.loads(proof_path.read_text())
+    predecessor_proof["predecessor_target_evidence"] = "codex_terra-only"
+    proof_path.write_text(json.dumps(predecessor_proof))
+    before = {p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
+    values = {
+        "assignment_id": "assign-shared",
+        "assignment_revision": identity["revision"],
+        "run_id": "old-run",
+        "target_name": "codex_sol",
+        "transport": "manual",
+        "reason": "select admitted replacement",
+    }
+    result = (
+        _run_typescript_assignment(tmp_path, "reassign", values)
+        if runtime == "typescript"
+        else assignment_reassign(values, target=tmp_path, invocation=invocation)
+    )
+    if ineligible:
+        assert result["status"] == "blocked", result
+        assert result["reason_code"] == "assignment-replacement-ineligible", result
+        assert "required_source_answer" not in result
+        assert result["mutation_applied"] is False
+        assert result["artifact_refs"] == []
+        assert before == {
+            p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()
+        }
+        return
+    fresh_proof = json.loads(proof_path.read_text())
+    assert "predecessor_target_evidence" not in fresh_proof
+    assert fresh_proof["execution_configuration"] == execution
+    assert fresh_proof["packet_integrity"] == result["replacement_packet"]["packet_integrity"]
+    assert fresh_proof["assignment_decision_revision"] == result["replacement_packet"]["assignment_revision"]
+    assert result["status"] == "replaced", result
+    packet = result["replacement_packet"]
+    assert packet["target"] == "codex_sol"
+    assert packet["assignment_revision"] != identity["revision"]
+    assert packet["run_id"] != "old-run"
+    assert old_path.read_bytes() == old_bytes
+    from agentic_workspace import workspace_runtime_core
+    from agentic_workspace.config import load_workspace_config
+
+    def ordinary(task: str = "Implement the bounded feature change.") -> dict[str, object]:
+        return workspace_runtime_core._execution_posture_payload(
+            config=load_workspace_config(target_root=tmp_path),
+            target_root=tmp_path,
+            changed_paths=["src/feature.py"],
+            task_text=task,
+            materialize_assignment=True,
+        )
+
+    posture = ordinary()
+    assert posture["assignment_gate"]["selected_target"] == "codex_sol", posture
+    assert posture["implementation_allowed"] is False, posture
+    assert posture["assignment_action"]["operation_invocation"]["arguments"]["run_id"] == packet["run_id"], posture
+    assert ordinary("Unrelated direct work")["assignment_decision"]["assignment_decision_revision"] != packet["assignment_revision"]
+    args = result["next_current_continuation"]["operation_invocation"]["arguments"]
+    exported = (
+        _run_typescript_assignment(tmp_path, "export", args)
+        if runtime == "typescript"
+        else assignment_export(args, target=tmp_path, invocation=invocation)
+    )
+    assert exported["status"] == "handoff-prepared", exported
+    fresh = tmp_path / f".agentic-workspace/local/assignment-runs/{packet['run_id']}/export/packet.json"
+    assert json.loads(fresh.read_text()) == packet
+    dispatched = assignment_export(args, target=tmp_path, invocation=invocation)
+    assert dispatched["status"] == "handoff-prepared", dispatched
+    assert json.loads(fresh.read_text()) == packet
+    assert old_path.read_bytes() == old_bytes
+    stale = assignment_export(
+        {**args, "assignment_revision": identity["revision"], "run_id": "old-run", "target_name": "worker"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert stale["status"] == "blocked"
+
+    current_config = config_path.read_text()
+    config_path.write_text(current_config.replace('strength = "strong"', 'strength = "weak"'))
+    stale_before = {p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()}
+    stale_eligibility = assignment_export(args, target=tmp_path, invocation=invocation)
+    assert stale_eligibility["status"] == "blocked", stale_eligibility
+    assert stale_eligibility["mutation_applied"] is False
+    assert stale_before == {
+        p.relative_to(tmp_path).as_posix(): p.read_bytes() for p in (tmp_path / ".agentic-workspace").rglob("*") if p.is_file()
+    }
+    assert json.loads(fresh.read_text()) == packet
+    config_path.write_text(current_config)
+    plan_path.write_text(json.dumps({"revision": "plan-rev-2"}))
+    stale_work = assignment_export(args, target=tmp_path, invocation=invocation)
+    assert stale_work["status"] == "blocked", stale_work
+    plan_path.write_text(json.dumps({"revision": "plan-rev-1"}))
+    canonical_path = tmp_path / ".agentic-workspace/planning/assignments/assign-shared.assignment.json"
+    canonical_bytes = canonical_path.read_bytes()
+    canonical = json.loads(canonical_bytes)
+    canonical["replacement_packet"]["scope"] = ["**"]
+    canonical_path.write_text(json.dumps(canonical))
+    tampered = assignment_export(args, target=tmp_path, invocation=invocation)
+    assert tampered["status"] == "blocked", tampered
+    canonical_path.write_bytes(canonical_bytes)
+    config_path = tmp_path / ".agentic-workspace/config.local.toml"
+    config_path.write_text(config_path.read_text().replace('human_override_policy = "explicit-only"', 'human_override_policy = "none"'))
+    stale_source = assignment_export(args, target=tmp_path, invocation=invocation)
+    assert stale_source["status"] == "blocked"
+    assert json.loads(fresh.read_text()) == packet
+    # A later exact source answer can supersede the current replacement. The
+    # old answer is no longer live, but the new answer binds the entire packet.
+    config_path.write_text(
+        config_path.read_text()
+        .replace('human_override_policy = "none"', 'human_override_policy = "explicit-only"')
+        .replace(str(identity["revision"]), packet["assignment_revision"])
+        .replace(json.loads(old_bytes)["packet_integrity"], packet["packet_integrity"])
+    )
+    again = assignment_reassign(
+        {**values, "assignment_revision": packet["assignment_revision"], "run_id": packet["run_id"]},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    assert again["status"] == "replaced", again
+    assert again["replacement_packet"]["assignment_revision"] != packet["assignment_revision"]
+    assert assignment_export(args, target=tmp_path, invocation=invocation)["status"] == "blocked"
+    config_path.unlink()  # Losing the answer must not erase the binding assignment.
+    missing_source = ordinary()
+    assert missing_source["implementation_allowed"] is False, missing_source
+    assert missing_source["assignment_gate"]["selected_target"] == "codex_sol"
+
+
+@pytest.mark.parametrize("runtime", ["python", "typescript"])
+def test_source_owned_automatic_replacement_export_never_launches(tmp_path: Path, runtime: str) -> None:
+    """#2909: one real SDK-less argv host; export/dispatch share the packet."""
+    from agentic_workspace.assignment_source import revision
+    from agentic_workspace.config import load_workspace_config
+
+    identity, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="old-process-run")
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/plan.plan.json"
+    plan_path.parent.mkdir(parents=True)
+    plan_path.write_text(json.dumps({"revision": "plan-rev-1"}))
+    old_path = tmp_path / ".agentic-workspace/local/assignment-runs/old-process-run/export/packet.json"
+    old = json.loads(old_path.read_text())
+    worker = tmp_path / "worker.py"
+    worker.write_text(
+        "import sys,json,pathlib\ntext=sys.stdin.read()\nctx=json.loads(text.split('```json\\n')[-1].split('\\n```')[0])\nresult=ctx['return_contract']['required_identity']\nresult.update(changed_paths=[],summary='bounded result',stop_conditions_hit=[],patch='',result_delivery={'mode':'unapplied-patch'})\npathlib.Path('launched').write_text('yes')\nprint(json.dumps(result))\n"
+    )
+    config_path = tmp_path / ".agentic-workspace/config.local.toml"
+    config_text = f"""schema_version = 1
+[delegation]
+human_override_policy = "explicit-only"
+transport_authority = "automatic"
+[safety]
+safe_to_auto_run_commands = true
+[delegation_targets.process_worker]
+target_id = "test:argv-worker"
+target_revision = "worker-1"
+strength = "strong"
+location = "local"
+transports = [{{kind="process",command={json.dumps([sys.executable, str(worker)])}}}]
+"""
+    config_path.write_text(config_text)
+    target = load_workspace_config(target_root=tmp_path).local_override.delegation_targets[0]
+    execution = {
+        "target": target.name,
+        "target_identity_ref": target.target_id,
+        "target_revision": target.target_revision,
+        "transport": "cli",
+        "adapter": {"kind": "process", "execution_methods": ["cli"], "transports": [dict(target.transports[0])]},
+    }
+    config_path.write_text(
+        config_text
+        + f'''
+[delegation.replacement]
+assignment_id = "assign-shared"
+assignment_revision = "{identity["revision"]}"
+work_id = "slice-1"
+work_revision = "plan-rev-1"
+target = "process_worker"
+transport = "cli"
+execution_revision = "{revision(execution)}"
+packet_integrity = "{old["packet_integrity"]}"
+'''
+    )
+    values = {
+        "assignment_id": "assign-shared",
+        "assignment_revision": identity["revision"],
+        "run_id": "old-process-run",
+        "target_name": "process_worker",
+        "transport": "cli",
+        "reason": "admitted process replacement",
+    }
+
+    def call(operation: str, args: dict[str, object]) -> dict[str, object]:
+        if runtime == "typescript":
+            return _run_typescript_assignment(tmp_path, operation, args)
+        return {"reassign": assignment_reassign, "export": assignment_export, "dispatch": assignment_dispatch, "admit": assignment_admit}[
+            operation
+        ](args, target=tmp_path, invocation=invocation)
+
+    replaced = call("reassign", values)
+    assert replaced["status"] == "replaced", replaced
+    args = replaced["next_current_continuation"]["operation_invocation"]["arguments"]
+    exported = call("export", args)
+    assert exported["status"] == "handoff-prepared", exported
+    assert not (tmp_path / "launched").exists()
+    path = tmp_path / f".agentic-workspace/local/assignment-runs/{args['run_id']}/export/packet.json"
+    before = path.read_bytes()
+    dispatched = call("dispatch", args)
+    assert dispatched["status"] == "awaiting-admission", dispatched
+    assert (tmp_path / "launched").read_text() == "yes"
+    assert path.read_bytes() == before
+    assert json.loads(before) == replaced["replacement_packet"]
+
+    # Run-only continuation must use the same source host in generated Node.
+    admitted_source = config_path.read_text()
+    config_path.write_text(admitted_source.replace('target_revision = "worker-1"', 'target_revision = "worker-2"'))
+    assert call("admit", {"run_id": args["run_id"]})["status"] == "blocked"
+    config_path.write_text(admitted_source)
+    admitted = call("admit", {"run_id": args["run_id"]})
+    assert admitted["status"] == "admitted", admitted
+
+
+def test_source_owned_replacement_rechecks_projected_planning_revision(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from repo_planning_bootstrap import installer as planning_owner
+
+    from agentic_workspace import assignment_source, target_evidence, workspace_runtime_core
+
+    projected = {
+        "planning_record": {"status": "present", "task": {"surface": "planning://work"}, "touched_scope": ["src/work.py"]},
+        "planning_revision": {"active_execplan": "planning://work", "active_execplan_hash": "one"},
+    }
+    monkeypatch.setattr(planning_owner, "planning_summary_query", lambda **_: {"status": "present", "payload": projected})
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_planning_safety_gate_payload",
+        lambda **_: {
+            "route_decision": {"task_relation": "continues-selected-owner", "owner_posture": "current", "required_transition": "none"}
+        },
+    )
+    bound = workspace_runtime_core._live_assignment_plan_binding(target_root=tmp_path, task_text="work", changed_paths=[])
+    packet = {
+        "assignment_identity": {"plan_ref": bound["plan_ref"], "human_intent": "work", "allowed_paths": bound["allowed_paths"]},
+        "packet_integrity": "sealed",
+    }
+    work = {"revision": bound["plan_revision"]}
+    monkeypatch.setattr(assignment_source, "source_facts", lambda _: ({"source": {}}, {}))
+    monkeypatch.setattr(assignment_source, "load_workspace_config", lambda **_: {})
+    monkeypatch.setattr(workspace_runtime_core, "_current_assignment_selection", lambda **_: ({},))
+    monkeypatch.setattr(target_evidence, "replacement_eligibility", lambda **_: {})
+    monkeypatch.setattr(assignment_source, "replace_assignment", lambda value: {"status": "checked", "work": value["work"]})
+    assert assignment_source.replace_from_source(tmp_path, packet, work, {})["status"] == "checked"
+    projected["planning_revision"]["active_execplan_hash"] = "changed-without-counter-bump"
+    assert assignment_source.replace_from_source(tmp_path, packet, work, {})["status"] == "checked"
+    projected["planning_record"]["proof_expectations"] = ["new material proof requirement"]
+    with pytest.raises(ValueError, match="assignment-override-stale-work"):
+        assignment_source.replace_from_source(tmp_path, packet, work, {})
+    projected["planning_record"].pop("proof_expectations")
+    projected["planning_record"]["status"] = "unavailable"
+    with pytest.raises(ValueError, match="assignment-override-stale-work"):
+        assignment_source.replace_from_source(tmp_path, packet, work, {})

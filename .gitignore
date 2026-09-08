@@ -25,3 +25,6 @@ agentic-workspace.delegation-outcomes.json
 
 # Agent scratch files
 scratch/
+
+# Rust build output
+/target/

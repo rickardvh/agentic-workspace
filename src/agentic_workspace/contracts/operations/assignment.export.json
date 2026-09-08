@@ -20,6 +20,9 @@
   ],
   "id": "assignment.export",
   "inputs": [
+    {"name": "configuration_parameters_json", "required": false, "source": "cli-option"},
+    {"name": "configuration_revision", "required": false, "source": "cli-option"},
+    {"name": "configuration_id", "required": false, "source": "cli-option"},
     {
       "name": "target",
       "required": false,

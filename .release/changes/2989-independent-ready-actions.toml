@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose exact ready-action choice when admitted read and effect domains establish independence."
+issues = [2989]

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add a discovered Codex control-plane peer transport with bounded provider-owned continuation."

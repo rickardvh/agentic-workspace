@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "kind": "agentic-workspace/source-decision-contract/v1",
+  "request_schema": "schemas/source_decision_input.schema.json",
+  "kinds": {
+    "contribution": "agentic-workspace/source-contribution/v1",
+    "decision": "agentic-workspace/operating-decision/v1",
+    "decision_view": "agentic-workspace/decision-view/v1",
+    "invocation": "agentic-workspace/operation-invocation/v1",
+    "capability_contract": "agentic-workspace/capability-contract/v1",
+    "public_request": "agentic-workspace/public-request/v1"
+  },
+  "statuses": ["direct", "actionable", "decision", "blocked", "terminal"],
+  "consequences": {
+    "task": "task",
+    "prefixes": ["action:", "decision:", "effect:", "claim:", "outcome:"],
+    "action_identity_fields": ["owner", "revision", "operation_id", "arguments", "effects", "authority"]
+  },
+  "semantic_routes": {
+    "selection_owner": "acting-agent",
+    "currentness": ["current-work identity", "route-source revision", "current declared route"],
+    "authority_effect": "applicability-only",
+    "persistent_history": "none"
+  },
+  "public_requests": {
+    "selection_owner": "acting-agent-or-human",
+    "binding": ["current-work identity", "capability-contract revision", "capability-owner revision", "source-contribution revision"],
+    "constructibility": "owner intention kind plus arguments validated by its declared JSON Schema Draft 2020-12",
+    "resolution": "responsible owner derives a separately declared operation and exact arguments, decision, blocker, or settled response",
+    "schema_authority": "self-contained input_schema in the revision-bound capability contract; external retrieval disabled",
+    "owner_responses": ["action", "decision", "blocked", "settled"],
+    "unknown_variants": "fail-closed",
+    "execution": "invoke only the exact returned operation envelope"
+  },
+  "capability_ownership": {
+    "domains": "exclusive among current declared owners",
+    "effects": "bound to one owned domain and admitted operation",
+    "claims": "exclusive authority declared separately from a module contribution",
+    "cross_owner_results": "evidence only until the responsible owner admits a typed request",
+    "procedure_references": "non-authoritative"
+  },
+  "native_cli": {
+    "executable": "agentic-workspace",
+    "help_flag": "--help",
+    "commands": [
+      {
+        "name": "start",
+        "description": "Resolve the current operating decision.",
+        "input_field": "request",
+        "input_required": false
+      },
+      {
+        "name": "invoke",
+        "description": "Invoke the exact operation returned by the current owner.",
+        "input_field": "invocation",
+        "input_required": true
+      }
+    ],
+    "options": [
+      {
+        "flag": "--target",
+        "field": "target",
+        "default": ".",
+        "description": "Repository target (default: current directory)."
+      },
+      {
+        "flag": "--task",
+        "field": "task",
+        "default": "",
+        "description": "Current task text; semantics remain agent-owned."
+      },
+      {
+        "flag": "--changed",
+        "field": "changed",
+        "default": [],
+        "multiple": true,
+        "description": "Changed paths; accepts multiple values and repetition."
+      },
+      {
+        "flag": "--format",
+        "field": "format",
+        "default": "json",
+        "choices": [
+          "json"
+        ],
+        "description": "Output format (json)."
+      },
+      {
+        "flag": "--input",
+        "field": "input",
+        "description": "JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action."
+      }
+    ]
+  },
+  "authority": {
+    "data_shapes": "this JSON contract and referenced JSON Schema",
+    "executable_semantics": "crates/agentic-workspace-core",
+    "bindings": ["src/agentic_workspace/decision.py", "bindings/node/semantic-decision.mjs"],
+    "json_transport": "agentic-workspace-core binary stdin/stdout"
+  }
+}

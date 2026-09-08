@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve remaining local-only state and custody instead of recursively deleting the workspace tree during uninstall."
+issues = [2984, 3001]

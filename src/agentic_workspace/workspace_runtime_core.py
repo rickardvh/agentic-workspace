@@ -10659,6 +10659,17 @@ def _workspace_uninstall_report(
         if not destination.exists():
             actions.append({"kind": "skipped", "path": destination.as_posix(), "detail": "already absent"})
             continue
+        if relative == Path(".agentic-workspace/OWNERSHIP.toml"):
+            actions.append(
+                {
+                    "kind": "preserved",
+                    "path": relative.as_posix(),
+                    "detail": "ownership authority requires reconciliation before removal, even when it matches package content",
+                }
+            )
+            if destination.read_bytes() != _workspace_payload_bytes_for_target(relative, target_root=target_root):
+                ambiguous_payloads.append(relative)
+            continue
         if destination.read_bytes() == _workspace_payload_bytes_for_target(relative, target_root=target_root):
             removable_candidates.append(relative)
             continue
@@ -10698,12 +10709,15 @@ def _workspace_uninstall_report(
         _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
         if local_only_repo_root is not None:
             actions.append(_remove_local_only_state(target_root=target_root, dry_run=dry_run))
-            local_workspace_root = target_root / ".agentic-workspace"
-            if local_workspace_root.exists():
-                shutil.rmtree(local_workspace_root)
     if local_only_repo_root is not None:
-        if dry_run and target_root.exists():
-            actions.append({"kind": "would remove", "path": ".agentic-workspace", "detail": "remove the local-only workspace tree"})
+        if (target_root / ".agentic-workspace").exists():
+            actions.append(
+                {
+                    "kind": "preserved",
+                    "path": ".agentic-workspace",
+                    "detail": "retain remaining state, custody and local ignore rules; package removal does not authorize deleting the workspace tree",
+                }
+            )
         actions.extend(
             _remove_local_agent_startup(
                 repo_root=local_only_repo_root,
@@ -10712,8 +10726,6 @@ def _workspace_uninstall_report(
                 cli_invoke=config.cli_invoke,
             )
         )
-        actions.append(_remove_local_only_git_exclude(repo_root=local_only_repo_root, dry_run=dry_run))
-        actions.append(_remove_legacy_local_only_gitignore(repo_root=local_only_repo_root, dry_run=dry_run))
     return _workspace_report(target_root=target_root, message="Uninstall report", dry_run=dry_run, actions=actions, warnings=warnings)
 
 
@@ -11114,7 +11126,7 @@ def _minimal_module_footprint_report(
             "when the compact summary is insufficient.\n\n"
             "## Meaning Boundary\n\n"
             "`planning_record` is the canonical active planning record and machine-readable state. Compact prose answers "
-            "questions such as ‘What should I do next?’; raw execplan detail is the fallback for maintenance or omitted "
+            "questions such as â€˜What should I do next?â€™; raw execplan detail is the fallback for maintenance or omitted "
             "evidence. Preserve the `resumable_contract` identity across summary, handoff, and closeout.\n",
             "create the bounded-owner Planning anchor without a repository-global state aggregate",
         )
@@ -20716,13 +20728,13 @@ def _operating_loop_text_lines(packet: dict[str, Any] | None) -> list[str]:
     required_text = ",".join((str(item) for item in required)) or "none"
     return [
         "loop: "
-        f"Memory {memory.get('state', 'not_applicable')} · "
-        f"Planning {planning.get('state', 'none')} · "
+        f"Memory {memory.get('state', 'not_applicable')} Â· "
+        f"Planning {planning.get('state', 'none')} Â· "
         f"Verification {verification.get('state', 'proof_not_required')}",
         "closeout: "
-        f"{loop.get('closeout_state')} · "
-        f"claim {loop.get('safe_claim')} · "
-        f"owner {loop.get('residue_owner')} · "
+        f"{loop.get('closeout_state')} Â· "
+        f"claim {loop.get('safe_claim')} Â· "
+        f"owner {loop.get('residue_owner')} Â· "
         f"required {required_text}",
     ]
 
@@ -20739,7 +20751,7 @@ def _emit_implement_text(payload: dict[str, Any]) -> None:
         effects = _as_dict(decision.get("effects"))
         print(
             "effects: "
-            f"implementation_allowed={str(bool(effects.get('implementation_allowed'))).lower()} · "
+            f"implementation_allowed={str(bool(effects.get('implementation_allowed'))).lower()} Â· "
             f"outside_scope={effects.get('outside_working_set', 'requires-explicit-authority')}"
         )
         proof = _as_dict(decision.get("proof"))
@@ -25111,6 +25123,14 @@ def _report_closeout_trust_payload(
         return {
             "kind": "agentic-workspace/current-task-proof-state/v1",
             "status": proof_execution_evidence["status"],
+            "task_claim_judgment": _current_task_claim_judgment(
+                target_root=target_root,
+                task_text=str(task_text or ""),
+                changed_paths=normalized_changed_paths,
+                manual_verification=manual_verification,
+                separation_of_duty=_as_dict(_as_dict(proof_selection.get("proof_decision")).get("separation_of_duty")),
+                cli_invoke=cli_invoke,
+            ),
             "manual_verification": manual_verification,
             "proof_execution_evidence": proof_execution_evidence,
             "receipt_bridge": {
@@ -43502,6 +43522,10 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             if local_override.assignment_policy is not None
             else "default",
         ),
+        "required_execution_guarantees": _sourced_value(
+            list(local_override.required_execution_guarantees),
+            source=local_override.field_sources.get("delegation.required_execution_guarantees", "default"),
+        ),
         "selection_objective": _sourced_value(
             "safe minimum expected total successful-completion cost with quality and proof before price",
             source="derived:best-fit-ranking",
@@ -44837,6 +44861,9 @@ def _assignment_implementation_gate_payload(
     selected_adapter_configured = (
         internal_transport_configured if selected_automatic_transport == "internal" else bool(configured_dispatch_command)
     )
+    selected_configuration = _as_dict(assignment_decision.get("selected_execution_configuration"))
+    if selected_configuration:
+        selected_adapter_configured = selected_configuration.get("constructible") is True
     automatic_transport_authorized = bool(
         selected_transport != "manual"
         and selected_automatic_transport
@@ -45172,26 +45199,85 @@ def _delegated_run_lifecycle_payload(
 def _live_assignment_plan_binding(*, target_root: Path, task_text: str, changed_paths: list[str]) -> dict[str, Any]:
     """Resolve the plan identity and scope that a fresh assignment must bind."""
 
-    current_work = resolve_current_work_context(root=target_root, task=task_text, relation_hint="plan-continuation")
-    plan_id = str(current_work.get("selected_plan_id") or current_work.get("plan_id") or "").strip()
-    plan_ref = f".agentic-workspace/planning/execplans/{plan_id}.plan.json" if plan_id else ""
-    if not plan_ref:
-        active_plan_ref, _active_plan = _active_execplan_record_payload(target_root=target_root)
-        plan_ref = str(active_plan_ref or "").strip()
-    plan_path = target_root / plan_ref if plan_ref else None
-    plan_record: dict[str, Any] = {}
-    if plan_path is not None:
-        try:
-            loaded_plan = json.loads(plan_path.read_text(encoding="utf-8-sig"))
-            plan_record = loaded_plan if isinstance(loaded_plan, dict) else {}
-        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-            plan_record = {}
-    allowed_paths = _dedupe(list(changed_paths) or _plan_exact_list(plan_record, "canonical_core.touched_scope", "touched_paths"))
+    from repo_planning_bootstrap.installer import planning_summary_query
+
+    from agentic_workspace.assignment_source import revision
+
+    query = planning_summary_query(target=target_root, selectors=["planning_record", "planning_revision"])
+    payload = _as_dict(query.get("payload")) if query.get("status") == "present" else {}
+    plan_record = _as_dict(payload.get("planning_record"))
+    source = _as_dict(payload.get("planning_revision"))
+    plan_ref = str(_as_dict(plan_record.get("task")).get("surface") or "").strip()
+    source_hash = str(source.get("active_execplan_hash") or "").strip()
+    present = (
+        plan_record.get("status") == "present"
+        and plan_ref
+        and plan_ref == source.get("active_execplan")
+        and source_hash not in {"", "missing"}
+    )
+    route: dict[str, Any] = {}
+    if task_text.strip() and (plan_ref or source.get("active_execplan")):
+        route = _as_dict(
+            _planning_safety_gate_payload(
+                target_root=target_root,
+                config=_load_workspace_config(target_root=target_root),
+                changed_paths=changed_paths,
+                task_text=task_text,
+                execution_posture={
+                    "capability_posture": _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
+                },
+            ).get("route_decision")
+        )
+    relation = route.get("task_relation", "not-applicable" if not plan_ref and not source.get("active_execplan") else "")
+    if task_text.strip() and relation in {"bounded-independent", "not-applicable"}:
+        # Legacy field names carry a work reference, not necessarily a file or
+        # durable Planning owner. The exact direct task is its semantic source.
+        from agentic_workspace.decision import direct_task_subject
+
+        direct_revision = str(direct_task_subject(task_text, changed_paths)["revision"])
+        return {
+            "plan_ref": direct_revision,
+            "plan_revision": direct_revision,
+            "allowed_paths": _dedupe(changed_paths),
+            "plan_record": {},
+            "route_decision": route,
+        }
+    if task_text.strip() and relation != "continues-selected-owner":
+        return {"plan_ref": "", "plan_revision": "", "allowed_paths": _dedupe(changed_paths), "plan_record": {}, "route_decision": route}
+    # Bind the selected owner's semantic projection, not its file hash or the
+    # composite Planning revision: attempts and integration bookkeeping must
+    # not invalidate the work they describe. No private plan reads here.
+    semantic_fields = (
+        "requested_outcome",
+        "hard_constraints",
+        "agent_may_decide",
+        "capability_posture",
+        "role_metadata",
+        "next_role_needed",
+        "touched_scope",
+        "proof_expectations",
+        "references",
+        "execution_bounds",
+        "stop_conditions",
+    )
+    plan_revision = (
+        "planning-owner:"
+        + revision(
+            {
+                "ref": plan_ref,
+                "contract": {key: plan_record.get(key) for key in semantic_fields},
+            }
+        )
+        if present
+        else ""
+    )
+    allowed_paths = _dedupe(list(changed_paths) or _list_payload(plan_record.get("touched_scope")))
     return {
         "plan_ref": plan_ref,
-        "plan_revision": str(plan_record.get("revision") or "").strip(),
+        "plan_revision": plan_revision,
         "allowed_paths": allowed_paths,
-        "plan_record": plan_record,
+        "plan_record": plan_record if present else {},
+        "route_decision": route,
     }
 
 
@@ -45202,11 +45288,20 @@ def _assignment_plan_binding_matches(*, assignment: dict[str, Any], live_binding
     plan_revision = str(live_binding.get("plan_revision") or "").strip()
     allowed_paths = sorted({str(path) for path in _list_payload(live_binding.get("allowed_paths")) if str(path).strip()})
     if not plan_ref or not plan_revision:
-        return True
+        return not str(_as_dict(assignment.get("assignment_gate")).get("plan_revision") or "").startswith("planning-owner:")
     if not allowed_paths:
         return False
     gate = _as_dict(assignment.get("assignment_gate"))
     bound_paths = sorted({str(path) for path in _list_payload(gate.get("allowed_paths")) if str(path).strip()})
+    if plan_revision.startswith("direct-task:") and not str(gate.get("plan_revision") or "").startswith(
+        ("planning-owner:", "direct-task:")
+    ):
+        # Already sealed legacy work keeps its admitted source contract, but
+        # cannot borrow an unrelated modern direct task merely by being current.
+        from agentic_workspace.decision import direct_task_subject
+
+        expected = str(direct_task_subject(str(gate.get("human_intent") or ""), bound_paths)["revision"])
+        return plan_revision == expected and bound_paths == allowed_paths
     return (
         str(gate.get("plan_ref") or "").strip() == plan_ref
         and str(gate.get("plan_revision") or "").strip() == plan_revision
@@ -45276,6 +45371,7 @@ def _assignment_primary_action_payload(
     cli_invoke: str,
     task_text: str = "",
     changed_paths: list[str] | None = None,
+    canonical_assignment: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compile canonical assignment state into one revision-bound ordinary action."""
 
@@ -45297,7 +45393,7 @@ def _assignment_primary_action_payload(
         "implementation_allowed": assignment_gate.get("implementation_allowed"),
         "rule": "Canonical assignment is consumed once; post-assignment actors execute this action without reranking the target.",
     }
-    if execution_role != "orchestrator" or policy_value != "required-best-fit":
+    if not canonical_assignment and (execution_role != "orchestrator" or policy_value != "required-best-fit"):
         return base
     if gate_status == "assigned-current-target":
         return {
@@ -45343,7 +45439,7 @@ def _assignment_primary_action_payload(
     if gate_status not in {"dispatch-required", "handoff-required"} or target_root is None:
         return base
 
-    assignment = _current_assignment_lifecycle_record(target_root=target_root)
+    assignment = canonical_assignment or _current_assignment_lifecycle_record(target_root=target_root)
     live_plan_binding = _live_assignment_plan_binding(
         target_root=target_root,
         task_text=task_text,
@@ -45557,24 +45653,111 @@ def _assignment_primary_action_payload(
     }
 
 
-def _execution_posture_payload(
+def _completed_assignment_packet(target_root: Path, assignment: dict[str, Any]) -> dict[str, Any] | None:
+    """Read the exact retained attempt; adapters prove any consumed-offer view."""
+    run_id = str(_as_dict(assignment.get("current_attempt")).get("run_id") or "")
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", run_id):
+        return None
+    path = target_root / ".agentic-workspace/local/assignment-runs" / run_id / "state.json"
+    try:
+        state = json.loads(path.read_text(encoding="utf-8"))
+        packet = state["assignment"]
+        if (
+            packet.get("run_id") == run_id
+            and packet.get("assignment_id") == assignment.get("assignment_id")
+            and packet.get("assignment_revision") == assignment.get("current_revision")
+            and state.get("current_state") in {"awaiting-admission", "admitted", "integrated", "proof-recorded"}
+        ):
+            return packet
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    return None
+
+
+def _current_assignment_selection(
     *,
     config: WorkspaceConfig,
     changed_paths: list[str],
     task_text: str | None,
-    target_root: Path | None = None,
-    materialize_assignment: bool = False,
-) -> dict[str, Any]:
-    posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
+    work_identity: dict[str, Any] | None = None,
+    execution_choice: dict[str, Any] | None = None,
+    completed_packet: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """One current owner evaluation for ordinary selection and replacement admission."""
+    posture: dict[str, Any] = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
+    if work_identity is not None:
+        # Existing canonical work classes outrank fresh text-based discovery.
+        posture = {
+            **posture,
+            "posture": {**posture["posture"], "execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]},
+        }
+    live_binding: dict[str, Any] = {}
+    if config.target_root is not None and config.local_override.delegation_targets:
+        live_binding = _live_assignment_plan_binding(
+            target_root=config.target_root, task_text=str(task_text or ""), changed_paths=changed_paths
+        )
+        if live_binding.get("plan_record"):
+            # Consume Planning's existing route authority before borrowing its
+            # task judgment. An unrelated active owner is not this task's policy.
+            route = _as_dict(live_binding.get("route_decision"))
+            if (
+                route.get("task_relation") == "continues-selected-owner"
+                and route.get("owner_posture") == "current"
+                and route.get("required_transition") == "none"
+                and _as_dict(live_binding["plan_record"].get("capability_posture"))
+                and (
+                    work_identity is None
+                    or (
+                        work_identity.get("plan_ref") == live_binding.get("plan_ref")
+                        and work_identity.get("plan_revision") == live_binding.get("plan_revision")
+                    )
+                )
+            ):
+                planning_posture = _as_dict(live_binding["plan_record"].get("capability_posture"))
+                posture = {
+                    **posture,
+                    "status": "planning-owner-judgment",
+                    "reason": "Current related Planning owner supplies task capability judgment.",
+                    "posture": {**posture["posture"], **planning_posture},
+                }
+                if work_identity is not None:
+                    posture["posture"].update({"execution class": work_identity["task_class"], "scope class": work_identity["scope_class"]})
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
-    delegation_control = _delegation_control_payload(config.local_override)
+    configurations: dict[str, Any] = {}
+    work: dict[str, Any] = {}
+    if config.target_root is not None and config.local_override.delegation_targets:
+        from agentic_workspace.assignment_source import current_route_configurations
+
+        work = (
+            {"id": work_identity["slice_id"], "revision": str(work_identity["plan_revision"])}
+            if work_identity is not None
+            else {
+                "id": live_binding.get("plan_ref") or "direct-task",
+                "revision": hashlib.sha256(
+                    json.dumps(
+                        {"task": task_text, "paths": sorted(changed_paths), "plan_revision": live_binding.get("plan_revision")},
+                        sort_keys=True,
+                    ).encode()
+                ).hexdigest(),
+            }
+        )
+        configurations = current_route_configurations(
+            config.target_root,
+            runtime_resolution["profile_recommendations"],
+            config.local_override,
+            work,
+            completed_packet=completed_packet,
+        )
+        for profile in runtime_resolution["profile_recommendations"]:
+            profile["execution_configurations"] = [
+                row for row in configurations.get("candidates", []) if row["configuration"]["target"] == profile["name"]
+            ]
+            eligible_configurations = [row["configuration"] for row in profile["execution_configurations"] if row["eligible"]]
+            profile["execution_methods"] = list(dict.fromkeys(row["transport"] for row in eligible_configurations))
+            profile["transports"] = [row["execution"]["adapter"] for row in eligible_configurations]
     assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
-    effective_orchestration = _effective_orchestration_posture_payload(
-        assignment_policy=assignment_policy,
-        delegation_control=delegation_control,
-        profile_payloads=list(runtime_resolution.get("profile_recommendations", [])),
-        cli_invoke=config.cli_invoke,
-    )
+    if execution_choice is not None and not configurations:
+        raise ValueError("assignment-configuration-source-unavailable")
     outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
     if config.target_root is not None:
         _, _, outcome_records = config_lib.load_delegation_outcomes(target_root=config.target_root)
@@ -45588,6 +45771,139 @@ def _execution_posture_payload(
         runtime_resolution=runtime_resolution,
         target_evidence=target_evidence,
         human_intent=str(task_text or ""),
+    )
+    if configurations:
+        from agentic_workspace.assignment_source import configuration_requirements, revision
+        from agentic_workspace.decision import execution_configurations
+
+        feasibility_revision = configurations["revision"]
+        offer_revision = revision({"feasibility": feasibility_revision, "decision": assignment_decision["assignment_decision_revision"]})
+        if execution_choice is not None:
+            if execution_choice.get("revision") != offer_revision:
+                raise ValueError("assignment-configuration-choice-stale")
+            selected = execution_configurations(
+                {
+                    "work": work,
+                    **configuration_requirements(config.local_override),
+                    "candidates": [row["configuration"] for row in configurations["candidates"]],
+                    "selection": {"revision": feasibility_revision, "candidate": execution_choice.get("candidate")},
+                }
+            )
+            if not selected.get("selected"):
+                raise ValueError(str(selected.get("reason_code") or "assignment-configuration-choice-unavailable"))
+            if "parameters" in execution_choice:
+                from agentic_workspace.assignment_source import parameterize_configuration
+
+                assert config.target_root is not None
+                variant = parameterize_configuration(config.target_root, selected["selected"], execution_choice["parameters"])
+                # Re-enter the shared eligibility and configuration-context owner
+                # with adapter-constructed facts, never caller eligibility JSON.
+                variant_context = {
+                    "work": work,
+                    **configuration_requirements(config.local_override),
+                    "candidates": [variant],
+                }
+                variant_offer = execution_configurations(variant_context)
+                selected = execution_configurations(
+                    {**variant_context, "selection": {"revision": variant_offer["revision"], "candidate": variant["id"]}}
+                )
+                if not selected.get("selected"):
+                    raise ValueError(str(selected.get("reason_code") or "assignment-configuration-choice-unavailable"))
+                variant_row = next(row for row in selected["candidates"] if row["configuration"] == selected["selected"])
+                if variant_row not in configurations["candidates"]:
+                    configurations["candidates"].append(variant_row)
+                for profile in runtime_resolution["profile_recommendations"]:
+                    if profile["name"] == selected["selected"]["target"] and variant_row not in profile["execution_configurations"]:
+                        profile["execution_configurations"].append(variant_row)
+            configurations["selected"] = selected["selected"]
+            assignment_decision = assignment_decision_from_policy(
+                assignment_policy=assignment_policy,
+                runtime_resolution=runtime_resolution,
+                target_evidence=target_evidence,
+                human_intent=str(task_text or ""),
+                execution_choice=selected["selected"],
+            )
+        configurations["revision"] = offer_revision
+        configurations["feasibility_revision"] = feasibility_revision
+    assignment_decision["execution_configurations"] = configurations
+    return posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision
+
+
+def _execution_posture_payload(
+    *,
+    config: WorkspaceConfig,
+    changed_paths: list[str],
+    task_text: str | None,
+    target_root: Path | None = None,
+    materialize_assignment: bool = False,
+    execution_choice: dict[str, Any] | None = None,
+    requested_transport: str | None = None,
+) -> dict[str, Any]:
+    caller_choice = execution_choice
+    retained: dict[str, Any] = {}
+    stale_retained_choice = ""
+
+    if target_root is not None:
+        if not str(task_text or "").strip():
+            live = _live_assignment_plan_binding(target_root=target_root, task_text="", changed_paths=changed_paths)
+            resumed = _current_assignment_lifecycle_record(target_root=target_root, changed_paths=changed_paths, planning_binding=live)
+            if resumed.get("execution_choice"):
+                gate = _as_dict(resumed.get("assignment_gate"))
+                task_text = str(gate.get("human_intent") or "")
+                changed_paths = changed_paths or [str(path) for path in _list_payload(gate.get("allowed_paths"))]
+        # A taskless lookup may resume only through the Planning match above.
+        # None means an unfiltered custody lookup, not an empty semantic subject.
+        retained = _current_assignment_lifecycle_record(
+            target_root=target_root, task_text=str(task_text or ""), changed_paths=changed_paths
+        )
+        retained_choice = retained.get("execution_choice")
+        if isinstance(retained_choice, dict) and retained_choice:
+            if execution_choice is not None and execution_choice != retained_choice:
+                raise ValueError("configuration-choice-cannot-replace-current-assignment")
+            execution_choice = retained_choice
+    try:
+        posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
+            config=config,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            execution_choice=execution_choice,
+            completed_packet=_completed_assignment_packet(target_root, retained)
+            if target_root is not None and retained and not materialize_assignment
+            else None,
+        )
+    except ValueError as error:
+        if (
+            str(error) != "assignment-configuration-choice-stale"
+            or not retained.get("execution_choice")
+            or caller_choice is not None
+            or materialize_assignment
+        ):
+            raise
+        # A read must expose current offers and the exact retained blocker,
+        # not crash or silently transfer the old assignment to another target.
+        stale_retained_choice = str(error)
+        execution_choice = None
+        posture, runtime_resolution, assignment_policy, target_evidence, assignment_decision = _current_assignment_selection(
+            config=config,
+            changed_paths=changed_paths,
+            task_text=task_text,
+        )
+        assignment_decision = {
+            **assignment_decision,
+            "decision": "blocked",
+            "selected_target": retained.get("target_name"),
+            "selected_execution_configuration": {},
+            "selected_transport": None,
+            "reason_code": stale_retained_choice,
+        }
+    if execution_choice is not None and requested_transport and assignment_decision.get("selected_transport") != requested_transport:
+        raise ValueError("configuration-choice-transport-mismatch")
+    delegation_control = _delegation_control_payload(config.local_override)
+    effective_orchestration = _effective_orchestration_posture_payload(
+        assignment_policy=assignment_policy,
+        delegation_control=delegation_control,
+        profile_payloads=list(runtime_resolution.get("profile_recommendations", [])),
+        cli_invoke=config.cli_invoke,
     )
     decomposition_delegation = (
         _active_decomposition_delegation_payload(target_root=target_root)
@@ -45611,6 +45927,8 @@ def _execution_posture_payload(
         and current_target_name
     )
     if parent_orchestration_scope:
+        if execution_choice is not None:
+            raise ValueError("configuration-choice-requires-bounded-child")
         whole_task_candidate = {
             "selected_target": assignment_decision.get("selected_target"),
             "selected_target_identity_ref": assignment_decision.get("selected_target_identity_ref"),
@@ -45693,6 +46011,57 @@ def _execution_posture_payload(
         selected_target=target,
         delegation_control=delegation_control,
     )
+    if stale_retained_choice:
+        assignment_gate = {
+            **assignment_gate,
+            "status": "blocked",
+            "implementation_allowed": False,
+            "reason_code": stale_retained_choice,
+            "required_next_action": "reconcile-stale-execution-configuration",
+            "silent_local_fallback_allowed": False,
+        }
+    # A source-admitted replacement is already an assignment-owner consequence.
+    # Ranking projections must not silently turn it back into the previous target.
+    current_assignment = (
+        _current_assignment_lifecycle_record(target_root=target_root, task_text=str(task_text or ""), changed_paths=changed_paths)
+        if target_root is not None
+        else {}
+    )
+    replacement = _as_dict(current_assignment.get("replacement_packet"))
+    replacement_identity = _as_dict(replacement.get("assignment_identity"))
+    if (
+        target_root is not None
+        and replacement
+        and " ".join(str(replacement_identity.get("human_intent") or "").split()) == " ".join(str(task_text or "").split())
+        and sorted(replacement_identity.get("allowed_paths") or []) == sorted(changed_paths)
+    ):
+        from agentic_workspace.assignment_source import current_replacement
+
+        materialize_assignment = False
+        assignment_gate = dict(current_assignment["assignment_gate"])
+        target = next(
+            (row for row in runtime_resolution.get("profile_recommendations", []) if row.get("name") == replacement["target"]),
+            {"name": replacement["target"]},
+        )
+        assignment_decision = {
+            **assignment_decision,
+            "selected_target": replacement["target"],
+            "selected_target_identity_ref": replacement_identity["target_identity_ref"],
+            "assignment_decision_revision": replacement["assignment_revision"],
+            "decision": "assign-best-fit",
+        }
+        try:
+            current_replacement(
+                target_root, replacement, {"id": replacement_identity["slice_id"], "revision": replacement_identity["plan_revision"]}
+            )
+        except (ValueError, OSError, KeyError) as error:
+            assignment_gate = {
+                **assignment_gate,
+                "status": "blocked",
+                "implementation_allowed": False,
+                "required_next_action": str(error),
+                "silent_local_fallback_allowed": False,
+            }
     recommendation = runtime_resolution["recommendation"]
     if recommendation == "stay-local":
         quality_tradeoff = "Stay direct when delegation overhead is not justified or local bounded execution is sufficient."
@@ -45817,7 +46186,6 @@ def _execution_posture_payload(
                 for item in _list_payload(plan_record.get("references"))
                 if isinstance(item, dict) and str(item.get("target") or item.get("label") or "").strip()
             ]
-            + _plan_exact_list(plan_record, "context_budget.live working set")
         )
         enhanced_gate = {
             **assignment_gate,
@@ -45832,6 +46200,7 @@ def _execution_posture_payload(
             "allowed_effects": allowed_effects,
             "allowed_paths": assignment_paths,
             "dispatch_adapter": {
+                "execution_configuration": assignment_decision.get("selected_execution_configuration"),
                 "kind": str((target or {}).get("dispatch_adapter_kind") or ""),
                 "command": list((target or {}).get("dispatch_command") or []),
                 "output_mode": str((target or {}).get("dispatch_output_mode") or "stdout"),
@@ -45888,6 +46257,7 @@ def _execution_posture_payload(
                     "target_name": enhanced_gate.get("selected_target"),
                     "assignment_gate": enhanced_gate,
                     "assignment_policy": assignment_policy,
+                    **({"execution_choice": execution_choice} if execution_choice is not None else {}),
                     "delegation_decision": enhanced_delegation,
                     "structural_proof_receipt_ref": proof_ref,
                     "current_attempt": {
@@ -45937,6 +46307,7 @@ def _execution_posture_payload(
         cli_invoke=config.cli_invoke,
         task_text=str(task_text or ""),
         changed_paths=changed_paths,
+        canonical_assignment=current_assignment if replacement and not materialize_assignment else None,
     )
     task_assignment_disposition = _task_assignment_disposition_payload(
         assignment_decision=assignment_decision,
@@ -45945,6 +46316,7 @@ def _execution_posture_payload(
         effective_orchestration=effective_orchestration,
         decomposition_delegation=decomposition_delegation,
         delegation_decision=delegation_decision,
+        binding_replacement=bool(replacement),
     )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
@@ -46032,6 +46404,7 @@ def _task_assignment_disposition_payload(
     effective_orchestration: dict[str, Any],
     decomposition_delegation: dict[str, Any] | None = None,
     delegation_decision: dict[str, Any] | None = None,
+    binding_replacement: bool = False,
 ) -> dict[str, Any]:
     orchestration_assignment = _as_dict(effective_orchestration.get("assignment"))
     binding_orchestrator = (
@@ -46054,6 +46427,9 @@ def _task_assignment_disposition_payload(
     elif action_status == "direct-current-target":
         outcome = "execute-here"
         evaluated_state = "evaluated-local"
+    elif binding_replacement:
+        outcome = "delegate-bounded-slice" if action_status in {"ready", "reconciliation-required"} else "blocked-unavailable"
+        evaluated_state = "delegated" if outcome == "delegate-bounded-slice" else "transport-blocked"
     elif not binding_orchestrator and orchestration_assignment.get("policy") == "local-preferred":
         # The absence of a configured assignment target is the ordinary quiet
         # local case, not an unavailable child transport. Mandatory child
@@ -52635,6 +53011,16 @@ def _proof_receipt_publication_transaction(*, target_root: Path, producer_receip
         raise
 
 
+def _proof_publication_identity(receipt: dict[str, Any]) -> dict[str, Any]:
+    identity = {key: receipt.get(key) for key in ("command", "result", "changed_paths", "proof_subject", "target_context")}
+    identity["target_context"] = receipt.get("target_context", {})
+    identity["proof_commands"] = receipt.get("proof_commands", [])
+    for field in ("task_claim_judgment", "assignment_proof_obligation", "assignment_proof_binding", "assignment_closeout_lineage"):
+        if field in receipt:
+            identity[field] = receipt[field]
+    return identity
+
+
 def _existing_proof_publication_receipt(
     *,
     target_root: Path,
@@ -52672,6 +53058,7 @@ def _existing_proof_publication_receipt(
         "assignment_proof_obligation",
         "assignment_proof_binding",
         "assignment_closeout_lineage",
+        "task_claim_judgment",
     ):
         if existing.get(field) != receipt.get(field):
             raise WorkspaceUsageError("Prior proof publication identity collides with different receipt semantics.")
@@ -53147,6 +53534,19 @@ def _record_proof_receipt_payload(
         changed_paths=receipt["changed_paths"],
         command=command,
     )
+    if str(task_text or "").strip() and receipt_claim_sufficiency == "sufficient":
+        work = _live_assignment_plan_binding(target_root=target_root, task_text=str(task_text), changed_paths=receipt["changed_paths"])
+        from agentic_workspace.decision import direct_task_subject
+
+        receipt["task_claim_judgment"] = {
+            "task_identity": direct_task_subject(str(task_text), receipt["changed_paths"]),
+            "work_ref": work.get("plan_ref", ""),
+            "work_revision": work.get("plan_revision", ""),
+            "proof_subject_fingerprint": receipt["proof_subject"]["fingerprint"],
+            "claim_class": "slice_complete",
+            "status": "sufficient",
+            "authority": "acting-agent-task-judgment",
+        }
     receipt["producer_class"] = "aw-proof"
     receipt["authority"] = "aw-proof"
     assignment_obligation = _integrated_assignment_proof_obligation(
@@ -53257,19 +53657,7 @@ def _record_proof_receipt_payload(
         }
         receipt["assignment_closeout_lineage"] = closeout_lineage
     receipt = _proof_receipt_redact_sensitive_data(receipt)
-    publication_identity = {
-        "command": command,
-        "result": result,
-        "changed_paths": receipt["changed_paths"],
-        "proof_subject": receipt.get("proof_subject", {}),
-        "target_context": target_context,
-        "proof_commands": aggregate_commands,
-    }
-    if "assignment_proof_obligation" in receipt:
-        publication_identity["assignment_proof_obligation"] = receipt["assignment_proof_obligation"]
-        publication_identity["assignment_proof_binding"] = receipt.get("assignment_proof_binding")
-    if "assignment_closeout_lineage" in receipt:
-        publication_identity["assignment_closeout_lineage"] = receipt["assignment_closeout_lineage"]
+    publication_identity = _proof_publication_identity(receipt)
     producer_receipt_id = hashlib.sha256(json.dumps(publication_identity, sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()[
         :16
     ]
@@ -53333,35 +53721,12 @@ def _record_proof_receipt_payload(
                     },
                 )
             if target_context and publish_trusted_producer:
-                proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
-                try:
-                    calibration = {
-                        "status": "recorded",
-                        "record": _record_aw_proof_delegation_outcome(
-                            target_root=target_root,
-                            delegation_target=target_context["delegation_target"],
-                            task_class=target_context["task_class"],
-                            scope_class=target_context["scope_class"],
-                            outcome=proof_outcome,
-                            proof_receipt_ref=producer_receipt_ref,
-                            idempotency_key=producer_receipt_id,
-                            review_burden="light" if proof_outcome == "success" else "high",
-                            handoff_sufficiency="sufficient" if proof_outcome == "success" else "insufficient",
-                            escalation_required=proof_outcome != "success",
-                        )["recorded"],
-                        "target_context": target_context,
-                        "source_ref": producer_receipt_ref,
-                        "rule": "Ordinary proof receipts feed delegation evidence only after producer-store resolution and target-context matching.",
-                    }
-                except WorkspaceUsageError as exc:
-                    if "duplicate evidence" not in str(exc):
-                        raise
-                    calibration = {
-                        "status": "already-recorded",
-                        "target_context": target_context,
-                        "source_ref": producer_receipt_ref,
-                        "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
-                    }
+                calibration = {
+                    "status": "non-calibrating",
+                    "reason": "proof-result-does-not-establish-target-responsibility",
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Assignment/result owners may nominate attributed evidence after integration and bound proof; proof publication alone cannot establish target quality or handoff/review burden.",
+                }
             elif publish_trusted_producer:
                 calibration = assignment_context
             else:
@@ -61669,28 +62034,28 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
     review_burden: str = "normal",
     escalation_required: bool = False,
     responsibility_evidence: dict[str, Any] | None = None,
+    assignment_context: dict[str, Any] | None = None,
+    context_cost: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     from agentic_workspace.orchestration import attribute_orchestration_outcome
 
-    assignment_context = _trusted_producer_assignment_context(target_root=target_root)
+    assignment_context = assignment_context or _trusted_producer_assignment_context(target_root=target_root)
     target_context = _as_dict(assignment_context.get("target_context"))
     if not target_context:
         return assignment_context
     if producer_class not in _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS:
         raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
     attribution_input = {
+        **dict(responsibility_evidence or {}),
         "admitted": True,
-        "target_executed": True,
-        "context_sufficient": True,
-        "transport_sufficient": True,
-        "worker_succeeded": outcome == "success",
         "assignment_id": target_context.get("assignment_id"),
         "assignment_revision": target_context.get("assignment_revision"),
         "run_id": target_context.get("run_id"),
         "target": target_context.get("delegation_target"),
         "task_class": target_context.get("task_class"),
-        **dict(responsibility_evidence or {}),
+        "slice_id": target_context.get("slice_id"),
+        "semantic_revision": target_context.get("semantic_revision"),
     }
     attribution = attribute_orchestration_outcome(evidence=attribution_input)
     if not _as_dict(attribution.get("routing_effect")).get("target_evidence_allowed"):
@@ -61751,6 +62116,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
             },
             "source_payload": source_payload,
             "responsibility_attribution": attribution,
+            "context_cost": context_cost,
             "idempotency_key": stable_key,
         },
     )
@@ -61777,6 +62143,7 @@ def _record_trusted_assignment_outcome_from_ordinary_boundary(
             confidence="low",
             idempotency_key=stable_key,
             trusted_producer_receipt=receipt,
+            context_cost=context_cost,
         )
     except WorkspaceUsageError as exc:
         if "duplicate evidence" not in str(exc):
@@ -66121,6 +66488,106 @@ def _final_response_closeout_trust_for_admission(
 _DIRECT_CLOSEOUT_RESIDUE_KINDS = {"issue", "planning", "memory", "docs", "review", "none"}
 
 
+def _batch_task_judgment(context: dict[str, Any]) -> dict[str, Any]:
+    """Batch current owner observations without retaining a cache or authority."""
+    from agentic_workspace.decision import task_judgment
+
+    field = "receipts" if context.get("action") == "candidates" else "observations"
+    items = list(context.get(field, []))
+    results = [task_judgment({**context, field: items[offset : offset + 128]}) for offset in range(0, max(1, len(items)), 128)]
+    if field == "receipts":
+        return {"indices": [offset * 128 + index for offset, result in enumerate(results) for index in result["indices"]]}
+    return results[0] if len(results) == 1 else task_judgment({"action": "summarize", "batches": results})
+
+
+def _current_task_claim_judgment(
+    *,
+    target_root: Path,
+    task_text: str,
+    changed_paths: list[str],
+    manual_verification: dict[str, Any],
+    separation_of_duty: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    """Keep reusable execution evidence separate from current semantic acceptance."""
+    from agentic_workspace.assignment_lifecycle import load_indexed_assignment_task_proof
+    from agentic_workspace.workspace_runtime_proof import _read_proof_receipt_records, _receipt_subject_freshness
+
+    work = _live_assignment_plan_binding(target_root=target_root, task_text=task_text, changed_paths=changed_paths)
+    records, _, _, _ = _read_proof_receipt_records(target_root)
+    context = {
+        "task": task_text,
+        "changed_paths": changed_paths,
+        "work_ref": str(work.get("plan_ref") or ""),
+        "work_revision": str(work.get("plan_revision") or ""),
+    }
+    records = records or []
+    candidates = _batch_task_judgment({"action": "candidates", **context, "receipts": records})["indices"]
+    observations = []
+    for index in candidates:
+        receipt = records[index]
+        judgment = _as_dict(receipt.get("task_claim_judgment"))
+        publication_id = str(receipt.get("publication_id") or "")
+        indexed = load_indexed_assignment_task_proof(target_root=target_root, receipt_ref=f"proof://receipts/{publication_id}")
+        expected_id = hashlib.sha256(
+            json.dumps(_proof_publication_identity(receipt), sort_keys=True, ensure_ascii=True).encode("utf-8")
+        ).hexdigest()[:16]
+        publication_current = publication_id == expected_id and indexed.get("task_claim_judgment") == judgment
+        sufficient = publication_current and proof_receipt_admission(receipt)["proof_sufficient"]
+        freshness = (
+            _receipt_subject_freshness(
+                target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=str(receipt.get("command") or "")
+            ).get("status", "unverifiable")
+            if sufficient
+            else "unverifiable"
+        )
+        observations.append(
+            {
+                "receipt": receipt,
+                "publication_current": publication_current,
+                "proof_sufficient": bool(sufficient),
+                "evidence_freshness": freshness,
+            }
+        )
+    classified = _batch_task_judgment(
+        {
+            "action": "classify",
+            **context,
+            "observations": observations,
+            "manual_required": manual_verification.get("expected") is True,
+            "manual_status": str(manual_verification.get("status") or ""),
+            "independent_required": bool(separation_of_duty),
+            "independent_status": str(separation_of_duty.get("status") or ""),
+        }
+    )
+    manual_missing = classified["manual_missing"]
+    independent_missing = classified["independent_missing"]
+    status = classified["status"]
+    request = {
+        "task": task_text,
+        "changed_paths": changed_paths,
+        "work_ref": work.get("plan_ref", ""),
+        "work_revision": work.get("plan_revision", ""),
+        "acceptance_source": {"source": "current-task", "requested_outcome": task_text},
+        "judgment_required": "Does the current changed scope and admitted evidence satisfy this exact requested outcome?",
+        "manual_verification": manual_verification if manual_missing else {},
+        "independent_review": separation_of_duty if independent_missing else {},
+        "owner_route": f"{cli_invoke} proof --target . --task {json.dumps(task_text)} --changed "
+        + " ".join(json.dumps(path) for path in changed_paths)
+        + " --format json",
+        "judgment_ingress": "Use the existing proof --record-receipt --task with --receipt-claim-sufficiency sufficient only after judging this exact task against its evidence. Required independent or manual evidence must enter its selected owner first.",
+    }
+    return {
+        "status": status,
+        "claim_class": "slice_complete",
+        "work_ref": work.get("plan_ref", ""),
+        "work_revision": work.get("plan_revision", ""),
+        "current_judgment_count": classified["current_judgment_count"],
+        "unresolved_judgment": request if status != "accepted" else {},
+        "rule": "Command success remains reusable validation; only current scoped semantic judgment can support a task completion claim, and it cannot replace required independent or manual evidence.",
+    }
+
+
 def _direct_task_terminal_outcome_contract(*, closeout_trust: dict[str, Any], residue_kind: str, residue_owner: str) -> dict[str, Any]:
     current_task_closeout = _as_dict(closeout_trust.get("current_task_closeout"))
     scope = _as_dict(current_task_closeout.get("scope"))
@@ -66139,6 +66606,7 @@ def _direct_task_terminal_outcome_contract(*, closeout_trust: dict[str, Any], re
         current_task_closeout.get("status") != "active"
         or scope.get("relationship") != "bounded-current-task"
         or proof_state.get("status") != "recorded-and-accepted"
+        or _as_dict(proof_state.get("task_claim_judgment")).get("status") != "accepted"
         or receipt_reconciliation.get("status") != "accepted"
         or normalized_residue_kind not in _DIRECT_CLOSEOUT_RESIDUE_KINDS
         or normalized_residue_kind == "none"
@@ -66199,6 +66667,7 @@ def _direct_task_terminal_outcome_contract(*, closeout_trust: dict[str, Any], re
         authorization["source"] = "current_task_closeout.proof_state+final_response.structured_residue"
         authorization["proof_authority"] = {
             "status": proof_state.get("status"),
+            "task_claim_judgment": proof_state.get("task_claim_judgment", {}),
             "receipt_reconciliation": receipt_reconciliation,
             "changed_paths": changed_paths,
         }
@@ -66240,18 +66709,56 @@ def _final_response_terminal_contract(*, closeout_trust: dict[str, Any], residue
     )
 
 
-def _current_assignment_lifecycle_record(*, target_root: Path) -> dict[str, Any]:
+def _current_assignment_lifecycle_record(
+    *,
+    target_root: Path,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
+    planning_binding: dict[str, Any] | None = None,
+    assignment_id: str | None = None,
+) -> dict[str, Any]:
     assignment_root = target_root / ".agentic-workspace" / "planning" / "assignments"
     if not assignment_root.exists():
         return {}
     candidates: list[tuple[str, str, str, dict[str, Any]]] = []
-    for path in sorted(assignment_root.glob("*.assignment.json")):
+    if assignment_id is not None and not re.fullmatch(r"[A-Za-z0-9_-]+", assignment_id):
+        return {}
+    paths = (
+        [assignment_root / f"{assignment_id}.assignment.json"]
+        if assignment_id is not None
+        else sorted(assignment_root.glob("*.assignment.json"))
+    )
+    for path in paths:
         try:
             payload = json.loads(path.read_text(encoding="utf-8-sig"))
         except (OSError, json.JSONDecodeError):
             continue
         if not isinstance(payload, dict):
             continue
+        if assignment_id is not None and payload.get("assignment_id") != assignment_id:
+            continue
+        if planning_binding is not None:
+            gate = _as_dict(payload.get("assignment_gate"))
+            if (
+                not planning_binding.get("plan_ref")
+                or not planning_binding.get("plan_revision")
+                or payload.get("status") != "current"
+                or not payload.get("execution_choice")
+                or gate.get("plan_ref") != planning_binding["plan_ref"]
+                or gate.get("plan_revision") != planning_binding["plan_revision"]
+                or (changed_paths and sorted(gate.get("allowed_paths") or []) != sorted(changed_paths))
+            ):
+                continue
+        if task_text is not None:
+            identity = _as_dict(_as_dict(payload.get("replacement_packet")).get("assignment_identity"))
+            if not identity and payload.get("execution_choice"):
+                identity = _as_dict(payload.get("assignment_gate"))
+            if (
+                payload.get("status") != "current"
+                or " ".join(str(identity.get("human_intent") or "").split()) != " ".join(task_text.split())
+                or sorted(identity.get("allowed_paths") or []) != sorted(changed_paths or [])
+            ):
+                continue
         attempt = _as_dict(payload.get("current_attempt"))
         observed = str(attempt.get("updated_at") or payload.get("updated_at") or payload.get("created_at") or "").strip()
         status_rank = "1" if str(payload.get("status") or "").strip() == "current" else "0"
@@ -66262,11 +66769,13 @@ def _current_assignment_lifecycle_record(*, target_root: Path) -> dict[str, Any]
         candidates.append((status_rank, observed, source_path, {**payload, "_source_path": source_path}))
     if not candidates:
         return {}
+    if planning_binding is not None and len(candidates) > 1:
+        raise ValueError("configuration-choice-planning-subject-ambiguous")
     return sorted(candidates, key=lambda item: (item[0], item[1], item[2]))[-1][3]
 
 
-def _delegated_worker_kernel_payload(*, target_root: Path) -> dict[str, Any]:
-    assignment = _current_assignment_lifecycle_record(target_root=target_root)
+def _delegated_worker_kernel_payload(*, target_root: Path, assignment_id: str | None = None) -> dict[str, Any]:
+    assignment = _current_assignment_lifecycle_record(target_root=target_root, assignment_id=assignment_id)
     if not assignment:
         return {
             "kind": "agentic-workspace/delegated-worker-kernel/v1",

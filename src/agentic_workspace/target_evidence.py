@@ -91,7 +91,8 @@ def _canonical_target_key(profile: DelegationTargetProfile | None, fallback: str
 def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
     outcome_score = {"success": 1.0, "mixed": 0.0, "failed": -1.0}[record.outcome]
     handoff_score = {"sufficient": 0.25, "borderline": 0.0, "insufficient": -0.25}[record.handoff_sufficiency]
-    review_score = {"light": 0.25, "normal": 0.0, "high": -0.25}[record.review_burden]
+    # Unknown review burden gives no quality adjustment; it is not a measured zero cost.
+    review_score = {"light": 0.25, "normal": 0.0, "high": -0.25, "unknown": 0.0}[record.review_burden]
     escalation_score = -0.5 if record.escalation_required else 0.0
     return outcome_score + handoff_score + review_score + escalation_score
 
@@ -205,16 +206,31 @@ def _context_cost_penalty(context_cost: dict[str, Any]) -> int:
 
 
 def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[dict[str, Any]]:
-    by_transport: dict[str, list[dict[str, Any]]] = {}
+    by_transport: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for record in records:
         context_cost = record.context_cost if isinstance(record.context_cost, dict) else {}
         transport = str(context_cost.get("transport") or "").strip()
         if transport:
-            by_transport.setdefault(transport, []).append(context_cost)
+            by_transport.setdefault((transport, str(context_cost.get("configuration_context") or "")), []).append(context_cost)
     summaries: list[dict[str, Any]] = []
-    for transport in sorted(by_transport):
-        costs = by_transport[transport]
-        penalties = [_context_cost_penalty(cost) for cost in costs]
+    for transport, context in sorted(by_transport):
+        costs = by_transport[(transport, context)]
+        burden_fields = (
+            "effective_input_tokens",
+            "output_tokens",
+            "elapsed_ms",
+            "orientation_command_count",
+            "retry_count",
+            "repair_loop_count",
+        )
+        burden_support = {}
+        for field in burden_fields:
+            values = [cost[field] for cost in costs if isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool)]
+            if values:
+                burden_support[field] = {
+                    "record_count": len(values),
+                    "average_penalty": sum(_context_cost_penalty({field: value}) for value in values) / len(values),
+                }
         observed_context_cost = {
             field: round(
                 sum(int(cost[field]) for cost in costs if isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool))
@@ -248,11 +264,24 @@ def _transport_cost_summaries(records: list[DelegationOutcomeRecord]) -> list[di
         summaries.append(
             {
                 "transport": transport,
+                **({"configuration_context": context} if context else {}),
                 "record_count": len(costs),
-                "expected_burden_component": round(sum(penalties) / len(penalties)),
+                "expected_burden_component": round(sum(item["average_penalty"] for item in burden_support.values()))
+                if burden_support
+                else None,
+                "burden_metric_support": burden_support,
+                "burden_aggregation": "sum-of-observed-metric-means-not-a-measured-lifecycle-total",
                 "observed_context_cost": observed_context_cost,
+                "observed_metric_counts": {
+                    field: sum(isinstance(cost.get(field), int) and not isinstance(cost.get(field), bool) for cost in costs)
+                    for field in observed_context_cost
+                },
                 "observable_fields": observable_fields,
-                "unknown_metric_state": "partial-or-unobserved" if any(cost.get("unknown_fields") for cost in costs) else "observed",
+                "unknown_metric_state": "partial-or-unobserved"
+                if any(cost.get("unknown_fields") for cost in costs)
+                or any(item["record_count"] < len(costs) for item in burden_support.values())
+                or len(burden_support) < len(burden_fields)
+                else "observed",
                 "supporting_adapter_revisions": sorted(
                     {str(cost.get("adapter_revision") or "") for cost in costs if str(cost.get("adapter_revision") or "")}
                 ),
@@ -265,9 +294,7 @@ def _complexity_reduction_signal(records_by_target: dict[str, list[DelegationOut
     repeated_contexts: list[dict[str, Any]] = []
     for target_name in sorted(records_by_target):
         records_by_context: dict[str, list[tuple[int, DelegationOutcomeRecord, list[str]]]] = {}
-        for index, record in enumerate(records_by_target[target_name]):
-            if record.admission_state not in CURRENT_ADMISSION_STATES:
-                continue
+        for index, record in _currently_admitted_records(list(enumerate(records_by_target[target_name]))):
             reasons = _record_complexity_burden_reasons(record)
             if not reasons:
                 continue
@@ -645,6 +672,7 @@ def assignment_decision_from_policy(
     runtime_resolution: dict[str, Any],
     target_evidence: dict[str, Any],
     human_intent: str = "",
+    execution_choice: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     policy_value = str(assignment_policy.get("assignment_policy", {}).get("value") or "local-preferred")
     current_target = str(assignment_policy.get("current_target", {}).get("value") or "")
@@ -703,6 +731,9 @@ def assignment_decision_from_policy(
         required_action = str(profile.get("required_action") or "")
         location = str(profile.get("location") or "")
         execution_methods = [str(item) for item in profile.get("execution_methods", []) if str(item).strip()]
+        route_rows = profile.get("execution_configurations")
+        if isinstance(route_rows, list):
+            execution_methods = [row["configuration"]["transport"] for row in route_rows if row["eligible"]]
         human_control_modes = [str(item) for item in profile.get("human_control_modes", []) if str(item).strip()]
         proof_requirements = [str(item) for item in profile.get("proof_requirements", []) if str(item).strip()]
         hard_rejection_reasons: list[str] = []
@@ -740,29 +771,40 @@ def assignment_decision_from_policy(
         current_target_component = 5 if current_target_matches_profile else 0
         transport_options: list[dict[str, Any]] = []
         for method_index, method in enumerate(execution_methods):
+            configuration = (
+                [row["configuration"] for row in route_rows if row["eligible"]][method_index] if isinstance(route_rows, list) else {}
+            )
+            comparison_context = _as_dict(configuration.get("execution")).get("comparison_context")
             matching_transport_costs = [
                 cost
                 for evidence in matching_evidence
                 for cost in evidence.get("transport_costs", [])
-                if isinstance(cost, dict) and str(cost.get("transport") or "") == method
+                if isinstance(cost, dict)
+                and str(cost.get("transport") or "") == method
+                and (not configuration or (comparison_context and cost.get("configuration_context") == comparison_context))
+            ]
+            known_burdens = [
+                cost["expected_burden_component"]
+                for cost in matching_transport_costs
+                if isinstance(cost.get("expected_burden_component"), int) and not isinstance(cost.get("expected_burden_component"), bool)
             ]
             transport_option: dict[str, Any] = {
                 "transport": method,
-                "expected_burden": round(
-                    sum(int(cost.get("expected_burden_component") or 0) for cost in matching_transport_costs)
-                    / len(matching_transport_costs)
-                )
-                if matching_transport_costs
-                else 0,
+                "expected_burden": round(sum(known_burdens) / len(known_burdens)) if known_burdens else None,
                 "evidence_state": "admitted-contextual" if matching_transport_costs else "unknown",
                 "record_count": sum(int(cost.get("record_count") or 0) for cost in matching_transport_costs),
                 "configured_order": method_index,
             }
+            if isinstance(route_rows, list):
+                transport_option["execution_configuration"] = configuration
             observed_fields = {field for cost in matching_transport_costs for field in _as_dict(cost.get("observed_context_cost"))}
             observed_context_cost = {}
             for field in sorted(observed_fields):
                 weighted_values = [
-                    (int(_as_dict(cost.get("observed_context_cost"))[field]), max(1, int(cost.get("record_count") or 1)))
+                    (
+                        int(_as_dict(cost.get("observed_context_cost"))[field]),
+                        max(1, int(_as_dict(cost.get("observed_metric_counts")).get(field) or cost.get("record_count") or 1)),
+                    )
                     for cost in matching_transport_costs
                     if isinstance(_as_dict(cost.get("observed_context_cost")).get(field), int)
                 ]
@@ -775,9 +817,17 @@ def assignment_decision_from_policy(
             transport_options.append(transport_option)
         selected_transport_option = (
             max(transport_options, key=lambda item: (int(item["expected_burden"]), -int(item["configured_order"])))
+            if transport_options and all(item["expected_burden"] is not None for item in transport_options)
+            else transport_options[0]
             if transport_options
             else {}
         )
+        if execution_choice is not None and execution_choice.get("target") == target:
+            selected_transport_option = next(
+                (option for option in transport_options if option.get("execution_configuration") == execution_choice), {}
+            )
+            if not selected_transport_option:
+                raise ValueError("configuration-choice-ineligible")
         selected_transport = str(selected_transport_option.get("transport") or "")
         transport_burden_component = int(selected_transport_option.get("expected_burden") or 0)
         burden_component = transport_burden_component + target_cost_component + current_economic_component + target_latency_component
@@ -788,7 +838,8 @@ def assignment_decision_from_policy(
                 burden_component += 2
         matching_uncertainty = uncertainty_by_target.get(target_identity_ref, []) or uncertainty_by_target.get(target, [])
         uncertainty_component = -5 * len(matching_uncertainty)
-        probe_value_component = 5 if not matching_evidence and eligible else 0
+        # Absence of observations is not an economic exploration reward.
+        probe_value_component = 0
         score = (
             declared_fit_score
             + recommendation_component
@@ -805,7 +856,7 @@ def assignment_decision_from_policy(
         }
         continuation = (
             "manual-handoff"
-            if required_action == "manual-handoff-required"
+            if required_action == "manual-handoff-required" or selected_transport == "manual"
             else "delegated-validation"
             if eligible and task_is_validation
             else "delegated-implementation"
@@ -852,7 +903,9 @@ def assignment_decision_from_policy(
                 "ranking_reasons": [current_economic_reason],
                 "latency_class": latency_class,
                 "selected_transport": selected_transport or None,
+                "selected_execution_configuration": selected_transport_option.get("execution_configuration"),
                 "transport_options": transport_options,
+                "configuration_rejections": [row for row in (route_rows or []) if not row["eligible"]],
                 "required_action": required_action or "none",
                 "continuation": continuation,
                 "permitted_continuation": continuation,
@@ -972,6 +1025,14 @@ def assignment_decision_from_policy(
     if downroute_required and downroute_candidates:
         eligible_candidates = downroute_candidates
         selected_target = eligible_candidates[0]["target"]
+    if execution_choice is not None:
+        chosen = next((item for item in eligible_candidates if item.get("selected_execution_configuration") == execution_choice), None)
+        if chosen is None:
+            raise ValueError("configuration-choice-owner-ineligible")
+        if policy_value == "local-preferred" and chosen is not current_candidate:
+            raise ValueError("configuration-choice-conflicts-with-local-policy")
+        eligible_candidates = [chosen] + [item for item in eligible_candidates if item is not chosen]
+        selected_target = chosen["target"]
     tied_candidates: list[dict[str, Any]] = []
     if eligible_candidates:
         top_score = int(eligible_candidates[0]["score"])
@@ -1013,7 +1074,7 @@ def assignment_decision_from_policy(
             canonical_outcome = "planning-review-escalation"
             selected_target = None
             next_action = "resolve local-preferred current_target eligibility before execution"
-    elif len(tied_candidates) > 1:
+    elif len(tied_candidates) > 1 and execution_choice is None:
         decision = "tie"
         canonical_outcome = "planning-review-escalation"
         selected_target = None
@@ -1064,7 +1125,9 @@ def assignment_decision_from_policy(
         "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
         "selected_target_revision": selected_candidate.get("target_revision"),
         "selected_transport": selected_candidate.get("selected_transport"),
+        "selected_execution_configuration": selected_candidate.get("selected_execution_configuration"),
         "candidate_scores": candidate_scores,
+        "execution_choice": execution_choice,
         "human_intent": " ".join(human_intent.split()),
     }
     assignment_decision_revision = (
@@ -1083,6 +1146,7 @@ def assignment_decision_from_policy(
         "selected_target_identity_ref": selected_candidate.get("target_identity_ref"),
         "selected_target_revision": selected_candidate.get("target_revision"),
         "selected_transport": selected_candidate.get("selected_transport"),
+        "selected_execution_configuration": selected_candidate.get("selected_execution_configuration"),
         "assignment_decision_revision": assignment_decision_revision,
         "task_class": requested_task_class or None,
         "scope_class": requested_scope_class or None,
@@ -1136,4 +1200,46 @@ def assignment_decision_from_policy(
         "record_count": target_evidence.get("record_count", 0),
         "claim_boundary": assignment_policy.get("binding", {}).get("claim_boundary", "assignment policy unresolved"),
         "rule": "Assignment decisions preserve policy, contextual target evidence, and runtime suitability as separate inputs; learned evidence cannot override hard policy or capability prohibitions.",
+    }
+
+
+def replacement_eligibility(
+    *, decision: dict[str, Any], work: dict[str, Any], execution: dict[str, Any], packet_integrity: str
+) -> dict[str, Any]:
+    """Project hard eligibility from the same owner result used before ordinary ranking.
+
+    A source answer replaces selection only. Scores and a different preferred
+    candidate cannot reject an otherwise eligible exact replacement.
+    """
+    candidates = [row for row in decision.get("candidate_scores", []) if row.get("target") == execution["target"]]
+    candidate = candidates[0] if len(candidates) == 1 else {}
+    facts = {
+        key: candidate.get(key)
+        for key in (
+            "target",
+            "target_identity_ref",
+            "target_revision",
+            "eligible",
+            "hard_rejection_reasons",
+            "eligibility",
+            "required_action",
+            "permitted_continuation",
+        )
+    }
+    transports = [row.get("transport") for row in candidate.get("transport_options", [])]
+    eligible = (
+        candidate.get("eligible") is True
+        and not candidate.get("hard_rejection_reasons")
+        and candidate.get("target_identity_ref") == execution["target_identity_ref"]
+        and candidate.get("target_revision") == execution["target_revision"]
+        and execution["transport"] in transports
+        and candidate.get("permitted_continuation") in {"manual-handoff", "delegated-validation", "delegated-implementation"}
+    )
+    return {
+        "owner": "assignment",
+        "eligible": eligible,
+        "work": work,
+        "execution": execution,
+        "packet_integrity": packet_integrity,
+        "candidate": facts,
     }

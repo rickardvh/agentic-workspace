@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Admit exact assignment replacements from the local configuration owner and derive current sealed handoffs through the shared Rust authority."
+issues = [2210, 2916, 2947, 2817, 2909]

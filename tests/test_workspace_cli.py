@@ -8832,7 +8832,13 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
     manifest_path.write_bytes(repo_owned_manifest)
     _write(tmp_path / "docs" / "upgrade.md", "# Upgrade replay\n")
     _write(tmp_path / "pyproject.toml", '[project]\nname = "upgrade-replay"\nversion = "0.0.0"\n')
-    _write(tmp_path / "Makefile", "test:\n\tpython -m pytest tests/test_upgrade_replay.py -q\n")
+    _write(
+        tmp_path / "Makefile",
+        "test:\n\tpython -m pytest tests/test_upgrade_replay.py -q\n"
+        "maintainer-surfaces:\n\tpython -m py_compile tests/test_upgrade_replay.py\n"
+        "lint-workspace:\n\tpython -m py_compile tests/test_upgrade_replay.py\n"
+        "typecheck:\n\tpython -m py_compile tests/test_upgrade_replay.py\n",
+    )
     _write(tmp_path / "tests" / "test_upgrade_replay.py", "def test_upgrade_replay():\n    assert True\n")
     changed_paths = ["docs/upgrade.md", "tests/test_upgrade_replay.py"]
     execplan_dir = tmp_path / ".agentic-workspace" / "planning" / "execplans"
@@ -8923,6 +8929,8 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
                     "passed",
                     "--receipt-claim-sufficiency",
                     "sufficient",
+                    "--task",
+                    task,
                     "--format",
                     "json",
                 ]
@@ -9015,6 +9023,145 @@ def test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp
     )
     assert rejected["status"] == "rejected_auto_resumed"
     assert rejected["authoritative_response"] == {}
+
+
+def test_direct_task_claim_does_not_reuse_unrelated_or_unbound_judgment(tmp_path: Path, capsys) -> None:
+    test_upgrade_replay_preserves_context_through_proof_and_bounded_closeout(tmp_path, capsys)
+    task = "Upgrade the installed workspace without losing the active task"
+    changed = ["docs/upgrade.md", "tests/test_upgrade_replay.py"]
+
+    def report_for(current_task: str) -> dict:
+        assert (
+            cli.main(
+                [
+                    "report",
+                    "--target",
+                    str(tmp_path),
+                    "--section",
+                    "closeout_trust",
+                    "--task",
+                    current_task,
+                    "--changed",
+                    *changed,
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        return json.loads(capsys.readouterr().out)["answer"]["current_task_closeout"]["proof_state"]
+
+    def reject_claim(current_task: str) -> None:
+        assert (
+            cli.main(
+                [
+                    "final-response",
+                    "admit",
+                    "--target",
+                    str(tmp_path),
+                    "--attempt",
+                    "This task slice is complete.",
+                    "--claim-class",
+                    "slice-complete",
+                    "--claim-scope-id",
+                    "direct_task_closeout:slice_complete",
+                    "--task",
+                    current_task,
+                    "--changed",
+                    *changed,
+                    "--residue",
+                    "issue",
+                    "--residue-owner",
+                    "GitHub issue #2334",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        result = json.loads(capsys.readouterr().out)
+        assert result["status"] != "accepted_bounded_report"
+
+    unrelated = "Implement payment validation with independent domain review"
+    state = report_for(unrelated)
+    assert state["status"] == "recorded-and-accepted"  # Generic execution remains reusable.
+    assert state["task_claim_judgment"]["status"] == "task-judgment-required"
+    assert state["task_claim_judgment"]["unresolved_judgment"]["task"] == unrelated
+    reject_claim(unrelated)
+
+    original = (tmp_path / changed[0]).read_bytes()
+    (tmp_path / changed[0]).write_bytes(original + b"\nA materially changed requirement.\n")
+    assert report_for(task)["task_claim_judgment"]["status"] != "accepted"
+    reject_claim(task)
+    (tmp_path / changed[0]).write_bytes(original)
+    assert report_for(task)["task_claim_judgment"]["status"] == "accepted"
+    makefile = tmp_path / "Makefile"
+    original_makefile = makefile.read_bytes()
+    makefile.write_text("test:\n\tpython -m pytest tests/test_upgrade_replay.py -q\n", encoding="utf-8")
+    manual = report_for(task)
+    assert manual["manual_verification_expected"] is True
+    assert manual["task_claim_judgment"]["status"] == "manual-evidence-required"
+    assert manual["task_claim_judgment"]["unresolved_judgment"]["manual_verification"]["expected"] is True
+    reject_claim(task)
+    makefile.write_bytes(original_makefile)
+    configuration = tmp_path / ".agentic-workspace/config.toml"
+    original_configuration = configuration.read_bytes()
+    configuration.write_bytes(
+        original_configuration
+        + (
+            "\n[assurance.closeout_postures.domain_acceptance]\n"
+            'purpose = "Require independent domain acceptance."\n'
+            'applies_to_paths = ["docs/upgrade.md"]\n'
+            'required_evidence = ["domain_review_recorded"]\n'
+            'review_owner = "domain-reviewer"\n'
+            'claim_boundary = "upgrade-domain-acceptance"\n'
+        ).encode()
+    )
+    independent = report_for(task)["task_claim_judgment"]
+    assert independent["status"] == "independent-review-required"
+    assert independent["unresolved_judgment"]["independent_review"]["required_mode"] == "human"
+    reject_claim(task)
+    configuration.write_bytes(original_configuration)
+
+    # Old generic proof receipts are still valid executable evidence, but neither
+    # omission nor pasting a judgment onto their cache can create task authority.
+    local = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt = json.loads((local / "last.json").read_text(encoding="utf-8"))
+    commands = report_for(task)["expected_commands"]
+    judgment = receipt["task_claim_judgment"]
+    for path in (local / "last.json", local / "history.jsonl"):
+        path.unlink()
+    for command in commands:
+        assert (
+            cli.main(
+                [
+                    "proof",
+                    "--target",
+                    str(tmp_path),
+                    "--changed",
+                    *changed,
+                    "--record-receipt",
+                    "--receipt-command",
+                    command,
+                    "--receipt-result",
+                    "passed",
+                    "--receipt-claim-sufficiency",
+                    "sufficient",
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        capsys.readouterr()
+    state = report_for(task)
+    assert state["status"] == "recorded-and-accepted"
+    assert state["task_claim_judgment"]["status"] == "task-judgment-required"
+    reject_claim(task)
+    generic = json.loads((local / "last.json").read_text(encoding="utf-8"))
+    generic["task_claim_judgment"] = judgment
+    (local / "last.json").write_text(json.dumps(generic), encoding="utf-8")
+    assert report_for(task)["task_claim_judgment"]["status"] == "task-judgment-required"
 
 
 def test_upgrade_to_necessary_surfaces_repairs_missing_required_skills(tmp_path: Path, capsys) -> None:
@@ -17220,30 +17367,12 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert correction["phase_after"] == "review-proof"
     admissions = correction["calibration_admissions"]
     assert [item["producer_class"] for item in admissions] == ["human-review", "retry-outcome"]
-    assert [item["status"] for item in admissions] == ["recorded", "recorded"]
-    human_review_ref = admissions[0]["source_ref"]
-    retry_ref = admissions[1]["source_ref"]
-    human_review_receipt_id = human_review_ref.rsplit("/", 1)[-1]
-    retry_receipt_id = retry_ref.rsplit("/", 1)[-1]
-    human_review_receipt = json.loads(
-        (tmp_path / ".agentic-workspace" / "reviews" / "receipts" / f"{human_review_receipt_id}.json").read_text(encoding="utf-8")
-    )
-    retry_receipt = json.loads(
-        (tmp_path / ".agentic-workspace" / "local" / "retry-receipts" / f"{retry_receipt_id}.json").read_text(encoding="utf-8")
-    )
-    assert (
-        human_review_receipt["target_context"]
-        == retry_receipt["target_context"]
-        == {
-            "delegation_target": "fast_worker",
-            "task_class": "mechanical-follow-through",
-            "scope_class": "narrow-code-change",
-        }
-    )
-    assert human_review_receipt["authority"] == "human-review"
-    assert human_review_receipt["result"] == "changes-requested"
-    assert retry_receipt["authority"] == "local-outcome-ledger"
-    assert retry_receipt["result"] == "passed"
+    # A review comment and the resulting repair transition do not establish
+    # worker responsibility, successful retry, or observed review burden.
+    assert [item["status"] for item in admissions] == ["routed-to-responsible-owner", "routed-to-responsible-owner"]
+    assert all("source_ref" not in item for item in admissions)
+    assert not list((tmp_path / ".agentic-workspace/reviews/receipts").glob("*.json"))
+    assert not list((tmp_path / ".agentic-workspace/local/retry-receipts").glob("*.json"))
 
     assert (
         cli.main(
@@ -17355,38 +17484,14 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert closeout["review_stack_transition"]["phase_after"] == "review-closed"
     assert closeout["review_stack_transition"]["command_exit_code"] == 0
     assert [item["producer_class"] for item in closeout["calibration_admissions"]] == ["closeout-outcome", "handoff-outcome"]
-    assert [item["status"] for item in closeout["calibration_admissions"]] == ["recorded", "recorded"]
-    closeout_ref = closeout["calibration_admissions"][0]["source_ref"]
-    handoff_ref = closeout["calibration_admissions"][1]["source_ref"]
-    closeout_receipt_id = closeout_ref.rsplit("/", 1)[-1]
-    handoff_receipt_id = handoff_ref.rsplit("/", 1)[-1]
-    closeout_receipt = json.loads(
-        (tmp_path / ".agentic-workspace" / "local" / "closeout-receipts" / f"{closeout_receipt_id}.json").read_text(encoding="utf-8")
-    )
-    handoff_receipt = json.loads(
-        (tmp_path / ".agentic-workspace" / "local" / "handoff-receipts" / f"{handoff_receipt_id}.json").read_text(encoding="utf-8")
-    )
-    assert (
-        closeout_receipt["target_context"]
-        == handoff_receipt["target_context"]
-        == {
-            "delegation_target": "fast_worker",
-            "task_class": "mechanical-follow-through",
-            "scope_class": "narrow-code-change",
-        }
-    )
-    assert closeout_receipt["result"] == "accepted"
-    assert handoff_receipt["result"] == "accepted"
+    assert [item["status"] for item in closeout["calibration_admissions"]] == ["routed-to-responsible-owner", "routed-to-responsible-owner"]
+    assert all(item["recorded_target_evidence"] is False for item in closeout["calibration_admissions"])
+    assert all("source_ref" not in item for item in closeout["calibration_admissions"])
 
     from agentic_workspace.config import load_delegation_outcomes
 
     _, _, records = load_delegation_outcomes(target_root=tmp_path)
-    assert [record.producer_class for record in records if record.producer_class != "aw-proof"] == [
-        "human-review",
-        "retry-outcome",
-        "closeout-outcome",
-        "handoff-outcome",
-    ]
+    assert not records
 
     actionable_stack = copy.deepcopy(fresh_stack)
     actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1

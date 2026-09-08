@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+from dataclasses import replace
+from datetime import date
+
+import pytest
 
 from agentic_workspace.orchestration import (
     assignment_bound_entry,
@@ -11,6 +15,106 @@ from agentic_workspace.orchestration import (
     reconcile_action_result,
     verification_contributions,
 )
+
+
+def _burden_record(record_id: str, **changes):
+    from agentic_workspace.config import DelegationOutcomeRecord
+
+    record = DelegationOutcomeRecord(
+        recorded_at=date.today().isoformat(),
+        delegation_target="worker",
+        task_class="implementation",
+        scope_class="bounded",
+        outcome="success",
+        handoff_sufficiency="sufficient",
+        review_burden="high",
+        escalation_required=False,
+        record_id=record_id,
+    )
+    return replace(record, **changes)
+
+
+@pytest.mark.parametrize("operation", ["supersede", "correct-or-dispute", "prune-or-compact"])
+def test_repeated_burden_excludes_invalidated_predecessors(operation) -> None:
+    from agentic_workspace.target_evidence import target_evidence_posture
+
+    records = [_burden_record("first"), _burden_record("second")]
+    current = target_evidence_posture(target_root=None, profiles=[], records=records)
+    assert current["complexity_reduction_signal"]["status"] == "available"
+    records.append(_burden_record("correction", operation=operation, predecessor_id="first", review_burden="light"))
+    corrected = target_evidence_posture(target_root=None, profiles=[], records=records)
+    assert corrected["complexity_reduction_signal"]["status"] == "not-observed"
+
+
+def _transport_summary(costs):
+    from agentic_workspace.target_evidence import target_evidence_posture
+
+    records = [_burden_record(str(index), context_cost={"transport": "process", **cost}) for index, cost in enumerate(costs)]
+    posture = target_evidence_posture(target_root=None, profiles=[], records=records)
+    return posture["suitability"][0]["transport_costs"][0]
+
+
+def test_unknown_cost_observations_do_not_dilute_known_inflation() -> None:
+    summary = _transport_summary([{"effective_input_tokens": 50_000}, *[{} for _ in range(19)]])
+    assert summary["record_count"] == 20
+    assert summary["expected_burden_component"] == -30
+    assert summary["burden_metric_support"]["effective_input_tokens"]["record_count"] == 1
+    assert summary["observed_metric_counts"]["effective_input_tokens"] == 1
+    assert summary["unknown_metric_state"] == "partial-or-unobserved"
+
+
+def test_wholly_unknown_transport_burden_remains_unknown() -> None:
+    summary = _transport_summary([{}, {"assignment_packet_bytes": 200}])
+    assert summary["expected_burden_component"] is None
+    assert summary["burden_metric_support"] == {}
+    assert summary["unknown_metric_state"] == "partial-or-unobserved"
+
+
+def test_disjoint_partial_burden_uses_metric_support_without_claiming_total() -> None:
+    summary = _transport_summary([{"effective_input_tokens": 50_000}, {"retry_count": 2}])
+    assert summary["expected_burden_component"] == -40
+    assert summary["burden_metric_support"] == {
+        "effective_input_tokens": {"record_count": 1, "average_penalty": -30},
+        "retry_count": {"record_count": 1, "average_penalty": -10},
+    }
+    assert summary["burden_aggregation"] == "sum-of-observed-metric-means-not-a-measured-lifecycle-total"
+    assert summary["unknown_metric_state"] == "partial-or-unobserved"
+
+
+@pytest.mark.parametrize("observed", [False, True])
+def test_assignment_transport_keeps_unknown_burden_out_of_mean(observed) -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    costs = [{"transport": "cli", "record_count": 19, "expected_burden_component": None}]
+    if observed:
+        costs.append({"transport": "cli", "record_count": 1, "expected_burden_component": -30})
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "worker"},
+            "binding": {"enforceable": True},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "implementation", "scope_class": "bounded"},
+            "profile_recommendations": [
+                {
+                    "name": "worker",
+                    "recommendation": "recommended",
+                    "score": 8,
+                    "capability_mismatch": False,
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                }
+            ],
+        },
+        target_evidence={
+            "suitability": [
+                {"target": "worker", "context_key": "implementation::bounded", "route_effect": "no-change", "transport_costs": costs}
+            ]
+        },
+    )
+    assert decision["candidate_scores"][0]["transport_options"][0]["expected_burden"] == (-30 if observed else None)
 
 
 def _kernel(*, revision: str = "rev-1", run_id: str = "run-1", target: str = "worker-a", status: str = "assignment-bound"):
@@ -75,6 +179,30 @@ def test_generic_start_collapses_to_assignment_entry(monkeypatch, tmp_path) -> N
     assert emitted[0]["broad_startup_constructed"] is False
 
 
+def test_worker_entry_resolves_exact_assignment_instead_of_latest_sibling(tmp_path) -> None:
+    from agentic_workspace.workspace_runtime_core import _delegated_worker_kernel_payload
+
+    assignment_root = tmp_path / ".agentic-workspace/planning/assignments"
+    assignment_root.mkdir(parents=True)
+    for name, updated in (("worker-a", "2026-01-01"), ("worker-b", "2026-01-02")):
+        (assignment_root / f"{name}.assignment.json").write_text(
+            json.dumps(
+                {
+                    "assignment_id": name,
+                    "status": "current",
+                    "current_revision": "rev-1",
+                    "current_attempt": {"run_id": name + "-run", "owner": name, "status": "selected", "updated_at": updated},
+                    "assignment_gate": {"allowed_paths": [name + ".py"]},
+                }
+            )
+        )
+    exact = _delegated_worker_kernel_payload(target_root=tmp_path, assignment_id="worker-a")
+    assert exact["assignment"]["assignment_id"] == "worker-a"
+    assert exact["scope"]["allowed_paths"] == ["worker-a.py"]
+    assert _delegated_worker_kernel_payload(target_root=tmp_path, assignment_id="../worker-a")["status"] == "direct-compatible"
+    assert _delegated_worker_kernel_payload(target_root=tmp_path, assignment_id="missing")["status"] == "direct-compatible"
+
+
 def test_frontier_is_derived_and_separates_semantic_slice_from_attempt() -> None:
     result = derive_orchestration_frontier(
         planning_slices=[
@@ -134,6 +262,7 @@ def test_attribution_only_routes_equivalent_target_execution_to_target_evidence(
             "target_executed": True,
             "context_sufficient": True,
             "transport_sufficient": True,
+            "failure_stage": "target-execution",
             "slice_id": "slice-1",
             "semantic_revision": "sem-1",
             "assignment_revision": "attempt-2",

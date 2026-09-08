@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Align source-owned replacement admission with validated override policy defaults and record required reason provenance without widening authority."
+issues = [2916, 2210, 2909]

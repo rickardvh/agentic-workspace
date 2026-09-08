@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Separate material action currentness from logical effect identity and enforce exact shared-core invocation admission."
+issues = [2987]

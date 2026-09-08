@@ -84,6 +84,7 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_review_scale_extracted_boundaries.py \
 	tests/test_runtime_compatibility.py \
 	tests/test_runtime_implementation_ownership.py \
+	tests/test_shared_core.py \
 	tests/test_schema_reference_docs.py \
 	tests/test_security_supply_chain.py \
 	tests/test_scoped_instructions.py \
@@ -131,11 +132,12 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_repository_scanning.py \
 	tests/test_repo_evolution_scenario.py \
 	tests/test_repo_improvement_effectiveness.py \
-	tests/test_source_payload_operational_install.py
+	tests/test_source_payload_operational_install.py \
+	tests/test_v1_contract.py
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \
 	setup install-hooks pre-commit \
-	test test-nosync test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-contracts-measurement test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
+	test test-nosync test-rust-core test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-contracts-measurement test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
 	lint lint-nosync lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
 	typecheck typecheck-nosync typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
 	format format-nosync format-workspace format-memory format-planning format-verification \
@@ -156,6 +158,7 @@ help:
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
 	@echo "  sync-verification    Sync consolidated root dev environment for verification package checks."
 	@echo "  test                 Run workspace and package test suites serially by default."
+	@echo "  test-rust-core       Run the shared Rust operating-decision core tests."
 	@echo "  test-nosync          Run tests after caller-provided dependency sync."
 	@echo "                       Opt into pytest-xdist only with PYTEST_PARALLEL_ARGS='-n <count>'."
 	@echo "  test-workspace       Run all focused workspace test targets serially."
@@ -228,6 +231,9 @@ sync-verification:
 
 .NOTPARALLEL: test-workspace
 
+test-rust-core:
+	@cargo test --workspace
+
 test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration
 
 test-workspace-cli:
@@ -267,6 +273,8 @@ test: sync-all test-nosync
 lint-workspace:
 	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
 	@$(COMPACT_RUN) --label "prompt semantic markers" -- uv run python scripts/check/check_prompt_semantic_markers.py
+	@cargo fmt --all -- --check
+	@cargo clippy --workspace --all-targets -- -D warnings
 
 lint-memory:
 	@$(COMPACT_RUN) --label "memory lint" --cwd packages/memory -- uv run ruff check .
@@ -444,7 +452,7 @@ check-verification-nosync: test-verification lint-verification typecheck-verific
 
 check-verification: sync-all check-verification-nosync
 
-check-nosync: test-nosync lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory runtime-implementation-ownership security-supply-chain package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
+check-nosync: test-rust-core test-nosync lint-nosync typecheck-nosync format-check-nosync verify-nosync memory-freshness-strict maintainer-surfaces validation-runtime-plan structured-file-inventory runtime-implementation-ownership security-supply-chain package-artifact-duplicates agent-aids absolute-paths composed-operation-scenarios
 
 check: sync-all check-nosync
 

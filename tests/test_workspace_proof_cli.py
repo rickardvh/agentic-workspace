@@ -6982,8 +6982,16 @@ owner = "workspace-proof-runtime"
     )
     payload = json.loads(capsys.readouterr().out)
     answer = payload.get("values", payload.get("answer", payload))
-    assert answer["proof_closeout_summary"]["receipt_bridge"]["status"] == "complete"
-    assert answer["proof_closeout_summary"]["status"] == "sufficient-recorded"
+    # This fixture records the instantiated owner template only. The separate
+    # package fallback remains required on the baseline and must not be granted.
+    summary = answer["proof_closeout_summary"]
+    assert summary["receipt_bridge"]["status"] == "action-required"
+    assert summary["status"] == "not-yet-sufficient"
+    assert next(item for item in summary["proof_results"] if item["command"] == template_command)["receipt_state"] == "accepted"
+    assert (
+        next(item for item in summary["proof_results"] if item["command"] == "uv run pytest tests/test_workspace_proof_cli.py -q")["result"]
+        == "missing"
+    )
     receipt_tiers = [item for tier in answer["proof_command_tiers"]["tiers"] for item in tier["commands"]]
     assert next(item for item in receipt_tiers if item["command"] == template_command)["posture"] == "already-satisfied"
 
@@ -7038,7 +7046,7 @@ owner = "workspace-proof-runtime"
         required_commands=selected["required_commands"],
         selected_commands=selected["selected_commands"],
     )
-    stale_state = reconciliation["commands"][0]
+    stale_state = next(item for item in reconciliation["commands"] if item["command"] == template_command)
     assert stale_state["evidence_state"] == "template-binding-rejected"
     assert stale_state["diagnostic"] == "stale-lane_revision-template-binding"
     assert stale_state["minimum_rerun_command"] == template_command
@@ -7129,8 +7137,10 @@ owner = "workspace-proof-runtime"
         == 0
     )
     fixed_point = json.loads(capsys.readouterr().out)["values"]
-    assert fixed_point["proof_closeout_summary"]["status"] == "sufficient-recorded"
-    state = fixed_point["proof_receipt_reconciliation"]["commands"][0]
+    # The recorded template survives the receipt-only commit. An unrelated
+    # unrecorded fallback remains required; it cannot borrow this evidence.
+    assert fixed_point["proof_closeout_summary"]["status"] == "not-yet-sufficient"
+    state = next(item for item in fixed_point["proof_receipt_reconciliation"]["commands"] if item["command"] == template_command)
     assert state["evidence_state"] == "accepted"
     assert state["live_obligation_binding"]["status"] == "accepted"
     assert head_b != baseline["payload"]["head"]
@@ -7155,7 +7165,7 @@ owner = "workspace-proof-runtime"
     )
     stale = json.loads(capsys.readouterr().out)["values"]
     assert stale["proof_closeout_summary"]["status"] != "sufficient-recorded"
-    stale_state = stale["proof_receipt_reconciliation"]["commands"][0]
+    stale_state = next(item for item in stale["proof_receipt_reconciliation"]["commands"] if item["command"] == template_command)
     assert stale_state["evidence_state"] == "subject-stale"
     assert stale_state["subject_freshness"]["status"] != "reusable"
 
@@ -8832,9 +8842,38 @@ def test_assignment_adapter_support_surfaces_compose_focused_proof_owners(capsys
     assert "domain:correction_guidance_authority" not in lane_ids
     assert "domain:session_logging_friction" not in lane_ids
     assert "domain:workspace_root_guidance" not in lane_ids
+    assert "verification:config_orthogonality_constructibility" in lane_ids
+    assert {
+        "verification:repo_acceptance_policy",
+        "verification:closeout_intent_satisfaction",
+        "verification:requirement_grounding_delegation",
+    }.isdisjoint(lane_ids)
+    assert any(
+        "local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners" in command
+        for command in answer["required_commands"]
+    )
     assert len(answer["required_commands"]) <= 9
     assert not any("-k correction" in command for command in answer["required_commands"])
     assert not any("session_logging" in command for command in answer["required_commands"])
+
+
+@pytest.mark.parametrize(
+    ("changed", "expected_protocols"),
+    [
+        (
+            "src/agentic_workspace/workspace_runtime_proof.py",
+            {"verification:closeout_intent_satisfaction", "verification:requirement_grounding_delegation"},
+        ),
+        (
+            ".agentic-workspace/config.toml",
+            {"verification:repo_acceptance_policy", "verification:config_orthogonality_constructibility"},
+        ),
+    ],
+)
+def test_assignment_adapter_support_protocols_retain_exact_source_obligations(capsys, changed, expected_protocols) -> None:
+    assert cli.main(["proof", "--target", str(ROOT), "--changed", changed, "--select", "selected_lanes", "--format", "json"]) == 0
+    answer = json.loads(capsys.readouterr().out)["values"]
+    assert expected_protocols.issubset({lane["id"] for lane in answer["selected_lanes"]})
 
 
 def test_assignment_adapter_support_route_retains_genuine_additional_owner(capsys) -> None:

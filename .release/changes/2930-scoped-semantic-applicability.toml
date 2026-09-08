@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Scope semantic route staleness to applicability and let current shared routes select decision consequences without widening authority."
+issues = [2930, 3040, 2909]

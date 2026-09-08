@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from agentic_workspace.proof_subject import build_proof_subject, classify_proof_subject, compare_proof_subjects
+
+
+@pytest.mark.parametrize("fingerprint", [None, "", "same", "g" * 64, "a" * 63, 12])
+def test_malformed_fingerprint_never_creates_reusable_subject(fingerprint: object) -> None:
+    subject = {"kind": "agentic-workspace/proof-subject/v1", "identity_complete": True, "claim_classes": [], "fingerprint": fingerprint}
+    assert compare_proof_subjects(stored=subject, current=subject)["status"] == "unverifiable"
+    subject.pop("fingerprint")
+    assert compare_proof_subjects(stored=subject, current=subject)["status"] == "unverifiable"
 
 
 def _receipt(root: Path, paths: list[str]) -> dict[str, object]:

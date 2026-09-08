@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Discover native transport peers, bind worker entry to exact assignments, preserve attempted dispatch evidence, and support reversible terminal worker cleanup."
+issues = [2947, 2817, 2818, 2767, 2210, 2909]

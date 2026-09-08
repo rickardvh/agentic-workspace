@@ -4896,6 +4896,13 @@ const commandDefinitions = [
       "options": [
         {
           "flags": [
+            "--request"
+          ],
+          "help": "Complete returned public request JSON. Discover semantic route requests with --select semantic_route_result; edit only the declared arguments.",
+          "name": "request"
+        },
+        {
+          "flags": [
             "--target"
           ],
           "help": "Optional repository path for startup context (defaults to current workspace).",
@@ -6004,7 +6011,8 @@ const commandDefinitions = [
           "choices": [
             "light",
             "normal",
-            "high"
+            "high",
+            "unknown"
           ],
           "default": "normal",
           "flags": [
@@ -8743,6 +8751,27 @@ const commandDefinitions = [
           },
           "options": [
             {
+              "flags": [
+                "--configuration-parameters-json"
+              ],
+              "help": "Adapter-owned JSON parameter choices for the paired current configuration offer.",
+              "name": "configuration_parameters_json"
+            },
+            {
+              "flags": [
+                "--configuration-revision"
+              ],
+              "help": "Current execution configuration offer revision; pair with configuration-id before materializing an assignment.",
+              "name": "configuration_revision"
+            },
+            {
+              "flags": [
+                "--configuration-id"
+              ],
+              "help": "Acting orchestrator choice of one eligible execution configuration; cannot replace an existing assignment.",
+              "name": "configuration_id"
+            },
+            {
               "choices": [
                 "text",
                 "json"
@@ -8835,6 +8864,27 @@ const commandDefinitions = [
             "path": "operations/assignment.export.json"
           },
           "options": [
+            {
+              "flags": [
+                "--configuration-parameters-json"
+              ],
+              "help": "Adapter-owned JSON parameter choices for the paired current configuration offer.",
+              "name": "configuration_parameters_json"
+            },
+            {
+              "flags": [
+                "--configuration-revision"
+              ],
+              "help": "Current execution configuration offer revision; pair with configuration-id before materializing an assignment.",
+              "name": "configuration_revision"
+            },
+            {
+              "flags": [
+                "--configuration-id"
+              ],
+              "help": "Acting orchestrator choice of one eligible execution configuration; cannot replace an existing assignment.",
+              "name": "configuration_id"
+            },
             {
               "choices": [
                 "text",
@@ -9900,8 +9950,7 @@ const commandDefinitions = [
                 "--target-name"
               ],
               "help": "Selected target name.",
-              "name": "target_name",
-              "required": true
+              "name": "target_name"
             },
             {
               "choices": [
@@ -9910,7 +9959,6 @@ const commandDefinitions = [
                 "cli",
                 "api"
               ],
-              "default": "manual",
               "flags": [
                 "--transport"
               ],
@@ -9976,8 +10024,7 @@ const commandDefinitions = [
                 "--reason"
               ],
               "help": "Human-readable transition reason.",
-              "name": "reason",
-              "required": true
+              "name": "reason"
             },
             {
               "flags": [
@@ -10035,6 +10082,27 @@ const commandDefinitions = [
               ],
               "help": "Serialized current assignment run state authority.",
               "name": "run_state_json"
+            },
+            {
+              "flags": [
+                "--configuration-revision"
+              ],
+              "help": "Current execution configuration offer revision; pair with configuration-id before materializing an assignment.",
+              "name": "configuration_revision"
+            },
+            {
+              "flags": [
+                "--configuration-id"
+              ],
+              "help": "Acting orchestrator choice of one eligible execution configuration; cannot replace an existing assignment.",
+              "name": "configuration_id"
+            },
+            {
+              "flags": [
+                "--configuration-parameters-json"
+              ],
+              "help": "Adapter-owned JSON parameter choices for the paired current configuration offer.",
+              "name": "configuration_parameters_json"
             }
           ]
         },

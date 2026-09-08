@@ -1,0 +1,126 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "delegation-lane-sweep",
+  "title": "Reconstruct delegation execution configurations, transport continuity and attributed completion evidence",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 4,
+  "intent": {
+    "outcome": "Exhaust coherent delegation lane through proved stacked PRs from reconstruct/foundation-contract: execution configurations, native continuity, bounded context, attributed lifecycle burden and conformance.",
+    "non_goals": [
+      "No merge, master modification, provider transcript store, session manager, global ranking or self-approval."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Exhaust coherent delegation lane through proved stacked PRs from reconstruct/foundation-contract: execution configurations, native continuity, bounded context, attributed lifecycle burden and conformance.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "crates/agentic-workspace-core",
+      "src/agentic_workspace",
+      "tests",
+      "packages/planning",
+      "packages/verification",
+      "generated",
+      "scripts",
+      "docs",
+      ".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json"
+    ],
+    "effects": [
+      "Bounded repository edits, generated projections, executable proof and stacked pull requests; no merge or independent review approval."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "delegation-lane-sweep"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Current orchestrator retains parent custody. Configured native peers are available through revision-bound assignments; two bounded supported-host inspection attempts returned no verdict. Further inference requires a concrete evidence purpose and explicit bounded cost, not speculative diagnosis. Independent PR review remains pending.",
+      "scope": "active-plan-work-unit",
+      "parent_task_custody": "retained-current",
+      "bounded_child_authority": "separate-binding-decision"
+    }
+  },
+  "references": [],
+  "next_action": "Bind delegation to the Planning owner projection and current selected-owner content, prove the layer, then reassess unresolved issue outcomes and publish the stack and cost audit.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Each promoted stack layer has executable proof; independent acceptance and complete ordinary delegated outcomes remain unproven."
+    ],
+    "requirements": [
+      "cargo test --manifest-path crates/agentic-workspace-core/Cargo.toml",
+      "uv run --frozen --active --no-sync pytest tests/test_shared_core.py tests/test_external_operation_clients.py",
+      "AW selected proof for exact changed paths"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "delegation-lane-sweep",
+    "residual_intent": "Complete the useful delegation stack, preserve existing issue owners for partial outcomes, and report exact independent acceptance and supported-host limits."
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ],
+  "goal": [
+    "Exhaust coherent delegation lane through proved stacked PRs from reconstruct/foundation-contract: execution configurations, native continuity, bounded context, attributed lifecycle burden and conformance."
+  ],
+  "non_goals": [
+    "No merge, master modification, provider transcript store, session manager, global ranking or self-approval."
+  ],
+  "intent_continuity": {
+    "larger intended outcome": "Current source-owned best-fit delegation with constructible native continuity and attributed total-completion evidence.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "Existing issues #2916 #2210 #2817 #2947 #2818 #2209 #2967 #2767 #2970 #2334 #2909; stack closeout map"
+  },
+  "execution_bounds": {
+    "allowed paths": "crates/agentic-workspace-core, src/agentic_workspace, tests, packages/planning, packages/verification, generated, scripts, docs, .agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json",
+    "max changed files": "120 authored plus generated outputs across coherent layers",
+    "required validation commands": "AW selected proof per layer; Rust core tests; focused public Python/TypeScript parity; real installed Codex capability and execution evidence",
+    "ask-before-refactor threshold": "Unrelated owner redesign or genuinely unknowable human/domain semantics",
+    "stop before touching": "master, merges, human review approval, unrelated active Planning owners, provider transcripts"
+  },
+  "touched_paths": [
+    "crates/agentic-workspace-core",
+    "src/agentic_workspace",
+    "tests",
+    "generated",
+    "scripts",
+    "docs"
+  ],
+  "validation_commands": [
+    "cargo test --manifest-path crates/agentic-workspace-core/Cargo.toml",
+    "uv run --frozen --active --no-sync pytest tests/test_shared_core.py tests/test_external_operation_clients.py",
+    "AW selected proof for exact changed paths"
+  ],
+  "completion_criteria": [
+    "Each layer is independently reviewable with proof before stacking further.",
+    "Continuation capability and currentness fail closed; provider flags remain adapter owned.",
+    "Report exact merge order, partial versus closable issues, inherited failures and genuine blockers; independent PR review remains pending."
+  ],
+  "canonical_core": {
+    "hard_constraints": "No merge, master modification, provider transcript store, session manager, global ranking or self-approval. Preserve human-owned execution policy, keep provider refs local and opaque, and treat unknown cost as unknown.",
+    "agent_may_decide": "Choose coherent stack slices, bounded execution configurations and appropriate executable proof within the user-authorized delegation lane.",
+    "escalate_when": "A required semantic or domain decision cannot be inferred, independent acceptance is required, or an installed external capability cannot construct the needed action."
+  }
+}

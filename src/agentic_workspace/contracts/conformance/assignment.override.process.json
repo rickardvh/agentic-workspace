@@ -27,11 +27,11 @@
       "code": 0
     },
     "filesystem": {
-      "allowed_write_directories": [
-        ".agentic-workspace/local/assignment-runs/run-1"
-      ],
+      "allowed_write_directories": [],
       "allowed_write_paths": [],
-      "forbidden_paths": [],
+      "forbidden_paths": [
+        ".agentic-workspace/local/assignment-runs/run-1/state.json"
+      ],
       "required_paths": []
     },
     "idempotency": {
@@ -52,9 +52,21 @@
           ]
         },
         {
-          "equals": "override-recorded",
+          "equals": "blocked",
           "path": [
             "status"
+          ]
+        },
+        {
+          "equals": false,
+          "path": [
+            "mutation_applied"
+          ]
+        },
+        {
+          "equals": "assignment-override-authority-unavailable",
+          "path": [
+            "reason_code"
           ]
         }
       ],

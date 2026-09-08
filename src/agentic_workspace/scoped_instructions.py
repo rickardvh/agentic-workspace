@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-import fnmatch
 import hashlib
+import io
 import json
 import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
+from agentic_workspace.decision import instruction_applicability, instruction_source_admission
 from agentic_workspace.semantic_task_routes import (
     current_semantic_task_route_fact,
     discover_semantic_routes,
-    route_selector_matches,
     select_semantic_task_routes,
 )
 
@@ -92,14 +92,10 @@ def _valid_repo_pattern(value: str) -> bool:
     return ".." not in Path(normalized).parts
 
 
-def _frontmatter(path: Path, *, load_body: bool) -> tuple[dict[str, list[Any]], str, bool, bool, list[dict[str, str]]]:
+def _frontmatter(text: str, *, load_body: bool) -> tuple[dict[str, list[Any]], str, bool, bool, list[dict[str, str]]]:
     metadata: dict[str, list[Any]] = {field: [] for field in FRONTMATTER_FIELDS}
     diagnostics: list[dict[str, str]] = []
-    try:
-        handle = path.open(encoding="utf-8")
-    except OSError as exc:
-        return metadata, "", False, False, [{"field": "file", "code": "unreadable", "message": str(exc)}]
-    with handle:
+    with io.StringIO(text) as handle:
         first = handle.readline()
         if first.rstrip("\r\n") != "---":
             remainder = handle.read()
@@ -188,12 +184,15 @@ def read_instruction(path: Path, *, root: Path, load_body: bool = False) -> Inst
         source_ref = path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         source_ref = path.as_posix()
-    metadata, body, has_guidance, body_loaded, diagnostics = _frontmatter(path, load_body=load_body)
-    diagnostics.extend(_validate_metadata(metadata))
     try:
-        revision = _digest(path.read_text(encoding="utf-8"))
-    except OSError:
+        text = path.read_text(encoding="utf-8")
+        metadata, body, has_guidance, body_loaded, diagnostics = _frontmatter(text, load_body=load_body)
+        revision = _digest(text)
+    except OSError as exc:
+        metadata, body, has_guidance, body_loaded, diagnostics = _frontmatter("", load_body=False)
+        diagnostics.append({"field": "file", "code": "unreadable", "message": str(exc)})
         revision = ""
+    diagnostics.extend(_validate_metadata(metadata))
     return InstructionDocument(
         identity=path.stem,
         source_ref=source_ref,
@@ -213,11 +212,6 @@ def instruction_documents(root: Path, *, load_bodies: bool = False) -> list[Inst
     return [read_instruction(path, root=root, load_body=load_bodies) for path in sorted(directory.glob("*.md")) if path.is_file()]
 
 
-def _matched_paths(patterns: list[str], changed_paths: Iterable[str]) -> list[str]:
-    normalized = [str(path).replace("\\", "/") for path in changed_paths]
-    return sorted({path for path in normalized for pattern in patterns if fnmatch.fnmatch(path, pattern)})
-
-
 def instruction_applies(
     document: InstructionDocument,
     *,
@@ -225,32 +219,16 @@ def instruction_applies(
     selected_routes: list[str] | None = None,
     route_posture: str = "unresolved",
 ) -> tuple[bool, str, list[str]]:
-    patterns = [str(item) for item in document.metadata["paths"]]
-    matched = _matched_paths(patterns, changed_paths)
-    path_applies = not patterns or bool(matched)
-    route_selectors = [str(item) for item in document.metadata["routes"]]
-    route_applies = not route_selectors or (
-        route_posture == "selected" and any(route_selector_matches(selector, selected_routes or []) for selector in route_selectors)
+    result = instruction_applicability(
+        {
+            "paths": [str(item) for item in document.metadata["paths"]],
+            "routes": [str(item) for item in document.metadata["routes"]],
+            "changed_paths": changed_paths,
+            "selected_routes": selected_routes or [],
+            "route_posture": route_posture,
+        }
     )
-    if path_applies and route_applies:
-        reasons: list[str] = []
-        if patterns:
-            reasons.append(f"{matched[0]} matches {next(pattern for pattern in patterns if fnmatch.fnmatch(matched[0], pattern))}")
-        else:
-            reasons.append("global path scope")
-        if route_selectors:
-            reasons.append("selected semantic route matches " + ", ".join(route_selectors))
-        return True, "; ".join(reasons), matched
-    reasons = []
-    if not path_applies:
-        reasons.append("no changed or target path matches " + ", ".join(patterns))
-    if not route_applies:
-        reasons.append(
-            "semantic route selection is " + route_posture
-            if route_posture != "selected"
-            else "no selected semantic route matches " + ", ".join(route_selectors)
-        )
-    return False, "; ".join(reasons), matched
+    return bool(result["applies"]), str(result["reason"]), list(result["matched_paths"])
 
 
 def _capability_candidates(root: Path) -> dict[str, list[str]]:
@@ -308,10 +286,11 @@ def inspect_instructions(
     changed_paths: list[str] | None = None,
     include_ir: bool = False,
     evidence: dict[str, bool] | None = None,
+    semantic_route_fact: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     del task  # Semantic applicability is an explicit current-task fact, never inferred from prompt text.
     changed = [str(item).replace("\\", "/") for item in (changed_paths or [])]
-    route_fact = current_semantic_task_route_fact(root)
+    route_fact = semantic_route_fact if semantic_route_fact is not None else current_semantic_task_route_fact(root)
     route_posture = str(route_fact.get("posture") or "unresolved") if route_fact.get("status") == "current" else "unresolved"
     selected_routes = [str(item) for item in route_fact.get("routes", [])] if route_posture == "selected" else []
     candidates = _capability_candidates(root)
@@ -332,6 +311,38 @@ def inspect_instructions(
             route_posture=route_posture,
         )
         document = read_instruction(root / shallow.source_ref, root=root, load_body=applies)
+        if document.revision != shallow.revision:
+            diagnostics.append(
+                {
+                    "source_ref": document.source_ref,
+                    "field": "file",
+                    "code": "stale-source",
+                    "message": "instruction changed during applicability selection",
+                }
+            )
+            continue
+        admission: dict[str, Any] = {
+            "status": "not-applicable",
+            "checks": [],
+            "protect": [],
+            "authority": {"effects": [], "target_patterns": []},
+        }
+        if applies and (
+            document.metadata["protect"]
+            or any(not isinstance(check, str) or not check.startswith("requirement:") for check in document.metadata["checks"])
+        ):
+            # Machine-local preferences cannot admit repository restrictions.
+            try:
+                shared = tomllib.loads((root / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
+            except (OSError, tomllib.TOMLDecodeError):
+                shared = {}
+            admission = instruction_source_admission(
+                {
+                    "target": str(root),
+                    "admitted_revision": shared.get("assurance", {}).get("instruction_revision"),
+                    "sources": [{"reference": document.source_ref, "revision": document.revision}],
+                }
+            )["sources"][0]
         item_diagnostics = [dict(item) for item in document.diagnostics]
         resolved_use: list[str] = []
         resolved_checks: list[dict[str, str]] = []
@@ -352,6 +363,12 @@ def inspect_instructions(
                     }
                 )
         for index, value in enumerate(document.metadata["checks"]):
+            if value not in admission["checks"] and not (isinstance(value, str) and value.startswith("requirement:")):
+                if isinstance(value, str):
+                    _, diagnostic = _resolve_reference(value, candidates=candidates, field=f"checks[{index}]")
+                    if diagnostic:
+                        item_diagnostics.append(diagnostic)
+                continue
             if isinstance(value, dict):
                 command = str(value.get("run") or "").strip()
                 check_id = "instruction-check:" + document.identity + ":" + hashlib.sha256(command.encode()).hexdigest()[:16]
@@ -360,6 +377,10 @@ def inspect_instructions(
                 resolved, diagnostic = _resolve_reference(str(value), candidates=candidates, field=f"checks[{index}]")
                 if diagnostic:
                     item_diagnostics.append(diagnostic)
+                    if value in admission["checks"] and not str(value).startswith("requirement:"):
+                        resolved_checks.append(
+                            {"identity": "instruction-check:" + str(value), "reference": str(value), "kind": "unavailable"}
+                        )
                 else:
                     check_id = "instruction-check:" + resolved
                     resolved_checks.append(
@@ -398,29 +419,18 @@ def inspect_instructions(
             "read": document.metadata["read"] if applies else [],
             "use": resolved_use if applies else [],
             "checks": resolved_checks if applies else [],
-            "protect": document.metadata["protect"] if applies else [],
+            "protect": admission["protect"] if applies else [],
+            **({"binding_admission": admission} if admission["status"] != "not-applicable" else {}),
             "diagnostics": item_diagnostics,
         }
         records.append(record)
-        if applies and item_diagnostics:
-            program["source_diagnostics"].extend(
-                {
-                    "code": "invalid-bounded-control",
-                    "ref": f"{document.source_ref}:{diagnostic['field']}",
-                    "owner": "repo-instructions",
-                    "repair": diagnostic["message"],
-                }
-                for diagnostic in item_diagnostics
-            )
-        if not applies or item_diagnostics:
+        if not applies:
             continue
         fact_id = f"instruction:{document.identity}:applies"
         source = {
             "owner": "repo-instructions",
-            "revision": _digest(
-                document.revision + str(route_fact.get("current_source_revision") or route_fact.get("source_revision") or "")
-            ),
-            "current": route_fact.get("status") != "stale",
+            "revision": document.revision,
+            "current": True,
         }
         program["facts"].append({"id": fact_id, "type": "boolean", "value": True, "source": source})
         effects: list[dict[str, str]] = []
@@ -442,7 +452,7 @@ def inspect_instructions(
                     "source": {"owner": "proof", "revision": document.revision, "current": True},
                 }
             )
-        effects.extend({"kind": "restrict", "target": f"effect:write:{pattern}"} for pattern in document.metadata["protect"])
+        effects.extend({"kind": "restrict", "target": f"effect:write:{pattern}"} for pattern in admission["protect"])
         if effects:
             program["clauses"].append(
                 {
@@ -451,8 +461,11 @@ def inspect_instructions(
                     "when": {"fact": fact_id, "operator": "is", "value": True},
                     "effects": effects,
                     "authority": {
-                        "effects": sorted({effect["kind"] for effect in effects}),
-                        "target_patterns": [effect["target"] for effect in effects],
+                        "effects": ["surface", "prefer", *admission["authority"]["effects"]],
+                        "target_patterns": [
+                            *[effect["target"] for effect in effects if effect["kind"] in {"surface", "prefer"}],
+                            *admission["authority"]["target_patterns"],
+                        ],
                     },
                 }
             )

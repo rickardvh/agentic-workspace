@@ -1,0 +1,312 @@
+# Shared Rust core boundary
+
+This reconstruction slice uses one executable authority for deterministic operating-decision semantics:
+
+| Concern | Authority | Boundary |
+| --- | --- | --- |
+| Public contribution, action, outcome, blocker, decision, claim, and consequence shapes | `src/agentic_workspace/contracts/source_decision_contract.json` and its schema | Declarative JSON/JSON Schema only; it is not executable policy. |
+| Public request, capability, domain, effect, operation, and exclusive claim-authority shapes | The same declarative contract and schema | Describe constructible data and ownership only; they contain no operation algorithm or choreography. |
+| Normalization, exact identity, composition, terminality, and fail-closed ambiguity | `crates/agentic-workspace-core` | Implemented once in Rust. |
+| Python access | `src/agentic_workspace/decision.py` | JSON process binding only. |
+| Node access | `bindings/node/semantic-decision.mjs` | JSON process binding only. |
+| JSON access | `agentic-workspace-core` stdin/stdout | Transport projection of the same Rust call. |
+| Semantic applicability and acting-agent/human judgment | current typed context and the acting agent/human | Not inferred by the deterministic core. |
+
+Semantic route selection is ephemeral input, not a task classifier or history. The acting agent chooses a declared route; the Rust core only verifies that the fact is bound to the supplied current-work identity and current route-source revision, rejects removed/unknown routes, canonicalizes route order, and projects the fact with an `applicability-only` authority ceiling. Task prose alone never creates a route fact, and route selection cannot add actions, effects, or claims.
+
+Typed public requests are selected outside the deterministic core. A request identifies an owner and intention kind, carries arguments validated against that owner's declared JSON Schema, and binds to the current-work, capability-contract, capability-owner, and source-contribution revisions. Requests are declared independently of operations. The responsible owner derives the exact operation and effect-bearing arguments, or returns a bounded decision, blocker, or settled response. Rust requires exactly one response from that owner and validates the derived action against its separately declared operation schema and effect authority. For example, an intention with `subject: {name: "case-17", mode: "finish"}` may resolve to `example.finish` with `subject: "case-17"`; the caller supplies neither the operation ID nor its exact arguments.
+
+Request and operation `input_schema` values are self-contained JSON Schema Draft 2020-12 documents carried in the revision-bound capability contract. The Rust `jsonschema` validator checks schema validity and instances, including nested properties, enums, composition, and local `$defs`/`$ref`. External HTTP/file retrieval is disabled. Schema authors close bounded request objects with `additionalProperties: false` or `unevaluatedProperties: false`; no parallel AW type vocabulary exists. The existing input revision digest includes these schemas. Unknown public request fields (including a caller-supplied `operation_id`) and undeclared request kinds fail closed.
+
+The capability contract is trusted admission input, separate from implementation descriptors and source contributions. It assigns every declared domain and effect to one owner, assigns every authority-bearing operation to that owner, and records one exclusive owner for each grantable claim. Rust rejects conflicting domains/effects/claims, undeclared response operations, cross-owner effects, self-widened action authority, and claims or outcomes granted by a non-owner. Cross-owner evidence must become a new typed request admitted by the responsible owner; this slice does not add a central choreography registry.
+
+Pure current-work facts and direct/no-signal decisions need neither a capability contract nor semantic-route classification. Progressive contract discovery and real first-party owner consumption remain later #2930/#2986/#2606 work. The existing Python module runtime and historical operation IR are transition evidence, not new authority; they are not deleted until their owners migrate through #2984/#3000/#3001.
+
+The candidate initial matrix is the repository's support-bearing hosted Linux x86-64 lanes (Python 3.11/3.13 and Node 20/24) and Windows x86-64 lane (Python 3.14 and Node 24), all on Rust stable. A cell is admitted only after its support-bearing core and binding checks pass; toolchain availability alone does not admit another platform. Native artifact bundling and final release support remain owned by #2985/#2987.
+
+## #3018/#3019 disposition
+
+| Component | Disposition | Result here |
+| --- | --- | --- |
+| Contribution/outcome/claim/action vocabulary and exact typed shapes | ADAPT | Kept as the smaller declarative contract and schema. |
+| Settled-versus-terminal, explicit current outcome authority, hostile-priority rejection | PORT semantics | Implemented once in Rust with shared vectors. |
+| Selective consequence scoping, bounded decisions, lossless alternatives and recovery | PORT semantics | Implemented once in Rust; pending actions now remain explicit too. |
+| Exact action identity review correction | ADAPT | Revision-bound digest includes owner, operation, arguments/targets, effects, and authority. |
+| Python/TypeScript parity tests and installed-surface intent | EVIDENCE | Replaced by black-box Rust/Python/Node/JSON execution of one core. |
+| Executable JSON expression program and dual evaluator/templates | DROP | Not carried into this branch. |
+| Generated schemas/types/builders and package/conformance machinery | ADAPT later | Retained as downstream #2985/#2987 input; no executable target runtime is added here. |
+| Baseline source-first module/request seam | ADAPT | Public constructibility, baseline `Operation.input_schema` Draft 2020-12 validation, and capability ownership move into the declarative contract plus Rust validation; arbitrary raw-intent and self-declared authority behavior is not ported. |
+| Historical operation IR plans and target executors | EVIDENCE / DROP later | Existing contracts inform request/effect inventories, but executable steps do not become a second runtime or public request DSL. |
+
+This slice advances #3020, #2987, and #2989. It does not close them or claim that built-in state owners have migrated.
+
+The stacked #2930 slice adapts the pre-contraction route identity/currentness contract but drops its local selection file and handwritten Python/TypeScript route runtimes. Progressive vocabulary discovery remains a host/declarative concern; repository-control, Memory, Verification, and other owner consumption remains with their owning issues.
+
+## Post-#3025 restriction correction (#2606)
+
+Restriction authority is separately admitted in `capability_contract.restriction_authorities`: each entry names an admitted `owner` and an `affects` set using the existing exact consequence vocabulary. Blocker and bounded-decision scopes, plus `claim:<name>` for each blocked claim, must belong to that owner's grant. Claim-grant authority and effect/state ownership imply no veto; restriction implies no grant or mutation authority. `task` explicitly permits a task-wide constraint and is not a wildcard for other scopes. A policy owner can be granted `effect:planning-state` without owning Planning state. Multiple restriction owners may constrain the same consequence. Blockers cannot impersonate another owner. Unknown claim/effect grants, absent owners, and removed grants fail closed; exact action/decision/outcome targets can be admitted before their consequences appear.
+
+This is a deterministic admission check, not authentication of caller-supplied JSON. Hosts must supply the current contract from trusted authority, never assemble grants from arbitrary installed code declarations. The normalized contract, including restrictions, participates in the existing composed input digest. Acquiring trusted authority from real former sources, revocation/disappearance handling, and durable invocation revalidation remain #2606/#2984/#3000 work.
+
+The #2909 ratchet consumes the restriction vectors in `tests/vectors/source_decision.json` through the existing Rust vector suite and `tests/test_shared_core.py` Python/Node/JSON checks in the hosted core lanes. They reject self-granted vetoes, cross-domain and task widening, bounded-question bypass, blocker-owner impersonation, removed grants, and claim/effect acquisition through restriction. Positive proof retains exact selective blocking and demonstrates externally granted cross-owner restriction. These are kernel regressions, not former-source or first-party migration closure evidence.
+
+Remaining correction ownership before broad stateful migration:
+
+| Owner | Confirmed remaining coupling / boundary |
+| --- | --- |
+| #2987, consumed by #3000/#2981 | Action-local dependency revisions and logical effect generation are separated below. Real source derivation and durable execution-attempt/recovery identity remain unresolved. |
+| #2989 | Known independent actions form a ready set as described below; terminality now uses outcome-owned required claims and residual work, as described below. Real owner journeys remain unresolved. Existing explicit outcome authority, settled/direct distinction, and fail-closed conflicting actions are retained and tested. |
+| #2986 | Complete normalized request binding and request-local consequence selection are implemented below. Constructible human answers and real first-party public journeys remain unresolved. The intention-to-owner-derived-operation model and schema validation are retained. |
+| #2606 | Trusted source acquisition/currentness, capability disappearance, cross-owner worker evidence admission, state custody, and real first-party consumption remain unresolved. This slice only removes implicit restriction authority in the shared kernel. |
+
+This slice closes none of those issues. It makes #2984/#3000/#3001 safer by requiring explicit restriction admission before migrated owners or persisted decisions can treat contributed vetoes as authority. It does not make broad stateful migration ready by itself, and adds no alternate runtime, scheduler, policy language, registry, or durable state.
+
+## Material action currentness (#2987)
+
+Every owner-derived action supplies `dependency_revision`, the revision of its material subject/source/policy dependencies, independently of the enclosing contribution revision. Owners must derive this from actual current material inputs, including work identity when it changes applicability; omitting a material input is an owner contract violation. Rust binds that revision to the exact declared operation schema/result/effect/claim contract and effect custody. The aggregate decision `input_revision` still identifies the entire composed view, but is absent from the returned invocation.
+
+`expected_dependency_revision` and the exact `consequence_id` bind current action admission. `idempotency_key` identifies the logical owner/operation/arguments/ordered effects/authority plus optional `effect_generation`. A changed material dependency invalidates the invocation without inventing another effect. Repeating the effect requires the owner to return a new generation. Clients cannot choose generation or any other effect-bearing field at invocation time. Empty/absent generation means the initial effect. Distinct attempts do not create distinct logical effects; attempt identity and durable receipts are deliberately left to #3000.
+
+Python `admit_invocation`, Node `admitInvocation`, and JSON `{ "admission": { "decision": <fresh trusted decision>, "invocation": <exact returned action>, "previous_invocation": <trusted receipt invocation or null> } }` execute one Rust admission check. They are host boundaries: the decision must be freshly resolved from current sources, and a previous invocation must come from trusted receipt custody. Callers cannot use a supplied decision as proof of their own authority. Admission returns `execute` or `replay`, never performs an effect, and rejects any changed or unknown invocation field. A trusted exact receipt can replay after the action disappears, without re-execution. A freshly authorized invocation for the same logical effect can likewise reuse the receipt despite changed dependency currentness. The existing Python callback dispatcher consumes this check; its process-local receipt store is not durable #3000 recovery proof.
+
+The #2909 shared vector and Rust/Python/Node tests prove unchanged exact action across unrelated owner/view churn, relevant dependency rejection before callback execution, stable logical identity across dependency changes, tampering rejection, and owner-authorized repetition. No real former-source owner migration or issue closure is claimed.
+
+## Independently ready actions (#2989)
+
+`ready_actions` contains exact invocations available for agent/client choice. `primary_action` remains the single-action projection only. With multiple available actions, Rust checks every pair against the admitted operation contract: optional `reads` declares the complete material read-domain footprint, and the full operation effect ceiling supplies write domains through existing exclusive effect custody. No write may overlap another action's reads or writes. Missing `reads` means unknown; it does not mean read-free. A false or incomplete footprint is an admission/owner contract violation, not a grant the implementation may self-assert. Changed footprints also change material action currentness.
+
+Unknown or conflicting relationships retain a fail-closed composition blocker and lossless alternatives. The core does not rank, schedule, execute concurrently, or truncate alternatives. A client chooses one exact ready action and re-resolves after its result. Rust invocation admission checks membership in that current ready set. #2909 shared cases cover independent actions, unknown footprints, read/write and write/write conflicts, permutation stability, and public Python/Node exact choice. Real owner footprint derivation remains owner migration proof; this slice closes no issue.
+
+## Selected-outcome closure (#2989)
+
+A current authoritative outcome closes when its own status, claim evidence, and residual work establish completion. Optional `required_claims` names additional claims that must be currently allowed by their admitted owners; missing owners, missing evidence, blocked claims, and constraints on these claims cannot waive an obligation. The outcome owner must include every unfinished required task in existing `residual_work`, even when another owner will perform it, and must bind that conclusion to current evidence. Dependency completeness is an owner responsibility, not inferred from module installation or an action census.
+
+Optional or unrelated actions, questions, advice, and claim gaps remain in pending detail. They no longer veto an otherwise complete selected outcome. An admitted task-wide restriction still prevents terminality. A synthetic conflict between optional actions affects those exact alternatives, not the entire completed outcome. Terminal views have no primary action; any independently ready optional invocations remain available by explicit choice. #2909 shared vectors cover pending optional action/conflict, missing and blocked required claims, current required proof, residual required implementation, genuine task blockers, and unrelated claim gaps. Owner-local settled state still grants no task terminality. This is kernel proof, not #2989 or real Planning/Verification journey closure.
+
+## Request-local response binding (#2986)
+
+Responses carry `request_identity` and explicit `consequence_ids`. The Rust core checks the full normalized request identity, responsible owner, source revision, and existence/type of every selected consequence. Correlation ID alone is never admission authority. Same ID with changed valid arguments or currentness rejects the old response. A request's settled response says nothing about owner-local quiescence; unrelated owner actions/decisions/blockers can coexist with any request-specific response. The former whole-contribution response census is removed.
+
+Owners use Python `prepare_request(request, current_work, capability_contract)`, Node `prepareRequest`, or JSON `{ "prepare_request": { "request": <public request>, "current_work": <current work>, "capability_contract": <trusted contract> } }`. Rust returns the normalized `request`, complete `identity`, and `result_kind`, without effects or dispatch. The returned request is valid ordinary `intent.public_request` input. Owners derive exact consequence IDs through the same compiler on their proposed contribution, then bind the response to those IDs and the prepared identity; bindings never reimplement hashing. Preparation does not prove source currentness by itself: response admission still checks the current source contribution.
+
+#2909 vectors and Python/Node public API tests cover same-ID changed arguments, wrong/absent consequence references, response-kind mismatch, request-specific response alongside unrelated actions, and request-local settled state. Human-answer construction and the real first-party vertical journey remain #2986 work. No issue closes.
+
+
+## Constructible human answers (#2986)
+
+A bounded question now carries an owner-bound `response_request` and its declared `response_schema`, replacing the internal response operation ID. The owner supplies the request kind and fixed arguments; Rust binds current work, owner/source/capability revisions and question identity. Fixed arguments cannot prefill `answer`. Finite choices must each fit the admitted request schema; omitted/empty choices permit schema-bounded open judgment.
+
+Python `answer_decision`, Node `answerDecision`, and JSON `answer_decision` consume a freshly resolved trusted decision, its selected question ID, and the human answer, plus the host's current admitted capability contract. The client supplies no target, operation, effect, authority, or idempotency fields. Rust inserts only `arguments.answer` and returns the same prepared public request shape as `prepare_request`. The responsible owner then resolves that intention to exact consequences; answering itself performs no effect. The returned template is intentionally incomplete until the answer is bound and validated.
+
+As with invocation admission, hosts must supply the freshly resolved decision rather than accept client-authored decision JSON as authority. Removed/revised questions fail against that current view; request-response admission still checks source currentness before accepting the owner's response. This is no new state store or authentication layer.
+
+#2909 uses the existing shared vectors for admitted request kinds, current-work requirements, fixed-field and prefilled-answer rejection, and open question projection. Python/Node/JSON proof exercises finite/open answers, stale questions and contracts, invalid choices/schema values, and extra effect-bearing fields. Real first-party journeys, runtime identity continuity, generated package builders and hidden-vocabulary subtraction remain #2986/#3020 work; this kernel slice closes no issue.
+
+
+## Committed outcome and current continuation (#3000)
+
+The transitional process-local dispatcher retains only the exact admitted invocation and a copied, validated owner outcome. It stores no `next_decision`. Rust `operation_result` validates result status/effect bounds and composes the committed value with the host's fresh continuation; Python and Node expose transport-only helpers. Historical views inside owner outcomes are rejected. A returned mutable value cannot mutate the retained outcome.
+
+The outcome is retained before post-effect source resolution. If that resolution throws, the result still reports the proven effect/value with `continuation_status: unavailable` and `next_decision: null`. A later valid replay resolves current owners again without re-executing the effect. With available sources, continuation status is `current`. Pre-effect currentness remains required before a new effect; unavailable pre-effect resolution never authorizes execution.
+
+Existing #2909 shared-core/v1 Python/Node/JSON lanes prove changed-owner replay, post-effect resolution failure, retained value isolation, result effect/status validation, and rejection of historical views in outcome evidence. This removes the wrong lifetime coupling before durable storage. It does not supply durable custody, attempt/recovery identity, operation upgrade compatibility, concurrency or crash recovery. Those remain #2984/#3000/#3001, as does truthful treatment of a handler that fails after an unrecorded external effect. No issue closes.
+
+
+## Exact operation semantics for replay (#3000)
+
+Each admitted operation declares `semantic_revision` for its implementation and recovery meaning. Rust derives `operation_revision` from that revision, the normalized schema/result/effect/claim contract, owner identity and effect custody. The digest is separate from the source-dependent action revision and logical effect identity. Hosts derive this declaration from admitted producer authority; an implementation cannot authorize itself by supplying a version string.
+
+The current decision carries a derived `operation_revisions` projection, including admitted operations with no pending action. Receipt replay requires an exact revision match against that current projection and the submitted/retained invocation. Removed, unavailable or changed semantics fail closed, even if the old invocation is byte-for-byte unchanged. Package/owner revisions alone do not invalidate otherwise identical operation semantics. Compatible upgrades retain the exact admitted semantic revision; no conversion rules or compatibility registry are introduced.
+
+The existing #2909 shared-core/v1 Python/Node/JSON proof includes semantic/schema/result-contract upgrades, unchanged logical effects, replay after action completion, removed semantics and malformed revision. If all source resolution is unavailable in the transitional dispatcher, current operation compatibility cannot be established and replay fails closed while retaining the committed outcome. Post-effect unavailable continuation still reports the committed result as in #3032. Independent acquisition of admitted producer identity and durable custody/attempts remain the next owners' work. No issue closes.
+
+
+## One retained attempt before effect (#3000)
+
+Rust `admit_attempt` derives a separate attempt identity for the logical effect's initial attempt. It validates exact invocation/replay authority and returns `execute` only without retained evidence. An installed attempt with no validated outcome returns `uncertain`; committed evidence returns `replay`. Relevant action currentness changes and caller retry IDs cannot replace the retained attempt or change the logical effect. There is no automatic second attempt: proving safe owner recovery remains owner-specific work.
+
+`commit_attempt` adds a validated owner outcome to that exact record. A committed outcome cannot be changed. The record binds its invocation and outcome with a content revision; malformed/edited content and extra fields fail closed. This revision detects alteration, not authenticity: the host must supply custody-proven records. A caller cannot acquire custody by constructing a valid record. No current continuation is retained.
+
+The transitional Python dispatcher consumes this boundary, installs the process-local attempt before calling the handler, and retains uncertainty after exceptions or invalid results. A short process-local admission lock excludes concurrent admission; handlers and source resolution run outside it. Typed `UncertainOperationError.admission` names the exact owner/effect/attempt for recovery, without claiming whether the effect happened. This is not durable or cross-process custody yet.
+
+The #2909 shared-core/v1 lanes exercise fresh JSON-process receipt interpretation, uncertain retries, result immutability/corruption, authorized repeat, and an external callback failure. Durable installation, process concurrency, actual owner-specific recovery and preserved custody remain #3000/#3001/#2984. No parent issue closes.
+
+
+## Immutable stored attempts and exact custody (#3000/#3001)
+
+`admit_stored_attempt` installs the pre-effect record with atomic absent-file creation, flushes it, and only then returns `execute`. The storage target must match the target argument of the exact admitted owner-derived operation; clients cannot relocate an effect's receipt to another repository. Storage uses two bounded immutable files per logical effect under `.agentic-workspace/local/effects/`: the admission and, if committed, the result. It keeps no attempt history or historical continuation. Concurrent processes cannot both acquire the admission path. Effects execute outside the storage call, without a broad lock.
+
+`commit_stored_attempt` verifies exact acquired admission custody and creates the result without truncating/replacing admission evidence. Replaying/committing existing evidence requires an independently retained reference bound to canonical target, exact relative path, owner and content revision. Missing references, unknown collisions, altered bytes, wrong owners/targets and incomplete writes fail closed and preserve the existing files. Losing the returned result reference leaves the attempt uncertain even if recognizable result bytes exist. The host must preserve custody references through its responsible durable source before relying on later replay; deriving a reference from an unknown file is forbidden. These transport inputs are trusted host/source inputs, not client-granted authority.
+
+Directory-handle-relative file operations use `cap-std` to prevent parent-path replacement from escaping the acquired target. This is a filesystem confinement dependency; all AW admission, identity, result and custody semantics remain in this Rust core. Creation uses OS exclusive create rather than an application lock around external work. Regular evidence files are synced before return. Directory capability handles are not synced: Linux may open them with O_PATH, which is not a syncable file descriptor. Proof covers process interruption, not simulated whole-machine/power-loss durability on every filesystem.
+
+The existing #2909 Python/Node/JSON lanes prove pre/post-effect process interruption, fresh-process committed replay, same-effect two-process contention, owner-authorized repeat, unrelated view churn, exact custody reuse, unowned recognizable content preservation, partial-result rejection, cross-target substitution, Windows junction/Unix symlink refusal and quiet invalid/direct paths. The external-process fixture consumes the actual public storage seam; first-party domain migration is not claimed.
+
+Explicit two-sided ownership transfer, authority-correct durable reference ingress for real source owners, domain multi-write recovery, de-adoption and reconciliation-backed cleanup remain #3001/#3000/#2984. Existing ownership/source disposition is preserved; no legacy content is adopted or deleted here. No issue closes.
+
+
+## Local-only de-adoption preserves remaining state (#2984)
+
+The legacy lifecycle host no longer recursively deletes the entire local-only workspace tree after its selective package removal. It reports the remaining tree as preserved in preview and apply. It also preserves `OWNERSHIP.toml` even when its bytes match the package: its authority still requires reconciliation before removal. A modified ledger continues to block selective removal under the existing ambiguity rule. This is subtraction from the transitional host, not another semantic reducer or an assertion that all legacy per-file deletion rules have acquired exact custody.
+
+The existing #2909 shared-core test surface now exercises the actual local-only uninstall report: a package payload is removed while the ownership ledger, acquired attempt/result files and the host's retained custody reference survive byte-for-byte, then a fresh Rust process replays the committed result through that reference. This removes two premature deletion paths. Existing ownership-ledger transfer, other owner deletion rules, explicit two-sided transfer, and exact reconciliation-backed cleanup remain #2984/#3001. No issue closes and no current checkout authority is removed.
+
+Local-only ignore rules also remain intact so preserved private state does not become newly visible to Git after package removal. The lifecycle regression verifies both retained ignore files and actual Git ignore behavior.
+
+## Effectful callback dispatch consumes durable admission (#3000)
+
+The shipped Python callback dispatcher now uses the Rust stored-attempt boundary for every operation with effects. The responsible owner must declare and return an exact `arguments.target`; a missing target fails before the callback. Registration cannot select process-local recovery for an effectful invocation. The handler runs outside the admission lock. Rust alone admits currentness, acquires custody and commits the validated outcome.
+
+Successful effectful dispatch returns the existing custody reference in `result.custody`; an uncertain exception includes admission custody in `error.admission.custody`. A host restarting dispatch supplies an independently retained reference through `invoke(..., custody=...)`. The process-local copy is only a convenience for the same live dispatcher. Losing it cannot permit execution again: existing unowned evidence remains preserved and blocks dispatch. Custody is transport evidence alongside the result, never part of committed effect truth or historical continuation.
+
+The #2909 existing callback/module lane exercises actual process interruption after an external effect, independent process contention, exact replay in a fresh dispatcher process, dependency/repeat behavior, and the external-module callback seam. Read-only callbacks retain the existing process-local path and create no durable files. Real source-owner custody retention and two-sided transfer remain unresolved; no issue closes.
+
+## Same-owner former Planning reconciliation (#2970)
+
+`planning_view(context)` / `planningView(context)` / JSON `planning_view` read one independently admitted former `planning-execplan/v1` source. The host supplies exact source evidence (`target`, `path`, semantic `owner`, byte `revision`) obtained from that source's established Planning custody, alongside the separately admitted capability contract. This is the same trusted-host boundary as effect custody, not a public permission to manufacture authority by constructing this object. File shape, path, hash, `OWNERSHIP.toml`, package installation and reconstruction disposition do not establish admission. A non-Planning or missing source admission fails closed. Direct work (`relevant: false`, selected by the agent/human) neither reads sources nor writes state.
+
+Planning derives a stable subject identity from its established subject ID and target, plus a material revision over outcome, scope, dependencies, constraints, frontier, proof, handoff and residual state. Source byte revision, operation semantics, logical reconciliation effect and execution attempt remain separate. Fields such as old placeholders are preserved rather than silently judged complete. Unknown fields prevent complete coverage and expose their names. Only an explicit agent/human judgment can omit the former drift_log field; their contents are not persisted. This is one former-representation reader, not a field-mapping DSL or migration registry.
+
+The view returns an exact `planning.reconcile` invocation only for accounted-for source semantics and an admitted `planning-reconciliation-v1` operation. `reconcile_planning(context)` / `reconcilePlanning(context)` / JSON `reconcile_planning` re-resolve the source before invoking the established durable attempt/result boundary. The committed result's value is the corrected Planning representation. It contains the exact former-source evidence, subject identity/material revision, selected current state and coverage. No additional Planning state file, pointer, ownership database or transaction is introduced. An existing destination requires independently retained exact same-owner custody; recognizable unowned content is preserved. The old source remains intact and authoritative if admission or commit is uncertain. There is no ownership transfer: Planning's semantic custody never changes.
+
+Fresh-session callers retain the returned custody through their responsible host and pass it to `planning_view`. The reader revalidates source currentness and committed contents before returning `planning.current: true` and the same subject. Owner-local reconciliation does not grant task completion or Verification claims. Missing custody cannot silently adopt a result; a changed former source reopens reconciliation. Former-source retirement, automatic selected-owner cutover, multiple-source reconciliation, all other former Planning representations and Verification admission remain unresolved. No issue closes.
+
+The #2909 regression lives in the existing shared-core runtime lanes. `tests/vectors/planning_execplan.json` is copied from the actual selected `.agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json`, introduced at accepted commit `66d34279b`. Its provenance includes the established Planning owner-selection and targeted-write lifecycle, confirmed against the current selected-owner AW view and accepted repository source. The fixture host atomically creates its admitted copy; it does not infer source ownership from that copy's shape. The proof preserves the real outcome/bounds/proof/delegation/continuation fields, checks fresh Python/Node/JSON processes, and varies in-flight states and history to test lossless preservation. It does not claim the lived-in checkout was cut over or every historical source was migrated.
+
+
+### Planning-specific interrupted reconciliation completion
+
+Planning can finish an admitted reconciliation when the responsible host retained exact attempt custody and the result is still absent. A read-only view revalidates the source and returns the same exact reconciliation action; it does not claim the subject current. Invocation atomically creates the deterministic result under the same attempt and logical effect. This operation has no external callback or other effect to repeat. The successful result semantics are unchanged (`planning-reconciliation-v1`); retained committed results still undergo the same exact validation.
+
+Partial result files and successful results whose returned custody was lost remain preserved and blocked. Their shape is not adopted as proof, even when the expected bytes can be derived. Concurrent recovery contenders can create only one result. This owner-local recovery does not change generic uncertain-attempt admission or permit replaying external effects. The existing #2909 shared-core lane covers absent-result recovery, same-attempt/effect identity, fresh continuation, concurrent completion, partial residue and lost commit replies.
+
+## Material decision continuity (#3040)
+
+The existing shared compiler accepts optional `decision_context`: a bounded host-selected set of material decisions, independent current source/provenance admissions, current dependency revisions and exact applicable scope identities. `normalize_decision_record` / Node `normalizeDecisionRecord` / JSON `normalize_decision_record` derive and check the semantic record shape/revision. Normalization establishes no authority. The context uses the existing Python/Node/JSON compiler; it is neither a second decision engine nor a durable owner.
+
+A stable source-assigned decision ID survives revision. The material revision covers the semantic choice, consequence, authors/contributors, deciding actor and authority basis, affected scope, material evidence/context and explicit supersession. The canonical source owner/reference/revision and rationale locator are independently admitted and excluded from this semantic digest: a host may attest that non-material source churn preserves the same choice. Material rationale evidence belongs in dependencies; moving its locator alone is not a new decision. Changed deciding authority or material dependencies cannot reuse the old semantic admission. Current dependency observations are separate from both stored expectations and aggregate operating-view revision.
+
+Authors develop a choice; contributors assist; the deciding actor supplies decisive authority through an admitted basis. An agent can decide within admitted delegation, a human can confirm an agent-authored choice, or a human can originate it. AW-informed context is retained as owner evidence references, never relabeled as AW semantic authorship. The trusted host must authenticate this provenance and current canonical source before admitting the exact `(id, material_revision, source, rationale_reference)` binding. An ordinary client cannot manufacture the independent admission by serializing a matching object. This is the existing trusted-host boundary, not cryptographic attestation or a new authority registry.
+
+Supersession names a distinct prior ID, exact material revision and scope shared by both decisions. The host supplies the complete supersession closure for the bounded selection; missing targets, cycles and wrong revisions/scopes fail closed. Superseded scope does not revive merely because the replacement's dependencies later become stale. Unsuperseded scope remains separately eligible. Rationale and historical semantic records remain with their canonical source, referenced by the normalized record and its currentness state.
+
+The ordinary operating decision receives `decision_context.consequences` containing only current exact-scope consequences, with identity/revision, authors, deciding authority and source. Compact currentness states identify stale/superseded records and their rationale references. These facts affect the operating view, but grant no mutation, effect, proof, claim, policy, restriction or custody authority; executable contributions continue through existing capability admission. Domain owners must still derive actions and their material dependencies from relevant current facts. Unrelated scope produces no extra output or view revision change. There is no path glob, prose classifier, archive loading or storage in this slice; the input is capped at 64 selected records, not an archive-sized startup payload.
+
+The existing #2909 shared-core suite proves the provenance variants, Python/Node/JSON equivalence, source churn, changed authority/dependencies, scoped supersession/history references, quiet unrelated context and authority negatives. Reconciliation disposition, durable fallback/native ownership, source adapters, selective discovery/#2930 and #3041 dogfood remain. No issue closes, and the gated former Planning carry is untouched.
+
+Competing supersession checks follow the full ancestry separately for each scope. Advancing one side of a fork does not resolve its competition with the other side. A linear chain, independent decisions sharing scope, and an explicit successor resolving both sides remain valid; disjoint scope edges do not create a false shared lineage. The #2909 shared-core regression exercises each case.
+
+### Explicit decision reconciliation (#3040/#2570)
+
+For known future-value residue, the host supplies optional `decision_context.reconciliation`: exact admitted decision IDs, the independently resolved native/fallback owner roles, current destination admissions and owner-admitted dismissal judgments. This reuses the compiler's decision context; it adds no command, writer, capture phase or storage. Materiality and dismissal reasons remain agent/human judgments. The native/fallback role facts, destination evidence and dismissal authority must come from their responsible host/domain boundaries, not an ordinary client's constructed payload.
+
+Every known residue ID receives `pending`, `repo-native`, `fallback`, `dismissed` or `superseded` in the ordinary decision. Missing records fail closed. A repo-native owner takes precedence whenever admitted; a fallback receipt cannot bypass it. Retention requires the destination to attest the exact stable ID/material revision and rationale locator at a currently observed source revision. A location string, missing receipt, changed material value or stale destination does not suffice. Failed or later unavailable destination admission preserves the former current consequence and an explicit pending owner route. Successful admission projects that owner's source/rationale reference; it does not copy rationale into Memory or authorize physical deletion/transfer.
+
+Dismissal separately names the decisive actor, reason and current authority basis, bound to the exact decision revision. It cannot be inferred from the original semantic author, a stale confirmation or a record field. A fully superseded decision reuses the already admitted explicit supersession relation. Partial supersession leaves unresolved remaining scope. Reconciliation and semantic currentness remain separate: a durable owner may hold a stale decision, and a known unresolved residue remains visible even when it has no currently applicable operating consequence. No disposition grants task-global blocking, mutation, proof or claim authority.
+
+The #2909 shared-core lane covers native-first/fallback outcomes, failed/stale/different-value destination admissions, later destination loss, current dismissal authority, explicit supersession and missing/unrelated residue. Actual Memory/native adapters, source custody retention, stronger-owner promotion mutations, ordinary typed write requests, archive discovery and #3041 dogfood remain unimplemented. The former April decision's provenance must be reconciled honestly before a real-source migration can claim its semantic author/decisive authority; commit authorship alone cannot establish that distinction.
+
+
+## Repository source admission
+
+The optional repository adapter reads Markdown containing one fenced `aw-decision` JSON record. It is an encoding of the existing material-decision contract, not a universal ADR convention. Human-readable rationale remains canonical repository content. The adapter derives `source` and `rationale_reference`; these fields cannot be asserted by the record.
+
+The trusted repository host configures `[assurance] decision_record_target` and `decision_record_revision`. The latter is a full immutable Git commit, explicitly admitting the records and their semantic provenance within that archive. It is a source-owner attestation, not simply a discovery hint. Do not automatically set it to HEAD or infer it from Git tracking, actor labels, path recognition, or installation. Configuration changes need the repository owner's normal authority/review. Ordinary requests cannot supply or override this admission. Python/Node/raw JSON adapter calls are trusted host APIs, like the existing source-contribution APIs, not public intention arguments.
+
+`start --changed <exact paths> --format json` supplies path applicability. The adapter discovers typed records in a bounded admitted archive, then Rust validates parsed exact scope membership, source bytes and dependency revisions before projecting through the existing compiler. No task text is used. No applicable paths means no archive read or native invocation. This first adapter admits archives of at most 64 typed records; larger archives fail closed and require a bounded source-owner selection. It does not claim to solve large-archive discovery. The first adapter observes repository text dependencies only; unavailable external-owner dependencies remain stale. LF and CRLF represent the same text revision. It reads but never adopts, transfers, writes or deletes source files.
+
+Changed source bytes fail closed for reconciliation; current material dependencies are checked separately. This conservative adapter requires renewed source admission even for editorial changes. The shared semantic identity remains independent of source revision. Missing supersession closure fails closed; no classifier or automatic history completion fills it in.
+
+The Rust-produced current consequences and currentness states enter the immutable admitted projection input before final compilation. Their exact source-input revision participates in the canonical operating-decision identity; the ordinary packet projects the compiled context without a sidecar identity. Source dependencies are re-read after materialization, and changed currentness rejects finalization. An absent context adds no revision field or material input. These facts grant no action, effect, proof, claim, custody or human authority. Full prose is neither copied to Memory nor returned at startup. Owner/operation-based and semantic applicability, automatic capture, fallback storage and promotion remain separate work.
+
+The existing #2909 shared-core surface proves relevant/no-signal, source and authority staleness, forged actor and effect-authority negatives, retained superseded rationale, Python/Node/JSON equivalence, and actual ordinary startup with fresh validation before cache reuse. The real repository trace uses `docs/decisions/identity-lifetimes.md`.
+
+
+Installed transports use their packaged native binary. In an editable source checkout without that artifact, the Python/Node transport asks Cargo to validate/build the current shared core on demand; it does not require an ordinary client to supply an executable path or silently reuse an unvalidated old binary. No-signal startup does not invoke the core and does not build it. Explicit binary overrides remain available to trusted hosts and conformance tools.
+
+
+## Memory fallback and admitted native promotion
+
+The shared `semantic_route_view` host API accepts independently supplied current
+work and route declarations. It returns complete `public-request/v1` templates
+for branch discovery and agent selection. Public arguments contain only a branch
+and continuation cursor, or a posture and at most 16 exact leaf identities.
+Discovery returns at most 16 children per page; it does not rank or schedule them.
+The existing request validator binds the complete request, including work, source
+revision and arguments. A reused caller ID cannot reuse another request's answer.
+This owner declares no operations, effects, claims or custody authority.
+
+The repository source adapter can consume that same host context and public
+request through `semantic_routes`. Exact source scope still wins. Only current
+selected leaves can supply additional applicability; missing or stale selection
+does not invalidate exact applicability. This API is stateless and does not adopt
+the former local route-selection file. Remaining legacy route consumers require
+their own migration slices.
+
+Ordinary `start --select semantic_route_result --task "<current task>" --format
+json` returns those templates. Send a completed template through `start --request
+'<public request JSON>' --task "<same current task>" --format json`. The host
+derives work identity from the existing current-work binding plus the exact task,
+and derives source revision/leaf identities from current repository declarations.
+Clients cannot override either host input. Task text is hashed for identity, never
+classified for applicability. Route selection does not depend on unrelated HEAD
+changes. Invalid declarations provide no selectable leaves.
+
+The source's consequence and route response enter admitted projection inputs
+before ordinary decision compilation and cache lookup. Revalidation rereads the
+host facts. An unchanged request remains reusable; task/source changes invalidate
+semantic selection, while exact path applicability survives. No request/selector
+means no new route discovery, native call or state write. The shared-authority ADR
+is the real ownership-audit route example; no ADR prose is copied into Memory.
+
+The standalone generated TypeScript CLI lacks this repository host evidence
+adapter and reports explicit unavailability for the selector/request. It must not
+silently accept and ignore a public request. The configured Python host supplies
+the ordinary path; Python/Node/JSON shared semantic APIs remain equivalent with
+trusted host inputs. No caller JSON is promoted to substitute host admission.
+
+The same source adapter accepts an independently admitted Memory snapshot via the trusted host's optional `[assurance.decision_record_fallback]` table (`archive`, `admitted_revision`). This is explicit source-owner admission, including Memory custody/provenance, not discovery or an owner label supplied by the note. No default directory, caller-selected owner, or new public request fields are added. A host without native admission can retain and selectively surface this typed source under Memory's fallback role.
+
+With a native owner configured, Rust feeds both independently read snapshots into the existing #3043 reconciliation contract. A current destination must contain the same stable identity and material revision before the consequence points to it. Missing/unadmitted/changed/different-value native sources leave the admitted fallback contribution visible with pending reconciliation. Later destination loss reopens that route. Physical copying, retirement, custody transfer and write operations are not performed by this reader.
+
+The owning #2909 cases exercise Memory retention, native failure/success/loss, authority negatives, unchanged material identity and no-signal. `tests/fixtures/decision_fallback.md` preserves the known agent-authored source-admission decision from #3044; a fresh fixture repository atomically creates it under Memory, independently admits it, then proves ordinary startup before and after native promotion. This is a new known-provenance decision, not a claim to have migrated the April note or established custody from a familiar path. The former source remains byte-for-byte intact.
+
+### Independent instruction admission (#2613/#2606)
+
+Markdown `checks` and `protect` declare proposed hard scopes. The shared repository
+owner separately admits an exact immutable instruction snapshot through
+`[assurance] instruction_revision`. This follows the existing source-admission
+boundary: it is a trusted shared-config input, never an ordinary request argument,
+local preference, Git author identity, or value inferred from current HEAD.
+
+Rust independently reads the exact repository-relative source in that snapshot
+and compares its text revision with both current filesystem bytes and the
+adapter's observed revision. Only a current match returns binding checks,
+protected targets and clause authority. A stale, missing, conflicting, malformed
+or lookalike source returns no hard grant. Current `checks` create obligations,
+not passing evidence or claim-grant authority. `protect` grants no mutation or
+custody authority. `requirement:` references still defer to their existing owner;
+guidance and recommended `use` procedures remain non-binding.
+
+The Python clause adapter consumes these returned scopes; it no longer builds
+hard authority from its own emitted effects. Existing path/route applicability
+is preserved, including conjunctive declarations. A shared current semantic route
+can select a source but cannot admit it. Unrelated sources require no Rust call.
+The real workspace-operating instruction preserves the unresolved Planning source
+without acquiring its custody or rewriting it. Lower-authority local config cannot
+admit additional restrictions. Source admission itself performs no file writes.
+
+The shared Python/Node/JSON API and existing #2909 tests cover independent scopes,
+staleness, lookalikes, conflicting identities, recommendation failures, route
+selection and ordinary proof routing. This does not close configuration/source
+reconciliation, proof-result admission or external effect enforcement.
+
+The standalone generated TypeScript host cannot independently admit this source snapshot. It exposes hard bindings as unavailable rather than echoing declarations as grants; the Node shared-core API accepts the same trusted host inputs as Python and JSON.
+
+### Scoped semantic applicability (#2930)
+
+Material decisions may reference shared `semantic_routes` identities. An exact path/source/owner/contract/operation scope match remains sufficient; only when there is no exact match can a current acting-agent route select the decision's governed scope. This does not create a new route vocabulary or confer authority.
+
+The shared Rust compiler normalizes a missing or stale route selection to unresolved applicability with no selected routes. A bounded decision candidate then reports `applicability-unresolved`; it cannot block the task or unrelated actions. Explicit `none` or another current route leaves the candidate quiet. Malformed contracts and attempts to claim authority beyond applicability still fail closed. Empty semantic references preserve existing material decision revisions.
+
+The #2909 Rust/Python/Node/JSON vectors exercise the same consequence projection. Focused cases also cover exact-scope precedence, work/source staleness, missing/none/unrelated selection, and unchanged action/claim authority. Public route discovery/selection and ordinary source-adapter integration remain the next dependent slice; this primitive does not close #2930, #3040, #3041, or #2570.

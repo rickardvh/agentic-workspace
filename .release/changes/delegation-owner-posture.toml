@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Consume the current related Planning owner's capability posture before assignment ranking, preserving canonical reentry work classes."
+issues = [2210, 2970, 2817]

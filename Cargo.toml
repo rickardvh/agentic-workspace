@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/agentic-workspace-core", "crates/agentic-workspace-cli"]
+resolver = "2"

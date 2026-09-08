@@ -1,0 +1,159 @@
+use serde_json::Value;
+use std::fs;
+use std::path::PathBuf;
+
+fn vectors() -> Value {
+    let path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/vectors/source_decision.json");
+    serde_json::from_str(&fs::read_to_string(path).expect("shared vectors are readable"))
+        .expect("shared vectors are valid JSON")
+}
+
+fn capability_contract() -> Value {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/vectors/capability_contract.json");
+    serde_json::from_str(&fs::read_to_string(path).expect("capability contract is readable"))
+        .expect("capability contract is valid JSON")
+}
+
+fn authority_bearing(input: &Value) -> bool {
+    input["intent"].get("outcome").is_some()
+        || input["intent"].get("public_request").is_some()
+        || input["contributions"]
+            .as_array()
+            .is_some_and(|contributions| {
+                contributions.iter().any(|contribution| {
+                    ["actions", "blockers", "decisions"].iter().any(|field| {
+                        contribution[*field]
+                            .as_array()
+                            .is_some_and(|items| !items.is_empty())
+                    }) || contribution
+                        .get("outcome")
+                        .is_some_and(|value| !value.is_null())
+                        || contribution.get("request_response").is_some()
+                        || ["allowed", "blocked"].iter().any(|field| {
+                            contribution["claims"][*field]
+                                .as_array()
+                                .is_some_and(|items| !items.is_empty())
+                        })
+                })
+            })
+}
+
+fn expanded(input: &Value) -> Value {
+    let mut payload = input.clone();
+    if authority_bearing(&payload) && payload.get("capability_contract").is_none() {
+        payload
+            .as_object_mut()
+            .expect("input is an object")
+            .insert("capability_contract".to_owned(), capability_contract());
+    }
+    payload
+}
+
+fn selected<'a>(mut value: &'a Value, path: &str) -> &'a Value {
+    for part in path.split('.') {
+        value = if let Ok(index) = part.parse::<usize>() {
+            &value[index]
+        } else {
+            &value[part]
+        };
+    }
+    value
+}
+
+#[test]
+fn shared_success_vectors_match() {
+    for case in vectors()["cases"].as_array().expect("cases are an array") {
+        let decision = agentic_workspace_core::compile_value(expanded(&case["input"]))
+            .unwrap_or_else(|error| panic!("{}: {error}", case["id"]));
+        for (path, expected) in case["expect"].as_object().expect("expect is an object") {
+            assert_eq!(
+                selected(&decision, path),
+                expected,
+                "{}: {path}",
+                case["id"]
+            );
+        }
+    }
+}
+
+#[test]
+fn shared_error_vectors_fail_closed() {
+    for case in vectors()["error_cases"]
+        .as_array()
+        .expect("error cases are an array")
+    {
+        let error = agentic_workspace_core::compile_value(expanded(&case["input"]))
+            .expect_err("case must fail");
+        assert!(
+            error.to_string().contains(
+                case["error_contains"]
+                    .as_str()
+                    .expect("error fragment is text")
+            ),
+            "{}: {error}",
+            case["id"]
+        );
+    }
+}
+
+#[test]
+fn normalized_source_permutations_are_stable() {
+    for case in vectors()["equivalent_inputs"]
+        .as_array()
+        .expect("equivalent inputs are an array")
+    {
+        let decisions = case["inputs"]
+            .as_array()
+            .expect("inputs are an array")
+            .iter()
+            .map(|input| {
+                agentic_workspace_core::compile_value(expanded(input))
+                    .expect("permutation compiles")
+            })
+            .collect::<Vec<_>>();
+        assert!(
+            decisions.windows(2).all(|pair| pair[0] == pair[1]),
+            "{}",
+            case["id"]
+        );
+    }
+}
+
+#[test]
+fn action_material_dependencies_and_effect_generation() {
+    let all = vectors();
+    let case = all["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["id"] == "action-material-dependencies")
+        .unwrap();
+    let mut payload = expanded(&case["input"]);
+    let first = agentic_workspace_core::compile_value(payload.clone()).unwrap();
+    payload["contributions"][0]["revision"] = "unrelated-advice-change".into();
+    payload["capability_contract"]["revision"] = format!("sha256:{}", "e".repeat(64)).into();
+    let unrelated = agentic_workspace_core::compile_value(payload.clone()).unwrap();
+    assert_ne!(first["input_revision"], unrelated["input_revision"]);
+    assert_eq!(first["primary_action"], unrelated["primary_action"]);
+    payload["contributions"][0]["actions"][0]["dependency_revision"] = "proof-2".into();
+    let current = agentic_workspace_core::compile_value(payload.clone()).unwrap();
+    assert_eq!(
+        first["primary_action"]["idempotency_key"],
+        current["primary_action"]["idempotency_key"]
+    );
+    assert_ne!(first["primary_action"], current["primary_action"]);
+    assert!(
+        agentic_workspace_core::admit_invocation_value(
+            serde_json::json!({"decision":current,"invocation":first["primary_action"]})
+        )
+        .is_err()
+    );
+    payload["contributions"][0]["actions"][0]["effect_generation"] = "authorized-repeat-2".into();
+    let repeat = agentic_workspace_core::compile_value(payload).unwrap();
+    assert_ne!(
+        first["primary_action"]["idempotency_key"],
+        repeat["primary_action"]["idempotency_key"]
+    );
+}

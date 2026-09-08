@@ -4,6 +4,22 @@
   "additionalProperties": false,
   "description": "Input accepted by public assignment lifecycle operations that prepare handoff packets, import returns, admit or reject results, integrate admitted work, and record lifecycle maintenance actions.",
   "properties": {
+    "configuration_parameters_json": {
+      "description": "Bounded JSON object of adapter-owned parameter choices for the paired current configuration offer. Not source authority or standing policy.",
+      "type": "string",
+      "maxLength": 4096,
+      "minLength": 2
+    },
+    "configuration_revision": {
+      "description": "Current source-resolved execution configuration offer revision. An intention only; replacing an assignment also requires exact source-owner or repair admission.",
+      "type": "string",
+      "minLength": 1
+    },
+    "configuration_id": {
+      "description": "One eligible configuration from the paired revision; target, transport and adapter-owned topology stay bound together.",
+      "type": "string",
+      "minLength": 1
+    },
     "admission_status": {
       "description": "Reviewer decision recorded for an imported assignment return.",
       "enum": [

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Attribute delegation outcomes conservatively in the shared core and derive optional contextual evidence from admitted assignment closeout."
+issues = [2967, 2209, 2818, 2210, 2909]

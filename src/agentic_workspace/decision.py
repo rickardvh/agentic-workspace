@@ -1,208 +1,216 @@
 from __future__ import annotations
 
-import hashlib
 import json
+import subprocess
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agentic_workspace.native_core import core_binary as native_core_binary
+
 
 class DecisionContractError(ValueError):
-    """Raised when a source owner contributes an invalid decision fragment."""
+    """Raised when the shared core rejects a source-decision request."""
 
 
-def _digest(value: object) -> str:
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
-    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+def start(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Consume repository sources through the native public owner boundary."""
+    return _request({"start": context})
 
 
-def _strings(value: object, *, field: str) -> list[str]:
-    if value is None:
-        return []
-    if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
-        raise DecisionContractError(f"{field} must be a list of non-empty strings")
-    return [item for item in value if isinstance(item, str)]
+def invoke(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Submit an exact public invocation to the same native owner boundary."""
+    return _request({"invoke": context})
 
 
-def normalize_contribution(value: Mapping[str, Any]) -> dict[str, Any]:
-    """Normalize the only semantic input accepted by the v1 reducer."""
+def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
+    """Use the shared owner's established direct-task semantic identity."""
+    return _request({"direct_task_subject": {"task": task, "paths": paths}})
 
-    owner = str(value.get("owner") or "").strip()
-    revision = str(value.get("revision") or "").strip()
-    if not owner or not revision:
-        raise DecisionContractError("a contribution requires owner and revision")
 
-    blockers = value.get("blockers", [])
-    actions = value.get("actions", [])
-    if not isinstance(blockers, list) or any(not isinstance(item, Mapping) for item in blockers):
-        raise DecisionContractError(f"{owner}.blockers must be a list of objects")
-    if not isinstance(actions, list) or any(not isinstance(item, Mapping) for item in actions):
-        raise DecisionContractError(f"{owner}.actions must be a list of objects")
+def task_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"task_requirements": context})
 
-    normalized_actions: list[dict[str, Any]] = []
-    typed_actions = [dict(item) for item in actions if isinstance(item, Mapping)]
-    for index, item in enumerate(typed_actions):
-        operation_id = str(item.get("operation_id") or "").strip()
-        if not operation_id:
-            raise DecisionContractError(f"{owner}.actions[{index}].operation_id is required")
-        arguments = item.get("arguments", {})
-        if not isinstance(arguments, Mapping):
-            raise DecisionContractError(f"{owner}.actions[{index}].arguments must be an object")
-        priority = item.get("priority", 0)
-        if not isinstance(priority, int):
-            raise DecisionContractError(f"{owner}.actions[{index}].priority must be an integer")
-        normalized_actions.append(
-            {
-                "operation_id": operation_id,
-                "arguments": dict(arguments),
-                "effects": _strings(item.get("effects"), field=f"{owner}.actions[{index}].effects"),
-                "authority": str(item.get("authority") or owner),
-                "priority": priority,
-            }
-        )
 
-    normalized_blockers: list[dict[str, str]] = []
-    typed_blockers = [dict(item) for item in blockers if isinstance(item, Mapping)]
-    for index, item in enumerate(typed_blockers):
-        code = str(item.get("code") or "").strip()
-        message = str(item.get("message") or "").strip()
-        if not code or not message:
-            raise DecisionContractError(f"{owner}.blockers[{index}] requires code and message")
-        blocker = {"code": code, "message": message, "owner": str(item.get("owner") or owner)}
-        recovery = str(item.get("recovery") or "").strip()
-        if recovery:
-            blocker["recovery"] = recovery
-        normalized_blockers.append(blocker)
+def task_judgment(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"task_judgment": context})
 
-    claims = value.get("claims", {})
-    if not isinstance(claims, Mapping):
-        raise DecisionContractError(f"{owner}.claims must be an object")
 
-    facts = value.get("facts", {})
-    if not isinstance(facts, Mapping):
-        raise DecisionContractError(f"{owner}.facts must be an object")
+def proof_subject(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Compute shared proof identity; runtime observations grant no authority."""
+    return _request({"proof_subject": context})
 
-    return {
-        "owner": owner,
-        "revision": revision,
-        "relevant": value.get("relevant", True) is not False,
-        "facts": dict(facts),
-        "blockers": normalized_blockers,
-        "actions": normalized_actions,
-        "claims": {
-            "allowed": _strings(claims.get("allowed"), field=f"{owner}.claims.allowed"),
-            "blocked": _strings(claims.get("blocked"), field=f"{owner}.claims.blocked"),
-        },
-        "terminal": value.get("terminal", False) is True,
-    }
+
+def proof_receipt(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Shared shape admission; host codec observations grant no evidence authority."""
+    return _request({"proof_receipt": context})
+
+
+def attribute_assignment_outcome(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"attribute_assignment_outcome": evidence})
+
+
+def _request(payload: Mapping[str, Any]) -> dict[str, Any]:
+    try:
+        binary = native_core_binary()
+    except (OSError, RuntimeError) as error:
+        raise DecisionContractError(str(error)) from error
+    completed = subprocess.run(
+        [str(binary)],
+        input=json.dumps(payload, separators=(",", ":")),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        try:
+            message = json.loads(completed.stderr)["error"]["message"]
+        except (KeyError, TypeError, json.JSONDecodeError):
+            message = completed.stderr.strip() or f"shared core exited with status {completed.returncode}"
+        raise DecisionContractError(str(message))
+    return dict(json.loads(completed.stdout))
 
 
 def compile_source_decision(
     contributions: Iterable[Mapping[str, Any]],
     *,
     intent: Mapping[str, Any] | None = None,
+    capability_contract: Mapping[str, Any] | None = None,
+    decision_context: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Reduce current source-owner contributions to one operating answer.
+    payload: dict[str, Any] = {"contributions": list(contributions), "intent": dict(intent or {})}
+    if capability_contract is not None:
+        payload["capability_contract"] = dict(capability_contract)
+    if decision_context is not None:
+        payload["decision_context"] = dict(decision_context)
+    return _request(payload)
 
-    Rendering consumers are intentionally not an input. A CLI, Python client, or
-    other transport may select detail after this function returns, but cannot
-    influence identity, action, status, or claim authority.
-    """
 
-    normalized = [normalize_contribution(item) for item in contributions]
-    relevant = sorted((item for item in normalized if item["relevant"]), key=lambda item: item["owner"])
-    owners = [item["owner"] for item in relevant]
-    if len(owners) != len(set(owners)):
-        raise DecisionContractError("each source owner may contribute at most once")
+def admit_invocation(
+    decision: Mapping[str, Any], invocation: Mapping[str, Any], previous: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    return _request({"admission": {"decision": decision, "invocation": invocation, "previous_invocation": previous}})
 
-    source_input = {
-        "intent": dict(intent or {}),
-        "sources": [
-            {
-                "owner": item["owner"],
-                "revision": item["revision"],
-                "facts": item["facts"],
-                "blockers": item["blockers"],
-                "actions": item["actions"],
-                "claims": item["claims"],
-                "terminal": item["terminal"],
-            }
-            for item in relevant
-        ],
-    }
-    input_revision = _digest(source_input)
 
-    blockers = [blocker for item in relevant for blocker in item["blockers"]]
-    actions = [(item["owner"], action) for item in relevant for action in item["actions"]]
-    primary_action: dict[str, Any] | None = None
+def prepare_request(request: Mapping[str, Any], current_work: Mapping[str, Any], capability_contract: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"prepare_request": {"request": request, "current_work": current_work, "capability_contract": capability_contract}})
 
-    if not blockers and actions:
-        actions.sort(key=lambda pair: (-pair[1]["priority"], pair[0], pair[1]["operation_id"]))
-        top_priority = actions[0][1]["priority"]
-        tied = [pair for pair in actions if pair[1]["priority"] == top_priority]
-        if len(tied) > 1:
-            blockers.append(
-                {
-                    "code": "ambiguous-action",
-                    "message": "multiple source owners proposed equally authoritative actions",
-                    "owner": "operating-decision",
-                    "recovery": "reconcile the competing source owners",
-                }
-            )
-        else:
-            owner, action = actions[0]
-            primary_action = {
-                "kind": "agentic-workspace/operation-invocation/v1",
-                "operation_id": action["operation_id"],
-                "arguments": action["arguments"],
-                "effects": action["effects"],
-                "authority": action["authority"],
-                "source_owner": owner,
-                "expected_input_revision": input_revision,
-                "idempotency_key": _digest(
-                    {
-                        "operation_id": action["operation_id"],
-                        "arguments": action["arguments"],
-                        "input_revision": input_revision,
-                    }
-                ),
-            }
 
-    allowed_claims = sorted({claim for item in relevant for claim in item["claims"]["allowed"]})
-    blocked_claims = sorted({claim for item in relevant for claim in item["claims"]["blocked"]})
-    allowed_claims = [claim for claim in allowed_claims if claim not in blocked_claims]
-    if blockers:
-        status = "blocked"
-        primary_action = None
-    elif primary_action:
-        status = "actionable"
-    elif relevant and all(item["terminal"] for item in relevant):
-        status = "terminal"
-    else:
-        status = "direct"
+def answer_decision(decision: Mapping[str, Any], consequence: str, answer: Any, capability_contract: Mapping[str, Any]) -> dict[str, Any]:
+    return _request(
+        {"answer_decision": {"decision": decision, "question": consequence, "answer": answer, "capability_contract": capability_contract}}
+    )
 
-    semantic_answer = {
-        "input_revision": input_revision,
-        "status": status,
-        "primary_action": primary_action,
-        "blockers": blockers,
-        "claim_boundary": {"allowed": allowed_claims, "blocked": blocked_claims},
-        "relevant_owners": owners,
-    }
-    return {
-        "kind": "agentic-workspace/operating-decision/v1",
-        "decision_id": "operating-decision:" + _digest(semantic_answer).removeprefix("sha256:")[:16],
-        **semantic_answer,
-    }
+
+def operation_result(invocation: Mapping[str, Any], outcome: Mapping[str, Any], decision: Mapping[str, Any] | None) -> dict[str, Any]:
+    return _request({"operation_result": {"invocation": invocation, "outcome": outcome, "decision": decision}})
+
+
+def admit_attempt(decision: Mapping[str, Any], invocation: Mapping[str, Any], record: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    return _request({"admit_attempt": {"decision": decision, "invocation": invocation, "record": record}})
+
+
+def commit_attempt(record: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"commit_attempt": {"record": record, "outcome": outcome}})
+
+
+def admit_stored_attempt(
+    target: str, decision: Mapping[str, Any], invocation: Mapping[str, Any], custody: Mapping[str, Any] | None = None
+) -> dict[str, Any]:
+    return _request({"admit_stored_attempt": {"target": target, "decision": decision, "invocation": invocation, "custody": custody}})
+
+
+def commit_stored_attempt(target: str, custody: Mapping[str, Any], outcome: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"commit_stored_attempt": {"target": target, "custody": custody, "outcome": outcome}})
 
 
 def select_decision_detail(decision: Mapping[str, Any], fields: Iterable[str]) -> dict[str, Any]:
-    """Create a non-authoritative view without recompiling semantic state."""
-
-    selected = {field: decision[field] for field in fields if field in decision}
     return {
         "kind": "agentic-workspace/decision-view/v1",
         "decision_id": decision.get("decision_id"),
         "input_revision": decision.get("input_revision"),
         "authoritative": False,
-        "values": selected,
+        "values": {field: decision[field] for field in fields if field in decision},
     }
+
+
+def planning_view(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"planning_view": context})
+
+
+def semantic_route_view(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"semantic_route_view": context})
+
+
+def instruction_source_admission(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"instruction_source_admission": context})
+
+
+def instruction_applicability(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"instruction_applicability": context})
+
+
+def replace_assignment(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Trusted host API; ordinary commands cannot supply admitted source facts."""
+    return _request({"replace_assignment": context})
+
+
+def execution_configurations(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Trusted adapter facts, shared eligibility and revision-bound agent choice."""
+    return _request({"execution_configurations": context})
+
+
+def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"reconcile_planning": context})
+
+
+__all__ = [
+    "start",
+    "invoke",
+    "semantic_route_view",
+    "normalize_decision_record",
+    "DecisionContractError",
+    "compile_source_decision",
+    "select_decision_detail",
+    "admit_invocation",
+    "prepare_request",
+    "answer_decision",
+    "operation_result",
+    "admit_attempt",
+    "commit_attempt",
+    "admit_stored_attempt",
+    "commit_stored_attempt",
+    "planning_view",
+    "reconcile_planning",
+]
+
+
+def normalize_decision_record(record: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"normalize_decision_record": record})
+
+
+def repository_decision_view(
+    *,
+    target: str,
+    archive: str = "",
+    admitted_revision: str = "",
+    applicable_scope: list[str],
+    fallback: Mapping[str, Any] | None = None,
+    semantic_routes: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Trusted repository host/source-owner input, never public request fields."""
+    return _request(
+        {
+            "repository_decision_view": {
+                "target": target,
+                "archive": archive,
+                "admitted_revision": admitted_revision,
+                "applicable_scope": applicable_scope,
+                "fallback": dict(fallback) if fallback is not None else None,
+                "semantic_routes": semantic_routes,
+            }
+        }
+    )
+
+
+def admit_assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"admit_assignment_packet": context})

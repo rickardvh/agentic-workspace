@@ -655,9 +655,33 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     target_root = Path(str(values.get("target_root") or values.get("target") or context.cwd)).resolve()
     local_root = _resolve_inside(target_root, ".agentic-workspace/local/assignment-runs")
     dry_run = bool(values.get("dry_run", False))
+    dispatch_attempted = False
+    receipt: dict[str, Any]
 
     assignment_id = _optional_text(values.get("assignment_id"))
     assignment_revision = _optional_text(values.get("assignment_revision"))
+    choice_revision = _optional_text(values.get("configuration_revision"))
+    choice_id = _optional_text(values.get("configuration_id"))
+    choice_parameters = values.get("configuration_parameters_json")
+    execution_choice: dict[str, Any] | None = None
+    if choice_revision or choice_id or choice_parameters is not None:
+        if (
+            not choice_revision
+            or not choice_id
+            or not ((transition in {"dispatch", "export"} and not assignment_id) or (transition == "reassign" and assignment_id))
+        ):
+            raise PrimitiveExecutionError("configuration-choice-requires-both-fields-and-new-assignment")
+        execution_choice = {"revision": choice_revision, "candidate": choice_id}
+        if choice_parameters is not None:
+            if not isinstance(choice_parameters, str) or len(choice_parameters) > 4096:
+                raise PrimitiveExecutionError("configuration-parameters-must-be-bounded-json-object")
+            try:
+                parameters = json.loads(choice_parameters)
+            except (TypeError, ValueError) as error:
+                raise PrimitiveExecutionError("configuration-parameters-must-be-json-object") from error
+            if not isinstance(parameters, dict):
+                raise PrimitiveExecutionError("configuration-parameters-must-be-json-object")
+            execution_choice["parameters"] = parameters
     if transition in {"dispatch", "export"} and not assignment_id:
         from agentic_workspace import config as config_lib
         from agentic_workspace.workspace_runtime_core import _execution_posture_payload
@@ -669,11 +693,39 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             changed_paths=changed_paths,
             task_text=_optional_text(values.get("task")),
             target_root=target_root,
-            materialize_assignment=True,
+            materialize_assignment=not dry_run,
+            execution_choice=execution_choice,
+            requested_transport=_optional_text(values.get("transport")),
         )
         materialization = _assignment_mapping(posture.get("assignment_materialization"))
         assignment_id = _optional_text(materialization.get("assignment_id"))
         assignment_revision = _optional_text(materialization.get("assignment_revision"))
+        if dry_run and not assignment_id:
+            decision = _assignment_mapping(posture.get("assignment_decision"))
+            return {
+                "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+                "operation_id": operation_id,
+                "transition": transition,
+                "status": "selection-preview",
+                "outcome": "noop",
+                "mutation_applied": False,
+                "assignment_id": None,
+                "assignment_revision": None,
+                "run_id": "",
+                "artifact_refs": [],
+                "state_ref": None,
+                "state": {
+                    "schema_version": "agentic-workspace/assignment-lifecycle-decision-state/v1",
+                    "current_state": "unmaterialized",
+                },
+                "failures": [],
+                "preview": {
+                    "selected_configuration": decision.get("selected_execution_configuration"),
+                    "assignment_gate": posture.get("assignment_gate"),
+                    "assignment_materialized": False,
+                },
+                "message": "Current selection only; assignment construction and transport execution have not occurred.",
+            }
         if assignment_id:
             values = {
                 **values,
@@ -802,6 +854,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         from agentic_workspace.orchestration import reconcile_action_result
 
         result["next_current_continuation"] = reconcile_action_result(result=result)
+        if currentness == "current" and planning_assignment.get("replacement_packet"):
+            from agentic_workspace.assignment_burden import assignment_attempt_burden
+
+            result["attempt_burden"] = assignment_attempt_burden(target_root, planning_assignment["replacement_packet"])
         return result
 
     def require(field: str) -> str:
@@ -914,10 +970,36 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 "rule": "Import records evidence in received/awaiting-admission; AW-owned admission, integration, proof, and closeout remain pending.",
             },
         }
-        packet["worker_context"] = _assignment_worker_context(packet)
+        canonical_packet = current_authorities.get("replacement_packet")
+        if canonical_packet:
+            from agentic_workspace.assignment_source import current_replacement
+
+            try:
+                current = current_replacement(
+                    target_root, canonical_packet, {"id": identity["slice_id"], "revision": identity["plan_revision"]}
+                )
+                if current["status"] != "current":
+                    raise ValueError(current["reason_code"])
+                if (
+                    target_name != canonical_packet["target"]
+                    or packet["transport"] != canonical_packet["transport"]
+                    or run_id != canonical_packet["run_id"]
+                ):
+                    raise ValueError("assignment-replacement-intention-mismatch")
+                packet = canonical_packet
+            except (ValueError, OSError) as error:
+                failures.append(
+                    {
+                        "reason": str(error),
+                        "field": "assignment.replacement",
+                        "recovery": "Reconcile the current replacement source; do not use the previous target or local execution.",
+                    }
+                )
+        else:
+            packet["worker_context"] = _assignment_worker_context(packet)
         transport = _optional_text(values.get("transport")) or "manual"
         dispatch_configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
-        if transition == "dispatch" and dispatch_configuration["kind"] == "host-native" and not dispatch_configuration["command"]:
+        if not canonical_packet and dispatch_configuration.get("kind") in {"host-native", "native"}:
             packet = _assignment_seal_host_native_packet(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
@@ -931,10 +1013,10 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "packet_ref": _assignment_relative(packet_path, root=target_root),
             "prompt_ref": _assignment_relative(prompt_path, root=target_root),
             "integrity": _optional_text(packet.get("packet_integrity")) or _assignment_digest(packet),
-            "worker_context_integrity": _assignment_digest(packet["worker_context"]),
+            "worker_context_integrity": _assignment_digest(packet.get("worker_context") or _assignment_worker_context(packet)),
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
-        if transition == "dispatch" and transport == "manual":
+        if not canonical_packet and transition == "dispatch" and transport == "manual":
             failures.append(
                 {
                     "reason": "automatic-transport-required",
@@ -953,13 +1035,34 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             }
         )
         writes = {packet_path: packet, prompt_path: prompt, manifest_path: manifest}
-        if transport != "manual" and not failures:
+        if transition == "dispatch" and dispatch_configuration.get("kind") == "native" and not failures and not dry_run:
+            from agentic_workspace.native_transport import ProviderError, require_unattempted_run
+
+            try:
+                require_unattempted_run(target_root, run_id)
+            except ProviderError as error:
+                failures.append(
+                    {
+                        "reason": str(error),
+                        "field": "run_id",
+                        "recovery": "Preserve this attempt's result; use current assignment re-entry for an explicitly new attempt.",
+                    }
+                )
+        if transition == "dispatch" and transport != "manual" and not failures and not dry_run:
+            # The worker must resolve this exact bounded assignment at entry.
+            # Persist custody before crossing the process boundary; failures
+            # cannot erase an attempt that may already have consumed resources.
+            for path, payload in writes.items():
+                _write_assignment_artifact(path=path, payload=payload)
+            _write_assignment_artifact(path=state_path, payload=state)
+            dispatch_attempted = True
             dispatch = _dispatch_assignment_packet(
                 packet=packet,
                 prompt=prompt,
                 target_root=target_root,
                 transport=transport,
             )
+            dispatch.update({key: packet[key] for key in ("assignment_id", "assignment_revision", "run_id", "packet_integrity")})
             dispatch_path = artifact("dispatch/receipt.json")
             artifact_paths.append(dispatch_path)
             writes[dispatch_path] = dispatch
@@ -1071,6 +1174,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                         },
                     }
                 )
+            if failures:
+                state["current_state"] = "dispatch-failed"
     elif transition == "import":
         require("run_id")
         returned = _assignment_import_return_value(values=values, target_root=target_root, failures=failures)
@@ -1093,7 +1198,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "summary",
             "stop_conditions_hit",
         ) + (("patch",) if assignment_identity.get("role") == "implementer" else ())
-        if _assignment_mapping(state.get("host_execution")).get("result_delivery_required"):
+        if assignment.get("replacement") or _assignment_mapping(state.get("host_execution")).get("result_delivery_required"):
             required_return_fields += ("assignment_id", "packet_integrity", "result_delivery")
         missing_return_fields = [field for field in required_return_fields if field not in returned]
         if missing_return_fields:
@@ -1179,6 +1284,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             state=state,
             values=values,
             failures=failures,
+            replacing=transition == "repair",
         )
         admission = (
             _assignment_admit_with_current_authority(current_authorities=current_authorities, returned_work=returned)
@@ -1212,6 +1318,25 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "worker_reported_baseline_trusted": False,
             "rule": "Admission receipts are valid only after the host primitive re-resolves current Planning, proof, run, and mutation baseline authorities and strict return admission succeeds.",
         }
+        if transition == "repair" and state.get("current_state") in {
+            "dispatch-failed",
+            "awaiting-admission",
+            "rejected",
+            "repair-requested",
+        }:
+            prior = _assignment_mapping(state.get("assignment"))
+            if prior.get("assignment_identity") != _assignment_identity(current_authorities):
+                failures.append(
+                    {
+                        "reason": "assignment-repair-packet-not-current",
+                        "field": "state.assignment",
+                        "recovery": "Resolve the exact current semantic assignment before repair.",
+                    }
+                )
+            receipt["repair_binding"] = {
+                key: prior.get(key) for key in ("assignment_id", "assignment_revision", "run_id", "packet_integrity")
+            }
+            state["repair_admission_ref"] = _assignment_relative(receipt_path, root=target_root)
         artifact_paths.append(receipt_path)
         state.update(
             {
@@ -1223,6 +1348,14 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             }
         )
         writes = {receipt_path: receipt}
+        if transition == "repair" and receipt.get("repair_binding") and not failures:
+            from agentic_workspace.native_transport import prepare_repair_continuation
+
+            continuation = prepare_repair_continuation(target_root, _assignment_mapping(state.get("assignment")))
+            if continuation is not None:
+                continuation_path, continuation_record = continuation
+                writes[continuation_path] = continuation_record
+                artifact_paths.append(continuation_path)
     elif transition == "integrate":
         require("run_id")
         return_id = _optional_text(values.get("return_id")) or str(state.get("last_return_id") or "unidentified-return")
@@ -1357,41 +1490,172 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         state.update({"current_state": receipt["status"]})
         writes = {receipt_path: receipt}
     elif transition == "reassign":
-        require("run_id")
-        target_name = require("target_name")
-        reason = require("reason")
-        receipt_path = artifact("reassignment/reassign.json")
-        receipt = {
-            "kind": "agentic-workspace/assignment-reassignment-receipt/v1",
-            "run_id": run_id,
-            "status": "superseded",
-            "new_target": target_name,
-            "reason": reason,
-        }
-        artifact_paths.append(receipt_path)
-        state.update({"current_state": "superseded", "reassigned_to": target_name})
-        writes = {receipt_path: receipt}
+        from agentic_workspace.assignment_source import replace_after_repair, replace_from_source, source_facts
+
+        repair_preview = dry_run and execution_choice is None and state.get("current_state") == "repair-requested"
+        if execution_choice is None and not repair_preview:
+            require("reason")
+            require("target_name")
+
+        try:
+            if execution_choice is None and not repair_preview:
+                source_facts(target_root)
+        except (ValueError, OSError) as error:
+            failures.append(
+                {
+                    "reason": "assignment-override-authority-unavailable",
+                    "field": "host.assignment_override_admission",
+                    "recovery": str(error),
+                }
+            )
+
+        assignment_id = assignment_id or _optional_text(state.get("assignment_id"))
+        authorities = _assignment_current_authorities_from_store(
+            target_root=target_root,
+            assignment_id=assignment_id,
+            assignment_revision=assignment_revision,
+            run_id=run_id,
+            state=state,
+            values=values,
+            failures=failures,
+            replacing=True,
+        )
+        prior = _assignment_mapping(state.get("assignment"))
+        if prior.get("assignment_identity") != _assignment_identity(authorities):
+            failures.append(
+                {
+                    "reason": "assignment-revision-mismatch",
+                    "field": "assignment_revision",
+                    "recovery": "Resolve the exact current assignment packet before replacement.",
+                }
+            )
+        if not failures:
+            try:
+                result = (
+                    replace_after_repair(target_root, prior, execution_choice)
+                    if execution_choice is not None or repair_preview
+                    else replace_from_source(
+                        target_root,
+                        prior,
+                        {"id": prior["assignment_identity"]["slice_id"], "revision": prior["assignment_identity"]["plan_revision"]},
+                        {
+                            "assignment_revision": assignment_revision,
+                            "target": values.get("target_name"),
+                            "transport": values.get("transport") or "manual",
+                            "reason": values.get("reason"),
+                        },
+                    )
+                )
+            except (ValueError, OSError, KeyError) as error:
+                result = {"status": "blocked", "reason_code": str(error)}
+            if result["status"] == "repair-choice-required":
+                return {
+                    "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+                    "operation_id": operation_id,
+                    "transition": transition,
+                    "status": "selection-preview",
+                    "outcome": "noop",
+                    "mutation_applied": False,
+                    "assignment_id": assignment_id,
+                    "assignment_revision": assignment_revision,
+                    "run_id": run_id,
+                    "artifact_refs": [],
+                    "failures": [],
+                    "preview": result,
+                    "state": _assignment_lifecycle_decision_state(state),
+                    "next_current_continuation": {
+                        "kind": "agentic-workspace/action-result-continuation/v1",
+                        "status": "decision-required",
+                        "owner": "assignment",
+                        "decision": "Select a current eligible configuration for this same semantic work.",
+                        "operation_id": "assignment.reassign",
+                        "required_inputs": ["configuration_revision", "configuration_id"],
+                    },
+                }
+            if result["status"] != "replaced":
+                failures.append(
+                    {
+                        "reason": result["reason_code"],
+                        "field": "host.assignment_override_admission",
+                        "recovery": "Resolve the current assignment owner's eligibility requirements; a source answer cannot waive them."
+                        if result["reason_code"] in {"assignment-replacement-ineligible", "assignment-replacement-eligibility-unavailable"}
+                        else "Resolve the current local-config owner replacement answer; command fields cannot supply authority.",
+                    }
+                )
+            else:
+                packet = _assignment_mapping(result.get("packet"))
+                if execution_choice is not None and (
+                    (values.get("target_name") and values["target_name"] != packet["target"])
+                    or (values.get("transport") and values["transport"] != packet["transport"])
+                ):
+                    failures.append(
+                        {
+                            "reason": "assignment-repair-intention-mismatch",
+                            "field": "target_name|transport",
+                            "recovery": "Select the configuration matching the requested target and transport.",
+                        }
+                    )
+                from agentic_workspace.assignment_source import current_replacement
+
+                try:
+                    if execution_choice is None:
+                        current_replacement(target_root, packet, packet["replacement"]["work"])
+                except (ValueError, OSError) as error:
+                    failures.append(
+                        {
+                            "reason": str(error),
+                            "field": "host.assignment_override_admission",
+                            "recovery": "Refresh the source-owner answer before replacement.",
+                        }
+                    )
+                canonical_path = _resolve_inside(target_root, authorities["planning_assignment_ref"])
+                canonical = json.loads(canonical_path.read_text(encoding="utf-8-sig"))
+                if canonical.get("current_revision") != prior["assignment_revision"]:
+                    failures.append(
+                        {
+                            "reason": "assignment-revision-mismatch",
+                            "field": "assignment_revision",
+                            "recovery": "Resolve the new current assignment before replacing it.",
+                        }
+                    )
+                canonical["replacement_packet"] = packet
+                if execution_choice is not None:
+                    canonical["execution_choice"] = execution_choice
+                canonical["current_revision"] = packet["assignment_revision"]
+                canonical["target_name"] = packet["target"]
+                canonical["assignment_gate"] = {
+                    **canonical["assignment_gate"],
+                    "selected_target": packet["target"],
+                    "target_identity_ref": packet["assignment_identity"]["target_identity_ref"],
+                    "target_revision": packet["assignment_identity"]["target_revision"],
+                    "assignment_decision_revision": packet["assignment_revision"],
+                    "dispatch_adapter": packet["assignment_identity"]["dispatch_adapter"],
+                    "status": packet["assignment_identity"]["gate_status"],
+                    "required_next_action": packet["assignment_identity"]["required_next_action"],
+                    "implementation_allowed": result["implementation_allowed"],
+                    "executor_disposition": {"transport": packet["transport"]},
+                }
+                obligation = canonical["assignment_gate"].get("proof_obligation", {})
+                canonical["assignment_gate"]["proof_obligation"] = {
+                    **obligation,
+                    "revision": packet["assignment_identity"]["proof_obligation_revision"],
+                    "subject": {**obligation.get("subject", {}), "run_id": packet["run_id"]},
+                }
+                canonical["current_attempt"] = {"run_id": packet["run_id"], "owner": packet["target"], "status": "selected"}
+                proof_path = _resolve_inside(target_root, authorities["proof_receipt_ref"])
+                proof = _assignment_mapping(result.get("structural_proof_receipt"))
+                # Existing owner paths only. The old packet and run stay intact.
+                writes = {proof_path: proof, canonical_path: canonical}
+                artifact_paths.extend(writes)
+                state = {**state, "current_state": "superseded"}
     elif transition == "override":
-        assignment_id = require("assignment_id")
-        reason = require("reason")
-        scope = require("scope")
-        expires_at = require("expires_at")
-        receipt_path = artifact("override/override.json")
-        receipt = {
-            "kind": "agentic-workspace/assignment-human-override-receipt/v1",
-            "assignment_id": assignment_id,
-            "run_id": run_id,
-            "status": "override-recorded",
-            "scope": scope,
-            "reason": reason,
-            "expires_at": expires_at,
-            "revalidation_required": True,
-            "claim_effect": "downgrade-until-revalidated",
-            "proof_effect": "explicit override receipt required in proof boundary",
-        }
-        artifact_paths.append(receipt_path)
-        state.update({"current_state": "override-recorded", "override": receipt})
-        writes = {receipt_path: receipt}
+        failures.append(
+            {
+                "reason": "assignment-override-authority-unavailable",
+                "field": "host.assignment_override_admission",
+                "recovery": "Only exact source-owner replacement is constructible; caller fields cannot grant override authority.",
+            }
+        )
     else:
         require("run_id")
         prior_state = _optional_text(state.get("current_state"))
@@ -1474,6 +1738,22 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             expected_paths = set(_assignment_list(_assignment_mapping(planning_assignment.get("assignment_gate")).get("allowed_paths")))
             proved_paths = set(_assignment_list(task_proof.get("changed_paths")))
             proof_subject = _assignment_mapping(task_proof.get("proof_subject"))
+            from agentic_workspace.proof_subject import classify_proof_subject
+
+            proof_currentness = classify_proof_subject(
+                target_root=target_root,
+                receipt=task_proof,
+                changed_paths=sorted(proved_paths),
+                command=str(task_proof.get("command") or ""),
+            )
+            if proof_currentness.get("status") != "reusable":
+                failures.append(
+                    {
+                        "reason": "assignment-task-proof-not-current",
+                        "field": "task_proof_receipt_ref.proof_subject",
+                        "recovery": "Run proof again against the current integrated files before closing the assignment.",
+                    }
+                )
             try:
                 integration_receipt = _assignment_mapping(json.loads(artifact("integration/integration.json").read_text(encoding="utf-8")))
             except (OSError, json.JSONDecodeError):
@@ -1515,6 +1795,26 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
                 state["current_state"] = prior_state
                 receipt["status"] = "blocked"
 
+    if transition == "cleanup" and not failures and not dry_run:
+        adapter = _assignment_mapping(
+            _assignment_mapping(_assignment_mapping(state.get("assignment")).get("assignment_identity")).get("dispatch_adapter")
+        )
+        execution = _assignment_mapping(_assignment_mapping(adapter.get("execution_configuration")).get("execution"))
+        if _assignment_mapping(execution.get("adapter")).get("adapter") == "codex-app-server/v1":
+            from agentic_workspace.native_transport import cleanup_owned_run
+
+            cleanup = cleanup_owned_run(target_root, run_id)
+            receipt["transport_cleanup"] = cleanup
+            if cleanup["status"] == "deferred":
+                state["current_state"] = prior_state
+                failures.append(
+                    {
+                        "reason": cleanup["reason"],
+                        "field": "transport_cleanup",
+                        "recovery": "Release the exact worker and retry cleanup; provider state and semantic assignment are preserved.",
+                    }
+                )
+
     transition_receipt = {
         "transition": transition,
         "operation_id": operation_id,
@@ -1536,6 +1836,11 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     if failures:
         outcome = "blocked"
         status = "blocked"
+        if dispatch_attempted:
+            for path, payload in writes.items():
+                _write_assignment_artifact(path=path, payload=payload)
+            _write_assignment_artifact(path=state_path, payload=state)
+            artifact_paths.append(state_path)
     elif dry_run:
         outcome = "noop"
         status = str(state.get("current_state") or transition)
@@ -1558,7 +1863,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         "transition": transition,
         "status": status,
         "outcome": outcome,
-        "mutation_applied": outcome == "applied",
+        "mutation_applied": outcome == "applied" or dispatch_attempted,
         "target_root": target_root.as_posix(),
         "run_id": run_id,
         "assignment_id": assignment_id or _optional_text(state.get("assignment_id")) or None,
@@ -1576,6 +1881,110 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     from agentic_workspace.orchestration import reconcile_action_result
 
     result["next_current_continuation"] = reconcile_action_result(result=result)
+    if transition == "close" and outcome == "applied":
+        if planning_assignment.get("replacement_packet"):
+            from agentic_workspace.assignment_burden import assignment_attempt_burden
+
+            result["attempt_burden"] = assignment_attempt_burden(target_root, planning_assignment["replacement_packet"])
+        # Close has already admitted the exact producer-owned proof, current
+        # integrated paths, return and assignment/run identity above. Nominate
+        # through the existing evidence owner, never from worker success text.
+        from agentic_workspace.workspace_runtime_core import _record_trusted_assignment_outcome_from_ordinary_boundary
+
+        gate = _assignment_mapping(planning_assignment.get("assignment_gate"))
+        try:
+            dispatch_observation = _assignment_mapping(json.loads(artifact("dispatch/receipt.json").read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            dispatch_observation = {}
+        context = {
+            "delegation_target": planning_assignment.get("target_name") or gate.get("selected_target"),
+            "task_class": gate.get("task_class"),
+            "scope_class": gate.get("scope_class"),
+            "assignment_id": planning_assignment.get("assignment_id"),
+            "assignment_revision": planning_assignment.get("current_revision"),
+            "run_id": run_id,
+            "slice_id": gate.get("slice_id"),
+            "semantic_revision": gate.get("slice_revision") or gate.get("plan_revision"),
+        }
+        if all(
+            context.get(key) for key in ("delegation_target", "task_class", "scope_class", "assignment_id", "assignment_revision", "run_id")
+        ):
+            try:
+                nomination = _record_trusted_assignment_outcome_from_ordinary_boundary(
+                    target_root=target_root,
+                    producer_class="closeout-outcome",
+                    outcome="success",
+                    source_payload={"planning_assignment_ref": planning_ref, "task_proof_receipt_ref": task_proof_ref},
+                    idempotency_key="assignment-close:" + hashlib.sha256(json.dumps(context, sort_keys=True).encode("utf-8")).hexdigest(),
+                    assignment_context={
+                        "status": "current",
+                        "source_ref": planning_ref,
+                        "revision": planning_assignment["current_revision"],
+                        "target_context": context,
+                        "rule": "Current assignment close admitted the exact integrated return and producer-owned task proof; this is not PR review approval.",
+                    },
+                    responsibility_evidence={
+                        "target_executed": True,
+                        "worker_succeeded": True,
+                        "context_sufficient": True,
+                        "transport_sufficient": True,
+                    },
+                    context_cost=dispatch_observation.get("context_cost"),
+                    review_burden="unknown",
+                )
+            except (ValueError, OSError):
+                nomination = {"status": "non-calibrating", "reason": "evidence-admission-unavailable"}
+            result["outcome_evidence"] = {key: nomination[key] for key in ("status", "source_ref", "reason") if key in nomination}
+    if transition == "reassign" and failures and prior and failures[0]["reason"] == "assignment-override-authority-unavailable":
+        from agentic_workspace.assignment_source import replacement_offer
+
+        try:
+            result["required_source_answer"] = replacement_offer(
+                target_root, prior, str(values.get("target_name") or ""), str(values.get("transport") or "")
+            )
+        except (ValueError, OSError, KeyError):
+            pass
+    if transition == "reassign" and not failures:
+        result["status"] = "replaced"
+        result["replacement_packet"] = packet
+        result["next_current_continuation"] = {
+            "status": "actionable",
+            "owner": "assignment-lifecycle",
+            "action": "export-current-replacement",
+            "operation_invocation": {
+                "operation_id": "assignment.export",
+                "arguments": {
+                    "assignment_id": packet["assignment_id"],
+                    "assignment_revision": packet["assignment_revision"],
+                    "run_id": packet["run_id"],
+                    "target_name": packet["target"],
+                    "transport": packet["transport"],
+                },
+            },
+            "implementation_allowed": False,
+            "silent_local_fallback_allowed": False,
+        }
+        if dry_run and execution_choice is not None:
+            result["status"] = "selection-preview"
+            result["preview"] = {"assignment_materialized": False, "replacement_packet": packet}
+            result["next_current_continuation"] = {
+                "status": "actionable",
+                "owner": "assignment-lifecycle",
+                "action": "apply-current-repair-selection",
+                "operation_invocation": {
+                    "operation_id": "assignment.reassign",
+                    "arguments": {
+                        "assignment_id": assignment_id,
+                        "assignment_revision": assignment_revision,
+                        "run_id": run_id,
+                        "configuration_revision": choice_revision,
+                        "configuration_id": choice_id,
+                        **({"configuration_parameters_json": choice_parameters} if choice_parameters is not None else {}),
+                    },
+                },
+                "implementation_allowed": False,
+                "silent_local_fallback_allowed": False,
+            }
     return result
 
 
@@ -1588,6 +1997,7 @@ def _assignment_current_authorities_from_store(
     state: Mapping[str, Any],
     values: Mapping[str, Any],
     failures: list[dict[str, str]],
+    replacing: bool = False,
 ) -> dict[str, Any]:
     if not assignment_id:
         failures.append(
@@ -1633,6 +2043,51 @@ def _assignment_current_authorities_from_store(
             "delegation_decision": delegation_decision,
         }
     )
+    if "replacement_packet" in planning_assignment:
+        identity = dict(planning_assignment["replacement_packet"]["assignment_identity"])
+        from agentic_workspace.assignment_source import current_replacement
+
+        try:
+            if not replacing:
+                current_replacement(
+                    target_root,
+                    planning_assignment["replacement_packet"],
+                    {"id": assignment_gate.get("slice_id"), "revision": assignment_gate.get("plan_revision")},
+                )
+        except (ValueError, OSError) as error:
+            failures.append(
+                {
+                    "reason": str(error),
+                    "field": "assignment.replacement",
+                    "recovery": "Reconcile current source-owner admission before continuation; no previous-target fallback.",
+                }
+            )
+    configuration = _assignment_mapping(_assignment_mapping(identity.get("dispatch_adapter")).get("execution_configuration"))
+    if configuration and not replacing:
+        from agentic_workspace.assignment_source import validate_current_configuration
+
+        try:
+            validate_current_configuration(target_root, configuration)
+            choice = planning_assignment.get("execution_choice")
+            if isinstance(choice, dict) and choice:
+                from agentic_workspace.config import load_workspace_config
+                from agentic_workspace.workspace_runtime_core import _current_assignment_selection
+
+                _current_assignment_selection(
+                    config=load_workspace_config(target_root=target_root),
+                    changed_paths=_assignment_list(identity.get("allowed_paths")),
+                    task_text=_optional_text(identity.get("human_intent")),
+                    execution_choice=choice,
+                    completed_packet=dict(_assignment_mapping(state.get("assignment"))),
+                )
+        except (ValueError, OSError, KeyError) as error:
+            failures.append(
+                {
+                    "reason": str(error),
+                    "field": "assignment.execution_configuration",
+                    "recovery": "Reconcile the current source and capability before using this sealed assignment.",
+                }
+            )
     current_revision = _optional_text(planning_assignment.get("current_revision") or identity.get("revision"))
     if assignment_revision and assignment_revision != current_revision:
         failures.append(
@@ -1668,6 +2123,7 @@ def _assignment_current_authorities_from_store(
         )
     run_state = _assignment_current_run_state(run_id=run_id, state=state, planning_assignment=planning_assignment)
     return {
+        **({"replacement_packet": planning_assignment["replacement_packet"]} if "replacement_packet" in planning_assignment else {}),
         "assignment_gate": assignment_gate,
         "assignment_policy": assignment_policy,
         "delegation_decision": delegation_decision,
@@ -1742,13 +2198,14 @@ def _assignment_current_run_state(*, run_id: str, state: Mapping[str, Any], plan
         return {"status": "superseded", "run_id": run_id, "current_run_id": current_attempt.get("run_id")}
     status = _optional_text(state.get("current_state")) or _optional_text(current_attempt.get("status")) or "awaiting-admission"
     host_execution = _assignment_mapping(state.get("host_execution"))
+    replacement = _assignment_mapping(planning_assignment.get("replacement_packet"))
     return {
         "status": status,
         "run_id": run_id,
         "owner": current_attempt.get("owner"),
-        "result_delivery_required": bool(host_execution.get("result_delivery_required")),
-        "assignment_id": host_execution.get("assignment_id"),
-        "packet_integrity": host_execution.get("packet_integrity"),
+        "result_delivery_required": bool(replacement or host_execution.get("result_delivery_required")),
+        "assignment_id": replacement.get("assignment_id", host_execution.get("assignment_id")),
+        "packet_integrity": replacement.get("packet_integrity", host_execution.get("packet_integrity")),
     }
 
 
@@ -1849,6 +2306,8 @@ def _verify_materialized_assignment_delta(
 
 
 def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(current_authorities.get("replacement_packet"), Mapping):
+        return dict(current_authorities["replacement_packet"]["assignment_identity"])
     assignment_gate = _assignment_mapping(current_authorities.get("assignment_gate"))
     assignment_policy = _assignment_mapping(current_authorities.get("assignment_policy"))
     delegation_decision = _assignment_mapping(current_authorities.get("delegation_decision"))
@@ -2320,7 +2779,14 @@ def _write_assignment_artifact(*, path: Path, payload: Any) -> None:
         text = payload
     else:
         text = json.dumps(payload, indent=2, sort_keys=True, default=str)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    # Preserve a complete current owner record if local replacement is interrupted.
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", delete=False) as stream:
+        temporary = Path(stream.name)
+        stream.write(text.rstrip() + "\n")
+    try:
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _assignment_export_prompt(packet: Any) -> str:
@@ -2335,7 +2801,7 @@ def _assignment_export_prompt(packet: Any) -> str:
     delivery_instruction = (
         "The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline."
         if delivery_mode == "already-materialized"
-        else "The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return the proposed unified diff in a `patch` field."
+        else "The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return any proposed changes as a unified diff in a `patch` field."
     )
     required_identity = _assignment_mapping(_assignment_mapping(worker_context.get("return_contract")).get("required_identity"))
     identity_instruction = (
@@ -2351,7 +2817,8 @@ def _assignment_export_prompt(packet: Any) -> str:
             "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
             delivery_instruction,
             identity_instruction,
-            "The patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
+            'When no changes are returned, set `changed_paths` to [] and `patch` to "". For read-only, no-change, or stopped work, report findings or blockers in `summary` and `stop_conditions_hit`; never invent a diff.',
+            "When changes are returned, the patch must be a complete git-compatible unified diff beginning with `diff --git`; generate or verify it with diff tooling so hunk counts are exact, and never use apply_patch markers, ellipses, placeholder `@@` markers, or omitted context.",
             "",
             "```json",
             json.dumps(worker_context, indent=2, sort_keys=True, default=str),
@@ -2410,10 +2877,17 @@ def _assignment_dispatch_configuration(*, identity: Mapping[str, Any], transport
     adapter = _assignment_mapping(identity.get("dispatch_adapter"))
     variants = [item for item in adapter.get("transports", []) if isinstance(item, Mapping)]
     selected = next((item for item in variants if _optional_text(item.get("method")) == transport), None)
+    configuration = _assignment_mapping(adapter.get("execution_configuration"))
+    if configuration.get("transport") == transport:
+        configured_adapter = _assignment_mapping(_assignment_mapping(configuration.get("execution")).get("adapter"))
+        if configured_adapter:
+            selected = configured_adapter
     selected_mapping = _assignment_mapping(selected)
     variant_kind = _optional_text(selected_mapping.get("kind"))
     kind = (
-        "process"
+        "native"
+        if variant_kind == "native"
+        else "process"
         if variant_kind in {"process", "api"}
         else "host-native"
         if variant_kind == "internal"
@@ -2476,6 +2950,10 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
 
     identity = _assignment_mapping(packet.get("assignment_identity"))
     configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
+    if configuration.get("kind") == "native":
+        from agentic_workspace.native_transport import dispatch_packet
+
+        return dispatch_packet(target_root, packet, prompt)
     adapter = _assignment_mapping(configuration.get("adapter"))
     adapter_kind = _optional_text(configuration.get("kind"))
     command_template = _assignment_list(configuration.get("command"))
@@ -2597,6 +3075,10 @@ def _dispatch_assignment_packet(*, packet: Mapping[str, Any], prompt: str, targe
             }
             if role == "implementer":
                 return_properties["patch"] = {"type": "string"}
+            for field in ("assignment_id", "packet_integrity"):
+                if field in _assignment_mapping(packet.get("return_contract")).get("required_fields", []):
+                    return_properties[field] = {"type": "string"}
+                    required_fields.append(field)
             output_schema_path.write_text(
                 json.dumps(
                     {
@@ -2723,10 +3205,20 @@ def _assignment_context_cost(
         value = observed_mapping.get(field)
         metrics[field] = value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
     packet_text = json.dumps(packet, indent=2, sort_keys=True, default=str).rstrip() + "\n"
+    configuration_context = (
+        _assignment_mapping(
+            _assignment_mapping(_assignment_mapping(packet.get("assignment_identity")).get("dispatch_adapter")).get(
+                "execution_configuration"
+            )
+        )
+        .get("execution", {})
+        .get("comparison_context")
+    )
     return {
         "kind": "agentic-workspace/assignment-context-cost/v1",
         "transport": transport,
         "adapter_revision": adapter_revision,
+        **({"configuration_context": configuration_context} if configuration_context is not None else {}),
         "assignment_packet_bytes": len(packet_text.encode("utf-8")),
         "rendered_prompt_bytes": len(prompt.encode("utf-8")),
         **metrics,

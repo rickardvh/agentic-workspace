@@ -1713,6 +1713,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "kind": proof_state.get("kind", "agentic-workspace/current-task-proof-state/v1"),
                     "status": proof_state.get("status", ""),
                     "proof_execution_status": proof_execution.get("status", ""),
+                    "task_claim_judgment": proof_state.get("task_claim_judgment", {}),
                     "state_model": proof_execution.get("state_model", []),
                     "expected_commands": proof_execution.get("expected_commands", []),
                     "manual_verification_expected": proof_execution.get("manual_verification_expected"),

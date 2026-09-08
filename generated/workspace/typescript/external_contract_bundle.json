@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:ccbb5f33f476b2928adf1c148d7d798cf905e1a02e57edf0caa4be787f6d7bf2",
+  "profile_fingerprint": "sha256:4cc648ab758c7cc8df9e4c13a2cd785b19742f548f8964a94424e5da84c3a3a4",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -5468,8 +5468,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b8ad6f94a881bf54f35ea3fd18348cc811163013c5f7f84b2e607db6a055df6f",
-      "compatibility_fingerprint": "sha256:e847b7f42e6e0ddbbe316e3ba884190cfc3673c824f1a22fbddba73a62ba6212",
+      "fingerprint": "sha256:79419b2f413abe0ba12a19309d6bcba2e55a4bbb50a9ffd503137d6eeb11b2bf",
+      "compatibility_fingerprint": "sha256:153963c8763c7d5615de5ff5b8c28c49b8337e444ff76f16ada435b0d7187608",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5907,6 +5907,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -6199,8 +6212,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:a14b2640dec78bd073592e4c9e510b2ba3bf44574a7b7c1fc7998620f600f86d",
-      "compatibility_fingerprint": "sha256:905b80c78b3894db6bc46564b66b675446ae135de37ee355f629fb5c323cbdb6",
+      "fingerprint": "sha256:ac136cca85647d817332bcd9a551d8b909be34c136e14f04fdfb92efbdd3858c",
+      "compatibility_fingerprint": "sha256:2eb6c5712481f24cbdf95cf6b7fed1945ecb2a0b17a12d617712aed385e13f70",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6580,6 +6593,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -6872,8 +6898,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bdc6019c411d6422c457e8ed8afbc0d609619b1f0b6a8d1e6ecbeed9e2672753",
-      "compatibility_fingerprint": "sha256:4f8cfdbcda4def82006f7263d97b516ac42d817418f5703bb272a82b6ce2dc2b",
+      "fingerprint": "sha256:b59996376414caa1f4bff338e5c82cc90e393961894746462399851f845392d0",
+      "compatibility_fingerprint": "sha256:8e05a467fd2e8b2fb4b0beca568fec742ba6a84fba7813f2ac3e6290d5badd98",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7269,6 +7295,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -7561,8 +7600,8 @@
     "assignment.dispatch": {
       "identity": "assignment.dispatch",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ec3fb1aa48df768039035b5deee7cc8bdf8dd87e9c7e9fddaacf0d46e8ee317a",
-      "compatibility_fingerprint": "sha256:0a92e6e753f39cb10a71a36190669859c7afaa42dab2bd7a1f54dd4812e629cc",
+      "fingerprint": "sha256:fc74691a1901adeedf2291e94d916e67495c6bfeba89d8f77dbf4a87b082397c",
+      "compatibility_fingerprint": "sha256:1e43aceedbe9239546dbcb30f08796b4a01e0a149d0e227650fc9e9d85ca8ad8",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -7584,6 +7623,21 @@
         ],
         "id": "assignment.dispatch",
         "inputs": [
+          {
+            "name": "configuration_parameters_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_id",
+            "required": false,
+            "source": "cli-option"
+          },
           {
             "name": "target",
             "required": false,
@@ -7817,6 +7871,21 @@
           "classification": "lifecycle-mutation",
           "inputs": [
             {
+              "name": "configuration_parameters_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target",
               "required": false,
               "source": "cli-option"
@@ -7890,6 +7959,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -8182,8 +8264,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:72f95b0a9e9eaeca7b467f0f54f2b72256417f62a84590010fb82c99ad40d02e",
-      "compatibility_fingerprint": "sha256:4d5f17ffec72c5c49c3774762f5f50454c5cdbef215292b3d87f74fb3b1dc49d",
+      "fingerprint": "sha256:81c7b258542154d3e803e6785c8da9f4f5d19c13c6d6683e150f68786a228d6b",
+      "compatibility_fingerprint": "sha256:60a60bc0927774d2f631948521848af37f2f88b37d02a77e64b69d97ffffef7c",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -8206,6 +8288,21 @@
         ],
         "id": "assignment.export",
         "inputs": [
+          {
+            "name": "configuration_parameters_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_id",
+            "required": false,
+            "source": "cli-option"
+          },
           {
             "name": "target",
             "required": false,
@@ -8480,6 +8577,21 @@
           "classification": "lifecycle-mutation",
           "inputs": [
             {
+              "name": "configuration_parameters_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target",
               "required": false,
               "source": "cli-option"
@@ -8589,6 +8701,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -8881,8 +9006,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ff8bbf81544c1f42c96fc79a988513891610cdf2767149c764540af29468f96b",
-      "compatibility_fingerprint": "sha256:8529a48513b8173cf35cb0d4676d4068e9b271f11b773c962234aa2d0d4f7d06",
+      "fingerprint": "sha256:23cdbf39931ece8f455d8f8aaf6b552f419995d5a0987ef215b29b88003207a5",
+      "compatibility_fingerprint": "sha256:7f5ebbf034954fdfe9f7d7d282623c56c032c640c9f21c6bd8d2fdcd6c1491b2",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9272,6 +9397,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -9564,8 +9702,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:51448e71495bccbe3cd50b66b1d0a35477064ef0232939fa7dfe27d5af1e5438",
-      "compatibility_fingerprint": "sha256:45dbde662d45c3fdd9e98da322f1bc77ccf6361e6436992b4ef53b7cad29e6c2",
+      "fingerprint": "sha256:d1c3b938cfe4104bc7fdec0357e2eec7a3eb561da4c39d01bf6005a08bf88162",
+      "compatibility_fingerprint": "sha256:8a3f36bcd461377fb2a760dedffd6be0fc3248344443301800c47f3d3e19ce78",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -9945,6 +10083,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -10237,8 +10388,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3b181874a1a43e993b87b43acb6d3609c1a345ec64673eb36557fc4e9adc860d",
-      "compatibility_fingerprint": "sha256:72963cdb69f29d37d314858c88e7acd013c6ffc88d91645b3763a532df02c121",
+      "fingerprint": "sha256:fd8f1c5ec704fa56c216899ff9f7c81971df4b37346fbf2a5ea69a176dbd4934",
+      "compatibility_fingerprint": "sha256:3c4f2352a218634e46fe553857f35d973b444515cf68e1221aa7a7fb11486fe8",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10618,6 +10769,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -10910,8 +11074,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3a86f79194e621ee2d97fe18c906be49d831a78790ec769457f0410c3f71bfdd",
-      "compatibility_fingerprint": "sha256:269821e5a0c375360d8456ad79e2ccaf85a332b7c04ce46849b3250a7e7488bf",
+      "fingerprint": "sha256:8781b60d699be91a1562db365e4086d4d8e57f3719bc3595a202853acdafe1fd",
+      "compatibility_fingerprint": "sha256:b34769b2f6619d9b2b25fdcf765ede1fc91833a7f889d8cce604634aa09ab87c",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -10924,13 +11088,14 @@
           "idempotent": true,
           "read_only": false,
           "requires_preflight_gate": false,
-          "writes_repo_state": false
+          "writes_repo_state": true
         },
         "guards": [
-          "Write only under .agentic-workspace/local/assignment-runs/.",
+          "Update only the exact current Planning assignment and its structural receipt plus local run artifacts, after source-owner or exact repair admission; preserve semantic work and prior execution artifacts.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
-          "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
+          "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
+          "Repair-based reassignment requires an owner-bound repair receipt, unchanged semantic Planning source, confirmed native worker release and an explicit current eligible configuration. A dry-run after repair exposes offers without choosing or dispatching."
         ],
         "id": "assignment.reassign",
         "inputs": [
@@ -10961,7 +11126,7 @@
           },
           {
             "name": "target_name",
-            "required": true,
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -10991,7 +11156,7 @@
           },
           {
             "name": "reason",
-            "required": true,
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -11006,6 +11171,21 @@
           },
           {
             "name": "dry_run",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "configuration_parameters_json",
             "required": false,
             "source": "cli-option"
           }
@@ -11041,7 +11221,7 @@
           ]
         },
         "locality": {
-          "network": "forbidden",
+          "network": "allowed",
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
@@ -11098,6 +11278,18 @@
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
+          },
+          {
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json",
+            "description": "exact current assignment owner binds a replacement attempt without changing semantic work",
+            "required": false,
+            "when": "source or repair admission succeeds"
+          },
+          {
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json",
+            "description": "referenced structural receipt rebound to the new exact attempt; no successful task proof is invented",
+            "required": false,
+            "when": "source or repair admission succeeds"
           }
         ]
       },
@@ -11218,7 +11410,7 @@
             },
             {
               "name": "target_name",
-              "required": true,
+              "required": false,
               "source": "cli-option"
             },
             {
@@ -11248,7 +11440,7 @@
             },
             {
               "name": "reason",
-              "required": true,
+              "required": false,
               "source": "cli-option"
             },
             {
@@ -11265,6 +11457,21 @@
               "name": "dry_run",
               "required": false,
               "source": "cli-option"
+            },
+            {
+              "name": "configuration_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "configuration_parameters_json",
+              "required": false,
+              "source": "cli-option"
             }
           ],
           "output": {
@@ -11276,13 +11483,14 @@
             "idempotent": true,
             "read_only": false,
             "requires_preflight_gate": false,
-            "writes_repo_state": false
+            "writes_repo_state": true
           },
           "guards": [
-            "Write only under .agentic-workspace/local/assignment-runs/.",
+            "Update only the exact current Planning assignment and its structural receipt plus local run artifacts, after source-owner or exact repair admission; preserve semantic work and prior execution artifacts.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
-            "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
+            "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade.",
+            "Repair-based reassignment requires an owner-bound repair receipt, unchanged semantic Planning source, confirmed native worker release and an explicit current eligible configuration. A dry-run after repair exposes offers without choosing or dispatching."
           ]
         },
         "schemas": {
@@ -11291,6 +11499,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -11583,8 +11804,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7412c75df59ea169745b350ebc0becf07b3212a8bd5e2ec173e77fca5bc688bf",
-      "compatibility_fingerprint": "sha256:3256f807d27e6ad7fb829f6b0ceb53fab5b410044494ddebd4a3e498068910a0",
+      "fingerprint": "sha256:8148bdc00ae9136d8ee927cc91188cbec67377a8541f914062a4fc7ff579d755",
+      "compatibility_fingerprint": "sha256:237dda36579d5960790302eee5be1d28e367e6fe50a2a2751e03128683a728e7",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -11964,6 +12185,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -12256,8 +12490,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6e839252fdba0fff83f30509dbd5aefc3ad7ea24e45cf551444788b54fca1641",
-      "compatibility_fingerprint": "sha256:9426a10abe1bc4b740d05149214bae17e2d6239b587522d56e2910daf2be4ab0",
+      "fingerprint": "sha256:1e75f4150451c59f45ce2fd7b7c4abd3e113b61a4d8893956716c7d6276ea774",
+      "compatibility_fingerprint": "sha256:18850d7e59b6d96283c82dd534b72980ca0b43a16f91d378a8b2a7725dea27b6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -12273,7 +12507,7 @@
           "writes_repo_state": false
         },
         "guards": [
-          "Write only under .agentic-workspace/local/assignment-runs/.",
+          "Write local assignment-run repair records and, when exact released persistent native custody permits it, bounded adapter-local transport-continuation metadata. No semantic assignment replacement or worker execution is authorized by recording repair.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
           "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
@@ -12439,6 +12673,12 @@
         ],
         "summary": "Request repair for a returned assignment result without admitting mutation.",
         "writes": [
+          {
+            "surface": ".agentic-workspace/local/transport-continuations/",
+            "description": "bounded adapter-owned persistent reference for an exact released repair attempt; no transcripts or session history",
+            "required": false,
+            "when": "a current repair receipt and released persistent native custody are present"
+          },
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
@@ -12625,7 +12865,7 @@
             "writes_repo_state": false
           },
           "guards": [
-            "Write only under .agentic-workspace/local/assignment-runs/.",
+            "Write local assignment-run repair records and, when exact released persistent native custody permits it, bounded adapter-local transport-continuation metadata. No semantic assignment replacement or worker execution is authorized by recording repair.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
             "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
@@ -12637,6 +12877,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -12929,8 +13182,8 @@
     "assignment.status": {
       "identity": "assignment.status",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ee1643ebf59491e8d77476f2aef21a67c13872bccd9292c17e129fd300331515",
-      "compatibility_fingerprint": "sha256:9eebac8cec7cfee93dcc713748547138fa006c4523b7cb69e94fcb8d0c6b2450",
+      "fingerprint": "sha256:538f8a717567f695af5024d88e5d52732966cc39e6ff0f15a4dc9f7906f1c790",
+      "compatibility_fingerprint": "sha256:65293d96f5a44fdd067c6c5ccd1e994b11c347bbfeac243a1a53fa1d941e890b",
       "contract": {
         "classification": "read-only-report",
         "command_surface": {
@@ -13194,6 +13447,19 @@
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
+                "configuration_parameters_json": {
+                  "type": "string",
+                  "maxLength": 4096,
+                  "minLength": 2
+                },
+                "configuration_revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "configuration_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "admission_status": {
                   "enum": [
                     "admitted",
@@ -17985,8 +18251,8 @@
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b6d6d7df451b6faa4b249bb055ebc8aa42912f6d983caf751e6d10b837ed32b2",
-      "compatibility_fingerprint": "sha256:c8dbf6ebacd66bb9674008f0faa0da14f00048fc389def33e95275e3fbde378f",
+      "fingerprint": "sha256:ac517e97544a68c89da1eca0b23eb9b2e1cc4d9ac39f8a0968dd865bec7fb3c3",
+      "compatibility_fingerprint": "sha256:c56828648019b878bc61b56fda53b942086095c9f75ab3579a7d9f4c04105f27",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "delegation-outcome.append",
@@ -18626,7 +18892,8 @@
                   "enum": [
                     "light",
                     "normal",
-                    "high"
+                    "high",
+                    "unknown"
                   ]
                 },
                 "escalation_required": {
@@ -25719,6 +25986,22 @@
         "additionalProperties": false,
         "description": "Input accepted by public assignment lifecycle operations that prepare handoff packets, import returns, admit or reject results, integrate admitted work, and record lifecycle maintenance actions.",
         "properties": {
+          "configuration_parameters_json": {
+            "description": "Bounded JSON object of adapter-owned parameter choices for the paired current configuration offer. Not source authority or standing policy.",
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 2
+          },
+          "configuration_revision": {
+            "description": "Current source-resolved execution configuration offer revision. An intention only; replacing an assignment also requires exact source-owner or repair admission.",
+            "type": "string",
+            "minLength": 1
+          },
+          "configuration_id": {
+            "description": "One eligible configuration from the paired revision; target, transport and adapter-owned topology stay bound together.",
+            "type": "string",
+            "minLength": 1
+          },
           "admission_status": {
             "description": "Reviewer decision recorded for an imported assignment return.",
             "enum": [
@@ -26462,9 +26745,10 @@
             "enum": [
               "light",
               "normal",
-              "high"
+              "high",
+              "unknown"
             ],
-            "description": "Review burden classification."
+            "description": "Observed review burden classification, or unknown when review burden was not measured."
           },
           "escalation_required": {
             "type": "boolean",

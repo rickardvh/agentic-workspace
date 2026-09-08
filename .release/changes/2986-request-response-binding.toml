@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Bind owner responses to complete normalized public requests and explicit request-local consequences."
+issues = [2986]

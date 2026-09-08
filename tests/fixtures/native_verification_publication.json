@@ -1,0 +1,82 @@
+{
+  "provenance": "Produced deterministically by build_proof_subject, _proof_publication_identity and _write_trusted_producer_receipt; not acceptance evidence.",
+  "publication_id": "0d8c3e9a8c707e75",
+  "publication_identity_json": "{\"changed_paths\": [\"a.txt\"], \"command\": \"check a.txt\", \"proof_commands\": [], \"proof_subject\": {\"claim_classes\": [\"executable-validation\"], \"command_sha256\": \"35accbcc1c754b4a726c65a1cf95dd396367f59f600efa7a495e4b9f7cb28b66\", \"dependency_roles\": [{\"owner\": \"claim\", \"path\": \"a.txt\", \"reason\": \"declared-proof-subject-input\", \"role\": \"semantic-input\"}], \"dependency_scope\": \"declared-path-and-command\", \"effect_scope\": [\"a.txt\"], \"evidence_outputs\": [], \"fallback\": \"not-required\", \"fingerprint\": \"0cc444aab09febdbb0ef3c52d6fad7972467b43fd604d92ac14209e26dbdbfd3\", \"id\": \"proof-subject:0cc444aab09febdbb0ef\", \"identity_complete\": true, \"kind\": \"agentic-workspace/proof-subject/v1\", \"rule\": \"Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs.\", \"runtime\": {\"implementation\": \"CPython\", \"version\": \"3.13.9\"}, \"source_inputs\": [{\"path\": \"a.txt\", \"sha256\": \"7692c3ad3540bb803c020b3aee66cd8887123234ea0c6e7143c0add73ff431ed\"}], \"unavailable_inputs\": []}, \"result\": \"passed\", \"target_context\": {\"boolean\": true, \"decimal\": 1.25, \"integer\": 7, \"unicode\": \"\\u00c5 U0001f642\", \"unknown\": null}, \"task_claim_judgment\": {\"claim_class\": \"slice_complete\", \"proof_subject_fingerprint\": \"0cc444aab09febdbb0ef3c52d6fad7972467b43fd604d92ac14209e26dbdbfd3\", \"status\": \"sufficient\", \"work_ref\": \"planning:current\", \"work_revision\": \"semantic-one\"}}",
+  "receipt": {
+    "kind": "agentic-workspace/proof-receipt/v1",
+    "command": "check a.txt",
+    "result": "passed",
+    "changed_paths": [
+      "a.txt"
+    ],
+    "recorded_at": "2026-09-07T00:00:00+00:00",
+    "proof_subject": {
+      "kind": "agentic-workspace/proof-subject/v1",
+      "id": "proof-subject:0cc444aab09febdbb0ef",
+      "fingerprint": "0cc444aab09febdbb0ef3c52d6fad7972467b43fd604d92ac14209e26dbdbfd3",
+      "claim_classes": [
+        "executable-validation"
+      ],
+      "effect_scope": [
+        "a.txt"
+      ],
+      "source_inputs": [
+        {
+          "path": "a.txt",
+          "sha256": "7692c3ad3540bb803c020b3aee66cd8887123234ea0c6e7143c0add73ff431ed"
+        }
+      ],
+      "command_sha256": "35accbcc1c754b4a726c65a1cf95dd396367f59f600efa7a495e4b9f7cb28b66",
+      "runtime": {
+        "implementation": "CPython",
+        "version": "3.13.9"
+      },
+      "identity_complete": true,
+      "unavailable_inputs": [],
+      "dependency_roles": [
+        {
+          "path": "a.txt",
+          "owner": "claim",
+          "role": "semantic-input",
+          "reason": "declared-proof-subject-input"
+        }
+      ],
+      "evidence_outputs": [],
+      "dependency_scope": "declared-path-and-command",
+      "fallback": "not-required",
+      "rule": "Only declared semantic inputs participate in proof freshness; proof-owned publication outputs are diagnostic unless this claim explicitly declares them as semantic inputs."
+    },
+    "target_context": {
+      "unicode": "\u00c5 U0001f642",
+      "integer": 7,
+      "decimal": 1.25,
+      "boolean": true,
+      "unknown": null
+    },
+    "task_claim_judgment": {
+      "work_ref": "planning:current",
+      "work_revision": "semantic-one",
+      "claim_class": "slice_complete",
+      "status": "sufficient",
+      "proof_subject_fingerprint": "0cc444aab09febdbb0ef3c52d6fad7972467b43fd604d92ac14209e26dbdbfd3"
+    },
+    "publication_id": "0d8c3e9a8c707e75",
+    "receipt_id": "0d8c3e9a8c707e75",
+    "producer_class": "aw-proof",
+    "source_ref": "proof://receipts/0d8c3e9a8c707e75",
+    "status": "current",
+    "revision": "2026-09-07T00:00:00+00:00"
+  },
+  "index": {
+    "kind": "agentic-workspace/trusted-producer-receipt-index/v1",
+    "receipts": {
+      "0d8c3e9a8c707e75": {
+        "path": "0d8c3e9a8c707e75.json",
+        "producer_class": "aw-proof",
+        "revision": "2026-09-07T00:00:00+00:00",
+        "source_ref": "proof://receipts/0d8c3e9a8c707e75",
+        "status": "current"
+      }
+    }
+  }
+}

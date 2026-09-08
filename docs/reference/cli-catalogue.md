@@ -3,7 +3,7 @@
 
 Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.
 
-- Contract digest: `sha256:85d5ab201a3c4d9bb92ab8474c9a73e85b0a1fa21bd7e7167d3a73ab852635e6`
+- Contract digest: `sha256:6e9378326077300bb2ec69a2545f392bf8fa84aeb1165014811a60a804b4857b`
 - Program: `agentic-workspace`
 - Command/subcommand count: 130
 
@@ -88,7 +88,7 @@ Shared-state mutability and ignored local diagnostics are separate. A `no` below
 | `agentic-workspace session-log analyze` | `reusable_host_repo_diagnostics` | `local_only` | no | 6 | Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates. |
 | `agentic-workspace session-log repair` | `reusable_host_repo_diagnostics` | `local_only` | yes | 4 | Repair or backfill a partial local session-log index from its Markdown entries. |
 | `agentic-workspace session-log export` | `reusable_host_repo_diagnostics` | `local_only` | yes | 5 | Export an existing local session log as a local diagnostic bundle with known local paths normalized. |
-| `agentic-workspace start` | `core_context_router` | `ordinary_host_repo` | no | 6 | Return the minimum safe startup context for beginning work in a target repository. |
+| `agentic-workspace start` | `core_context_router` | `ordinary_host_repo` | no | 7 | Return the minimum safe startup context for beginning work in a target repository. |
 | `agentic-workspace implement` | `core_context_router` | `ordinary_host_repo` | no | 7 | Return a cheap-implementer context for a bounded changed-path scope. |
 | `agentic-workspace defaults` | `core_context_router` | `ordinary_host_repo` | no | 4 | Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs. |
 | `agentic-workspace proof` | `core_context_router` | `ordinary_host_repo` | yes | 38 | Show the canonical proof routes and current workspace proof summary. |
@@ -1084,6 +1084,7 @@ ordinary first-contact startup context
 | Flags | Required | Default | Choices | Action / nargs | Description |
 | --- | --- | --- | --- | --- | --- |
 | `--format` | no | `text` | text, json | `value` | Output format. |
+| `--request` | no | `—` | — | `value` | Complete returned public request JSON. Discover semantic route requests with --select semantic_route_result; edit only the declared arguments. |
 | `--target` | no | `—` | — | `value` | Optional repository path for startup context (defaults to current workspace). |
 | `--changed` | no | `—` | — | `extend; nargs=*` | Optional repo-relative changed paths used to include a proof recommendation. |
 | `--task` | no | `—` | — | `value` | Optional task description used to include task-specific skill recommendations in startup context. |

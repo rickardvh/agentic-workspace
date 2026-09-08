@@ -2749,6 +2749,8 @@ def compile_projection_surface_operating_decision(
         inputs={
             "consumer": consumer,
             "task": str(material_inputs.get("task") or ""),
+            **({"decision_context": material_inputs["decision_context"]} if "decision_context" in material_inputs else {}),
+            **({"semantic_route_result": material_inputs["semantic_route_result"]} if "semantic_route_result" in material_inputs else {}),
             "changed_paths": [str(path) for path in _as_list(material_inputs.get("changed"))],
             "target_root": str(material_inputs.get("target_root") or "") or None,
             "revisions": {
@@ -2886,6 +2888,17 @@ def bind_projection_surface_operating_decision(
     }
     if valid:
         _bind_instruction_claim_effects_to_projection(payload=payload, decision=operating_decision)
+        if any(field in operating_decision for field in ("decision_context", "semantic_route_result")) and isinstance(
+            payload.get("decision_packet"), dict
+        ):
+            for field in ("decision_context", "semantic_route_result"):
+                if field in operating_decision:
+                    payload["decision_packet"][field] = operating_decision[field]
+            payload["decision_packet"]["identity"] = {
+                "revision": admitted_revision,
+                "decision_id": operating_decision["decision_id"],
+                "source_selector": "context.projection_decision_authority",
+            }
     if _as_dict(payload.get("decision_packet")).get("kind") == "agentic-workspace/ordinary-start-decision/v1":
         payload.pop("task_posture_packet", None)
     return payload
@@ -3611,12 +3624,16 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             raise TypeError("source_contributions must be a list")
         intent = inputs.get("intent")
         if intent is None:
-            intent = {"task": str(inputs.get("task") or ""), "changed_paths": _as_list(inputs.get("changed_paths"))}
+            intent = {}
         if not isinstance(intent, dict):
             raise TypeError("intent must be an object")
+        capability_contract = inputs.get("capability_contract")
+        if capability_contract is not None and not isinstance(capability_contract, dict):
+            raise TypeError("capability_contract must be an object")
         return compile_source_decision(
             [item for item in contributions if isinstance(item, dict)],
             intent=intent,
+            capability_contract=capability_contract,
         )
 
     future_context_signals = [_as_dict(item) for item in _as_list(inputs.get("future_context_signals")) if isinstance(item, dict)]
@@ -3711,6 +3728,9 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
             changed_paths=[str(path) for path in _as_list(inputs.get("changed_paths"))],
             include_ir=True,
             evidence={str(key): bool(value) for key, value in _as_dict(inputs.get("instruction_evidence")).items()},
+            semantic_route_fact=_as_dict(_as_dict(inputs["semantic_route_result"].get("decision")).get("semantic_task_routes"))
+            if "semantic_route_result" in inputs
+            else None,
         )
         scoped_program = _as_dict(scoped_instruction_projection.pop("instruction_program", {}))
         instruction_program = {
@@ -4088,6 +4108,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "status": status,
         "input_revisions": input_revisions,
         "canonical_decision_input_revision": invocation_current_revision,
+        **({"decision_context": inputs["decision_context"]} if "decision_context" in inputs else {}),
+        **({"semantic_route_result": inputs["semantic_route_result"]} if "semantic_route_result" in inputs else {}),
         "context_authority_coverage": coverage,
         "context_authority_projection": context_authority_projection,
         "context_consequences": context_consequences,

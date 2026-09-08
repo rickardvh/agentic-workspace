@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "checked_in_justification": "Temporary reconstruction disposition preserves the accepted salvage boundaries until corrected owners admit retained semantics.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Syntax validation only; this disposition map does not grant domain authority or destructive readiness.",
+      "owner": "workspace-reconstruction",
+      "pattern": ".agentic-workspace/reconstruction/authority-and-salvage.toml",
+      "schema_or_validator": "parser: Python tomllib",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Shared Planning contract fixture proves source-current semantic admission across core bindings.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Fixture data is conformance evidence, never live Planning authority.",
+      "owner": "workspace-runtime",
+      "pattern": "tests/vectors/planning_execplan.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Bounded maintainer evidence retains the exact public release locator, resolver graph, and second-process result required for distribution closure review.",
       "editable_by_agents": true,
       "format": "json",
@@ -1561,6 +1585,66 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Checked in as the minimal Node package boundary for exercising the shared native semantic core without a target-language reducer.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The manifest exposes only the thin hand-maintained process binding permitted at the shared-core boundary.",
+      "owner": "workspace-runtime",
+      "pattern": "bindings/node/package.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Checked in as language-neutral black-box evidence for the shared operating-decision reducer.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Rust, Python, Node, and direct JSON tests consume the same success, negative, stale, and permutation corpus.",
+      "owner": "workspace-runtime",
+      "pattern": "tests/vectors/source_decision.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Checked in as the shared declarative capability/request authority fixture exercised through every core binding.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "The fixture declares constructible request shapes and exclusive domain, effect, operation, and claim ownership without encoding executable policy.",
+      "owner": "workspace-runtime",
+      "pattern": "tests/vectors/capability_contract.json",
+      "schema_or_validator": "validator: uv run pytest tests/test_shared_core.py -q",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
+      "checked_in_justification": "Checked in as the locked root manifest for the shared deterministic Rust core workspace.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "The root manifest only declares the Rust workspace and carries no operating-decision policy.",
+      "owner": "workspace-runtime",
+      "pattern": "Cargo.toml",
+      "schema_or_validator": "parser: cargo metadata --locked --no-deps",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Checked in as crate build metadata for the shared deterministic Rust core.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Crate manifests declare native build inputs; executable reducer authority remains Rust source.",
+      "owner": "workspace-runtime",
+      "pattern": "crates/*/Cargo.toml",
+      "schema_or_validator": "parser: cargo metadata --locked --no-deps",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Checked in so source-checkout launcher behavior, CI, and local package checks can validate generated command package freshness without regenerating first.",
       "editable_by_agents": false,
       "format": "json",
@@ -2490,7 +2574,7 @@
     {
       "checked_in_justification": "Generated TypeScript command-package resources are kept as files so executable adapter source stays thin and does not embed large JSON blocks.",
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
-      "max_bytes": 430000,
+      "max_bytes": 440000,
       "named_consumer": "generated TypeScript command-package resource loader",
       "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "pattern": "generated/*/typescript/resources/command_package.json",

@@ -1743,6 +1743,29 @@ function applyPayloadCopy(values) {
   return actions;
 }
 
+function verificationOwnerReport(values) {
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+  const environmentPython = process.env.VIRTUAL_ENV ? join(process.env.VIRTUAL_ENV, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python') : '';
+  const checkoutPython = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+  const python = environmentPython && existsSync(environmentPython) ? environmentPython : existsSync(join(sourceRoot, 'scripts/run_agentic_workspace.py')) && existsSync(checkoutPython) ? checkoutPython : 'python';
+  // This is the package's declared public runtime entrypoint. Manifest commands
+  // remain report data and are never executed by this read-only transport.
+  const args = ['-c', 'import sys; from repo_verification_bootstrap.cli import main; raise SystemExit(main(sys.argv[1:]))', 'report', '--target', targetRoot, '--format', 'json'];
+  const changed = values.changed_paths ?? [];
+  if (Array.isArray(changed) && changed.length) args.push('--changed', ...changed.map(String));
+  if (values.task_text) args.push('--task', String(values.task_text));
+  if (values.verbose) args.push('--verbose');
+  const result = spawnSync(python, args, { cwd: targetRoot, encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 10 * 1024 * 1024 });
+  if (result.status === 0) {
+    try {
+      const report = JSON.parse(result.stdout);
+      if (report.kind === 'agentic-workspace/verification/v1') return report;
+    } catch {}
+  }
+  return { kind: 'agentic-workspace/verification/v1', status: 'unavailable', configured: false, reason_code: 'verification-owner-unavailable', completion_claim_allowed: false, recovery: 'Run the public agentic-verification report with its installed owner runtime; no empty successful report may replace missing owner evidence.' };
+}
+
 function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'python.function.call') {
     const moduleName = String(args.import_module ?? '');
@@ -1764,7 +1787,7 @@ function domainPrimitive(primitive, values, args, operationId) {
     if (functionName.includes('uninstall') || functionName.includes('migrate')) return unsupportedMutationResult(values, `${functionName.replace(/_/g, ' ')}`);
     if (functionName === 'route_memory' || functionName === 'sync_memory' || functionName === 'review_routes') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), message: functionName.replace(/_/g, ' '), actions: [] };
     if (moduleName.includes('runtime_search')) return { dry_run: true, query: values.query ?? '', target_root: resolve(String(values.target ?? '.')), matches: [], message: 'Memory search completed with native TypeScript runtime.' };
-    if (moduleName.includes('verification')) return { kind: 'verification-report/v1', target_root: values.target_root ?? resolve(String(values.target ?? '.')), changed_paths: values.changed_paths ?? [], task_text: values.task_text ?? '', checks: [], message: 'Verification report' };
+    if (moduleName.includes('verification')) return verificationOwnerReport(values);
     return lifecycleResult(values, functionName || operationId);
   }
   if (primitive === 'planning.close-item.apply') return unsupportedMutationResult(values, `Close planning item ${values.item ?? ''}`.trim());
@@ -1826,7 +1849,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'memory.route_report.load') return { message: 'Routing report', route_report_summary: { feedback: { status: 'not-evaluated', path: '.agentic-workspace/memory/repo/route-feedback.md' }, fixtures: { status: 'not-evaluated', fixture_count: 0 } }, detail_command: 'agentic-memory route-report --target . --verbose --format json' };
   if (primitive === 'memory.bootstrap.doctor.load') return values.result ?? payloadStatus(values, { policy_root: 'memory.contracts', policy_path: 'payload_verification.memory.json', target_root_value: 'target_root', message: 'Doctor report' });
   if (primitive === 'memory.promotion_report.load') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), notes: values.notes ?? [], candidates: [], message: 'Memory promotion report' };
-  if (primitive === 'verification.report.load') return { kind: 'verification-report/v1', target_root: values.target_root ?? resolve(String(values.target ?? '.')), changed_paths: values.changed_paths ?? [], task_text: values.task_text ?? '', checks: [], message: 'Verification report' };
+  if (primitive === 'verification.report.load') return verificationOwnerReport(values);
   if (primitive === 'memory.current.load') return values.current_command === 'check' ? { dry_run: true, target_root: resolve(String(values.target ?? '.')) } : { detected_version: null, target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'memory.prompt.render' || primitive === 'planning.prompt.render') return { message: `Prompt rendered for ${operationId}`, command: operationId, target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'prompt.render') {
@@ -2301,11 +2324,13 @@ function assignmentDispatchConfiguration(identity, transport) {
   const adapter = isObject(identity.dispatch_adapter) ? identity.dispatch_adapter : {};
   const methods = new Set(Array.isArray(adapter.execution_methods) ? adapter.execution_methods.map(String) : []);
   const variants = Array.isArray(adapter.transports) ? adapter.transports.filter(isObject) : [];
-  const selectedVariant = variants.find((item) => assignmentText(item.method) === transport);
+  const selectedConfiguration = isObject(adapter.execution_configuration) ? adapter.execution_configuration : {};
+  const selectedVariant = selectedConfiguration.transport === transport && isObject(selectedConfiguration.execution?.adapter)
+    ? selectedConfiguration.execution.adapter : variants.find((item) => assignmentText(item.method) === transport);
   const variantKind = assignmentText(selectedVariant?.kind);
   return {
     admitted: methods.has(transport),
-    kind: selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : '') : assignmentText(adapter.kind),
+    kind: selectedVariant ? (['process', 'api'].includes(variantKind) ? 'process' : variantKind === 'internal' ? 'host-native' : variantKind === 'native' ? 'native' : '') : assignmentText(adapter.kind),
     command: Array.isArray(selectedVariant?.command) ? selectedVariant.command.map(String) : Array.isArray(adapter.command) ? adapter.command.map(String) : [],
     outputMode: assignmentText(selectedVariant?.output_mode) || assignmentText(adapter.output_mode) || 'stdout',
     timeoutSeconds: Number(selectedVariant?.timeout_seconds ?? adapter.timeout_seconds ?? 1800),
@@ -2358,11 +2383,11 @@ function assignmentExportPrompt(packet) {
   const mode = assignmentText(context.return_contract?.result_delivery?.default) || 'unapplied-patch';
   const delivery = mode === 'already-materialized'
     ? 'The selected result delivery mode is `already-materialized`: edit only the assigned shared worktree paths, and return the exact baseline-relative unified diff plus its sealed mutation baseline.'
-    : 'The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return the proposed unified diff in a `patch` field.';
+    : 'The selected result delivery mode is `unapplied-patch`: do not edit the target checkout; return any proposed changes as a unified diff in a `patch` field.';
   const identityInstruction = isObject(context.return_contract?.required_identity)
     ? 'Copy every value in return_contract.required_identity exactly and include the selected result_delivery mode.'
     : 'Return every field named by return_contract.required_fields and include the selected result_delivery mode.';
-  return `You are receiving a bounded Agentic Workspace worker context.\nUse only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.\nAcquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.\nReturn a structured result for agentic-workspace assignment import; do not claim AW proof or integration.\n${delivery}\n${identityInstruction}\nThe patch must be a complete git-compatible unified diff beginning with diff --git; generate or verify it with diff tooling so hunk counts are exact.\n\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\``;
+  return `You are receiving a bounded Agentic Workspace worker context.\nUse only the intent, scope, effects, inputs, proof burden, stop conditions, authority limits, and return contract below.\nAcquire deeper repository context only through the listed read-first references; omitted parent conversation and broad workspace state are not part of this assignment.\nReturn a structured result for agentic-workspace assignment import; do not claim AW proof or integration.\n${delivery}\n${identityInstruction}\nWhen no changes are returned, set changed_paths to [] and patch to "". For read-only, no-change, or stopped work, report findings or blockers in summary and stop_conditions_hit; never invent a diff.\nWhen changes are returned, the patch must be a complete git-compatible unified diff beginning with diff --git; generate or verify it with diff tooling so hunk counts are exact.\n\n\`\`\`json\n${JSON.stringify(context, null, 2)}\n\`\`\``;
 }
 
 function assignmentDispatch(packet, prompt, targetRoot, transport) {
@@ -2441,6 +2466,54 @@ function assignmentResultContinuation(result) {
 }
 
 function assignmentLifecycleApply(values, operationId) {
+  // Replacement source admission belongs to the configured repository host.
+  // This generated adapter transports public intention only; it cannot rebuild
+  // host/source authority or duplicate the Rust replacement implementation.
+  const replacementRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  let replacementId = assignmentText(values.assignment_id);
+  let hasReplacement = false;
+  let hasConfigurationAuthority = false;
+  const replacementRun = assignmentText(values.run_id);
+  if (/^[a-zA-Z0-9_-]+$/.test(replacementRun)) {
+    try {
+      const state = readJson(join(replacementRoot, '.agentic-workspace/local/assignment-runs', replacementRun, 'state.json'));
+      replacementId ||= assignmentText(state.assignment_id);
+      hasReplacement = Boolean(state.assignment?.replacement);
+    } catch {}
+  }
+  if (replacementId && /^[a-zA-Z0-9_-]+$/.test(replacementId)) {
+    try {
+      const assignment = readJson(join(replacementRoot, '.agentic-workspace/planning/assignments', `${replacementId}.assignment.json`));
+      hasReplacement ||= Boolean(assignment.replacement_packet);
+      hasConfigurationAuthority = Boolean(assignment.assignment_gate?.dispatch_adapter?.execution_configuration?.execution?.authority_revision);
+    } catch {}
+  }
+  const hasConfigurationChoice = values.configuration_revision !== undefined || values.configuration_id !== undefined || values.configuration_parameters_json !== undefined;
+  const requiresProofOwner = operationId === 'assignment.close';
+  if (requiresProofOwner || operationId === 'assignment.reassign' || hasReplacement || hasConfigurationChoice || hasConfigurationAuthority) {
+    const sourceHost = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../scripts/run_agentic_workspace.py');
+    const sourceRoot = resolve(dirname(sourceHost), '..');
+    const python = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+    if (existsSync(sourceHost) && existsSync(python)) {
+      const args = [sourceHost, 'assignment', operationId.split('.').at(-1), '--target', replacementRoot, '--format', 'json'];
+      for (const key of ['assignment_id','assignment_revision','run_id','target_name','transport','reason','scope','expires_at','return_json','return_id','artifact_ref','task_proof_receipt_ref','configuration_revision','configuration_id','configuration_parameters_json','task']) {
+        if (values[key] !== undefined && values[key] !== null && values[key] !== '') args.push(`--${key.replaceAll('_','-')}`, typeof values[key] === 'object' ? JSON.stringify(values[key]) : String(values[key]));
+      }
+      const changedPaths = values.changed_paths ?? values.changed ?? [];
+      for (const changed of Array.isArray(changedPaths) ? changedPaths : [changedPaths]) args.push('--changed', String(changed));
+      if (values.dry_run) args.push('--dry-run');
+      const result = spawnSync(python, args, { cwd: sourceRoot, encoding:'utf8', windowsHide:true });
+      if (result.status !== 0) {
+        let reason = result.stderr || 'Replacement source host unavailable';
+        try { const failure = JSON.parse(result.stdout); reason = failure.message || failure.reason_code || reason; } catch {}
+        throw new RuntimeError(reason);
+      }
+      return JSON.parse(result.stdout);
+    }
+    if (requiresProofOwner) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:'close',status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'proof-currentness-owner-unavailable',failures:[{reason:'proof-currentness-owner-unavailable',field:'host',recovery:'Use the configured proof-owner host to resolve complete subject currentness before assignment close.'}] };
+    if (hasConfigurationChoice || hasConfigurationAuthority) throw new RuntimeError('configuration-choice-source-host-unavailable');
+    if (hasReplacement) return { kind:'agentic-workspace/assignment-lifecycle-result/v1',operation_id:operationId,transition:operationId.split('.').at(-1),status:'blocked',outcome:'blocked',mutation_applied:false,artifact_refs:[],actions:[],reason_code:'replacement-source-host-unavailable',failures:[{reason:'replacement-source-host-unavailable',field:'host',recovery:'Use the configured source-owner host; do not fall back to the former target.'}] };
+  }
   const transition = assignmentText(values.assignment_command) || String(operationId).split('.').at(-1);
   const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
   const assignmentId = assignmentText(values.assignment_id);
@@ -2525,7 +2598,7 @@ function assignmentLifecycleApply(values, operationId) {
     writes.set(promptPath, prompt);
     writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentText(effectivePacket.packet_integrity) || assignmentDigest(effectivePacket) });
     Object.assign(state, { assignment: effectivePacket, planning_assignment_ref: authorities.planning_assignment_ref, structural_proof_receipt_ref: authorities.proof_receipt_ref, current_state: 'handoff-prepared', run_id: runId, assignment_id: id });
-    if (transport !== 'manual' && !failures.length) {
+    if (transition === 'dispatch' && transport !== 'manual' && !failures.length && !values.dry_run) {
       const dispatch = assignmentDispatch(effectivePacket, prompt, targetRoot, transport);
       const dispatchPath = artifact('dispatch/receipt.json');
       artifactPaths.push(dispatchPath);
@@ -2669,15 +2742,10 @@ function assignmentLifecycleApply(values, operationId) {
       writes.set(resolveInside(targetRoot, planningRef), planning);
       Object.assign(state, { current_state: 'closed' });
     } else Object.assign(state, { current_state: priorState });
-  } else if (transition === 'override') {
-    requireField('assignment_id');
-    requireField('reason');
-    requireField('scope');
-    requireField('expires_at');
-    const receiptPath = artifact('override/override.json');
-    artifactPaths.push(receiptPath);
-    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-human-override-receipt/v1', assignment_id: assignmentId, run_id: runId, status: 'override-recorded', scope: assignmentText(values.scope), reason: assignmentText(values.reason), expires_at: assignmentText(values.expires_at), revalidation_required: true, claim_effect: 'downgrade-until-revalidated', proof_effect: 'explicit override receipt required in proof boundary' });
-    Object.assign(state, { current_state: 'override-recorded' });
+  } else if (transition === 'reassign' || transition === 'override') {
+    // This host cannot independently admit revision-bound override authority.
+    // Public intent fields must not become a replacement or override receipt.
+    failures.push({ reason: 'assignment-override-authority-unavailable', field: 'host.assignment_override_admission', recovery: 'The source owner must admit an override bound to the current assignment/work revision and exact replacement execution configuration. Caller target, reason, scope, expiry, or authority labels cannot supply that evidence; do not resume locally or redispatch the previous target.' });
   } else {
     requireField('run_id');
     const receiptPath = artifact(`closeout/${transition}.json`);
@@ -3198,7 +3266,10 @@ function inspectInstructionsNative(targetRoot, values, operationId) {
       matched_paths: matched, matched_routes: matchedRoutes, route_selectors: routeSelectors, body_loaded: document.body_loaded,
       features: [['guidance', document.has_guidance], ['read', document.metadata.read.length], ['use', document.metadata.use.length], ['checks', document.metadata.checks.length], ['protect', document.metadata.protect.length]].filter(([, present]) => present).map(([name]) => name),
       guidance: document.guidance, read: applies ? document.metadata.read : [], use: applies ? document.metadata.use : [],
-      checks: applies ? document.metadata.checks : [], protect: applies ? document.metadata.protect : [], diagnostics: itemDiagnostics,
+      checks: applies ? document.metadata.checks.filter((check) => typeof check === 'string' && check.startsWith('requirement:')) : [],
+      protect: [], diagnostics: itemDiagnostics,
+      ...(applies && (document.metadata.protect.length || document.metadata.checks.some((check) => typeof check !== 'string' || !check.startsWith('requirement:')))
+        ? { binding_admission: { status: 'unavailable-in-generated-typescript-host', rule: 'Binding scopes require the shared Rust source-admission API with trusted repository host inputs; declarations alone are not grants.' } } : {}),
     });
   }
   const payload = {
@@ -3416,7 +3487,67 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
   return domainPrimitive(primitive, values, args, operationId);
 }
 
+function workspaceAuthoritativeOwnerOperation(operationId, values) {
+  // Restrict this transport to ordinary ingress and proof/claim owners. Serialize only the
+  // generated public interface: source host retains mutation and authority gates.
+  const allowed = new Set(['proof.report', 'report.combined', 'final-response.admit', 'start.context', 'implement.context']);
+  if (!allowed.has(operationId)) throw new RuntimeError('unsupported proof-owner operation');
+  const findInterface = (iface, inheritedId, path = [], options = []) => {
+    const currentPath = [...path, iface.name];
+    const currentOptions = [...options, ...(iface.options ?? [])];
+    const id = iface.operation_ref?.id ?? inheritedId;
+    if (id === operationId && !(iface.subcommands?.length)) return { path: currentPath, options: currentOptions };
+    for (const child of iface.subcommands ?? []) {
+      const found = findInterface(child, id, currentPath, currentOptions);
+      if (found) return found;
+    }
+    return null;
+  };
+  let declaration = null;
+  for (const command of loadJsonResource('command_package.json').commands ?? []) {
+    declaration = findInterface(command.interface, command.operation_ref?.id);
+    if (declaration) break;
+  }
+  if (!declaration) throw new RuntimeError('proof-owner public interface unavailable');
+  const argv = [...declaration.path, `--target=${resolve(String(values.target ?? '.'))}`];
+  for (const option of declaration.options) {
+    if (option.name === 'format' || option.name === 'target') continue;
+    const value = values[option.name];
+    if (value === undefined || value === null || value === '') continue;
+    const flag = option.flags?.find((item) => item.startsWith('--'));
+    if (!flag) throw new RuntimeError('proof-owner option has no public flag');
+    if (option.action === 'store_true') { if (value === true) argv.push(flag); }
+    else if (option.action === 'store_false') { if (value === false) argv.push(flag); }
+    else if (option.nargs === '*' || option.action === 'extend') { if (Array.isArray(value) && value.length) argv.push(flag, ...value.map(String)); }
+    else if (option.action === 'append') { for (const item of Array.isArray(value) ? value : [value]) argv.push(`${flag}=${String(item)}`); }
+    else argv.push(`${flag}=${typeof value === 'object' ? JSON.stringify(value) : String(value)}`);
+  }
+  argv.push('--format=json');
+  const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+  const sourceHost = join(sourceRoot, 'scripts/run_agentic_workspace.py');
+  const environmentPython = process.env.VIRTUAL_ENV ? join(process.env.VIRTUAL_ENV, process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python') : '';
+  const checkoutPython = join(sourceRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+  const python = environmentPython && existsSync(environmentPython) ? environmentPython : existsSync(sourceHost) && existsSync(checkoutPython) ? checkoutPython : 'python';
+  const hostArgs = existsSync(sourceHost) ? [sourceHost, ...argv] : ['-c', 'import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))', ...argv];
+  // Selected execution owns its per-command budget/cancellation/resume contract;
+  // an adapter timeout must not cut off a live proof mutation transaction.
+  const launchOptions = { cwd: existsSync(sourceHost) ? sourceRoot : resolve(String(values.target ?? '.')), encoding: 'utf8', windowsHide: true, maxBuffer: 10 * 1024 * 1024 };
+  let result = spawnSync(python, hostArgs, launchOptions);
+  // Some supported hosts expose only python3. Retry discovery only when the
+  // generic interpreter never started; owner rejection must never run twice.
+  if (python === 'python' && result.error?.code === 'ENOENT') result = spawnSync('python3', hostArgs, launchOptions);
+  if (result.stdout) {
+    try {
+      const payload = JSON.parse(result.stdout);
+      if (isObject(payload)) return result.status === 0 ? payload : { ...payload, exit_status: Number.isInteger(result.status) ? result.status : 2 };
+    } catch {}
+  }
+  const owner = ['start.context', 'implement.context'].includes(operationId) ? 'ordinary-owner' : 'proof-owner';
+  return { kind: `agentic-workspace/${owner}-operation-error/v1`, operation_id: operationId, status: result.error ? 'unavailable' : 'rejected', diagnostic: String(result.stderr || result.error?.message || '').trim().slice(0, 2000), reason_code: result.error ? `${owner}-unavailable` : `${owner}-operation-rejected`, mutation_applied: result.error?.code === 'ENOENT' ? false : null, completion_claim_allowed: false, exit_status: 2, recovery: 'Use the installed authoritative workspace host with these exact public arguments; do not replace current owner decisions or proof admission with an empty adapter result. If execution started without a result, reconcile its current receipts before retrying.' };
+}
+
 function executeTypescriptDomainOperation(operationId, values) {
+  if (['proof.report', 'report.combined', 'final-response.admit', 'start.context', 'implement.context'].includes(operationId)) return workspaceAuthoritativeOwnerOperation(operationId, values);
   const target = resolve(String(values.target ?? '.'));
   if (operationId === 'external-evidence.submit' || operationId === 'external-evidence.query') {
     return {
@@ -3425,25 +3556,6 @@ function executeTypescriptDomainOperation(operationId, values) {
       message: 'External evidence admission requires the package-trusted runtime-backed host boundary.',
       command: operationId === 'external-evidence.submit' ? 'external-evidence-submit' : 'external-evidence-query',
       exit_status: 2,
-    };
-  }
-  if (operationId === 'final-response.admit') {
-    const checkpointRef = '.agentic-workspace/local/chat-checkpoint.json';
-    const checkpointPath = resolveInside(target, checkpointRef);
-    const checkpoint = {
-      kind: 'agentic-workspace/local-chat-checkpoint/v1',
-      source: values.source ?? 'generated-typescript-final-response',
-      after_compaction: Boolean(values.after_compaction),
-      attempt: values.attempt ?? '',
-      local_only: true,
-    };
-    mkdirSync(dirname(checkpointPath), { recursive: true });
-    writeFileSync(checkpointPath, `${JSON.stringify(checkpoint, null, 2)}\n`, 'utf8');
-    return {
-      kind: 'agentic-workspace/final-response-admission-result/v1',
-      status: 'recorded',
-      checkpoint_write: { path: checkpointRef, local_only: true },
-      target_root: target,
     };
   }
   if (operationId === 'autopilot.run') return {
@@ -3531,17 +3643,9 @@ function executeTypescriptDomainOperation(operationId, values) {
     const payload = { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
     return selectWorkspacePayload(payload, values, 'summary');
   }
-  if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory/schemas; use --select or --verbose for detail.' }, context: { proof: { kind: 'proof-selection/v1' } } };
-  if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };
-  if (operationId === 'proof.report') {
-    const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'proof');
-    if (prevalidationError) return prevalidationError;
-    return { kind: 'proof-next-decision/v1', next: { action: 'manual-verification' }, detail_command: 'agentic-workspace proof --verbose --changed <paths> --format json' };
-  }
   if (operationId === 'setup.guidance') return { kind: 'workspace-setup/v1', command: 'setup', target_root: target };
   if (operationId === 'ownership.report') return { profile: 'compact-contract-answer/v1', surface: 'ownership', matched: false, target_root: target };
   if (operationId === 'skills.report') return { task: values.task ?? '', target_root: target, skills: [] };
-  if (operationId === 'report.combined') return { kind: 'workspace-report-router/v1', command: 'report', target_root: target };
   if (operationId === 'reconcile.report') return { kind: 'planning-reconcile/v1', status: 'clean', target_root: target };
   if (operationId === 'preflight.report') return { kind: 'preflight-response/v1', mode: values.active_only ? 'active-state-only' : 'full', target_root: target };
   if (operationId === 'checkpoint.write') return {

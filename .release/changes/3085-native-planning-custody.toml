@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Acquire absent Planning custody through current public reconciliation."
+issues = [2970, 3000, 3001]

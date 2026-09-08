@@ -17,6 +17,7 @@ from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
 from agentic_workspace.current_work_context import startup_route_identity
+from agentic_workspace.decision import repository_decision_view
 from agentic_workspace.operating_decision import (
     admit_projection_surface_decision_input,
     attach_projection_surface_decision_input_consumption,
@@ -30,6 +31,8 @@ from agentic_workspace.operating_decision import (
 from agentic_workspace.orchestration import assignment_bound_entry
 from agentic_workspace.projection_reuse import (
     ProjectionProgress,
+    _operating_decision_revisions,
+    admitted_projection_revisions,
     enforce_projection_serialization_budget,
     lookup_projection_reuse,
     prepare_projection_reuse,
@@ -46,6 +49,7 @@ from agentic_workspace.reporting_support import (
     state_delta_core_payload,
     visible_state_delta_response_payload,
 )
+from agentic_workspace.semantic_task_routes import semantic_route_host_context
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _active_intent_contract_payload,
@@ -3570,28 +3574,63 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             launched_worker_payload = {"assignment": {}, "status": "invalid-launch-identity"}
         bounded_entry = assignment_bound_entry(
             launched=_as_dict(launched_worker_payload),
-            current=_delegated_worker_kernel_payload(target_root=target_root),
+            current=_delegated_worker_kernel_payload(
+                target_root=target_root,
+                assignment_id=str(_as_dict(_as_dict(launched_worker_payload).get("assignment")).get("assignment_id") or ""),
+            ),
         )
         _emit_payload(payload=bounded_entry, format_name=args.format)
         return 0
     start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
     task_text = getattr(args, "task", None)
     selected_fields = getattr(args, "select", None)
+    request_json = getattr(args, "request", None)
+    route_requested = request_json is not None or _selector_requests(selected_fields, "semantic_route_result")
+    public_request = json.loads(request_json) if request_json is not None else None
+    if request_json is not None and not isinstance(public_request, dict):
+        raise ValueError("--request requires a complete public request object")
     if inventory_payload := _selector_inventory_selected_payload(select=selected_fields, source_command="start"):
         _emit_payload(payload=inventory_payload, format_name=args.format)
         return 0
     changed_paths = list(getattr(args, "changed", []) or [])
-    if selected_fields and (
-        fast_selected := _fast_start_selected_decision_payload(
-            target_root=target_root,
-            config=config,
-            task_text=task_text,
-            changed_paths=changed_paths,
-            select=str(selected_fields),
+    if (
+        selected_fields
+        and not route_requested
+        and (
+            fast_selected := _fast_start_selected_decision_payload(
+                target_root=target_root,
+                config=config,
+                task_text=task_text,
+                changed_paths=changed_paths,
+                select=str(selected_fields),
+            )
         )
     ):
         _emit_payload(payload=fast_selected, format_name=args.format)
         return 0
+
+    def read_decision_source() -> dict[str, Any]:
+        if (
+            route_requested
+            or changed_paths
+            and (
+                (config.assurance.decision_record_revision and config.assurance.decision_record_target)
+                or config.assurance.decision_record_fallback
+            )
+        ):
+            return repository_decision_view(
+                target=str(target_root),
+                archive=config.assurance.decision_record_target or "",
+                admitted_revision=config.assurance.decision_record_revision or "",
+                fallback=config.assurance.decision_record_fallback,
+                applicable_scope=[f"path:{path}" for path in _normalize_changed_paths(changed_paths)],
+                semantic_routes=semantic_route_host_context(target_root, task=str(task_text or ""), request=public_request)
+                if route_requested
+                else None,
+            )
+        return {}
+
+    native = read_decision_source()
     effective_profile = _start_profile_for_select(requested_profile=start_profile, select=selected_fields)
     reuse_query = {
         "profile": effective_profile,
@@ -3605,6 +3644,43 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
             selected_modules=list(config.enabled_modules),
         ),
     }
+
+    def source_revision(source: dict[str, Any]) -> str:
+        if "semantic_route_result" in source:
+            return "sha256:" + hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        return str(source.get("input_revision") or "")
+
+    if "decision_context" in native or route_requested:
+        reuse_query["decision_context_revision"] = source_revision(native)
+
+    def decision_revisions(query: dict[str, Any]) -> dict[str, Any]:
+        revisions = prepare_projection_reuse(root=target_root, operation="start", query=query, force_refresh=True).get(
+            "decision_input_revisions", {}
+        )
+        if "decision_context_revision" in query and not revisions:
+            # Cache-disabled surfaces still admit the complete decision input.
+            inputs, _, _ = admitted_projection_revisions(root=target_root, operation="start", query=query)
+            revisions = _operating_decision_revisions(inputs)
+        return revisions
+
+    def current_decision_revisions() -> dict[str, Any]:
+        query = dict(reuse_query)
+        query.pop("decision_context_revision", None)
+        current = read_decision_source() if "decision_context" in native or route_requested else {}
+        if "decision_context" in current or route_requested:
+            query["decision_context_revision"] = source_revision(current)
+        query["setup_capability_freshness_revision"] = _setup_capability_freshness_revision(
+            target_root=target_root, selected_modules=list(config.enabled_modules)
+        )
+        return decision_revisions(query)
+
+    material_inputs = {
+        "task": str(task_text or ""),
+        "changed": changed_paths,
+        "target_root": str(target_root),
+        **({"decision_context": native["decision_context"]} if "decision_context" in native else {}),
+        **({"semantic_route_result": native["semantic_route_result"]} if "semantic_route_result" in native else {}),
+    }
     reuse_context: dict[str, Any] | None = None
     admitted_input: dict[str, Any] = {}
     payload: dict[str, Any]
@@ -3617,7 +3693,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         admitted_input = admit_projection_surface_decision_input(
             input_revisions=reuse_context.get("decision_input_revisions", {}),
             consumer="start",
-            material_inputs={"task": str(task_text or ""), "changed": changed_paths, "target_root": str(target_root)},
+            material_inputs=material_inputs,
         )
         reused, reuse_context = lookup_projection_reuse(
             root=target_root,
@@ -3630,6 +3706,12 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         if reused is not None:
             _emit_payload(payload=reused, format_name=args.format)
             return 0
+    if ("decision_context" in native or route_requested) and not admitted_input:
+        admitted_input = admit_projection_surface_decision_input(
+            input_revisions=decision_revisions(reuse_query),
+            consumer="start",
+            material_inputs=material_inputs,
+        )
     with ProjectionProgress(root=target_root, operation="start") as progress:
 
         def build_start_projection(decision_input: dict[str, Any]) -> dict[str, Any]:
@@ -3654,18 +3736,7 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
                 builder=build_start_projection,
                 admitted_input=admitted_input,
                 consumer="start",
-                revalidate_input_revisions=lambda: prepare_projection_reuse(
-                    root=target_root,
-                    operation="start",
-                    query={
-                        **reuse_query,
-                        "setup_capability_freshness_revision": _setup_capability_freshness_revision(
-                            target_root=target_root,
-                            selected_modules=list(config.enabled_modules),
-                        ),
-                    },
-                    force_refresh=True,
-                ).get("decision_input_revisions", {}),
+                revalidate_input_revisions=current_decision_revisions,
             ),
             stage="build-start-projection",
         )
@@ -3697,6 +3768,9 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     )
     if payload.get("context") == {}:
         payload.pop("context")
+    if _selector_requests(selected_fields, "semantic_route_result"):
+        payload.setdefault("values", {})["semantic_route_result"] = operating_decision.get("semantic_route_result", {})
+        payload["missing"] = [item for item in payload.get("missing", []) if item != "semantic_route_result"]
     if _selector_requests(selected_fields, "source_guidance"):
         payload.setdefault("values", {})["source_guidance"] = _as_dict(operating_decision.get("source_guidance"))
         payload["missing"] = [item for item in payload.get("missing", []) if item != "source_guidance"]

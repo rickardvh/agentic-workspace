@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Surface exact-path repo-native decision consequences from independently admitted source snapshots through ordinary startup."
+issues = [3040, 3041, 2909]

@@ -856,6 +856,8 @@ def admitted_projection_revisions(
         "external_freshness": external_revision,
         "worktree": worktree_revision,
     }
+    if query.get("decision_context_revision"):
+        revisions["decision_context_revision"] = query["decision_context_revision"]
     if selector_enrichment_dependencies:
         revisions["selector_enrichment"] = selector_enrichment_revision
     return revisions, sorted(set(dependencies)), findings
@@ -876,7 +878,10 @@ _OPERATING_DECISION_REVISION_FIELDS = (
 def _operating_decision_revisions(input_revisions: dict[str, Any]) -> dict[str, Any]:
     """Keep enrichment-only freshness outside operating-decision identity."""
 
-    return {field: input_revisions.get(field) for field in _OPERATING_DECISION_REVISION_FIELDS}
+    revisions = {field: input_revisions.get(field) for field in _OPERATING_DECISION_REVISION_FIELDS}
+    if "decision_context_revision" in input_revisions:
+        revisions["decision_context_revision"] = input_revisions["decision_context_revision"]
+    return revisions
 
 
 def _invalidation_reasons(previous: dict[str, Any], current: dict[str, Any]) -> list[str]:
@@ -959,7 +964,7 @@ def prepare_projection_reuse(*, root: Path, operation: str, query: dict[str, Any
         "input_revisions": input_revisions,
         "decision_input_revisions": _operating_decision_revisions(input_revisions),
         "enrichment_input_revisions": {
-            field: value for field, value in input_revisions.items() if field not in _OPERATING_DECISION_REVISION_FIELDS
+            field: value for field, value in input_revisions.items() if field not in _operating_decision_revisions(input_revisions)
         },
         "canonical_input_revision": "",
         "decision_id": "",

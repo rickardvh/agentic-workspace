@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Admit an explicit eligible replacement attempt through the existing repair/reassign owner while preserving current semantic work and source authority."
+issues = [2210, 2947, 2970, 2818, 2909]

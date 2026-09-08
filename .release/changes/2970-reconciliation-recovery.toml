@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Finish an interrupted Planning reconciliation under exact retained attempt custody without repeating external effects or adopting result collisions."
+issues = [2970, 3000, 2909]

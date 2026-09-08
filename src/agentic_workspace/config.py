@@ -321,6 +321,7 @@ SUPPORTED_REVIEW_BURDENS = (
     "light",
     "normal",
     "high",
+    "unknown",
 )
 SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT = (
     "off",
@@ -479,6 +480,8 @@ class MixedAgentLocalOverride:
     local_overlay: dict[str, Any]
     high_risk_overlay: dict[str, Any]
     field_sources: dict[str, str]
+    assignment_replacement: dict[str, str] | None = None
+    required_execution_guarantees: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -620,6 +623,9 @@ class AssuranceConfig:
     closeout_postures: tuple[AssuranceCloseoutPosture, ...]
     test_data_policy: dict[str, Any]
     decision_record_target: str | None
+    decision_record_revision: str | None
+    instruction_revision: str | None
+    decision_record_fallback: dict[str, Any] | None
     decision_record_format: str | None
     decision_record_template: str | None
     decision_record_statuses: tuple[str, ...]
@@ -1692,6 +1698,9 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "closeout_postures",
         "test_data_policy",
         "decision_record_target",
+        "decision_record_revision",
+        "instruction_revision",
+        "decision_record_fallback",
         "decision_record_format",
         "decision_record_template",
         "decision_record_statuses",
@@ -1756,6 +1765,9 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         raw_test_data_policy = {}
     if not isinstance(raw_test_data_policy, dict):
         raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.test_data_policy] section must be a table.")
+    raw_decision_fallback = raw_assurance.get("decision_record_fallback")
+    if raw_decision_fallback is not None and not isinstance(raw_decision_fallback, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.decision_record_fallback] must be a table.")
     decision_record_target = raw_assurance.get("decision_record_target")
     decision_record_format = raw_assurance.get("decision_record_format")
     decision_record_template = raw_assurance.get("decision_record_template")
@@ -1796,6 +1808,11 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             domain_proof_lanes=domain_proof_lanes,
             closeout_postures=closeout_postures,
             test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
+            decision_record_fallback=dict(raw_decision_fallback) if raw_decision_fallback is not None else None,
+            instruction_revision=str(raw_assurance["instruction_revision"]).strip() if raw_assurance.get("instruction_revision") else None,
+            decision_record_revision=str(raw_assurance["decision_record_revision"]).strip()
+            if raw_assurance.get("decision_record_revision")
+            else None,
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
             decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,
             decision_record_template=str(decision_record_template).strip() if decision_record_template is not None else None,
@@ -2096,24 +2113,36 @@ def load_delegation_target_profiles(
                 if not isinstance(raw_transport, dict):
                     raise WorkspaceUsageError(f"{transport_path.as_posix()} must be a table.")
                 transport_payload: dict[str, Any] = {str(key): value for key, value in raw_transport.items()}
-                unknown_transport = sorted(set(transport_payload) - {"kind", "command", "output_mode", "timeout_seconds"})
+                transport_fields = {"kind", "command", "output_mode", "timeout_seconds"}
+                if transport_payload.get("kind") == "native":
+                    transport_fields = {"kind", "adapter", "parameters", "timeout_seconds"}
+                unknown_transport = sorted(set(transport_payload) - transport_fields)
                 if unknown_transport:
-                    warnings.append(f"{transport_path.as_posix()} contains unsupported field(s): {', '.join(unknown_transport)}.")
+                    raise WorkspaceUsageError(f"{transport_path.as_posix()} contains unsupported field(s): {', '.join(unknown_transport)}.")
                 kind = require_required_enum(
                     payload=transport_payload,
                     key="kind",
                     config_path=transport_path,
-                    allowed=("internal", "process", "api", "manual"),
+                    allowed=("internal", "process", "api", "manual", "native"),
                 )
-                method = {"internal": "internal", "process": "cli", "api": "api", "manual": "manual"}[kind]
-                if method in seen_methods:
+                method = {"internal": "internal", "process": "cli", "api": "api", "manual": "manual", "native": "cli"}[kind]
+                transport_key = f"native:{transport_payload.get('adapter')}" if kind == "native" else method
+                if transport_key in seen_methods:
                     raise WorkspaceUsageError(f"{target_path.as_posix()} transports may configure method {method!r} only once.")
-                seen_methods.add(method)
+                seen_methods.add(transport_key)
                 command = require_optional_string_list(payload=transport_payload, key="command", config_path=transport_path)
                 if kind in {"process", "api"} and not command:
                     raise WorkspaceUsageError(f"{transport_path.as_posix()} command is required for {kind} transport.")
                 if kind in {"internal", "manual"} and command:
                     raise WorkspaceUsageError(f"{transport_path.as_posix()} command is not allowed for {kind} transport.")
+                if kind == "native" and (
+                    not isinstance(transport_payload.get("adapter"), str)
+                    or not transport_payload["adapter"]
+                    or not isinstance(transport_payload.get("parameters"), dict)
+                ):
+                    raise WorkspaceUsageError(
+                        f"{transport_path.as_posix()} native transport requires adapter identity and parameter object."
+                    )
                 output_mode = require_optional_enum(
                     payload=transport_payload,
                     key="output_mode",
@@ -2133,6 +2162,11 @@ def load_delegation_target_profiles(
                         "timeout_seconds": raw_timeout,
                         "readiness": "runtime-required" if kind == "internal" else "configured",
                         "source": "canonical-transports",
+                        **(
+                            {"adapter": transport_payload["adapter"], "parameters": transport_payload["parameters"]}
+                            if kind == "native"
+                            else {}
+                        ),
                     }
                 )
         else:
@@ -2158,7 +2192,7 @@ def load_delegation_target_profiles(
                         "source": "legacy-compatibility-decoder",
                     }
                 )
-        execution_methods = tuple(str(item["method"]) for item in transports)
+        execution_methods = tuple(dict.fromkeys(str(item["method"]) for item in transports))
         configured_adapter = next(
             (item for item in transports if item["method"] in {"cli", "api"} and item["readiness"] == "configured"),
             None,
@@ -2296,10 +2330,16 @@ def normalize_delegation_context_cost(raw: Any, *, surface_name: str) -> dict[st
     unknown_fields = raw.get("unknown_fields", [])
     if not isinstance(unknown_fields, list) or any(not isinstance(item, str) for item in unknown_fields):
         raise WorkspaceUsageError(f"{surface_name} record context_cost unknown_fields must be a string list.")
+    configuration_context = raw.get("configuration_context")
+    if configuration_context is not None and (
+        not isinstance(configuration_context, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", configuration_context)
+    ):
+        raise WorkspaceUsageError(f"{surface_name} record context_cost configuration_context must be a SHA256 identity or null.")
     return {
         "kind": "agentic-workspace/assignment-context-cost/v1",
         "transport": transport.strip(),
         "adapter_revision": str(raw.get("adapter_revision") or "").strip(),
+        **({"configuration_context": configuration_context} if configuration_context is not None else {}),
         **{field_name: raw[field_name] for field_name in required_integer_fields},
         **{field_name: raw.get(field_name) for field_name in optional_integer_fields},
         "unknown_fields": list(dict.fromkeys(unknown_fields)),
@@ -3213,6 +3253,25 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             f"{', '.join(legacy_delegation_fields)} are deprecated and scheduled for removal by "
             f"{DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION}; migrate to canonical assignment/transport/override fields."
         )
+    replacement = raw_delegation.get("replacement")
+    if replacement is not None:
+        fields = {
+            "assignment_id",
+            "assignment_revision",
+            "work_id",
+            "work_revision",
+            "target",
+            "transport",
+            "execution_revision",
+            "packet_integrity",
+        }
+        if (
+            not isinstance(replacement, dict)
+            or set(replacement) != fields
+            or any(not isinstance(v, str) or not v for v in replacement.values())
+            or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in replacement["assignment_id"])
+        ):
+            raise WorkspaceUsageError("delegation.replacement must be one exact revision-bound source-owner answer")
     unknown_delegation = sorted(
         set(raw_delegation)
         - {
@@ -3225,6 +3284,8 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "underfit_behavior",
             "down_routing_behavior",
             "human_override_policy",
+            "replacement",
+            "required_execution_guarantees",
             "manual_transport_policy",
         }
     )
@@ -3294,6 +3355,25 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         allowed=SUPPORTED_MANUAL_TRANSPORT_POLICIES,
     )
+
+    required_execution_guarantees = raw_delegation.get("required_execution_guarantees", [])
+    if (
+        not isinstance(required_execution_guarantees, list)
+        or len(required_execution_guarantees) > 32
+        or any(
+            not isinstance(value, str) or re.fullmatch(r"[a-z][a-z0-9._:-]{0,127}", value) is None
+            for value in required_execution_guarantees
+        )
+        or len(set(required_execution_guarantees)) != len(required_execution_guarantees)
+    ):
+        raise WorkspaceUsageError("delegation.required_execution_guarantees must be at most 32 unique bounded guarantee names")
+    if "required_execution_guarantees" in raw_delegation:
+        field_sources["delegation.required_execution_guarantees"] = _local_config_field_source(
+            local_payload=local_payload,
+            shared_payload=shared_payload,
+            table="delegation",
+            key="required_execution_guarantees",
+        )
 
     raw_clarification = payload.get("clarification", {})
     if raw_clarification is None:
@@ -3469,6 +3549,8 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         underfit_behavior=underfit_behavior,
         down_routing_behavior=down_routing_behavior,
         human_override_policy=human_override_policy,
+        assignment_replacement=replacement,
+        required_execution_guarantees=tuple(sorted(required_execution_guarantees)),
         manual_transport_policy=manual_transport_policy,
         clarification_mode=clarification_mode,
         setup_prompt_disposition=setup_prompt_disposition,
