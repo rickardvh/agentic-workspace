@@ -387,3 +387,7 @@ scope. The original failing Rust case passed. No proof or task completion is
 inferred from preserved request currentness; no provider calls were made.
 
 The integrated Rust boundary also caught an obsolete fixture expecting consumed transport authority to remain unsupported. Its replacement checks the actual Assignment policy and retained safety ceiling: automatic transport with safety false still forbids execution. The initial boundary had89 passes, one stale fixture failure and3 subprocess helpers ignored.
+
+### Current policy precedence conformance
+
+Linux runtime CI on the comparative-assignment stack passed154 shared-core tests and found one old fixture expecting a deprecated manual-disabled alias to override canonical automatic transport authority. The fixture now verifies canonical precedence and retains a separate negative without canonical authority, plus the independent unsafe automatic-command ceiling. The CI failure remains recorded; this changes no product behavior or provider evidence.
