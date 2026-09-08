@@ -1,8 +1,11 @@
 use serde_json::{Value, json};
+#[cfg(not(unix))]
+use std::io::Write;
 use std::{
     collections::BTreeSet,
     env, fs,
     io::{self, Read},
+    process::{Command, Stdio},
 };
 
 fn declaration() -> Value {
@@ -170,16 +173,83 @@ fn run() -> Result<(), (&'static str, String)> {
         .find(|command| command["name"] == parsed.command)
         .unwrap();
     parsed.values[command["input_field"].as_str().unwrap()] = input;
-    let result = match parsed.command.as_str() {
-        "start" => agentic_workspace_core::native_public::start(parsed.values),
-        "invoke" => agentic_workspace_core::native_public::invoke(parsed.values),
-        _ => unreachable!("command declaration and adapter dispatch must agree"),
+    // The CLI owns only argv/JSON transport. Every semantic operation runs in
+    // the same colocated executable used by the JSON/Python/Node adapters.
+    let executable = env::current_exe().map_err(|error| ("core-location", error.to_string()))?;
+    let core = executable.with_file_name(if cfg!(windows) {
+        "agentic-workspace-core.exe"
+    } else {
+        "agentic-workspace-core"
+    });
+    forward(&core, &json!({parsed.command: parsed.values}))
+}
+
+#[cfg(unix)]
+fn forward(core: &std::path::Path, payload: &Value) -> Result<(), (&'static str, String)> {
+    use std::io::{Seek, SeekFrom};
+    use std::os::unix::process::CommandExt;
+    // Anonymous regular input avoids pipe-capacity deadlock and argv exposure.
+    // exec keeps the same process identity and signal lifetime as the core.
+    let mut input = tempfile::tempfile().map_err(|error| ("core-input", error.to_string()))?;
+    serde_json::to_writer(&mut input, payload)
+        .map_err(|error| ("core-input", error.to_string()))?;
+    input
+        .seek(SeekFrom::Start(0))
+        .map_err(|error| ("core-input", error.to_string()))?;
+    let error = Command::new(core).stdin(Stdio::from(input)).exec();
+    Err((
+        "core-unavailable",
+        format!("colocated core {}: {error}", core.display()),
+    ))
+}
+
+#[cfg(not(unix))]
+fn forward(core: &std::path::Path, payload: &Value) -> Result<(), (&'static str, String)> {
+    let mut command = Command::new(core);
+    command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
     }
-    .map_err(|error| ("owner-rejected", error.to_string()))?;
-    println!(
-        "{}",
-        serde_json::to_string(&result).expect("owner result is JSON")
+    #[cfg(windows)]
+    let mut command = {
+        use process_wrap::std::{CommandWrap, JobObject};
+        let mut wrapped = CommandWrap::from(command);
+        wrapped.wrap(JobObject);
+        wrapped
+    };
+    let mut child = command.spawn().map_err(|error| {
+        (
+            "core-unavailable",
+            format!("colocated core {}: {error}", core.display()),
+        )
+    })?;
+    #[cfg(windows)]
+    let stdin = child.stdin().take();
+    #[cfg(not(windows))]
+    let stdin = child.stdin.take();
+    let write = stdin.expect("piped core input").write_all(
+        serde_json::to_string(payload)
+            .expect("parsed request is JSON")
+            .as_bytes(),
     );
+    if let Err(error) = write {
+        let _ = child.kill();
+        let _ = child.wait();
+        return Err(("core-input", error.to_string()));
+    }
+    let status = child.wait().map_err(|error| {
+        let _ = child.kill();
+        let _ = child.wait();
+        ("core-wait", error.to_string())
+    })?;
+    if !status.success() {
+        std::process::exit(status.code().unwrap_or(2));
+    }
     Ok(())
 }
 

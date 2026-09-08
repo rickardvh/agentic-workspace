@@ -90,7 +90,9 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
 
 @pytest.fixture(scope="module")
 def native_cli(shared_core_binary: Path) -> Path:
-    subprocess.run(["cargo", "build", "--locked", "-p", "agentic-workspace-cli"], cwd=ROOT, check=True)
+    subprocess.run(
+        ["cargo", "build", "--locked", "-p", "agentic-workspace-core", "-p", "agentic-workspace-cli", "--bins"], cwd=ROOT, check=True
+    )
     return shared_core_binary.with_name("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
 
 

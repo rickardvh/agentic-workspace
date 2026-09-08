@@ -16,6 +16,25 @@ Ordinary results contain bounded process facts and an exact hashed artifact refe
 
 ## Current compatibility and cost limits
 
-The current native runtime identity includes the actual adapter executable hash. A proof produced by the native CLI is therefore not yet reusable through the distinct core executable used by Python/Node/JSON, even when both contain the same Rust library. The public negative reports `native-producer-binary-compatibility-unproven`; this is an implementation residual, not an external acceptance blocker. No recorded executable path is read to manufacture compatibility.
+The current native runtime identity includes the actual core executable hash and location. Reuse requires that exact currently observed runtime; no recorded executable path is read to manufacture compatibility.
 
 Freshness records `validation_duration_us` separately from the execution's `duration_ms`. Hashing the current binary during selection and admission is real validation work. The fixtures prove reuse and scope rejection, not a net saving for their deliberately small commands.
+
+
+The native CLI is an argv/JSON transport to its exact colocated
+`agentic-workspace-core` executable. Python, Node and JSON consumers of that
+same executable can reuse current command evidence and replay current committed
+invocations without re-executing the command. The CLI does not link owner semantics,
+search PATH, honor an alternate core environment override, or build a missing core.
+Source development builds must build both binaries with
+`cargo build --locked --workspace --bins`; wheel staging already includes both.
+Windows uses a Job Object for child lifetime; Unix replaces the CLI process with
+the core after preparing anonymous JSON stdin, without exposing packets in argv.
+
+Executable location remains part of proof runtime identity. Byte-identical copies
+at different installation paths remain explicitly incompatible in this slice;
+package version equality never substitutes for actual executable identity. The
+supported positive is one actual core executable across adapters, not arbitrary
+independently built or relocated packages. A changed core at the same path stales
+prior command proof and invocation replay. Process evidence still grants neither
+task judgment nor independent acceptance.

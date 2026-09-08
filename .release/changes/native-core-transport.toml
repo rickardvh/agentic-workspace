@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Run native CLI owner operations through the same colocated core executable used by JSON, Python and Node, preserving exact runtime proof reuse and interruption custody."
