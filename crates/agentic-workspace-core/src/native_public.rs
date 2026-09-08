@@ -495,6 +495,14 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &requests,
         &contract,
     )?;
+    *contributions
+        .iter_mut()
+        .find(|c| c["owner"] == "workspace")
+        .expect("configuration contribution") = native_config::assignment_consumption(
+        &configuration,
+        &assignment["result"],
+        &requirements["execution_configurations"],
+    );
     let mut assignment_contribution = assignment["contribution"].clone();
     assignment.as_object_mut().unwrap().remove("contribution");
     requirements["assignment"] = assignment;

@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "The user confirms #3166/#3167/#3168 merged; GitHub #3138 independently records their exact-head review/CI and c2303e921. The original checkout recovers native revision 12 with exact merged bytes. #2970/#3077 remain evidence/conformance gaps, not missing implementation of those slices. #2613 is a bounded implementation gap per #2983 comment 5590398962: lived-in shared config remains a large proof/path registry. Native changed-path startup additionally reproduces a #2817/#2210 implementation gate before source edits: exact current task requirements and comparative choice cannot admit retained-local implementation with unresolved configured target/manual alternatives. Existing policy is preserved; no source workaround, worker launch, self-review, issue closure or promotion occurred.",
+    "frontier": "Merged base c2303e921 integrates #3166/#3167/#3168. The explicitly human-authorized maintainer repair adds current typed target-scope judgment to existing Assignment task requirements, preserves viable unresolved-alternative refusal, and distinguishes the current manual read-only result boundary from a patch-producing task. Exact admitted local Assignment consumes only matching configured target context for implementation; delegation, completion and unknown lifecycle controls survive. The unchanged original local configuration now yields a current Assignment identity and no implementation blockers. #2613 is the next bounded implementation gap. No parent closure or promotion is inferred.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Continue from merged c2303e9212a067d306be14846824ff727bc59cb0. Resolve the real native Assignment bootstrap blocker in #2817/#2210 before implementation: configured target-scope restrictions have no native judgment request and manual patch handoff is unresolved; choosing the retained current target remains unadmitted. Then finish #2613 human-configuration versus Verification/domain-state separation and the remaining owner audit. Preserve exact local policy and do not infer a generic override.",
+  "next_action": "Continue #2613: transfer implementation-coupled Verification routes out of human configuration through the existing owner, preserve irreducible repo policy and actual local authority, and finish the P0/P1 audit. The bounded #2817/#2210 typed scope repair now admits retained-local implementation against unchanged lived-in config; independent review and cumulative conformance remain required.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -61,7 +61,8 @@
       "#3168 writer proof remains 21 advisory/configuration cases with one Windows file-symlink skip and passing directory-junction rejection, 96 Rust tests with three ignored helpers, and shared/local native/JSON/Python/TypeScript parity. No broader configuration custody or configure-once completion is inferred.",
       "Current follow-up: isolated installed Python and packed TypeScript consumers pass fresh-process Planning create/select/update/reconcile, idempotent result recovery and stale unconsumed-action rejection, exact configuration write/no-op/source-drift/replay rejection, disabled modules, incompatible reader and malformed source rejection, artifact-payload presence/currentness/drift/missing-byte admission, and consumer removal with ordinary native owner recovery. Payload bytes and initial human policy are explicit fixtures, not a claim that a native payload installer created them.",
       "Five replacement installed-runtime/integration cases and 13 external-consumer/maintainer cases pass on Windows. Memory explicitly owns the optional-ledger rule; present malformed evidence still fails. Generated mirrors are current. Hosted exact-head and cumulative conformance remain pending; no release gate is waived.",
-      "Merged c2303e921 current proof: source-built paired Rust binaries recover the real native Planning owner; all 16 native/JSON/Python/TypeScript Assignment comparison/currentness cases pass. Real original-local-source startup retains the implementation blocker after exact task and current-target comparative requests. This is observed failure-to-admit evidence, not successful implementation or target-failure evidence."
+      "Merged c2303e921 current proof: source-built paired Rust binaries recover the real native Planning owner; all 16 native/JSON/Python/TypeScript Assignment comparison/currentness cases pass. Real original-local-source startup retains the implementation blocker after exact task and current-target comparative requests. This is observed failure-to-admit evidence, not successful implementation or target-failure evidence.",
+      "Bounded Assignment repair: unchanged local config SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189; actual native route returns assigned-current-target and no implementation blockers. 66 neighboring parity/configuration cases pass with one Windows file-symlink skip; Rust core 96 pass/3 subprocess helpers ignored; generated package static proof passes. Original 16 refusal/currentness cases are retained. No worker launched and no configuration policy was rewritten."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -131,7 +132,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 13,
+  "revision": 14,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -183,18 +184,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/895e9ea7e7ec2b4b304abf1a170f5221042d31869b8a27ac800fffc72606fc69.attempt.json",
-        "revision": "sha256:366cd44a9bcbd9447bb468ab652c8ab7da63b325a096f484b0ab88c88991bee0",
+        "path": ".agentic-workspace/local/effects/72652da00a092920f6b92754cce126e4c208a48005b9bbf7704c1a583cea3836.attempt.json",
+        "revision": "sha256:cd23b76442d5801cedea7df646a13df4cab05b5b6244772f47671db72ff1189b",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/895e9ea7e7ec2b4b304abf1a170f5221042d31869b8a27ac800fffc72606fc69.result.json",
-        "revision": "sha256:9da63a72a069cd712540be55c40ade64f1798f0351029251ba2da81f21bd52e7",
+        "path": ".agentic-workspace/local/effects/72652da00a092920f6b92754cce126e4c208a48005b9bbf7704c1a583cea3836.result.json",
+        "revision": "sha256:eb3ba091601241d6924149aa95f7b898d647ca361b5c080957bfa98d07d72b67",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:6338462c081fae006ed98952e05f409857aa641d4298fcff3a3a8828a19e2a49",
+    "invocation_revision": "sha256:9b08602b6ea159b98c1460c2d255aa398625047a9626655c189407ed96cb7852",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -202,7 +203,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:32095b3388bded13ac74d2403c04f1f1092a38c6868db3e37e556672f755a180",
+        "document_revision": "sha256:dbde77b9b46b74b67dfa7f658a13a53434a6f5909adc56f7e13cc9f68466a2fb",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

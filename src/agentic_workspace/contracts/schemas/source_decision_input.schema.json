@@ -1404,6 +1404,33 @@
       "type": "object",
       "description": "Acting agent task judgment, not policy or Verification authority.",
       "properties": {
+        "target_scope": {
+          "type": "object",
+          "maxProperties": 32,
+          "description": "Current acting-agent applicability judgments for exact configured forbidden task classes. Applies denies the target; not-applicable does not grant capability or override policy. Omitted or unresolved remains blocked. Never durable configuration.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "enum": [
+                  "applies",
+                  "not-applicable",
+                  "unresolved"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "required": [
+              "status",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
         "task_identity": {
           "$ref": "#/$defs/task_requirements_identity"
         },

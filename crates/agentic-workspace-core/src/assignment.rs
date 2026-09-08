@@ -534,6 +534,7 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
     }
     for manual in execution["manual_targets"].as_array().into_iter().flatten() {
         if manual["source_policy_eligible"] == true
+            && manual["required_result_classes_supported"] != false
             && !alternatives.iter().any(|a| a["target"] == manual["target"])
         {
             unresolved.push(manual.clone());

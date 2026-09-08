@@ -181,6 +181,85 @@ fn residual(source: &str, field: &str, value: &Value, config: &Value) -> Value {
     result
 }
 
+/// An admitted retained-local Assignment consumes only its exact source context.
+/// Other target lifecycle/control fields and all delegation/claim gaps survive.
+pub(crate) fn assignment_consumption(
+    configuration: &Value,
+    assignment: &Value,
+    execution: &Value,
+) -> Value {
+    let mut contribution = configuration["contribution"].clone();
+    if assignment["local_assignment_satisfied"] != true
+        || assignment["assignment_identity"].is_null()
+    {
+        return contribution;
+    }
+    for residual in configuration["residuals"].as_array().into_iter().flatten() {
+        if residual["source"] != LOCAL {
+            continue;
+        }
+        let field = residual["field"].as_str().unwrap_or("");
+        let consumed = if let Some(name) = field.strip_prefix("delegation_targets.") {
+            execution["target_context"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|context| {
+                    context["target"] == name
+                        && context["revision"] == residual["value_revision"]
+                        && context["profile"].as_object().is_some_and(|fields| {
+                            fields.keys().all(|key| {
+                                matches!(
+                                    key.as_str(),
+                                    "target_id"
+                                        | "target_revision"
+                                        | "strength"
+                                        | "location"
+                                        | "confidence"
+                                        | "task_fit"
+                                        | "capability_classes"
+                                        | "forbidden_task_classes"
+                                        | "transports"
+                                        | "model_family"
+                                        | "provider"
+                                        | "context_capacity"
+                                        | "cost_class"
+                                        | "latency_class"
+                                        | "confidence_source"
+                                        | "current_economic_evidence"
+                                        | "identity_status"
+                                        | "human_control_modes"
+                                )
+                            })
+                        })
+                })
+        } else {
+            // Availability of a different worker/planner is not needed for the
+            // exact admitted retained-local executor. No worker availability is granted.
+            matches!(
+                field,
+                "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
+            )
+        };
+        if consumed {
+            let code = format!("native-config-owner:{LOCAL}:{field}");
+            for blocker in contribution["blockers"]
+                .as_array_mut()
+                .into_iter()
+                .flatten()
+            {
+                if blocker["code"] == code {
+                    blocker["affects"]
+                        .as_array_mut()
+                        .unwrap()
+                        .retain(|effect| effect != "effect:implementation");
+                }
+            }
+        }
+    }
+    contribution
+}
+
 /// Explicit repo enablement gates availability, never task relevance.
 pub(crate) fn module_enabled(configuration: &Value, owner: &str) -> bool {
     configuration["modules"]
