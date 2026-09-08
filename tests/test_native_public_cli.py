@@ -575,3 +575,53 @@ def test_native_reader_rejects_invalid_or_unknown_contract_before_domain_parsing
     assert result["failed_checks"] == [failed_check]
     assert result["managed_state_interpreted"] is False
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_current_schema_consumption_preserves_other_residuals(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    declaration = 'schema_version=1\n[cli_compatibility]\ncontract_schema="agentic-workspace/installed-state-compatibility/v1"\n'
+    config.write_text(declaration)
+    context = {"target": str(tmp_path), "task": "Inspect unrelated source"}
+    current = consume(surface, shared_core_binary, native_cli, context)
+    assert current["runtime_compatibility"]["status"] == "admitted"
+    assert current["configuration"]["residuals"] == []
+    assert current["decision_packet"]["status"] == "direct"
+    config.write_text(declaration + 'enforcement="advisory"\nrequired_resources=["agentic_workspace:unobserved-resource"]\n')
+    residual = consume(surface, shared_core_binary, native_cli, context)
+    fields = {item["field"] for item in residual["configuration"]["residuals"]}
+    assert fields == {"cli_compatibility.enforcement", "cli_compatibility.required_resources"}
+    assert residual["decision_packet"]["status"] != "direct"
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize(
+    ("setting", "failed_check"),
+    [
+        ('contract_schema="agentic-workspace/future-contract/v99"', "contract_schema"),
+        ("minimum_reader_epoch=999", "minimum_reader_epoch"),
+        ('required_reader_capabilities=["future-reader"]', "required_reader_capabilities"),
+    ],
+)
+def test_native_advisory_does_not_waive_prestate_reader_contract(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, setting: str, failed_check: str
+) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('schema_version=1\n[cli_compatibility]\nenforcement="advisory"\n' + setting + "\n")
+    state = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    state.parent.mkdir(parents=True)
+    state.write_bytes(b"unreadable source must remain untouched")
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_bytes(b"unreadable route registry")
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Continue current work"})
+    assert result["status"] == "blocked"
+    assert result["failed_checks"] == [failed_check]
+    assert result["managed_state_interpreted"] is False
+    assert "decision_packet" not in result
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
