@@ -799,7 +799,11 @@ pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
     crate::native_config::disabled_owner(
         target,
         "verification",
-        &[MANIFEST, ".agentic-workspace/proof/receipts/INDEX.json"],
+        &[
+            MANIFEST,
+            &format!("{RECEIPTS}/index.json"),
+            ".agentic-workspace/local/independent-review-host-results/index.json",
+        ],
         &["effect:proof-execution", "claim:complete"],
     )
 }
