@@ -473,8 +473,14 @@ mod tests {
                 .iter()
                 .any(|v| v["code"] == "local-command-safety-ceiling")
         );
+        assert_eq!(
+            result["assignment_policy"]["transport_authority"],
+            "automatic"
+        );
+        assert_eq!(result["assignment_policy"]["execution_permitted"], false);
+        assert_eq!(result["assignment_policy"]["effective_mode"], "suggest");
         assert!(
-            result["residuals"]
+            !result["residuals"]
                 .as_array()
                 .unwrap()
                 .iter()

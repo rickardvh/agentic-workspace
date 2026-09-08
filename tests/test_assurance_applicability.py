@@ -140,3 +140,42 @@ def test_unreconciled_planning_owner_is_not_known_absence(tmp_path: Path, shared
     row = result["verification"]["assurance_applicability"]["requirements"][0]
     assert row["status"] == "unresolved"
     assert "current agent applicability judgment" not in row["applies_because"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_planning_frontier_preserves_verification_request_lifetime(tmp_path, shared_core_binary, native_cli, surface):
+    from tests.test_native_planning_create import material
+
+    context = {"target": str(tmp_path), "task": "Continue one exact bounded outcome"}
+
+    def call(extra=None):
+        return consume(surface, shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    request = call()["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    created = call({"invocation": call({"request": request})["decision_packet"]["primary_action"]})
+    call({"invocation": call({"request": created["value"]["selection_request"]})["decision_packet"]["primary_action"]})
+    before = call()
+    claim = before["verification"]["requests"][0]
+    update = before["planning"]["update_requests"][0]
+    update["arguments"]["material"] = {**material(), "lifecycle": "live", "phase": "validation"}
+    call({"invocation": call({"request": update})["decision_packet"]["primary_action"]})
+    fresh = call()
+    call({"invocation": call({"request": fresh["planning"]["requests"][0]})["decision_packet"]["primary_action"]})
+    current = call({"request": claim})
+    assert current["verification"]["source"] == before["verification"]["source"]
+    assert "verification-request-stale" not in current["verification"]["evidence_gaps"]
+    assert "current-task-claim-judgment-not-admitted" in current["verification"]["evidence_gaps"]
+    assert current["decision_packet"]["status"] != "terminal"
+    update = call()["planning"]["update_requests"][0]
+    update["arguments"]["material"] = {
+        **material(),
+        "lifecycle": "live",
+        "phase": "validation",
+        "scope": {"allowed": "Materially different work"},
+    }
+    call({"invocation": call({"request": update})["decision_packet"]["primary_action"]})
+    fresh = call()
+    call({"invocation": call({"request": fresh["planning"]["requests"][0]})["decision_packet"]["primary_action"]})
+    changed = call({"request": claim})
+    assert "verification-request-stale" in changed["verification"]["evidence_gaps"]
