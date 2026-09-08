@@ -25,6 +25,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "toml",
+ "toml_edit",
  "windows",
 ]
 

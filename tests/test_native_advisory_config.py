@@ -152,3 +152,125 @@ def test_optional_diagnostic_preferences_preserve_direct_work_and_human_latitude
     assert initiative["configuration"]["revision"] != first["configuration"]["revision"]
     assert any(b["code"].endswith(":workspace.improvement_latitude") for b in initiative["decision_packet"]["blockers"])
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("source_name", ["config.toml", "config.local.toml"])
+def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, source_name: str
+) -> None:
+    import copy
+
+    context = {"target": str(tmp_path), "task": "Correct the configured native invocation", "changed": []}
+
+    def call(**extra):
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+
+    assert call()["configuration_write"]["requests"] == []
+    source = tmp_path / ".agentic-workspace" / source_name
+    source.parent.mkdir()
+    original = b"# Human-owned policy\r\nschema_version=1\r\n[workspace] # preserve table comment\r\ncli_invoke = 'old-command' # preserve inline comment\r\nenabled=true\r\n"
+    source.write_bytes(original)
+    unrelated = tmp_path / "unrelated.txt"
+    unrelated.write_bytes(b"in-progress unrelated work")
+    request = call()["configuration_write"]["requests"][0]
+    # Same-value work is a deterministic no-op, without a human prompt or write.
+    assert call(request=request)["configuration_write"]["status"] == "unchanged"
+    assert not (source.parent / "local").exists()
+    request["arguments"]["value"] = "agentic-workspace"
+    proposal = call(request=request)["decision_packet"]
+    assert proposal["status"] == "decision"
+    answer = proposal["decision_request"]["response_request"]
+    deferred = copy.deepcopy(answer)
+    deferred["arguments"]["answer"] = "defer"
+    assert call(request=deferred)["configuration_write"]["status"] == "deferred"
+    answer["arguments"]["answer"] = "authorize-write"  # faithful bounded human answer
+    tampered = copy.deepcopy(answer)
+    tampered["arguments"]["value"] = "different-command"
+    with pytest.raises(AssertionError):
+        call(request=tampered)
+    unsupported = copy.deepcopy(answer)
+    unsupported["arguments"]["key"] = "modules.enabled"
+    with pytest.raises(AssertionError):
+        call(request=unsupported)
+    ready = call(request=answer)
+    action = ready["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "configuration.write"
+    # A change to the other source also invalidates the exact write.
+    local = source.with_name("config.local.toml" if source_name == "config.toml" else "config.toml")
+    local.write_text('schema_version=1\n[workspace]\ncli_invoke="conflicting-command"\n')
+    with pytest.raises(AssertionError):
+        call(invocation=action)
+    assert source.read_bytes() == original
+    fresh = call()["configuration_write"]["requests"][1]
+    fresh["arguments"]["value"] = "another-override"
+    with pytest.raises(AssertionError, match="conflict"):
+        call(request=fresh)
+    local.unlink()
+    source.write_bytes(original + b"# changed since authorization\r\n")
+    with pytest.raises(AssertionError):
+        call(invocation=action)
+    source.write_bytes(original)
+    forged = copy.deepcopy(action)
+    forged["arguments"]["post_revision"] = "sha256:forged"
+    with pytest.raises(AssertionError):
+        call(invocation=forged)
+    applied = call(invocation=action)
+    assert applied["status"] == "applied"
+    assert applied["value"]["continuing_custody"] is False
+    assert applied["value"]["completion_authority"] is False
+    expected = original.replace(b"'old-command'", b'"agentic-workspace"')
+    assert source.read_bytes() == expected
+    assert unrelated.read_bytes() == b"in-progress unrelated work"
+    current = call()
+    assert current["configuration"]["cli_invoke"] == "agentic-workspace"
+    assert current["configuration_write"]["recovery_requests"] == []
+    with pytest.raises(AssertionError):
+        call(invocation=action)
+    assert source.read_bytes() == expected
+    # Returning to identical preimage bytes cannot revive a consumed authorization.
+    source.write_bytes(original)
+    with pytest.raises(AssertionError, match="already consumed"):
+        call(invocation=action)
+    assert source.read_bytes() == original
+    source.write_bytes(expected)
+    # Historical evidence does not authorize a new edit.
+    next_request = current["configuration_write"]["requests"][0]
+    next_request["arguments"]["value"] = "yet-another-command"
+    assert call(request=next_request)["configuration_write"]["status"] == "human-decision-required"
+    # Malformed current bytes are preserved and never interpreted as a repair grant.
+    source.write_bytes(b"[broken")
+    rejected = call(request=answer)
+    assert rejected["status"] == "blocked"
+    assert source.read_bytes() == b"[broken"
+
+
+@pytest.mark.parametrize("linked", ["source", "parent"])
+def test_configuration_writer_preserves_linked_sources(tmp_path: Path, shared_core_binary: Path, native_cli: Path, linked: str) -> None:
+    import os
+    import subprocess
+
+    target = tmp_path / "target"
+    target.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    body = b'schema_version=1\n[workspace]\ncli_invoke="original"\n'
+    (outside / "config.toml").write_bytes(body)
+    workspace = target / ".agentic-workspace"
+    if linked == "parent" and os.name == "nt":
+        result = subprocess.run(["cmd", "/c", "mklink", "/J", str(workspace), str(outside)], capture_output=True)
+        assert result.returncode == 0, result.stderr
+    else:
+        try:
+            if linked == "parent":
+                workspace.symlink_to(outside, target_is_directory=True)
+            else:
+                workspace.mkdir()
+                (workspace / "config.toml").symlink_to(outside / "config.toml")
+        except OSError:
+            pytest.skip("Host does not permit file symlink creation; directory junction covered separately")
+    context = {"target": str(target), "task": "Inspect linked configuration", "changed": []}
+    result = consume("native", shared_core_binary, native_cli, context)
+    assert result.get("status", result.get("decision_packet", {}).get("status")) == "blocked"
+    assert (outside / "config.toml").read_bytes() == body
+    assert not (outside / "local").exists()
