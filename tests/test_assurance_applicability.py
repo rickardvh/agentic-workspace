@@ -56,8 +56,10 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
     with pytest.raises(AssertionError, match="unknown requirement"):
         consume(surface, shared_core_binary, native_cli, {**context, "request": forged})
     source.write_text(source.read_text() + "# current source changes\n", encoding="utf-8")
-    stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
-    assert stale["verification"]["assurance_applicability"]["requirements"][0]["status"] == "unresolved"
+    with pytest.raises(AssertionError, match="stale for the current capability contract revision"):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    fresh = consume(surface, shared_core_binary, native_cli, context)
+    assert fresh["verification"]["assurance_applicability"]["requirements"][0]["status"] == "unresolved"
     assert not (tmp_path / ".agentic-workspace/local").exists()
 
 
