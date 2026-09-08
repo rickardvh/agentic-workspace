@@ -478,7 +478,8 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
 
     context = fixture(tmp_path)
     request = call(context)["planning"]["creation_requests"][0]
-    request["arguments"] = {"material": material()}
+    authored = {**material(), "adaptive_assurance": {"proof_profiles": []}, "risk_registry_refs": ["risk:original"], "invariant_refs": []}
+    request["arguments"] = {"material": authored}
     created = call({**context, "invocation": call({**context, "request": request})["decision_packet"]["primary_action"]})
     selected = call({**context, "request": created["value"]["selection_request"]})
     call({**context, "invocation": selected["decision_packet"]["primary_action"]})
@@ -490,6 +491,21 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
     claim = call(context)["verification"]["requests"][0]
     claim["arguments"]["evidence_refs"] = [proof_ref]
     assert call({**context, "request": claim})["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+    # Only a typed risk reference changes: unchanged scope/frontier cannot hide
+    # this material revision, and Planning cannot turn the declaration into proof.
+    old_subject = old["planning"]["current_owner"]["reconciliation"]["subject"]
+    risk_update = old["planning"]["update_requests"][0]
+    risk_update["arguments"]["material"] = {**authored, "lifecycle": "planned", "phase": "shaping", "risk_registry_refs": ["risk:revised"]}
+    risk_action = call({**context, "request": risk_update})["decision_packet"]["primary_action"]
+    call({**context, "invocation": risk_action})
+    old = call(context)
+    risk_reentry = call({**context, "request": old["planning"]["requests"][0]})["decision_packet"]["primary_action"]
+    call({**context, "invocation": risk_reentry})
+    old = call(context)
+    assert old["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != old_subject["revision"]
+    new_claim = old["verification"]["requests"][0]
+    new_claim["arguments"]["evidence_refs"] = [proof_ref]
+    assert call({**context, "request": new_claim})["verification"]["evidence"][0]["evidence_freshness"] == "stale"
     selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
     selector_bytes = selector.read_bytes()
     path = tmp_path / created["value"]["owner_path"]
@@ -505,6 +521,7 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
     assert result["status"] == "applied", result
     updated = json.loads(path.read_bytes())
     assert updated["scope"] == changed_material["scope"]
+    assert updated["risk_registry_refs"] == ["risk:revised"], "omitted optional update fields retain their current owner value"
     assert updated["id"] == body["id"] and updated["creation_provenance"] == body["creation_provenance"]
     assert selector.read_bytes() == selector_bytes
     assert call({**context, "invocation": action})["value"] == result["value"]

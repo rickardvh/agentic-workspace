@@ -20,6 +20,8 @@ pub(crate) const MATERIAL: &[&str] = &[
     "references",
     "blockers",
 ];
+pub(crate) const ASSURANCE: &[&str] =
+    &["adaptive_assurance", "risk_registry_refs", "invariant_refs"];
 fn error(message: impl ToString) -> CoreError {
     CoreError::new(message.to_string())
 }
@@ -30,6 +32,7 @@ pub(crate) fn declaration() -> Value {
     let canonical = canonical_schema();
     let properties: serde_json::Map<String, Value> = MATERIAL
         .iter()
+        .chain(ASSURANCE)
         .map(|key| ((*key).to_owned(), canonical["properties"][key].clone()))
         .collect();
     json!({"kind":KIND,"result_kind":"agentic-planning/creation-result/v1","input_schema":{

@@ -73,3 +73,14 @@ The Rust process test terminates the actual update writer after publication and
 recovers through fresh reworded current continuation. Four public consumers
 also exercise genuine producer bytes with the result deliberately withheld;
 that deterministic fixture is not another process-interruption observation.
+
+Current creation and update requests also accept the existing optional canonical
+`adaptive_assurance`, `risk_registry_refs` and `invariant_refs` declarations.
+Omitting them creates no defaults; omitting them from an update preserves the
+current owner's value. Explicit empty lists mean known empty, while absent
+fields remain unknown. Invalid declarations preserve the source and fail closed.
+The Planning owner retains these exact declarations in its existing material
+proof state. A change therefore stales dependent subject-bound proof even when
+scope and frontier stay unchanged. Verification applicability consumes only the
+declared profiles and exact risk/invariant references, never prose, successful
+process exits or Planning completion. These declarations grant no evidence.

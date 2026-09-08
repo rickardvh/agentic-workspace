@@ -22,6 +22,7 @@ pub(crate) fn declaration() -> Value {
     let fields = fields();
     let properties: serde_json::Map<String, Value> = fields
         .iter()
+        .chain(crate::native_planning_create::ASSURANCE)
         .map(|k| (k.to_string(), schema["properties"][k].clone()))
         .collect();
     json!({"kind":KIND,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":schema["$schema"],"$defs":schema["$defs"],"type":"object","properties":{"owner_ref":{"type":"string"},"material":{"type":"object","properties":properties,"required":fields,"additionalProperties":false}},"required":["owner_ref","material"],"additionalProperties":false}})
@@ -239,6 +240,11 @@ pub(crate) fn view(
             .remove(PROVENANCE);
         for key in fields() {
             document[key] = request["arguments"]["material"][key].clone();
+        }
+        for key in crate::native_planning_create::ASSURANCE {
+            if let Some(value) = request["arguments"]["material"].get(*key) {
+                document[*key] = value.clone();
+            }
         }
         // Current execution and returned authority may only be changed by those
         // owners. Material updates preserve their existing relationship records.

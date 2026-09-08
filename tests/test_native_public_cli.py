@@ -213,6 +213,73 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+    reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+    path = tmp_path / reference
+    path.parent.mkdir(parents=True)
+    body = json.loads((ROOT / reference).read_bytes())
+    # Real compact former owner plus exact existing typed assurance declarations
+    # from the worker-context owner, and explicit fixture-owned risk/invariant refs.
+    richer = json.loads((ROOT / ".agentic-workspace/planning/execplans/issue-2818-worker-context-cost.plan.json").read_bytes())
+    body["adaptive_assurance"] = richer["adaptive_assurance"]
+    body["risk_registry_refs"] = ["risk:fixture"]
+    body["invariant_refs"] = ["invariant:fixture"]
+    path.write_text(json.dumps(body))
+    (path.parent.parent / "state.toml").write_text(
+        f'[[active.execplans]]\nid="{body["id"]}"\npath="{reference.as_posix()}"\nstatus="active"\n'
+    )
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        "schema_version=1\n"
+        '[assurance.requirements.profile]\nlevel="high"\nforce="blocking"\napplies_to_proof_profiles=["assignment lifecycle"]\n'
+        '[assurance.requirements.risk]\nlevel="high"\nforce="blocking"\napplies_to_risk_refs=["risk:fixture"]\n'
+        '[assurance.requirements.invariant]\nlevel="high"\nforce="blocking"\napplies_to_invariant_refs=["invariant:fixture"]\n'
+    )
+    context = {"target": str(tmp_path), "task": "Continue the bounded current outcome"}
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value)
+
+    def statuses(value: dict) -> set[str]:
+        return {r["status"] for r in value["verification"]["assurance_applicability"]["requirements"]}
+
+    initial = call(context)
+    assert statuses(initial) == {"unresolved"}
+    continuation = initial["planning"]["requests"][0]
+    continued = call({**context, "request": continuation})
+    assert statuses(continued) == {"applicable"}
+    assert continued["planning"]["current_owner"]["reconciliation"]["coverage"]["complete"] is True
+    action = continued["decision_packet"]["primary_action"]
+    call({**context, "invocation": action})
+    fresh = call(context)
+    assert statuses(fresh) == {"applicable"}
+    old_subject = fresh["planning"]["current_owner"]["reconciliation"]["subject"]
+    assert old_subject["state"]["proof"]["adaptive_assurance"] == richer["adaptive_assurance"]
+    assert fresh["verification"]["evidence"] == []
+    assert fresh["decision_packet"]["status"] != "terminal"
+    unrelated = {**fresh["planning"]["requests"][0], "arguments": {"answer": "unrelated-direct"}}
+    assert statuses(call({**context, "request": unrelated})) == {"not-applicable"}
+    old_claim = fresh["verification"]["requests"][0]
+    body["adaptive_assurance"]["proof_profiles"] = []
+    body["risk_registry_refs"] = []
+    del body["invariant_refs"]
+    path.write_text(json.dumps(body))
+    stale = call({**context, "request": old_claim})
+    assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
+    current = call(context)
+    request = current["planning"]["requests"][0]
+    revised = call({**context, "request": request})
+    rows = {r["id"]: r["status"] for r in revised["verification"]["assurance_applicability"]["requirements"]}
+    assert rows == {"profile": "not-applicable", "risk": "not-applicable", "invariant": "unresolved"}
+    assert revised["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != old_subject["revision"]
+    body["risk_registry_refs"] = "not a typed list"
+    path.write_text(json.dumps(body))
+    preserved = path.read_bytes()
+    with pytest.raises(AssertionError, match="invalid Planning assurance"):
+        call({**context, "request": call(context)["planning"]["requests"][0]})
+    assert path.read_bytes() == preserved
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_real_former_planning_returned_continuation_preserves_semantic_owner(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
