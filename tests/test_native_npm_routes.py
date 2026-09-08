@@ -210,3 +210,33 @@ def test_source_generated_discovery_uses_explicit_development_core(tmp_path: Pat
     assert payload["status"] == "current"
     assert payload["routes"] == []
     assert not (tmp_path / ".agentic-workspace").exists()
+
+
+def test_readiness_archive_survives_exact_conformance_reuse(tmp_path: Path) -> None:
+    import hashlib
+    import runpy
+
+    readiness = runpy.run_path(str(ROOT / "scripts/check/run_external_consumer_readiness.py"))
+    runner = runpy.run_path(str(ROOT / "scripts/check/run_generated_command_package_proof.py"))
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    npm = shutil.which("npm")
+    assert npm
+    archive = readiness["_pack_typescript_artifact"](dist, npm)
+    original = hashlib.sha256(archive.read_bytes()).hexdigest()
+    # This is CI's order: readiness creates dist's root archive first, then the
+    # conformance packer fills missing peers and preserves the exact root bytes.
+    runner["_pack_packages"](dist)
+    assert hashlib.sha256(archive.read_bytes()).hexdigest() == original
+    package = tmp_path / "extracted"
+    runner["_extract_tarball"](archive, package)
+    target = tmp_path / "target"
+    target.mkdir()
+    registry = target / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_bytes((ROOT / "tools/skills/REGISTRY.json").read_bytes())
+    result = run(package, target, "routes")
+    assert result["status"] == "current", result
+    assert result["route_count"] > 0
+    assert (package / "src/native/bin/artifact.json").is_file()
+    assert not (target / ".agentic-workspace").exists()

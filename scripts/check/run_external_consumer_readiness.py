@@ -84,10 +84,18 @@ def _build_python_artifacts(dist: Path) -> list[Path]:
 
 
 def _pack_typescript_artifact(dist: Path, npm: str) -> Path:
-    completed = _run(
-        [npm, "pack", "--json", "--pack-destination", dist],
-        cwd=REPO_ROOT / "generated/workspace/typescript",
-    )
+    # This archive is subsequently reused verbatim by packed conformance and
+    # release validation. Stage its native payload at the originating producer.
+    with tempfile.TemporaryDirectory(prefix="aw-readiness-native-stage-") as temporary:
+        package = Path(temporary) / "workspace"
+        _run(
+            [sys.executable, REPO_ROOT / "scripts/release/stage_native_npm.py", "--output", package],
+            cwd=REPO_ROOT,
+        )
+        completed = _run(
+            [npm, "pack", "--json", "--pack-destination", dist.resolve()],
+            cwd=package,
+        )
     payload = json.loads(completed.stdout)
     archive = dist / str(payload[0]["filename"])
     if not archive.is_file():
