@@ -63,7 +63,7 @@ acceptance, not a new review marker from this implementation session:
 | Owners | Classification | Boundary |
 | --- | --- | --- |
 | #3139, #3140, #3141, #3142, #3143, #3144, #3145, #3146, #3147, #3149, #3150 | candidate-complete | Bounded child acceptance in #3138; no parent closure inferred. |
-| #3151, #3152, #3153, #3154, #3155, #3156, #3157, #3158, #3159, #3160, #3161, #3162, #3163 | evidence/conformance gap | Integrated and semantically reviewed according to #3138. Current cumulative focused proof can support continuation; this audit does not invent missing exact-head hosted acceptance. |
+| #3151, #3152, #3153, #3154, #3155, #3156, #3157, #3158, #3159, #3160, #3161, #3162, #3163 | candidate-complete | The independent #3164 review discharged the remaining hosted-proof gate under the human-selected cumulative-proof policy. The cumulative #3137 head is green on CI, Security and Semver; separate parent gaps remain with their owners. |
 | #2909 | evidence/conformance gap | Owner regressions are inputs. Aggregate final conformance cannot pass while the implementation gaps above remain. |
 | #3059 | evidence/conformance gap | #2983's current P2 amendment requires integrated stable/volatile, fresh-context, lazy-detail and bounded-host-context proof after the domain owners are correct. |
 | #2616 | evidence/conformance gap | Reconcile onboarding/support/cookbook truth after native owner behavior is admitted. No premature native/platform/stable claim. |
@@ -71,6 +71,12 @@ acceptance, not a new review marker from this implementation session:
 | #3014, #3138 | evidence/conformance gap | Cutover remains gated by #2990 and later explicit human promotion approval. No master promotion permission follows from this audit. |
 
 ## Bounded #2970 correction and proof
+
+The child disposition above follows the independent reviewer at
+https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179,
+not a new acceptance decision by this implementation agent. Cumulative head
+`ae4bc9f3e0f4b07d09ca458186f00724d2d30378` passed CI
+(run 34222615733), Security (34222615646) and Semver (34222615707).
 
 The existing `planning.update` operation can now use either valid native creation
 custody or committed, source-current selected Planning reconciliation custody.
