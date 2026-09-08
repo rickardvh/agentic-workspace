@@ -25,13 +25,9 @@ class LedgerWarning(NamedTuple):
 def gather_ledger_warnings(*, repo_root: Path = REPO_ROOT) -> list[LedgerWarning]:
     ledger_path = repo_root / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md"
     if not ledger_path.exists():
-        return [
-            LedgerWarning(
-                "missing_recurring_friction_ledger",
-                ledger_path.relative_to(repo_root).as_posix(),
-                "Recurring-friction ledger is missing; refresh the installed memory payload before relying on recurring-friction evidence.",
-            )
-        ]
+        # Memory owns this optional source, not a mandatory installed artifact.
+        # Stronger issue/Planning owners must not be duplicated into an empty ledger.
+        return []
 
     text = ledger_path.read_text(encoding="utf-8")
     warnings: list[LedgerWarning] = []
@@ -67,7 +63,7 @@ def main() -> int:
         else:
             for warning in warnings:
                 print(f"- {warning.warning_class}: {warning.path}: {warning.message}")
-    if any(warning.warning_class in {"missing_recurring_friction_ledger", "recurring_friction_structure"} for warning in warnings):
+    if any(warning.warning_class in {"recurring_friction_structure"} for warning in warnings):
         return 1
     return 0
 

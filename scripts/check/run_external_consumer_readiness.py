@@ -1,47 +1,22 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import tomllib
+import zipfile
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = REPO_ROOT / "tests/fixtures/external_consumer"
-REQUIRED_OPERATIONS = ("config.report", "delegation-outcome.append")
-READINESS_CASES = (
-    "absent",
-    "disabled",
-    "incompatible",
-    "malformed",
-    "retryable",
-    "additive-field",
-    "mutation-applied",
-    "mutation-noop",
-    "mutation-rejected",
-    "mutation-failed",
-)
-READINESS_EXECUTORS = {
-    "cli-json": "direct-cli-json",
-    "python": "generated-python-client",
-    "typescript": "generated-typescript-client",
-    "vendor-neutral": "packed-typescript-client",
-}
-MUTATION_VALUES = {
-    "delegation_target": "external-consumer",
-    "task_class": "bounded-conformance",
-    "scope_class": "bounded-conformance",
-    "source_type": "proof-receipt",
-    "source_ref": "external-consumer/delegation-outcome.append",
-    "idempotency_key": "external-consumer-delegation-outcome-append",
-    "outcome": "success",
-}
-MUTATION_PATH = Path(".agentic-workspace/delegation-outcomes.json")
+REQUIRED_OPERATIONS = ("start", "planning.create", "planning.update", "planning.reconcile", "configuration.write")
 
 
 class ReadinessCheckError(RuntimeError):
@@ -129,29 +104,6 @@ def _prepare_typescript_consumer(root: Path, archive: Path, npm: str) -> Path:
     return script
 
 
-def _init_repo(root: Path) -> None:
-    root.mkdir(parents=True, exist_ok=True)
-    _run(["git", "init", "--quiet"], cwd=root)
-    _run(["git", "config", "user.email", "external-consumer@example.invalid"], cwd=root)
-    _run(["git", "config", "user.name", "External Consumer Proof"], cwd=root)
-
-
-def _prepare_target(host_cli: Path, root: Path, *, mirror_payload: bool = False, modules: str = "") -> None:
-    _init_repo(root)
-    command: list[str | Path] = [host_cli, "install", "--target", root, "--non-interactive", "--format", "json"]
-    if modules:
-        command.extend(["--modules", modules])
-    if mirror_payload:
-        command.append("--mirror-payload")
-    _run(command, cwd=root)
-    _run(["git", "add", "-A"], cwd=root)
-    _run(["git", "commit", "--quiet", "-m", "baseline"], cwd=root)
-
-
-def _git_status(root: Path) -> str:
-    return _run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=root).stdout.strip()
-
-
 def _consumer_request(
     *,
     language: str,
@@ -162,7 +114,12 @@ def _consumer_request(
 ) -> dict[str, Any]:
     request_path = consumer_root / "request.json"
     request_path.write_text(json.dumps(request, sort_keys=True), encoding="utf-8", newline="\n")
-    completed = _run([executable, script, request_path], cwd=consumer_root)
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in {"PYTHONPATH", "AGENTIC_WORKSPACE_CORE_BINARY", "AGENTIC_WORKSPACE_CLI_BINARY"}
+    }
+    completed = _run([executable, script, request_path], cwd=consumer_root, env=env)
     try:
         payload = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
@@ -176,129 +133,6 @@ def _ok(payload: Mapping[str, Any], label: str) -> Any:
     if payload.get("status") != "ok":
         raise ReadinessCheckError(f"{label} failed: {json.dumps(payload, sort_keys=True)}")
     return payload.get("result")
-
-
-def _error(payload: Mapping[str, Any], kind: str, label: str) -> Mapping[str, Any]:
-    if payload.get("status") != "error" or payload.get("kind") != kind:
-        raise ReadinessCheckError(f"{label} expected {kind}: {json.dumps(payload, sort_keys=True)}")
-    return payload
-
-
-def _semantic_projection(value: Any, roots: Sequence[Path]) -> Any:
-    if isinstance(value, dict):
-        return {key: _semantic_projection(item, roots) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_semantic_projection(item, roots) for item in value]
-    if isinstance(value, str):
-        normalized = value.replace("\\", "/")
-        for root in roots:
-            normalized = normalized.replace(root.resolve().as_posix(), "<target>")
-        return normalized
-    return value
-
-
-def _assert_receipts(receipt_store: Mapping[str, Any]) -> None:
-    receipts = {
-        str(item.get("operation_id")): item
-        for item in receipt_store.get("receipts", [])
-        if isinstance(item, Mapping) and item.get("status") == "passed"
-    }
-    for operation_id in REQUIRED_OPERATIONS:
-        receipt = receipts.get(operation_id)
-        if not isinstance(receipt, Mapping):
-            raise ReadinessCheckError(f"missing passing packaged receipt for {operation_id}")
-        for case in READINESS_CASES:
-            if (receipt.get("cases", {}).get(case) or {}).get("status") != "passed":
-                raise ReadinessCheckError(f"{operation_id} receipt lacks case {case}")
-            for transport in READINESS_EXECUTORS:
-                if (receipt.get("case_transport_matrix", {}).get(case, {}).get(transport) or {}).get("status") != "passed":
-                    raise ReadinessCheckError(f"{operation_id} receipt lacks {case} × {transport}")
-        for transport, executor in READINESS_EXECUTORS.items():
-            evidence = receipt.get("executors", {}).get(transport) or {}
-            if evidence.get("status") != "passed" or evidence.get("executor_id") != executor:
-                raise ReadinessCheckError(f"{operation_id} receipt lacks executor provenance for {transport}")
-        footprints = receipt.get("footprints", {})
-        for footprint in ("necessary-surfaces", "full-mirror", "semantic-parity"):
-            if (footprints.get(footprint) or {}).get("status") != "passed":
-                raise ReadinessCheckError(f"{operation_id} receipt lacks footprint {footprint}")
-
-
-def _mutation_scenarios(
-    *,
-    language: str,
-    call: Any,
-    source_target: Path,
-    target: Path,
-    host_invocation: list[str],
-) -> dict[str, Any]:
-    shutil.copytree(source_target, target)
-    sentinel = target / "unrelated-state.txt"
-    sentinel.write_text("preserve-me", encoding="utf-8", newline="\n")
-    request = {
-        "action": "invoke",
-        "target": str(target),
-        "invocation": host_invocation,
-        "operation_id": "delegation-outcome.append",
-        "values": MUTATION_VALUES,
-        "allow_runtime_backed": True,
-    }
-    _ok(call(request), f"{language} mutation applied")
-    ledger = target / MUTATION_PATH
-    if not ledger.is_file():
-        raise ReadinessCheckError(f"{language} mutation did not create {MUTATION_PATH.as_posix()}")
-    before = ledger.read_bytes()
-    duplicate = call(request)
-    duplicate_error = duplicate.get("details", {}).get("error", {})
-    if (
-        duplicate.get("status") != "error"
-        or duplicate.get("kind") != "rejected"
-        or duplicate_error.get("failure_class") != "duplicate-mutation"
-        or duplicate_error.get("completion_boundary") != "mutation-not-applied"
-        or ledger.read_bytes() != before
-        or sentinel.read_text(encoding="utf-8") != "preserve-me"
-    ):
-        raise ReadinessCheckError(
-            f"{language} duplicate mutation was not safely blocked: {json.dumps(duplicate, sort_keys=True)}"
-        )
-    rejected = dict(request)
-    rejected["values"] = {**MUTATION_VALUES, "operation": "correct-or-dispute", "predecessor_id": "missing-predecessor"}
-    rejected_result = call(rejected)
-    rejected_error = rejected_result.get("details", {}).get("error", {})
-    if (
-        rejected_result.get("status") != "error"
-        or rejected_result.get("kind") != "rejected"
-        or rejected_error.get("failure_class") != "invalid-lifecycle-transition"
-        or rejected_error.get("completion_boundary") != "mutation-not-applied"
-        or ledger.read_bytes() != before
-        or sentinel.read_text(encoding="utf-8") != "preserve-me"
-    ):
-        raise ReadinessCheckError(f"{language} invalid transition did not preserve state")
-    failure_target = target.parent / f"{target.name}-write-failure"
-    shutil.copytree(target, failure_target)
-    failure_ledger = failure_target / MUTATION_PATH
-    failure_ledger.unlink()
-    failure_ledger.mkdir()
-    failed_request = {**request, "target": str(failure_target)}
-    failed_result = call(failed_request)
-    failed_error = failed_result.get("details", {}).get("error", {})
-    if (
-        failed_result.get("status") != "error"
-        or failed_result.get("kind") != "failed"
-        or failed_error.get("failure_class") != "unexpected-runtime-exception"
-        or failed_error.get("completion_boundary") != "command-did-not-complete"
-        or not str(failed_error.get("message") or "").strip()
-        or not failure_ledger.is_dir()
-    ):
-        raise ReadinessCheckError(f"{language} write failure was not surfaced")
-    if (failure_target / "unrelated-state.txt").read_text(encoding="utf-8") != "preserve-me":
-        raise ReadinessCheckError(f"{language} write failure changed unrelated state")
-    return {
-        "mutation-applied": "passed",
-        "mutation-noop": str(duplicate.get("kind") or "error"),
-        "mutation-rejected": str(rejected_result.get("kind") or "error"),
-        "mutation-failed": str(failed_result.get("kind") or "error"),
-        "unrelated_state_unchanged": True,
-    }
 
 
 def _reverse_dependency_violations() -> list[str]:
@@ -330,268 +164,273 @@ def _reverse_dependency_violations() -> list[str]:
     return violations
 
 
+def _snapshot(target: Path) -> dict[str, bytes]:
+    return {
+        p.relative_to(target).as_posix(): p.read_bytes()
+        for p in target.rglob("*")
+        if p.is_file() and ".git" not in p.relative_to(target).parts
+    }
+
+
+def exercise_native_lifecycle(call: Any, target: Path) -> dict[str, Any]:
+    """Installed public calls, each in a fresh process; no fixture-created custody."""
+    target.mkdir(parents=True, exist_ok=True)
+    sentinel = target / "example.txt"
+    sentinel.write_bytes(b"preserve unrelated consumer work\n")
+    task = "Maintain the installed consumer Planning owner"
+
+    def start(request=None):
+        context = {"target": str(target), "task": task}
+        if request is not None:
+            context["request"] = [request]
+        return _ok(call({"action": "start", "context": context}), "native start")
+
+    def invoke(action):
+        return call({"action": "invoke", "context": {"target": str(target), "task": task, "invocation": action}})
+
+    def admit(request):
+        return start(request)["decision_packet"]["primary_action"]
+
+    before = _snapshot(target)
+    initial = start()
+    assert initial["decision_packet"]["status"] == "direct"
+    assert _snapshot(target) == before, "unconfigured startup must leave no footprint"
+    create = initial["planning"]["creation_requests"][0]
+    material = json.loads((FIXTURE_ROOT / "planning-material.json").read_text())
+    create["arguments"] = {"material": material}
+    created = _ok(invoke(admit(create)), "native create")
+    _ok(invoke(admit(start()["planning"]["created_owner"]["selection_request"])), "native select")
+    current = start()
+    assert current["planning"]["current_owner"]["current"] is True
+    path = target / created["value"]["owner_path"]
+    body = json.loads(path.read_bytes())
+    update = current["planning"]["update_requests"][0]
+    update["arguments"]["material"] = {key: body[key] for key in material}
+    update["arguments"]["material"].update(lifecycle=body["lifecycle"], phase=body["phase"])
+    update["arguments"]["material"]["continuation"]["frontier"] = "Fresh installed consumers recover this retained frontier."
+    action = admit(update)
+    stale_update = copy.deepcopy(update)
+    stale_update["arguments"]["material"]["continuation"]["frontier"] = "Never publish this stale alternative."
+    stale_action = admit(stale_update)
+    applied = _ok(invoke(action), "native update")
+    before = _snapshot(target)
+    duplicate = invoke(action)
+    assert duplicate["status"] == "error" or duplicate["result"] == applied, duplicate
+    assert _snapshot(target) == before, "an idempotent duplicate cannot publish again"
+    _ok(invoke(admit(start()["planning"]["requests"][0])), "native reconcile")
+    before = _snapshot(target)
+    assert invoke(stale_action)["status"] == "error", "an unconsumed stale action cannot survive owner reconciliation"
+    assert _snapshot(target) == before
+    assert start()["planning"]["current_owner"]["current"] is True
+    final = json.loads(path.read_bytes())
+    assert final["id"] == body["id"] and final["scope"] == body["scope"]
+    assert final["continuation"]["frontier"] == update["arguments"]["material"]["continuation"]["frontier"]
+    assert sentinel.read_bytes() == b"preserve unrelated consumer work\n"
+    assert not any(part in {"adapters", "plugins", "adapter.lock", "plugin.lock"} for ref in _snapshot(target) for part in Path(ref).parts)
+    return {"fresh_process_owner_recovery": "passed", "stale_replay_preserves_state": "passed", "unrelated_state": "preserved"}
+
+
+def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
+    target.mkdir(parents=True)
+    context = {"target": str(target), "task": "Correct an explicit repository configuration"}
+
+    def start(request=None):
+        return _ok(call({"action": "start", "context": {**context, **({"request": [request]} if request else {})}}), "configuration start")
+
+    source = target / ".agentic-workspace/config.toml"
+    source.parent.mkdir()
+    # Explicit human-owned input, not a product installation or custody grant.
+    original = b"# retained human policy\r\nschema_version=1\r\n[workspace]\r\ncli_invoke='old-command' # retain comment\r\n"
+    source.write_bytes(original)
+    request = start()["configuration_write"]["requests"][0]
+    assert start(request)["configuration_write"]["status"] == "unchanged"
+    request["arguments"]["value"] = "agentic-workspace"
+    answer = start(request)["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"  # bounded human-decision fixture
+    action = start(answer)["decision_packet"]["primary_action"]
+    invoke = {"action": "invoke", "context": {**context, "invocation": action}}
+    source.write_bytes(original + b"# concurrent human edit\r\n")
+    before = _snapshot(target)
+    assert call(invoke)["status"] == "error"
+    assert _snapshot(target) == before
+    source.write_bytes(original)
+    result = _ok(call(invoke), "configuration write")
+    assert result["value"]["completion_authority"] is False
+    assert source.read_bytes() == original.replace(b"'old-command'", b'"agentic-workspace"')
+    assert start()["configuration"]["cli_invoke"] == "agentic-workspace"
+    before = _snapshot(target)
+    assert call(invoke)["status"] == "error"
+    assert _snapshot(target) == before
+    for body, check in [
+        ("schema_version=1\n[modules]\nenabled=[]\n", "disabled"),
+        ("schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=999\n", "incompatible"),
+        ("[malformed", "malformed"),
+    ]:
+        source.write_text(body)
+        before = _snapshot(target)
+        result = start()
+        if check == "disabled":
+            assert all(result[owner]["status"] == "disabled" for owner in ("planning", "memory", "verification"))
+        else:
+            assert result.get("status", result.get("decision_packet", {}).get("status")) == "blocked"
+        assert _snapshot(target) == before
+    return {
+        "exact_write": "passed",
+        "no_op": "passed",
+        "source_drift": "rejected",
+        "replay": "rejected",
+        "disabled_modules": "passed",
+        "incompatible_reader": "rejected",
+        "malformed_source": "rejected",
+    }
+
+
+def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
+    """Faithful artifact-byte fixtures; no claim of a native payload installer."""
+    target.mkdir(parents=True)
+    context = {"target": str(target), "task": "Inspect optional artifact payload"}
+
+    def start():
+        return _ok(call({"action": "start", "context": context}), "payload start")
+
+    absent = start()
+    with zipfile.ZipFile(wheel) as archive:
+        manifest = json.loads(archive.read("agentic_workspace/contracts/workspace_surfaces.json"))
+        refs = manifest["payload_files"]
+        for ref in refs:
+            path = target / ref
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(archive.read("agentic_workspace/_payload/" + ref))
+        metadata = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
+        version = next(line[9:] for line in archive.read(metadata).decode().splitlines() if line.startswith("Version: "))
+    before = _snapshot(target)
+    present = start()
+    # Exact source/owner revisions change with shipped context; effective
+    # action, obligations and claim authority must remain identical.
+    for key in (
+        "status",
+        "primary_action",
+        "decision_request",
+        "blockers",
+        "claim_boundary",
+        "pending_consequences",
+        "ready_actions",
+        "terminal_authority",
+        "operation_revisions",
+    ):
+        assert absent["decision_packet"][key] == present["decision_packet"][key], key
+    assert absent["configuration"] == present["configuration"]
+    assert absent["planning"] == present["planning"]
+    assert _snapshot(target) == before
+    config = target / ".agentic-workspace/config.toml"
+    config.write_text('schema_version=1\n[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n')
+    provenance = target / ".agentic-workspace/payload-provenance.json"
+    provenance.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/payload-provenance/v1",
+                "payload_schema": "agentic-workspace/payload/v1",
+                "release_identity": {"package": "agentic-workspace", "version": version},
+                "payload_capabilities": ["installed-state-sync-v2"],
+                "payload_files": refs,
+            }
+        )
+    )
+    assert start()["configuration"]["payload"]["status"] == "satisfied"
+    path = target / refs[0]
+    original = path.read_bytes()
+    path.write_bytes(original + b"\nchanged after admission\n")
+    before = _snapshot(target)
+    drifted = start()
+    assert drifted["configuration"]["payload"]["status"] == "unresolved"
+    assert any(b["code"] == "native-payload-target-unproven" and "task" in b["affects"] for b in drifted["decision_packet"]["blockers"])
+    assert _snapshot(target) == before
+    path.write_bytes(original)
+    assert start()["configuration"]["payload"]["status"] == "satisfied"
+    path.unlink()
+    assert start()["configuration"]["payload"]["status"] == "unresolved"
+    return {
+        "optional_absence_presence": "equivalent",
+        "exact_artifact_bytes": "admitted",
+        "drift_and_missing_bytes": "rejected",
+        "fixture_authority": "read-only conformance, not installation custody",
+    }
+
+
 def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str, Any]:
     node = shutil.which("node")
     npm = shutil.which("npm") or shutil.which("npm.cmd")
     if not node or not npm:
         if require_node:
             raise ReadinessCheckError("Node.js and npm are required")
-        return {"kind": "agentic-workspace/external-consumer-readiness/v1", "status": "unavailable", "reason": "node-unavailable"}
+        return {"kind": "agentic-workspace/external-consumer-readiness/v2", "status": "unavailable", "reason": "node-unavailable"}
     with tempfile.TemporaryDirectory(prefix="agentic-workspace-external-consumer-") as directory:
         temp_root = Path(directory).resolve()
-        if temp_root == REPO_ROOT or REPO_ROOT in temp_root.parents:
-            raise ReadinessCheckError("external consumer root must be outside the source checkout")
+        assert not temp_root.is_relative_to(REPO_ROOT)
         dist = dist_dir.resolve() if dist_dir else temp_root / "dist"
         dist.mkdir(parents=True, exist_ok=True)
         wheels = sorted(dist.glob("*.whl"))
         if len(wheels) < 4:
             wheels = _build_python_artifacts(dist)
-        typescript_archive = _pack_typescript_artifact(dist, npm)
-
+        wheel = next(p for p in wheels if p.name.startswith("agentic_workspace-"))
+        archive = _pack_typescript_artifact(dist, npm)
         host_env = temp_root / "host-env"
         _install_python_stack(host_env, wheels)
         host_cli = _console_script(host_env, "agentic-workspace")
-        host_invocation = [str(host_cli)]
-
         python_root = temp_root / "python-consumer"
-        python_executable, python_script = _prepare_python_consumer(python_root, wheels)
+        # Native owners are artifact-owned: optional Python module distributions
+        # are absent here and present in the independent host environment.
+        python, python_script = _prepare_python_consumer(python_root, [wheel])
         typescript_root = temp_root / "typescript-consumer"
-        typescript_script = _prepare_typescript_consumer(typescript_root, typescript_archive, npm)
+        typescript_script = _prepare_typescript_consumer(typescript_root, archive, npm)
+        results = {}
+        targets = []
+        for language, consumer_root, executable, script in [
+            ("python", python_root, python, python_script),
+            ("typescript", typescript_root, node, typescript_script),
+        ]:
 
-        targets = temp_root / "targets"
-        necessary = targets / "necessary"
-        mirrored = targets / "full-mirror"
-        optional_absent = targets / "optional-absent"
-        optional_present = targets / "optional-present"
-        absent = targets / "absent"
-        disabled = targets / "disabled"
-        incompatible = targets / "incompatible"
-        _prepare_target(host_cli, necessary)
-        _prepare_target(host_cli, mirrored, mirror_payload=True)
-        _prepare_target(host_cli, optional_absent, modules="planning")
-        _prepare_target(host_cli, optional_present, modules="planning,memory,verification")
-        _init_repo(absent)
-        _init_repo(disabled)
-        _init_repo(incompatible)
-        (disabled / ".agentic-workspace").mkdir()
-        (disabled / ".agentic-workspace/config.toml").write_text(
-            "schema_version = 1\n[workspace]\nenabled = false\n", encoding="utf-8", newline="\n"
-        )
-        (incompatible / ".agentic-workspace").mkdir()
-        (incompatible / ".agentic-workspace/config.toml").write_text(
-            'schema_version = 1\n[workspace]\nenabled = true\n\n[cli_compatibility]\nexact_version = "999.0.0"\n',
-            encoding="utf-8",
-            newline="\n",
-        )
-
-        def request_for(language: str, request: Mapping[str, Any]) -> dict[str, Any]:
-            if language == "python":
+            def call(request):
                 return _consumer_request(
-                    language=language,
-                    consumer_root=python_root,
-                    executable=python_executable,
-                    script=python_script,
-                    request=request,
+                    language=language, consumer_root=consumer_root, executable=executable, script=script, request=request
                 )
-            return _consumer_request(
-                language=language,
-                consumer_root=typescript_root,
-                executable=node,
-                script=typescript_script,
-                request=request,
-            )
 
-        language_results: dict[str, Any] = {}
-        for language in ("python", "typescript"):
-
-            def call(request: Mapping[str, Any], current: str = language) -> dict[str, Any]:
-                return request_for(current, request)
-
-            provenance = _ok(call({"action": "provenance"}), f"{language} provenance")
-            for path in provenance.values():
-                resolved = Path(str(path)).resolve()
-                if resolved == REPO_ROOT or REPO_ROOT in resolved.parents:
-                    raise ReadinessCheckError(f"{language} loaded a source-checkout path: {resolved}")
-            readiness = _ok(
-                call({"action": "readiness", "operations": REQUIRED_OPERATIONS, "allow_runtime_backed": True}),
-                f"{language} readiness",
-            )
-            if readiness.get("status") != "ready" or set(readiness.get("supported_operations", [])) != set(REQUIRED_OPERATIONS):
-                raise ReadinessCheckError(f"{language} readiness was not complete: {json.dumps(readiness, sort_keys=True)}")
-            supported_evidence = readiness.get("supported_operation_evidence", [])
-            if (
-                {str(item.get("id")) for item in supported_evidence if isinstance(item, Mapping)} != set(REQUIRED_OPERATIONS)
-                or any(not str(item.get("receipt_ref") or "") for item in supported_evidence if isinstance(item, Mapping))
-                or int((readiness.get("operation_accounting") or {}).get("not_advertised_count") or 0) <= 0
-            ):
-                raise ReadinessCheckError(f"{language} readiness evidence/accounting was incomplete")
-            receipts = _ok(call({"action": "receipts"}), f"{language} receipts")
-            _assert_receipts(receipts)
-            negotiated = _ok(
-                call(
-                    {
-                        "action": "negotiate",
-                        "requirements": {operation: None for operation in REQUIRED_OPERATIONS},
-                        "allow_runtime_backed": True,
-                    }
-                ),
-                f"{language} negotiation",
-            )
-            incompatible_negotiation = _ok(
-                call(
-                    {
-                        "action": "negotiate",
-                        "requirements": {"config.report": "sha256:intentional-incompatibility"},
-                        "allow_runtime_backed": True,
-                    }
-                ),
-                f"{language} incompatibility",
-            )
-            if not negotiated.get("compatible") or incompatible_negotiation.get("compatible"):
-                raise ReadinessCheckError(f"{language} compatibility negotiation was not fail-closed")
-            for target, expected in (
-                (absent, "absent"),
-                (disabled, "disabled"),
-                (necessary, "enabled"),
-                (incompatible, "incompatible"),
-            ):
-                detected = _ok(call({"action": "detect", "target": str(target)}), f"{language} detect {expected}")
-                if detected.get("status") != expected:
-                    raise ReadinessCheckError(f"{language} detection expected {expected}: {detected}")
-                if expected == "enabled":
-                    continue
-                _error(
-                    call(
-                        {
-                            "action": "invoke",
-                            "target": str(target),
-                            "invocation": host_invocation,
-                            "operation_id": "config.report",
-                            "values": {},
-                            "allow_runtime_backed": True,
-                        }
-                    ),
-                    expected,
-                    f"{language} invoke {expected}",
-                )
-            _error(
-                call(
-                    {
-                        "action": "invoke",
-                        "target": str(necessary),
-                        "invocation": host_invocation,
-                        "operation_id": "config.report",
-                        "values": {"unexpected_external_field": True},
-                        "allow_runtime_backed": True,
-                    }
-                ),
-                "malformed",
-                f"{language} malformed",
-            )
-            operation_request = {
-                "action": "invoke",
-                "invocation": host_invocation,
-                "operation_id": "config.report",
-                "values": {},
-                "allow_runtime_backed": True,
-            }
-            necessary_result = _ok(call({**operation_request, "target": str(necessary)}), f"{language} necessary")
-            mirrored_result = _ok(call({**operation_request, "target": str(mirrored)}), f"{language} mirrored")
-            if _semantic_projection(necessary_result, [necessary]) != _semantic_projection(mirrored_result, [mirrored]):
-                raise ReadinessCheckError(f"{language} necessary/full-mirror semantics diverged")
-            _ok(call({**operation_request, "target": str(optional_absent)}), f"{language} optional absent")
-            _ok(call({**operation_request, "target": str(optional_present)}), f"{language} optional present")
-
-            stub_target = targets / f"{language}-stub"
-            shutil.copytree(necessary, stub_target)
-            response_path = temp_root / f"{language}-config-result.json"
-            response_path.write_text(json.dumps(necessary_result), encoding="utf-8", newline="\n")
-            stub = temp_root / "transport_stub.py"
-            stub.write_text(
-                "import json, pathlib, sys\n"
-                "mode = sys.argv[1]\n"
-                "response = pathlib.Path(sys.argv[2])\n"
-                "if mode == 'retryable':\n"
-                " print(json.dumps({'kind':'agentic-workspace/retryable-operation-error/v1','status':'retryable','message':'retry after refresh'}))\n"
-                " raise SystemExit(3)\n"
-                "payload = json.loads(response.read_text(encoding='utf-8'))\n"
-                "payload['future_additive_field'] = {'preserved': True}\n"
-                "print(json.dumps(payload))\n",
-                encoding="utf-8",
-                newline="\n",
-            )
-            retry_request = {
-                **operation_request,
-                "target": str(stub_target),
-                "invocation": [str(_python(host_env)), str(stub), "retryable", str(response_path)],
-            }
-            _error(call(retry_request), "retryable", f"{language} retryable")
-            additive = _ok(
-                call(
-                    {
-                        **retry_request,
-                        "invocation": [str(_python(host_env)), str(stub), "additive", str(response_path)],
-                    }
-                ),
-                f"{language} additive",
-            )
-            if (additive.get("future_additive_field") or {}).get("preserved") is not True:
-                raise ReadinessCheckError(f"{language} additive field was not preserved")
-            mutation = _mutation_scenarios(
-                language=language,
-                call=call,
-                source_target=necessary,
-                target=targets / f"{language}-mutation",
-                host_invocation=host_invocation,
-            )
-            language_results[language] = {
+            provenance = _ok(call({"action": "provenance"}), "installed provenance")
+            assert all(Path(p).resolve().is_relative_to(consumer_root) for p in provenance.values()), provenance
+            target = temp_root / (language + "-repo")
+            lifecycle = exercise_native_lifecycle(call, target)
+            results[language] = {
                 "provenance": "installed-artifact",
-                "readiness": readiness.get("status"),
-                "readiness_report": readiness,
-                "negotiation": "compatible-and-fail-closed",
-                "scenarios": {
-                    "absent": "passed",
-                    "disabled": "passed",
-                    "incompatible": "passed",
-                    "malformed": "passed",
-                    "retryable": "passed",
-                    "additive-field": "passed",
-                    "necessary/full-mirror": "equivalent",
-                    "optional-module-absence/presence": "passed",
-                    **mutation,
-                },
+                "lifecycle": lifecycle,
+                "configuration": _configuration_cases(call, temp_root / (language + "-config")),
+                "payload": _payload_cases(call, temp_root / (language + "-payload"), wheel),
             }
-
-        for target in (necessary, mirrored, optional_absent, optional_present):
-            if _git_status(target):
-                raise ReadinessCheckError(f"consumer execution changed checked-in target state: {target.name}")
+            targets.append(target)
+        retained = {target: _snapshot(target) for target in targets}
         shutil.rmtree(python_root)
         shutil.rmtree(typescript_root)
-        for target in (necessary, mirrored):
-            _run([host_cli, "status", "--target", target, "--format", "json"], cwd=target)
-            if _git_status(target):
-                raise ReadinessCheckError(f"consumer removal changed checked-in target state: {target.name}")
-        violations = _reverse_dependency_violations()
-        if violations:
-            raise ReadinessCheckError("reverse dependency violations: " + "; ".join(violations))
+        for target in targets:
+            completed = _run(
+                [host_cli, "start", "--target", target, "--task", "Maintain the installed consumer Planning owner", "--format", "json"],
+                cwd=target,
+            )
+            assert json.loads(completed.stdout)["planning"]["current_owner"]["current"] is True
+            assert _snapshot(target) == retained[target], "consumer removal cannot alter repository state"
+            assert str(host_env).encode() not in b"".join(retained[target].values())
+        assert not _reverse_dependency_violations()
         return {
-            "kind": "agentic-workspace/external-consumer-readiness/v1",
+            "kind": "agentic-workspace/external-consumer-readiness/v2",
             "status": "passed",
-            "artifacts": {
-                "python_wheels": [path.name for path in wheels],
-                "typescript_package": typescript_archive.name,
-            },
-            "consumers": language_results,
+            "artifacts": {"python_wheels": [p.name for p in wheels], "typescript_package": archive.name},
+            "consumers": results,
+            "supported_operations": list(REQUIRED_OPERATIONS),
+            "claim_boundary": "Executed native lifecycle only; no retired generated-operation readiness or payload-installation claim.",
             "package_boundary": {
                 "source_checkout_imports": 0,
                 "reverse_dependency_violations": 0,
-                "checked_in_residue_after_execution": 0,
                 "checked_in_residue_after_removal": 0,
                 "ordinary_aw_after_removal": "passed",
             },
-            "supported_operations": list(REQUIRED_OPERATIONS),
-            "supported_operation_evidence": language_results["python"]["readiness_report"]["supported_operation_evidence"],
-            "operation_accounting": language_results["python"]["readiness_report"]["operation_accounting"],
         }
 
 
@@ -603,9 +442,9 @@ def main() -> int:
     args = parser.parse_args()
     try:
         report = run(dist_dir=args.dist_dir, require_node=args.require_node)
-    except ReadinessCheckError as error:
+    except (ReadinessCheckError, AssertionError) as error:
         if args.format == "json":
-            print(json.dumps({"kind": "agentic-workspace/external-consumer-readiness/v1", "status": "failed", "message": str(error)}))
+            print(json.dumps({"kind": "agentic-workspace/external-consumer-readiness/v2", "status": "failed", "message": str(error)}))
         else:
             print(f"External consumer readiness: failed\n{error}")
         return 1

@@ -491,3 +491,12 @@ def test_rendered_quickstart_routes_issue_and_review_work_without_copying_doctri
     assert "implementation agents addressing feedback must not load it" in text
     assert "directly observed evidence" not in text
     assert len(text.splitlines()) <= 28
+
+
+def test_optional_friction_ledger_still_rejects_malformed_present_evidence(tmp_path: Path) -> None:
+    checker = _load_module(WORKSPACE_ROOT / "scripts/check/check_recurring_friction_ledger.py", "friction_checker")
+    assert checker.gather_ledger_warnings(repo_root=tmp_path) == []
+    ledger = tmp_path / ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
+    _write(ledger, "# Recurring friction\n\n## Unattributed repeated failure\n")
+    warnings = checker.gather_ledger_warnings(repo_root=tmp_path)
+    assert any(w.warning_class == "recurring_friction_structure" for w in warnings)

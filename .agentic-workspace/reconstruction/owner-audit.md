@@ -19,7 +19,7 @@ an implementation gap even when the former Python host supplies that behavior.
 ## P0/P1 dispositions
 
 Each owner has exactly one disposition against cumulative implementation candidate
-`58770439f` (#3168), including #3166 and #3167. Those three PRs remain open;
+`9a8d33b95` plus this #3168 blocking-review follow-up, including #3166 and #3167. Those three PRs remain open;
 classifying candidate behavior does not assert integration or independent
 admission. Historical evidence below retains its tested subject.
 
@@ -453,30 +453,33 @@ owner completion. This cutover removes a competing command host and over a
 thousand obsolete lines rather than restoring aliases. It is a breaking command
 surface change, recorded by one major changeset; no parent is closed here.
 
-Hosted #3168 follow-through: Linux built-wheel create/update/recovery and raw
-native admission passed all three artifact tests. The broader external-consumer
-readiness gate still calls the retired `install` command and legacy operation
-APIs; native installation/configuration and those API outcomes are not admitted.
-That release-relevant gap is retained, not relabeled as successful readiness.
-Memory's maintainer checks now call their existing audit scripts directly rather
-than the retired root `report`; Planning retains its package handoff test and
-removes only the duplicate retired root-command assertion. The Makefile split inventory now includes its 51 previously unlisted root tests.
-The existing inventory/maintainer/Planning checks pass (18 cases), as do four
-native CLI black-box cases. Three obsolete root-command tests (241 lines) are
-removed: generated selector wrapper parity, automatic final-response proof
-continuation, and the duplicate Planning front-door integration wrapper.
-The historical diagnostic review now keeps its unchanged promotion note in the
-schema-supported recommendation map; structured-file inventory passes. No
-independent review verdict or authority is added. The maintainer checker no
-longer demands the retired generic workspace_behavior profile; owner scope,
-currentness paths and authority references remain checked. Hosted runtime and
-external-consumer installation/API failures remain unresolved.
+The blocking-review follow-up replaces retired root install/init consumers with
+installed native owner journeys. Independent Python and packed TypeScript
+consumers run outside the checkout and cannot select a source core override.
+Every call uses a fresh process. Planning creation, selection, update and
+reconciliation preserve identity, scope and unrelated work; duplicate result
+recovery cannot write again and an unconsumed stale action is rejected.
+The same installed consumers exercise bounded configuration writes, source drift,
+replay, module disablement, reader incompatibility and malformed policy.
 
-The real selected owner is native-authored revision 8, SHA-256
-`c7c2e7e414923ed96a15981890f6e04ea6049b6929e0a418c94b73edeebe8073`.
-Exact update/reconcile, fresh-process currentness and stale-update rejection pass;
-identity, scope, relationships and unrelated original-checkout files remain intact.
-The copied tracked bytes carry the observation only, not transported local custody.
+Optional artifact payload leaves effective action/claim authority unchanged;
+required payload admits exact wheel bytes and rejects changed or missing bytes.
+These are explicit faithful artifact/policy fixtures, not a payload-installation
+claim. Removing consumer environments preserves repository state, and the
+independently installed host recovers the current native owner afterward. Python
+module distributions are absent in one consumer and present in the host.
+
+Memory now explicitly owns an optional friction-ledger contract: no empty file or
+duplicate issue/Planning owner is required merely to satisfy a check. Existing
+malformed evidence still fails. Both generated Memory mirrors are refreshed.
+Verification replaces retired report/implement hints with executable native
+owner tests and current decision/request guidance; semantic satisfaction remains
+with its responsible agent/domain owner.
+
+Current Windows evidence: the installed Python/TypeScript consumer gate passes;
+five installed-runtime/integration cases and 13 consumer/maintainer cases pass.
+Exact-head hosted CI, independent review and broader #2909/#2990 admission remain
+pending. No release gate is deleted and no owner closes from this local result.
 
 ## Bounded configuration source writer (#2767, proposed)
 
@@ -502,12 +505,11 @@ Windows file-symlink case is skipped; the directory-junction case passes. All
 pre-publication retry, post-publication recovery and last-moment policy drift.
 An earlier neighboring native run passed 119 cases with one file-symlink skip.
 Commit lint/type/format checks pass. The separate runtime-ownership checker still
-fails inherited retained-Python ratchets; broader external-consumer/runtime
-readiness is not admitted. No assertion or ratchet is weakened to hide those gaps.
+fails inherited retained-Python ratchets; final hosted external-consumer/runtime
+readiness is not yet admitted. No assertion or ratchet is weakened to hide those gaps.
 
-The actual selected Plan was updated by its native writer to revision 9,
-SHA-256 `d9d54de3e3c77abf2558d96446c9b61aa036e4a342e061347494cf6230533f63`.
-Fresh-process recovery and stale-update rejection pass with identity, scope,
-relationships and unrelated work preserved. Its copied tracked bytes are
-continuation evidence, not transferred local custody. #2767 remains open for its
-broader outcome; #2909/#2990 and independent review retain their admission gates.
+The actual selected Plan is reconciled through its native writer for this
+blocking-review follow-up. Fresh-process recovery and stale-update rejection
+preserve identity, scope, relationships and unrelated work. Copied tracked bytes
+are continuation evidence, not transferred local custody. #2767 remains open for
+its broader outcome; #2909/#2990 and independent review retain admission.

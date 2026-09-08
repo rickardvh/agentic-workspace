@@ -268,20 +268,18 @@ def test_install_survives_into_fresh_second_process(coordinated_artifacts: tuple
             *(str(path) for path in sorted(local_dist.glob("*.whl"))),
         ]
     )
-    first = subprocess.run(
-        [str(executable), "init", "--target", str(host), "--modules", "memory", "--format", "json"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    assert json.loads(first.stdout)["decision"]["mutation"] == "applied"
-    second = subprocess.run(
-        [str(executable), "start", "--target", str(host), "--task", "second process proof", "--format", "json"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    payload = json.loads(second.stdout)
-    assert payload["kind"] == "startup-context/v1"
-    config = (host / ".agentic-workspace/config.toml").read_text(encoding="utf-8")
-    assert str(environment).replace("\\", "/") not in config.replace("\\", "/")
+    from tests.test_external_consumer_readiness import _module
+
+    def call(request):
+        context = request["context"]
+        packet = tmp_path / "packet.json"
+        args = [str(executable), request["action"], "--target", context["target"], "--task", context["task"], "--format", "json"]
+        value = context.get("invocation", context.get("request"))
+        if value is not None:
+            packet.write_text(json.dumps(value))
+            args.extend(["--input", str(packet)])
+        result = subprocess.run(args, cwd=host, capture_output=True, text=True)
+        return {"status": "ok", "result": json.loads(result.stdout)} if result.returncode == 0 else {"status": "error"}
+
+    _module().exercise_native_lifecycle(call, host)
+    assert all(str(environment).encode() not in path.read_bytes() for path in (host / ".agentic-workspace").rglob("*") if path.is_file())
