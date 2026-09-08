@@ -172,15 +172,17 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
 
 
 def test_stage_rejects_rust_host_platform_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from scripts.release import stage_native_npm
+    import runpy
+
+    stage_native_npm = runpy.run_path(str(ROOT / "scripts/release/stage_native_npm.py"))
 
     def observe(command, **kwargs):
         assert command == ["rustc", "-vV"], "mismatched host must fail before Cargo build"
         return subprocess.CompletedProcess(command, 0, stdout="host: unsupported-unknown-platform\n", stderr="")
 
-    monkeypatch.setattr(stage_native_npm.subprocess, "run", observe)
+    monkeypatch.setattr(stage_native_npm["subprocess"], "run", observe)
     with pytest.raises(ValueError, match="does not match Node artifact host"):
-        stage_native_npm.stage(tmp_path / "stage", profile="dev")
+        stage_native_npm["stage"](tmp_path / "stage", profile="dev")
     assert not (tmp_path / "stage").exists()
 
 
