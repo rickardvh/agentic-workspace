@@ -32,8 +32,9 @@ def material() -> dict:
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("selector_mode", ["shared", "legacy-local"])
 def test_real_former_owner_can_evolve_after_native_custody(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, selector_mode: str
 ) -> None:
     ref = Path(".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json")
     path = tmp_path / ref
@@ -42,6 +43,18 @@ def test_real_former_owner_can_evolve_after_native_custody(
     original = json.loads(path.read_bytes())
     state = tmp_path / ".agentic-workspace/planning/state.toml"
     state.write_text(f'[[active.execplans]]\nid="{original["id"]}"\npath="{ref.as_posix()}"\nstatus="active"\n')
+    selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    legacy = {
+        "kind": "agentic-planning/owner-selection/v1",
+        "mode": "local",
+        "current_work_id": "default",
+        "selected_owner": {"id": original["id"], "ref": ref.as_posix()},
+        "planning_revision": "former-producer-revision",
+        "reason": "Selected owner through the established former Planning producer",
+    }
+    if selector_mode == "legacy-local":
+        selector.parent.mkdir(parents=True)
+        selector.write_text(json.dumps(legacy, indent=2) + "\n")
     unrelated = tmp_path / "unrelated.txt"
     unrelated.write_text("Preserve this concurrent work")
     context = {"target": str(tmp_path), "task": "Maintain the current reconstruction frontier"}
@@ -53,9 +66,49 @@ def test_real_former_owner_can_evolve_after_native_custody(
     assert first["planning"]["update_requests"] == [], "source recognition is not mutation custody"
     continuation = first["planning"]["requests"][0]
     selected = call({**context, "request": continuation})
+    if selector_mode == "legacy-local":
+        assert selected["planning"]["status"] == "custody-required"
+        before_selector = selector.read_bytes()
+        transfer = first["planning"]["selector_transfer"]["request"]
+        assert "answer" not in transfer["arguments"], "the owner cannot answer for the human"
+        with pytest.raises(AssertionError):
+            call({**context, "request": transfer})
+        transfer["arguments"]["answer"] = "authorize-selector-transfer"
+        # Even semantically identical selector bytes require a new decision.
+        selector.write_bytes(before_selector + b" ")
+        with pytest.raises(AssertionError):
+            call({**context, "request": transfer})
+        assert selector.read_bytes() == before_selector + b" "
+        selector.write_bytes(before_selector)
+        selected = call({**context, "request": transfer})
     action = selected["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.reconcile"
-    call({**context, "invocation": action})
+    if selector_mode == "legacy-local":
+        policy = tmp_path / ".agentic-workspace/config.local.toml"
+        policy.write_text("schema_version=1\n[workspace]\nenabled=false\n")
+        restricted = call(context)
+        current_answer = restricted["planning"]["selector_transfer"]["request"]
+        current_answer["arguments"]["answer"] = "authorize-selector-transfer"
+        denied = call({**context, "request": current_answer})
+        assert denied["decision_packet"]["status"] == "blocked"
+        assert denied["decision_packet"]["primary_action"] is None
+        with pytest.raises(AssertionError):
+            call({**context, "invocation": action})
+        assert selector.read_bytes() == before_selector
+        assert path.read_bytes() == (ROOT / ref).read_bytes()
+        policy.unlink()
+    acquired = call({**context, "invocation": action})
+    assert path.read_bytes() == (ROOT / ref).read_bytes(), "custody transfer cannot rewrite Planning material"
+    if selector_mode == "legacy-local":
+        transferred = json.loads(selector.read_bytes())
+        assert {k: v for k, v in transferred.items() if k != "reconciliation"} == legacy
+        retained = transferred["reconciliation"]
+        assert retained["invocation"]["arguments"]["selection_transition"]["human_authorization"] == transfer
+        assert retained["custody"]["committed"]
+        assert call({**context, "invocation": action})["value"] == acquired["value"]
+        assert selector.read_bytes() == json.dumps(transferred, indent=2).encode()
+        with pytest.raises(AssertionError):
+            call({**context, "request": transfer})
     before = call(context)
     subject = before["planning"]["current_owner"]["reconciliation"]["subject"]
     update = before["planning"]["update_requests"][0]

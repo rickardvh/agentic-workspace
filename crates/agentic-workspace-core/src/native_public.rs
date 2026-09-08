@@ -267,6 +267,9 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     for request in planning["requests"].as_array_mut().into_iter().flatten() {
         request["capability_revision"] = contract["revision"].clone();
     }
+    if let Some(request) = planning["selector_transfer"].get_mut("request") {
+        request["capability_revision"] = contract["revision"].clone();
+    }
     let mut contributions = vec![configuration["contribution"].clone()];
     let mut planning_detail = Value::Null;
     if !planning["planning_input"].is_null() {

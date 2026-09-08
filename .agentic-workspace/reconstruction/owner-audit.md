@@ -36,7 +36,7 @@ The repair described below is not yet integrated into that candidate.
 | #2613 | bounded implementation gap | Current native source inspection still reports `current-control-requires-native-owner` for real configured initiative/runtime/target facts. Recognition and preservation are not completed semantic transfer. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | bounded implementation gap | Real former material update required native creation provenance. This branch repairs updates after committed reconciliation. A pre-existing local selector without retained native custody still needs an authority-correct transfer. |
+| #2970 | bounded implementation gap | Real former material update required native creation provenance. This branch repairs updates after committed reconciliation and adds an explicit revision-bound human selector transfer. The lived-in checkout still needs native configuration admission before that transfer can execute. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | No repo-owned `docs/adr/` archive or equivalent configured reconstruction decision archive was found. The ordinary repo seeding/promotion dogfood is absent. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -81,30 +81,51 @@ inventing a `canonical_core`. Native provenance is validated before it is
 excluded from semantic subject identity.
 
 `test_real_former_owner_can_evolve_after_native_custody` starts with the exact
-checked-in `v1-contraction-2983-2990.plan.json`, selected by the former shared
-Planning state relation. It exercises public acquisition, material update,
+checked-in `v1-contraction-2983-2990.plan.json`, selected by either the former shared
+Planning state relation or a faithful occupied legacy local selector. It exercises public acquisition, material update,
 fresh-process continuation, wrong-identity and stale-request rejection,
 interrupted publication recovery without another material write, same-material
 subject stability, and unrelated direct work. Native execution uses an empty
 PATH in the test: Python/Node are not supplying its AW semantics.
 
-This does **not** claim transfer of an already occupied legacy local selector.
-The actual supplied checkout has that distinct source condition. Its selector
-and stale plan bytes have not been edited. The pending authority choice is
-whether a current explicit human transfer decision may authorize replacing
-exact selector/plan bytes, or former producer evidence must first be recovered.
-Do not manufacture native custody from recognition, receipt-shaped data or
-implementation-agent self-assertion.
+The human explicitly authorized one exact revision-bound selector transfer. The
+owner now supplies `selector_transfer.request`; the human supplies only
+`answer=authorize-selector-transfer`. Its binding includes the exact selector
+bytes, current selected source, work context, target and unchanged destination.
+The existing reconciliation operation retains that answer in immutable attempt
+and result custody. It adds native custody to the selector, preserves all former
+selector fields and Planning bytes, and grants no proof or completion. Ordinary
+continuation still cannot acquire an unowned selector. After transfer, normal
+native producer custody governs updates; historical authorization is not a
+standing adoption permission.
+
+Current native inspection of the supplied lived-in checkout used the exact
+owner-generated human answer and the configured startup-source read request.
+Planning accepted the transfer intention, but the final decision retained 14
+unresolved configuration controls affecting the task. No invocation was issued.
+The selector digest remained
+`sha256:6a2c05ab4a527b284e9098d75005e2cbc96baefe95ba57817749d945b2e1a893`;
+the real plan remained
+`sha256:f8b5995adf1f5345f0a9aec9502de0b099d230e7673c0ea9e4b878f4cfaa4c26`.
+Current blockers include runtime availability, required workflow obligations,
+update/payload controls, improvement latitude and compatibility source controls.
+Their semantic admission belongs to #2613/#2767 under #3077; the human selector
+transfer does not waive those owners. The live frontier has not been updated.
 
 Current proof on the repair branch:
 
-- Planning create/update/selection suite: 75 passed.
-- Expanded exact real-former-source test: 4 passed (native, JSON, Python, TypeScript).
-- Rust core library: 93 passed; 3 subprocess helpers ignored by the normal runner.
+- Prior Planning create/update/selection suite: 75 passed; expanded suite is included below.
+- Expanded exact real-former-source test: 8 passed (shared/local selectors across native, JSON, Python, TypeScript), including unchanged material and policy refusal.
+- Rust core library: 95 passed; 3 subprocess helpers ignored by the normal runner.
+  Fresh child processes prove attempt/commit interruption recovery for both
+  native selector switches and human-authorized legacy transfer.
 - Native CLI unit/transport: 6 passed; includes absent Python/Node behavior.
 - Shared-core Planning conformance: 16 passed.
 - `make lint-workspace`, `make typecheck`, `cargo build --locked --workspace --bins`: passed.
-- Broader current native projection suite: 452 passed.
+- Broader native projection and selection suite: 474 passed after removing
+  irrelevant internal schemas from public operation discovery. The packet
+  size limit is unchanged. Builds and executable tests ran separately after
+  the initial Windows file-lock errors; failed setup runs are not counted.
 - Assignment/Verification cross-owner suite: 70 passed.
 - Selected workspace continuation/claim regressions: 2 passed.
 - Reconstruction disposition-map checks: 6 passed.
@@ -117,7 +138,8 @@ read-only evidence, not a successful complete repository-maintenance journey.
 
 ## Continuation and closure honesty
 
-Earliest gate remains #2970's occupied former-selector transfer. Then complete
+Earliest live gate remains #2970: its transfer mechanism now exists, but actual
+checkout admission depends on #2613/#2767 configuration convergence. Complete
 #3077's real native repository path, the configured consequential delegation
 lifecycle (#2947/#2817/#2818/#2210), and positive #2209 evidence. Keep the other
 native owner gaps with their existing issues, consolidating coherent owner
@@ -129,7 +151,8 @@ then #2909, #2616 and exact #2990 admission; only then #3014/#3138 cutover.
 - `intent_served`: real former Planning intent can evolve after acquired native
   reconciliation without changing subject identity or restoring history machinery.
 - `proof`: current focused tests above; independent acceptance remains pending.
-- `unresolved`: occupied former-selector transfer and the owner table's gaps.
+- `unresolved`: live native configuration admission, actual frontier update and
+  the owner table's gaps. Human selector transfer authority is resolved.
 - `closure_honest`: partial for #2970; no reconstruction parent or release gate
   is closed by this patch.
 
@@ -137,7 +160,16 @@ Dogfood disposition: no new epic or issue. Preserve the regression in tests;
 retain only this compact audit and the bounded Planning owner while needed.
 The implementation adds no ordinary command, store, history import or default
 host footprint. It reduces a former-owner dead end, but total first-stable
-completion cost is not yet proven lower while the occupied-selector case remains.
+completion cost is not yet proven lower while live configuration admission remains.
+The bounded transfer removes a custody dead end without another command or store.
+Public discovery drops unrelated internal schemas to preserve its size budget.
 Repeated legacy router/proof discovery cost belongs to #3077/#2986, not a new
 workflow layer. Unknown worker metrics remain unknown; this pass has produced
 no successful non-local worker or lifecycle economics evidence.
+
+Conformance residue for #2909: `check_structured_file_inventory.py` rejects the
+pre-existing `promotion_gate` field in
+`.agentic-workspace/planning/reviews/2026-09-08-current-planning-frontier-continuation.review.json`.
+The same field is present at the fetched cumulative candidate. This patch does
+not rewrite that separately owned review or widen its schema to hide the error.
+Inventory conformance is not green; final release admission remains blocked.

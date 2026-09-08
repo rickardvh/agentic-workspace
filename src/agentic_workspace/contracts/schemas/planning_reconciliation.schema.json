@@ -6,7 +6,14 @@
   "type": "object",
   "description": "Trusted Planning host boundary. Source custody is admitted outside this payload; shape, names and hashes cannot establish it.",
   "properties": {
-    "source_requests": {"type": "array", "maxItems": 16, "items": {"$ref": "source_decision_input.schema.json#/$defs/public_request"}, "description": "Explicit current source-owner request dependencies retained for exact invocation revalidation; not proof or mutation authority."},
+    "source_requests": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "source_decision_input.schema.json#/$defs/public_request"
+      },
+      "description": "Explicit current source-owner request dependencies retained for exact invocation revalidation; not proof or mutation authority."
+    },
     "target": {
       "type": "string",
       "description": "Host-selected target root."
@@ -85,34 +92,113 @@
       "type": "object",
       "description": "Bounded producer custody retained by the already admitted current owner selection; not caller authority or Planning semantics.",
       "properties": {
-        "kind": {"const": "agentic-planning/reconciliation-custody/v1", "description": "Versioned retained producer custody."},
-        "current_work": {"type": "object", "description": "Exact work identity whose continuation was admitted."},
-        "source": {"$ref": "#/$defs/evidence", "description": "Exact selected semantic owner source at production."},
-        "invocation": {"type": "object", "description": "Exact owner-derived admitted operation."},
-        "custody": {"$ref": "#/$defs/custody", "description": "Producer-returned attempt and optional committed references."}
+        "kind": {
+          "const": "agentic-planning/reconciliation-custody/v1",
+          "description": "Versioned retained producer custody."
+        },
+        "current_work": {
+          "type": "object",
+          "description": "Exact work identity whose continuation was admitted."
+        },
+        "source": {
+          "$ref": "#/$defs/evidence",
+          "description": "Exact selected semantic owner source at production."
+        },
+        "invocation": {
+          "type": "object",
+          "description": "Exact owner-derived admitted operation."
+        },
+        "custody": {
+          "$ref": "#/$defs/custody",
+          "description": "Producer-returned attempt and optional committed references."
+        }
       },
-      "required": ["kind", "current_work", "source", "invocation", "custody"],
+      "required": [
+        "kind",
+        "current_work",
+        "source",
+        "invocation",
+        "custody"
+      ],
       "additionalProperties": false
     },
     "update_recovery_request": {
       "type": "object",
       "description": "Select an exact retained native update for current same-owner continuation. Requires the existing current continue-selected request; grants no custody or material revision.",
       "properties": {
-        "owner_ref": {"type": "string", "description": "Exact current native-created owner reference."},
-        "pending_revision": {"type": "string", "description": "Exact retained update invocation revision returned by the owner."}
+        "owner_ref": {
+          "type": "string",
+          "description": "Exact current native-created owner reference."
+        },
+        "pending_revision": {
+          "type": "string",
+          "description": "Exact retained update invocation revision returned by the owner."
+        }
       },
-      "required": ["owner_ref", "pending_revision"],
+      "required": [
+        "owner_ref",
+        "pending_revision"
+      ],
       "additionalProperties": false
     },
     "continuation_request": {
       "type": "object",
-      "description": "Agent intention concerning the current source-selected Planning owner; grants neither source authority nor completion.",
+      "description": "Current-task continuation or an explicit human answer authorizing one exact selector custody transfer. Neither grants Planning material, proof or completion authority.",
       "properties": {
-        "owner_ref": {"type":"string","description":"Explicit destination choice; replacement requires independently admitted current native selector custody."},
-        "answer": {"type": "string", "enum": ["continue-selected", "unrelated-direct"], "description": "Explicit current-task relationship to the selected owner."}
+        "owner_ref": {
+          "type": "string",
+          "description": "Explicit destination choice; replacement requires independently admitted current native selector custody."
+        },
+        "answer": {
+          "type": "string",
+          "enum": [
+            "continue-selected",
+            "unrelated-direct",
+            "authorize-selector-transfer"
+          ],
+          "description": "Explicit current-task relationship to the selected owner."
+        },
+        "transfer_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Owner-derived exact selector/source/work/target/destination binding. The human supplies only the bounded answer."
+        }
       },
-      "required": ["answer"],
-      "additionalProperties": false
+      "required": [
+        "answer"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "answer": {
+                "const": "authorize-selector-transfer"
+              }
+            },
+            "required": [
+              "answer"
+            ]
+          },
+          "then": {
+            "required": [
+              "transfer_revision"
+            ],
+            "not": {
+              "required": [
+                "owner_ref"
+              ]
+            }
+          },
+          "else": {
+            "not": {
+              "required": [
+                "transfer_revision"
+              ]
+            }
+          }
+        }
+      ]
     },
     "evidence": {
       "type": "object",
@@ -175,7 +261,13 @@
       "type": "object",
       "description": "Minimum shape of the admitted former execplan; unknown fields remain a coverage ambiguity.",
       "properties": {
-        "canonical_core": {"type": ["object", "null"], "description": "Lossless current owner canonical semantics, never attempt-only bookkeeping."},
+        "canonical_core": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Lossless current owner canonical semantics, never attempt-only bookkeeping."
+        },
         "kind": {
           "const": "planning-execplan/v1",
           "description": "Supported former Planning representation."
@@ -413,6 +505,17 @@
       "additionalProperties": false
     },
     "selection_transition": {
+      "description": "One exact native-custody release or explicitly human-authorized legacy selector custody transfer. Never generic legacy state adoption.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/native_selection_transition"
+        },
+        {
+          "$ref": "#/$defs/human_selection_transfer"
+        }
+      ]
+    },
+    "native_selection_transition": {
       "type": "object",
       "description": "One current native Planning selector release and destination, retained inside its existing effect invocation.",
       "properties": {
@@ -424,9 +527,14 @@
         "prior_custody": {
           "$ref": "#/$defs/custody",
           "properties": {
-            "committed": {"$ref": "#/$defs/evidence", "description": "Exact completed prior native owner admission; an uncertain attempt cannot release selection."}
+            "committed": {
+              "$ref": "#/$defs/evidence",
+              "description": "Exact completed prior native owner admission; an uncertain attempt cannot release selection."
+            }
           },
-          "required": ["committed"],
+          "required": [
+            "committed"
+          ],
           "description": "Independently validated current native Planning producer custody."
         },
         "selection": {
@@ -480,6 +588,48 @@
       "required": [
         "prior_sha256",
         "prior_custody",
+        "selection"
+      ],
+      "additionalProperties": false
+    },
+    "human_selection_transfer": {
+      "type": "object",
+      "description": "Historical evidence of a one-shot human-authorized transition from absent native custody. Native producer custody governs subsequent mutations.",
+      "properties": {
+        "prior_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Exact pre-transfer selector bytes."
+        },
+        "human_authorization": {
+          "type": "object",
+          "description": "Exact owner-generated public request with the explicit human bounded answer; revalidated before transfer.",
+          "properties": {
+            "arguments": {
+              "$ref": "#/$defs/continuation_request",
+              "properties": {
+                "answer": {
+                  "const": "authorize-selector-transfer"
+                }
+              },
+              "required": [
+                "answer",
+                "transfer_revision"
+              ]
+            }
+          },
+          "required": [
+            "arguments"
+          ]
+        },
+        "selection": {
+          "type": "object",
+          "description": "Unmodified parsed legacy selector. All unrelated fields are preserved; only retained native custody is added."
+        }
+      },
+      "required": [
+        "prior_sha256",
+        "human_authorization",
         "selection"
       ],
       "additionalProperties": false
