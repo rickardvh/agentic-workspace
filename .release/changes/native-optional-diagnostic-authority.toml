@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve optional diagnostic source preferences without turning them into ordinary task authority."

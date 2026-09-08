@@ -70,6 +70,8 @@ fn residual(source: &str, field: &str, value: &Value) -> Value {
     // their current source meaning without turning persistence into authority.
     let advisory = if field == "workspace.optimization_bias" {
         Some("advisory-rendering-preference")
+    } else if field == "workspace.advanced_features" {
+        Some("optional-diagnostic-preference")
     } else if field.starts_with("workflow_obligations.")
         && value["force"] == "recommended"
         && value.as_object().is_some_and(|fields| {

@@ -99,6 +99,7 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
     advisory = {item["field"] for item in config["residuals"] if item["affects"] == []}
     assert advisory == {
         "workspace.optimization_bias",
+        "workspace.advanced_features",
         "workflow_obligations.commit_after_proof",
         "workflow_obligations.system_intent_refresh",
     }
@@ -115,6 +116,29 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
         blocker["code"] == "local-command-safety-ceiling" and blocker["affects"] == ["effect:execute-command"] for blocker in blockers
     )
     assert any(blocker["code"] == "local-human-review-required" and blocker["affects"] == ["claim:pr-complete"] for blocker in blockers)
-    assert len(blockers) == len(config["residuals"]) - 3 + 2
+    assert len(blockers) == len(config["residuals"]) - 4 + 2
     assert (source.read_bytes(), local.read_bytes()) == before
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_optional_diagnostic_preferences_preserve_direct_work_and_human_latitude(tmp_path, shared_core_binary, native_cli, surface):
+    context = {"target": str(tmp_path), "task": "Inspect a documentation link", "changed": ["README.md"]}
+    source = tmp_path / ".agentic-workspace/config.toml"
+    source.parent.mkdir()
+    actual = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
+    features = actual["workspace"]["advanced_features"]
+    text = "schema_version=1\n[workspace]\nadvanced_features=" + json.dumps(features) + "\n"
+    source.write_text(text, encoding="utf-8")
+    first = consume(surface, shared_core_binary, native_cli, context)
+    assert first["decision_packet"]["status"] == "direct"
+    preference = next(r for r in first["configuration"]["residuals"] if r["field"] == "workspace.advanced_features")
+    assert preference["value"] == features
+    assert preference["authority"] == "advisory" and preference["affects"] == []
+    assert preference["satisfaction"] == "not-evidence"
+    assert source.read_text(encoding="utf-8") == text
+    source.write_text(text + 'improvement_latitude="proactive"\n', encoding="utf-8")
+    initiative = consume(surface, shared_core_binary, native_cli, context)
+    assert initiative["configuration"]["revision"] != first["configuration"]["revision"]
+    assert any(b["code"].endswith(":workspace.improvement_latitude") for b in initiative["decision_packet"]["blockers"])
     assert not (tmp_path / ".agentic-workspace/local").exists()
