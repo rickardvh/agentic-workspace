@@ -88,6 +88,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             "invoked owner is disabled by current module enablement",
         ));
     }
+    let mut system_intent = crate::native_intent::view(target, &work, &configuration, None, None)?;
     let admissions = &configuration["admissions"];
     let (mut owner_input, mut routes) = decision_source::resolve(json!({
         "target":target,
@@ -138,12 +139,26 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     };
     let contract = combined_contract(&[
         &configuration["capability_contract"],
+        &system_intent["capability_contract"],
         &planning_probe["capability_contract"],
         &verification_probe["capability_contract"],
         &instructions["capability_contract"],
         &memory["capability_contract"],
         &native_requirements::contract()?,
     ])?;
+    if let Some(request) = request_for("system-intent") {
+        system_intent = crate::native_intent::view(
+            target,
+            &work,
+            &configuration,
+            Some(request),
+            Some(&contract),
+        )?;
+    } else {
+        for request in system_intent["requests"].as_array_mut().unwrap() {
+            request["capability_revision"] = contract["revision"].clone();
+        }
+    }
     if let Some(request) = request_for("memory") {
         memory = native_memory::public_view(
             target,
@@ -243,6 +258,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         verification_request("verification/requirements/v1"),
         &contract,
     )?;
+    contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.push(instructions["contribution"].clone());
     owner_input["contributions"] = json!(contributions);
@@ -281,7 +297,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     Ok(
-        json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
+        json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
     )
 }
 
@@ -322,7 +338,12 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         }
         if !matches!(
             owner,
-            "planning" | "semantic-routes" | "verification" | "memory" | "assignment"
+            "planning"
+                | "semantic-routes"
+                | "verification"
+                | "memory"
+                | "assignment"
+                | "system-intent"
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
