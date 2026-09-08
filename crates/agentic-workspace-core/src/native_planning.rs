@@ -180,6 +180,41 @@ pub(crate) fn resolve(
     resolve_with_contract(target, current_work, request, None)
 }
 
+/// Existing artifact-profile intent is realized by this bounded Planning owner.
+/// Scratchpad presence is uncertain source context, never current work custody.
+pub(crate) fn artifact_profile(target: &Path, profile: &Value) -> Result<Value, CoreError> {
+    if profile.is_null() {
+        return Ok(json!({"status":"absent","sources":[],"blockers":[]}));
+    }
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let sources: Vec<Value> = if profile == "gemini" {
+        ["implementation_plan.md", "task.md", "walkthrough.md"]
+            .iter()
+            .map(|reference| crate::native_intent::observation(&root, reference))
+            .filter(|source| source["status"] != "missing")
+            .collect()
+    } else {
+        vec![]
+    };
+    let blockers = if sources.is_empty() {
+        vec![]
+    } else {
+        vec![json!({
+            "code":"native-artifact-durable-transfer-unresolved",
+            "message":"Preserve optional runtime artifacts. Current durable facts must reach the existing Planning owner before delegation, handoff, review or completion; file presence is not current custody and the native typed transfer/update path remains unavailable.",
+            "affects":["effect:delegation","claim:complete","claim:pr-complete"]
+        })]
+    };
+    Ok(json!({"status":"current-owner-method","profile":profile,
+        "canonical_owner":"planning","canonical_operation":"planning.reconcile",
+        "source_rule":"Bounded repository-owned Planning state remains authoritative; local owner selection is not a cross-agent source of truth.",
+        "native_artifacts":if profile=="gemini"{"optional-runtime-scratchpads"}else{"not-relied-on"},
+        "handoff_rule":"Retain durable execution facts in the current Planning owner before handoff, review or session end; do not reconstruct retired aggregate record forests.",
+        "sources":sources,"blockers":blockers,"transfer_status":if blockers.is_empty(){"not-required"}else{"unresolved-owner-update"},
+        "authority_boundary":"Operational method only; profile selection, artifact recognition and Planning status confer no custody, proof or acceptance."}))
+}
+
 pub(crate) fn resolve_with_contract(
     target: &Path,
     current_work: &Value,
