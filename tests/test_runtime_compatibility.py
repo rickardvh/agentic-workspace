@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -148,10 +150,20 @@ def _isolated_runtime(
     compatibility_source = (Path(__file__).resolve().parents[1] / "src/agentic_workspace/runtime_compatibility.py").read_text(
         encoding="utf-8"
     )
+    source_root = Path(__file__).resolve().parents[1] / "src/agentic_workspace"
+    schema_dir = package / "contracts/schemas"
+    schema_dir.mkdir(parents=True)
+    schema = json.loads((source_root / "contracts/schemas/runtime_compatibility.schema.json").read_text())
     if old_reader:
-        compatibility_source = compatibility_source.replace("READER_CONTRACT_EPOCH = 1", "READER_CONTRACT_EPOCH = 0").replace(
-            'READER_CAPABILITIES = ("pre-state-runtime-compatibility-v1",)', "READER_CAPABILITIES = ()"
-        )
+        schema["x-runtime-reader"] = {"reader_epoch": 0, "reader_capabilities": []}
+    (schema_dir / "runtime_compatibility.schema.json").write_text(json.dumps(schema))
+    for name in ("decision.py", "native_core.py"):
+        shutil.copyfile(source_root / name, package / name)
+    from agentic_workspace.native_core import core_binary
+
+    binary = core_binary()
+    (package / "_native").mkdir()
+    shutil.copyfile(binary, package / "_native" / binary.name)
     (package / "runtime_compatibility.py").write_text(compatibility_source, encoding="utf-8")
     (package / "cli.py").write_text(
         (Path(__file__).resolve().parents[1] / "src/agentic_workspace/cli.py").read_text(encoding="utf-8"), encoding="utf-8"
@@ -252,3 +264,38 @@ def test_independently_resolved_current_package_reader_proceeds_without_source_r
         "selected_owner": "fixture-owner",
     }
     assert state_load.read_text(encoding="utf-8") == "loaded"
+
+
+def test_reader_identity_keeps_existing_sorted_ascii_encoding(tmp_path: Path) -> None:
+    target = tmp_path / "work ÃƒÂ© Ã°Å¸Ëœâ‚¬"
+    target.mkdir()
+    _write_config(target, minimum_epoch=1, capabilities=(" z ", "pre-state-runtime-compatibility-v1", "z"))
+    admission = admit_runtime_compatibility(target)
+    identity = {"expected": admission["expected_repository"], "observed": admission["observed_runtime"], "target": str(target.resolve())}
+    assert admission["identity_digest"] == "sha256:" + hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    assert admission["missing_reader_capabilities"] == ["z"]
+
+
+def test_invalid_configuration_cannot_disappear_before_reader_admission(tmp_path: Path) -> None:
+    source = _write_config(tmp_path)
+    source.write_text("[broken")
+    assert admit_runtime_compatibility(tmp_path)["status"] == "blocked"
+
+
+@pytest.mark.parametrize(
+    "declaration,failed_check",
+    [
+        ('cli_compatibility="invalid"', "compatibility_contract_shape"),
+        ('cli_compatibility=["invalid"]', "compatibility_contract_shape"),
+        ('[cli_compatibility]\ncontract_schema=""', "compatibility_contract_shape"),
+        ("[cli_compatibility]\nrequired_reader_capabilities=[1]", "compatibility_contract_shape"),
+        ('[cli_compatibility]\ncontract_schema="agentic-workspace/future-contract/v99"', "contract_schema"),
+    ],
+)
+def test_binding_reader_rejects_invalid_or_unknown_contract(tmp_path: Path, declaration: str, failed_check: str) -> None:
+    source = tmp_path / ".agentic-workspace/config.toml"
+    source.parent.mkdir()
+    source.write_text("schema_version=1\n" + declaration + "\n")
+    result = admit_runtime_compatibility(tmp_path)
+    assert result["status"] == "blocked"
+    assert result["failed_checks"] == [failed_check]

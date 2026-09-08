@@ -222,3 +222,7 @@ def repository_decision_view(
 
 def admit_assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"admit_assignment_packet": context})
+
+
+def runtime_compatibility(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"runtime_compatibility": context})
