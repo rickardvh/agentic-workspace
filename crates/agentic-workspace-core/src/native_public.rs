@@ -349,9 +349,15 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     let decision = compile_value(owner_input)?;
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
-    Ok(
-        json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
-    )
+    let mut public = json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    // Requests bind the composed contract above. Owner-local fragments remain
+    // internal composition inputs, not additional public authorities.
+    for owner in public.as_object_mut().unwrap().values_mut() {
+        if let Some(object) = owner.as_object_mut() {
+            object.remove("capability_contract");
+        }
+    }
+    Ok(public)
 }
 
 fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
