@@ -20,6 +20,7 @@ struct Input {
     capability_contract: Option<Value>,
     custody: Option<Value>,
     invocation: Option<Value>,
+    selection_transition: Option<Value>,
 }
 
 fn error(message: impl ToString) -> CoreError {
@@ -210,6 +211,24 @@ fn decision_input(input: &Input, reconciled: &Value, current: bool) -> Result<Va
     if !input.source_requests.is_empty() {
         for action in actions.as_array_mut().unwrap() {
             action["source_requests"] = json!(input.source_requests);
+        }
+    }
+    if let Some(transition) = &input.selection_transition {
+        let schema: Value = serde_json::from_str(include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
+        ))
+        .map_err(error)?;
+        let mut shape = schema["$defs"]["selection_transition"].clone();
+        shape["$schema"] = schema["$schema"].clone();
+        shape["$defs"] = schema["$defs"].clone();
+        crate::schema_validator(&shape, "Planning selection transition")?
+            .validate(transition)
+            .map_err(error)?;
+        for action in actions.as_array_mut().unwrap() {
+            action["dependency_revision"] = json!(digest(
+                &json!({"reconciliation_dependency":action["dependency_revision"],"selection_transition":transition})
+            )?);
+            action["arguments"]["selection_transition"] = transition.clone();
         }
     }
     let mut value = json!({"contributions": [{

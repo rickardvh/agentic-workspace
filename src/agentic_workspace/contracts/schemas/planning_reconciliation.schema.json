@@ -60,6 +60,19 @@
         "null"
       ],
       "description": "Exact returned action for effect admission."
+    },
+    "selection_transition": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/selection_transition",
+          "description": "Native owner-admitted selector transition; effect currentness only, never material Planning identity or caller authority."
+        },
+        {
+          "type": "null",
+          "description": "No selector switch is proposed."
+        }
+      ],
+      "description": "Optional exact selector transition supplied by the native Planning owner."
     }
   },
   "required": [
@@ -85,7 +98,7 @@
       "type": "object",
       "description": "Agent intention concerning the current source-selected Planning owner; grants neither source authority nor completion.",
       "properties": {
-        "owner_ref": {"type":"string","description":"Explicit source-owner selection intention; cannot replace an existing local selector."},
+        "owner_ref": {"type":"string","description":"Explicit destination choice; replacement requires independently admitted current native selector custody."},
         "answer": {"type": "string", "enum": ["continue-selected", "unrelated-direct"], "description": "Explicit current-task relationship to the selected owner."}
       },
       "required": ["answer"],
@@ -152,7 +165,7 @@
       "type": "object",
       "description": "Minimum shape of the admitted former execplan; unknown fields remain a coverage ambiguity.",
       "properties": {
-        "canonical_core": {"type": "object", "description": "Preserved owner-declared outcome, hard constraints and judgment boundaries; all nested fields remain material."},
+        "canonical_core": {"type": ["object", "null"], "description": "Lossless current owner canonical semantics, never attempt-only bookkeeping."},
         "kind": {
           "const": "planning-execplan/v1",
           "description": "Supported former Planning representation."
@@ -213,7 +226,13 @@
       "type": "object",
       "description": "Current material Planning state, excluding execution history.",
       "properties": {
-        "canonical_core": {"type": ["object", "null"], "description": "Lossless current owner canonical semantics, never attempt-only bookkeeping."},
+        "canonical_core": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Lossless current owner canonical semantics, never attempt-only bookkeeping."
+        },
         "outcome": {
           "type": "object",
           "description": "Preserved current outcome semantics."
@@ -371,11 +390,87 @@
         "reconciliation": {
           "$ref": "#/$defs/reconciliation",
           "description": "Owner-derived exact selected semantic state and source binding."
+        },
+        "selection_transition": {
+          "$ref": "#/$defs/selection_transition",
+          "description": "Native owner-admitted selector transition; effect currentness only, never material Planning identity or caller authority."
         }
       },
       "required": [
         "target",
         "reconciliation"
+      ],
+      "additionalProperties": false
+    },
+    "selection_transition": {
+      "type": "object",
+      "description": "One current native Planning selector release and destination, retained inside its existing effect invocation.",
+      "properties": {
+        "prior_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "Exact existing selector bytes before replacement."
+        },
+        "prior_custody": {
+          "$ref": "#/$defs/custody",
+          "properties": {
+            "committed": {"$ref": "#/$defs/evidence", "description": "Exact completed prior native owner admission; an uncertain attempt cannot release selection."}
+          },
+          "required": ["committed"],
+          "description": "Independently validated current native Planning producer custody."
+        },
+        "selection": {
+          "type": "object",
+          "description": "Exact destination selector fields; reconciliation custody is retained separately in this same carrier.",
+          "properties": {
+            "kind": {
+              "const": "agentic-planning/owner-selection/v1",
+              "description": "Existing selector representation."
+            },
+            "mode": {
+              "const": "local",
+              "description": "Local selection scope."
+            },
+            "current_work_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Current work context selected by the owner."
+            },
+            "selected_owner": {
+              "type": "object",
+              "description": "Current destination semantic owner.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Destination Planning identity."
+                },
+                "ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Exact destination Planning source."
+                }
+              },
+              "required": [
+                "id",
+                "ref"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "kind",
+            "mode",
+            "current_work_id",
+            "selected_owner"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "prior_sha256",
+        "prior_custody",
+        "selection"
       ],
       "additionalProperties": false
     }
