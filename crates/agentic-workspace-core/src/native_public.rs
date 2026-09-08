@@ -47,6 +47,10 @@ pub fn start(value: Value) -> Result<Value, CoreError> {
 }
 
 fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<Value, CoreError> {
+    let compatibility = crate::runtime_compatibility::native(target)?;
+    if compatibility["status"] == "blocked" {
+        return Ok(compatibility);
+    }
     let work = json!({"kind":"current-work", "id":digest(&json!({
         "target":target, "task":input.task, "changed":input.changed
     }))?});
@@ -195,7 +199,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     Ok(
-        json!({"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
+        json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements}),
     )
 }
 
@@ -275,6 +279,9 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         ));
     }
     let current = resolve(&input, &target, true)?;
+    if current["status"] == "blocked" {
+        return Ok(current);
+    }
     let committed = &current["planning"]["current_owner"]["committed_operation"];
     crate::admit_invocation_value(
         json!({"decision":current["decision_packet"], "invocation":invocation,

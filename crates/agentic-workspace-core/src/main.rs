@@ -23,6 +23,13 @@ fn main() {
         agentic_workspace_core::separation_of_duty::view(request["separation_of_duty"].clone())
     } else if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("runtime_compatibility"))
+    {
+        agentic_workspace_core::runtime_compatibility::view(
+            request["runtime_compatibility"].clone(),
+        )
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("instruction_applicability"))
     {
         agentic_workspace_core::instruction_applicability::view(
