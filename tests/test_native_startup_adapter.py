@@ -17,6 +17,75 @@ def startup_blockers(packet: dict) -> list:
     return [row for row in packet["decision_packet"]["blockers"] if row["owner"] == "startup-adapter"]
 
 
+def test_source_repository_configured_native_route_is_stateful(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+    import shlex
+    import shutil
+    import subprocess
+    import tomllib
+
+    from tests.test_native_config_admission import former_repository
+
+    selector, plan = former_repository(tmp_path)
+    before = plan.read_bytes()
+    configuration = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text())
+    invocation = configuration["workspace"]["cli_invoke"]
+    # Changed-path context must retain the exact configured admitted Git source,
+    # rather than disabling that requirement to make a fixture pass.
+    subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(tmp_path),
+            "fetch",
+            "--quiet",
+            "--no-tags",
+            "--depth=1",
+            str(ROOT),
+            configuration["assurance"]["decision_record_revision"],
+        ],
+        check=True,
+    )
+    assert invocation == "./target/debug/agentic-workspace"
+    assert f"configured invocation is `{invocation}`" in (ROOT / "AGENTS.md").read_text()
+    context = {"target": str(tmp_path), "task": "Maintain the selected former owner", "changed": ["src/example.rs"]}
+    command = [
+        *shlex.split(invocation),
+        "start",
+        "--target",
+        str(tmp_path),
+        "--task",
+        context["task"],
+        "--changed",
+        "src/example.rs",
+        "--format",
+        "json",
+    ]
+    git_path = str(Path(shutil.which("git")).parent)
+    assert shutil.which("python", path=git_path) is None
+    assert shutil.which("node", path=git_path) is None
+    process = subprocess.run(command, cwd=ROOT, env={**os.environ, "PATH": git_path}, capture_output=True, text=True)
+    assert process.returncode == 0, process.stderr
+    initial = json.loads(process.stdout)
+    assert initial["configuration"]["payload"]["status"] == "satisfied"
+    transfer = initial["planning"]["selector_transfer"]["request"]
+    transfer["arguments"]["answer"] = "authorize-selector-transfer"
+    requests = [initial["startup_adapter"]["requests"][0], transfer]
+    # The configured command and subsequent product execution both require
+    # neither Python nor Node on the host PATH.
+    ready = consume("native", shared_core_binary, native_cli, {**context, "request": requests}, host_path=git_path)
+    action = ready["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.reconcile"
+    result = consume("native", shared_core_binary, native_cli, {**context, "invocation": action}, host_path=git_path)
+    assert result["custody"]["committed"]
+    fresh = consume("native", shared_core_binary, native_cli, context, host_path=git_path)
+    assert fresh["planning"]["current_owner"]["current"] is True
+    assert fresh["planning"]["update_requests"]
+    assert fresh["decision_packet"]["status"] != "terminal"
+    assert json.loads(selector.read_bytes())["reconciliation"]["custody"]["committed"]
+    assert plan.read_bytes() == before
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_configured_startup_text_is_exact_lazy_and_not_custody(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str

@@ -18,10 +18,10 @@ Do not replace a configured invocation with a guessed bare command.
 ## Resolve
 
 1. Run the configured invocation with `start --target . --task "<task>" --format json` for ordinary first contact.
-2. If changed paths are already known, use `implement --target . --changed <paths> --task "<task>" --format json` when that is the routed/current affordance.
+2. If changed paths are known, use `start --target . --changed <path> --task "<task>" --format json`; repeat `--changed` for each path.
 3. Consume the compact current decision before raw `.agentic-workspace/` files. Preserve the fields that materially constrain the decision, including when present:
    - decision/action identity and input revision;
-   - `next_safe_action` or `immediate_next_allowed_action`;
+   - `status`, `primary_action`, `decision_request` and blockers;
    - allowed and forbidden actions/effects;
    - proof or claim boundaries;
    - routed owner, skill, operation, selector, or preferred invocation;
@@ -33,6 +33,13 @@ Do not replace a configured invocation with a guessed bare command.
 ## Act
 
 1. Follow the supported next action before inventing a different command path.
+   For a native decision request, use the exact owner-returned request, supplying
+   only its bounded answer or material. Pass it to `start --input <request.json>`
+   with the same target, task and changed paths. Combine required source-read
+   requests and the owner request in a JSON array. Preserve their currentness
+   fields; drift requires a fresh request rather than an edited revision.
+   Execute the returned `primary_action` with `invoke --input <action.json>` and
+   the same context plus `--format json`. Do not construct actions yourself.
 2. Prefer a typed/routed operation, generated command, specialized skill, exact owner/selector, or explicit human decision over hand-editing managed state.
 3. Load a specialized capability procedure only when the current decision routes there.
    A `reconcile-repository-configuration` action routes exactly to `workspace-setup-jumpstart` and its configured `setup --target . --format json` command; do not substitute task-keyword inference or broad repo discovery.
@@ -73,13 +80,11 @@ A module or future capability may route its own specialized skill or operation t
 
 ## No-CLI / Degraded Fallback
 
-If the configured invocation is unavailable, use the installed no-CLI startup fallback when present:
-
-```bash
-python .agentic-workspace/fallback/no_cli_startup.py
-```
-
-Follow its forbidden actions and next safe action. A degraded route should stay bounded to the named repair or owner; do not compensate by reading the entire workspace tree.
+If the configured native invocation is unavailable, preserve current state and
+repair that invocation through its repository/package owner. A retained no-CLI
+or Python maintainer helper may explain recovery, but cannot authorize product
+effects or replace missing native semantics. Do not compensate by reading the
+entire workspace tree or silently running the former host.
 
 ## Compatibility Note
 

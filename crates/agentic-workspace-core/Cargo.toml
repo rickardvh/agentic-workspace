@@ -20,6 +20,9 @@ process-wrap = { version = "10", default-features = false, features = ["std", "p
 [dev-dependencies]
 serde_json = "1"
 
+[build-dependencies]
+serde_json = "1"
+
 [[bin]]
 name = "agentic-workspace-core"
 path = "src/main.rs"

@@ -42,7 +42,7 @@ pub(crate) fn declaration() -> Value {
     json!({"kind":KIND,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":schema["$schema"],"$defs":schema["$defs"],"type":"object","properties":{"owner_ref":{"type":"string"},"material":{"type":"object","properties":properties,"required":fields,"additionalProperties":false}},"required":["owner_ref","material"],"additionalProperties":false}})
 }
 pub(crate) fn operation() -> Value {
-    json!({"id":"planning.update","semantic_revision":"planning-update-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"prior_revision":{"type":"string"},"document":{"type":"object"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","prior_revision","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/update-result/v1","effects":["planning-state"],"reads":["planning"]})
+    json!({"id":"planning.update","semantic_revision":"planning-update-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"prior_revision":{"type":"string"},"document":{"type":"object"},"provenance_format":{"const":"repo-relative-v2"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","prior_revision","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/update-result/v1","effects":["planning-state"],"reads":["planning"]})
 }
 pub(crate) fn recovery_declaration() -> Value {
     let canonical: Value = serde_json::from_str(include_str!(
@@ -72,8 +72,75 @@ fn outcome(invocation: &Value) -> Result<Value, CoreError> {
 }
 fn payload(invocation: &Value, custody: &Value) -> Result<Value, CoreError> {
     let mut body = invocation["arguments"]["document"].clone();
-    body[PROVENANCE] = json!({"kind":"agentic-planning/update-provenance/v1","invocation_revision":digest(invocation)?,"custody":custody,"outcome":outcome(invocation)?});
+    let portable = invocation["arguments"]["provenance_format"] == "repo-relative-v2";
+    let mut custody = custody.clone();
+    if portable {
+        for field in ["attempt", "committed"] {
+            custody[field]["target"] = json!(".");
+        }
+    }
+    body[PROVENANCE] = json!({"kind":if portable {"agentic-planning/update-provenance/v2"} else {"agentic-planning/update-provenance/v1"},"invocation_revision":digest(invocation)?,"custody":custody,"outcome":outcome(invocation)?});
     Ok(body)
+}
+
+/// A transported plan can preserve this observation without transporting local
+/// producer authority. Missing local records never produce update custody.
+pub(crate) fn portable_observation(relative: &str, body: &Value) -> Result<bool, CoreError> {
+    portable_envelope(relative, body, true)
+}
+fn portable_envelope(
+    relative: &str,
+    body: &Value,
+    current_material: bool,
+) -> Result<bool, CoreError> {
+    let provenance = &body[PROVENANCE];
+    if provenance["kind"] != "agentic-planning/update-provenance/v2" {
+        return Ok(false);
+    }
+    let valid_hash = |value: &Value| {
+        value
+            .as_str()
+            .and_then(|s| s.strip_prefix("sha256:"))
+            .is_some_and(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+    };
+    let mut document = body.clone();
+    document
+        .as_object_mut()
+        .ok_or_else(|| error("invalid Planning document"))?
+        .remove(PROVENANCE);
+    let material_revision = if current_material {
+        json!(digest(&document)?)
+    } else {
+        provenance["outcome"]["value"]["document_revision"].clone()
+    };
+    let expected = json!({"status":"applied","effects":["planning-state"],"value":{"owner_path":relative,"owner_id":body["id"],"document_revision":material_revision}});
+    if provenance.as_object().map(|v| v.len()) != Some(4)
+        || !valid_hash(&provenance["invocation_revision"])
+        || !valid_hash(&material_revision)
+        || provenance["outcome"] != expected
+        || provenance["custody"].as_object().map(|v| v.len()) != Some(2)
+    {
+        return Err(error("invalid portable Planning update observation"));
+    }
+    let mut key = None;
+    for (field, suffix) in [("attempt", ".attempt.json"), ("committed", ".result.json")] {
+        let reference = &provenance["custody"][field];
+        let path = reference["path"].as_str().unwrap_or("");
+        let name = path
+            .strip_prefix(".agentic-workspace/local/effects/")
+            .and_then(|s| s.strip_suffix(suffix));
+        if reference.as_object().map(|v| v.len()) != Some(4)
+            || reference["target"] != "."
+            || reference["owner"] != "planning"
+            || !valid_hash(&reference["revision"])
+            || !name.is_some_and(|s| s.len() == 64 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+            || key.is_some_and(|previous| Some(previous) != name)
+        {
+            return Err(error("invalid portable Planning custody reference"));
+        }
+        key = name;
+    }
+    Ok(true)
 }
 /// Validate the latest producer without mistaking its initial bytes for the
 /// permanent material lifetime. Pending publication requires the exact postimage.
@@ -85,9 +152,34 @@ pub(crate) fn inspect(
     let Some(provenance) = body.get(PROVENANCE) else {
         return Ok(None);
     };
+    let mut custody = provenance["custody"].clone();
+    if provenance["kind"] == "agentic-planning/update-provenance/v2" {
+        // Validate the envelope even when local custody exists. Material may
+        // evolve after a committed write; only a source-only copy requires its
+        // exact recorded material digest below.
+        portable_envelope(relative, body, false)?;
+        let root = cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
+            .map_err(error)?;
+        let mut absent = 0;
+        for field in ["attempt", "committed"] {
+            let path = custody[field]["path"].as_str().unwrap();
+            if crate::native_planning::read(&root, path)?.is_none() {
+                absent += 1;
+            }
+            custody[field]["target"] = json!(
+                std::fs::canonicalize(target)
+                    .map_err(error)?
+                    .to_string_lossy()
+            );
+        }
+        if absent == 2 {
+            portable_observation(relative, body)?;
+            return Ok(None);
+        }
+    }
     let prepared = attempt_store::prepare_commit(
         target.to_str().ok_or_else(|| error("target encoding"))?,
-        provenance["custody"].clone(),
+        custody,
         provenance["outcome"].clone(),
     )?;
     let invocation = &prepared["record"]["invocation"];
@@ -308,7 +400,7 @@ pub(crate) fn view(
                 "Planning update needs an explicit supported frontier",
             ));
         }
-        result["action"] = json!({"operation_id":"planning.update","dependency_revision":digest(&json!({"source":current_revision,"document":document}))?,"arguments":{"target":target,"request":request,"owner_path":reference,"prior_revision":current_revision,"document":document,"planning_request":null},"effects":["planning-state"]});
+        result["action"] = json!({"operation_id":"planning.update","dependency_revision":digest(&json!({"source":current_revision,"document":document}))?,"arguments":{"target":target,"request":request,"owner_path":reference,"prior_revision":current_revision,"document":document,"provenance_format":"repo-relative-v2","planning_request":null},"effects":["planning-state"]});
     }
     Ok(result)
 }

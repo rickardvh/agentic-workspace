@@ -90,7 +90,8 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     if origin.is_some() {
         body.as_object_mut().unwrap().remove("creation_provenance");
     }
-    if update.is_some() {
+    if update.is_some() || crate::native_planning_update::portable_observation(&source.path, &body)?
+    {
         body.as_object_mut()
             .unwrap()
             .remove(crate::native_planning_update::PROVENANCE);

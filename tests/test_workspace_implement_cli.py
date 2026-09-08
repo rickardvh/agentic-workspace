@@ -3657,9 +3657,9 @@ def test_generated_ordinary_implement_guidance_is_executable_from_default_decisi
 
     guidance = workspace_pointer_block(cli_invoke="agentic-workspace")
     ordinary_route = guidance.split("Ordinary route:", 1)[1].split("Boundaries:", 1)[0]
-    assert 'implement --target . --changed <paths> --task "<task>" --format json' in ordinary_route
-    assert "authoritative `decision_packet` action, effects, claim boundary" in ordinary_route
-    assert "ordinary work proceeds from `decision_packet`" in ordinary_route
+    assert 'start --target . --changed <path> --task "<task>" --format json' in ordinary_route
+    assert "`decision_packet.status`, `primary_action`, `decision_request`" in ordinary_route
+    assert "invoke --input <action.json>" in ordinary_route
     assert "--select communication_contract" not in ordinary_route
 
     assert (

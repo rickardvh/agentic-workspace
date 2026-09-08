@@ -1,0 +1,46 @@
+# Native repository maintenance
+
+The source repository's configured ordinary AW invocation is
+`./target/debug/agentic-workspace`. Before first use and after changing Rust or
+bundled contract/payload sources, run `cargo build --locked --workspace --bins`.
+This builds both the CLI and its colocated shared core; building only the CLI
+adapter can leave the core absent or stale. Windows resolves the `.exe` suffix.
+The executable calls the shared Rust core. Python and TypeScript remain
+bindings. Repository generators and checks may use Python, but are not an
+alternate authority for ordinary product operations.
+
+Start with the invocation in `AGENTS.md`, the current task and `--format json`.
+Include each known path with a separate `--changed`. Read the decision packet:
+source-read requests deliver current instructions, bounded answer requests carry
+the owner's authority/currentness fields, and `primary_action` is the exact
+invocation the native owner has prepared. Submit requests to `start --input`
+and actions to `invoke --input`, preserving target, task and changed paths.
+Resolve again after an effect. A blocked or missing action is not permission to
+switch to the former host.
+
+The former Planning bridge preserves established selection and material:
+
+- A recognized former source is readable context, not native mutation custody.
+- An occupied legacy selector requires the exact owner-produced, revision-bound
+  transfer request and an explicit human answer. Transfer preserves the selector's
+  selection and the plan bytes. It grants neither proof nor completion.
+- Following acquisition, native updates preserve owner identity and relationships.
+  Reconcile the changed source before reusing its current subject or proof.
+- Tracked update provenance uses repository-relative references. Local immutable
+  attempts and results remain bound to their producing checkout. A copied plan
+  preserves its observed material but must acquire current native custody in the
+  new checkout. Never copy local receipts to manufacture that authority.
+- Pending writes retain their original invocation and postimage format across
+  software changes; recovery does not silently rewrite the uncertain effect.
+
+Native payload admission compares installed bytes with the artifact's bundled
+payload and checks the configured release/capability requirement. A provenance
+label cannot hide drift. Required-before-work and required-before-claim keep
+their distinct force, as do advisory compatibility and closeout obligations.
+
+This path has real former-owner transfer/update/recovery evidence and independent
+native, JSON, Python and TypeScript tests. It does not establish all native owner
+outcomes or release/platform admission. Configuration mutation, consequential
+delegation, positive lifecycle-derived target evidence and remaining owners stay
+with #2613/#2767, #2947/#2817/#2818/#2210, #2209 and the #2983 frontier. #2909
+aggregates conformance; #2990 admits one exact release-equivalent candidate.

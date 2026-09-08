@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "live",
   "phase": "implementation",
-  "revision": 5,
+  "revision": 10,
   "intent": {
     "non_goals": [
       "No promotion or inferred ownership from familiar local files"
@@ -18,17 +18,16 @@
     "closure_boundary": "this slice only"
   },
   "scope": {
-    "owned": [
-      "crates/agentic-workspace-core/src/native_planning.rs",
-      "crates/agentic-workspace-core/src/native_public.rs",
-      "crates/agentic-workspace-core/src/native_planning_update.rs",
-      "crates/agentic-workspace-core/src/planning.rs",
-      "src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json",
-      "tests/test_native_planning_create.py",
-      ".agentic-workspace/reconstruction/owner-audit.md"
-    ],
     "effects": [
       "planning-state"
+    ],
+    "owned": [
+      "crates/agentic-workspace-core/",
+      "tests/test_native_config_admission.py",
+      "tests/test_native_planning_create.py",
+      "tests/test_native_public_cli.py",
+      "tests/test_native_advisory_config.py",
+      ".agentic-workspace/reconstruction/owner-audit.md"
     ]
   },
   "relationships": {
@@ -43,13 +42,19 @@
     "external_posture": {
       "state": "unobserved",
       "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "The next native configuration correction is a tightly coupled source-force and admission change; retain the existing local implementer and require independent PR review. This is not evidence of a successful non-local lifecycle.",
+      "scope": "active-plan-work-unit",
+      "parent_task_custody": "retained-current",
+      "bounded_child_authority": "separate-binding-decision"
     }
   },
   "references": [],
-  "next_action": "Admit existing native configuration controls under #2613/#2767 so #3077 can execute the authorized real-selector transfer and #2970 can refresh the actual frontier",
-  "blockers": [
-    "Native real-checkout admission still has 14 task-affecting configuration residuals; selector human authority is resolved."
-  ],
+  "next_action": "Complete source-native repository guidance after the proven real former-owner journey",
+  "blockers": [],
   "proof": {
     "claims": [
       "Make selected former Planning custody maintainable through native updates is implemented, validated, and closed out honestly."
@@ -60,10 +65,16 @@
     "refs": []
   },
   "continuation": {
-    "owner": "#2970 / #2613 / #2767 / #3077",
-    "residual_intent": "Actual real-selector transfer and frontier update remain blocked on native configuration admission; then complete #3077 and the owner audit before #2909/#2990."
+    "residual_intent": "Real #2970 transfer and frontier evolution succeeded. Complete the native ordinary source-repository cutover, then admit remaining native owner behavior and cumulative release conformance.",
+    "owner": "#3077 / #2613 / #2767 / #2909"
   },
-  "specialist_contracts": [],
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ],
   "completion_criteria": [
     "Real former owner fresh-session material maintenance preserves identity, future-useful context and unrelated work",
     "Stale or unadmitted custody and substituted actions cannot mutate",
@@ -74,11 +85,11 @@
     "uv run pytest tests/test_native_planning_create.py tests/test_planning_selection_custody.py -q"
   ],
   "execution_bounds": {
-    "ask-before-refactor threshold": "Change outside current former-owner maintenance boundary",
-    "stop before touching": "master, release admission, unrelated working trees",
-    "max changed files": "10",
-    "allowed paths": "crates/agentic-workspace-core/src/; src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json; tests/test_native_planning_create.py; tests/test_planning_selection_custody.py; .agentic-workspace/planning/execplans/former-owner-maintenance-2970.plan.json; .agentic-workspace/reconstruction/owner-audit.md; docs/",
-    "required validation commands": "cargo test --locked -p agentic-workspace-core native_planning; uv run pytest tests/test_native_planning_create.py tests/test_planning_selection_custody.py -q"
+    "ask-before-refactor threshold": "Changing configured meaning rather than preserving source force and currentness",
+    "allowed paths": "crates/agentic-workspace-core/; tests/test_native_config_admission.py; tests/test_native_planning_create.py; tests/test_native_public_cli.py; tests/test_native_advisory_config.py; .agentic-workspace/reconstruction/owner-audit.md; .agentic-workspace/planning/execplans/former-owner-maintenance-2970.plan.json; docs/maintainer/; AGENTS.md; .agentic-workspace/config.toml; src/agentic_workspace/config.py; .agentic-workspace/skills/workspace-startup/SKILL.md; src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md; tests/test_native_startup_adapter.py; tests/test_maintainer_surfaces.py; tests/test_workspace_modules_cli.py; tests/test_workspace_implement_cli.py",
+    "stop before touching": "master, release admission, unrelated state",
+    "max changed files": "24",
+    "required validation commands": "cargo test --locked -p agentic-workspace-core --lib; pytest tests/test_native_config_admission.py"
   },
   "goal": [
     "Make a real former Planning owner maintainable through exact native custody and material update while preserving identity and currentness"
