@@ -27,6 +27,10 @@ def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
     return _request({"direct_task_subject": {"task": task, "paths": paths}})
 
 
+def assurance_applicability(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assurance_applicability": context})
+
+
 def task_requirements(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"task_requirements": context})
 

@@ -4153,9 +4153,7 @@ def _assurance_requirement_planning_facts(active_planning_record: dict[str, Any]
     refs: list[str] = []
     for raw in (
         active_planning_record.get("id"),
-        active_planning_record.get("title"),
         active_planning_record.get("surface"),
-        active_planning_record.get("next_action"),
     ):
         if str(raw).strip():
             refs.append(str(raw).strip())
@@ -4186,6 +4184,7 @@ def _assurance_requirement_planning_facts(active_planning_record: dict[str, Any]
             evidence_by_requirement[requirement_id] = [str(value).strip() for value in _list_payload(values) if str(value).strip()]
     return {
         "refs": _dedupe(refs),
+        "legacy_refs": [str(active_planning_record.get(key) or "") for key in ("title", "next_action")],
         "proof_profiles": _dedupe(proof_profiles),
         "risk_refs": _dedupe(risk_refs),
         "invariant_refs": _dedupe(invariant_refs),
@@ -4359,6 +4358,32 @@ def _activation_kind_facts(*, paths: list[str], source: str) -> list[dict[str, A
     ]
 
 
+def _assurance_applicability_rows(
+    *,
+    requirements: list[dict[str, Any]],
+    changed_paths: list[str] | None,
+    task_text: str | None,
+    planning_facts: dict[str, Any],
+    selected_semantic_routes: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    from agentic_workspace.assignment_source import revision
+    from agentic_workspace.decision import assurance_applicability, direct_task_subject
+
+    identity = direct_task_subject(task_text or "", _normalize_changed_paths(changed_paths or []))
+    result = assurance_applicability(
+        {
+            "requirements": requirements,
+            "changed_paths": _normalize_changed_paths(changed_paths or []),
+            "planning_facts": planning_facts,
+            "route_fact": {"posture": "selected", "routes": selected_semantic_routes} if selected_semantic_routes is not None else None,
+            "source_revision": revision(requirements),
+            "task_identity": identity,
+            "current_work": {"id": planning_facts["current_work_id"]} if planning_facts.get("current_work_id") else identity,
+        }
+    )
+    return result["requirements"]
+
+
 def _assurance_requirement_match(
     *,
     requirement: dict[str, Any],
@@ -4367,36 +4392,18 @@ def _assurance_requirement_match(
     planning_facts: dict[str, Any],
     selected_semantic_routes: list[str] | None = None,
 ) -> tuple[bool, list[str], list[dict[str, Any]]]:
-    applies_because: list[str] = []
-    activation_facts: list[dict[str, Any]] = []
-    normalized_paths = _normalize_changed_paths(changed_paths or [])
-    for path in normalized_paths:
-        for pattern in _list_payload(requirement.get("applies_to_paths")):
-            pattern_text = str(pattern).strip()
-            if pattern_text and fnmatch.fnmatch(path, pattern_text):
-                applies_because.append(f"changed path matched {pattern_text}")
-                activation_facts.extend(_activation_kind_facts(paths=[path], source=f"changed path matched {pattern_text}"))
-    normalized_task = (task_text or "").lower()
-    for marker in _list_payload(requirement.get("applies_to_task_markers")):
-        marker_text = str(marker).strip()
-        if marker_text and marker_text.lower() in normalized_task:
-            applies_because.append(f"task marker matched {marker_text}")
-    for selector in _list_payload(requirement.get("applies_to_semantic_routes")):
-        selector_text = str(selector).strip()
-        if selector_text and route_selector_matches(selector_text, selected_semantic_routes or []):
-            applies_because.append(f"semantic task route matched {selector_text}")
-    for field_name, fact_name, label in (
-        ("applies_to_planning_refs", "refs", "planning ref"),
-        ("applies_to_proof_profiles", "proof_profiles", "proof profile"),
-        ("applies_to_risk_refs", "risk_refs", "risk ref"),
-        ("applies_to_invariant_refs", "invariant_refs", "invariant ref"),
-    ):
-        configured = {str(item).strip() for item in _list_payload(requirement.get(field_name)) if str(item).strip()}
-        facts = {str(item).strip() for item in _list_payload(planning_facts.get(fact_name)) if str(item).strip()}
-        for matched in sorted(configured & facts):
-            applies_because.append(f"{label} matched {matched}")
-    applies_because = _dedupe(applies_because)
-    return (bool(applies_because), applies_because, activation_facts)
+    row = _assurance_applicability_rows(
+        requirements=[requirement],
+        changed_paths=changed_paths,
+        task_text=task_text,
+        planning_facts=planning_facts,
+        selected_semantic_routes=selected_semantic_routes,
+    )[0]
+    return (
+        row["status"] == "applicable",
+        row["applies_because"],
+        _activation_kind_facts(paths=row["matched_paths"], source="current assurance path scope"),
+    )
 
 
 def _measurement_status_for_requirement(
@@ -4742,14 +4749,18 @@ def _assurance_requirements_report_payload(
     matching: list[dict[str, Any]] = []
     active: list[dict[str, Any]] = []
     evidence_status: list[dict[str, Any]] = []
-    for requirement in configured:
-        matched, applies_because, activation_facts = _assurance_requirement_match(
-            requirement=requirement,
-            changed_paths=changed_paths,
-            task_text=task_text,
-            planning_facts=planning_facts,
-            selected_semantic_routes=selected_semantic_routes,
-        )
+    applicability = _assurance_applicability_rows(
+        requirements=configured,
+        changed_paths=changed_paths,
+        task_text=task_text,
+        planning_facts=planning_facts,
+        selected_semantic_routes=selected_semantic_routes,
+    )
+    for requirement, application in zip(configured, applicability, strict=True):
+        matched = application["status"] == "applicable"
+        unresolved = application["status"] == "unresolved"
+        applies_because = application["applies_because"]
+        activation_facts = _activation_kind_facts(paths=application["matched_paths"], source="current assurance path scope")
         status = _assurance_status_for_requirement(
             requirement=requirement,
             applies_because=applies_because,
@@ -4757,10 +4768,35 @@ def _assurance_requirements_report_payload(
             activation_facts=activation_facts,
             strict_policy=bool(config.assurance.strict_closeout) if config is not None else False,
         )
+        if unresolved:
+            status = {
+                **status,
+                "state": "unknown",
+                "applicability": application,
+                "missing_evidence": [],
+                "next_action": {
+                    "id": "resolve-assurance-applicability",
+                    "owner": "verification",
+                    "request_kind": "verification/assurance-applicability/v1",
+                    "requirement_id": requirement["id"],
+                    "authority_refs": requirement["authority_refs"],
+                    "public_query": {
+                        "entrypoint": "start",
+                        "input": {
+                            "target": str(target_root),
+                            "task": task_text or "",
+                            "changed": _normalize_changed_paths(changed_paths or []),
+                        },
+                        "selector": "verification.assurance_request",
+                    },
+                },
+            }
+            evidence_status.append(status)
         matching.append(
             {
                 "id": requirement["id"],
                 "matched": matched,
+                "applicability": application,
                 "applies_because": applies_because,
                 "activation_kinds": sorted({str(item.get("activation_kind")) for item in activation_facts if item.get("activation_kind")}),
                 "activation_evidence": activation_facts,
@@ -4791,7 +4827,7 @@ def _assurance_requirements_report_payload(
                             "whether evidence is sufficient to claim completion",
                         ],
                         human_owned_decisions=["waiver, dismissal, or acceptance when required evidence is unavailable"],
-                        rule="Assurance task-marker matches are explicit config evidence; AW reports configured pressure and does not decide user intent.",
+                        rule="Current exact facts and agent-selected routes determine applicability; unresolved former semantic scope grants no evidence or waiver.",
                     ),
                 }
             )
@@ -4865,7 +4901,10 @@ def _assurance_requirements_report_payload(
         "rule": "Repo-declared assurance requirements are domain-generic routing and claim-boundary facts; AW does not certify compliance.",
         "authority_boundary": _authority_boundary_payload(
             surface="assurance_requirements",
-            observed_by_aw=["repo-declared assurance configuration", "changed-path/task-marker/planning match facts"],
+            observed_by_aw=[
+                "repo-declared assurance configuration",
+                "current exact path/Planning facts and admitted semantic applicability",
+            ],
             recommended_by_aw=["carry configured evidence, review-owner, and blocking-claim obligations into proof and closeout"],
             agent_owned_decisions=[
                 "semantic user-intent acceptance",
@@ -41545,15 +41584,12 @@ def _pre_test_evidence_requirement_matches(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     relevant = [item for item in _assurance_requirement_payloads(config) if _pre_test_evidence_requirement(item)]
     matched: list[dict[str, Any]] = []
-    for requirement in relevant:
-        applies, applies_because, _activation_facts = _assurance_requirement_match(
-            requirement=requirement,
-            changed_paths=changed_paths,
-            task_text=task_text,
-            planning_facts={},
-        )
-        if not applies:
+    rows = _assurance_applicability_rows(requirements=relevant, changed_paths=changed_paths, task_text=task_text, planning_facts={})
+    for requirement, row in zip(relevant, rows, strict=True):
+        if row["status"] != "applicable":
+            requirement["applicability"] = row
             continue
+        applies_because = row["applies_because"]
         requirement_id = str(requirement.get("id", "")).strip()
         matched.append(
             {
@@ -41613,6 +41649,9 @@ def _pre_test_evidence_guardrail_payload(
             "changed_test_paths": changed_test_paths,
             "evidence_path_classifications": path_classifications,
             "configured_requirement_count": len(configured_requirements),
+            "unresolved_applicability": [
+                item["applicability"] for item in configured_requirements if item.get("applicability", {}).get("status") == "unresolved"
+            ],
             "blocking": False,
         }
 

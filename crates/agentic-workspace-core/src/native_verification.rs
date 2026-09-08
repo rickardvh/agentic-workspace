@@ -495,6 +495,44 @@ pub fn view(
     planning_subject: Option<&Value>,
     request: Option<Value>,
 ) -> Result<Value, CoreError> {
+    view_with_applicability(
+        target,
+        task,
+        changed,
+        current_work,
+        planning_subject,
+        request,
+        ApplicabilityContext {
+            facts: &Value::Null,
+            request: None,
+            contract: None,
+        },
+    )
+}
+
+pub(crate) struct ApplicabilityContext<'a> {
+    pub facts: &'a Value,
+    pub request: Option<Value>,
+    pub contract: Option<&'a Value>,
+}
+
+pub(crate) fn view_with_applicability(
+    target: &Path,
+    task: &str,
+    changed: &[String],
+    current_work: &Value,
+    planning_subject: Option<&Value>,
+    request: Option<Value>,
+    applicability: ApplicabilityContext<'_>,
+) -> Result<Value, CoreError> {
+    let mut assurance_input = crate::assurance_applicability::native_input(
+        target,
+        task,
+        changed,
+        current_work,
+        planning_subject,
+        applicability.facts,
+    )?;
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     let mut gaps = Vec::<String>::new();
@@ -583,32 +621,50 @@ pub fn view(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration()]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
-        "restriction_authorities":[{"owner":"verification","affects":["claim:complete"]}]});
+        "restriction_authorities":[{"owner":"verification","affects":["claim:complete","claim:claim-slice-complete","claim:claim-work-complete","claim:close-parent-lane"]}]});
     contract["revision"] = json!(digest(&contract)?);
+    let admission_contract = applicability.contract.unwrap_or(&contract);
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":"verification/claim/v1","owner":"verification",
-        "owner_revision":owner_revision,"source_revision":source_revision,"capability_revision":contract["revision"],
+        "owner_revision":owner_revision,"source_revision":source_revision,"capability_revision":admission_contract["revision"],
         "task_identity":current_work,"request_kind":"verification/claim/v1","arguments":{"claim_class":"slice_complete","evidence_refs":[]}});
     let mut authentication_request = template.clone();
     authentication_request["id"] = json!("verification/authenticate-host-review/v1");
     authentication_request["request_kind"] = json!("verification/authenticate-host-review/v1");
     authentication_request["arguments"] =
         json!({"host_result_ref":"independent-review-host-result:<current-indexed-ref>"});
+    let mut assurance_request = template.clone();
+    assurance_request["id"] = json!("verification/assurance-applicability/v1");
+    assurance_request["request_kind"] = json!("verification/assurance-applicability/v1");
+    assurance_request["source_revision"] = assurance_input["source_revision"].clone();
+    assurance_request["arguments"] = json!({"decisions":{}});
     let mut authentication = Value::Null;
     let mut evidence = Vec::new();
     let mut requested = false;
-    if let Some(request) = request {
+    for request in request
+        .into_iter()
+        .flat_map(|value| value.as_array().cloned().unwrap_or_else(|| vec![value]))
+        .chain(applicability.request)
+    {
         prepare_request_value(
-            json!({"request":request,"current_work":request["task_identity"],"capability_contract":contract}),
+            json!({"request":request,"current_work":request["task_identity"],"capability_contract":admission_contract}),
         )?;
         if request["owner"] != "verification" {
             return Err(CoreError::new("Verification request names another owner"));
         }
-        requested = true;
-        if request["task_identity"] != *current_work
+        let claim_request = request["request_kind"] != "verification/assurance-applicability/v1";
+        requested |= claim_request;
+        if !claim_request {
+            assurance_input["judgment"] = json!({"source_revision":request["source_revision"],
+                "task_identity":if request["task_identity"]==*current_work {assurance_input["task_identity"].clone()} else {request["task_identity"].clone()},
+                "current_work":request["task_identity"],"decisions":request["arguments"]["decisions"]});
+        }
+        if !claim_request {
+            // The shared applicability owner validates its separately bound source.
+        } else if request["task_identity"] != *current_work
             || request["source_revision"] != source_revision
         {
             gaps.push("verification-request-stale".into());
@@ -643,15 +699,46 @@ pub fn view(
         "required_authority":"Use each selected protocol's review_owner and authority_refs; authenticate any independent producer through the existing Verification owner.",
         "judgment_ingress":"Existing Verification receipt admission; this read-only native view does not admit returned judgments.",
         "returned_judgment_requirements":["exact claim and current work/subject","current strategy and evidence references","judgment and unresolved reasons","required producer authority and independence"]}));
-    let blockers = if applicable {
+    let mut blockers = if applicable {
         json!([{"code":"verification-evidence-unresolved","message":"Current Verification obligations require admitted task-bound evidence and judgment.","affects":["claim:complete"]}])
     } else {
         json!([])
     };
+    let assurance = crate::assurance_applicability::view(assurance_input.clone())?;
+    let mut decisions = serde_json::Map::new();
+    for row in assurance["requirements"].as_array().unwrap() {
+        if row["status"] == "unresolved" {
+            decisions.insert(row["id"].as_str().unwrap().into(), json!("unresolved"));
+        }
+        if row["status"] != "not-applicable"
+            && matches!(
+                row["force"].as_str(),
+                Some("blocking" | "required-before-closeout")
+            )
+        {
+            let affects: Vec<String> = row["blocking_claims"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .map(|claim| format!("claim:{claim}"))
+                .collect();
+            if !affects.is_empty() {
+                blockers.as_array_mut().unwrap().push(json!({"code":format!("assurance:{}:{}",row["id"].as_str().unwrap(),row["status"].as_str().unwrap()),
+                "message":if row["status"]=="unresolved" {"Current source assurance applicability needs agent judgment; evidence cannot resolve scope."} else {"Current assurance evidence/measurement/review admission remains required; applicability does not prove satisfaction."},"affects":affects}));
+            }
+        }
+    }
+    if decisions.is_empty() {
+        assurance_request = Value::Null;
+    } else {
+        assurance_request["arguments"]["decisions"] = json!(decisions);
+    }
+    let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row|json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":row["source_requirement"],"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})).collect();
     Ok(
-        json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable {"unresolved"} else {"not-applicable"},
+        json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":strategy,"strategy_revision":strategy_revision,
-        "requests":[template],"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers},
         "authority_effect":"read-only-no-claim-grants"}),

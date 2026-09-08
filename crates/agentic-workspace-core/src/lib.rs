@@ -1,4 +1,5 @@
 pub mod assignment;
+pub mod assurance_applicability;
 pub mod attempt;
 pub mod attempt_store;
 pub mod continuity;

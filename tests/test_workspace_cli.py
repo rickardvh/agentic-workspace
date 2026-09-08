@@ -8027,14 +8027,41 @@ force = "required-before-closeout"
     payload = json.loads(capsys.readouterr().out)
 
     payload = payload["values"]
-    guardrail = payload["pre_test_evidence_guardrail"]
+    # Prose overlap cannot activate the pre-test behavior. The unresolved
+    # source remains available to Verification when an affected claim is requested.
+    assert "pre_test_evidence_guardrail" not in payload
+    source_scope = workspace_runtime_core._pre_test_evidence_guardrail_payload(
+        target_root=tmp_path,
+        changed_paths=[],
+        task_text="regression test",
+        config=cli._load_workspace_config(target_root=tmp_path),
+    )
+    assert source_scope["unresolved_applicability"][0]["status"] == "unresolved"
+    assert source_scope["blocking"] is False
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Small change",
+                "--changed",
+                "tests/example.py",
+                "--select",
+                "pre_test_evidence_guardrail",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    guardrail = json.loads(capsys.readouterr().out)["values"]["pre_test_evidence_guardrail"]
     assert guardrail["status"] == "advisory"
     assert guardrail["blocking"] is False
-    assert guardrail["source_boundary"]["no_universal_task_keyword_policy"] is True
-    assert any("task marker matched regression test" in source for source in guardrail["trigger_sources"])
+    assert any("changed path matched tests/**" in source for source in guardrail["trigger_sources"])
     assert "package-local-behavior" in guardrail["evidence_owner_options"]
     assert "convert-to-conformance" in guardrail["proof_decision_options"]
-    assert any("trust question" in question for question in guardrail["pre_test_decision_questions"])
 
     assert (
         cli.main(

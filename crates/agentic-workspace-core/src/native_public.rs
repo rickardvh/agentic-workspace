@@ -56,6 +56,11 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     }))?});
     let requests = owner_requests(input.request.as_ref())?;
     let request_for = |owner: &str| requests.iter().find(|request| request["owner"] == owner);
+    let verification_request = |kind: &str| {
+        requests
+            .iter()
+            .find(|request| request["owner"] == "verification" && request["request_kind"] == kind)
+    };
     let route_input = json!({
         "current_work":work, "source":native_routes::source(target)?,
         "request":request_for("semantic-routes")
@@ -138,20 +143,28 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     let subject = planning_detail
         .get("reconciliation")
         .and_then(|value| value.get("subject"));
-    let verification = native_verification::view(
+    let verification = native_verification::view_with_applicability(
         target,
         &input.task,
         &input.changed,
         &work,
         subject,
-        request_for("verification")
-            .filter(|r| {
-                matches!(
-                    r["request_kind"].as_str(),
-                    Some("verification/claim/v1" | "verification/authenticate-host-review/v1")
-                )
-            })
-            .cloned(),
+        Some(json!(
+            requests
+                .iter()
+                .filter(|r| r["owner"] == "verification"
+                    && matches!(
+                        r["request_kind"].as_str(),
+                        Some("verification/claim/v1" | "verification/authenticate-host-review/v1")
+                    ))
+                .cloned()
+                .collect::<Vec<_>>()
+        )),
+        native_verification::ApplicabilityContext {
+            facts: &json!({"route_fact":route_fact,"planning":{"status":planning["status"],"source_revision":planning["source_revision"]}}),
+            request: verification_request("verification/assurance-applicability/v1").cloned(),
+            contract: Some(&contract),
+        },
     )?;
     contributions.push(verification["contribution"].clone());
     let requirements = native_requirements::view(
@@ -163,7 +176,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &configuration,
         &verification,
         request_for("assignment"),
-        request_for("verification").filter(|r| r["request_kind"] == "verification/requirements/v1"),
+        verification_request("verification/requirements/v1"),
         &contract,
     )?;
     contributions.push(memory["contribution"].clone());
@@ -234,6 +247,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                     "verification/claim/v1"
                         | "verification/requirements/v1"
                         | "verification/authenticate-host-review/v1"
+                        | "verification/assurance-applicability/v1"
                 )
             )
         {
@@ -247,9 +261,14 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
-        if !owners.insert(owner) {
+        let key = if owner == "verification" {
+            format!("{owner}:{}", request["request_kind"].as_str().unwrap())
+        } else {
+            owner.to_owned()
+        };
+        if !owners.insert(key) {
             return Err(CoreError::new(
-                "supply at most one current request per owner",
+                "supply at most one current request per owner and Verification request kind",
             ));
         }
     }

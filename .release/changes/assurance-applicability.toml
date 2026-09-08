@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Resolve assurance scope through shared exact facts and current Verification applicability judgment, retaining unresolved former semantic scope without keyword authority."
+issues = [2930, 2613, 2334]

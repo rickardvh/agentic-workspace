@@ -153,6 +153,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                     | "assurance.decision_record_target"
                                     | "assurance.decision_record_revision"
                                     | "assurance.instruction_revision"
+                                    | "assurance.requirements"
                             ))
                         || (source == LOCAL
                             && matches!(
