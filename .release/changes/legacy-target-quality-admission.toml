@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve legacy producer observations without promoting editable receipt/index shapes into current target quality authority."
