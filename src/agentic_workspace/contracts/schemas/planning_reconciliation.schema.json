@@ -6,6 +6,7 @@
   "type": "object",
   "description": "Trusted Planning host boundary. Source custody is admitted outside this payload; shape, names and hashes cannot establish it.",
   "properties": {
+    "source_requests": {"type": "array", "maxItems": 16, "items": {"$ref": "source_decision_input.schema.json#/$defs/public_request"}, "description": "Explicit current source-owner request dependencies retained for exact invocation revalidation; not proof or mutation authority."},
     "target": {
       "type": "string",
       "description": "Host-selected target root."

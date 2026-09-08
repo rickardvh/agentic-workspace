@@ -11,6 +11,7 @@ Typed invocation for a routed AW action. This object owns machine action identit
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Typed invocation for a routed AW action. This object owns machine action identity; rendered commands are display or manual transport forms. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| `source_requests` | array of ref `source_decision_input.schema.json#/$defs/public_request` | no |  | Explicit current source-owner request dependencies retained for exact invocation revalidation; not proof or mutation authority. |  |  |
 | `kind` | const `"agentic-workspace/operation-invocation/v1"` | yes |  | Schema discriminator for typed operation invocations. |  |  |
 | `producer_module` | string | no |  | Canonical module that produced the typed invocation. |  |  |
 | `producer_function` | string | no |  | Canonical function that produced the typed invocation. |  |  |

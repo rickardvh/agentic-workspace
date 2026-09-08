@@ -916,6 +916,7 @@
       "properties": {
         "operation_id": {"type": "string", "minLength": 1},
         "dependency_revision": {"type": "string", "minLength": 1, "description": "Owner-derived revision of material action dependencies, excluding unrelated source changes."},
+        "source_requests": {"type": "array", "maxItems": 16, "items": {"$ref": "#/$defs/public_request"}, "description": "Exact current source-owner requests retained as invocation dependencies; delivery is not proof or mutation authority."},
         "effect_generation": {"type": "string", "description": "Owner-authorized repeat boundary; absent means the initial logical effect, never ambient revision churn."},
         "arguments": {"type": "object"},
         "effects": {"type": "array", "items": {"type": "string", "minLength": 1}},
@@ -1315,10 +1316,10 @@
     },
     "system_intent_read_arguments": {
       "type": "object",
-      "description": "Exact current governing source read; no interpretation or acceptance authority.",
+      "description": "Exact current owner-selected source read; no interpretation, mutation or acceptance authority.",
       "x-doc-role": "internal",
       "properties": {
-        "reference": {"type": "string", "minLength": 1, "description": "Reference returned by the current system-intent owner."},
+        "reference": {"type": "string", "minLength": 1, "description": "Reference returned by the current source owner."},
         "revision": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$", "description": "Exact current source byte identity."}
       },
       "required": ["reference", "revision"],

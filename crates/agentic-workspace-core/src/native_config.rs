@@ -216,7 +216,8 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                         || (source == SHARED
                             && matches!(
                                 field.as_str(),
-                                "system_intent.sources"
+                                "workspace.agent_instructions_file"
+                                    | "system_intent.sources"
                                     | "system_intent.preferred_source"
                                     | "modules.enabled"
                                     | "cli_compatibility.contract_schema"
@@ -293,7 +294,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
         "sources":sources,"residuals":residuals,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
-        "modules":shared["modules"]["enabled"],"system_intent":shared["system_intent"],
+        "agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"system_intent":shared["system_intent"],
         "assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
             "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
