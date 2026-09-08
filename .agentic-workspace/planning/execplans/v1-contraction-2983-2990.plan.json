@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Obtain independent review of #3166/#3167/#3168. Continue remaining native P0/P1 owners from the current cumulative audit: broader configuration, host-native/shared-worktree lifecycle, Memory/correction, and failure/dispute/convergence learning. Keep #2767 open beyond the bounded invocation writer; aggregate #2909 and exact #2990 only after owner outcomes are admitted.",
+  "next_action": "Address #3168 blocking integration review: replace retired external-consumer/runtime journeys with current native artifact lifecycle proof preserving isolation/module/payload guarantees; reconcile the missing Memory ledger requirement and stale Verification command guidance; rerun exact-head CI. #3167 Planning is now reconciled at af247a793. Keep all broader native owner and release gates open.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -56,7 +56,7 @@
   "phase": "implementation",
   "proof": {
     "claims": [
-      "The real selected owner was natively maintained/recovered at revision 8. This update preserves the same identity, scope, relationships and unrelated original-checkout work.",
+      "The real selected owner was natively maintained/recovered at revision 10. This update preserves the same identity, scope, relationships and unrelated original-checkout work.",
       "#3167 evidence remains bounded: native process execution and return admission reach Planning/Verification; matched real Codex and retained-local extraction demonstrate one current retained-and-checked contextual signal, not host-native/shared-worktree completion or general target quality.",
       "#3168 configuration writer: 21 current advisory/configuration cases passed across native, Python, TypeScript and JSON; one Windows file-symlink case skipped, directory-junction rejection passed. Byte-preserving shared/local writes, bounded human answer/defer, source/policy drift, forged action, unsupported key, stale replay and consumed-authorization ABA rejection passed.",
       "96 Rust tests passed, with three ignored helpers. The new interruption test covers pre-publication retry, post-publication receipt recovery without rewriting, and last-moment policy drift. An earlier neighboring native run passed 119 cases with one file-symlink skip. Commit format/lint/type checks passed.",
@@ -130,7 +130,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 9,
+  "revision": 11,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -182,18 +182,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/cd97a1c191600b18fe73e370d369f68cd2cd9a5a756dc1f0752ec7099a41aef0.attempt.json",
-        "revision": "sha256:52cc73931896a7db468dfb36d18b89acfe936e410b27d1df850b2a735196ef31",
+        "path": ".agentic-workspace/local/effects/a629b7cd76623b832a4a6b4d8ef55df9d1214b08626b7fc078fabb9c12c0cdf3.attempt.json",
+        "revision": "sha256:1ada964797b0b0a83934a8d1e00bac18e8a765280203d2fd325572b1fb11e1e1",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/cd97a1c191600b18fe73e370d369f68cd2cd9a5a756dc1f0752ec7099a41aef0.result.json",
-        "revision": "sha256:4c69ab62aacc67d5c5849783b5e238488a0ecb0a0d3998b58421b6b16f712fe6",
+        "path": ".agentic-workspace/local/effects/a629b7cd76623b832a4a6b4d8ef55df9d1214b08626b7fc078fabb9c12c0cdf3.result.json",
+        "revision": "sha256:877d54439f7e05949fe161812fc76b4c2ebd1f1ab6422f0662e27ba0e4c2e9d2",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:7d72c2de3ca479b620440270e940968dd46f66ef515c70760bae12201442a759",
+    "invocation_revision": "sha256:d278b78b2cf3dbfa0beacf61691021d435da8664e58b386d552d3f5e8210e902",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -201,7 +201,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:7acc08521c1248b3715c78fc1d136fc4454c3c24dc807d586559118e09ebe441",
+        "document_revision": "sha256:c56f8ee6c0b5b8c298f00a7c44eb504732664f48773e853708a1dce846464e3d",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
