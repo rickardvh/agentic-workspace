@@ -1019,7 +1019,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             packet["worker_context"] = _assignment_worker_context(packet)
         transport = _optional_text(values.get("transport")) or "manual"
         dispatch_configuration = _assignment_dispatch_configuration(identity=identity, transport=transport)
-        if not canonical_packet and dispatch_configuration.get("kind") in {"host-native", "native"}:
+        if not canonical_packet and (transport == "manual" or dispatch_configuration.get("kind") in {"host-native", "native"}):
             packet = _assignment_seal_host_native_packet(packet)
         packet_path = artifact("export/packet.json")
         prompt_path = artifact("export/prompt.md")
