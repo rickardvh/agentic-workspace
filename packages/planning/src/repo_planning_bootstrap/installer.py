@@ -754,12 +754,31 @@ def _lane_status_schema_details(record: dict[str, Any]) -> list[dict[str, Any]]:
     return details
 
 
+def _refuse_native_planning_write(path: Path) -> None:
+    """Restriction only: retained adapters cannot mutate a native owner carrier."""
+    if not path.is_file():
+        return
+    try:
+        value = json.loads(path.read_bytes())
+    except (ValueError, UnicodeDecodeError):
+        return
+    if isinstance(value, dict) and any(key in value for key in ("creation_provenance", "update_provenance")):
+        raise ValueError(
+            "Native Planning owner preserved; use its current planning/update/v1 request through agentic-workspace start/invoke."
+        )
+
+
 def _write_schema_backed_planning_record(*, record_path: Path, record: dict[str, Any], schema_path: Path) -> None:
     findings = _json_schema_findings(payload=record, schema_path=schema_path)
     if findings:
         raise ValueError(f"planning record does not validate against {schema_path.name}: {'; '.join(findings)}")
     record_path.parent.mkdir(parents=True, exist_ok=True)
-    record_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    existed = record_path.exists()
+    _refuse_native_planning_write(record_path)
+    # Exclusive creation cannot overwrite a native owner that wins an absent-path race.
+    mode = "w" if existed else "x"
+    with record_path.open(mode, encoding="utf-8", newline="\n") as output:
+        output.write(json.dumps(record, ensure_ascii=False, indent=2) + "\n")
 
 
 def planning_record_schema_findings(record_path: Path) -> list[str]:
@@ -1613,6 +1632,7 @@ def _backfill_review_records(target_root: Path) -> None:
             _write_review_record(record_path=record_path, record=record)
         # Remove the derived .md now that a canonical .review.json exists
         if record_path.exists() and review_path.exists():
+            _refuse_native_planning_write(review_path)
             review_path.unlink()
 
 
@@ -1680,6 +1700,7 @@ def _backfill_execplan_records(target_root: Path) -> None:
                 _write_execplan_record(record_path=record_path, record=record)
             # Remove the derived .md now that a canonical .plan.json exists
             if record_path.exists() and plan_path.exists():
+                _refuse_native_planning_write(plan_path)
                 plan_path.unlink()
 
 
@@ -1696,6 +1717,7 @@ def _cleanup_derived_markdown_views(target_root: Path) -> None:
                 continue
             record_path = _canonical_execplan_record_path(md_path)
             if record_path.exists():
+                _refuse_native_planning_write(md_path)
                 md_path.unlink()
     review_dir = target_root / ".agentic-workspace" / "planning" / "reviews"
     if review_dir.exists():
@@ -1704,6 +1726,7 @@ def _cleanup_derived_markdown_views(target_root: Path) -> None:
                 continue
             record_path = _canonical_review_record_path(md_path)
             if record_path.exists():
+                _refuse_native_planning_write(md_path)
                 md_path.unlink()
 
 
@@ -1837,6 +1860,7 @@ def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = Fal
     for relative in removable:
         destination = target_root / relative
         if destination.exists():
+            _refuse_native_planning_write(destination)
             destination.unlink()
 
     _prune_empty_parent_dirs(target_root=target_root, relatives=removable)
@@ -5074,6 +5098,7 @@ def _apply_reconcile_safe_prune(
                 continue
             removed = path.exists()
             if removed and not dry_run:
+                _refuse_native_planning_write(path)
                 path.unlink()
         else:
             skipped.append({**target, "reason": "cleanup action is not supported by safe-prune apply"})
@@ -17403,6 +17428,7 @@ def archive_lane_record(
         _add_planning_mutation_proof_actions(result)
         return result
     _write_lane_record(record_path=archive_path, record=archived)
+    _refuse_native_planning_write(record_path)
     record_path.unlink()
     result.add("archived", archive_path, "moved closed lane record to lanes/archive")
     result.add("derived", archive_path, f"archived lane '{slug}' is absent from live views")
@@ -17567,6 +17593,7 @@ def _promote_decomposition_lane_to_execplan(
     if selection_result.reason_code:
         result.reason_code = selection_result.reason_code
         result.recovery_command = selection_result.recovery_command
+        _refuse_native_planning_write(record_path)
         record_path.unlink()
         result.add("manual review", record_path, f"local owner selection failed; promotion rolled back: {selection_result.reason_code}")
         return result
@@ -17924,12 +17951,14 @@ def create_execplan_scaffold(
     except OSError as exc:
         if original_record is None:
             if record_path.exists():
+                _refuse_native_planning_write(record_path)
                 record_path.unlink()
         else:
             record_path.write_bytes(original_record)
         if lane_record_update is not None:
             if original_lane is None:
                 if lane_record_update[0].exists():
+                    _refuse_native_planning_write(lane_record_update[0])
                     lane_record_update[0].unlink()
             else:
                 lane_record_update[0].write_bytes(original_lane)
@@ -18428,6 +18457,7 @@ def intake_planning_artifact(
             if dry_run:
                 result.add("would remove", artifact_path, "remove source artifact after canonical execplan intake")
             else:
+                _refuse_native_planning_write(artifact_path)
                 artifact_path.unlink()
                 result.add("removed", artifact_path, "removed source artifact after canonical execplan intake")
         result.add("next safe action", target_root / PLANNING_STATE_PATH, "agentic-planning summary --target . --format json")
@@ -18462,6 +18492,7 @@ def intake_planning_artifact(
     destination.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     result.add("created", destination, "canonical planning-decomposition/v1 record")
     if remove_source and destination != artifact_path:
+        _refuse_native_planning_write(artifact_path)
         artifact_path.unlink()
         result.add("removed", artifact_path, "removed source artifact after canonical decomposition intake")
     result.add("next safe action", target_root / PLANNING_STATE_PATH, "agentic-planning summary --target . --format json")
@@ -19297,6 +19328,11 @@ def targeted_execplan_write(
     if plan_path is None:
         return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "ambiguous-or-missing-owner"}
     record_path = _canonical_execplan_record_path(plan_path)
+    if apply:
+        try:
+            _refuse_native_planning_write(record_path)
+        except ValueError as exc:
+            return {"kind": "agentic-planning/targeted-execplan-write/v1", "status": "native-owner-required", "message": str(exc)}
     record = _load_execplan_record(record_path)
     if record is None:
         return {
@@ -21629,6 +21665,7 @@ def _prepare_execplan_closeout(
         }
         selected_path.write_text(json.dumps(selected_carry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         if str(carry_selection.get("selected_key") or "") == selected_key:
+            _refuse_native_planning_write(carry_selection_path)
             carry_selection_path.unlink(missing_ok=True)
         result.add("consumed local carry", selected_path, "marked the uniquely selected carry consumed after durable closeout write")
     result.add("updated", record_path, "prepared normalized closeout fields before archive validation")
@@ -24046,12 +24083,15 @@ def archive_execplan(
     if retain_archive:
         archive_dir.mkdir(parents=True, exist_ok=True)
         if has_record:
+            _refuse_native_planning_write(record_path)
+            _refuse_native_planning_write(destination_record)
             shutil.move(str(record_path), str(destination_record))
             if archive_record != closeout_record:
                 _write_execplan_record(record_path=destination_record, record=archive_record)
         else:
             _write_execplan_record(record_path=destination_record, record=archive_record)
         if plan_path.exists() and plan_path != record_path:
+            _refuse_native_planning_write(plan_path)
             plan_path.unlink()
     else:
         if archive_retention_skipped or apply_cleanup:
@@ -24061,8 +24101,10 @@ def archive_execplan(
                 record=closeout_evidence_record,
             )
         if plan_path.exists() and plan_path != record_path:
+            _refuse_native_planning_write(plan_path)
             plan_path.unlink()
         if record_path.exists():
+            _refuse_native_planning_write(record_path)
             record_path.unlink()
     # Legacy aggregate cleanup is derived from bounded owner removal; the
     # compatibility file is never rewritten by closeout.
@@ -24132,6 +24174,7 @@ def _restore_planning_archive_transaction(target_root: Path, snapshot: dict[Path
     if last_closeout_path.is_file():
         current_files.add(last_closeout_path)
     for path in current_files - snapshot.keys():
+        _refuse_native_planning_write(path)
         path.unlink()
     for path, content in snapshot.items():
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -24266,6 +24309,7 @@ def _compact_retained_execplan(
         evidence_path=receipt_path,
         plan_id=str(receipt.get("plan_id") or plan_path.stem),
     )
+    _refuse_native_planning_write(plan_path)
     plan_path.unlink()
     result.reason_code = "retention-applied"
     return result
@@ -28056,13 +28100,17 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
 
 def _apply_planning_writes_atomically(paths: list[Path], apply: Callable[[], None]) -> None:
     """Restore every affected Planning surface when a multi-file mutation fails."""
+    for path in paths:
+        _refuse_native_planning_write(path)
     snapshots = {path: path.read_bytes() if path.exists() else None for path in paths}
     try:
         apply()
     except Exception:
         for path, original in snapshots.items():
+            _refuse_native_planning_write(path)
             if original is None:
                 if path.exists():
+                    _refuse_native_planning_write(path)
                     path.unlink()
             else:
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -28287,6 +28335,7 @@ def _migrate_legacy_planning_state(*, target_root: Path, result: InstallResult, 
             return receipt
         else:
             receipt["preserved_owner"]["selection_status"] = "selected-local"
+    _refuse_native_planning_write(state_path)
     state_path.unlink()
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")

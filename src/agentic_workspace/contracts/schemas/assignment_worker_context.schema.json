@@ -61,6 +61,8 @@
       "properties": {
         "required": {"description": "Inputs required before work proceeds.", "items": {"type": "string"}, "type": "array"},
         "read_first": {"description": "Exact references or selectors the worker reads before requesting deeper context.", "items": {"type": "string"}, "type": "array"},
+        "capsule": {"description": "Exact currently observed input bodies selected by the acting agent for this read-only assignment.", "type": "array", "maxItems": 8, "items": {"type": "object", "additionalProperties": false, "required": ["reference", "revision", "content"], "properties": {"reference": {"type": "string"}, "revision": {"type": "string"}, "content": {"type": "string"}}}},
+        "task_requirements": {"description": "Unchanged current task requirement owner projection; this grants no capability or evidence authority.", "type": "object"},
         "lazy_expansion_rule": {"description": "Rule preventing construction or transmission of unrelated context.", "type": "string"}
       },
       "required": ["required", "read_first", "lazy_expansion_rule"],

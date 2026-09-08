@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Seal current native read-only manual handoffs and admit exact unproven return observations through shared packet semantics."
+issues = [2947, 2210, 2817]

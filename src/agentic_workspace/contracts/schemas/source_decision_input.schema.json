@@ -59,6 +59,193 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "readonly_handoff_inputs": {
+  "description": "Current acting-agent completeness judgment for necessary read-only assignment inputs; source readability/currentness is observed separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "input_refs",
+    "complete",
+    "reason"
+  ],
+  "properties": {
+    "input_refs": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    }
+  }
+},
+    "readonly_handoff_export": {
+  "description": "Read-only export of one current comparative assignment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "assignment_revision"
+  ],
+  "properties": {
+    "assignment_revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  }
+},
+    "readonly_handoff_return": {
+  "description": "Structured read-only worker observation; never proof, authenticated review or completion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "returned"
+  ],
+  "properties": {
+    "returned": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "assignment_id",
+        "assignment_revision",
+        "run_id",
+        "target",
+        "packet_integrity",
+        "result_delivery",
+        "changed_paths",
+        "patch",
+        "summary",
+        "stop_conditions_hit"
+      ],
+      "properties": {
+        "assignment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "assignment_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "packet_integrity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "kind": {
+          "const": "agentic-workspace/delegated-return/v1"
+        },
+        "result_delivery": {
+          "const": "unapplied-patch"
+        },
+        "changed_paths": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "patch": {
+          "const": ""
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "stop_conditions_hit": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      }
+    }
+  }
+},
+
+    "assignment_comparative_judgment": {
+  "type": "object",
+  "description": "One current comparative execution assessment by the acting orchestrator; never a persistent preference, capability observation or proof.",
+  "additionalProperties": false,
+  "required": [
+    "revision",
+    "alternative",
+    "reason",
+    "uncertainties"
+  ],
+  "properties": {
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "alternative": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "uncertainties": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    }
+  }
+},
+    "execution_configuration_choice": {
+      "description": "Current feasible execution configuration choice; neither assignment nor launch authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "candidate"
+      ],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Exact current execution configuration inventory revision."
+        },
+        "candidate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Exact eligible configuration ID returned by the owner."
+        }
+      }
+    },
     "verification_strategy_request": {
       "type": "object",
       "additionalProperties": false,
@@ -97,6 +284,15 @@
         }
       },
       "description": "Current Verification strategy assessment bound by its public request to exact task, work, source and capability identities."
+    },
+    "session_logging_policy_input": {
+      "type": "object", "additionalProperties": false,
+      "description": "Maintainer logging policy over canonical local configuration and the existing process disable override; never workflow authority.",
+      "required": ["local", "disable_override"],
+      "properties": {
+        "local": {"type": "object", "description": "Current local source, separately validated against workspace_local_override.schema.json."},
+        "disable_override": {"type": "string", "description": "Observed AW_SESSION_LOGGING_DISABLE value; exact 1 disables capture."}
+      }
     },
     "verification_execute_request": {
       "type": "object",
@@ -1037,6 +1233,10 @@
       },
       "required": ["owner", "revision"],
       "not": {"required": ["terminal"]}
+    },
+    "decision_source_read_request": {
+      "description":"Select one exact currently returned decision admission for bounded rationale retrieval. These public fields grant no source admission, currentness, custody or executable authority.",
+      "allOf":[{"$ref":"#/$defs/decision_admission"}]
     },
     "memory_note_read_request": {
       "type": "object",

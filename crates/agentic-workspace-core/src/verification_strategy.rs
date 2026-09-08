@@ -91,10 +91,19 @@ pub(crate) fn view(
             recommended.insert(profile.into());
         }
     }
+    let planning_profiles =
+        planning.map(|subject| &subject["state"]["proof"]["adaptive_assurance"]["proof_profiles"]);
+    let planning_required: BTreeSet<String> = planning_profiles
+        .map(strings)
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
+    required.extend(planning_required.iter().cloned());
     selected.extend(required.iter().cloned());
-    // The current native subject alone cannot assert an absent former Planning
-    // profile selection. The Planning owner must supply that semantic projection.
+    // These exact declarations are validated and made material by Planning.
+    // Explicit empty differs from absent; neither is inferred from prose.
     if planning.is_some()
+        && !planning_profiles.is_some_and(Value::is_array)
         && policy["profiles"]
             .as_object()
             .is_some_and(|profiles| !profiles.is_empty())
@@ -141,7 +150,7 @@ pub(crate) fn view(
         disallowed.extend(denied.clone());
         let revision = digest(profile)?;
         let source_ref = format!(".agentic-workspace/config.toml#assurance.proof_profiles.{id}");
-        profiles.push(json!({"id":id,"source_ref":source_ref,"source_revision":revision,"selected_by":if required.contains(&id){"binding-requirement"}else{"agent-assessment"},"required_count":required_commands.len(),"optional_count":optional.len(),"disallowed_count":denied.len(),"evidence_status":"not-established-by-selection"}));
+        profiles.push(json!({"id":id,"source_ref":source_ref,"source_revision":revision,"selected_by":if planning_required.contains(&id){"planning-owner"}else if required.contains(&id){"binding-requirement"}else{"agent-assessment"},"required_count":required_commands.len(),"optional_count":optional.len(),"disallowed_count":denied.len(),"evidence_status":"not-established-by-selection"}));
         if !required_commands.is_empty() {
             obligations.push(json!({"profile_id":id,"required_commands":required_commands,"source_ref":source_ref,"source_revision":revision,"status":"current-proof-evidence-required"}));
         }

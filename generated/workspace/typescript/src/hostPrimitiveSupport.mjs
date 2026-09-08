@@ -30,7 +30,7 @@ import {
 } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { routeDiscovery } from './native/semantic-decision.mjs';
+import { routeDiscovery, assignmentPacket } from './native/semantic-decision.mjs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -1038,6 +1038,14 @@ function existingPlanningSelectionCarrier(targetRoot) {
     .map((path) => join(targetRoot, path)).find((path) => existsSync(path));
 }
 
+function refuseNativePlanningWrite(path) {
+  if (!existsSync(path)) return;
+  const record = readJson(path);
+  if (isObject(record) && ('creation_provenance' in record || 'update_provenance' in record)) {
+    throw new Error('Native Planning owner preserved; use its current planning/update/v1 request through agentic-workspace start/invoke.');
+  }
+}
+
 function planningNewPlanResult(values, operationId) {
   const result = lifecycleResult(values, operationId);
   const slug = String(values.id ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -1117,6 +1125,7 @@ function planningNewPlanResult(values, operationId) {
     return finalizeMutationOutcome(result);
   }
   const recordExisted = existsSync(recordPath);
+  refuseNativePlanningWrite(recordPath);
   if (recordExisted && values.overwrite !== true) {
     result.reason_code = 'target-already-exists';
     result.conflict_owner = owner;
@@ -1206,6 +1215,7 @@ function planningNewPlanResult(values, operationId) {
       const displacedSurface = String(item.surface ?? '');
       const displacedPath = displacedSurface ? join(result.target_root, displacedSurface) : '';
       if (displacedPath && existsSync(displacedPath)) {
+        refuseNativePlanningWrite(displacedPath);
         const displacedPlan = readJson(displacedPath);
         if (isObject(displacedPlan.active_milestone)) displacedPlan.active_milestone.status = 'planned';
         writeFileSync(displacedPath, `${JSON.stringify(displacedPlan, null, 2)}\n`, 'utf8');
@@ -1238,6 +1248,7 @@ function planningNewPlanResult(values, operationId) {
   // Activation must use the same absent-only selection owner as owner-select.
   // Preserve a created draft on incomplete admission: a later read/check/delete
   // could remove another writer's replacement and cannot prove rollback custody.
+  refuseNativePlanningWrite(recordPath);
   writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, { encoding: 'utf8', flag: recordExisted ? 'w' : 'wx' });
   if (activate) {
     const selected = planningOwnerSelectResult({
@@ -2366,45 +2377,9 @@ function assignmentDispatchConfiguration(identity, transport) {
   };
 }
 
-function assignmentWorkerContext(packet) {
-  const identity = isObject(packet.assignment_identity) ? packet.assignment_identity : {};
-  return {
-    kind: 'agentic-workspace/assignment-worker-context/v1',
-    assignment: { id: assignmentText(packet.assignment_id), revision: assignmentText(packet.assignment_revision) || assignmentText(identity.revision), run_id: assignmentText(packet.run_id), target: assignmentText(packet.target) || assignmentText(identity.target) },
-    intent: { outcome: assignmentText(identity.human_intent), task_class: assignmentText(identity.task_class), role: assignmentText(identity.role) },
-    scope: { class: assignmentText(identity.scope_class), allowed_paths: Array.isArray(identity.allowed_paths) ? identity.allowed_paths.map(String) : [] },
-    effects: { allowed: Array.isArray(identity.allowed_effects) ? identity.allowed_effects.map(String) : [], prohibited: Array.isArray(identity.prohibited_effects) ? identity.prohibited_effects.map(String) : [] },
-    inputs: { required: Array.isArray(identity.required_inputs) ? identity.required_inputs.map(String) : [], read_first: Array.isArray(identity.read_first) ? identity.read_first.map(String) : [], lazy_expansion_rule: 'Read only these exact references first; request or resolve deeper context only when the assignment requires it.' },
-    proof: { obligation_id: assignmentText(identity.proof_obligation_id), obligation_revision: assignmentText(identity.proof_obligation_revision), worker_authority: false },
-    stop_conditions: Array.isArray(identity.stop_conditions) ? identity.stop_conditions.map(String) : [],
-    authority: { semantic_source: 'canonical-assignment-identity', claim_authority: isObject(identity.claim_authority) ? identity.claim_authority : {}, scope_widening_allowed: false },
-    return_contract: isObject(packet.return_contract) ? packet.return_contract : {},
-  };
-}
-
-function assignmentPacketIntegrity(packet) {
-  const subject = JSON.parse(JSON.stringify(packet));
-  subject.packet_integrity = '';
-  for (const contract of [subject.return_contract, subject.worker_context?.return_contract]) {
-    if (isObject(contract?.required_identity)) contract.required_identity.packet_integrity = '';
-  }
-  return assignmentDigest(subject);
-}
-
-function assignmentSealHostNativePacket(packet) {
-  const sealed = JSON.parse(JSON.stringify(packet));
-  const contract = isObject(sealed.return_contract) ? sealed.return_contract : {};
-  contract.required_fields = [...new Set([...(Array.isArray(contract.required_fields) ? contract.required_fields.map(String) : []), 'assignment_id', 'packet_integrity', 'result_delivery'])];
-  contract.required_identity = { assignment_id: sealed.assignment_id, assignment_revision: sealed.assignment_revision, run_id: sealed.run_id, target: sealed.target, packet_integrity: '' };
-  sealed.return_contract = contract;
-  sealed.worker_context = assignmentWorkerContext(sealed);
-  const integrity = assignmentPacketIntegrity(sealed);
-  sealed.packet_integrity = integrity;
-  sealed.return_contract.required_identity.packet_integrity = integrity;
-  sealed.worker_context = assignmentWorkerContext(sealed);
-  if (assignmentPacketIntegrity(sealed) !== integrity) throw new Error('host-native assignment packet integrity did not stabilize');
-  return sealed;
-}
+function assignmentWorkerContext(packet) { return assignmentPacket({action: 'worker-context', packet}); }
+function assignmentPacketIntegrity(packet) { return assignmentPacket({action: 'integrity', packet}).integrity; }
+function assignmentSealHostNativePacket(packet) { return assignmentPacket({action: 'seal', packet}); }
 
 function assignmentExportPrompt(packet) {
   const context = isObject(packet.worker_context) ? packet.worker_context : assignmentWorkerContext(packet);

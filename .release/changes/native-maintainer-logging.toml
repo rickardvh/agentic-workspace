@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Capture bounded native maintainer diagnostics through current local policy and existing registered logical streams."

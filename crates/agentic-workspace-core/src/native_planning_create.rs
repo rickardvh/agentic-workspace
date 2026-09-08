@@ -6,7 +6,7 @@ use std::path::Path;
 
 const KIND: &str = "planning/create/v1";
 const PROVENANCE: &str = "creation_provenance";
-const MATERIAL: &[&str] = &[
+pub(crate) const MATERIAL: &[&str] = &[
     "title",
     "owner_level",
     "intent",
@@ -20,16 +20,19 @@ const MATERIAL: &[&str] = &[
     "references",
     "blockers",
 ];
+pub(crate) const ASSURANCE: &[&str] =
+    &["adaptive_assurance", "risk_registry_refs", "invariant_refs"];
 fn error(message: impl ToString) -> CoreError {
     CoreError::new(message.to_string())
 }
-fn canonical_schema() -> Value {
+pub(crate) fn canonical_schema() -> Value {
     serde_json::from_str(include_str!("../../../packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-execplan.schema.json")).expect("canonical Planning schema")
 }
 pub(crate) fn declaration() -> Value {
     let canonical = canonical_schema();
     let properties: serde_json::Map<String, Value> = MATERIAL
         .iter()
+        .chain(ASSURANCE)
         .map(|key| ((*key).to_owned(), canonical["properties"][key].clone()))
         .collect();
     json!({"kind":KIND,"result_kind":"agentic-planning/creation-result/v1","input_schema":{
@@ -137,6 +140,7 @@ pub(crate) fn inspect_origin(
     if record["outcome"] != outcome(invocation)? {
         return Err(error("Planning creation outcome mismatch"));
     }
+    crate::native_planning_update::inspect(target, relative, body)?;
     Ok(Some(
         json!({"invocation":invocation,"outcome":record["outcome"],"custody":prepared["custody"]}),
     ))

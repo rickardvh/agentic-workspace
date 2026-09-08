@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Discharge exact profile command obligations from admitted current native execution evidence without granting task or review sufficiency."
+issues = [2334, 2613, 2986, 2909]

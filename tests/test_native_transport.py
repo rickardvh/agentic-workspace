@@ -541,7 +541,7 @@ def test_hard_ineligible_native_route_does_not_probe_provider(tmp_path, monkeypa
     if prohibition == "safety":
         policy.safe_to_auto_run_commands = False
     elif prohibition == "authority":
-        policy.transport_authority = "manual-only"
+        policy.transport_authority = "manual"
     elif prohibition == "capability":
         profile["capability_mismatch"] = True
     elif prohibition == "proof":

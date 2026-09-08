@@ -70,6 +70,8 @@ fn residual(source: &str, field: &str, value: &Value) -> Value {
     // their current source meaning without turning persistence into authority.
     let advisory = if field == "workspace.optimization_bias" {
         Some("advisory-rendering-preference")
+    } else if field == "workspace.advanced_features" {
+        Some("optional-diagnostic-preference")
     } else if field.starts_with("workflow_obligations.")
         && value["force"] == "recommended"
         && value.as_object().is_some_and(|fields| {
@@ -197,6 +199,18 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
             }
         }
     }
+    let assignment_source = crate::native_assignment_policy::load(target);
+    let mut assignment_policy = Value::Null;
+    match assignment_source {
+        Ok(observed)=>{
+            local=observed.effective;
+            assignment_policy=observed.policy;
+            assignment_policy["source_revision"]=json!(observed.revision);
+            for source in observed.sources {if !sources.iter().any(|s|s["reference"]==source["reference"]){sources.push(source);}}
+
+        },
+        Err(error)=>blockers.push(json!({"code":"assignment-policy-source-unresolved","message":error.to_string(),"affects":["effect:implementation"]})),
+    }
     for (source, value) in [(SHARED, &shared), (LOCAL, &local)] {
         for (section, content) in value.as_object().into_iter().flatten() {
             if section == "schema_version" {
@@ -233,6 +247,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 field.as_str(),
                                 "safety.safe_to_auto_run_commands"
                                     | "safety.requires_human_verification_on_pr"
+                                    | "session_logging.enabled"
+                                    | "session_logging.path_mode"
+                                    | "session_logging.redact_local_paths"
                             ));
                 let consumed = consumed
                     || (source == SHARED
@@ -247,6 +264,23 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                         && shared["modules"]["enabled"]
                             .as_array()
                             .is_none_or(|modules| modules.iter().any(|m| m == "verification")));
+                let consumed = consumed
+                    || (source == LOCAL
+                        && !assignment_policy.is_null()
+                        && matches!(
+                            field.as_str(),
+                            "workspace.shared_config_path"
+                                | "delegation.assignment_policy"
+                                | "delegation.transport_authority"
+                                | "delegation.current_target"
+                                | "delegation.human_override_policy"
+                                | "delegation.mode"
+                                | "delegation.execution_role"
+                                | "delegation.selection_objective"
+                                | "delegation.underfit_behavior"
+                                | "delegation.down_routing_behavior"
+                                | "delegation.manual_transport_policy"
+                        ));
                 if !consumed && present(value) {
                     residuals.push(residual(source, &field, value));
                 }
@@ -316,7 +350,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"system_intent":shared["system_intent"],
-        "assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
+        "assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
             "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
             "decision_record_target":shared["assurance"]["decision_record_target"],
@@ -439,8 +473,14 @@ mod tests {
                 .iter()
                 .any(|v| v["code"] == "local-command-safety-ceiling")
         );
+        assert_eq!(
+            result["assignment_policy"]["transport_authority"],
+            "automatic"
+        );
+        assert_eq!(result["assignment_policy"]["execution_permitted"], false);
+        assert_eq!(result["assignment_policy"]["effective_mode"], "suggest");
         assert!(
-            result["residuals"]
+            !result["residuals"]
                 .as_array()
                 .unwrap()
                 .iter()

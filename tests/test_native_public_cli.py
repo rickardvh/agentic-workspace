@@ -127,7 +127,7 @@ def consume(surface: str, binary: Path, native: Path, context: dict, *, host_pat
         ]
         stdin = None
     environment = {**os.environ, "PATH": host_path} if surface == "native" else None
-    result = subprocess.run(command, input=stdin, text=True, capture_output=True, cwd=ROOT, check=False, env=environment)
+    result = subprocess.run(command, input=stdin, text=True, encoding="utf-8", capture_output=True, cwd=ROOT, check=False, env=environment)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 
@@ -210,6 +210,92 @@ def test_real_former_planning_native_invocation_and_fresh_continuation(
     assert replayed["status"] == applied["status"]
     assert replayed["value"] == applied["value"]
     assert files == {path.relative_to(tmp_path): path.read_bytes() for path in tmp_path.rglob("*") if path.is_file()}
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+    reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+    path = tmp_path / reference
+    path.parent.mkdir(parents=True)
+    body = json.loads((ROOT / reference).read_bytes())
+    # Real compact former owner plus exact existing typed assurance declarations
+    # from the worker-context owner, and explicit fixture-owned risk/invariant refs.
+    richer = json.loads((ROOT / ".agentic-workspace/planning/execplans/issue-2818-worker-context-cost.plan.json").read_bytes())
+    body["adaptive_assurance"] = richer["adaptive_assurance"]
+    body["risk_registry_refs"] = ["risk:fixture"]
+    body["invariant_refs"] = ["invariant:fixture"]
+    path.write_text(json.dumps(body))
+    (path.parent.parent / "state.toml").write_text(
+        f'[[active.execplans]]\nid="{body["id"]}"\npath="{reference.as_posix()}"\nstatus="active"\n'
+    )
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        "schema_version=1\n"
+        '[assurance.requirements.profile]\nlevel="high"\nforce="blocking"\napplies_to_proof_profiles=["assignment lifecycle"]\n'
+        '[assurance.requirements.risk]\nlevel="high"\nforce="blocking"\napplies_to_risk_refs=["risk:fixture"]\n'
+        '[assurance.requirements.invariant]\nlevel="high"\nforce="blocking"\napplies_to_invariant_refs=["invariant:fixture"]\n'
+        '[assurance.proof_profiles."assignment lifecycle"]\nrequired_commands=["echo bounded"]\n'
+        '[assurance.proof_profiles."target evidence and best-fit selection"]\nrequired_commands=["echo contextual"]\n'
+        '[assurance.proof_profiles."supported-host dogfood"]\nrequired_commands=["echo host"]\n'
+    )
+    context = {"target": str(tmp_path), "task": "Continue the bounded current outcome"}
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value)
+
+    def statuses(value: dict) -> set[str]:
+        return {r["status"] for r in value["verification"]["assurance_applicability"]["requirements"]}
+
+    initial = call(context)
+    assert statuses(initial) == {"unresolved"}
+    continuation = initial["planning"]["requests"][0]
+    continued = call({**context, "request": continuation})
+    assert statuses(continued) == {"applicable"}
+    assert continued["planning"]["current_owner"]["reconciliation"]["coverage"]["complete"] is True
+    action = continued["decision_packet"]["primary_action"]
+    call({**context, "invocation": action})
+    fresh = call(context)
+    assert statuses(fresh) == {"applicable"}
+    old_subject = fresh["planning"]["current_owner"]["reconciliation"]["subject"]
+    assert old_subject["state"]["proof"]["adaptive_assurance"] == richer["adaptive_assurance"]
+    assert fresh["verification"]["evidence"] == []
+    strategy = fresh["verification"]["strategy_control"]
+    assert {r["id"] for r in strategy["selected_profiles"]} == set(richer["adaptive_assurance"]["proof_profiles"])
+    assert all(
+        r["selected_by"] == "planning-owner" and r["evidence_status"] == "not-established-by-selection"
+        for r in strategy["selected_profiles"]
+    )
+    assert len(strategy["obligations"]) == 3
+    assert "planning-assurance-profile-projection-unavailable" not in strategy["gaps"]
+    assert fresh["decision_packet"]["status"] != "terminal"
+    unrelated = {**fresh["planning"]["requests"][0], "arguments": {"answer": "unrelated-direct"}}
+    assert statuses(call({**context, "request": unrelated})) == {"not-applicable"}
+    old_claim = fresh["verification"]["requests"][0]
+    body["adaptive_assurance"]["proof_profiles"].append("missing-current-profile")
+    path.write_text(json.dumps(body))
+    missing = call(context)
+    missing = call({**context, "request": missing["planning"]["requests"][0]})
+    assert "selected-proof-profile-unavailable:missing-current-profile" in missing["verification"]["strategy_control"]["gaps"]
+    assert missing["verification"]["strategy_control"]["execution_blocked"] is True
+    body["adaptive_assurance"]["proof_profiles"] = []
+    body["risk_registry_refs"] = []
+    del body["invariant_refs"]
+    path.write_text(json.dumps(body))
+    stale = call({**context, "request": old_claim})
+    assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
+    current = call(context)
+    request = current["planning"]["requests"][0]
+    revised = call({**context, "request": request})
+    rows = {r["id"]: r["status"] for r in revised["verification"]["assurance_applicability"]["requirements"]}
+    assert rows == {"profile": "not-applicable", "risk": "not-applicable", "invariant": "unresolved"}
+    assert revised["verification"]["strategy_control"]["selected_profiles"] == []
+    assert "planning-assurance-profile-projection-unavailable" not in revised["verification"]["strategy_control"]["gaps"]
+    assert revised["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != old_subject["revision"]
+    body["risk_registry_refs"] = "not a typed list"
+    path.write_text(json.dumps(body))
+    preserved = path.read_bytes()
+    with pytest.raises(AssertionError, match="invalid Planning assurance"):
+        call({**context, "request": call(context)["planning"]["requests"][0]})
+    assert path.read_bytes() == preserved
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -823,3 +909,108 @@ def test_native_enablement_change_stales_proof_execution(tmp_path: Path, shared_
         call({**context, "invocation": action})
     assert not (tmp_path / "count.txt").exists()
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_public_read_real_repository_decision_preserves_currentness(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    import tomllib
+
+    from tests.test_shared_core import _commit_native
+
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    reference = "docs/decisions/shared-semantic-authority.md"
+    source = (ROOT / reference).read_bytes()
+    path = tmp_path / reference
+    path.parent.mkdir(parents=True)
+    path.write_bytes(source)
+    # Real admitted rationale and its existing basis; no invented author or
+    # changed decision. This fixture's commit is a host admission, not review.
+    admitted = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text())["assurance"]["decision_record_revision"]
+    basis = subprocess.run(["git", "show", f"{admitted}:SYSTEM_INTENT.md"], cwd=ROOT, check=True, capture_output=True).stdout
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(basis)
+    record = json.loads(source.decode().split("```aw-decision\n", 1)[1].split("\n```", 1)[0])
+    assert record["authority"]["basis"][0]["revision"] == "sha256:" + hashlib.sha256(basis.replace(b"\r\n", b"\n")).hexdigest()
+    revision = _commit_native(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        f'schema_version=1\n[modules]\nenabled=[]\n[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n'
+    )
+    context = {
+        "target": str(tmp_path),
+        "task": "Review the public semantic boundary",
+        "changed": ["crates/agentic-workspace-core/src/lib.rs"],
+    }
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    initial = call(context)
+    request = initial["decision_sources"]["requests"][0]
+    assert initial["decision_packet"]["decision_context"]["consequences"][0]["id"] == record["id"]
+    assert "response" not in initial["decision_sources"]
+    selected = call({**context, "request": request})
+    response = selected["decision_sources"]["response"]
+    assert response["body"].replace("\r\n", "\n") == source.decode().replace("\r\n", "\n")
+    assert response["decision_state"]["status"] == "current"
+    assert response["authority_effect"] == "no-new-authority"
+    assert selected["decision_packet"]["status"] != "terminal"
+    quiet_context = {**context, "changed": ["unrelated.txt"]}
+    assert call(quiet_context)["decision_sources"]["requests"] == []
+    with pytest.raises(AssertionError):
+        call({**quiet_context, "request": request})
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(basis + b"\nChanged governing source\n")
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "request": request})
+    stale = call(context)
+    assert stale["decision_packet"]["decision_context"]["consequences"] == []
+    reread = call({**context, "request": stale["decision_sources"]["requests"][0]})
+    assert reread["decision_sources"]["response"]["decision_state"]["status"] == "stale"
+    path.write_bytes(source + b"\nUnadmitted source edit\n")
+    with pytest.raises(AssertionError, match="stale decision source"):
+        call({**context, "request": request})
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_public_decision_read_supersession_keeps_rationale_without_old_consequence(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    from copy import deepcopy
+
+    from tests.test_shared_core import _commit_native, _native_archive, _write_native
+
+    host, record = _native_archive(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+
+    def admit(revision: str) -> None:
+        config.write_text(
+            f'schema_version=1\n[modules]\nenabled=[]\n[assurance]\ndecision_record_target="design"\ndecision_record_revision="{revision}"\n'
+        )
+
+    admit(host["admitted_revision"])
+    context = {"target": str(tmp_path), "task": "Inspect the current component boundary", "changed": ["src/core.rs"]}
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    initial = call(context)
+    old_request = initial["decision_sources"]["requests"][0]
+    state = initial["decision_packet"]["decision_context"]["states"][0]
+    successor = deepcopy(record)
+    successor["id"] = "architecture/successor"
+    successor["consequence"] = "Use the current replacement consequence"
+    successor["supersedes"] = [{"id": record["id"], "material_revision": state["material_revision"], "scope": record["scope"]}]
+    _write_native(tmp_path / "design/successor.md", successor)
+    admit(_commit_native(tmp_path))
+    with pytest.raises(AssertionError):
+        call({**context, "request": old_request})
+    current = call(context)
+    assert [r["id"] for r in current["decision_packet"]["decision_context"]["consequences"]] == [successor["id"]]
+    historical_request = next(r for r in current["decision_sources"]["requests"] if r["arguments"]["id"] == record["id"])
+    historical = call({**context, "request": historical_request})
+    assert historical["decision_sources"]["response"]["decision_state"]["status"] == "superseded"
+    assert "Rationale stays in the repository" in historical["decision_sources"]["response"]["body"]
+    assert [r["id"] for r in historical["decision_packet"]["decision_context"]["consequences"]] == [successor["id"]]

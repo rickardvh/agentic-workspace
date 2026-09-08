@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose exact native-created Planning material updates through the current public request and retained owner custody."
+issues = [2970, 2986, 3000, 3001, 2984, 2909, 3077]

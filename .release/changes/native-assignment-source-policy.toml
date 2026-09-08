@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Reconcile current native assignment source policy through one shared reducer while preserving binding assignment and independent safety boundaries."
+issues = [2916, 2210, 2767]

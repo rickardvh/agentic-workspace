@@ -365,3 +365,107 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Option<Value>), CoreError>
     fallback["reconciliation"] = json!({"residue":residue, "native_owner":if native_configured {Some("repository")} else {None}, "fallback_owner":"memory", "destinations":destinations, "dismissals":[]});
     finish(Some(fallback))
 }
+
+const READ_KIND: &str = "decision-continuity/read-current-source/v1";
+const READ_OWNER: &str = "decision-continuity";
+/// Retrieval adapts existing admitted identity; it creates no authority or state.
+pub(crate) fn read_contract() -> Result<Value, CoreError> {
+    let canonical: Value = serde_json::from_str(include_str!(
+        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
+    ))
+    .map_err(error)?;
+    let mut shape = canonical["$defs"]["decision_source_read_request"].clone();
+    shape["$schema"] = canonical["$schema"].clone();
+    shape["$defs"] = json!({"decision_admission":canonical["$defs"]["decision_admission"],"decision_reference":canonical["$defs"]["decision_reference"]});
+    let declaration = json!({"kind":READ_KIND,"result_kind":"agentic-workspace/decision-source-read-result/v1","input_schema":shape});
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":READ_OWNER,"revision":crate::digest(&declaration)?,"requests":[declaration]}]});
+    contract["revision"] = json!(crate::digest(&contract)?);
+    Ok(contract)
+}
+/// Only the existing selected closure can be read. The continuity projection
+/// owns currentness and supersession; reading historical rationale does not.
+pub(crate) fn public_read(
+    target: &std::path::Path,
+    context: &Value,
+    decision: &Value,
+    work: &Value,
+    contract: &Value,
+    request: Option<&Value>,
+) -> Result<Value, CoreError> {
+    let revision =
+        crate::digest(&json!({"context":context,"projection":decision["decision_context"]}))?;
+    let owner = contract["owners"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|o| o["owner"] == READ_OWNER)
+        .ok_or_else(|| error("decision read owner missing"))?;
+    let selected: Vec<_> = context["admissions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|admission| {
+            admission["source"]["owner"] == "repository"
+                && decision["decision_context"]["states"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|state| {
+                        state["id"] == admission["id"]
+                            && state["material_revision"] == admission["material_revision"]
+                            && state["source"] == admission["source"]
+                    })
+        })
+        .cloned()
+        .collect();
+    let requests:Vec<_>=selected.iter().map(|admission| json!({"kind":"agentic-workspace/public-request/v1","id":format!("decision/read:{}",admission["id"].as_str().unwrap()),"owner":READ_OWNER,"owner_revision":owner["revision"],"source_revision":revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":READ_KIND,"arguments":admission})).collect();
+    let mut result = json!({"requests":requests,"source_revision":revision});
+    if let Some(request) = request {
+        crate::prepare_request_value(
+            json!({"request":request,"current_work":work,"capability_contract":contract}),
+        )?;
+        if request["owner"] != READ_OWNER
+            || request["source_revision"] != revision
+            || !selected.contains(&request["arguments"])
+        {
+            return Err(error(
+                "decision source read is stale or outside the current selected scope",
+            ));
+        }
+        let source = &request["arguments"]["source"];
+        let path = source["reference"]
+            .as_str()
+            .ok_or_else(|| error("decision source reference missing"))?;
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+        let bytes = read(&root, path)?;
+        if hash(&bytes) != source["revision"] {
+            return Err(error(
+                "decision source changed during read; reconcile current owner",
+            ));
+        }
+        // Validate only the bounded already-observed dependencies, not the archive.
+        for dependency in context["current_dependencies"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|d| d["owner"] == "repository")
+        {
+            let reference = dependency["reference"]
+                .as_str()
+                .ok_or_else(|| error("decision dependency reference missing"))?;
+            if hash(&read(&root, reference)?) != dependency["revision"] {
+                return Err(error(
+                    "decision dependency changed during read; reconcile current owner",
+                ));
+            }
+        }
+        let state = decision["decision_context"]["states"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|state| state["id"] == request["arguments"]["id"])
+            .ok_or_else(|| error("decision scope changed during read"))?;
+        result["response"] = json!({"kind":"agentic-workspace/decision-source-read-result/v1","status":"read","source":source,"decision_state":state,"body":std::str::from_utf8(&bytes).map_err(error)?,"authority_effect":"no-new-authority"});
+    }
+    Ok(result)
+}
