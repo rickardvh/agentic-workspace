@@ -41,7 +41,7 @@ The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
 | #2970 | evidence/conformance gap | The real selected owner is now native-authored revision 6 with concrete scope/proof, current merged frontier and dependencies, and no obsolete three-PR cap. Native re-entry and fresh-process recovery report current custody; stale update requests fail without mutation. Full owner-specific cumulative conformance and independent acceptance remain under #2909; no parent closure is inferred. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
-| #3041 | bounded implementation gap | No repo-owned `docs/adr/` archive or equivalent configured reconstruction decision archive was found. The ordinary repo seeding/promotion dogfood is absent. |
+| #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
 | #2981 | evidence/conformance gap | Current reusable-conclusion tests exist under `test_resolved_decision_reuse.py`; native ordinary producer-lifetime and later-equivalent-work cost evidence remains to be established. |
 | #2767 | bounded implementation gap | Native config reads and preserves sources, but ordinary native requests do not include the setup/config owner mutation journey. Current unresolved configuration must not silently become defaults. |
@@ -312,3 +312,10 @@ without a new command, store, installer or workflow concept. The rejected
 relationship update is failed-attempt cost, not successful evidence. The durable
 regression remains `tests/test_native_planning_create.py` and
 `tests/test_native_startup_adapter.py`; #2909 owns cumulative admission.
+
+
+The current #3077 guidance follow-up removes the retired mandatory
+summary/report/skills/reconcile loop from the repo-local dogfooding skill. It
+uses the configured native request/action route, keeps unsupported owner effects
+explicit, and compresses overlapping evidence/cost checklists into one existing
+owner record. No shipped payload, runtime behavior or new test surface changes.
