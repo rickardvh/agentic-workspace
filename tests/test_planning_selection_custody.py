@@ -178,3 +178,60 @@ await import(cli);
     assert payload["mutation_applied"] is (carrier == RECEIPT)
     assert not payload.get("operation_receipt")
     assert winner.read_text() == "independent writer won acquisition"
+
+
+def activate_typescript(root: Path) -> dict:
+    result = subprocess.run(
+        [
+            shutil.which("node"),
+            str(ROOT / "generated/planning/typescript/src/cli.mjs"),
+            "new-plan",
+            "--id",
+            "activation-candidate",
+            "--title",
+            "Activation candidate",
+            "--activate",
+            "--switch-active",
+            "--target",
+            str(root),
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.stdout, result.stderr
+    return json.loads(result.stdout)
+
+
+def test_typescript_activation_rejects_unselectable_scaffold(tmp_path: Path) -> None:
+    installer.install_bootstrap(target=tmp_path)
+    result = activate_typescript(tmp_path)
+    assert result["reason_code"] == "owner-not-selectable", result
+    assert not (tmp_path / SELECTION).exists()
+    assert not (tmp_path / RECEIPT).exists()
+    assert any("draft retained" in action["detail"] for action in result["actions"])
+
+
+def test_typescript_activation_preserves_native_custody(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+    ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+    path = tmp_path / ref
+    path.parent.mkdir(parents=True)
+    path.write_bytes((ROOT / ref).read_bytes())
+    state = tmp_path / ".agentic-workspace/planning/state.toml"
+    state.write_text(f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{ref.as_posix()}"\nstatus="active"\n')
+    context = {"target": str(tmp_path), "task": "Continue the current reconstruction scope"}
+    initial = consume("native", shared_core_binary, native_cli, context)
+    request = initial["decision_packet"]["decision_request"]["response_request"]
+    request["arguments"]["answer"] = "continue-selected"
+    ready = consume("native", shared_core_binary, native_cli, {**context, "request": request})
+    consume("native", shared_core_binary, native_cli, {**context, "invocation": ready["decision_packet"]["primary_action"]})
+    before = {p: (tmp_path / p).read_bytes() for p in (SELECTION, ref, state.relative_to(tmp_path))}
+    result = activate_typescript(tmp_path)
+    assert result["reason_code"] == "owner-selection-acquisition-required", result
+    assert before == {p: (tmp_path / p).read_bytes() for p in before}
+    assert not (tmp_path / RECEIPT).exists()
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/activation-candidate.plan.json").exists()
+    assert consume("native", shared_core_binary, native_cli, context)["planning"]["current_owner"]["current"] is True

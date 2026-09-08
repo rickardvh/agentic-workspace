@@ -1018,6 +1018,11 @@ export function finalizeMutationOutcome(result) {
   return result;
 }
 
+function existingPlanningSelectionCarrier(targetRoot) {
+  return ['.agentic-workspace/local/planning/owner-selection.json', '.agentic-workspace/local/planning/owner-selection-receipt.json']
+    .map((path) => join(targetRoot, path)).find((path) => existsSync(path));
+}
+
 function planningNewPlanResult(values, operationId) {
   const result = lifecycleResult(values, operationId);
   const slug = String(values.id ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -1089,6 +1094,12 @@ function planningNewPlanResult(values, operationId) {
         preservedCurrentWorkId = String(priorSelection.current_work_id ?? '').trim() || 'default';
       }
     } catch { /* invalid prior selection uses deterministic initialization */ }
+  }
+  const incumbent = activate && existingPlanningSelectionCarrier(result.target_root);
+  if (incumbent) {
+    result.reason_code = 'owner-selection-acquisition-required';
+    result.actions = [{ kind: 'manual review', path: incumbent, detail: 'Existing selection or receipt is preserved; activation requires admitted source-owner transfer before its first overwrite.' }];
+    return finalizeMutationOutcome(result);
   }
   const recordExisted = existsSync(recordPath);
   if (recordExisted && values.overwrite !== true) {
@@ -1209,17 +1220,27 @@ function planningNewPlanResult(values, operationId) {
   }
   if (laneItem) laneItem.execplan = owner;
   mkdirSync(dirname(recordPath), { recursive: true });
-  writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+  // Activation must use the same absent-only selection owner as owner-select.
+  // Preserve a created draft on incomplete admission: a later read/check/delete
+  // could remove another writer's replacement and cannot prove rollback custody.
+  writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, { encoding: 'utf8', flag: recordExisted ? 'w' : 'wx' });
   if (activate) {
-    mkdirSync(dirname(ownerSelectionPath), { recursive: true });
-    writeFileSync(ownerSelectionPath, `${JSON.stringify({
-      kind: 'agentic-planning/owner-selection/v1',
-      mode: 'local',
+    const selected = planningOwnerSelectResult({
+      ...values, owner: undefined, owner_ref: owner, mode: 'local',
       current_work_id: preservedCurrentWorkId,
-      selected_owner: { id: slug, ref: owner },
-      planning_revision: planningRevision(result.target_root, state).revision_id,
+      expect_planning_revision: undefined,
       reason: source || `Selected owner ${slug} for current work.`,
-    }, null, 2)}\n`, 'utf8');
+    }, 'planning.owner-select.lifecycle');
+    if (selected.reason_code) {
+      result.reason_code = selected.reason_code;
+      result.recovery_command = selected.recovery_command;
+      result.actions = [
+        { kind: recordExisted ? 'updated' : 'created', path: owner, detail: 'draft retained; activation did not complete and no rollback custody is inferred' },
+        ...selected.actions,
+      ];
+      return finalizeMutationOutcome(result);
+    }
+    result.operation_receipt = selected.operation_receipt;
   }
   result.actions = [{ kind: recordExisted ? 'updated' : 'created', path: owner, detail: prepOnly ? 'schema-valid prep-only execplan scaffold' : 'schema-valid execplan scaffold' }];
   if (activate || queue || laneItem) {
@@ -1613,8 +1634,9 @@ function planningOwnerSelectResult(values, operationId) {
     result.actions = [{ kind: 'no-op', path: selected.ref, detail: 'requested owner is already selected; no file was rewritten' }];
     return finalizeMutationOutcome(result);
   }
-  for (const path of [selectionPath, receiptPath]) {
-    if (existsSync(path)) return refuse('owner-selection-acquisition-required', path, 'Existing selection or receipt is preserved: this operation has no admitted custody for its first overwrite. Exact source-owner/human-authorized acquisition or transfer is required; matching JSON, revision, or continuation intent is not authority. Current native reconciliation custody remains with planning.reconcile.');
+  const incumbent = existingPlanningSelectionCarrier(targetRoot);
+  if (incumbent) {
+    return refuse('owner-selection-acquisition-required', incumbent, 'Existing selection or receipt is preserved: this operation has no admitted custody for its first overwrite. Exact source-owner/human-authorized acquisition or transfer is required; matching JSON, revision, or continuation intent is not authority. Current native reconciliation custody remains with planning.reconcile.');
   }
   if (result.dry_run) {
     result.operation_receipt = buildReceipt('dry-run', beforePlanning, 'proposed');
