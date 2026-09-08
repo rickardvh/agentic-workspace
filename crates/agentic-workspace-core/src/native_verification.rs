@@ -492,6 +492,81 @@ fn receipt_view(
         "proof_subject":subject["id"],"gaps":gaps})
 }
 
+/// Current domain-lane commands are execution candidates, not proof sufficiency.
+/// Source metadata stays on the selected route; discovery uses bounded descriptors.
+fn domain_routes(target: &Path, changed: &[String]) -> Result<(Value, Value), CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let source = crate::native_config::load(
+        &root,
+        ".agentic-workspace/config.toml",
+        include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+        ),
+    )
+    .map_err(CoreError::new)?;
+    let config = source.map_or(json!({}), |(value, _)| value);
+    let mut routes = serde_json::Map::new();
+    let mut descriptors = Vec::new();
+    let mut omitted = 0;
+    for (id, lane) in config["assurance"]["domain_proof_lanes"]
+        .as_object()
+        .into_iter()
+        .flatten()
+    {
+        let matched: Vec<&String> = changed
+            .iter()
+            .filter(|path| {
+                lane["applies_to_paths"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
+                    .any(|pattern| matches(pattern, path))
+            })
+            .collect();
+        let unresolved = lane["applies_to_task_markers"]
+            .as_array()
+            .is_some_and(|items| !items.is_empty());
+        if matched.is_empty() && !unresolved {
+            continue;
+        }
+        let source_ref =
+            format!(".agentic-workspace/config.toml#assurance.domain_proof_lanes.{id}");
+        let revision = digest(lane)?;
+        let descriptor = json!({"route_id":format!("domain:{id}"),"source_ref":source_ref,"source_revision":revision,"applicability":if matched.is_empty(){"current-task-judgment-unresolved"}else{"path-matched"},"command_count":lane["commands"].as_array().map_or(0,Vec::len),"metadata":"retained-in-source-and-selected-strategy","claim_boundary":"candidate-not-strategy-sufficiency"});
+        if descriptors.len() < 32
+            && serde_json::to_vec(&descriptor).is_ok_and(|bytes| bytes.len() <= 2048)
+        {
+            descriptors.push(descriptor);
+        } else {
+            omitted += 1;
+        }
+        if !matched.is_empty() {
+            let mut route = lane.clone();
+            route["source_kind"] = json!("config-domain-lane");
+            route["source_ref"] = json!(source_ref);
+            route["source_revision"] = json!(revision);
+            route["matched_paths"] = json!(matched);
+            routes.insert(format!("domain:{id}"), route);
+        }
+    }
+    Ok((
+        json!(routes),
+        json!({"lanes":descriptors,"omitted_descriptor_count":omitted,"source":".agentic-workspace/config.toml#assurance.domain_proof_lanes","boundary":"Exact path matches offer source commands. Semantic applicability, lane composition, escalation, manual evidence and claim sufficiency remain current owner obligations."}),
+    ))
+}
+fn visible_strategy(strategy: &Value, selected: Option<&Value>) -> Value {
+    let mut result = strategy.clone();
+    if let Some(routes) = result["proof_routes"].as_object_mut() {
+        routes.retain(|id, route| {
+            route["source_kind"] != "config-domain-lane"
+                || selected.is_some_and(|choice| choice["route_id"] == *id)
+        });
+    }
+    result
+}
+
 /// Host-only inputs are supplied by the current-work and Planning owners. A
 /// public caller can request a claim judgment, never supply source admission.
 pub fn view(
@@ -571,8 +646,12 @@ pub(crate) fn view_with_applicability(
     {
         gaps.push("verification-manifest-owner-sections-invalid".into());
     }
-    let source_revision = digest(&json!({"manifest_revision":manifest_revision,
-        "planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}))?;
+    let (domain, domain_descriptors) = domain_routes(target, changed)?;
+    let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
+    let source_revision = digest(
+        &json!({"manifest_revision":manifest_revision,"domain_revision":domain_revision,
+        "planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
+    )?;
     let mut protocols = serde_json::Map::new();
     let mut selector_gaps = Vec::new();
     if let Some(all) = manifest["protocols"].as_object() {
@@ -615,6 +694,13 @@ pub(crate) fn view_with_applicability(
                     gaps.push(format!("referenced-verification-scenario-unavailable:{id}"));
                 }
             }
+        }
+    }
+    for (id, route) in domain.as_object().unwrap() {
+        if routes.insert(id.clone(), route.clone()).is_some() {
+            return Err(CoreError::new(
+                "domain proof route identity collides with manifest route",
+            ));
         }
     }
     let strategy = json!({"source":MANIFEST,"protocols":protocols,"proof_routes":routes,"scenarios":scenarios});
@@ -759,6 +845,17 @@ pub(crate) fn view_with_applicability(
     report_request["arguments"] =
         json!({"route_id":"unresolved","command":"<reported-command>","result":"failed"});
     record_requests.push(report_request);
+    let visible_strategy = visible_strategy(
+        &strategy,
+        if execution["status"] == "selected" {
+            proof_choice.as_ref()
+        } else {
+            None
+        },
+    );
+    if !domain.as_object().unwrap().is_empty() {
+        gaps.push("domain-lane-strategy-sufficiency-unresolved".into());
+    }
     let applicable = requested || !protocols.is_empty() || !gaps.is_empty();
     if applicable {
         gaps.extend(selector_gaps.clone());
@@ -770,7 +867,7 @@ pub(crate) fn view_with_applicability(
     let packet = applicable.then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
         "task_identity":current_work,"task_claim_identity":direct_subject,"work_ref":work_ref,"work_revision":work_revision,"planning_subject":planning_subject,
         "acceptance_source":{"source":"current-task","requested_outcome":task},
-        "strategy":strategy,"strategy_revision":strategy_revision,
+        "strategy":visible_strategy,"strategy_revision":strategy_revision,
         "judgment_required":"Does this exact requested outcome and changed scope satisfy the current claim and applicable strategy?",
         "admitted_automated_evidence":evidence.iter().filter(|item| item["publication_admission"]["status"] == "admitted" && item["receipt_admission"]["proof_sufficient"] == true && item["evidence_freshness"] == "reusable").collect::<Vec<_>>(),"candidate_evidence":evidence,"known_uncertainty":gaps,
         "required_authority":"Use each selected protocol's review_owner and authority_refs; authenticate any independent producer through the existing Verification owner.",
@@ -814,8 +911,8 @@ pub(crate) fn view_with_applicability(
     let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row|json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":row["source_requirement"],"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})).collect();
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
-        "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":strategy,"strategy_revision":strategy_revision,
-        "execution":execution,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
+        "domain_proof_candidates":domain_descriptors,"execution":execution,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),

@@ -107,6 +107,8 @@ pub(crate) fn select_mode(
         );
     }
     let mut available = Vec::new();
+    let mut domain_count = 0usize;
+    let mut omitted_domain_commands = 0usize;
     if let Some(routes) = strategy["proof_routes"].as_object() {
         for (id, route) in routes {
             for command in route["commands"]
@@ -115,14 +117,32 @@ pub(crate) fn select_mode(
                 .flatten()
                 .filter_map(Value::as_str)
             {
+                if route["source_kind"] == "config-domain-lane" {
+                    if domain_count >= 16
+                        || serde_json::to_vec(&json!({"route_id":id,"command":command}))
+                            .map_or(true, |bytes| bytes.len() > 4096)
+                    {
+                        omitted_domain_commands += 1;
+                        continue;
+                    }
+                    domain_count += 1;
+                }
                 available.push(json!({"route_id":id,"command":command}));
             }
         }
     }
     let Some(choice) = choice else {
-        return Ok(json!({"status":"selection-required","choices":available}));
+        return Ok(
+            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"candidate_boundary":"Domain candidates are bounded; remaining exact commands stay at their current source-field reference. No automatic selection or proof sufficiency."}),
+        );
     };
-    let source_selected = available.iter().any(|item| item == choice);
+    let source_selected = strategy["proof_routes"]
+        .get(choice["route_id"].as_str().unwrap_or(""))
+        .is_some_and(|route| {
+            route["commands"]
+                .as_array()
+                .is_some_and(|commands| commands.contains(&choice["command"]))
+        });
     if !source_selected && report.is_none() {
         return Err(err(
             "proof selection is not a current source-declared command",
@@ -138,6 +158,13 @@ pub(crate) fn select_mode(
     } else {
         &Value::Null
     };
+    if route["source_kind"] == "config-domain-lane"
+        && serde_json::to_vec(route).map_or(true, |bytes| bytes.len() > 32768)
+    {
+        return Ok(
+            json!({"status":"blocked","reason":"domain-lane-selected-detail-exceeds-native-bound","source_ref":route["source_ref"],"source_revision":route["source_revision"],"choices":available}),
+        );
+    }
     let mut protocols = serde_json::Map::new();
     let mut dependencies = serde_json::Map::new();
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
@@ -156,8 +183,13 @@ pub(crate) fn select_mode(
             gaps.push(format!("proof-protocol-unavailable:{id}"));
         }
         protocols.insert(id.into(), protocol.clone());
+    }
+    for authority in protocols
+        .values()
+        .chain((route["source_kind"] == "config-domain-lane").then_some(route))
+    {
         for field in ["authority_refs", "stale_when"] {
-            for reference in protocol[field]
+            for reference in authority[field]
                 .as_array()
                 .into_iter()
                 .flatten()
