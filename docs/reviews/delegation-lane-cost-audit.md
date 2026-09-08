@@ -372,3 +372,18 @@ Native start/invoke now emits bounded metadata into the existing registered logi
 Avoidable implementation-agent mistakes were an initially incomplete schema-validator envelope (nine failures), then a misspelled existing analysis flag (`--origin-scope` instead of `--origin`, one failure); corrected focused reruns passed. No provider inference was used. Existing-registry registration of a new logical identity is still skipped because safe registration custody is unimplemented. Native interruption/rotation and release-artifact acceptance remain separate gaps; diagnostic omissions and transport success never grant task or proof acceptance.
 
 Integration briefly retained conflict markers in an unpublished commit after an unqualified Python command was unavailable and the shell continued. A first merge-repair expression also consumed trailing text; JSON validation caught it. The implementation agent restored complete sources, corrected the merge and amended that unpublished commit before publication. This is avoidable implementation-agent command sequencing waste; no product or target-quality inference follows.
+
+### Material lifetime correction from integrated CI
+
+Linux CI on the native Planning update stack exposed a real Verification request
+lifetime regression: changing Planning's returned/integration-pending frontier
+invalidated an otherwise exact semantic request. The same failure reproduced
+locally. Assurance had hashed an entire Planning subject and physical owner
+context rather than the material identity and applicability facts it consumes.
+The correction recomputes that small semantic input; no memoisation is needed.
+Four native/Python/TypeScript/JSON creation-update-reconciliation cases passed in
+21.56 seconds, preserving requests across frontier updates and rejecting changed
+scope. The original failing Rust case passed. No proof or task completion is
+inferred from preserved request currentness; no provider calls were made.
+
+The integrated Rust boundary also caught an obsolete fixture expecting consumed transport authority to remain unsupported. Its replacement checks the actual Assignment policy and retained safety ceiling: automatic transport with safety false still forbids execution. The initial boundary had89 passes, one stale fixture failure and3 subprocess helpers ignored.
