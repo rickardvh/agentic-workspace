@@ -1253,6 +1253,17 @@
         "required_execution_guarantees"
       ],
       "additionalProperties": false
+    },
+    "system_intent_read_arguments": {
+      "type": "object",
+      "description": "Exact current governing source read; no interpretation or acceptance authority.",
+      "x-doc-role": "internal",
+      "properties": {
+        "reference": {"type": "string", "minLength": 1, "description": "Reference returned by the current system-intent owner."},
+        "revision": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$", "description": "Exact current source byte identity."}
+      },
+      "required": ["reference", "revision"],
+      "additionalProperties": false
     }
   }
 }

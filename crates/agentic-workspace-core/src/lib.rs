@@ -9,6 +9,7 @@ pub mod instruction_applicability;
 pub mod instruction_source;
 mod native_config;
 mod native_instructions;
+mod native_intent;
 mod native_memory;
 mod native_planning;
 mod native_proof;
