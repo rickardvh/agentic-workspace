@@ -40,17 +40,32 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     rows = {r["configuration"]["id"]: r for r in offered["configurations"]["candidates"]}
     assert rows["local:internal"]["eligible"] is True
     assert rows["worker:cli"]["eligible"] is True
-    assert rows["worker:manual"]["eligible"] is True
+    assert rows["worker:manual"]["eligible"] is False
+    assert "execution-return-unconstructible" in rows["worker:manual"]["reasons"]
+    manual = offered["manual_targets"][0]
+    assert manual["source_policy_eligible"] is True
+    assert manual["handoff_constructible"] is False
+    assert manual["automatic_invocation"] is False
+    assert manual["gap"] == "native-manual-handoff-owner-unavailable"
+    assert manual["target_best_fit"] == "unresolved-not-rejected"
     assert all(r["configuration"]["proof_classes"] == [] and r["configuration"]["independent_context"] is False for r in rows.values())
     request = next(r for r in offered["requests"] if r[-1]["arguments"]["candidate"] == "worker:cli")
     selected = call({**context, "request": request})
     assert selected["task_requirements"]["execution_configurations"]["configurations"]["selected"]["id"] == "worker:cli"
     assert selected["decision_packet"].get("primary_action") is None
+    assert any("effect:implementation" in row["affects"] for row in selected["decision_packet"]["blockers"])
     assert not (tmp_path / "marker.txt").exists()
     assert not (tmp_path / ".agentic-workspace/local").exists()
     with pytest.raises(AssertionError, match="stale|changed"):
         call({**context, "task": "A different requested outcome", "request": request})
-    executable.write_text("echo changed capability, still never run")
+    before_stat = executable.stat()
+    original = executable.read_bytes()
+    replacement = original.replace(b"echo", b"ECHO", 1)
+    assert replacement != original and len(replacement) == len(original)
+    executable.write_bytes(replacement)
+    os.utime(executable, ns=(before_stat.st_atime_ns, before_stat.st_mtime_ns))
+    assert executable.stat().st_mtime_ns == before_stat.st_mtime_ns
+
     stale = call({**context, "request": request})["task_requirements"]["execution_configurations"]["configurations"]
     assert stale["reason_code"] == "assignment-configuration-choice-stale"
     source.write_text(source.read_text().replace('transport_authority="automatic"', 'transport_authority="manual"'))
@@ -73,7 +88,8 @@ def test_missing_capability_safety_manual_and_former_source_preserved(tmp_path, 
 
     rows = {r["configuration"]["id"]: r for r in preview()["configurations"]["candidates"]}
     assert "execution-return-unconstructible" in rows["worker:cli"]["reasons"]
-    assert rows["worker:manual"]["eligible"] is True
+    assert rows["worker:manual"]["eligible"] is False
+    assert "execution-return-unconstructible" in rows["worker:manual"]["reasons"]
     source.write_text(
         source.read_text()
         .replace('transport_authority="automatic"', 'transport_authority="automatic"\nmanual_transport_policy="disabled"')
@@ -116,3 +132,19 @@ def test_native_adapter_and_unknown_transport_do_not_become_capabilities(tmp_pat
     assert invalid["task_requirements"]["requests"] == []
     assert any(row["code"].startswith("invalid-config:") for row in invalid["decision_packet"]["blockers"])
     assert source.read_bytes() == invalid_bytes
+
+
+def test_oversized_executable_is_unavailable_without_reading_or_running(tmp_path, shared_core_binary, native_cli):
+    _, executable, context = fixture(tmp_path)
+    with executable.open("r+b") as stream:
+        stream.truncate(134_217_729)
+    first = consume("json", shared_core_binary, native_cli, context)
+    request = first["task_requirements"]["requests"][0]
+    request["arguments"]["required_result_classes"] = ["read-only"]
+    result = consume("json", shared_core_binary, native_cli, {**context, "request": request})["task_requirements"][
+        "execution_configurations"
+    ]
+    row = next(r for r in result["configurations"]["candidates"] if r["configuration"]["id"] == "worker:cli")
+    assert row["configuration"]["constructible"] is False
+    assert "execution-return-unconstructible" in row["reasons"]
+    assert not (tmp_path / "marker.txt").exists()

@@ -2,6 +2,8 @@
 use crate::{CoreError, digest};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 pub(crate) fn declaration() -> Value {
     let schema: Value = serde_json::from_str(include_str!(
@@ -12,7 +14,11 @@ pub(crate) fn declaration() -> Value {
     shape["$schema"] = schema["$schema"].clone();
     json!({"kind":"assignment/select-execution-configuration/v1","result_kind":"agentic-workspace/execution-configurations/v1","input_schema":shape})
 }
-fn executable(target: &Path, command: &str) -> Option<Value> {
+fn executable(
+    target: &Path,
+    command: &str,
+    observed_paths: &mut std::collections::BTreeMap<PathBuf, Value>,
+) -> Option<Value> {
     let mut candidates = Vec::<PathBuf>::new();
     if command.contains(['/', '\\']) || Path::new(command).is_absolute() {
         candidates.push(target.join(command));
@@ -51,9 +57,40 @@ fn executable(target: &Path, command: &str) -> Option<Value> {
         let Ok(path) = path.canonicalize() else {
             continue;
         };
-        return Some(
-            json!({"path":path,"size":metadata.len(),"modified":metadata.modified().ok().and_then(|t|t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string())}),
-        );
+        if let Some(observed) = observed_paths.get(&path) {
+            return Some(observed.clone());
+        }
+        // Observe bytes, not only replaceable path/mtime hints. Discovery never
+        // executes them, and a failure cannot authorize a different PATH peer.
+        let mut file = std::fs::File::open(&path).ok()?;
+        let before = file.metadata().ok()?;
+        if before.len() > 134_217_728 {
+            return None;
+        }
+        let mut hasher = Sha256::new();
+        let mut buffer = [0u8; 65536];
+        let mut total = 0u64;
+        loop {
+            let count = file.read(&mut buffer).ok()?;
+            if count == 0 {
+                break;
+            }
+            total += count as u64;
+            if total > 134_217_728 {
+                return None;
+            }
+            hasher.update(&buffer[..count]);
+        }
+        let after = file.metadata().ok()?;
+        if total != before.len()
+            || after.len() != before.len()
+            || after.modified().ok() != before.modified().ok()
+        {
+            return None;
+        }
+        let observed = json!({"path":path,"size":after.len(),"modified":after.modified().ok().and_then(|t|t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string()),"content_digest":format!("sha256:{:x}",hasher.finalize())});
+        observed_paths.insert(path, observed.clone());
+        return Some(observed);
     }
     None
 }
@@ -109,6 +146,8 @@ pub(crate) fn view(
     }
     let mut candidates = Vec::new();
     let mut unavailable = Vec::new();
+    let mut manual_targets = Vec::new();
+    let mut observed_paths = std::collections::BTreeMap::new();
     for (name, profile) in targets.into_iter().flatten() {
         let transports = match crate::transport_source::decode(profile) {
             Ok(value) => value,
@@ -156,7 +195,7 @@ pub(crate) fn view(
                 .as_array()
                 .and_then(|v| v.first())
                 .and_then(Value::as_str)
-                .and_then(|s| executable(target, s));
+                .and_then(|s| executable(target, s, &mut observed_paths));
             let authority = gaps.is_empty()
                 && (retained
                     || if manual {
@@ -172,9 +211,12 @@ pub(crate) fn view(
                 && !profile["human_control_modes"]
                     .as_array()
                     .is_some_and(|v| v.iter().any(|i| i == "off"));
+            if manual {
+                manual_targets.push(json!({"target":name,"source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"source_policy_eligible":authority&&profile_safe,"handoff_constructible":false,"automatic_invocation":false,"gap":"native-manual-handoff-owner-unavailable","target_best_fit":"unresolved-not-rejected"}));
+            }
             let capability =
                 digest(&json!({"profile":profile,"transport":transport,"executable":observed}))?;
-            candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":retained||manual||observed.is_some()&&matches!(method,"cli"|"api"),"result_classes":["read-only","unapplied-patch"],"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
+            candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":retained||observed.is_some()&&matches!(method,"cli"|"api"),"result_classes":["read-only","unapplied-patch"],"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
         }
     }
     let mut input = requirements["requirements"].clone();
@@ -205,6 +247,6 @@ pub(crate) fn view(
         .unwrap();
     let requests:Vec<Value>=preview["candidates"].as_array().into_iter().flatten().filter(|r|r["eligible"]==true).map(|r|json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/execution-configuration","owner":"assignment","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":transport_work,"request_kind":"assignment/select-execution-configuration/v1","arguments":{"revision":preview["revision"],"candidate":r["configuration"]["id"]}})).collect();
     Ok(
-        json!({"status":"observed","source_revision":source_revision,"configurations":result,"requests":requests,"unavailable_adapters":unavailable,"gaps":gaps,"claim_boundary":"Feasibility and exact choice only; no best-fit assignment, dispatch, human authority, proof or completion. Provider adapter discovery remains separate."}),
+        json!({"status":"observed","source_revision":source_revision,"configurations":result,"requests":requests,"unavailable_adapters":unavailable,"manual_targets":manual_targets,"gaps":gaps,"claim_boundary":"Feasibility and exact choice only; no best-fit assignment, dispatch, human authority, proof or completion. Provider adapter discovery remains separate."}),
     )
 }
