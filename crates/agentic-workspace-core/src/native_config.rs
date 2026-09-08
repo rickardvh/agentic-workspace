@@ -66,6 +66,31 @@ fn present(value: &Value) -> bool {
 }
 
 fn residual(source: &str, field: &str, value: &Value) -> Value {
+    // These existing controls describe rendering or replaceable methods. Keep
+    // their current source meaning without turning persistence into authority.
+    let advisory = if field == "workspace.optimization_bias" {
+        Some("advisory-rendering-preference")
+    } else if field.starts_with("workflow_obligations.")
+        && value["force"] == "recommended"
+        && value.as_object().is_some_and(|fields| {
+            fields.keys().all(|key| {
+                matches!(
+                    key.as_str(),
+                    "summary" | "stage" | "force" | "scope_tags" | "commands" | "review_hint"
+                )
+            })
+        })
+    {
+        Some("recommended-stage-method")
+    } else {
+        None
+    };
+    if let Some(disposition) = advisory {
+        return json!({"source":source,"field":field,"owner":"workspace-config",
+            "value_revision":digest(value).expect("JSON value hashes"),"value":value,
+            "affects":[],"reason":disposition,"authority":"advisory",
+            "applicability":"agent-judgment-required","satisfaction":"not-evidence"});
+    }
     let owner = match field.split('.').next().unwrap_or("") {
         "assurance" => "verification",
         "delegation" | "delegation_targets" | "handoff" => "assignment-delegation",
@@ -168,6 +193,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         }
     }
     for item in &residuals {
+        if item["affects"].as_array().is_some_and(Vec::is_empty) {
+            continue;
+        }
         blockers.push(json!({"code":format!("native-config-owner:{}:{}", item["source"].as_str().unwrap(),item["field"].as_str().unwrap()),
             "message":format!("{} [{}] remains owned by {}; consume that current owner before the affected behavior.",item["source"],item["field"],item["owner"]),
             "affects":item["affects"]}));
