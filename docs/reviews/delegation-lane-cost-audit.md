@@ -331,3 +331,25 @@ counterevidence under #2334/#2647 and producer custody under #3000/#3001.
 Adding a fresh fingerprint only when reporting would not repair it. A genuine
 fix needs current, producer-admitted apply execution evidence rather than a
 reported pass or file-shaped validation record. No parent closure follows.
+
+
+### Legacy repair retirement admission subtraction (2026-09-08)
+
+The stale-source counterexample above is corrected by declining reuse at the
+existing retirement boundary. Legacy apply execution remains observed, but a
+reported pass and raw apply/history files cannot establish a current verified
+repair. Both report admission and subsequent history consumption now retain a
+stronger-owner-required gap; forged history cannot restore the removed shortcut.
+The current strategy and actual candidate/validation execution remain visible,
+with affected handoff/closeout claims blocked until the apply owner supplies
+producer-admitted execution bound to current sources. No new proof store,
+constant-result native API, authority flag, or generic learning layer was added.
+Full native apply migration remains #2334/#2647/#3000/#3001 work, not completed
+acceptance. This is the #2981 stronger-owner disposition rather than unsupported
+reuse or blind re-execution of a potentially effectful apply.
+
+The four focused safety cases passed in 71.22 seconds. Adding the fresh
+TypeScript forged-history replay initially failed after 24.89 seconds because
+the implementation agent omitted a test import; that avoidable rerun cost is
+separate from product friction. The failure log is retained.
+The corrected fresh Python/TypeScript forged-history case passed in 26.58 seconds.
