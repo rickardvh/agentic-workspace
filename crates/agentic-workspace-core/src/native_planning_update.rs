@@ -4,6 +4,7 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 pub(crate) const KIND: &str = "planning/update/v1";
+pub(crate) const RECOVER_KIND: &str = "planning/update-recovery/v1";
 pub(crate) const PROVENANCE: &str = "update_provenance";
 fn error(value: impl ToString) -> CoreError {
     CoreError::new(value.to_string())
@@ -27,6 +28,18 @@ pub(crate) fn declaration() -> Value {
 }
 pub(crate) fn operation() -> Value {
     json!({"id":"planning.update","semantic_revision":"planning-update-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"prior_revision":{"type":"string"},"document":{"type":"object"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","prior_revision","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/update-result/v1","effects":["planning-state"],"reads":["planning"]})
+}
+pub(crate) fn recovery_declaration() -> Value {
+    let canonical: Value = serde_json::from_str(include_str!(
+        "../../../src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json"
+    ))
+    .expect("checked schema");
+    let mut shape = canonical["$defs"]["update_recovery_request"].clone();
+    shape["$schema"] = canonical["$schema"].clone();
+    json!({"kind":RECOVER_KIND,"result_kind":"agentic-planning/update-recovery-result/v1","input_schema":shape})
+}
+pub(crate) fn recovery_operation() -> Value {
+    json!({"id":"planning.update-recover","semantic_revision":"planning-update-recovery-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"planning_request":{"type":"object"},"owner_path":{"type":"string"},"retained_invocation":{"type":"object"}},"required":["target","request","planning_request","owner_path","retained_invocation"],"additionalProperties":false},"result_kind":"agentic-planning/update-recovery-result/v1","effects":["planning-state"],"reads":["planning"]})
 }
 fn revision(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
@@ -93,10 +106,12 @@ pub(crate) fn view(
     target: &Path,
     work: &Value,
     contract: &Value,
-    selected: &Value,
+    planning: &Value,
     request: Option<&Value>,
     invocation: Option<&Value>,
+    continuation: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    let selected = &planning["selected_owner"];
     let mut result = json!({"requests":[],"action":null,"retained":null});
     let owner = contract["owners"]
         .as_array()
@@ -141,6 +156,47 @@ pub(crate) fn view(
     let current_revision = revision(&bytes);
     result["requests"] = json!([{"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"planning","owner_revision":owner["revision"],"source_revision":current_revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"owner_ref":reference}}]);
     let retained = inspect(target, reference, &body)?;
+    let recovery_request = effective.filter(|r| r["request_kind"] == RECOVER_KIND);
+    if let Some(retained) = &retained
+        && (retained["committed"] != true || recovery_request.is_some())
+    {
+        let pending_revision = digest(&retained["invocation"])?;
+        let mut template = result["requests"][0].clone();
+        template["id"] = json!(RECOVER_KIND);
+        template["request_kind"] = json!(RECOVER_KIND);
+        template["arguments"] = json!({"owner_ref":reference,"pending_revision":pending_revision});
+        result["recovery_requests"] = json!([template]);
+        if let Some(request) = recovery_request {
+            prepare_request_value(
+                json!({"request":request,"current_work":work,"capability_contract":contract}),
+            )?;
+            let continuation = continuation.ok_or_else(|| {
+                error("Planning recovery requires current continue-selected judgment")
+            })?;
+            if continuation["arguments"]["answer"] != "continue-selected"
+                || !matches!(
+                    planning["status"].as_str(),
+                    Some("current" | "reentry-required")
+                )
+                || !planning["selection_transition"].is_null()
+                || selected["ref"] != reference
+                || request["source_revision"] != current_revision
+                || request["arguments"]["pending_revision"] != pending_revision
+                || payload(&retained["invocation"], &retained["custody"])? != body
+                || bytes != serde_json::to_vec_pretty(&body).map_err(error)?
+            {
+                return Err(error(
+                    "Planning recovery is stale or does not continue the exact selected owner",
+                ));
+            }
+            prepare_request_value(
+                json!({"request":continuation,"current_work":work,"capability_contract":contract}),
+            )?;
+            result["retained"] = retained.clone();
+            result["action"] = json!({"operation_id":"planning.update-recover","dependency_revision":digest(&json!({"source":current_revision,"pending":pending_revision,"continuation":continuation}))?,"arguments":{"target":target,"request":request,"planning_request":continuation,"owner_path":reference,"retained_invocation":retained["invocation"]},"effects":["planning-state"]});
+            return Ok(result);
+        }
+    }
     if let Some(invocation) = invocation
         && let Some(retained) = &retained
         && retained["invocation"] == *invocation
@@ -232,6 +288,68 @@ pub(crate) fn execute(
     execute_checked(target, decision, invocation, retained, revalidate, |_| {
         Ok(())
     })
+}
+/// A current re-entry has its own admitted effect. It finalizes only the old
+/// retained outcome, without replaying that operation's material mutation.
+pub(crate) fn recover(
+    target: &Path,
+    decision: &Value,
+    invocation: &Value,
+    retained: &Value,
+    revalidate: impl FnMut() -> Result<(), CoreError>,
+) -> Result<Value, CoreError> {
+    recover_checked(target, decision, invocation, retained, revalidate, |_| {
+        Ok(())
+    })
+}
+fn recover_checked(
+    target: &Path,
+    decision: &Value,
+    invocation: &Value,
+    retained: &Value,
+    mut revalidate: impl FnMut() -> Result<(), CoreError>,
+    mut observe: impl FnMut(&str) -> Result<(), CoreError>,
+) -> Result<Value, CoreError> {
+    let root =
+        cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
+    let _lock = crate::native_planning::owner_lock(&root)?;
+    revalidate()?;
+    let relative = invocation["arguments"]["owner_path"]
+        .as_str()
+        .ok_or_else(|| error("recovery owner missing"))?;
+    let bytes = read(target, relative)?;
+    let body: Value = serde_json::from_slice(&bytes).map_err(error)?;
+    let current = inspect(target, relative, &body)?
+        .ok_or_else(|| error("recovery retained update missing"))?;
+    if current != *retained
+        || current["invocation"] != invocation["arguments"]["retained_invocation"]
+        || payload(&current["invocation"], &current["custody"])? != body
+        || bytes != serde_json::to_vec_pretty(&body).map_err(error)?
+    {
+        return Err(error("recovery retained postimage changed; preserve it"));
+    }
+    let admission =
+        attempt_store::admit(json!({"target":target,"decision":decision,"invocation":invocation}))?;
+    observe("recovery-admission")?;
+    let mut original_custody = current["custody"].clone();
+    if current["committed"] != true {
+        original_custody["committed"] = Value::Null;
+    }
+    revalidate()?;
+    if read(target, relative)? != bytes {
+        return Err(error(
+            "recovery postimage changed before commit; preserve it",
+        ));
+    }
+    let original = attempt_store::commit(
+        json!({"target":target,"custody":original_custody,"outcome":current["outcome"]}),
+    )?;
+    observe("original-finalization")?;
+    let outcome = json!({"status":"applied","effects":["planning-state"],"value":{"status":"retained-update-finalized","original_invocation_revision":digest(&current["invocation"])?,"original_outcome":original["record"]["outcome"],"original_custody":original["custody"],"material_written":false}});
+    let committed = attempt_store::commit(
+        json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
+    )?;
+    Ok(json!({"outcome":outcome,"custody":committed["custody"]}))
 }
 fn execute_checked(
     target: &Path,
@@ -435,9 +553,8 @@ mod tests {
                 let recovered = fresh["planning"]["pending_update"]["invocation"].clone();
                 assert_eq!(recovered, action);
                 assert_ne!(fresh["decision_packet"]["status"], "terminal");
-                // Fresh discovery is not yet reworded same-owner recovery.
-                // The current continuation request cannot rewrite an old task
-                // binding or supply authority to its pending invocation.
+                // A current continuation cannot rewrite the old task binding.
+                // Recovery instead has its own current admitted action.
                 let mut reworded = context(&target);
                 reworded["task"] = json!("Continue this same bounded native owner update");
                 let reentry = crate::native_public::start(reworded.clone()).unwrap();
@@ -447,9 +564,40 @@ mod tests {
                 let current_bytes = read(&target, &relative).unwrap();
                 reworded.as_object_mut().unwrap().remove("request");
                 reworded["invocation"] = recovered.clone();
-                assert!(crate::native_public::invoke(reworded).is_err());
+                assert!(crate::native_public::invoke(reworded.clone()).is_err());
                 assert_eq!(read(&target, &relative).unwrap(), current_bytes);
-                assert_eq!(invoke(&target, recovered).unwrap()["status"], "applied");
+                reworded.as_object_mut().unwrap().remove("invocation");
+                let continuation = reentry["planning"]["requests"][0].clone();
+                let recovery = continued["planning"]["update_recovery_requests"][0].clone();
+                let mut unrelated = continuation.clone();
+                unrelated["arguments"]["answer"] = json!("unrelated-direct");
+                reworded["request"] = json!([unrelated, recovery]);
+                assert!(crate::native_public::start(reworded.clone()).is_err());
+                reworded["request"] = json!([continuation, recovery]);
+                let current = crate::native_public::start(reworded.clone()).unwrap();
+                let recovery_action = current["decision_packet"]["primary_action"].clone();
+                assert_eq!(recovery_action["operation_id"], "planning.update-recover");
+                assert_ne!(
+                    recovery_action["arguments"]["request"]["task_identity"],
+                    recovered["arguments"]["request"]["task_identity"]
+                );
+                reworded.as_object_mut().unwrap().remove("request");
+                reworded["invocation"] = recovery_action;
+                // Exact material drift after action selection cannot be finalized.
+                let mut drift = current_bytes.clone();
+                drift.push(b' ');
+                std::fs::write(target.join(&relative), &drift).unwrap();
+                assert!(crate::native_public::invoke(reworded.clone()).is_err());
+                assert_eq!(read(&target, &relative).unwrap(), drift);
+                std::fs::write(target.join(&relative), &current_bytes).unwrap();
+                let result = crate::native_public::invoke(reworded).unwrap();
+                assert_eq!(result["status"], "applied");
+                assert_eq!(result["value"]["material_written"], false);
+                assert_eq!(
+                    result["value"]["original_invocation_revision"],
+                    digest(&recovered).unwrap()
+                );
+                assert_eq!(read(&target, &relative).unwrap(), current_bytes);
                 assert_ne!(read(&target, &relative).unwrap(), original);
                 assert_ne!(start(&target)["decision_packet"]["status"], "terminal");
             }
@@ -506,6 +654,82 @@ mod tests {
             serde_json::from_slice::<Value>(&read(&target, &relative).unwrap()).unwrap(),
             historical
         );
+    }
+    #[test]
+    fn recovery_interruption_keeps_its_attempt_distinct_from_original_outcome() {
+        for boundary in ["recovery-admission", "original-finalization"] {
+            let target = std::env::temp_dir().join(format!(
+                "aw-recovery-{}-{}-{boundary}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::create_dir(&target).unwrap();
+            let relative = setup(&target);
+            let ready = ready(&target);
+            assert!(
+                execute_checked(
+                    &target,
+                    &ready["decision_packet"],
+                    &ready["decision_packet"]["primary_action"],
+                    &Value::Null,
+                    || Ok(()),
+                    |phase| {
+                        if phase == "publication" {
+                            Err(error("interrupted original writer"))
+                        } else {
+                            Ok(())
+                        }
+                    }
+                )
+                .is_err()
+            );
+            let bytes = read(&target, &relative).unwrap();
+            let mut context = context(&target);
+            context["task"] = json!("Continue the same owner after interruption");
+            let fresh = crate::native_public::start(context.clone()).unwrap();
+            context["request"] = json!([
+                fresh["planning"]["requests"][0],
+                fresh["planning"]["update_recovery_requests"][0]
+            ]);
+            let recovery = crate::native_public::start(context.clone()).unwrap();
+            let action = &recovery["decision_packet"]["primary_action"];
+            let failed = recover_checked(
+                &target,
+                &recovery["decision_packet"],
+                action,
+                &recovery["planning"]["update_retained"],
+                || Ok(()),
+                |phase| {
+                    if phase == boundary {
+                        Err(error("interrupted recovery"))
+                    } else {
+                        Ok(())
+                    }
+                },
+            );
+            assert!(
+                failed
+                    .unwrap_err()
+                    .to_string()
+                    .contains("interrupted recovery")
+            );
+            assert_eq!(read(&target, &relative).unwrap(), bytes);
+            let body: Value = serde_json::from_slice(&bytes).unwrap();
+            let original = inspect(&target, &relative, &body).unwrap().unwrap();
+            assert_eq!(original["committed"], boundary == "original-finalization");
+            context.as_object_mut().unwrap().remove("request");
+            context["invocation"] = action.clone();
+            assert!(
+                crate::native_public::invoke(context)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("existing effect evidence")
+            );
+            assert_eq!(read(&target, &relative).unwrap(), bytes);
+        }
     }
     #[test]
     fn update_final_revalidation_preserves_concurrent_material() {

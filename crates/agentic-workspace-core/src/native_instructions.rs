@@ -167,10 +167,24 @@ pub fn restrict_pending(
         action["source_owner"] == "planning"
             && matches!(
                 action["operation_id"].as_str(),
-                Some("planning.reconcile" | "planning.create" | "planning.update")
+                Some(
+                    "planning.reconcile"
+                        | "planning.create"
+                        | "planning.update"
+                        | "planning.update-recover"
+                )
             )
     }) {
-        let writes = if matches!(
+        let writes = if action["operation_id"] == "planning.update-recover" {
+            let mut writes = crate::attempt_store::write_paths(
+                &json!({"idempotency_key":action["logical_effect_id"]}),
+            )?;
+            writes.extend(crate::attempt_store::write_paths(
+                &action["arguments"]["retained_invocation"],
+            )?);
+            writes.push(".agentic-workspace/local/planning/owner-selection.lock".to_owned());
+            writes
+        } else if matches!(
             action["operation_id"].as_str(),
             Some("planning.create" | "planning.update")
         ) {

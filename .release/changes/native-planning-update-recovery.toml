@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Recover exact retained Planning updates through a fresh current same-owner continuation without replacing the original task identity."
+issues = [2970, 2986, 3000, 3001, 2909, 3077]

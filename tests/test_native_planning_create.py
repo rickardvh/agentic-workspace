@@ -32,6 +32,57 @@ def material() -> dict:
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+    context = {"target": str(tmp_path), "task": "Revise this bounded native Planning owner"}
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value)
+
+    creation = call(context)["planning"]["creation_requests"][0]
+    creation["arguments"] = {"material": material()}
+    action = call({**context, "request": creation})["decision_packet"]["primary_action"]
+    created = call({**context, "invocation": action})
+    select = call({**context, "request": created["value"]["selection_request"]})["decision_packet"]["primary_action"]
+    call({**context, "invocation": select})
+    update = call(context)["planning"]["update_requests"][0]
+    update["arguments"]["material"] = {**material(), "lifecycle": "live", "phase": "implementation"}
+    old = call({**context, "request": update})["decision_packet"]["primary_action"]
+    result = call({**context, "invocation": old})
+    path = tmp_path / created["value"]["owner_path"]
+    before = path.read_bytes()
+    # Exact genuine producer postimage with its result withheld is a deterministic
+    # interrupted-publication fixture; the Rust process test kills the real writer.
+    (tmp_path / result["custody"]["committed"]["path"]).unlink()
+    current = {**context, "task": "Continue the same bounded owner revision after restart"}
+    fresh = call(current)
+    continuation = fresh["planning"]["requests"][0]
+    recovery = fresh["planning"]["update_recovery_requests"][0]
+    with pytest.raises(AssertionError):
+        call({**current, "invocation": old})
+    with pytest.raises(AssertionError):
+        call({**current, "request": recovery})
+    unrelated = {**continuation, "arguments": {"answer": "unrelated-direct"}}
+    with pytest.raises(AssertionError):
+        call({**current, "request": [unrelated, recovery]})
+    stale_continuation = {**continuation, "source_revision": "sha256:" + "0" * 64}
+    with pytest.raises(AssertionError):
+        call({**current, "request": [stale_continuation, recovery]})
+    ready = call({**current, "request": [continuation, recovery]})
+    action = ready["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.update-recover"
+    with pytest.raises(AssertionError):
+        call({**current, "task": "Unrelated new work", "invocation": action})
+    finalized = call({**current, "invocation": action})
+    assert finalized["status"] == "applied" and finalized["value"]["material_written"] is False
+    assert finalized["value"]["original_outcome"]["status"] == "applied"
+    assert finalized["custody"] != finalized["value"]["original_custody"]
+    assert path.read_bytes() == before
+    after = call(current)
+    assert after["planning"]["pending_update"] is None
+    assert after["decision_packet"]["status"] != "terminal"
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_public_creation_then_separate_selection(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
     context = {"target": str(tmp_path), "task": "Create current bounded Planning custody"}
 

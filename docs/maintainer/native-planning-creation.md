@@ -51,11 +51,25 @@ is a restriction only; it cannot acquire custody. Native operations share the
 existing Planning lock and recheck exact bytes; arbitrary external editors are
 not participants in that cooperative protocol.
 
-Recovery currently requires the same exact task identity (including its task
-wording and changed paths). Fresh discovery of the pending invocation does not
-establish reworded same-semantic recovery: even explicit `continue-selected`
-under different wording cannot replace the retained update request's task
-binding. That remains an owner-reentry implementation gap under #2970/#2986.
-A future correction must bind a new current continuation to the exact retained
-pending effect while preserving source, capability and claim boundaries; it
-must not silently substitute the old task hash or replay parent context.
+The original invocation keeps its exact task identity, including wording and
+changed paths. A fresh caller with different wording can submit the returned
+`planning.update_recovery_requests` entry together with the existing current
+`continue-selected` request. This selects `planning.update-recover`, a new
+current re-entry action bound to the exact retained postimage, effect and
+selected owner. It cannot also change selection, admit historical custody or
+substitute the old task identity. Stale source, capability, continuation and
+unrelated work are rejected.
+
+Recovery has its own common admission and result. Under the existing Planning
+lock it finalizes only the original prepared outcome, returning original
+outcome/custody separately from its own. It writes no material Plan bytes and
+grants neither proof nor terminality. Interruption before its own result remains
+common attempt uncertainty; an independently observable committed original
+outcome does not fabricate completion of the re-entry attempt. No filename scan
+or additional recovery ledger supplies missing custody. The earlier original
+admission-before-postimage uncertainty remains unchanged.
+
+The Rust process test terminates the actual update writer after publication and
+recovers through fresh reworded current continuation. Four public consumers
+also exercise genuine producer bytes with the result deliberately withheld;
+that deterministic fixture is not another process-interruption observation.

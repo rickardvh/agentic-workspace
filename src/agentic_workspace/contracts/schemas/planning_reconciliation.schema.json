@@ -94,6 +94,16 @@
       "required": ["kind", "current_work", "source", "invocation", "custody"],
       "additionalProperties": false
     },
+    "update_recovery_request": {
+      "type": "object",
+      "description": "Select an exact retained native update for current same-owner continuation. Requires the existing current continue-selected request; grants no custody or material revision.",
+      "properties": {
+        "owner_ref": {"type": "string", "description": "Exact current native-created owner reference."},
+        "pending_revision": {"type": "string", "description": "Exact retained update invocation revision returned by the owner."}
+      },
+      "required": ["owner_ref", "pending_revision"],
+      "additionalProperties": false
+    },
     "continuation_request": {
       "type": "object",
       "description": "Agent intention concerning the current source-selected Planning owner; grants neither source authority nor completion.",

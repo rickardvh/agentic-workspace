@@ -518,12 +518,14 @@ fn resolve_context(
     let declaration = json!({"kind":"planning/continuation/v1","result_kind":"agentic-workspace/planning-continuation-result/v1","input_schema":shape});
     let creation_declaration = crate::native_planning_create::declaration();
     let update_declaration = crate::native_planning_update::declaration();
+    let recovery_declaration = crate::native_planning_update::recovery_declaration();
     let owner_revision = digest(&json!([
         declaration,
         creation_declaration,
-        update_declaration
+        update_declaration,
+        recovery_declaration
     ]))?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration,update_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration,update_declaration,recovery_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
     {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);
@@ -543,6 +545,7 @@ fn resolve_context(
         .extend([
             crate::native_planning_create::operation(),
             crate::native_planning_update::operation(),
+            crate::native_planning_update::recovery_operation(),
         ]);
     contract["revision"] = json!(digest(&contract)?);
     let validation_contract = current_full_contract.unwrap_or(&contract);

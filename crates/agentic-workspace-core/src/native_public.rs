@@ -80,7 +80,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             input
                 .invocation
                 .as_ref()
-                .filter(|i| i["operation_id"] == "planning.create")
+                .filter(|i| {
+                    matches!(
+                        i["operation_id"].as_str(),
+                        Some("planning.create" | "planning.update-recover")
+                    )
+                })
                 .and_then(|i| i["arguments"].get("planning_request"))
                 .filter(|r| r.is_object())
         });
@@ -88,7 +93,14 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         .iter()
         .find(|r| r["owner"] == "planning" && r["request_kind"] == "planning/create/v1");
     let update_request = requests.iter().find(|r| {
-        r["owner"] == "planning" && r["request_kind"] == crate::native_planning_update::KIND
+        r["owner"] == "planning"
+            && matches!(
+                r["request_kind"].as_str(),
+                Some(
+                    crate::native_planning_update::KIND
+                        | crate::native_planning_update::RECOVER_KIND
+                )
+            )
     });
     let verification_request = |kind: &str| {
         requests
@@ -284,16 +296,21 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         target,
         &work,
         &contract,
-        &planning["selected_owner"],
+        &planning,
         update_request,
-        input
-            .invocation
-            .as_ref()
-            .filter(|i| executing && i["operation_id"] == "planning.update"),
+        input.invocation.as_ref().filter(|i| {
+            executing
+                && matches!(
+                    i["operation_id"].as_str(),
+                    Some("planning.update" | "planning.update-recover")
+                )
+        }),
+        planning_request,
     )?;
     planning["update_requests"] = update["requests"].clone();
     planning["update_retained"] = update["retained"].clone();
     planning["pending_update"] = update["pending"].clone();
+    planning["update_recovery_requests"] = update["recovery_requests"].clone();
     if update["pending"].is_object() {
         let owner = contributions
             .iter_mut()
@@ -617,6 +634,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "proof.report"
         && invocation["operation_id"] != "planning.create"
         && invocation["operation_id"] != "planning.update"
+        && invocation["operation_id"] != "planning.update-recover"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -625,6 +643,30 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == "planning.update-recover" {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        let executed = crate::native_planning_update::recover(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            &current["planning"]["update_retained"],
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let next = resolve(&input, &target, false).ok();
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     if invocation["operation_id"] == "planning.update" {
         let retained = &current["planning"]["update_retained"];
