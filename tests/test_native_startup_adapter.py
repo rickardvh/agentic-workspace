@@ -85,11 +85,34 @@ def test_missing_configured_source_is_scoped_and_absent_selection_quiet(
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-@pytest.mark.parametrize("operation", ["planning", "proof", "create"])
+@pytest.mark.parametrize("operation", ["planning", "proof", "create", "switch"])
 def test_startup_delivery_is_carried_into_fresh_effect_admission(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, operation: str
 ) -> None:
-    if operation == "proof":
+    switch_choice = None
+    incumbent = None
+    if operation == "switch":
+        context = {"target": str(tmp_path), "task": "Establish current Planning custody"}
+
+        def setup(value):
+            return consume(surface, shared_core_binary, native_cli, value)
+
+        for index in range(2):
+            current = setup(context)
+            request = current["planning"]["creation_requests"][0]
+            request["arguments"] = {"material": planning_material()}
+            requests = [request]
+            if index:
+                direct = current["decision_packet"]["decision_request"]["response_request"]
+                direct["arguments"]["answer"] = "unrelated-direct"
+                requests.insert(0, direct)
+            created = setup({**context, "invocation": setup({**context, "request": requests})["decision_packet"]["primary_action"]})
+            switch_choice = created["value"]["selection_request"]
+            if not index:
+                setup({**context, "invocation": setup({**context, "request": switch_choice})["decision_packet"]["primary_action"]})
+                context["task"] = "Select a second bounded owner"
+        incumbent = (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").read_bytes()
+    elif operation == "proof":
         context = proof_fixture(tmp_path)
     elif operation == "create":
         context = {"target": str(tmp_path), "task": "Create bounded current work"}
@@ -113,7 +136,11 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
 
     current = call(context)
     read_request = current["startup_adapter"]["requests"][0]
-    if operation == "proof":
+    if operation == "switch":
+        # Refresh the exact request against the new startup source contract.
+        owner_request = dict(switch_choice)
+        owner_request["capability_revision"] = current["capability_contract"]["revision"]
+    elif operation == "proof":
         owner_request = current["verification"]["execution_requests"][0]
     elif operation == "create":
         owner_request = current["planning"]["creation_requests"][0]
@@ -144,7 +171,11 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
     with pytest.raises(AssertionError):
         call({**context, "invocation": action})
     assert not (tmp_path / "count.txt").exists()
-    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+    selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    if operation == "switch":
+        assert selector.read_bytes() == incumbent
+    else:
+        assert not selector.exists()
     if operation == "create":
         assert not (tmp_path / action["arguments"]["owner_path"]).exists()
     source.write_bytes(original)
@@ -152,5 +183,5 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
     assert call({**context, "invocation": action})["status"] == "applied"
     fresh = call(context)
     assert fresh["startup_adapter"]["status"] == "source-context-required"
-    if operation == "planning":
+    if operation in {"planning", "switch"}:
         assert fresh["planning"]["current_owner"]["current"] is True

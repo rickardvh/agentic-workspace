@@ -20,3 +20,4 @@ Trusted Planning host boundary. Source custody is admitted outside this payload;
 | `capability_contract` | object \| null | no |  | Independently admitted capability/effect contract. |  |  |
 | `custody` | anyOf | no |  | Current reconciliation custody supplied by the responsible host. |  |  |
 | `invocation` | object \| null | no |  | Exact returned action for effect admission. |  |  |
+| `selection_transition` | anyOf | no |  | Optional exact selector transition supplied by the native Planning owner. |  |  |

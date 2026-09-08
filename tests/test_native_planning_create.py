@@ -174,6 +174,75 @@ def test_creation_does_not_fabricate_missing_judgment_or_terminal_state(
     assert not (tmp_path / ".agentic-workspace").exists()
 
 
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_owned_selection_switches_only_by_current_explicit_request(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    context = {"target": str(tmp_path), "task": "Continue the first bounded owner"}
+
+    def call(value):
+        return consume(surface, shared_core_binary, native_cli, value)
+
+    request = call(context)["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    first = call({**context, "invocation": call({**context, "request": request})["decision_packet"]["primary_action"]})
+    choice = first["value"]["selection_request"]
+    call({**context, "invocation": call({**context, "request": choice})["decision_packet"]["primary_action"]})
+    selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    before = selector.read_bytes()
+    first_path = tmp_path / first["value"]["owner_path"]
+    first_bytes = first_path.read_bytes()
+    context["task"] = "Create a distinct bounded owner"
+    current = call(context)
+    unrelated = current["decision_packet"]["decision_request"]["response_request"]
+    unrelated["arguments"]["answer"] = "unrelated-direct"
+    request = current["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    action = call({**context, "request": [unrelated, request]})["decision_packet"]["primary_action"]
+    second = call({**context, "invocation": action})
+    assert selector.read_bytes() == before
+    choice = second["value"]["selection_request"]
+    selected = call({**context, "request": choice})
+    action = selected["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "planning.reconcile"
+    assert action["arguments"]["selection_transition"]["prior_custody"]["committed"]
+    assert selector.read_bytes() == before
+    forged = json.loads(json.dumps(action))
+    forged["arguments"]["selection_transition"]["prior_sha256"] = "sha256:" + "0" * 64
+    with pytest.raises(AssertionError):
+        call({**context, "invocation": forged})
+    assert selector.read_bytes() == before
+    call({**context, "invocation": action})
+    fresh = call(context)
+    assert fresh["planning"]["current_owner"]["current"] is True
+    assert fresh["planning"]["selected_owner"]["ref"] == second["value"]["owner_path"]
+    assert first_path.read_bytes() == first_bytes
+    call({**context, "invocation": action})
+    assert fresh["decision_packet"]["status"] != "terminal"
+    if surface == "native":
+        destination = tmp_path / second["value"]["owner_path"]
+        body = json.loads(destination.read_bytes())
+        subject = fresh["planning"]["current_owner"]["reconciliation"]["subject"]
+        for change in ["attempt", "material"]:
+            if change == "attempt":
+                body["relationships"]["assignment"] = {"attempt": 2, "status": "retrying"}
+            else:
+                body["canonical_core"]["hard_constraints"] = "New owner-authored material limit"
+            destination.write_text(json.dumps(body))
+            with pytest.raises(AssertionError):
+                call({**context, "invocation": action})
+            current = call(context)
+            answer = current["decision_packet"]["decision_request"]["response_request"]
+            answer["arguments"]["answer"] = "continue-selected"
+            continuation = call({**context, "request": answer})
+            pending = continuation["decision_packet"]["primary_action"]
+            assert "selection_transition" not in pending["arguments"]
+            call({**context, "invocation": pending})
+            resumed = call(context)["planning"]["current_owner"]
+            assert resumed["current"] is True
+            assert (resumed["reconciliation"]["subject"]["revision"] == subject["revision"]) is (change == "attempt")
+
+
 def test_creation_intersects_current_instruction_write_scope(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
     import shutil
 

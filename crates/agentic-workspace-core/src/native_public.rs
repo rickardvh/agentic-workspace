@@ -236,7 +236,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             .as_ref()
             .is_some_and(|i| i["operation_id"] == "planning.reconcile")
     {
-        native_planning::resolve_for_execution(target, &work, &contract)?
+        native_planning::resolve_for_invocation(
+            target,
+            &work,
+            &contract,
+            input.invocation.as_ref().unwrap(),
+        )?
     } else if planning_request.is_some() {
         native_planning::resolve_with_contract(target, &work, planning_request, Some(&contract))?
     } else {

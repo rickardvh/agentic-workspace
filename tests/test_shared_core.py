@@ -967,7 +967,7 @@ def _planning_context(tmp_path: Path, body: dict[str, Any] | None = None) -> dic
     owner = next(owner for owner in contract["owners"] if owner["owner"] == "planning")
     arguments = {
         **schema["$defs"]["operation_arguments"],
-        "$defs": {key: schema["$defs"][key] for key in ["evidence", "state", "subject", "coverage", "reconciliation"]},
+        "$defs": schema["$defs"],
         "$schema": schema["$schema"],
     }
     owner["operations"].append(
