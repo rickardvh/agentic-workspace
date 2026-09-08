@@ -480,8 +480,8 @@ allowed_composition = ["maintenance", "evidence"]
 
 [assurance.domain_proof_lanes.planning_package_behavior]
 purpose = "Focused Planning package behavior."
-applies_to_paths = ["packages/planning/src/**", "packages/planning/tests/**"]
-commands = ["make test-planning"]
+applies_to_paths = ["packages/planning/src/**", "packages/planning/tests/**", "tests/test_planning_selection_custody.py"]
+commands = ["make test-planning", "uv run pytest tests/test_planning_selection_custody.py -q"]
 review_aids = ["Confirm the change is package-local Planning behavior rather than root orchestration."]
 evidence_concepts = ["planning-package-behavior", "package-local-proof"]
 proof_profiles = ["workspace_behavior"]

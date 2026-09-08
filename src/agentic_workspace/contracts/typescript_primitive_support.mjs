@@ -3,7 +3,10 @@
 // Agentic Workspace primitive behavior that is copied into generated packages.
 
 import {
+  closeSync,
   copyFileSync,
+  fsyncSync,
+  openSync,
   chmodSync,
   existsSync,
   lstatSync,
@@ -1498,8 +1501,19 @@ function planningOwnerSelectResult(values, operationId) {
     result.recovery_command = recovery || null;
     return finalizeMutationOutcome(result);
   };
+  const checkPaths = () => {
+    for (const path of [selectionPath, receiptPath]) {
+      for (let current = path; ; current = dirname(current)) {
+        try {
+          if (lstatSync(current).isSymbolicLink()) throw new Error(`Planning path crosses a link or junction: ${current}`);
+        } catch (error) { if (error.code !== 'ENOENT') throw error; }
+        if (current === targetRoot || dirname(current) === current) break;
+      }
+    }
+  };
+  try { checkPaths(); } catch (error) { return refuse('owner-selection-path-unadmitted', selectionOwner, error.message); }
   if (!['local', 'shared'].includes(mode)) return refuse('unsupported-selection-mode', selectionOwner, '--mode must be local or shared');
-  if (mode === 'shared' && !reason) return refuse('shared-selection-reason-required', stateOwner, 'shared selection requires --reason');
+  if (mode === 'shared') return refuse('shared-selection-retired', selectionOwner, 'shared owner selection is retired because current-work selection is local context; use --mode local');
   if ((!ownerId && !ownerRefInput) || (ownerId && ownerRefInput)) return refuse('owner-identity-required', '.agentic-workspace/planning/execplans', 'provide --owner or --owner-ref, not both');
   const expectedPlanning = String(values.expect_planning_revision ?? '').trim();
   if (expectedPlanning && expectedPlanning !== beforePlanning.revision_id) {
@@ -1565,34 +1579,14 @@ function planningOwnerSelectResult(values, operationId) {
     planning_revision: beforePlanning.revision_id,
     reason,
   };
-  let proposedState = JSON.parse(JSON.stringify(state));
-  let changedFields = ['local.current_work.selected_owner'];
-  if (mode === 'shared') {
-    proposedState.todo = isObject(proposedState.todo) ? proposedState.todo : {};
-    const active = Array.isArray(proposedState.todo.active_items) ? proposedState.todo.active_items : [];
-    const queued = Array.isArray(proposedState.todo.queued_items) ? proposedState.todo.queued_items : [];
-    let selectedItem = null;
-    const remaining = [];
-    for (const item of [...active, ...queued]) {
-      const matchesOwner = isObject(item) && (String(item.id ?? '') === selection.selected_owner.id || String(item.surface ?? '') === selected.ref);
-      if (matchesOwner) {
-        if (selectedItem) return refuse('owner-index-ambiguous', stateOwner, `owner '${selection.selected_owner.id}' has multiple state index entries`);
-        selectedItem = { ...item };
-      } else if (isObject(item)) remaining.push({ ...item, status: 'next', maturity: 'ready' });
-    }
-    selectedItem = selectedItem ?? { id: selection.selected_owner.id, title: String(selected.record.title ?? selection.selected_owner.id), surface: selected.ref, why_now: selected.ref, owner_role: 'implementation', review_role: 'validation', handoff_ready: true, next_action: String(selected.record.next_action ?? 'Continue the selected owner.'), done_when: String(selected.record.proof?.claims?.[0] ?? 'Selected owner acceptance and proof are satisfied.'), proof: "Use the selected owner's proof contract." };
-    proposedState.todo.active_items = [{ ...selectedItem, status: 'active', maturity: 'active', surface: selected.ref }];
-    proposedState.todo.queued_items = remaining;
-    changedFields = ['todo.active_items', 'todo.queued_items'];
-  }
+  const proposedState = state;
+  const changedFields = ['local.current_work.selected_owner'];
   let existingSelection = null;
   if (existsSync(selectionPath)) {
     try { existingSelection = JSON.parse(readText(selectionPath)); } catch { existingSelection = null; }
   }
   const semanticSelectionFields = ['kind', 'mode', 'current_work_id', 'selected_owner', 'reason'];
-  const noOp = mode === 'local'
-    ? semanticSelectionFields.every((field) => stableJson(existingSelection?.[field]) === stableJson(selection[field]))
-    : stableJson(proposedState) === stableJson(state);
+  const noOp = semanticSelectionFields.every((field) => stableJson(existingSelection?.[field]) === stableJson(selection[field]));
   const buildReceipt = (outcome, afterPlanning, afterCurrent) => ({
     kind: 'agentic-planning/owner-selection-receipt/v1',
     operation: 'planning.owner-select.lifecycle',
@@ -1612,6 +1606,9 @@ function planningOwnerSelectResult(values, operationId) {
     result.actions = [{ kind: 'no-op', path: selected.ref, detail: 'requested owner is already selected; no file was rewritten' }];
     return finalizeMutationOutcome(result);
   }
+  for (const path of [selectionPath, receiptPath]) {
+    if (existsSync(path)) return refuse('owner-selection-acquisition-required', path, 'Existing selection or receipt is preserved: this operation has no admitted custody for its first overwrite. Exact source-owner/human-authorized acquisition or transfer is required; matching JSON, revision, or continuation intent is not authority. Current native reconciliation custody remains with planning.reconcile.');
+  }
   if (result.dry_run) {
     result.operation_receipt = buildReceipt('dry-run', beforePlanning, 'proposed');
     result.actions = [
@@ -1620,25 +1617,29 @@ function planningOwnerSelectResult(values, operationId) {
     ];
     return finalizeMutationOutcome(result);
   }
-  const backups = new Map([[statePath, existsSync(statePath) ? readFileSync(statePath) : null], [selectionPath, existsSync(selectionPath) ? readFileSync(selectionPath) : null], [receiptPath, existsSync(receiptPath) ? readFileSync(receiptPath) : null]]);
+  const acquiredPaths = [];
+  const createCarrier = (path, value) => {
+    mkdirSync(dirname(path), { recursive: true });
+    checkPaths();
+    const fd = openSync(path, 'wx');
+    acquiredPaths.push(path);
+    try {
+      writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+      fsyncSync(fd);
+    } finally { closeSync(fd); }
+  };
   try {
-    if (mode === 'local') {
-      mkdirSync(dirname(selectionPath), { recursive: true });
-      writeFileSync(selectionPath, `${JSON.stringify(selection, null, 2)}\n`, 'utf8');
-    } else {
-      mkdirSync(dirname(statePath), { recursive: true });
-      writeFileSync(statePath, renderPlanningState(proposedState), 'utf8');
-    }
+    createCarrier(selectionPath, selection);
     const receipt = buildReceipt('selected', planningRevision(targetRoot, proposedState), shortFileHash(selectionPath));
-    mkdirSync(dirname(receiptPath), { recursive: true });
-    writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
+    createCarrier(receiptPath, receipt);
     result.operation_receipt = receipt;
   } catch (error) {
-    for (const [path, bytes] of backups.entries()) {
-      if (bytes === null) rmSync(path, { force: true });
-      else { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, bytes); }
-    }
-    return refuse('owner-selection-rolled-back', mode === 'local' ? selectionOwner : stateOwner, `owner selection rolled back after write failure: ${error.message}`);
+    // Never restore a snapshot over another writer's exclusive acquisition.
+    result.actions = acquiredPaths.map((path) => ({ kind: 'created', path, detail: 'exclusive acquisition created this carrier; completion is unresolved and bytes are preserved' }));
+    result.actions.push({ kind: 'manual review', path: selectionOwner, detail: `Exclusive owner selection acquisition did not complete; current selection/receipt are preserved for exact owner recovery: ${error.message}` });
+    result.reason_code = 'owner-selection-acquisition-incomplete';
+    result.operation_receipt = {};
+    return finalizeMutationOutcome(result);
   }
   result.actions = [
     { kind: 'updated', path: mode === 'local' ? selectionOwner : stateOwner, detail: `selected existing owner '${selection.selected_owner.id}' in ${mode} mode` },
