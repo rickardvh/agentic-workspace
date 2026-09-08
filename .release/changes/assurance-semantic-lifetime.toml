@@ -1,3 +1,3 @@
 schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
+bump = "minor"
 summary = "Bind assurance and Verification requests to material Planning identity and consumed facts rather than frontier churn."
