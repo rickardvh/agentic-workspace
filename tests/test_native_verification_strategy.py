@@ -68,9 +68,10 @@ def test_level_permissions_and_profiles_require_current_judgment(
     assert result["value"]["claim_boundary"]["completion_claim_allowed"] is False
     assert call({**context, "invocation": invocation})["value"] == result["value"]
     assert (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
-    stale = call({**context, "task": "Unrelated outcome", "request": complete})["verification"]
-    assert "verification-request-stale" in stale["evidence_gaps"]
-    assert stale["contribution"]["actions"] == []
+    stale = call({**context, "task": "Unrelated outcome", "request": complete})
+    assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
+    assert not any(action["source_owner"] == "verification" for action in stale["decision_packet"]["pending_consequences"]["actions"])
+    assert not any(action["source_owner"] == "verification" for action in stale["decision_packet"]["ready_actions"])
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -100,9 +101,10 @@ def test_binding_profiles_and_cross_route_disallowed_commands(
     assert [row["id"] for row in selected["strategy_control"]["selected_profiles"]] == ["required"]
     for route_id in ["domain:denied", "manifest_denied"]:
         denied = next(item for item in first["execution_requests"] if item["arguments"]["route_id"] == route_id)
-        blocked = call({**context, "request": denied})["verification"]
-        assert blocked["execution"]["reason"] == "selected-proof-profile-disallows-command"
-        assert blocked["contribution"]["actions"] == []
+        blocked = call({**context, "request": denied})
+        assert blocked["verification"]["execution"]["reason"] == "selected-proof-profile-disallows-command"
+        assert not any(action["source_owner"] == "verification" for action in blocked["decision_packet"]["pending_consequences"]["actions"])
+        assert not any(action["source_owner"] == "verification" for action in blocked["decision_packet"]["ready_actions"])
     assert not (tmp_path / "marker.txt").exists()
     source.write_text(source.read_text().replace('force="required-before-closeout"', 'force="recommended"'))
     optional = call(context)["verification"]["strategy_control"]

@@ -233,6 +233,9 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
         '[assurance.requirements.profile]\nlevel="high"\nforce="blocking"\napplies_to_proof_profiles=["assignment lifecycle"]\n'
         '[assurance.requirements.risk]\nlevel="high"\nforce="blocking"\napplies_to_risk_refs=["risk:fixture"]\n'
         '[assurance.requirements.invariant]\nlevel="high"\nforce="blocking"\napplies_to_invariant_refs=["invariant:fixture"]\n'
+        '[assurance.proof_profiles."assignment lifecycle"]\nrequired_commands=["echo bounded"]\n'
+        '[assurance.proof_profiles."target evidence and best-fit selection"]\nrequired_commands=["echo contextual"]\n'
+        '[assurance.proof_profiles."supported-host dogfood"]\nrequired_commands=["echo host"]\n'
     )
     context = {"target": str(tmp_path), "task": "Continue the bounded current outcome"}
 
@@ -255,10 +258,24 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
     old_subject = fresh["planning"]["current_owner"]["reconciliation"]["subject"]
     assert old_subject["state"]["proof"]["adaptive_assurance"] == richer["adaptive_assurance"]
     assert fresh["verification"]["evidence"] == []
+    strategy = fresh["verification"]["strategy_control"]
+    assert {r["id"] for r in strategy["selected_profiles"]} == set(richer["adaptive_assurance"]["proof_profiles"])
+    assert all(
+        r["selected_by"] == "planning-owner" and r["evidence_status"] == "not-established-by-selection"
+        for r in strategy["selected_profiles"]
+    )
+    assert len(strategy["obligations"]) == 3
+    assert "planning-assurance-profile-projection-unavailable" not in strategy["gaps"]
     assert fresh["decision_packet"]["status"] != "terminal"
     unrelated = {**fresh["planning"]["requests"][0], "arguments": {"answer": "unrelated-direct"}}
     assert statuses(call({**context, "request": unrelated})) == {"not-applicable"}
     old_claim = fresh["verification"]["requests"][0]
+    body["adaptive_assurance"]["proof_profiles"].append("missing-current-profile")
+    path.write_text(json.dumps(body))
+    missing = call(context)
+    missing = call({**context, "request": missing["planning"]["requests"][0]})
+    assert "selected-proof-profile-unavailable:missing-current-profile" in missing["verification"]["strategy_control"]["gaps"]
+    assert missing["verification"]["strategy_control"]["execution_blocked"] is True
     body["adaptive_assurance"]["proof_profiles"] = []
     body["risk_registry_refs"] = []
     del body["invariant_refs"]
@@ -270,6 +287,8 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
     revised = call({**context, "request": request})
     rows = {r["id"]: r["status"] for r in revised["verification"]["assurance_applicability"]["requirements"]}
     assert rows == {"profile": "not-applicable", "risk": "not-applicable", "invariant": "unresolved"}
+    assert revised["verification"]["strategy_control"]["selected_profiles"] == []
+    assert "planning-assurance-profile-projection-unavailable" not in revised["verification"]["strategy_control"]["gaps"]
     assert revised["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != old_subject["revision"]
     body["risk_registry_refs"] = "not a typed list"
     path.write_text(json.dumps(body))

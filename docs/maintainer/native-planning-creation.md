@@ -84,3 +84,12 @@ proof state. A change therefore stales dependent subject-bound proof even when
 scope and frontier stay unchanged. Verification applicability consumes only the
 declared profiles and exact risk/invariant references, never prose, successful
 process exits or Planning completion. These declarations grant no evidence.
+Verification strategy selects those same current profile IDs as Planning-owned
+requirements and exposes the configured command obligations. An unavailable
+profile remains an exact strategy gap. An explicit empty profile list removes
+no independently binding requirement and grants no proof or waiver.
+
+Strategy regression negatives inspect the composed public decision's pending
+and ready operations. Two inherited assertions previously read the removed
+private `verification.contribution`; their replacement preserves the stale-work
+and disallowed-command no-operation invariants across all four consumers.
