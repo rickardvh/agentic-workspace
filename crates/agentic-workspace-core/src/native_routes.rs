@@ -218,6 +218,9 @@ pub(crate) fn former_selection(
             Ok(metadata) if !linked(&metadata) && (path != REFERENCE || metadata.is_file()) => {}
             _ => {
                 diagnostic["reason"] = json!("former-route-source-unreadable-or-linked");
+                source["revision"] =
+                    json!(crate::digest(&json!({"catalogue":catalogue["revision"],
+                    "former_selection":diagnostic["reason"]}))?);
                 return Ok((source, Some(diagnostic)));
             }
         }
@@ -226,6 +229,8 @@ pub(crate) fn former_selection(
         Ok(bytes) => bytes,
         Err(_) => {
             diagnostic["reason"] = json!("former-route-source-unreadable-or-over-limit");
+            source["revision"] = json!(crate::digest(&json!({"catalogue":catalogue["revision"],
+                "former_selection":diagnostic["reason"]}))?);
             return Ok((source, Some(diagnostic)));
         }
     };
