@@ -61,19 +61,36 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             .iter()
             .find(|request| request["owner"] == "verification" && request["request_kind"] == kind)
     };
+    let (route_source, former_routes) =
+        native_routes::former_selection(target, &native_routes::source(target)?)?;
     let route_input = json!({
-        "current_work":work, "source":native_routes::source(target)?,
+        "current_work":work, "source":route_source,
         "request":request_for("semantic-routes")
     });
     let configuration = native_config::view(target)?;
     let admissions = &configuration["admissions"];
-    let (mut owner_input, routes) = decision_source::resolve(json!({
+    let (mut owner_input, mut routes) = decision_source::resolve(json!({
         "target":target,
         "archive":admissions["decision_record_target"].as_str().unwrap_or(""),
         "admitted_revision":admissions["decision_record_revision"].as_str().unwrap_or(""),
         "applicable_scope":input.changed.iter().map(|path| format!("path:{path}")).collect::<Vec<_>>(),
         "semantic_routes":route_input
     }))?;
+    if let (Some(view), Some(mut candidate)) = (routes.as_mut(), former_routes) {
+        if candidate["status"] == "candidate" {
+            let mut request = view["requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|request| request["request_kind"] == "semantic-routes/select/v1")
+                .unwrap()
+                .clone();
+            request["arguments"] =
+                json!({"posture":candidate["posture"],"routes":candidate["routes"]});
+            candidate["selection_request"] = request;
+        }
+        view["former_selection"] = candidate;
+    }
     let route_fact = routes
         .as_ref()
         .map(|value| value["decision"]["semantic_task_routes"].clone())

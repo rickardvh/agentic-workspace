@@ -201,6 +201,114 @@ pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
     )
 }
 
+/// Read the recognized former applicability fact without transferring its old
+/// work identity to the current native task or acquiring custody of its bytes.
+pub(crate) fn former_selection(
+    target: &Path,
+    catalogue: &Value,
+) -> Result<(Value, Option<Value>), CoreError> {
+    const REFERENCE: &str = ".agentic-workspace/local/current-task-routes.json";
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+    let mut source = catalogue.clone();
+    let mut diagnostic = json!({"reference":REFERENCE,"status":"unresolved",
+        "current_task_relation":"unproven","authority_effect":"none","bytes_preserved":true});
+    for path in [".agentic-workspace", ".agentic-workspace/local", REFERENCE] {
+        match root.symlink_metadata(path) {
+            Err(failure) if failure.kind() == ErrorKind::NotFound => return Ok((source, None)),
+            Ok(metadata) if !linked(&metadata) && (path != REFERENCE || metadata.is_file()) => {}
+            _ => {
+                diagnostic["reason"] = json!("former-route-source-unreadable-or-linked");
+                return Ok((source, Some(diagnostic)));
+            }
+        }
+    }
+    let bytes = match read(&root, REFERENCE) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            diagnostic["reason"] = json!("former-route-source-unreadable-or-over-limit");
+            return Ok((source, Some(diagnostic)));
+        }
+    };
+    let revision = hash(&bytes);
+    diagnostic["revision"] = json!(revision);
+    // The returned ordinary request binds both vocabulary and the exact former
+    // candidate. Neither its old ID nor its filename proves current task scope.
+    source["revision"] = json!(crate::digest(&json!({"catalogue":catalogue["revision"],
+        "former_selection":revision}))?);
+    let fact: Value = match serde_json::from_slice(&bytes) {
+        Ok(Value::Object(object)) => Value::Object(object),
+        _ => {
+            diagnostic["reason"] = json!("former-route-source-invalid");
+            return Ok((source, Some(diagnostic)));
+        }
+    };
+    let allowed = [
+        "kind",
+        "posture",
+        "routes",
+        "task_identity",
+        "current_work_id",
+        "source_revision",
+        "provenance",
+        "authority_effect",
+    ];
+    let routes = fact["routes"].as_array();
+    let old_work = fact["current_work_id"].as_str().unwrap_or("");
+    let shape_valid = fact
+        .as_object()
+        .unwrap()
+        .keys()
+        .all(|key| allowed.contains(&key.as_str()))
+        && fact["kind"] == "agentic-workspace/semantic-task-route-fact/v1"
+        && fact["provenance"] == "agent-selected"
+        && fact["authority_effect"] == "applicability-only"
+        && !old_work.is_empty()
+        && old_work.len() <= 256
+        && fact["task_identity"] == json!({"kind":"current-work","id":old_work})
+        && matches!(
+            fact["posture"].as_str(),
+            Some("selected" | "none" | "unresolved")
+        )
+        && routes.is_some_and(|routes| routes.iter().all(|route| route.as_str().is_some()));
+    if !shape_valid {
+        diagnostic["reason"] = json!("former-route-source-invalid-or-unsupported");
+        return Ok((source, Some(diagnostic)));
+    }
+    let routes = routes.unwrap();
+    if routes.len() > 16
+        || routes
+            .iter()
+            .any(|route| route.as_str().unwrap().len() > 256)
+    {
+        diagnostic["reason"] = json!("former-route-selection-exceeds-candidate-bound");
+        return Ok((source, Some(diagnostic)));
+    }
+    if fact["source_revision"] != catalogue["revision"] {
+        diagnostic["status"] = json!("stale");
+        diagnostic["reason"] = json!("former-route-vocabulary-revision-changed");
+        return Ok((source, Some(diagnostic)));
+    }
+    let declaration: Value = serde_json::from_str(include_str!(
+        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
+    ))
+    .expect("checked schema");
+    let shape = json!({"$schema":declaration["$schema"],"$defs":declaration["$defs"],"$ref":"#/$defs/semantic_route_choice"});
+    let choice = json!({"posture":fact["posture"],"routes":fact["routes"]});
+    if !crate::schema_validator(&shape, "former route candidate")?.is_valid(&choice)
+        || routes
+            .iter()
+            .any(|route| !catalogue["routes"].as_array().unwrap().contains(route))
+    {
+        diagnostic["reason"] = json!("former-route-selection-invalid");
+        return Ok((source, Some(diagnostic)));
+    }
+    diagnostic["status"] = json!("candidate");
+    diagnostic["reason"] = json!("current-vocabulary-requires-current-task-agent-selection");
+    diagnostic["posture"] = fact["posture"].clone();
+    diagnostic["routes"] = fact["routes"].clone();
+    Ok((source, Some(diagnostic)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

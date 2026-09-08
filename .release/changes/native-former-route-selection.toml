@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose recognized former route choices as bounded source-current candidates for explicit native task selection, preserving legacy bytes and rejecting stale answers without automatic applicability or authority."
+issues = [2930, 2613]
