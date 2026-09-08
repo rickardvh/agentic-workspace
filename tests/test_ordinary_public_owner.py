@@ -59,17 +59,60 @@ capability_classes = ["mechanical-follow-through"]
     if operation == "start":
         assert configured["effective_orchestration"]["assignment"]["authority"] == "binding"
     child = configured["task_assignment_disposition"]["bounded_child_assignment"]
-    assert child["selected_target"] == "bounded"
     assert child["implementation_allowed"] is False
-    assert child["required_next_action"] == "materialize-canonical-assignment"
-    assert configured["task_assignment_disposition"]["next_action"]["operation_invocation"]["operation_id"] == "assignment.export"
+    assert child["required_next_action"] == "resolve-current-task-requirements"
     assert configured["decision_packet"]["effects"]["implementation_allowed"] is False, configured
-    # Source drift is consumed on each call; a current local winner stays local.
-    local.write_text(local.read_text().replace('current_target = "current"', 'current_target = "bounded"'))
-    retained = _run(tmp_path, runtime, *arguments)
-    assert retained["task_assignment_disposition"]["outcome"] == "execute-here"
-    assert retained["task_assignment_disposition"]["bounded_child_assignment"]["status"] == "selected-current"
+    recovery = configured["task_assignment_disposition"]["next_action"]["operation_invocation"]
+    assert recovery["operation_id"] == "assignment.export"
+    assert recovery["arguments"] == {"task": arguments[2], "changed": ["docs/introduction.md"], "dry_run": True}
+    # Answer only the current owner's typed task judgment; this grants no transport authority.
+    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    preview_args = ["assignment", "export", *arguments[1:], "--dry-run"]
+    missing = _run(tmp_path, runtime, *preview_args)
+    assert missing["status"] == "requirements-required", missing
+    assert not missing["mutation_applied"]
+    judgment = missing["preview"]["task_requirements"]["judgment_request"]["arguments"]
+    judgment["required_result_classes"] = ["unapplied-patch"]
+    judgment_args = ["--task-judgment-json", json.dumps(judgment)]
+    preview = _run(tmp_path, runtime, *preview_args, *judgment_args)
+    assert preview["preview"]["task_requirements"]["status"] == "resolved", preview
+    gate = preview["preview"]["assignment_gate"]
+    assert gate["selected_target"] == "bounded"
+    assert gate["implementation_allowed"] is False
+    assert gate["required_next_action"] == "prepare-assigned-handoff"
+    # Fresh source admission can select local before any assignment is materialized.
+    original = local.read_text()
+    local.write_text(original.replace('current_target = "current"', 'current_target = "bounded"'))
+    retained = _run(tmp_path, runtime, *preview_args, *judgment_args)
+    assert retained["preview"]["assignment_gate"]["status"] == "assigned-current-target", retained
+    assert retained["preview"]["assignment_gate"]["implementation_allowed"] is True
     assert not (tmp_path / ".agentic-workspace/planning/assignments").exists()
+    local.write_text(original)
+    subprocess.run(["git", "-C", str(tmp_path), "add", "docs/introduction.md"], check=True)
+    subprocess.run(
+        ["git", "-C", str(tmp_path), "-c", "user.name=AW Tests", "-c", "user.email=tests@example.com", "commit", "-qm", "baseline"],
+        check=True,
+    )
+    offers = preview["preview"]["execution_configurations"]
+    selected = next(row["configuration"] for row in offers["candidates"] if row["eligible"] and row["configuration"]["target"] == "bounded")
+    exported = _run(
+        tmp_path,
+        runtime,
+        "assignment",
+        "export",
+        *arguments[1:],
+        *judgment_args,
+        "--transport",
+        "manual",
+        "--configuration-revision",
+        offers["revision"],
+        "--configuration-id",
+        selected["id"],
+    )
+    assert exported["status"] == "handoff-prepared", exported
+    resumed = _run(tmp_path, runtime, *arguments)
+    assert resumed["task_assignment_disposition"]["bounded_child_assignment"]["selected_target"] == "bounded"
+    assert resumed["decision_packet"]["effects"]["implementation_allowed"] is False
 
 
 @pytest.mark.parametrize("runtime", ["python", "typescript"])
