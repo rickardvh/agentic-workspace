@@ -14,8 +14,14 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
         "$ref":"#/$defs/task_requirements_judgment"});
     let declaration = json!({"kind":"assignment/judge-task-requirements/v1",
         "result_kind":"agentic-workspace/task-requirements/v1","input_schema":arguments});
+    let mut declarations = vec![
+        declaration,
+        crate::native_execution::declaration(),
+        crate::native_assignment::declaration(),
+    ];
+    declarations.extend(crate::native_handoff::declarations());
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
-        "owners":[{"owner":"assignment","revision":digest(&json!([declaration,crate::native_execution::declaration(),crate::native_assignment::declaration()]))?,"requests":[declaration,crate::native_execution::declaration(),crate::native_assignment::declaration()]}],"restriction_authorities":[{"owner":"assignment","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}]});
+        "owners":[{"owner":"assignment","revision":digest(&json!(declarations))?,"requests":declarations}],"restriction_authorities":[{"owner":"assignment","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}]});
     contract["revision"] = json!(digest(&contract)?);
     Ok(contract)
 }
@@ -32,10 +38,15 @@ pub(crate) fn view(
     request: Option<&Value>,
     verification_request: Option<&Value>,
     execution_request: Option<&Value>,
+    input_request: Option<&Value>,
     contract: &Value,
 ) -> Result<Value, CoreError> {
     if configuration["assignment_requirements"]["configured"] != true {
-        if request.is_some() || verification_request.is_some() || execution_request.is_some() {
+        if request.is_some()
+            || verification_request.is_some()
+            || execution_request.is_some()
+            || input_request.is_some()
+        {
             return Err(CoreError::new(
                 "task requirements require current configured assignment scope",
             ));
@@ -101,6 +112,27 @@ pub(crate) fn view(
         "judgment":judgment,"verification":obligation["verification"],
         "required_execution_guarantees":configuration["assignment_requirements"]["required_execution_guarantees"]}),
     )?;
+    let mut handoff_inputs = crate::native_handoff::inputs_view(
+        target,
+        transport_work,
+        configuration,
+        &result,
+        input_request,
+        contract,
+    )?;
+    let mut input_requests = Vec::new();
+    if result["status"] == "resolved"
+        && let Some(task_request) = request
+    {
+        let mut packet = vec![task_request.clone()];
+        if let Some(verification_request) = verification_request {
+            packet.push(verification_request.clone());
+        }
+        packet.push(handoff_inputs["request"].clone());
+        input_requests.push(json!(packet));
+    }
+    handoff_inputs["requests"] = json!(input_requests);
+    handoff_inputs.as_object_mut().unwrap().remove("request");
     let mut execution = crate::native_execution::view(
         target,
         &current_work,
@@ -108,6 +140,7 @@ pub(crate) fn view(
         execution_request,
         contract,
         transport_work,
+        &handoff_inputs,
     )?;
     if let Some(task_request) = request
         && let Some(choices) = execution["requests"].as_array_mut()
@@ -117,13 +150,16 @@ pub(crate) fn view(
             if let Some(obligation_request) = verification_request {
                 prerequisites.push(obligation_request.clone());
             }
+            if let Some(input_request) = input_request {
+                prerequisites.push(input_request.clone());
+            }
             prerequisites.push(choice.clone());
             *choice = json!(prerequisites);
         }
     }
     Ok(
         json!({"status":result["status"],"source_revision":source_revision,"requests":[template],"result":result,"verification_requirements":obligation,
-        "execution_configurations":execution,"remaining_owner_contracts":["current-native-best-fit-assignment-and-execution"],
+        "execution_configurations":execution,"handoff_inputs":handoff_inputs,"remaining_owner_contracts":["current-native-best-fit-assignment-and-execution"],
         "claim_boundary":"Current task judgment only; no assignment choice, local implementation, launch or proof authority."}),
     )
 }

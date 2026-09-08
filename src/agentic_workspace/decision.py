@@ -256,3 +256,7 @@ def review_authentication(context: Mapping[str, Any]) -> dict[str, Any]:
 
 def session_logging_policy(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"session_logging_policy": context})
+
+
+def assignment_packet(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"assignment_packet": context})

@@ -46,7 +46,7 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     assert manual["source_policy_eligible"] is True
     assert manual["handoff_constructible"] is False
     assert manual["automatic_invocation"] is False
-    assert manual["gap"] == "native-manual-handoff-owner-unavailable"
+    assert manual["gap"] == "native-manual-input-completeness-unresolved"
     assert manual["target_best_fit"] == "unresolved-not-rejected"
     assert all(r["configuration"]["proof_classes"] == [] and r["configuration"]["independent_context"] is False for r in rows.values())
     request = next(r for r in offered["requests"] if r[-1]["arguments"]["candidate"] == "worker:cli")

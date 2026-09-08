@@ -1151,15 +1151,19 @@ def test_assignment_dispatch_fails_closed_without_configured_adapter(tmp_path: P
 
 
 def test_assignment_host_native_dispatch_without_process_command_returns_bound_execution_contract(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, shared_core_binary: Path
 ) -> None:
     from agentic_workspace.contracts import python_primitive_support
 
-    monkeypatch.setattr(
-        python_primitive_support.subprocess,
-        "run",
-        lambda *_args, **_kwargs: pytest.fail("commandless host-native dispatch must not launch a process"),
-    )
+    original_run = python_primitive_support.subprocess.run
+    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
+
+    def only_semantic_core(command, *args, **kwargs):
+        assert Path(command[0]).resolve() == shared_core_binary.resolve(), "commandless dispatch must not launch a worker"
+        return original_run(command, *args, **kwargs)
+
+    monkeypatch.setattr(python_primitive_support.subprocess, "run", only_semantic_core)
+
     packet = {
         "assignment_id": "assignment-1",
         "assignment_revision": "sha256:assignment",
@@ -2555,6 +2559,11 @@ def _run_typescript_assignment(target: Path, transition: str, values: dict[str, 
                 arguments.extend(["--changed", str(path)])
             continue
         arguments.extend([f"--{name.replace('_', '-')}", json.dumps(value) if isinstance(value, (dict, list)) else str(value)])
+    # This helper exercises unpackaged generated source. Installed consumers use
+    # the separately verified staged native manifest and never this dev override.
+    from agentic_workspace.native_core import core_binary
+
+    environment = {**os.environ, "AGENTIC_WORKSPACE_CORE_BINARY": str(core_binary())}
     completed = subprocess.run(
         [
             "node",
@@ -2571,6 +2580,7 @@ def _run_typescript_assignment(target: Path, transition: str, values: dict[str, 
         text=True,
         capture_output=True,
         check=False,
+        env=environment,
     )
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)

@@ -59,6 +59,132 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "readonly_handoff_inputs": {
+  "description": "Current acting-agent completeness judgment for necessary read-only assignment inputs; source readability/currentness is observed separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "input_refs",
+    "complete",
+    "reason"
+  ],
+  "properties": {
+    "input_refs": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    }
+  }
+},
+    "readonly_handoff_export": {
+  "description": "Read-only export of one current comparative assignment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "assignment_revision"
+  ],
+  "properties": {
+    "assignment_revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  }
+},
+    "readonly_handoff_return": {
+  "description": "Structured read-only worker observation; never proof, authenticated review or completion.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "returned"
+  ],
+  "properties": {
+    "returned": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "assignment_id",
+        "assignment_revision",
+        "run_id",
+        "target",
+        "packet_integrity",
+        "result_delivery",
+        "changed_paths",
+        "patch",
+        "summary",
+        "stop_conditions_hit"
+      ],
+      "properties": {
+        "assignment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "assignment_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "packet_integrity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "kind": {
+          "const": "agentic-workspace/delegated-return/v1"
+        },
+        "result_delivery": {
+          "const": "unapplied-patch"
+        },
+        "changed_paths": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "patch": {
+          "const": ""
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "stop_conditions_hit": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      }
+    }
+  }
+},
+
     "assignment_comparative_judgment": {
   "type": "object",
   "description": "One current comparative execution assessment by the acting orchestrator; never a persistent preference, capability observation or proof.",

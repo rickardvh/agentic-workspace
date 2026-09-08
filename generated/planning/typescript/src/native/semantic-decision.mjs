@@ -162,3 +162,7 @@ export function attributeAssignmentOutcome(evidence) {
 export function reviewAuthentication(context) {
   return request({review_authentication: context});
 }
+
+export function assignmentPacket(context) {
+  return request({assignment_packet: context});
+}

@@ -436,6 +436,9 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             r["owner"] == "assignment"
                 && r["request_kind"] == "assignment/select-execution-configuration/v1"
         }),
+        requests
+            .iter()
+            .find(|r| r["request_kind"] == "assignment/judge-readonly-inputs/v1"),
         &contract,
     )?;
     contributions.push(startup_adapter["contribution"].clone());
@@ -452,6 +455,16 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     contributions.push(assignment["contribution"].clone());
     assignment.as_object_mut().unwrap().remove("contribution");
     requirements["assignment"] = assignment;
+    let handoff = crate::native_handoff::view(
+        target,
+        &input.task,
+        &input.changed,
+        &work,
+        &requirements,
+        &requests,
+        &contract,
+    )?;
+    requirements["handoff"] = handoff;
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.push(instructions["contribution"].clone());
@@ -597,6 +610,9 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                     "assignment/judge-task-requirements/v1"
                         | "assignment/select-execution-configuration/v1"
                         | "assignment/assess-best-fit/v1"
+                        | "assignment/judge-readonly-inputs/v1"
+                        | "assignment/export-readonly/v1"
+                        | "assignment/observe-readonly-return/v1"
                 )
             )
         {

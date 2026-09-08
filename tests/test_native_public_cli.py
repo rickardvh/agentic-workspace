@@ -127,7 +127,7 @@ def consume(surface: str, binary: Path, native: Path, context: dict, *, host_pat
         ]
         stdin = None
     environment = {**os.environ, "PATH": host_path} if surface == "native" else None
-    result = subprocess.run(command, input=stdin, text=True, capture_output=True, cwd=ROOT, check=False, env=environment)
+    result = subprocess.run(command, input=stdin, text=True, encoding="utf-8", capture_output=True, cwd=ROOT, check=False, env=environment)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
 

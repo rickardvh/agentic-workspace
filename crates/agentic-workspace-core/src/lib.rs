@@ -1,4 +1,5 @@
 pub mod assignment;
+pub mod assignment_packet;
 pub mod assurance_applicability;
 pub mod attempt;
 pub mod attempt_store;
@@ -9,6 +10,7 @@ pub mod instruction_applicability;
 pub mod instruction_source;
 pub mod maintainer_logging;
 mod native_config;
+pub(crate) mod native_handoff;
 mod native_instructions;
 mod native_intent;
 mod native_memory;

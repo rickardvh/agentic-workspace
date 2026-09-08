@@ -100,6 +100,7 @@ pub(crate) fn view(
     request: Option<&Value>,
     contract: &Value,
     transport_work: &Value,
+    handoff_inputs: &Value,
 ) -> Result<Value, CoreError> {
     let observed = match crate::native_assignment_policy::load(target) {
         Ok(value) => value,
@@ -116,7 +117,7 @@ pub(crate) fn view(
         gaps.push("binding-policy-current-target-unresolved");
     }
     let source_revision = digest(
-        &json!({"sources":observed.revision,"requirements":requirements["revision"],"work":work}),
+        &json!({"sources":observed.revision,"requirements":requirements["revision"],"handoff_inputs":handoff_inputs["revision"],"work":work}),
     )?;
     if requirements["status"] != "resolved" {
         return Ok(
@@ -200,11 +201,12 @@ pub(crate) fn view(
                     .as_array()
                     .is_some_and(|v| v.iter().any(|i| i == "off"));
             if manual {
-                manual_targets.push(json!({"target":name,"source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"source_policy_eligible":authority&&profile_safe,"handoff_constructible":false,"automatic_invocation":false,"gap":"native-manual-handoff-owner-unavailable","target_best_fit":"unresolved-not-rejected"}));
+                manual_targets.push(json!({"target":name,"source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"source_policy_eligible":authority&&profile_safe,"handoff_constructible":handoff_inputs["status"]=="ready","automatic_invocation":false,"gap":if handoff_inputs["status"]=="ready"{""}else{"native-manual-input-completeness-unresolved"},"target_best_fit":"unresolved-not-rejected"}));
             }
-            let capability =
-                digest(&json!({"profile":profile,"transport":transport,"executable":observed}))?;
-            candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":retained||observed.is_some()&&matches!(method,"cli"|"api"),"result_classes":["read-only","unapplied-patch"],"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
+            let capability = digest(
+                &json!({"profile":profile,"transport":transport,"executable":observed,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
+            )?;
+            candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&matches!(method,"cli"|"api"),"result_classes":if manual{json!(["read-only"])}else{json!(["read-only","unapplied-patch"])},"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
         }
     }
     let mut input = requirements["requirements"].clone();

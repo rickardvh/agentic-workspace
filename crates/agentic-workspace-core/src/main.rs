@@ -26,6 +26,11 @@ fn main() {
         )
     } else if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("assignment_packet"))
+    {
+        agentic_workspace_core::assignment_packet::view(request["assignment_packet"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("native_route_discovery"))
     {
         agentic_workspace_core::native_routes::discovery(request["native_route_discovery"].clone())
