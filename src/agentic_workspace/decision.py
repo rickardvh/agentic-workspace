@@ -244,3 +244,7 @@ def runtime_compatibility(context: Mapping[str, Any]) -> dict[str, Any]:
 
 def review_authentication(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"review_authentication": context})
+
+
+def session_logging_policy(context: Mapping[str, Any]) -> dict[str, Any]:
+    return _request({"session_logging_policy": context})

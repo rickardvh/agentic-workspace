@@ -121,6 +121,15 @@
       },
       "description": "Current Verification strategy assessment bound by its public request to exact task, work, source and capability identities."
     },
+    "session_logging_policy_input": {
+      "type": "object", "additionalProperties": false,
+      "description": "Maintainer logging policy over canonical local configuration and the existing process disable override; never workflow authority.",
+      "required": ["local", "disable_override"],
+      "properties": {
+        "local": {"type": "object", "description": "Current local source, separately validated against workspace_local_override.schema.json."},
+        "disable_override": {"type": "string", "description": "Observed AW_SESSION_LOGGING_DISABLE value; exact 1 disables capture."}
+      }
+    },
     "verification_execute_request": {
       "type": "object",
       "required": [

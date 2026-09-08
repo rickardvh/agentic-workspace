@@ -13,3 +13,13 @@ Exports preserve the raw local logs, normalize known machine-local paths, and di
 Raw sessions, derived views, blobs, and exports are ignored local diagnostics. AW does not automatically promote, upload, or delete them; they remain under `.agentic-workspace/local/` until the workspace's local retention or cleanup process removes them.
 
 Older Markdown/index-only sessions remain readable. Existing physical JSONL streams are deterministically migrated into the logical stream on the next identified session resolution; export synthesizes migration events and explicit gap records when it must recover chronology from derived views alone. A malformed or partial JSONL tail does not hide later valid events; readers report the damaged record and continue from subsequent complete lines.
+
+## Native transport capture
+
+Native `start` and `invoke` capture completion metadata when the current local `[session_logging]` source enables it and `AW_SESSION_LOGICAL_IDENTITY` supplies a stable explicit identity. `AW_SESSION_LOGGING_DISABLE=1` wins. Missing identity or disabled capture produces no diagnostic files or decision fields. Native capture uses the shared Rust policy for `enabled`, `path_mode`, and the `redact_local_paths` compatibility alias; malformed configuration or diagnostic state cannot change the command result.
+
+Native events contain timing, command identity, transport outcome, request/result byte counts and hashes, and explicit omissions. They omit raw tasks, arguments, result bodies and stdout/stderr. Paths follow the configured mode. Parent/correlation identities use the existing salted identity format at initial registration. Capture is limited to 8 KiB per event and a 1 MiB existing stream/registry read; reaching a bound, lock contention or interruption omits diagnostics. No rotation or interrupted-command recovery is claimed. Transport success is not task success or proof.
+
+An absent registry can be created exclusively. An already registered logical identity can append through the existing stream lock. Unknown or torn state is preserved. Registering a new logical identity into an existing registry remains an implementation/custody gap under #2995/#3001; native capture skips it instead of replacing another writer's registry. These limits mean #2995 is not complete, and release-artifact acceptance remains separate under #2990.
+
+The existing public `session-log analyze --origin all --format json` and `session-log export --no-artifacts --format json` discover registered native streams through the current logical identity. Native caller origin is explicitly unknown. Native capture does not introduce a separate analysis command or log store.

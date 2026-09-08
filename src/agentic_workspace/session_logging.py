@@ -24,6 +24,7 @@ from typing import Any
 from agentic_workspace import __version__
 from agentic_workspace import config as config_lib
 from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.decision import session_logging_policy
 from agentic_workspace.result_adapter import serialise_value
 
 SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
@@ -124,8 +125,23 @@ def load_state_for_argv(argv: Sequence[str], *, cwd: Path | None = None) -> Sess
         config = config_lib.load_workspace_config(target_root=target_root)
     except Exception as exc:  # pragma: no cover - best-effort side channel
         return SessionLoggingState(enabled=False, target_root=target_root, config=None, config_warning=str(exc))
+    try:
+        policy = session_logging_policy(
+            {
+                "local": {
+                    "schema_version": 1,
+                    "session_logging": {
+                        "enabled": bool(config.local_override.session_logging.enabled),
+                        "path_mode": config.local_override.session_logging.path_mode,
+                    },
+                },
+                "disable_override": os.environ.get("AW_SESSION_LOGGING_DISABLE", ""),
+            }
+        )
+    except Exception as exc:
+        return SessionLoggingState(enabled=False, target_root=target_root, config=None, config_warning=str(exc))
     return SessionLoggingState(
-        enabled=bool(config.local_override.session_logging.enabled),
+        enabled=policy["enabled"],
         target_root=target_root,
         config=config,
     )

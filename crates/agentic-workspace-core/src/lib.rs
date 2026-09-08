@@ -7,6 +7,7 @@ pub mod decision_source;
 pub mod direct_task;
 pub mod instruction_applicability;
 pub mod instruction_source;
+pub mod maintainer_logging;
 mod native_config;
 mod native_instructions;
 mod native_intent;

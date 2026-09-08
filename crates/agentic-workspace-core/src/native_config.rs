@@ -233,6 +233,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 field.as_str(),
                                 "safety.safe_to_auto_run_commands"
                                     | "safety.requires_human_verification_on_pr"
+                                    | "session_logging.enabled"
+                                    | "session_logging.path_mode"
+                                    | "session_logging.redact_local_paths"
                             ));
                 let consumed = consumed
                     || (source == SHARED

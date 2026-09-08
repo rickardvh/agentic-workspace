@@ -364,3 +364,11 @@ material revision from frontier changes. Interrupted postimage publication can
 resume its exact retained invocation; reworded same-semantic recovery remains an
 explicit owner-reentry implementation gap. No real provider work, target-quality
 observation or monetary saving is inferred from this deterministic run.
+
+### Native maintainer diagnostics (#2995)
+
+Native start/invoke now emits bounded metadata into the existing registered logical stream when current local policy enables capture and explicit identity is available. Actual native CLI capture was discovered by the existing public analysis/export commands; no private-path recovery was required. Nineteen native cases plus the shared forwarder guard passed in 5.70 seconds. A five-pair local timing sample observed median disabled-source startup of 58.38 ms versus 48.21 ms with the explicit disable override (10.16 ms difference); this is host timing, not claimed universal overhead or savings. Native no-identity and explicit-disable paths skip diagnostic source/state reads.
+
+Avoidable implementation-agent mistakes were an initially incomplete schema-validator envelope (nine failures), then a misspelled existing analysis flag (`--origin-scope` instead of `--origin`, one failure); corrected focused reruns passed. No provider inference was used. Existing-registry registration of a new logical identity is still skipped because safe registration custody is unimplemented. Native interruption/rotation and release-artifact acceptance remain separate gaps; diagnostic omissions and transport success never grant task or proof acceptance.
+
+Integration briefly retained conflict markers in an unpublished commit after an unqualified Python command was unavailable and the shell continued. A first merge-repair expression also consumed trailing text; JSON validation caught it. The implementation agent restored complete sources, corrected the merge and amended that unpublished commit before publication. This is avoidable implementation-agent command sequencing waste; no product or target-quality inference follows.
