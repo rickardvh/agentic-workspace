@@ -108,6 +108,14 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     assert action["operation_id"] == "delegation.dispatch"
     assert not (tmp_path / "launches.txt").exists()
     result = call(invocation=action)
+    cost = result["value"]["context_cost"]
+    assert cost["assignment_packet_bytes"] == len(
+        json.dumps(action["arguments"]["packet"], ensure_ascii=False, separators=(",", ":")).encode()
+    )
+    assert cost["rendered_prompt_bytes"] == cost["assignment_packet_bytes"]
+    assert cost["elapsed_ms"] == result["value"]["process"]["duration_ms"]
+    assert all(cost[field] is None for field in ("effective_input_tokens", "cached_input_tokens", "output_tokens", "retry_count"))
+    assert "provider_prompt_framing" in cost["unknown_fields"]
     if fault:
         assert result["value"]["status"] == "censored-or-invalid-return"
         assert result["value"]["returned"] is None and result["value"]["reentry"] is None
@@ -148,12 +156,23 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         assert call(invocation=action)["value"] == result["value"]
     assert (tmp_path / "launches.txt").read_text() == "launched\n"
     reentry = result["value"]["reentry"]
-    assert reentry["request"][-1]["arguments"]["returned"] == result["value"]["returned"]
+    assert reentry["request"][-2]["arguments"]["returned"] == result["value"]["returned"]
     observed = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
     assert observed["task_requirements"]["handoff"]["observation"]["proof_current"] is False
+    execution = observed["task_requirements"]["delegation"]["observation"]
+    assert execution["status"] == "current-executed-observation"
+    assert execution["returned"] == result["value"]["returned"]
+    assert execution["context_cost"] == cost
+    assert not any(execution["claim_boundary"].values())
+    forged = copy.deepcopy(reentry)
+    forged["request"][-2]["arguments"]["returned"]["summary"] = "Worker text cannot manufacture a retained outcome."
+    with pytest.raises(AssertionError, match="retained execution"):
+        consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **forged})
     dependency.write_text("Changed after execution.\n")
     with pytest.raises(AssertionError, match="changed|stale"):
         call(invocation=action)
+    with pytest.raises(AssertionError, match="changed|stale"):
+        consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
     assert (tmp_path / "launches.txt").read_text() == "launched\n"
     assert unrelated.read_text() == "Preserve concurrent work.\n"
 

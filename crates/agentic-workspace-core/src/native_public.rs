@@ -480,6 +480,24 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &requests,
         &contract,
     )?;
+    if !delegation["observed_invocation"].is_null() {
+        let original = delegation["observed_invocation"].clone();
+        let original_input = Input {
+            target: input.target.clone(),
+            task: input.task.clone(),
+            changed: input.changed.clone(),
+            request: None,
+            invocation: Some(original.clone()),
+        };
+        let fresh = resolve(&original_input, target, true)?;
+        crate::admit_invocation_value(
+            json!({"decision":fresh["decision_packet"],"invocation":original}),
+        )?;
+    }
+    delegation
+        .as_object_mut()
+        .unwrap()
+        .remove("observed_invocation");
     contributions.push(delegation["contribution"].clone());
     delegation.as_object_mut().unwrap().remove("contribution");
     requirements["delegation"] = delegation;
@@ -630,7 +648,12 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
-        if owner == "delegation" && request["request_kind"] != "delegation/dispatch/v1" {
+        if owner == "delegation"
+            && !matches!(
+                request["request_kind"].as_str(),
+                Some("delegation/dispatch/v1" | "delegation/read-result/v1")
+            )
+        {
             return Err(CoreError::new(
                 "requested Delegation request kind is not available",
             ));
@@ -725,6 +748,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
             json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
         )?;
         result["custody"] = executed["custody"].clone();
+        result["value"]["reentry"] =
+            crate::native_delegation::result_reentry(&executed, invocation)?;
         return Ok(result);
     }
     if invocation["operation_id"] == "planning.update-recover" {

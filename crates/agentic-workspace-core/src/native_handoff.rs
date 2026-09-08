@@ -169,6 +169,7 @@ pub(crate) fn view(
                     "assignment/export-readonly/v1"
                         | "assignment/observe-readonly-return/v1"
                         | "delegation/dispatch/v1"
+                        | "delegation/read-result/v1"
                 )
             )
         })

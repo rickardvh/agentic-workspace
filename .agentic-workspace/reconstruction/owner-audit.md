@@ -358,3 +358,12 @@ pause/resume, matched completed local comparison and observed full lifecycle cos
 are not established. #2209 remains blocked on admitted consequential evidence;
 process exit or worker success text never improves target standing. No issue
 closes from this execution correction. #2909 retains cumulative conformance.
+
+The same PR's continuation adds owner-validated committed execution provenance to
+the self-sufficient re-entry. The delegation owner reads its own exact custody;
+the native resolver revalidates the original action before exposing that typed
+observation. Forged return text and source drift are rejected. The existing cost
+contract receives measured process-input bytes and elapsed time; absent provider
+and downstream metrics remain unknown. This supplies source facts for later
+admission, not task acceptance or a target-quality update. Its nine focused
+dispatch cases pass across native/Python/TypeScript/JSON (25.25 seconds).

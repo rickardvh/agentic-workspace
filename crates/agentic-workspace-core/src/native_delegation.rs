@@ -5,14 +5,16 @@ use serde_json::{Value, json};
 use std::{io::Write, path::Path, process::Command, time::Duration};
 
 const KIND: &str = "delegation/dispatch/v1";
+pub(crate) const READ: &str = "delegation/read-result/v1";
 const OP: &str = "delegation.dispatch";
 fn error(value: impl ToString) -> CoreError {
     CoreError::new(value.to_string())
 }
 pub(crate) fn contract() -> Result<Value, CoreError> {
     let declaration = json!({"kind":KIND,"result_kind":"agentic-workspace/delegation-execution/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"handoff_revision":{"type":"string"}},"required":["handoff_revision"],"additionalProperties":false}});
+    let read = json!({"kind":READ,"result_kind":"agentic-workspace/delegation-result-observation/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"custody":{"type":"object"}},"required":["custody"],"additionalProperties":false}});
     let operation = json!({"id":OP,"semantic_revision":"native-delegation-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"packet":{"type":"object"},"execution":{"type":"object"}},"required":["target","packet","execution"],"additionalProperties":false},"effects":["delegation-execution"],"reads":["delegation"],"result_kind":"agentic-workspace/delegation-execution/v1"});
-    let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"delegation","revision":digest(&json!([declaration,operation]))?,"requests":[declaration],"operations":[operation],"domains":["delegation"],"effects":[{"id":"delegation-execution","domain":"delegation"}]}]});
+    let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"delegation","revision":digest(&json!([declaration,read,operation]))?,"requests":[declaration,read],"operations":[operation],"domains":["delegation"],"effects":[{"id":"delegation-execution","domain":"delegation"}]}]});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
 }
@@ -37,13 +39,48 @@ pub(crate) fn view(
         &json!({"work":work,"assignment":requirements["assignment"]["result"]["assignment_identity"],"packet":packet,"execution":selected["execution"]}),
     )?;
     let submitted_request = submitted.iter().find(|r| r["request_kind"] == KIND);
+    let result_read = submitted.iter().find(|r| r["request_kind"] == READ);
     let ready = handoff["status"] == "exported-read-only"
         && selected["transport"] == "cli"
         && selected["execution"]["adapter"]["kind"] == "process"
         && selected["execution"]["adapter"]["output_mode"] == "stdout";
     let mut requests = Vec::new();
     let mut actions = Vec::new();
-    if ready {
+    let mut observation = Value::Null;
+    let mut observed_invocation = Value::Null;
+    if let Some(request) = result_read {
+        crate::prepare_request_value(
+            json!({"request":request,"current_work":work,"capability_contract":contract}),
+        )?;
+        if request["source_revision"] != source || submitted_request.is_some() {
+            return Err(error(
+                "delegation result source changed or combined with dispatch",
+            ));
+        }
+        let retained = crate::attempt_store::inspect_committed(
+            &target.to_string_lossy(),
+            request["arguments"]["custody"].clone(),
+        )?;
+        let invocation = &retained["invocation"];
+        let value = &retained["outcome"]["value"];
+        if invocation["source_owner"] != "delegation"
+            || invocation["operation_id"] != OP
+            || invocation["arguments"]["packet"] != *packet
+            || invocation["arguments"]["execution"] != selected["execution"]
+            || invocation["source_requests"]
+                .as_array()
+                .is_none_or(|requests| requests.iter().any(|r| r["request_kind"] == READ))
+            || value["status"] != "returned-unproven"
+            || value["source_current"] != true
+            || value["returned"] != handoff["observation"]["returned"]
+        {
+            return Err(error(
+                "delegation observation differs from current retained execution",
+            ));
+        }
+        observed_invocation = invocation.clone();
+        observation = json!({"kind":"agentic-workspace/delegation-result-observation/v1","status":"current-executed-observation","assignment_identity":requirements["assignment"]["result"]["assignment_identity"],"returned":value["returned"],"process":value["process"],"context_cost":value["context_cost"],"custody":request["arguments"]["custody"],"claim_boundary":value["claim_boundary"]});
+    } else if ready {
         let template = json!({"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"delegation","owner_revision":owner["revision"],"source_revision":source,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"handoff_revision":digest(packet)?}});
         if let Some(request) = submitted_request {
             crate::prepare_request_value(
@@ -66,8 +103,30 @@ pub(crate) fn view(
         ));
     }
     Ok(
-        json!({"status":if ready {"dispatch-ready"} else {"not-ready"},"requests":requests,"contribution":{"owner":"delegation","revision":source,"settled":actions.is_empty(),"actions":actions},"claim_boundary":"Execution transports the sealed assignment only; no return admission, Verification proof, Planning progress or completion authority."}),
+        json!({"status":if !observation.is_null(){"result-observed"} else if ready {"dispatch-ready"} else {"not-ready"},"requests":requests,"observation":observation,"observed_invocation":observed_invocation,"contribution":{"owner":"delegation","revision":source,"settled":actions.is_empty(),"actions":actions},"claim_boundary":"Execution transports the sealed assignment only; no return admission, Verification proof, Planning progress or completion authority."}),
     )
+}
+
+/// Add exact committed transport provenance to the public re-entry after commit.
+/// It is not part of the committed outcome itself (which would self-reference).
+pub(crate) fn result_reentry(executed: &Value, invocation: &Value) -> Result<Value, CoreError> {
+    let mut reentry = executed["outcome"]["value"]["reentry"].clone();
+    if reentry.is_null() {
+        return Ok(reentry);
+    }
+    let mut request = invocation["source_requests"]
+        .as_array()
+        .and_then(|requests| requests.iter().find(|r| r["request_kind"] == KIND))
+        .cloned()
+        .ok_or_else(|| error("retained delegation request missing"))?;
+    request["id"] = json!(READ);
+    request["request_kind"] = json!(READ);
+    request["arguments"] = json!({"custody":executed["custody"]});
+    reentry["request"]
+        .as_array_mut()
+        .ok_or_else(|| error("return re-entry missing"))?
+        .push(request);
+    Ok(reentry)
 }
 
 fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, CoreError> {
@@ -194,9 +253,11 @@ pub(crate) fn execute(
         );
     }
     command.current_dir(target);
+    let input = serde_json::to_vec(&invocation["arguments"]["packet"]).map_err(error)?;
+    let input_bytes = input.len();
     let process = crate::process_execution::run(
         command,
-        Some(serde_json::to_vec(&invocation["arguments"]["packet"]).map_err(error)?),
+        Some(input),
         Duration::from_secs(
             adapter["timeout_seconds"]
                 .as_u64()
@@ -244,7 +305,10 @@ pub(crate) fn execute(
             .ok_or_else(|| error("sealed handoff lacks return re-entry"))?;
         request["arguments"]["returned"] = returned.clone().unwrap();
     }
-    let outcome = json!({"status":"applied","effects":["delegation-execution"],"value":{"kind":"agentic-workspace/delegation-execution/v1","status":if accepted {"returned-unproven"} else {"censored-or-invalid-return"},"source_current":current,"returned":if accepted{returned.unwrap()}else{Value::Null},"reentry":reentry,"process":{"status":process["status"],"exit_code":process["exit_code"],"duration_ms":process["duration_ms"],"stdout_bytes":process["output"]["stdout"]["bytes"],"stderr_bytes":process["output"]["stderr"]["bytes"],"truncated":process["output"]["stdout"]["truncated"]},"claim_boundary":{"proof":false,"planning_progress":false,"completion":false},"raw_transcript_stored":false}});
+    // This is the observed process boundary, not the provider's hidden prompt
+    // framing, token usage, internal retries or total successful-completion cost.
+    let context_cost = json!({"kind":"agentic-workspace/assignment-context-cost/v1","transport":"cli","adapter_revision":digest(adapter)?,"configuration_context":null,"assignment_packet_bytes":input_bytes,"rendered_prompt_bytes":input_bytes,"elapsed_ms":process["duration_ms"],"effective_input_tokens":null,"cached_input_tokens":null,"output_tokens":null,"orientation_command_count":null,"retry_count":null,"repair_loop_count":null,"unknown_fields":["effective_input_tokens","cached_input_tokens","output_tokens","orientation_command_count","retry_count","repair_loop_count","provider_prompt_framing","review_burden","integration_burden"],"observation_authority":"adapter-sidecar-or-host-measurement","raw_transcript_stored":false});
+    let outcome = json!({"status":"applied","effects":["delegation-execution"],"value":{"kind":"agentic-workspace/delegation-execution/v1","status":if accepted {"returned-unproven"} else {"censored-or-invalid-return"},"source_current":current,"returned":if accepted{returned.unwrap()}else{Value::Null},"reentry":reentry,"context_cost":context_cost,"process":{"status":process["status"],"exit_code":process["exit_code"],"duration_ms":process["duration_ms"],"stdout_bytes":process["output"]["stdout"]["bytes"],"stderr_bytes":process["output"]["stderr"]["bytes"],"truncated":process["output"]["stdout"]["truncated"]},"claim_boundary":{"proof":false,"planning_progress":false,"completion":false},"raw_transcript_stored":false}});
     let prepared = crate::attempt_store::prepare_commit(
         &target.to_string_lossy(),
         admission["custody"].clone(),
