@@ -45767,6 +45767,9 @@ def _current_assignment_selection(
         )
         task_requirements = configuration_requirements(
             config.local_override,
+            target_root=config.target_root,
+            task=str(task_text or ""),
+            changed_paths=changed_paths,
             task_identity=direct_task_subject(str(task_text or ""), changed_paths),
             work={"id": str(live_binding.get("plan_ref") or "absent"), "revision": str(live_binding.get("plan_revision") or "absent")},
             judgment=task_judgment,

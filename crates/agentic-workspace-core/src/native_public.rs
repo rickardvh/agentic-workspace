@@ -140,10 +140,13 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &input.changed,
         &work,
         subject,
-        request_for("verification").cloned(),
+        request_for("verification")
+            .filter(|r| r["request_kind"] == "verification/claim/v1")
+            .cloned(),
     )?;
     contributions.push(verification["contribution"].clone());
     let requirements = native_requirements::view(
+        target,
         &input.task,
         &input.changed,
         &work,
@@ -151,6 +154,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &configuration,
         &verification,
         request_for("assignment"),
+        request_for("verification").filter(|r| r["request_kind"] == "verification/requirements/v1"),
         &contract,
     )?;
     contributions.push(memory["contribution"].clone());
@@ -214,6 +218,16 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
         let owner = request["owner"].as_str().unwrap();
+        if owner == "verification"
+            && !matches!(
+                request["request_kind"].as_str(),
+                Some("verification/claim/v1" | "verification/requirements/v1")
+            )
+        {
+            return Err(CoreError::new(
+                "requested Verification request kind is not available",
+            ));
+        }
         if !matches!(
             owner,
             "planning" | "semantic-routes" | "verification" | "memory" | "assignment"

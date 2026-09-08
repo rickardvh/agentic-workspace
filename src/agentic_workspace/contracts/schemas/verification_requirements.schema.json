@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Selected Verification obligation execution requirements",
+  "description": "Agent judgment about execution requirements for one current source-owned obligation. This never authenticates reviewers, admits evidence, or satisfies other closeout obligations.",
+  "$defs": {
+    "arguments": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "obligation_ref",
+        "role",
+        "judgment"
+      ],
+      "properties": {
+        "obligation_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "enum": [
+            "executor",
+            "evaluator"
+          ]
+        },
+        "judgment": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "independence_mode",
+                "required_proof_classes",
+                "reason"
+              ],
+              "properties": {
+                "independence_mode": {
+                  "enum": [
+                    "none",
+                    "not-applicable",
+                    "fresh-context",
+                    "separate-actor",
+                    "distinct-provider",
+                    "human"
+                  ]
+                },
+                "required_proof_classes": {
+                  "type": "array",
+                  "maxItems": 32,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "target",
+    "task",
+    "changed_paths",
+    "current_work",
+    "role",
+    "request"
+  ],
+  "properties": {
+    "target": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Configured checkout whose current Verification owner is read."
+    },
+    "task": {
+      "type": "string",
+      "description": "Current task text; used by the existing exact direct-task identity owner."
+    },
+    "changed_paths": {
+      "type": "array",
+      "maxItems": 512,
+      "items": {
+        "type": "string"
+      },
+      "description": "Current changed paths used by existing Verification protocol selection."
+    },
+    "current_work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Current owning work identifier."
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Current material semantic work revision."
+        }
+      },
+      "description": "Current direct or Planning work identity supplied by its owning host entry."
+    },
+    "role": {
+      "enum": [
+        "executor",
+        "evaluator"
+      ],
+      "description": "Execution role to which only the selected obligation is assigned."
+    },
+    "request": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Current source-issued requirement judgment request, or null to request unresolved detail."
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

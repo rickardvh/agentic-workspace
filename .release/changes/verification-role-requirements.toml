@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Bind agent-authored execution requirements for one current Verification protocol to its exact task, work and role across native startup and ordinary assignment, without granting proof or reviewer authority."
+issues = [2210, 2334]

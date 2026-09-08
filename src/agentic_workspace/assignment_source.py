@@ -20,20 +20,46 @@ SOURCE = ".agentic-workspace/config.local.toml"
 
 
 def configuration_requirements(
-    policy: Any, *, task_identity: dict[str, Any], work: dict[str, Any], judgment: dict[str, Any] | None
+    policy: Any,
+    *,
+    task_identity: dict[str, Any],
+    work: dict[str, Any],
+    judgment: dict[str, Any] | None,
+    target_root: Path | None = None,
+    task: str = "",
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     """Current owner projection; absent task judgment never means no constraints."""
-    from agentic_workspace.decision import task_requirements
+    from agentic_workspace.decision import task_requirements, verification_requirements
+
+    current_judgment = dict(judgment) if judgment is not None else None
+    request = current_judgment.pop("verification_request", None) if current_judgment is not None else None
+    verification_owner = None
+    verification = None
+    if target_root is not None and current_judgment is not None and (current_judgment.get("role") == "evaluator" or request is not None):
+        verification_owner = verification_requirements(
+            {
+                "target": str(target_root),
+                "task": task,
+                "changed_paths": changed_paths or [],
+                "current_work": work,
+                "role": current_judgment["role"],
+                "request": request,
+            }
+        )
+        verification = verification_owner["verification"]
+        # The exact submitted owner request already binds this judgment's
+        # source. Derive its identity from the owner, never from caller facts.
+        if verification is not None and current_judgment.get("verification_identity") is None:
+            current_judgment["verification_identity"] = {"id": verification["id"], "revision": verification["revision"]}
 
     result = task_requirements(
         {
             "kind": "agentic-workspace/task-requirements-input/v1",
             "task_identity": task_identity,
             "current_work": work,
-            "judgment": judgment,
-            # The ordinary adapter has no current role-specific evaluator obligation
-            # projection. The shared owner exposes that gap instead of inventing it.
-            "verification": None,
+            "judgment": current_judgment,
+            "verification": verification,
             "required_execution_guarantees": list(getattr(policy, "required_execution_guarantees", ())),
         }
     )
@@ -56,6 +82,10 @@ def configuration_requirements(
         },
         "rule": "Supply only current task judgment through assignment preview/export/dispatch; this does not grant policy, proof or transport authority.",
     }
+    if verification_owner is not None and current_judgment is not None:
+        result["verification_requirements"] = verification_owner
+        result["judgment_request"]["arguments"]["role"] = current_judgment["role"]
+        result["judgment_request"]["arguments"]["verification_request"] = verification_owner["request"]
     return result
 
 
