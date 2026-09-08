@@ -191,6 +191,7 @@ fn owner(
     target: &Path,
     selected: &Value,
     provenance: &str,
+    incumbent: bool,
 ) -> Result<Value, CoreError> {
     let path = selected["ref"]
         .as_str()
@@ -207,11 +208,17 @@ fn owner(
     if body["id"] != id {
         return Err(error(path, "owner identity mismatch"));
     }
-    if !matches!(body["lifecycle"].as_str(), Some("live" | "planned"))
-        || matches!(
-            body["phase"].as_str(),
-            Some("complete" | "completed" | "closeout" | "closed" | "archived")
-        )
+    let quiescent = matches!(
+        body["lifecycle"].as_str(),
+        Some("closed" | "complete" | "completed" | "archived")
+    ) || matches!(
+        body["phase"].as_str(),
+        Some("closed" | "complete" | "completed" | "archived")
+    );
+    if !matches!(
+        body["lifecycle"].as_str(),
+        Some("live" | "planned" | "closed" | "complete" | "completed" | "archived")
+    ) || (quiescent && !incumbent)
     {
         return Err(error(path, "selected owner is not live"));
     }
@@ -241,10 +248,12 @@ fn owner(
             ));
         }
     }
-    Ok(
-        json!({"id":id,"ref":path,"selection_source":provenance,"source":{
-        "target":target,"path":path,"owner":"planning","revision":format!("sha256:{:x}",Sha256::digest(&bytes))}}),
-    )
+    let mut result = json!({"id":id,"ref":path,"selection_source":provenance,"source":{
+        "target":target,"path":path,"owner":"planning","revision":format!("sha256:{:x}",Sha256::digest(&bytes))}});
+    if quiescent {
+        result["quiescent"] = json!(true);
+    }
+    Ok(result)
 }
 
 /// Returns read-only public request detail and, only after current explicit
@@ -400,7 +409,13 @@ fn resolve_context(
                 return Err(error(SELECTION, "local selection target mismatch"));
             }
         }
-        selected = owner(&root, &target, &selection["selected_owner"], SELECTION)?;
+        selected = owner(
+            &root,
+            &target,
+            &selection["selected_owner"],
+            SELECTION,
+            true,
+        )?;
     } else if let Some(state) = load(STATE)? {
         let mut candidates = Vec::new();
         for (field, entries) in [
@@ -441,7 +456,7 @@ fn resolve_context(
         // Preserve the canonical owner's declared order, not directory order or
         // task keywords. Multiple references remain visible in source revision.
         if let Some(candidate) = candidates.first() {
-            selected = owner(&root, &target, candidate, STATE)?;
+            selected = owner(&root, &target, candidate, STATE, false)?;
         }
     }
     if let Some(reference) = reference {
@@ -455,6 +470,7 @@ fn resolve_context(
                 &target,
                 &json!({"id":body["id"],"ref":reference}),
                 "explicit-current-owner",
+                false,
             )?;
         } else if selected["ref"] != reference {
             let previous = selection
@@ -471,6 +487,7 @@ fn resolve_context(
                 &target,
                 &json!({"id":body["id"],"ref":reference}),
                 "explicit-current-owner",
+                false,
             )?;
             let prior = read(&root, SELECTION)?
                 .ok_or_else(|| error(SELECTION, "prior selector disappeared"))?;
@@ -521,7 +538,8 @@ fn resolve_context(
     if let Some(reference) = reference {
         template["arguments"]["owner_ref"] = json!(reference);
     }
-    let mut status = if selected.is_null() {
+    let quiescent = selected["quiescent"] == true;
+    let mut status = if selected.is_null() || quiescent {
         "direct"
     } else {
         "unresolved"
@@ -572,6 +590,18 @@ fn resolve_context(
                     planning_input["selection_transition"] = recovered;
                 }
             }
+        }
+    }
+    if quiescent && status != "stale" {
+        let continuing = retained["current_work"] == *current_work
+            || request.is_some_and(|r| r["arguments"]["answer"] == "continue-selected");
+        let unrelated = request.is_some_and(|r| r["arguments"]["answer"] == "unrelated-direct");
+        if continuing && !unrelated {
+            status = "reentry-required";
+            planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work}});
+        } else {
+            status = "direct";
+            planning_input = Value::Null;
         }
     }
     if !planning_input.is_null() && !transition.is_null() {

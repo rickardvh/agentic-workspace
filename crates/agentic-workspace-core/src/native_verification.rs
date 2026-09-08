@@ -494,18 +494,7 @@ fn receipt_view(
 
 /// Current domain-lane commands are execution candidates, not proof sufficiency.
 /// Source metadata stays on the selected route; discovery uses bounded descriptors.
-fn domain_routes(target: &Path, changed: &[String]) -> Result<(Value, Value), CoreError> {
-    let root = Dir::open_ambient_dir(target, ambient_authority())
-        .map_err(|e| CoreError::new(e.to_string()))?;
-    let source = crate::native_config::load(
-        &root,
-        ".agentic-workspace/config.toml",
-        include_str!(
-            "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
-        ),
-    )
-    .map_err(CoreError::new)?;
-    let config = source.map_or(json!({}), |(value, _)| value);
+fn domain_routes(config: &Value, changed: &[String]) -> Result<(Value, Value), CoreError> {
     let mut routes = serde_json::Map::new();
     let mut descriptors = Vec::new();
     let mut omitted = 0;
@@ -560,8 +549,10 @@ fn visible_strategy(strategy: &Value, selected: Option<&Value>) -> Value {
     let mut result = strategy.clone();
     if let Some(routes) = result["proof_routes"].as_object_mut() {
         routes.retain(|id, route| {
-            route["source_kind"] != "config-domain-lane"
-                || selected.is_some_and(|choice| choice["route_id"] == *id)
+            !matches!(
+                route["source_kind"].as_str(),
+                Some("config-domain-lane" | "config-proof-profile")
+            ) || selected.is_some_and(|choice| choice["route_id"] == *id)
         });
     }
     result
@@ -609,16 +600,26 @@ pub(crate) fn view_with_applicability(
     request: Option<Value>,
     applicability: ApplicabilityContext<'_>,
 ) -> Result<Value, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let (config, config_revision) = crate::native_config::load(
+        &root,
+        ".agentic-workspace/config.toml",
+        include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+        ),
+    )
+    .map_err(CoreError::new)?
+    .unwrap_or((json!({}), "absent".into()));
     let mut assurance_input = crate::assurance_applicability::native_input(
-        target,
+        &config,
+        &config_revision,
         task,
         changed,
         current_work,
         planning_subject,
         applicability.facts,
     )?;
-    let root = Dir::open_ambient_dir(target, ambient_authority())
-        .map_err(|e| CoreError::new(e.to_string()))?;
     let mut gaps = Vec::<String>::new();
     let (manifest, manifest_revision) = match read(&root, MANIFEST) {
         Ok(Some(bytes)) => {
@@ -646,10 +647,11 @@ pub(crate) fn view_with_applicability(
     {
         gaps.push("verification-manifest-owner-sections-invalid".into());
     }
-    let (domain, domain_descriptors) = domain_routes(target, changed)?;
+    let strategy_policy = crate::verification_strategy::policy(&config)?;
+    let (domain, domain_descriptors) = domain_routes(&config, changed)?;
     let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
     let source_revision = digest(
-        &json!({"manifest_revision":manifest_revision,"domain_revision":domain_revision,
+        &json!({"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
         "planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
     )?;
     let mut protocols = serde_json::Map::new();
@@ -703,8 +705,7 @@ pub(crate) fn view_with_applicability(
             ));
         }
     }
-    let strategy = json!({"source":MANIFEST,"protocols":protocols,"proof_routes":routes,"scenarios":scenarios});
-    let strategy_revision = digest(&strategy)?;
+    let mut strategy = json!({"source":MANIFEST,"protocols":protocols,"proof_routes":routes,"scenarios":scenarios});
     let direct_subject = crate::direct_task::subject(task, changed)?;
     let subject = planning_subject.unwrap_or(&direct_subject);
     let work_ref = subject["id"].clone();
@@ -716,7 +717,7 @@ pub(crate) fn view_with_applicability(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration()]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
@@ -739,6 +740,18 @@ pub(crate) fn view_with_applicability(
     assurance_request["request_kind"] = json!("verification/assurance-applicability/v1");
     assurance_request["source_revision"] = assurance_input["source_revision"].clone();
     assurance_request["arguments"] = json!({"decisions":{}});
+    let mut strategy_assessment = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"]["strategy"].get("assessment"))
+        .filter(|v| !v.is_null())
+        .cloned();
+    let retained_scope = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"]["strategy"].get("assurance_request"))
+        .filter(|v| !v.is_null())
+        .cloned();
+    let mut current_scope_request = Value::Null;
+    let mut evidence_refs = Vec::<String>::new();
     let mut proof_choice = applicability
         .invocation
         .map(|i| i["arguments"]["selection"]["choice"].clone());
@@ -754,6 +767,7 @@ pub(crate) fn view_with_applicability(
         .into_iter()
         .flat_map(|value| value.as_array().cloned().unwrap_or_else(|| vec![value]))
         .chain(applicability.request)
+        .chain(retained_scope)
     {
         prepare_request_value(
             json!({"request":request,"current_work":request["task_identity"],"capability_contract":admission_contract}),
@@ -761,19 +775,23 @@ pub(crate) fn view_with_applicability(
         if request["owner"] != "verification" {
             return Err(CoreError::new("Verification request names another owner"));
         }
-        let claim_request = request["request_kind"] != "verification/assurance-applicability/v1";
+        let scope_request = request["request_kind"] == "verification/assurance-applicability/v1";
+        let claim_request = !scope_request && request["request_kind"] != "verification/strategy/v1";
         requested |= claim_request;
-        if !claim_request {
+        if scope_request {
+            current_scope_request = request.clone();
             assurance_input["judgment"] = json!({"source_revision":request["source_revision"],
                 "task_identity":if request["task_identity"]==*current_work {assurance_input["task_identity"].clone()} else {request["task_identity"].clone()},
                 "current_work":request["task_identity"],"decisions":request["arguments"]["decisions"]});
         }
-        if !claim_request {
+        if scope_request {
             // The shared applicability owner validates its separately bound source.
         } else if request["task_identity"] != *current_work
             || request["source_revision"] != source_revision
         {
             gaps.push("verification-request-stale".into());
+        } else if request["request_kind"] == "verification/strategy/v1" {
+            strategy_assessment = Some(request["arguments"].clone());
         } else if request["request_kind"] == "verification/execute-selected/v1" {
             proof_choice = Some(request["arguments"].clone());
         } else if request["request_kind"] == "verification/record-receipt/v1" {
@@ -788,18 +806,51 @@ pub(crate) fn view_with_applicability(
                 request["arguments"]["host_result_ref"].as_str().unwrap(),
             );
         } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
-            evidence.extend(refs.iter().filter_map(Value::as_str).map(|r| {
-                receipt_view(
-                    &root,
-                    target,
-                    &strategy,
-                    r,
-                    task,
-                    changed,
-                    &json!({"id":work_ref,"revision":work_revision}),
-                )
-            }));
+            evidence_refs.extend(refs.iter().filter_map(Value::as_str).map(str::to_owned));
         }
+    }
+    let assurance = crate::assurance_applicability::view(assurance_input.clone())?;
+    let strategy_control = crate::verification_strategy::view(
+        &strategy_policy,
+        &assurance,
+        planning_subject,
+        strategy_assessment.as_ref(),
+    )?;
+    for (id, route) in strategy_control["routes"].as_object().unwrap() {
+        if strategy["proof_routes"]
+            .as_object_mut()
+            .unwrap()
+            .insert(id.clone(), route.clone())
+            .is_some()
+        {
+            return Err(CoreError::new(
+                "profile proof route collides with source route",
+            ));
+        }
+    }
+    strategy["assessment"] = json!(strategy_assessment);
+    strategy["assurance_request"] = current_scope_request;
+    strategy["disallowed_commands"] = strategy_control["disallowed_commands"].clone();
+    strategy["selection_blocked"] = strategy_control["execution_blocked"].clone();
+    strategy["selected_profile_identity"] = strategy_control["selected_profiles"].clone();
+    let strategy_revision = digest(&strategy)?;
+    evidence.extend(evidence_refs.iter().map(|reference| {
+        receipt_view(
+            &root,
+            target,
+            &strategy,
+            reference,
+            task,
+            changed,
+            &json!({"id":work_ref,"revision":work_revision}),
+        )
+    }));
+    let mut strategy_request = template.clone();
+    strategy_request["id"] = json!("verification/strategy/v1");
+    strategy_request["request_kind"] = json!("verification/strategy/v1");
+    strategy_request["arguments"] = json!({"level":strategy_policy["baseline"],"profile_ids":[],"reason":"Assess the current task's sufficient proof strategy without waiving source obligations."});
+    if let Some(assessment) = strategy_assessment.as_ref() {
+        strategy_request["arguments"] = assessment.clone();
     }
     let execution = crate::native_proof::select_mode(
         target,
@@ -845,6 +896,24 @@ pub(crate) fn view_with_applicability(
     report_request["arguments"] =
         json!({"route_id":"unresolved","command":"<reported-command>","result":"failed"});
     record_requests.push(report_request);
+    let mut prerequisite_requests = Vec::new();
+    if strategy_assessment.is_some() {
+        prerequisite_requests.push(strategy_request.clone());
+    }
+    if !strategy["assurance_request"].is_null() {
+        prerequisite_requests.push(strategy["assurance_request"].clone());
+    }
+    let with_context = |request: Value| -> Value {
+        if prerequisite_requests.is_empty() {
+            return request;
+        }
+        let mut requests = prerequisite_requests.clone();
+        requests.push(request);
+        json!(requests)
+    };
+    let execution_requests: Vec<Value> =
+        execution_requests.into_iter().map(&with_context).collect();
+    let record_requests: Vec<Value> = record_requests.into_iter().map(with_context).collect();
     let visible_strategy = visible_strategy(
         &strategy,
         if execution["status"] == "selected" {
@@ -878,7 +947,21 @@ pub(crate) fn view_with_applicability(
     } else {
         json!([])
     };
-    let assurance = crate::assurance_applicability::view(assurance_input.clone())?;
+    for gap in strategy_control["gaps"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        blockers.as_array_mut().unwrap().push(json!({"code":gap,"message":"Current Verification strategy control remains unresolved; no profile or evidence waiver is inferred.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+    }
+    for obligation in strategy_control["obligations"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        blockers.as_array_mut().unwrap().push(json!({"code":format!("profile-proof-required:{}",obligation["profile_id"].as_str().unwrap()),"message":"Selected proof profile requires current admitted command evidence; selection is not proof.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+    }
     let mut decisions = serde_json::Map::new();
     for row in assurance["requirements"].as_array().unwrap() {
         if row["status"] == "unresolved" {
@@ -912,7 +995,7 @@ pub(crate) fn view_with_applicability(
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
-        "domain_proof_candidates":domain_descriptors,"execution":execution,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"execution":execution,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),

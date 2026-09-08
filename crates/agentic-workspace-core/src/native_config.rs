@@ -236,7 +236,14 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                             ));
                 let consumed = consumed
                     || (source == SHARED
-                        && field == "assurance.requirements"
+                        && matches!(
+                            field.as_str(),
+                            "assurance.requirements"
+                                | "assurance.default_level"
+                                | "assurance.agent_may_escalate"
+                                | "assurance.agent_may_deescalate"
+                                | "assurance.proof_profiles"
+                        )
                         && shared["modules"]["enabled"]
                             .as_array()
                             .is_none_or(|modules| modules.iter().any(|m| m == "verification")));

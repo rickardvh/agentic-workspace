@@ -292,6 +292,19 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     Ok(result)
 }
 
+/// Quiescence retains the selected task's subject and obligations without proof.
+pub(crate) fn reentry_input(value: Value) -> Result<(Value, Value), CoreError> {
+    let input: Input = serde_json::from_value(value).map_err(error)?;
+    let reconciled = reconciliation(&input)?;
+    let contribution = json!({"owner":"planning","revision":digest(&reconciled)?,
+        "facts":{"reconciliation":reconciled,"current":false},"settled":false,
+        "blockers":[{"code":"planning-owner-reentry-required","message":"The selected Planning owner is quiescent. Preserve its subject, scope and unresolved obligations; the current owner must establish a live frontier before this task continues.","affects":["task"]}]});
+    Ok((
+        json!({"contributions":[contribution],"intent":input.intent}),
+        json!({"reconciliation":reconciled,"current":false}),
+    ))
+}
+
 /// Return the current owner contribution after the existing exact effect
 /// admission checks, for one final composed operating decision.
 pub(crate) fn compose_input(value: Value) -> Result<(Value, Value), CoreError> {

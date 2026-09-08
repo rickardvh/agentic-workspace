@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep closed selected Planning owners quiescent for unrelated work while retaining current task subject and unresolved obligations."
+issues = [2989, 2970, 3001, 2909, 3077]

@@ -120,10 +120,18 @@ fn owned_index(target: &Path, root: &Dir, bytes: Option<&[u8]>) -> Result<Value,
         "proof-publication-index-custody-required; existing index preserved; explicit owner transfer is required",
     ))
 }
+fn require_capacity(index: &Value) -> Result<(), CoreError> {
+    if index["receipts"].as_object().unwrap().len() >= 2048 {
+        return Err(err(
+            "proof-publication-index-capacity-reached; owner compaction required; receipt and index preserved",
+        ));
+    }
+    Ok(())
+}
 /// No write and no schema-based acquisition; used before launching a new process.
 pub(crate) fn check(target: &Path) -> Result<(), CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    owned_index(target, &root, read(&root, INDEX)?.as_deref()).map(|_| ())
+    require_capacity(&owned_index(target, &root, read(&root, INDEX)?.as_deref())?)
 }
 fn lock(root: &Dir) -> Result<std::fs::File, CoreError> {
     // Confined reader rejects directory links/reparse points before creation.
@@ -224,11 +232,7 @@ fn publish_checked(
     revalidate()?;
     let before = read(&root, INDEX)?;
     let mut next = owned_index(target, &root, before.as_deref())?;
-    if next["receipts"].as_object().unwrap().len() >= 2048 {
-        return Err(err(
-            "proof-publication-index-capacity-reached; owner compaction required; receipt and index preserved",
-        ));
-    }
+    require_capacity(&next)?;
     let id = receipt["receipt_id"]
         .as_str()
         .ok_or_else(|| err("receipt identity missing"))?;
@@ -517,7 +521,14 @@ mod tests {
         fs::write(repo.0.join(INDEX), &bytes).unwrap();
         attempt_store::commit(json!({"target":repo.0,"custody":custody,"outcome":outcome}))
             .unwrap();
-        check(&repo.0).unwrap();
+        let root = Dir::open_ambient_dir(&repo.0, ambient_authority()).unwrap();
+        owned_index(&repo.0, &root, Some(&bytes)).unwrap();
+        assert!(
+            check(&repo.0)
+                .unwrap_err()
+                .to_string()
+                .contains("index-capacity-reached")
+        );
         let error =
             publish(&repo.0, &receipt, &invocation, &custody, outcome, || Ok(())).unwrap_err();
         assert!(error.to_string().contains("index-capacity-reached"));
@@ -526,6 +537,33 @@ mod tests {
             fs::read(repo.0.join(receipt_path(&id).unwrap())).unwrap(),
             receipt_bytes
         );
+        let manifest = repo.0.join(".agentic-workspace/verification/manifest.toml");
+        fs::write(
+            &manifest,
+            fs::read_to_string(&manifest)
+                .unwrap()
+                .replace("echo checked", "echo executed > capacity-marker.txt"),
+        )
+        .unwrap();
+        let context = json!({"target":repo.0,"task":"A new bounded execution","changed":["a.txt"]});
+        let first = crate::native_public::start(context.clone()).unwrap();
+        let mut selected = context.clone();
+        selected["request"] = first["verification"]["execution_requests"][0].clone();
+        let ready = crate::native_public::start(selected).unwrap();
+        let action = ready["decision_packet"]["primary_action"].clone();
+        let paths = attempt_store::write_paths(&action).unwrap();
+        assert!(!repo.0.join(&paths[0]).exists());
+        let mut input = context;
+        input["invocation"] = action;
+        assert!(
+            crate::native_public::invoke(input)
+                .unwrap_err()
+                .to_string()
+                .contains("index-capacity-reached")
+        );
+        assert!(!repo.0.join(&paths[0]).exists());
+        assert!(!repo.0.join("capacity-marker.txt").exists());
+        assert_eq!(fs::read(repo.0.join(INDEX)).unwrap(), bytes);
     }
     #[test]
     fn recovery_ignores_unrelated_temporary_inventory() {

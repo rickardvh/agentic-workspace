@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Consume current assurance level permissions and selected proof profiles through typed native Verification judgment, and refuse full-index execution before effects."
+issues = [2334, 2613, 2981]

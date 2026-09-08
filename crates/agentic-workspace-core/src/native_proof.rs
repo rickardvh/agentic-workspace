@@ -108,6 +108,8 @@ pub(crate) fn select_mode(
     }
     let mut available = Vec::new();
     let mut domain_count = 0usize;
+    let mut profile_count = 0usize;
+    let mut omitted_profile_commands = 0usize;
     let mut omitted_domain_commands = 0usize;
     if let Some(routes) = strategy["proof_routes"].as_object() {
         for (id, route) in routes {
@@ -127,13 +129,20 @@ pub(crate) fn select_mode(
                     }
                     domain_count += 1;
                 }
+                if route["source_kind"] == "config-proof-profile" {
+                    if profile_count >= 16 || command.len() > 4096 {
+                        omitted_profile_commands += 1;
+                        continue;
+                    }
+                    profile_count += 1;
+                }
                 available.push(json!({"route_id":id,"command":command}));
             }
         }
     }
     let Some(choice) = choice else {
         return Ok(
-            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"candidate_boundary":"Domain candidates are bounded; remaining exact commands stay at their current source-field reference. No automatic selection or proof sufficiency."}),
+            json!({"status":"selection-required","choices":available,"omitted_domain_command_count":omitted_domain_commands,"omitted_profile_command_count":omitted_profile_commands,"candidate_boundary":"Domain candidates are bounded; remaining exact commands stay at their current source-field reference. No automatic selection or proof sufficiency."}),
         );
     };
     let source_selected = strategy["proof_routes"]
@@ -149,6 +158,19 @@ pub(crate) fn select_mode(
         ));
     }
     let command = choice["command"].as_str().unwrap();
+    if strategy["selection_blocked"] == true {
+        return Ok(
+            json!({"status":"blocked","reason":"current-strategy-assessment-unresolved","choices":available}),
+        );
+    }
+    if strategy["disallowed_commands"]
+        .as_array()
+        .is_some_and(|commands| commands.iter().any(|value| value == command))
+    {
+        return Ok(
+            json!({"status":"blocked","reason":"selected-proof-profile-disallows-command","choices":available}),
+        );
+    }
     let admission = proof_receipt::command(&json!(command));
     if admission["admitted"] != true {
         return Ok(json!({"status":"blocked","reason":admission["reason"],"choices":available}));
@@ -158,8 +180,10 @@ pub(crate) fn select_mode(
     } else {
         &Value::Null
     };
-    if route["source_kind"] == "config-domain-lane"
-        && serde_json::to_vec(route).map_or(true, |bytes| bytes.len() > 32768)
+    if matches!(
+        route["source_kind"].as_str(),
+        Some("config-domain-lane" | "config-proof-profile")
+    ) && serde_json::to_vec(route).map_or(true, |bytes| bytes.len() > 32768)
     {
         return Ok(
             json!({"status":"blocked","reason":"domain-lane-selected-detail-exceeds-native-bound","source_ref":route["source_ref"],"source_revision":route["source_revision"],"choices":available}),
@@ -184,10 +208,13 @@ pub(crate) fn select_mode(
         }
         protocols.insert(id.into(), protocol.clone());
     }
-    for authority in protocols
-        .values()
-        .chain((route["source_kind"] == "config-domain-lane").then_some(route))
-    {
+    for authority in protocols.values().chain(
+        (matches!(
+            route["source_kind"].as_str(),
+            Some("config-domain-lane" | "config-proof-profile")
+        ))
+        .then_some(route),
+    ) {
         for field in ["authority_refs", "stale_when"] {
             for reference in authority[field]
                 .as_array()
@@ -208,7 +235,7 @@ pub(crate) fn select_mode(
             }
         }
     }
-    let semantic_strategy = json!({"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies,"source_strategy_revision":digest(strategy)?,"strategy_coverage":if source_selected{"selected-command-covered"}else{"unproven"}});
+    let semantic_strategy = json!({"task_identity":crate::direct_task::subject(task,changed)?,"work":{"id":work["id"],"revision":work["revision"]},"route_id":choice["route_id"],"route":route,"protocols":protocols,"dependencies":dependencies,"source_strategy_revision":digest(strategy)?,"assessment":strategy["assessment"],"assurance_request":strategy["assurance_request"],"strategy_coverage":if source_selected{"selected-command-covered"}else{"unproven"}});
     let observed = if report.is_some() {
         json!({"implementation":"interoperability-report","strategy_revision":digest(&semantic_strategy)?,"producer_admission":"unproven","environment_scope":"unobserved"})
     } else {

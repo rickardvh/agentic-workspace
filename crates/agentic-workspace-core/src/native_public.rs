@@ -247,6 +247,9 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     } else {
         planning_probe
     };
+    for request in planning["requests"].as_array_mut().into_iter().flatten() {
+        request["capability_revision"] = contract["revision"].clone();
+    }
     let mut contributions = vec![configuration["contribution"].clone()];
     let mut planning_detail = Value::Null;
     if !planning["planning_input"].is_null() {
@@ -256,7 +259,11 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             context["source_requests"] =
                 json!([request_for("startup-adapter").expect("explicit current source request")]);
         }
-        let (owner_input, detail) = planning::compose_input(context)?;
+        let (owner_input, detail) = if planning["status"] == "reentry-required" {
+            planning::reentry_input(context)?
+        } else {
+            planning::compose_input(context)?
+        };
         contributions.extend(
             owner_input["contributions"]
                 .as_array()
@@ -335,6 +342,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                                     | "verification/authenticate-host-review/v1"
                                     | "verification/execute-selected/v1"
                                     | "verification/record-receipt/v1"
+                                    | "verification/strategy/v1"
                             )
                         ))
                     .cloned()
@@ -462,6 +470,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                     "verification/claim/v1"
                         | "verification/execute-selected/v1"
                         | "verification/record-receipt/v1"
+                        | "verification/strategy/v1"
                         | "verification/requirements/v1"
                         | "verification/authenticate-host-review/v1"
                         | "verification/assurance-applicability/v1"

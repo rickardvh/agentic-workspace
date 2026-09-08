@@ -59,6 +59,45 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "verification_strategy_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "profile_ids",
+        "reason"
+      ],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "description": "Agent-selected assurance guidance level, constrained by current source escalation permissions."
+        },
+        "profile_ids": {
+          "type": "array",
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "description": "Additional known current proof profiles selected by the acting agent; cannot remove source-required profiles."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048,
+          "description": "Current task-specific strategy judgment, never proof or reviewer authentication."
+        }
+      },
+      "description": "Current Verification strategy assessment bound by its public request to exact task, work, source and capability identities."
+    },
     "verification_execute_request": {
       "type": "object",
       "required": [

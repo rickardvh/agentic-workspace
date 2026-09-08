@@ -322,3 +322,95 @@ def test_created_owner_revision_outlives_creation_provenance(
     assert call(context)["planning"]["current_owner"]["current"] is True
     with pytest.raises(AssertionError, match="snapshot is stale"):
         call({**context, "invocation": creation})
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_quiescent_selected_owner_preserves_task_and_allows_unrelated_work(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value)
+
+    context = {"target": str(tmp_path), "task": "Implement bounded current owner"}
+    request = call(context)["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    action = call({**context, "request": request})["decision_packet"]["primary_action"]
+    created = call({**context, "invocation": action})
+    select = created["value"]["selection_request"]
+    action = call({**context, "request": select})["decision_packet"]["primary_action"]
+    call({**context, "invocation": action})
+    live = call(context)
+    old_subject = live["planning"]["current_owner"]["reconciliation"]["subject"]
+    path = tmp_path / created["value"]["owner_path"]
+    body = json.loads(path.read_bytes())
+    body["lifecycle"] = "closed"
+    body["phase"] = "closed"
+    path.write_text(json.dumps(body))
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    same = call(context)
+    assert same["planning"]["status"] == "reentry-required", same
+    subject = same["planning"]["current_owner"]["reconciliation"]["subject"]
+    assert (subject["id"], subject["revision"]) == (old_subject["id"], old_subject["revision"])
+    assert (
+        same["planning"]["current_owner"]["reconciliation"]["subject"]["state"]["scope"]
+        == live["planning"]["current_owner"]["reconciliation"]["subject"]["state"]["scope"]
+    )
+    assert same["decision_packet"]["status"] != "terminal"
+    other = {**context, "task": "Inspect an unrelated bounded source"}
+    quiet = call(other)
+    assert quiet["planning"]["status"] == "direct"
+    assert quiet["decision_packet"]["status"] != "terminal"
+    explicit = quiet["planning"]["requests"][0]
+    assert call({**other, "request": explicit})["planning"]["status"] == "reentry-required"
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    # New owner creation remains separate, and a native-owned closed selector
+    # can move only via its exact returned current reconciliation invocation.
+    request = quiet["planning"]["creation_requests"][0]
+    request["arguments"] = {"material": material()}
+    action = call({**other, "request": request})["decision_packet"]["primary_action"]
+    created_other = call({**other, "invocation": action})
+    action = call({**other, "request": created_other["value"]["selection_request"]})["decision_packet"]["primary_action"]
+    call({**other, "invocation": action})
+    assert call(other)["planning"]["selected_owner"]["ref"] == created_other["value"]["owner_path"]
+    assert path.read_bytes() == before[path]
+
+
+@pytest.mark.parametrize("state", ["closed", "closeout", "unknown"])
+def test_quiescent_disposition_never_acquires_historical_selector(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, state: str
+) -> None:
+    body = json.loads((ROOT / ".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json").read_text())
+    body["lifecycle"] = "closed" if state == "closed" else "live" if state == "closeout" else "unknown"
+    body["phase"] = state
+    reference = ".agentic-workspace/planning/execplans/historical.plan.json"
+    path = tmp_path / reference
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(body))
+    selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    selector.parent.mkdir(parents=True)
+    selector.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "default",
+                "selected_owner": {"id": body["id"], "ref": reference},
+            }
+        )
+    )
+    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    context = {"target": str(tmp_path), "task": "Read an unrelated bounded source"}
+
+    def call(value: dict) -> dict:
+        return consume("native", shared_core_binary, native_cli, value)
+
+    if state == "unknown":
+        with pytest.raises(AssertionError, match="not live"):
+            call(context)
+    else:
+        view = call(context)
+        assert view["planning"]["status"] == ("direct" if state == "closed" else "unresolved")
+        continued = call({**context, "request": view["planning"]["requests"][0]})
+        assert continued["planning"]["status"] == ("reentry-required" if state == "closed" else "custody-required")
+        assert continued["decision_packet"]["status"] != "terminal"
+    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
