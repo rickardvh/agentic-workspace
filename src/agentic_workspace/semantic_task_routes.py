@@ -125,44 +125,9 @@ def semantic_route_catalogue(root: Path) -> dict[str, Any]:
 
 
 def discover_semantic_routes(root: Path, *, parent: str = "", exact: str = "") -> dict[str, Any]:
-    catalogue = semantic_route_catalogue(root)
-    routes = list(catalogue["routes"])
-    normalized_parent = parent.strip().strip("/")
-    normalized_exact = exact.strip().strip("/")
-    if normalized_exact:
-        matches = [route for route in routes if route["id"] == normalized_exact]
-        level = "exact"
-    else:
-        prefix = f"{normalized_parent}/" if normalized_parent else ""
-        children: dict[str, dict[str, Any]] = {}
-        for route in routes:
-            if prefix and not route["id"].startswith(prefix):
-                continue
-            suffix = route["id"][len(prefix) :]
-            child = suffix.split("/", 1)[0]
-            if not child:
-                continue
-            child_id = f"{prefix}{child}".strip("/")
-            item = children.setdefault(child_id, {"id": child_id, "leaf": False, "child_count": 0})
-            item["leaf"] = item["leaf"] or route["id"] == child_id
-            item["child_count"] += int("/" in suffix)
-        matches = [children[key] for key in sorted(children)]
-        level = "branch" if normalized_parent else "roots"
-    return {
-        "kind": "agentic-workspace/semantic-task-route-discovery/v1",
-        "status": catalogue["status"],
-        "level": level,
-        "parent": normalized_parent,
-        "exact": normalized_exact,
-        "source_revision": catalogue["source_revision"],
-        "routes": matches,
-        "route_count": len(matches),
-        "full_catalogue_emitted": bool(normalized_exact),
-        "diagnostics": catalogue["diagnostics"],
-        "direct_selection_command": "agentic-workspace instructions select-route --route <known-leaf> --expect-source-revision "
-        + catalogue["source_revision"]
-        + " --target . --format json",
-    }
+    from agentic_workspace.decision import route_discovery
+
+    return route_discovery({"target": str(root.resolve()), "parent": parent, "exact": exact})
 
 
 def _current_work_id(root: Path) -> str:

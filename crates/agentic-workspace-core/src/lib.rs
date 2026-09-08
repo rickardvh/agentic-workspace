@@ -13,7 +13,7 @@ mod native_memory;
 mod native_planning;
 pub mod native_public;
 mod native_requirements;
-mod native_routes;
+pub mod native_routes;
 mod native_verification;
 pub mod planning;
 pub mod proof_receipt;
