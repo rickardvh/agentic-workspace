@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Resolve current target-scope restrictions through typed Assignment judgments while preserving viable-alternative refusal, exact currentness and unchanged local configuration."
+issues = [2817, 2210]
