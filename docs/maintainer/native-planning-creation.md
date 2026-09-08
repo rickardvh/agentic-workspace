@@ -50,3 +50,12 @@ paths refuse native provenance carriers and route back to this owner. The marker
 is a restriction only; it cannot acquire custody. Native operations share the
 existing Planning lock and recheck exact bytes; arbitrary external editors are
 not participants in that cooperative protocol.
+
+Recovery currently requires the same exact task identity (including its task
+wording and changed paths). Fresh discovery of the pending invocation does not
+establish reworded same-semantic recovery: even explicit `continue-selected`
+under different wording cannot replace the retained update request's task
+binding. That remains an owner-reentry implementation gap under #2970/#2986.
+A future correction must bind a new current continuation to the exact retained
+pending effect while preserving source, capability and claim boundaries; it
+must not silently substitute the old task hash or replay parent context.

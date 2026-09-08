@@ -435,6 +435,20 @@ mod tests {
                 let recovered = fresh["planning"]["pending_update"]["invocation"].clone();
                 assert_eq!(recovered, action);
                 assert_ne!(fresh["decision_packet"]["status"], "terminal");
+                // Fresh discovery is not yet reworded same-owner recovery.
+                // The current continuation request cannot rewrite an old task
+                // binding or supply authority to its pending invocation.
+                let mut reworded = context(&target);
+                reworded["task"] = json!("Continue this same bounded native owner update");
+                let reentry = crate::native_public::start(reworded.clone()).unwrap();
+                reworded["request"] = reentry["planning"]["requests"][0].clone();
+                let continued = crate::native_public::start(reworded.clone()).unwrap();
+                assert!(continued["planning"]["pending_update"].is_object());
+                let current_bytes = read(&target, &relative).unwrap();
+                reworded.as_object_mut().unwrap().remove("request");
+                reworded["invocation"] = recovered.clone();
+                assert!(crate::native_public::invoke(reworded).is_err());
+                assert_eq!(read(&target, &relative).unwrap(), current_bytes);
                 assert_eq!(invoke(&target, recovered).unwrap()["status"], "applied");
                 assert_ne!(read(&target, &relative).unwrap(), original);
                 assert_ne!(start(&target)["decision_packet"]["status"], "terminal");
