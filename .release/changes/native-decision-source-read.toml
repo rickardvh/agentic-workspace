@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose bounded rationale retrieval from the existing admitted decision-continuity owner through every public consumer."
+issues = [2570, 3040, 3041, 2986, 2909, 3077]

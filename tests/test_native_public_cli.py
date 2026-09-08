@@ -823,3 +823,108 @@ def test_native_enablement_change_stales_proof_execution(tmp_path: Path, shared_
         call({**context, "invocation": action})
     assert not (tmp_path / "count.txt").exists()
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_public_read_real_repository_decision_preserves_currentness(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    import tomllib
+
+    from tests.test_shared_core import _commit_native
+
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    reference = "docs/decisions/shared-semantic-authority.md"
+    source = (ROOT / reference).read_bytes()
+    path = tmp_path / reference
+    path.parent.mkdir(parents=True)
+    path.write_bytes(source)
+    # Real admitted rationale and its existing basis; no invented author or
+    # changed decision. This fixture's commit is a host admission, not review.
+    admitted = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text())["assurance"]["decision_record_revision"]
+    basis = subprocess.run(["git", "show", f"{admitted}:SYSTEM_INTENT.md"], cwd=ROOT, check=True, capture_output=True).stdout
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(basis)
+    record = json.loads(source.decode().split("```aw-decision\n", 1)[1].split("\n```", 1)[0])
+    assert record["authority"]["basis"][0]["revision"] == "sha256:" + hashlib.sha256(basis.replace(b"\r\n", b"\n")).hexdigest()
+    revision = _commit_native(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        f'schema_version=1\n[modules]\nenabled=[]\n[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n'
+    )
+    context = {
+        "target": str(tmp_path),
+        "task": "Review the public semantic boundary",
+        "changed": ["crates/agentic-workspace-core/src/lib.rs"],
+    }
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    initial = call(context)
+    request = initial["decision_sources"]["requests"][0]
+    assert initial["decision_packet"]["decision_context"]["consequences"][0]["id"] == record["id"]
+    assert "response" not in initial["decision_sources"]
+    selected = call({**context, "request": request})
+    response = selected["decision_sources"]["response"]
+    assert response["body"].replace("\r\n", "\n") == source.decode().replace("\r\n", "\n")
+    assert response["decision_state"]["status"] == "current"
+    assert response["authority_effect"] == "no-new-authority"
+    assert selected["decision_packet"]["status"] != "terminal"
+    quiet_context = {**context, "changed": ["unrelated.txt"]}
+    assert call(quiet_context)["decision_sources"]["requests"] == []
+    with pytest.raises(AssertionError):
+        call({**quiet_context, "request": request})
+    (tmp_path / "SYSTEM_INTENT.md").write_bytes(basis + b"\nChanged governing source\n")
+    with pytest.raises(AssertionError, match="stale"):
+        call({**context, "request": request})
+    stale = call(context)
+    assert stale["decision_packet"]["decision_context"]["consequences"] == []
+    reread = call({**context, "request": stale["decision_sources"]["requests"][0]})
+    assert reread["decision_sources"]["response"]["decision_state"]["status"] == "stale"
+    path.write_bytes(source + b"\nUnadmitted source edit\n")
+    with pytest.raises(AssertionError, match="stale decision source"):
+        call({**context, "request": request})
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_public_decision_read_supersession_keeps_rationale_without_old_consequence(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    from copy import deepcopy
+
+    from tests.test_shared_core import _commit_native, _native_archive, _write_native
+
+    host, record = _native_archive(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+
+    def admit(revision: str) -> None:
+        config.write_text(
+            f'schema_version=1\n[modules]\nenabled=[]\n[assurance]\ndecision_record_target="design"\ndecision_record_revision="{revision}"\n'
+        )
+
+    admit(host["admitted_revision"])
+    context = {"target": str(tmp_path), "task": "Inspect the current component boundary", "changed": ["src/core.rs"]}
+
+    def call(value: dict) -> dict:
+        return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
+
+    initial = call(context)
+    old_request = initial["decision_sources"]["requests"][0]
+    state = initial["decision_packet"]["decision_context"]["states"][0]
+    successor = deepcopy(record)
+    successor["id"] = "architecture/successor"
+    successor["consequence"] = "Use the current replacement consequence"
+    successor["supersedes"] = [{"id": record["id"], "material_revision": state["material_revision"], "scope": record["scope"]}]
+    _write_native(tmp_path / "design/successor.md", successor)
+    admit(_commit_native(tmp_path))
+    with pytest.raises(AssertionError):
+        call({**context, "request": old_request})
+    current = call(context)
+    assert [r["id"] for r in current["decision_packet"]["decision_context"]["consequences"]] == [successor["id"]]
+    historical_request = next(r for r in current["decision_sources"]["requests"] if r["arguments"]["id"] == record["id"])
+    historical = call({**context, "request": historical_request})
+    assert historical["decision_sources"]["response"]["decision_state"]["status"] == "superseded"
+    assert "Rationale stays in the repository" in historical["decision_sources"]["response"]["body"]
+    assert [r["id"] for r in historical["decision_packet"]["decision_context"]["consequences"]] == [successor["id"]]

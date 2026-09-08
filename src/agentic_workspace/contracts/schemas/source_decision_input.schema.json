@@ -1070,6 +1070,10 @@
       "required": ["owner", "revision"],
       "not": {"required": ["terminal"]}
     },
+    "decision_source_read_request": {
+      "description":"Select one exact currently returned decision admission for bounded rationale retrieval. These public fields grant no source admission, currentness, custody or executable authority.",
+      "allOf":[{"$ref":"#/$defs/decision_admission"}]
+    },
     "memory_note_read_request": {
       "type": "object",
       "description": "Read one currently selected advisory Memory note; source identity grants no freshness, promotion or binding authority.",

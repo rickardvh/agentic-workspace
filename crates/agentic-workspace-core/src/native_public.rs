@@ -183,7 +183,9 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             &instructions["capability_contract"],
         ],
     )?;
+    let decision_read_contract = decision_source::read_contract()?;
     let contract = combined_contract(&[
+        &decision_read_contract,
         &configuration["capability_contract"],
         &system_intent["capability_contract"],
         &startup_adapter["capability_contract"],
@@ -475,10 +477,19 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             .last_mut()
             .unwrap() = instructions["contribution"].clone();
     }
+    let decision_context = owner_input["decision_context"].clone();
     let decision = compile_value(owner_input)?;
+    let decision_sources = decision_source::public_read(
+        target,
+        &decision_context,
+        &decision,
+        &work,
+        &contract,
+        request_for("decision-continuity"),
+    )?;
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
-    let mut public = json!({"runtime_compatibility":compatibility,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
     // Requests bind the composed contract above. Owner-local fragments remain
     // internal composition inputs, not additional public authorities.
     for owner in public.as_object_mut().unwrap().values_mut() {
@@ -535,6 +546,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                 | "assignment"
                 | "system-intent"
                 | "startup-adapter"
+                | "decision-continuity"
         ) {
             return Err(CoreError::new("requested native owner is not available"));
         }
