@@ -1451,6 +1451,7 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
         set(payload)
         - {
             "schema_version",
+            "assurance",
             "protocols",
             "scenarios",
             "evidence_bundles",
@@ -1464,6 +1465,12 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
         raise VerificationUsageError(
             f"{VERIFICATION_MANIFEST_PATH.as_posix()} contains unsupported top-level field(s): {', '.join(unknown_top)}."
         )
+
+    assurance = _table(payload, "assurance", surface=VERIFICATION_MANIFEST_PATH.as_posix())
+    if set(assurance) - {"proof_profiles", "domain_proof_lanes", "requirements", "subsystem_profiles"} or any(
+        not isinstance(value, dict) for value in assurance.values()
+    ):
+        raise VerificationUsageError("Verification assurance contains unsupported owner fields.")
 
     scenarios_by_id: dict[str, dict[str, Any]] = {}
     raw_scenarios = _table(payload, "scenarios", surface=VERIFICATION_MANIFEST_PATH.as_posix())
@@ -1702,6 +1709,11 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     return {
         "configured": True,
         "path": _repo_relative_path(manifest_path, target_root),
+        "strategy_declarations": {
+            "source": VERIFICATION_MANIFEST_PATH.as_posix(),
+            "assurance": assurance,
+            "admission": "native-verification-owner-required",
+        },
         "protocols": protocols,
         "scenarios": list(scenarios_by_id.values()),
         "evidence_bundles": evidence_bundles,

@@ -26,11 +26,22 @@ def config(root: Path, command: str, extra: str = "") -> Path:
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("destination", [False, True])
 def test_domain_source_executes_without_claim_and_rejects_drift(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, destination: bool
 ) -> None:
     command = "Add-Content count.txt executed" if os.name == "nt" else "echo executed >> count.txt"
     source = config(tmp_path, command, 'authority_refs=["rules.md"]\n')
+    if destination:
+        former = source
+        source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+        source.parent.mkdir()
+        source.write_text(
+            'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols]\n[proof_routes]\n'
+            + former.read_text().split("\n", 1)[1]
+        )
+        former.write_text("schema_version=1\n")
+
     (tmp_path / "rules.md").write_text("current rule")
     context = {"target": str(tmp_path), "task": "Check the current source", "changed": ["a.txt"]}
 
@@ -62,8 +73,13 @@ def test_domain_source_executes_without_claim_and_rejects_drift(
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": invocation})
     source.write_text(source.read_text().replace("domain-review", "stronger-domain-review"))
-    with pytest.raises(AssertionError, match="stale"):
-        call({**context, "request": request})
+    if destination:
+        stale = call({**context, "request": request})
+        assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
+        assert not any(row["owner"] == "verification" for row in stale["decision_packet"]["pending_consequences"]["actions"])
+    else:
+        with pytest.raises(AssertionError, match="stale"):
+            call({**context, "request": request})
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": invocation})
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
@@ -81,7 +97,7 @@ def test_real_domain_lane_and_semantic_only_scope_stay_source_owned(
     source = tmp_path / ".agentic-workspace/config.toml"
     source.parent.mkdir()
     # Preserve the exact real lane declaration without unrelated repo-local ADR pins.
-    text = (ROOT / ".agentic-workspace/config.toml").read_text()
+    text = (ROOT / ".agentic-workspace/verification/manifest.toml").read_text()
     start = text.index("[assurance.domain_proof_lanes.proof_subject_owner]")
     end = text.index("\n[", start + 1)
     source.write_text("schema_version=1\n" + text[start:end])

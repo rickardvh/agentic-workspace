@@ -328,6 +328,9 @@
           ]
         },
         "proof_profiles": {
+          "deprecated": true,
+          "readOnly": true,
+          "x-agentic-workspace-source-owner": ".agentic-workspace/verification/manifest.toml#assurance.proof_profiles",
           "description": "Named proof profiles available to active planning assurance fields.",
           "type": "object",
           "default": {},
@@ -385,6 +388,9 @@
           }
         },
         "requirements": {
+          "deprecated": true,
+          "readOnly": true,
+          "x-agentic-workspace-source-owner": ".agentic-workspace/verification/manifest.toml#assurance.requirements",
           "description": "Repo-declared assurance requirements that map work signals to authority refs, required evidence, proof profiles, review owners, and completion claim boundaries.",
           "type": "object",
           "default": {},
@@ -678,6 +684,9 @@
           }
         },
         "subsystem_profiles": {
+          "deprecated": true,
+          "readOnly": true,
+          "x-agentic-workspace-source-owner": ".agentic-workspace/verification/manifest.toml#assurance.subsystem_profiles",
           "description": "Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids.",
           "type": "object",
           "default": {},
@@ -792,6 +801,9 @@
           }
         },
         "domain_proof_lanes": {
+          "deprecated": true,
+          "readOnly": true,
+          "x-agentic-workspace-source-owner": ".agentic-workspace/verification/manifest.toml#assurance.domain_proof_lanes",
           "description": "Host-declared proof lanes for domain-specific changed-path or task-marker matches.",
           "type": "object",
           "default": {},

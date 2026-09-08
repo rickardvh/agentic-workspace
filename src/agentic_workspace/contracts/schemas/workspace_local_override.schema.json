@@ -503,7 +503,7 @@
               "type": "number",
               "minimum": 0,
               "maximum": 1,
-              "description": "Advisory confidence in this target profile from 0 to 1. Agents may tune it from local outcome evidence, but it does not create execution authority."
+              "description": "Human-authored advisory prior for this target profile from 0 to 1. Admitted lifecycle outcomes belong to the target-evidence owner and must not rewrite this configuration. This prior grants no execution or completion authority."
             },
             "task_fit": {
               "type": "array",

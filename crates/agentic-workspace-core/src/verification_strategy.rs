@@ -13,7 +13,7 @@ pub(crate) fn declaration() -> Value {
     shape["$schema"] = all["$schema"].clone();
     json!({"kind":"verification/strategy/v1","result_kind":"agentic-workspace/verification-strategy/v1","input_schema":shape})
 }
-pub(crate) fn policy(config: &Value) -> Result<Value, CoreError> {
+pub(crate) fn policy(config: &Value, profile_source: &str) -> Result<Value, CoreError> {
     let assurance = &config["assurance"];
     let fields = [
         "default_level",
@@ -22,7 +22,7 @@ pub(crate) fn policy(config: &Value) -> Result<Value, CoreError> {
         "proof_profiles",
     ];
     let configured = fields.iter().any(|field| assurance.get(field).is_some());
-    let mut policy = json!({"configured":configured,"baseline":assurance["default_level"].as_str().unwrap_or("low"),"agent_may_escalate":assurance["agent_may_escalate"].as_bool().unwrap_or(true),"agent_may_deescalate":assurance["agent_may_deescalate"].as_bool().unwrap_or(false),"profiles":assurance["proof_profiles"].as_object().cloned().unwrap_or_default()});
+    let mut policy = json!({"configured":configured,"profile_source":profile_source,"baseline":assurance["default_level"].as_str().unwrap_or("low"),"agent_may_escalate":assurance["agent_may_escalate"].as_bool().unwrap_or(true),"agent_may_deescalate":assurance["agent_may_deescalate"].as_bool().unwrap_or(false),"profiles":assurance["proof_profiles"].as_object().cloned().unwrap_or_default()});
     policy["revision"] = json!(digest(&policy)?);
     Ok(policy)
 }
@@ -149,7 +149,10 @@ pub(crate) fn view(
         }
         disallowed.extend(denied.clone());
         let revision = digest(profile)?;
-        let source_ref = format!(".agentic-workspace/config.toml#assurance.proof_profiles.{id}");
+        let source_ref = format!(
+            "{}#assurance.proof_profiles.{id}",
+            policy["profile_source"].as_str().unwrap()
+        );
         profiles.push(json!({"id":id,"source_ref":source_ref,"source_revision":revision,"selected_by":if planning_required.contains(&id){"planning-owner"}else if required.contains(&id){"binding-requirement"}else{"agent-assessment"},"required_count":required_commands.len(),"optional_count":optional.len(),"disallowed_count":denied.len(),"evidence_status":"not-established-by-selection"}));
         if !required_commands.is_empty() {
             obligations.push(json!({"profile_id":id,"required_commands":required_commands,"source_ref":source_ref,"source_revision":revision,"status":"current-proof-evidence-required"}));

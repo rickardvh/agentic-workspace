@@ -506,9 +506,53 @@ fn receipt_view(
         "proof_subject":subject["id"],"gaps":gaps})
 }
 
+/// Verification owns operational route/profile declarations. A former config
+/// section is a recognized source only until transferred; competing sections
+/// fail closed rather than merging or choosing stronger-looking bytes.
+fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError> {
+    let Some(owned) = manifest.get("assurance") else {
+        return Ok(config.clone());
+    };
+    if !owned.as_object().is_some_and(|fields| {
+        fields.keys().all(|key| {
+            matches!(
+                key.as_str(),
+                "proof_profiles" | "domain_proof_lanes" | "requirements" | "subsystem_profiles"
+            )
+        })
+    }) {
+        return Err(CoreError::new(
+            "Verification assurance contains unsupported owner fields",
+        ));
+    }
+    let schema: Value = serde_json::from_str(include_str!(
+        "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+    ))
+    .expect("checked schema");
+    crate::schema_validator(&schema, "Verification strategy source")?
+        .validate(&json!({"schema_version":1,"assurance":owned}))
+        .map_err(|error| {
+            CoreError::new(format!("invalid Verification strategy source: {error}"))
+        })?;
+    let mut result = config.clone();
+    for (field, value) in owned.as_object().unwrap() {
+        if config["assurance"].get(field).is_some() {
+            return Err(CoreError::new(format!(
+                "competing Verification {field} sources: .agentic-workspace/config.toml and {MANIFEST}; preserve both and resolve ownership"
+            )));
+        }
+        result["assurance"][field] = value.clone();
+    }
+    Ok(result)
+}
+
 /// Current domain-lane commands are execution candidates, not proof sufficiency.
 /// Source metadata stays on the selected route; discovery uses bounded descriptors.
-fn domain_routes(config: &Value, changed: &[String]) -> Result<(Value, Value), CoreError> {
+fn domain_routes(
+    config: &Value,
+    changed: &[String],
+    source: &str,
+) -> Result<(Value, Value), CoreError> {
     let mut routes = serde_json::Map::new();
     let mut descriptors = Vec::new();
     let mut omitted = 0;
@@ -534,8 +578,7 @@ fn domain_routes(config: &Value, changed: &[String]) -> Result<(Value, Value), C
         if matched.is_empty() && !unresolved {
             continue;
         }
-        let source_ref =
-            format!(".agentic-workspace/config.toml#assurance.domain_proof_lanes.{id}");
+        let source_ref = format!("{source}#assurance.domain_proof_lanes.{id}");
         let revision = digest(lane)?;
         let descriptor = json!({"route_id":format!("domain:{id}"),"source_ref":source_ref,"source_revision":revision,"applicability":if matched.is_empty(){"current-task-judgment-unresolved"}else{"path-matched"},"command_count":lane["commands"].as_array().map_or(0,Vec::len),"metadata":"retained-in-source-and-selected-strategy","claim_boundary":"candidate-not-strategy-sufficiency"});
         if descriptors.len() < 32
@@ -556,7 +599,7 @@ fn domain_routes(config: &Value, changed: &[String]) -> Result<(Value, Value), C
     }
     Ok((
         json!(routes),
-        json!({"lanes":descriptors,"omitted_descriptor_count":omitted,"source":".agentic-workspace/config.toml#assurance.domain_proof_lanes","boundary":"Exact path matches offer source commands. Semantic applicability, lane composition, escalation, manual evidence and claim sufficiency remain current owner obligations."}),
+        json!({"lanes":descriptors,"omitted_descriptor_count":omitted,"source":format!("{source}#assurance.domain_proof_lanes"),"boundary":"Exact path matches offer source commands. Semantic applicability, lane composition, escalation, manual evidence and claim sufficiency remain current owner obligations."}),
     ))
 }
 fn visible_strategy(strategy: &Value, selected: Option<&Value>) -> Value {
@@ -625,15 +668,6 @@ pub(crate) fn view_with_applicability(
     )
     .map_err(CoreError::new)?
     .unwrap_or((json!({}), "absent".into()));
-    let mut assurance_input = crate::assurance_applicability::native_input(
-        &config,
-        &config_revision,
-        task,
-        changed,
-        current_work,
-        planning_subject,
-        applicability.facts,
-    )?;
     let mut gaps = Vec::<String>::new();
     let (manifest, manifest_revision) = match read(&root, MANIFEST) {
         Ok(Some(bytes)) => {
@@ -661,8 +695,37 @@ pub(crate) fn view_with_applicability(
     {
         gaps.push("verification-manifest-owner-sections-invalid".into());
     }
-    let strategy_policy = crate::verification_strategy::policy(&config)?;
-    let (domain, domain_descriptors) = domain_routes(&config, changed)?;
+    let config = strategy_sources(&config, &manifest)?;
+    let assurance_revision =
+        digest(&json!({"config":config_revision,"manifest":manifest_revision}))?;
+    let mut assurance_input = crate::assurance_applicability::native_input(
+        &config,
+        &assurance_revision,
+        task,
+        changed,
+        current_work,
+        planning_subject,
+        applicability.facts,
+    )?;
+    if config["assurance"]["subsystem_profiles"]
+        .as_object()
+        .is_some_and(|profiles| !profiles.is_empty())
+    {
+        gaps.push("verification-subsystem-profiles-owner-required".into());
+    }
+
+    let profile_source = if manifest["assurance"].get("proof_profiles").is_some() {
+        MANIFEST
+    } else {
+        ".agentic-workspace/config.toml"
+    };
+    let domain_source = if manifest["assurance"].get("domain_proof_lanes").is_some() {
+        MANIFEST
+    } else {
+        ".agentic-workspace/config.toml"
+    };
+    let strategy_policy = crate::verification_strategy::policy(&config, profile_source)?;
+    let (domain, domain_descriptors) = domain_routes(&config, changed, domain_source)?;
     let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
     let source_revision = digest(
         &json!({"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
@@ -1120,7 +1183,7 @@ mod tests {
         assert_eq!(get(&repo, &["notes.txt"], None)["status"], "not-applicable");
         repo.write(
             MANIFEST,
-            include_str!("../../../.agentic-workspace/verification/manifest.toml"),
+            "schema_version='agentic-workspace/verification-manifest/v1'\n[protocols.source]\napplies_to_paths=['src/**']\n[proof_routes.source]\nprotocol_refs=['source']\ncommands=['echo current']\n",
         );
         let result = get(&repo, &["unrelated/user-note.txt"], None);
         assert_eq!(result["status"], "not-applicable");

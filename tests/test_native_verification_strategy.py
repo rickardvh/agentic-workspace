@@ -292,3 +292,64 @@ def test_planning_profile_source_gap_and_subject_reentry_are_explicit(
     result = call({**context, "request": current})["verification"]
     assert "planning-assurance-profile-projection-unavailable" in result["strategy_control"]["gaps"]
     assert result["strategy_control"]["selected_profiles"] == []
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_profile_and_requirement_transfer_preserves_obligation_and_rejects_competing_sources(
+    tmp_path, shared_core_binary, native_cli, surface
+):
+    context = setup(tmp_path, binding=True)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir()
+    original = config.read_text()
+    profile_start = original.index("[assurance.proof_profiles.required]")
+    destination = 'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols]\n[proof_routes]\n' + original[profile_start:]
+
+    def call(request=None):
+        return consume(surface, shared_core_binary, native_cli, {**context, **({"request": request} if request else {})})
+
+    old = call()
+    request = old["verification"]["execution_requests"][0]
+    manifest.write_text(destination)
+    with pytest.raises(AssertionError, match="competing"):
+        call()
+    config.write_text(original[:profile_start])
+    current = call()
+    control = current["verification"]["strategy_control"]
+    assert control["baseline_level"] == "medium"
+    assert control["obligations"][0]["required_commands"] == old["verification"]["strategy_control"]["obligations"][0]["required_commands"]
+    assert control["selected_profiles"][0]["source_ref"].startswith(".agentic-workspace/verification/manifest.toml#")
+    assert current["decision_packet"]["claim_boundary"]["allowed"] == []
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(request)
+    before = config.read_bytes()
+    # The manifest cannot replace irreducible shared policy or accept malformed commands.
+    manifest.write_text(destination + "[assurance]\nagent_may_deescalate=true\n")
+    with pytest.raises(AssertionError, match="unsupported"):
+        call()
+    manifest.write_text(destination.replace('optional_commands=["echo optional"]', "optional_commands=17"))
+    with pytest.raises(AssertionError, match="invalid"):
+        call()
+    assert config.read_bytes() == before
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+def test_retained_reader_loads_manifest_without_config_and_rejects_competing_source(tmp_path):
+    from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
+
+    setup(tmp_path, binding=True)
+    source = tmp_path / ".agentic-workspace/config.toml"
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir()
+    original = source.read_text()
+    manifest.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n' + original[original.index("[assurance.proof_profiles.required]") :]
+    )
+    source.unlink()
+    result = load_workspace_config(target_root=tmp_path)
+    assert not result.exists
+    assert "required" in {profile.id for profile in result.assurance.proof_profiles}
+    source.write_text(original)
+    with pytest.raises(WorkspaceUsageError, match="Competing"):
+        load_workspace_config(target_root=tmp_path)

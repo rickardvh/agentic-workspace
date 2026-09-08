@@ -2,8 +2,9 @@
 
 Current merged base: `c2303e9212a067d306be14846824ff727bc59cb0`, freshly
 verified after #3166/#3167/#3168 integration. The current bounded follow-up
-repairs #2817/#2210's actual configured-source Assignment judgment path under
-explicit human maintainer authorization. It is not yet independently admitted.
+repairs #2817/#2210's configured-source Assignment judgment path in #3170 and
+transfers #2613 Verification declarations into the existing manifest. Both
+remain subject to independent review.
 Historical proof below retains its actual subject. Unrelated original-checkout
 assignments, proof receipts and local files remain outside this change.
 
@@ -18,7 +19,7 @@ an implementation gap even when the former Python host supplies that behavior.
 ## P0/P1 dispositions
 
 Each owner has exactly one disposition against the merged cumulative candidate
-plus this bounded Assignment correction. Integration of the former stack does
+plus the bounded Assignment and Verification source corrections. Integration of the former stack does
 not satisfy its parent owners. #2613's lived-in human-configuration boundary
 remains an implementation gap, as recorded in #2983 comment 5590398962.
 
@@ -90,6 +91,39 @@ ignored. Cumulative conformance and independent review remain separate gates.
 This removes the observed bootstrap defect; #2817/#2210/#2947 remain bounded
 implementation gaps for their full configured consequential lifecycle. Next:
 #2613's Verification/configuration source split, then the remaining P0/P1 owners.
+
+## #2613 current source/lifetime disposition
+
+The shared dogfood config shrinks from 945 to 122 lines without changing any
+retained value. Exact TOML comparison verifies that the destination contains all
+30 domain lanes, three profiles, 15 requirements and one subsystem profile; all
+pre-existing manifest content and remaining shared policy are unchanged.
+
+| Source family | Lifetime and disposition | Current boundary |
+| --- | --- | --- |
+| Verification routes/profiles/requirements/subsystem metadata | Transfer once, unchanged, to existing Verification manifest `assurance` | Native source selection fails on competing sections, malformed declarations or source drift. Requirement force and shared level/escalation policy survive. Unsupported subsystem semantics still block claims. |
+| Modules, workspace invocation/adapter choice, trust/admission pins, payload and source policy | Retain as durable repo choices | No capability enablement, source adoption or proof is inferred. |
+| Compatibility workflow obligations and advisory preferences | Retain pending existing-owner disposition | This transfer does not silently retire their policy or grant their former commands an ordinary native interface. |
+| Original local safety/delegation/target declarations | Retain unchanged human authority | Config SHA-256 remains `3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189`. Typed Assignment consumes current applicability/comparison, not configuration writes. |
+| Configured target confidence | Human-authored prior; derived lifecycle support stays with #2209 | Schema/guidance no longer invites agents to tune config from outcomes. Broader former observed/adaptive fields still need domain disposition. |
+| Former local setup/assignment-answer fields | Task/revision state; preserve unresolved source, no new authoring | #2767/#2210 retain source-specific transition and full continuation outcomes. Those legacy schema/source migrations are not claimed complete. |
+
+The installed no-CLI contract now describes the admitted native writer and source
+split; it no longer instructs agents to invoke retired setup commands or write
+new task continuation into local config. Former registry schema fields are marked
+read-only/deprecated for source transition, not advertised as ordinary authoring.
+This is still a bounded #2613 implementation slice: complete schema retirement,
+local former-state transition and broader configure-once admission remain open.
+
+Proof: 40 native/JSON/Python/TypeScript domain/profile cases pass; the four
+transfer cases additionally exercise requirements at the destination. They retain
+positive command/publication/idempotency and negative currentness/conflict/unknown
+policy tests. Rust core: 96 pass, three subprocess-only helpers ignored. The quiet
+unrelated-path test now uses a genuinely path-scoped source; the real manifest
+continues to preserve its global requirement uncertainty. Verification retained
+reader: 51 pass. Native original-checkout Assignment still admits the current
+executor with no implementation blocker and no local config diff. Independent
+review and cumulative release conformance remain pending.
 
 ## Integrated children and later gates
 
