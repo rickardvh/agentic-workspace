@@ -41,11 +41,11 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 20, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 21, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
-| #2981 | evidence/conformance gap | Current reusable-conclusion tests exist under `test_resolved_decision_reuse.py`; native ordinary producer-lifetime and later-equivalent-work cost evidence remains to be established. |
+| #2981 | bounded implementation gap | Native proof receipts bind actual producer bytes and preserve current evidence across unrelated file churn. The older Python semantic-partition tests do not establish a native retained negative conclusion or focused cross-owner partial re-resolution. Those ordinary native outcomes are absent, not merely missing CI. Avoid a generic cache until a material conclusion justifies retention. |
 | #2767 | bounded implementation gap | The authorized native writer can edit an existing workspace.cli_invoke in either canonical TOML source through an exact human-bound proposal. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
 | #2916 | candidate-complete | Existing independent #3138 acceptance. Typed policy/currentness/override authority is distinct from the unresolved execution and return lifecycle. |
 | #2210 | bounded implementation gap | Comparative judgment, exact execution identity, admitted return and a retained-and-checked contextual signal exist. Supported host-native/mutation lifecycles and complete consequential comparison remain unresolved; no inferred target winner or completion authority. |
@@ -106,7 +106,7 @@ pre-existing manifest content and remaining shared policy are unchanged.
 | Compatibility workflow obligations and advisory preferences | Retain pending existing-owner disposition | This transfer does not silently retire their policy or grant their former commands an ordinary native interface. |
 | Original local safety/delegation/target declarations | Retain unchanged human authority | Config SHA-256 remains `3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189`. Typed Assignment consumes current applicability/comparison, not configuration writes. |
 | Configured target confidence | Human-authored prior; derived lifecycle support stays with #2209 | Schema/guidance no longer invites agents to tune config from outcomes. Broader former observed/adaptive fields still need domain disposition. |
-| Former local setup/assignment-answer fields | Task/revision state; preserve unresolved source, no new authoring | #2767/#2210 retain source-specific transition and full continuation outcomes. Those legacy schema/source migrations are not claimed complete. |
+| Former local setup/assignment-answer fields | Task/revision state; preserve source, no new authoring | An independently admitted local Assignment can exclude a former replacement answer bound to a different work id from implementation restrictions only. Matching ids, absent current Assignment, malformed sources and source drift remain blocking; no answer is adopted or retired. #2767/#2210 retain broader transition outcomes. |
 
 The installed no-CLI contract now describes the admitted native writer and source
 split; it no longer instructs agents to invoke retired setup commands or write
@@ -181,6 +181,27 @@ proof-scope maintenance now belongs to that requirement without editing the
 package-managed Ownership file. The former-source transition reader remains;
 Ownership bytes and payload integrity remain unchanged. This resolves the live
 indirection, not the broader mixed-source payload lifecycle under #2613/#2767.
+
+The former-answer disposition passes four native/JSON/Python/TypeScript cases;
+the combined current Assignment/policy/configuration suite passes 45 cases and
+Rust core passes 96 (three subprocess helpers ignored). Source bytes remain
+unchanged. The ordinary lived-in route still admits the current local executor.
+
+### #2981 current lifetime disposition
+
+| Native constituent | Disposition | Current boundary |
+| --- | --- | --- |
+| Selected command evidence | reuse | Existing producer-owned receipt/publication, exact semantic inputs, current selected strategy, native binary and shell identity. Fresh admission checks the retained execution; it does not rerun the command. Different tasks and dependent source changes do not inherit it. |
+| Proof sufficiency and current claim | stronger-owner/derive | Verification composes current evidence with applicable requirements. Receipt reuse never carries a historical completion answer forward. |
+| Planning subject | stronger-owner/derive | The current Planning producer owns subject meaning and retained material. Attempt/custody records are not independent semantic subjects. Cross-owner reuse still needs focused proof. |
+| Assignment eligibility and comparison | recompute | Current target restrictions, capability observations, policy and work bind admission. Sparse lifecycle evidence derives from current Planning/Verification owners; a previous target choice is not retained authority. |
+| Memory and procedure no-signal | recompute | Native selectors avoid unrelated body reads. Persisting these cheap absence checks has no demonstrated benefit; this is the no-memoise counterexample, not the required material negative-reuse path. |
+| Public decision and rendered context | recompute | Compose current owner constituents. No whole decision, local host object or prompt is adopted as semantic input. |
+
+The audit therefore has 4 candidate-complete owners, 20 bounded implementation
+gaps and 10 evidence/conformance gaps. The #2981 correction supersedes the earlier
+4/19/11 count: native proof reuse exists, but the required native negative-reuse
+and partial re-resolution path is not implemented by the former Python helper.
 
 ## Integrated children and later gates
 

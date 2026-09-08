@@ -108,6 +108,28 @@ pub(crate) fn view(
     let mut result = crate::assignment::comparative_assessment(
         json!({"work":work,"policy":policy,"requirements":requirements["result"],"execution":execution,"judgment":request.map(|r|&r["arguments"])}),
     )?;
+    if let Some(answer) = configuration["residuals"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|r| {
+            r["source"] == ".agentic-workspace/config.local.toml"
+                && r["field"] == "delegation.replacement"
+        })
+    {
+        // A former exact answer is not standing policy. A different work id
+        // cannot govern this independently admitted local Assignment. Matching
+        // ids (even with different revisions) remain unresolved: no inferred
+        // retirement, transfer, replacement permission or legacy admission.
+        let unrelated = answer["work_identity"]["id"]
+            .as_str()
+            .zip(work["id"].as_str())
+            .is_some_and(|(old, current)| !old.is_empty() && !current.is_empty() && old != current);
+        result["former_replacement"] = json!({"source":answer["source"],"value_revision":answer["value_revision"],
+            "status":if result["local_assignment_satisfied"] != true {"current-assignment-required"}
+                else if unrelated {"outside-current-work"} else {"current-owner-answer-required"},
+            "authority_boundary":"Applicability to this admitted local work only; no source write, retirement, adoption or delegation permission."});
+    }
     for alternative in result["alternatives"].as_array_mut().into_iter().flatten() {
         let candidate = execution["configurations"]["candidates"]
             .as_array()

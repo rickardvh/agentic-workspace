@@ -3,12 +3,80 @@
 from __future__ import annotations
 
 import copy
+import json
 
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 BASE = 'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n'
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_former_exact_answer_cannot_block_unrelated_admitted_local_work(tmp_path, shared_core_binary, native_cli, surface):
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    answer = {
+        key: "former"
+        for key in (
+            "assignment_id",
+            "assignment_revision",
+            "work_id",
+            "work_revision",
+            "target",
+            "transport",
+            "execution_revision",
+            "packet_integrity",
+        )
+    }
+
+    def write():
+        source.write_text(BASE + "[delegation.replacement]\n" + "".join(f"{k}={json.dumps(v)}\n" for k, v in answer.items()))
+        return source.read_bytes()
+
+    context = {"target": str(tmp_path), "task": "Inspect different current work", "changed": []}
+
+    def call(request=None):
+        return consume(surface, shared_core_binary, native_cli, {**context, **({"request": request} if request is not None else {})})
+
+    def admit():
+        task = call()["task_requirements"]["requests"][0]
+        task["arguments"]["required_result_classes"] = ["read-only"]
+        choice = call(task)["task_requirements"]["assignment"]["requests"][0]
+        choice[-1]["arguments"].update(alternative="local:internal", reason="Current local executor is sufficient for this read.")
+        return choice, call(choice)
+
+    before = write()
+    pending = call()
+    assert any(b["code"] == "current-binding-assignment-required" for b in pending["decision_packet"]["blockers"])
+    assert any(
+        b["code"].endswith("delegation.replacement") and "effect:implementation" in b["affects"]
+        for b in pending["decision_packet"]["blockers"]
+    )
+    choice, current = admit()
+    assert current["task_requirements"]["assignment"]["result"]["former_replacement"]["status"] == "outside-current-work"
+    blocker = next(b for b in current["decision_packet"]["blockers"] if b["code"].endswith("delegation.replacement"))
+    assert "effect:implementation" not in blocker["affects"]
+    assert "effect:delegation" in blocker["affects"] and "claim:complete" in blocker["affects"]
+    assert source.read_bytes() == before
+
+    # A matching identity remains unresolved even with a different revision.
+    answer["work_id"] = current["current_work"]["id"]
+    before = write()
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(choice)
+    _, matching = admit()
+    assert matching["task_requirements"]["assignment"]["result"]["former_replacement"]["status"] == "current-owner-answer-required"
+    assert any(
+        b["code"].endswith("delegation.replacement") and "effect:implementation" in b["affects"]
+        for b in matching["decision_packet"]["blockers"]
+    )
+    assert source.read_bytes() == before
+    answer["work_id"] = ""
+    write()
+    malformed = call()
+    assert any("effect:implementation" in b["affects"] or "task" in b["affects"] for b in malformed["decision_packet"]["blockers"])
+    assert not (tmp_path / ".agentic-workspace/local").exists()
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
