@@ -1,45 +1,46 @@
 {
   "blockers": [
-    "#3164 and the native configuration correction are implemented on candidate branches but need independent review and integration.",
-    "#3077 repository-native guidance/cutover, consequential delegation (#2947/#2817/#2818/#2210), and positive lifecycle-derived target evidence (#2209) remain release-critical.",
-    "#2909 cumulative conformance includes a pre-existing invalid promotion_gate review field; #2990 release-equivalent admission and later #3014 promotion are not admitted."
+    "Remaining native ordinary owner coverage and former semantic-host subtraction under #3077/#3020/#2987 remain incomplete.",
+    "Consequential delegation (#2947/#2817/#2818/#2210) and positive lifecycle-derived target evidence (#2209) remain release-critical.",
+    "#2909 still owns inherited review-schema and runtime-routing conformance findings; #2616 final behavior, exact #2990 admission and later #3014/#3138 cutover are not complete."
   ],
   "completion_criteria": [
-    "#2989 lands one source-first operating decision and typed result-to-next-decision path.",
-    "#2984-#2988 remove pre-v1 compatibility, consolidate delivery/operation authority, shrink public vocabulary, and minimize checked-in host residue while preserving module semantics.",
-    "#2990 clean-room conformance proves all ten required areas from release-equivalent artifacts and records the retained 1.x compatibility contract.",
-    "All material findings are implemented or explicitly rejected with evidence; parent #2983 can close honestly.",
-    "No more than three coherent pull requests are opened, each with focused and full validation evidence."
+    "Every release-relevant P0/P1 owner is classified exactly once and its intended end state has current owner-specific proof; an open issue or a landed slice alone is not a disposition.",
+    "The ordinary native CLI and supported Python/TypeScript/JSON projections share Rust semantics; superseded hosts are subtracted after current authority is transferred or bounded.",
+    "Consequential non-local and matched local delegation outcomes and positive lifecycle-derived target evidence are admitted honestly.",
+    "#2909 cumulative conformance and #2616 final documentation describe admitted behavior; #2990 independently admits one exact release-equivalent candidate.",
+    "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
+    "frontier": "#3164/#3165 are integrated at 384473617acd395ebf66b3d449d7bd28bbe5bea9; this real owner is being reconciled through existing native custody, without new legacy adoption permission.",
     "owner": "#2983",
-    "residual_intent": "Complete the existing P0/P1 outcomes through the native Rust ordinary path, aggregate #2909, finalize #2616, then admit one exact #2990 candidate before any #3014/#3138 cutover."
+    "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
   "execution_bounds": {
     "allowed paths": "Tracked product source, first-party packages, generated/released resources, tests, docs, workflows, release metadata, and canonical Planning records required by #2983-#2990.",
-    "ask-before-refactor threshold": "A new public concept, command family, compatibility layer, distribution, or authority not required by the eight issue contracts.",
+    "ask-before-refactor threshold": "A new public concept, command family, compatibility layer, distribution or authority outside the existing release-critical owner outcomes and explicit human decisions.",
     "max changed files": "1200",
-    "required validation commands": "Focused tests per PR; make check-nosync; release-equivalent wheel/sdist clean-room conformance and uninstall proof.",
+    "required validation commands": "Focused owner-native/parity/currentness tests per correction; cumulative conformance and release-equivalent artifact/support proof under #2909/#2990 before admission.",
     "stop before touching": "Unknown repo-owned host content, credentials, unrelated user changes, or destructive lifecycle behavior outside explicit test fixtures."
   },
   "goal": [
-    "Implement the complete #2983-#2990 v1 contraction graph, including P1 dependencies #2987 and #2988, and deliver it as three or fewer coherent stacked pull requests with release-equivalent proof."
+    "Deliver the smallest coherent first-stable AW product through consolidated owner-aligned pull requests; preserve quiet repo-native continuity, supported language bindings, current authority and release-equivalent proof."
   ],
   "id": "v1-contraction-2983-2990",
   "intent": {
     "non_goals": [
       "Leave adjacent backlog or follow-on work out of this plan."
     ],
-    "outcome": "GitHub issues #2983-#2990; user requested all P0 issues in consolidated pull requests"
+    "outcome": "Complete the existing release-critical P0/P1 reconstruction owners through one native Rust authority, prove the cumulative candidate, and prepare exact first-stable admission under #2983/#2909/#2990."
   },
   "intent_continuity": {
-    "continuation surface": "#2983 current convergence frontier; #2613/#2767/#3077, delegation and #2209, then #2909/#2616/#2990/#3014",
+    "continuation surface": "#2983 current convergence frontier; #3077 and consequential delegation/#2209; then #2909/#2616/#2990/#3014",
     "larger intended outcome": "Ship and prove the smallest coherent Agentic Workspace v1 contract described by #2983.",
     "this slice completes the larger intended outcome": "no"
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Admit the native configuration correction under #2613/#2767/#3077, then finish the current P0/P1 owner gaps before cumulative #2909 and exact-candidate #2990 admission.",
+  "next_action": "Prove fresh-session recovery of this reconciled real owner under #2970 and route the regression to #2909; then complete the earliest remaining native ordinary-path and consequential delegation gaps under #3077/#2947/#2817/#2818/#2210, followed by positive #2209 target evidence.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -55,11 +56,20 @@
   "phase": "implementation",
   "proof": {
     "claims": [
-      "Implement and prove the v1 contraction issue graph is implemented, validated, and closed out honestly."
+      "Native former-owner transfer and material-update capability is integrated; complete first-stable intent is not yet satisfied."
     ],
-    "refs": [],
+    "refs": [
+      "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
+      "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587513916",
+      "tests/test_native_planning_create.py",
+      "tests/test_native_startup_adapter.py",
+      ".agentic-workspace/reconstruction/owner-audit.md"
+    ],
     "requirements": [
-      "Fill in the narrowest command that proves the promoted work."
+      "Prove this real owner is materially current through native update, fresh-session recovery, source-drift rejection and preservation of unrelated work.",
+      "For each remaining P0/P1 owner, prove positive and negative currentness/admission behavior through required native/Python/TypeScript/JSON surfaces; distinguish implementation from evidence gaps.",
+      "Admit a complete supported consequential non-local delegation lifecycle plus matched retained-local control, excluding incomplete or censored workers; prove attributable lifecycle-derived #2209 target evidence separately from completion authority.",
+      "Aggregate #2909 conformance and finalize #2616 against admitted behavior; #2990 must independently admit one exact release-equivalent candidate and supported artifact matrix before cutover."
     ]
   },
   "references": [
@@ -80,6 +90,24 @@
       "scope": "active-plan-work-unit",
       "state": "recorded"
     },
+    "dependencies": {
+      "order": "Current P0/P1 implementation and focused proof; cumulative #2909; finalize #2616; independently admit exact #2990; only then explicitly authorized #3014/#3138 cutover.",
+      "refs": [
+        "#2970",
+        "#3077",
+        "#2613",
+        "#2767",
+        "#2947",
+        "#2817",
+        "#2818",
+        "#2210",
+        "#2209",
+        "#2909",
+        "#2616",
+        "#2990",
+        "#3014"
+      ]
+    },
     "external_posture": {
       "refs": [],
       "state": "unobserved"
@@ -93,11 +121,29 @@
       "state": "selected-local"
     }
   },
-  "revision": 5,
+  "revision": 6,
   "scope": {
-    "effects": [],
+    "effects": [
+      "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
+    ],
     "owned": [
-      "Fill in the concrete files before implementation starts."
+      "crates/agentic-workspace-core/",
+      "crates/agentic-workspace-cli/",
+      "src/agentic_workspace/",
+      "packages/",
+      "generated/",
+      "tests/",
+      "scripts/",
+      "docs/",
+      ".github/",
+      ".release/",
+      ".agentic-workspace/",
+      "SYSTEM_INTENT.md",
+      "AGENTS.md",
+      "pyproject.toml",
+      "uv.lock",
+      "Cargo.toml",
+      "Cargo.lock"
     ]
   },
   "specialist_contracts": [
@@ -127,18 +173,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/d260b042923078f52e63cf39b8040cb5af4a6fab289f463f1fc636177745a8c0.attempt.json",
-        "revision": "sha256:6f7abdef0d99a8dc60c919da964d90b1eb5b49b66de8b2bec9611e89f010e065",
+        "path": ".agentic-workspace/local/effects/4b1878369fc534452600318158d3e0cb81b6ab014159f1df4a3a04bc44ec12ee.attempt.json",
+        "revision": "sha256:cd8d725665f51aded2f0793e7aff445371d7a1a6e65e45458824cb6c959b24ea",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/d260b042923078f52e63cf39b8040cb5af4a6fab289f463f1fc636177745a8c0.result.json",
-        "revision": "sha256:3d429b53e91038454571bf0695b8ce6aa156e3db259f4e7c247765d7b2927465",
+        "path": ".agentic-workspace/local/effects/4b1878369fc534452600318158d3e0cb81b6ab014159f1df4a3a04bc44ec12ee.result.json",
+        "revision": "sha256:a73b0adf856f6fbc7a507d662aa17b90362ec755b113986528ae8c0b77ee3c37",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:50be6c542b8003cde5c28bd24eba0b4e872d54537ecc0878ebe0529744b9bdef",
+    "invocation_revision": "sha256:187b75b31b2f4f8c9336edfafb82edb5d97c3e7d74028a745ccddff3842c6c64",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -146,7 +192,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:3de83a2a2298789df5caf029452b27b258ecef8c0368b1823af1dc3ecf9d8199",
+        "document_revision": "sha256:7b41e413ed3cced6e0c094600eefdc2921fb618559d52690979b85ad43da2857",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
