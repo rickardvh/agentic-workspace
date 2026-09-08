@@ -3,12 +3,66 @@ use crate::{CoreError, digest};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::path::Path;
+pub(crate) const JUDGE_RETURN: &str = "assignment/judge-return/v1";
 pub(crate) fn declarations() -> Vec<Value> {
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
     ))
     .expect("schema");
-    [("assignment/judge-readonly-inputs/v1","readonly_handoff_inputs"),("assignment/export-readonly/v1","readonly_handoff_export"),("assignment/observe-readonly-return/v1","readonly_handoff_return")].iter().map(|(kind,key)|{let mut shape=schema["$defs"][*key].clone();shape["$schema"]=schema["$schema"].clone();json!({"kind":kind,"result_kind":"agentic-workspace/assignment-readonly-handoff/v1","input_schema":shape})}).collect()
+    let mut declarations: Vec<Value> = [("assignment/judge-readonly-inputs/v1","readonly_handoff_inputs"),("assignment/export-readonly/v1","readonly_handoff_export"),("assignment/observe-readonly-return/v1","readonly_handoff_return")].iter().map(|(kind,key)|{let mut shape=schema["$defs"][*key].clone();shape["$schema"]=schema["$schema"].clone();json!({"kind":kind,"result_kind":"agentic-workspace/assignment-readonly-handoff/v1","input_schema":shape})}).collect();
+    declarations.push(json!({"kind":JUDGE_RETURN,"result_kind":"agentic-workspace/assignment-result-admission/v1","input_schema":{"$schema":schema["$schema"],"type":"object","properties":{"answer":{"enum":["use-result","repair-required","reject-result"]},"reason":{"type":"string","minLength":1,"maxLength":4096}},"required":["answer","reason"],"additionalProperties":false}}));
+    declarations
+}
+
+/// Current orchestrator judgment is not independent review or target calibration.
+pub(crate) fn admission(
+    work: &Value,
+    execution: &Value,
+    submitted: &[Value],
+    contract: &Value,
+) -> Result<Value, CoreError> {
+    let judgment = submitted.iter().find(|r| r["request_kind"] == JUDGE_RETURN);
+    if execution["status"] != "current-executed-observation" {
+        if judgment.is_some() {
+            return Err(CoreError::new(
+                "current executed result required before Assignment judgment",
+            ));
+        }
+        return Ok(json!({"status":"not-ready","requests":[]}));
+    }
+    let source = digest(&json!({"work":work,"execution":execution}))?;
+    let mut prerequisites = submitted
+        .iter()
+        .filter(|r| r["request_kind"] != JUDGE_RETURN)
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut status = "judgment-required";
+    let mut reason = "";
+    if let Some(value) = judgment {
+        validate(value, work, &source, contract)?;
+        reason = value["arguments"]["reason"].as_str().unwrap_or("").trim();
+        if reason.is_empty() {
+            return Err(CoreError::new(
+                "Assignment return judgment requires a reason",
+            ));
+        }
+        status = match value["arguments"]["answer"].as_str() {
+            Some("use-result") => "admitted-for-use",
+            Some("repair-required") => "repair-required",
+            Some("reject-result") => "rejected",
+            _ => return Err(CoreError::new("unsupported Assignment return judgment")),
+        };
+    }
+    prerequisites.push(request(
+        JUDGE_RETURN,
+        json!({"answer":"use-result","reason":""}),
+        work,
+        &source,
+        contract,
+    ));
+    Ok(
+        json!({"kind":"agentic-workspace/assignment-result-admission/v1","status":status,"source_revision":source,"assignment_identity":execution["assignment_identity"],"result_use_allowed":status=="admitted-for-use","judgment":{"source":"acting-orchestrator","reason":reason},"execution_custody":execution["custody"],"returned":execution["returned"],"requests":[prerequisites],"claim_boundary":{"proof":false,"independent_review":false,"completion":false,"target_quality":false}}),
+    )
 }
 fn request(kind: &str, args: Value, work: &Value, source: &str, contract: &Value) -> Value {
     let owner = contract["owners"]
@@ -170,6 +224,8 @@ pub(crate) fn view(
                         | "assignment/observe-readonly-return/v1"
                         | "delegation/dispatch/v1"
                         | "delegation/read-result/v1"
+                        | "assignment/judge-return/v1"
+                        | "planning/adopt-return/v1"
                 )
             )
         })

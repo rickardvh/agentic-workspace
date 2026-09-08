@@ -39,7 +39,7 @@ The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The real selected owner is now native-authored revision 6 with concrete scope/proof, current merged frontier and dependencies, and no obsolete three-PR cap. Native re-entry and fresh-process recovery report current custody; stale update requests fail without mutation. Full owner-specific cumulative conformance and independent acceptance remain under #2909; no parent closure is inferred. |
+| #2970 | evidence/conformance gap | The real selected owner is now native-authored revision 7 with concrete scope/proof, current merged frontier and dependencies, and no obsolete three-PR cap. Native re-entry and fresh-process recovery report current custody; stale update requests fail without mutation. Full owner-specific cumulative conformance and independent acceptance remain under #2909; no parent closure is inferred. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -320,64 +320,66 @@ uses the configured native request/action route, keeps unsupported owner effects
 explicit, and compresses overlapping evidence/cost checklists into one existing
 owner record. No shipped payload, runtime behavior or new test surface changes.
 
-## Native process execution continuation (proposed)
+## Native process lifecycle continuation (#3167, proposed)
 
-The cumulative branch now executes the sealed read-only process handoff through
-the source-built native runtime. Assignment selection, transport execution,
-return observation, Verification and completion remain separate. Exact source
-requests bind dispatch; input/output and process-tree lifetime are bounded.
-Fresh-session replay recovers a retained terminal publication without another
-worker. A missing terminal outcome stays uncertain. Stale, malformed, truncated,
-wrong-identity and stopped workers are excluded from successful return evidence.
-The existing proof process runner is shared rather than duplicated.
+The native ordinary route executes the exact sealed read-only process handoff,
+admits its committed execution provenance, and asks the acting orchestrator for
+a bounded use/repair/reject judgment. Planning can consume the admitted summary
+through its existing writer into the selected owner's continuation frontier.
+Identity, scope, dependencies, constraints, proof posture and other material are
+preserved. Fresh Planning re-entry and selected Verification execution remain
+separate effects. A continuation answer now travels with its exact proof action;
+changing proof scope cannot silently lose the selected Planning subject.
 
-An opt-in real Codex CLI 0.153.4 process run consumed the sealed current revision-6
-reconstruction owner in an isolated ephemeral, read-only worker directory. The
-configured host command supplied the packet; no parent conversation or former AW
-Python host supplied semantics. It returned a valid 1,936-byte observation in
-21,933 ms (22.51 seconds including native invocation) over a 9,883-byte source.
-The original diagnostic packet size included serializer whitespace and was not
-an observation of transmitted input bytes. Fresh native re-entry classified it as a
-current unproven observation. Effective/cached/output tokens, host framing cost,
-review/integration burden and total successful-completion savings are unknown.
-An earlier incorrect executable path failed before provider launch (664 ms) and
-is excluded. Both outcomes remain in local bounded evidence; no transcript is
-checked in. This is process transport evidence, not host-native adapter admission.
+Dispatch binds current source, configuration and Assignment identity; input,
+output and process lifetime are bounded. Terminal publication interruptions
+recover without relaunch. Missing terminal outcomes stay uncertain. Wrong
+identity, malformed/truncated output, source drift, stopped workers and forged
+return/adoption material fail closed. These do not count as successful evidence.
+The existing process runner and Planning writer are reused; there is no new
+result ledger, transcript archive or completion authority.
 
-The same task/input selected the retained-local configuration without dispatch
-or delegation artifacts. That proves routing feasibility only, not a completed
-matched local lifecycle or economic advantage. The current 77-case focused
-handoff/configuration/assignment/proof matrix passed in 150.39 seconds; 95 Rust
-tests passed (three helper tests ignored). The dispatch cases cover both terminal
-publication interruptions and tampered recovery rejection across the current
-native/Python/TypeScript/JSON boundary. Final cumulative release proof remains
-separate from these explicitly scoped results.
+The real Codex CLI 0.153.4 matched case extracted the exact continuation frontier
+from the real revision-7 owner (11,006 bytes; SHA-256
+`40ec4d1633fd4ceb12e45d2857a229909015fa79647d98dafbb4028efbfeb798`).
+Both independent native-owned fixtures retained that exact text, recovered current
+Planning custody and published a reusable selected-command check against public
+source and output. Unrelated files and the remaining Planning material survived.
+The non-local worker ran ephemeral/read-only in an isolated directory with its
+sealed context; no parent conversation or former AW Python semantic host was used.
 
-#2947/#2817/#2818/#2210 remain bounded implementation gaps: consequential delta
-admission, typed Planning/Verification return, real host-native continuation and
-pause/resume, matched completed local comparison and observed full lifecycle cost
-are not established. #2209 remains blocked on admitted consequential evidence;
-process exit or worker success text never improves target standing. No issue
-closes from this execution correction. #2909 retains cumulative conformance.
+| Matched case | End-to-end elapsed | Native calls | Worker measurement |
+| --- | --- | --- | --- |
+| Retained local | 7,463 ms | 20 | No worker or delegation artifacts |
+| Configured non-local process | 26,204 ms | 24 | 15,189 ms; 41,508 actual input bytes |
 
-The same PR's continuation adds owner-validated committed execution provenance to
-the self-sufficient re-entry. The delegation owner reads its own exact custody;
-the native resolver revalidates the original action before exposing that typed
-observation. Forged return text and source drift are rejected. The existing cost
-contract receives measured process-input bytes and elapsed time; absent provider
-and downstream metrics remain unknown. This supplies source facts for later
-admission, not task acceptance or a target-quality update. Its nine focused
-dispatch cases pass across native/Python/TypeScript/JSON (25.25 seconds).
+This is a completed bounded extraction/Planning/check lifecycle. The selected
+check is admitted proof of exact retained text, not task-completion judgment,
+independent review or general target quality. Provider tokens, framing, retries
+and review/integration cost remain unknown. Local elapsed time is lower for this
+case; no general delegation advantage or full economic admission is claimed.
+Earlier real process observations (21,933 and 20,965 ms) remain historical
+transport evidence. The bad executable-path attempt failed before provider
+launch and is excluded. No raw transcript is checked in.
 
-A fresh real run on the provenance extension consumed the real revision-7 owner
-(11,006 source bytes). Native measurements were 41,507 process-input bytes,
-2,026 stdout bytes and 20,965 ms; fresh re-entry admitted current executed
-observation provenance while retaining every false claim-authority flag. The
-earlier real success/failure artifacts remain separate. No provider token or
-successful-completion savings claim follows from the process-byte measurement.
+Proof: 167 focused Planning/startup/handoff/configuration/Assignment/proof cases
+passed in 454.51 seconds before the proof-dependency correction; the final nine
+dispatch cases then passed in 74.66 seconds across native/Python/TypeScript/JSON,
+including the exact Planning-to-Verification continuation. The existing Rust
+suite passed 95 tests (three helpers ignored). Focused final proof-producer
+validation is recorded in the PR, separately from historical totals.
 
-The real selected Planning owner now records this frontier as native-authored
-revision 7 (`40ec4d1633fd4ceb12e45d2857a229909015fa79647d98dafbb4028efbfeb798`).
-Exact native update/reconcile and a fresh process report current custody. The
-old material request fails with exit 2 and the same bytes. Its tracked copy is
-the native writer output; no local receipts or unrelated work are transported.
+#2947/#2817/#2818/#2210 remain bounded implementation gaps: unapplied or shared
+worktree delta admission, host-native continuation, live pause/resume/worker-loss
+recovery and broader matched lifecycle economics remain unproved. #2209 still
+needs current, attributable positive outcome evidence and de-adoption; process
+exit, worker text or this selected check alone cannot earn general standing.
+No parent issue closes. #2909 retains cumulative conformance and independent
+admission; #2990 and #3138 remain gated.
+
+The real selected reconstruction owner was separately maintained through native
+update/reconcile as revision 7. Fresh processes report current custody; the old
+request fails with exit 2 and unchanged bytes. Its checked-in copy is the native
+writer output; local custody receipts and unrelated original-checkout work are
+not transported. The isolated implementation worktree does not acquire custody
+over that copied selector: bounded source work remains direct there.

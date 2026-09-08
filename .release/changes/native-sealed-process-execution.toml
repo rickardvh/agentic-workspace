@@ -1,4 +1,4 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "minor"
-summary = "Execute exact sealed read-only process assignments natively with bounded output, terminal recovery and self-sufficient unproven return re-entry."
+summary = "Execute bounded sealed process assignments with terminal recovery, exact return admission and native Planning and Verification continuation."
 issues = [2947, 2210, 2817, 2818, 3000]
