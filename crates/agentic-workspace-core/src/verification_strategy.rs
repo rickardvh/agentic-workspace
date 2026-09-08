@@ -49,7 +49,26 @@ pub(crate) fn view(
     assessment: Option<&Value>,
 ) -> Result<Value, CoreError> {
     let baseline = policy["baseline"].as_str().unwrap();
-    let mut level = baseline;
+    let required_level = assurance["requirements"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|row| {
+            row["status"] == "applicable"
+                && matches!(
+                    row["force"].as_str(),
+                    Some("blocking" | "required-before-closeout")
+                )
+        })
+        .filter_map(|row| row["source_requirement"]["level"].as_str())
+        .max_by_key(|level| rank(level))
+        .unwrap_or("low");
+    let source_level = if rank(required_level) > rank(baseline) {
+        required_level
+    } else {
+        baseline
+    };
+    let mut level = source_level;
     let mut selected = BTreeSet::<String>::new();
     let mut required = BTreeSet::<String>::new();
     let mut recommended = BTreeSet::<String>::new();
@@ -62,11 +81,14 @@ pub(crate) fn view(
         .validate(assessment)
         .map_err(|e| CoreError::new(format!("invalid Verification strategy assessment: {e}")))?;
         level = assessment["level"].as_str().unwrap();
-        if rank(level) > rank(baseline) && policy["agent_may_escalate"] != true {
+        if rank(level) > rank(source_level) && policy["agent_may_escalate"] != true {
             gaps.push("assurance-escalation-not-authorized".into());
         }
         if rank(level) < rank(baseline) && policy["agent_may_deescalate"] != true {
             gaps.push("assurance-deescalation-not-authorized".into());
+        }
+        if rank(level) < rank(required_level) {
+            gaps.push("assurance-below-binding-requirement".into());
         }
         selected.extend(strings(&assessment["profile_ids"]));
     }
@@ -183,11 +205,11 @@ pub(crate) fn view(
     }
     let denied_level = gaps.iter().any(|gap| gap.starts_with("assurance-"));
     if denied_level {
-        level = baseline;
+        level = source_level;
     }
     let available: Vec<Value> = policy["profiles"].as_object().into_iter().flatten().take(32).map(|(id,profile)|json!({"id":id,"revision":digest(profile).expect("source JSON hashes")})).collect();
     Ok(
-        json!({"kind":"agentic-workspace/verification-strategy/v1","configured":policy["configured"],"source_revision":policy["revision"],"baseline_level":baseline,"effective_level":level,"level_status":if denied_level{"rejected"}else if assessment.is_some(){"agent-assessed"}else{"source-default-guidance"},"assessment":assessment,"available_profiles":available,"omitted_profile_count":policy["profiles"].as_object().map_or(0,|p|p.len().saturating_sub(32)),"selected_profiles":profiles,"recommended_profiles":recommended,"obligations":obligations,"disallowed_commands":disallowed,"routes":routes,"execution_blocked":invalid||denied_level,"gaps":gaps,"authority_boundary":"Guidance/profile selection does not waive source requirements or establish proof, task judgment, review or completion."}),
+        json!({"kind":"agentic-workspace/verification-strategy/v1","configured":policy["configured"],"source_revision":policy["revision"],"baseline_level":baseline,"required_level":required_level,"effective_level":level,"level_status":if denied_level{"rejected"}else if assessment.is_some(){"agent-assessed"}else if rank(required_level)>rank(baseline){"source-required-level"}else{"source-default-guidance"},"assessment":assessment,"available_profiles":available,"omitted_profile_count":policy["profiles"].as_object().map_or(0,|p|p.len().saturating_sub(32)),"selected_profiles":profiles,"recommended_profiles":recommended,"obligations":obligations,"disallowed_commands":disallowed,"routes":routes,"execution_blocked":invalid||denied_level,"gaps":gaps,"authority_boundary":"Guidance/profile selection does not waive source requirements or establish proof, task judgment, review or completion."}),
     )
 }
 pub(crate) fn public_view(view: &Value) -> Value {

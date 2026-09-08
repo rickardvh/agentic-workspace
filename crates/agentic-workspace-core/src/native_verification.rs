@@ -546,6 +546,126 @@ fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError
     Ok(result)
 }
 
+/// Project existing subsystem scope into the same assurance owner. Ownership
+/// paths establish applicability only; they confer no state custody or proof.
+fn subsystem_requirements(
+    root: &Dir,
+    config: &mut Value,
+    source: &str,
+) -> Result<String, CoreError> {
+    let profiles = config["assurance"]["subsystem_profiles"]
+        .as_object()
+        .cloned()
+        .unwrap_or_default();
+    if profiles.is_empty() {
+        return Ok("absent".into());
+    }
+    if profiles.len() > 128 {
+        return Err(CoreError::new("subsystem assurance exceeds bounded source"));
+    }
+    const OWNERSHIP: &str = ".agentic-workspace/OWNERSHIP.toml";
+    let bytes = read(root, OWNERSHIP)
+        .map_err(CoreError::new)?
+        .ok_or_else(|| {
+            CoreError::new("subsystem assurance requires its current Ownership source")
+        })?;
+    let parsed: toml::Value = std::str::from_utf8(&bytes)
+        .map_err(|_| CoreError::new("invalid Ownership source encoding"))?
+        .parse()
+        .map_err(|_| CoreError::new("invalid Ownership source TOML"))?;
+    let ownership = serde_json::to_value(parsed).map_err(|e| CoreError::new(e.to_string()))?;
+    let subsystems = ownership["subsystems"]
+        .as_array()
+        .filter(|rows| rows.len() <= 128)
+        .ok_or_else(|| CoreError::new("Ownership requires a bounded subsystem declaration"))?;
+    for (id, profile) in profiles {
+        if profile.as_object().is_none_or(|fields| {
+            fields.keys().any(|key| {
+                !matches!(
+                    key.as_str(),
+                    "assurance_level"
+                        | "scope_refs"
+                        | "requirement_refs"
+                        | "required_evidence"
+                        | "proof_profile"
+                        | "workflow_obligation_refs"
+                        | "review_owner"
+                        | "force"
+                        | "blocked_without_evidence"
+                        | "claim_boundary"
+                        | "notes"
+                )
+            })
+        }) {
+            return Err(CoreError::new(format!(
+                "subsystem assurance has unsupported semantics: {id}"
+            )));
+        }
+        let matched: Vec<_> = subsystems.iter().filter(|row| row["id"] == id).collect();
+        if matched.len() != 1 {
+            return Err(CoreError::new(format!(
+                "subsystem assurance requires one current Ownership declaration: {id}"
+            )));
+        }
+        let paths = matched[0]["paths"]
+            .as_array()
+            .filter(|paths| !paths.is_empty() && paths.len() <= 128)
+            .ok_or_else(|| {
+                CoreError::new(format!("subsystem scope requires bounded paths: {id}"))
+            })?;
+        if paths.iter().any(|path| {
+            path.as_str().is_none_or(|path| {
+                path.is_empty()
+                    || path.starts_with('/')
+                    || path.contains('\\')
+                    || path.contains(':')
+                    || path.split('/').any(|part| matches!(part, ".." | "." | ""))
+            })
+        }) {
+            return Err(CoreError::new(format!(
+                "subsystem scope has unsupported paths: {id}"
+            )));
+        }
+        if profile["scope_refs"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|scope| {
+                scope != &json!(format!("ownership.subsystems.{id}"))
+                    && scope != &json!(format!("subsystem:{id}"))
+            })
+        {
+            return Err(CoreError::new(format!(
+                "subsystem assurance scope requires owner resolution: {id}"
+            )));
+        }
+        let key = format!("subsystem:{id}");
+        if config["assurance"]["requirements"].get(&key).is_some() {
+            return Err(CoreError::new(format!(
+                "subsystem assurance requirement identity collides: {id}"
+            )));
+        }
+        let mut requirement = profile.clone();
+        requirement
+            .as_object_mut()
+            .unwrap()
+            .remove("assurance_level");
+        requirement["level"] = profile["assurance_level"].clone();
+        requirement["applies_to_paths"] = json!(paths);
+        requirement["source_ref"] = json!(format!("{source}#assurance.subsystem_profiles.{id}"));
+        requirement["authority_refs"] = json!([format!("{OWNERSHIP}#subsystems.{id}")]);
+        if let Some(value) = requirement
+            .as_object_mut()
+            .unwrap()
+            .remove("blocked_without_evidence")
+        {
+            requirement["blocking_claims"] = value;
+        }
+        config["assurance"]["requirements"][key] = requirement;
+    }
+    Ok(sha(&bytes))
+}
+
 /// Current domain-lane commands are execution candidates, not proof sufficiency.
 /// Source metadata stays on the selected route; discovery uses bounded descriptors.
 fn domain_routes(
@@ -695,9 +815,16 @@ pub(crate) fn view_with_applicability(
     {
         gaps.push("verification-manifest-owner-sections-invalid".into());
     }
-    let config = strategy_sources(&config, &manifest)?;
-    let assurance_revision =
-        digest(&json!({"config":config_revision,"manifest":manifest_revision}))?;
+    let mut config = strategy_sources(&config, &manifest)?;
+    let subsystem_source = if manifest["assurance"].get("subsystem_profiles").is_some() {
+        MANIFEST
+    } else {
+        ".agentic-workspace/config.toml"
+    };
+    let ownership_revision = subsystem_requirements(&root, &mut config, subsystem_source)?;
+    let assurance_revision = digest(
+        &json!({"config":config_revision,"manifest":manifest_revision,"ownership":ownership_revision}),
+    )?;
     let mut assurance_input = crate::assurance_applicability::native_input(
         &config,
         &assurance_revision,
@@ -707,12 +834,6 @@ pub(crate) fn view_with_applicability(
         planning_subject,
         applicability.facts,
     )?;
-    if config["assurance"]["subsystem_profiles"]
-        .as_object()
-        .is_some_and(|profiles| !profiles.is_empty())
-    {
-        gaps.push("verification-subsystem-profiles-owner-required".into());
-    }
 
     let profile_source = if manifest["assurance"].get("proof_profiles").is_some() {
         MANIFEST
@@ -906,6 +1027,7 @@ pub(crate) fn view_with_applicability(
         }
     }
     strategy["assessment"] = json!(strategy_assessment);
+    strategy["assurance_source_revision"] = assurance_input["source_revision"].clone();
     strategy["assurance_request"] = current_scope_request;
     strategy["disallowed_commands"] = strategy_control["disallowed_commands"].clone();
     strategy["selection_blocked"] = strategy_control["execution_blocked"].clone();
@@ -925,7 +1047,7 @@ pub(crate) fn view_with_applicability(
     let mut strategy_request = template.clone();
     strategy_request["id"] = json!("verification/strategy/v1");
     strategy_request["request_kind"] = json!("verification/strategy/v1");
-    strategy_request["arguments"] = json!({"level":strategy_policy["baseline"],"profile_ids":[],"reason":"Assess the current task's sufficient proof strategy without waiving source obligations."});
+    strategy_request["arguments"] = json!({"level":strategy_control["effective_level"],"profile_ids":[],"reason":"Assess the current task's sufficient proof strategy without waiving source obligations."});
     if let Some(assessment) = strategy_assessment.as_ref() {
         strategy_request["arguments"] = assessment.clone();
     }
@@ -1201,6 +1323,10 @@ mod tests {
         repo.write(
             MANIFEST,
             include_str!("../../../.agentic-workspace/verification/manifest.toml"),
+        );
+        repo.write(
+            ".agentic-workspace/OWNERSHIP.toml",
+            include_str!("../../../.agentic-workspace/OWNERSHIP.toml"),
         );
         let result = get(&repo, &["AGENTS.md"], None);
         assert_eq!(result["status"], "unresolved");

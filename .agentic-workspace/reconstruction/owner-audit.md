@@ -41,7 +41,7 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 18, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 19, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -148,6 +148,36 @@ workflow artifact choice, initiative authority, diagnostic policy and capability
 admission remain in their distinct sources. Shared config is now 120 lines.
 Former alias inputs stay recognizable and read-only for other repositories;
 this retirement does not erase their sources or adopt their state.
+
+### Current Verification consequence follow-through
+
+The existing subsystem profile now projects current, bounded Ownership paths
+into the same assurance requirement owner. Missing/duplicate declarations,
+unknown scope semantics, conflicting level aliases and unconfined sources fail
+closed. Review owner, evidence vocabulary, workflow references and force remain
+visible requirements; scope selection cannot discharge them. Ownership remains
+unchanged. Changing its bytes invalidates prepared proof actions and admitted
+receipts through the strategy's source revision. No new registry or custody
+operation is added.
+
+Binding applicable requirement levels now form an effective strategy floor.
+Agent de-escalation cannot undercut that floor, and source-required escalation
+does not require an agent escalation permission. Returned requests use the valid
+current level. Recommended or unrelated requirements do not raise it.
+
+After the exact transfer, the Verification owner removes two retired optional
+proof/report command entries and replaces required test-evidence reporting and
+mirror-report methods with current native strategy and generated-package checks.
+Required manual/independent review and evidence intent stay unchanged. This is
+source-owner method maintenance, distinct from the earlier byte-preserving move.
+
+The subsystem/migration parity cases execute and admit current command evidence,
+then prove action rejection and receipt de-adoption on Ownership drift. Retained
+former config profiles use the same owner; unrelated malformed Ownership is not
+read when no subsystem profile requires it. The actual dogfood Ownership file is
+preserved: modifying its repo-specific scope currently conflicts with managed
+payload integrity, a remaining source-boundary finding for #2613/#2767, not a
+reason to waive payload admission or ship more repository policy as defaults.
 
 ## Integrated children and later gates
 

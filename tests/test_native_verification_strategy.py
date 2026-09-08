@@ -318,11 +318,26 @@ def test_profile_and_requirement_transfer_preserves_obligation_and_rejects_compe
     current = call()
     control = current["verification"]["strategy_control"]
     assert control["baseline_level"] == "medium"
+    assert control["effective_level"] == "high" and control["required_level"] == "high"
     assert control["obligations"][0]["required_commands"] == old["verification"]["strategy_control"]["obligations"][0]["required_commands"]
     assert control["selected_profiles"][0]["source_ref"].startswith(".agentic-workspace/verification/manifest.toml#")
     assert current["decision_packet"]["claim_boundary"]["allowed"] == []
     with pytest.raises(AssertionError, match="stale|changed"):
         call(request)
+    # Agent de-escalation permission cannot waive a binding source requirement.
+    config.write_text(
+        config.read_text()
+        .replace("agent_may_deescalate=false", "agent_may_deescalate=true")
+        .replace("agent_may_escalate=true", "agent_may_escalate=false")
+    )
+    required = call()["verification"]
+    judgment = required["strategy_request"]
+    judgment["arguments"] = {"level": "low", "profile_ids": [], "reason": "Prefer a smaller check"}
+    denied = call(judgment)["verification"]["strategy_control"]
+    assert denied["effective_level"] == "high" and denied["execution_blocked"]
+    assert "assurance-below-binding-requirement" in denied["gaps"]
+    judgment["arguments"]["level"] = "high"
+    assert not call(judgment)["verification"]["strategy_control"]["execution_blocked"]
     before = config.read_bytes()
     # The manifest cannot replace irreducible shared policy or accept malformed commands.
     manifest.write_text(destination + "[assurance]\nagent_may_deescalate=true\n")
@@ -353,3 +368,76 @@ def test_retained_reader_loads_manifest_without_config_and_rejects_competing_sou
     source.write_text(original)
     with pytest.raises(WorkspaceUsageError, match="Competing"):
         load_workspace_config(target_root=tmp_path)
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_subsystem_profile_uses_current_ownership_without_granting_review(tmp_path, shared_core_binary, native_cli, surface):
+    context = setup(tmp_path)
+    source = tmp_path / ".agentic-workspace/config.toml"
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir()
+    declaration = (
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
+        '[assurance.subsystem_profiles.runtime]\nassurance_level="high"\nforce="required-before-closeout"\n'
+        'scope_refs=["ownership.subsystems.runtime"]\nproof_profile="required"\n'
+        'required_evidence=["runtime-check","independent-review"]\nreview_owner="maintainer"\n'
+        'blocked_without_evidence=["claim-work-complete"]\n'
+    )
+    manifest.write_text(declaration)
+    ownership = tmp_path / ".agentic-workspace/OWNERSHIP.toml"
+    scope = '[[subsystems]]\nid="runtime"\npaths=["a.txt"]\n'
+
+    def call(**updates):
+        return consume(surface, shared_core_binary, native_cli, {**context, **updates}, host_path=os.environ["PATH"])
+
+    with pytest.raises(AssertionError, match="Ownership"):
+        call()
+    ownership.write_text(scope)
+    current = call()["verification"]
+    assert current["strategy_control"]["effective_level"] == "high"
+    assert current["strategy_request"]["arguments"]["level"] == "high"
+    row = current["assurance_applicability"]["requirements"][0]
+    assert row["id"] == "subsystem:runtime" and row["status"] == "applicable"
+    assert row["source_requirement"]["review_owner"] == "maintainer"
+    assert row["source_requirement"]["required_evidence"] == ["runtime-check", "independent-review"]
+    assert current["assurance_owner_gaps"], "scope and profile selection cannot admit review"
+    request = current["execution_requests"][0]
+    action = call(request=request)["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "proof.report"
+    unrelated = call(changed=["unrelated.txt"])["verification"]
+    assert unrelated["assurance_applicability"]["requirements"][0]["status"] == "not-applicable"
+    assert unrelated["strategy_control"]["effective_level"] == "medium"
+    assert unrelated["strategy_control"]["selected_profiles"] == []
+    published = call(invocation=action)["value"]["publication"]["reference"]
+    claim = call()["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [published]
+    checked = call(request=claim)
+    assert checked["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+    assert checked["decision_packet"]["claim_boundary"]["allowed"] == []
+    ownership.write_text(scope + "\n")
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(invocation=action)
+    assert (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
+    claim = call()["verification"]["requests"][0]
+    claim["arguments"]["evidence_refs"] = [published]
+    assert call(request=claim)["verification"]["evidence"][0]["evidence_freshness"] == "stale"
+    ownership.write_text(scope + scope)
+    with pytest.raises(AssertionError, match="one current Ownership"):
+        call()
+    ownership.write_text(scope)
+    manifest.write_text(declaration.replace("ownership.subsystems.runtime", "unknown-scope"))
+    with pytest.raises(AssertionError, match="scope requires owner"):
+        call()
+    manifest.write_text(declaration + 'level="low"\n')
+    with pytest.raises(AssertionError, match="unsupported semantics"):
+        call()
+    manifest.unlink()
+    original_config = source.read_text()
+    source.write_text(original_config + declaration[declaration.index("[assurance.subsystem_profiles.runtime]") :])
+    former = call()
+    assert former["verification"]["strategy_control"]["effective_level"] == "high"
+    assert not any(row["field"] == "assurance.subsystem_profiles" for row in former["configuration"]["residuals"])
+    source.write_text(original_config)
+    ownership.write_text("Malformed unrelated ownership source")
+    assert call()["verification"]["strategy_control"]["effective_level"] == "medium"
+    assert source.exists() and (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]

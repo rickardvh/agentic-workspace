@@ -678,16 +678,16 @@ commands = ["uv run pytest tests/test_workspace_config_cli.py -k \"local_overrid
 # Operational strategy declarations transferred from shared config (#2613).
 [assurance.proof_profiles.workspace_behavior]
 required_commands = []
-optional_commands = ["uv run python scripts/run_agentic_workspace.py proof --target . --current --format json"]
+optional_commands = []
 review_aids = ["Use focused domain proof lanes for executable behavior evidence; broad workspace validation requires an explicit broad route or escalation reason."]
 
 [assurance.proof_profiles.verification_behavior]
 required_commands = ["uv run pytest packages/verification/tests -q"]
-optional_commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
+optional_commands = []
 review_aids = ["Confirm Verification reports facts and questions without making agent-owned proof decisions."]
 
 [assurance.proof_profiles.test_evidence_change]
-required_commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
+required_commands = ["uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q"]
 review_aids = ["Record or inspect the Verification proof-decision route when ordinary tests grow, shrink, or move."]
 
 [assurance.domain_proof_lanes.workspace_proof_runtime]
@@ -1062,7 +1062,7 @@ allowed_composition = ["behavior", "evidence", "broad"]
 [assurance.domain_proof_lanes.test_evidence_decision]
 purpose = "Focused test-evidence change review."
 applies_to_paths = ["tests/**", "packages/**/tests/**", "docs/maintainer/testing-strategy.md", "docs/maintainer/test-knowledge-inventory.md", "scripts/model_cli_harness/run_model_cli_harness.py"]
-commands = ["uv run python scripts/run_agentic_workspace.py report --target . --section verification --format json"]
+commands = ["uv run --frozen --active --no-sync python -m pytest tests/test_native_verification_strategy.py -q"]
 manual_evidence = ["verification_proof_decision_review", "test_evidence_owner_review"]
 review_aids = ["Record why retained, added, merged, converted, or pruned evidence is sufficient under the maintainer testing strategy."]
 evidence_concepts = ["test-evidence-decision", "route-maintenance"]
@@ -1123,7 +1123,7 @@ applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/re
 applies_to_task_markers = ["host guidance target localization", "root workspace guidance", "startup fallback authority"]
 authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", "docs/maintainer/testing-strategy.md"]
 claim_boundary = "focused-root-guidance-proof-required-before-runtime-routing-claim"
-commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "uv run pytest tests/test_workspace_cli.py -k \"session_improvement_intake or repo_friction or dogfooding_report_sections\" -q", "make typecheck", "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json"]
+commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "uv run pytest tests/test_workspace_cli.py -k \"session_improvement_intake or repo_friction or dogfooding_report_sections\" -q", "make typecheck", "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py"]
 escalation = ["the change alters generated command-package IR, cross-package payload behavior, or user-visible CLI compatibility beyond startup/report/defaults guidance", "the focused route cannot prove the changed command contract"]
 escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient", "high-risk-requirement"]
 evidence_concepts = ["root-workspace-guidance", "startup-routing", "report-contract", "generated-contract-freshness", "focused-serial-proof"]
