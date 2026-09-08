@@ -402,11 +402,23 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
                 assert re.fullmatch(r"\s*return request\([\s\S]*\);\s*", body), name
                 assert re.findall(r"\b(\w+)\(", body) == ["request"], name
 
-    # The public Rust executable may call only the admitted public owner ingress.
-    # Adding an adapter-owned semantic call fails even when the file stays short.
+    # The CLI transports the canonical public request to the admitted sibling
+    # executable. It cannot link a second semantic runtime into the adapter.
     native = (ROOT / "crates/agentic-workspace-cli/src/main.rs").read_text(encoding="utf-8")
     calls = set(re.findall(r"agentic_workspace_core::([A-Za-z_][A-Za-z_0-9:]*)", native))
-    assert calls == {"native_public::start", "native_public::invoke"}
+    assert calls == set()
+    manifest = (ROOT / "crates/agentic-workspace-cli/Cargo.toml").read_text(encoding="utf-8")
+    assert "agentic-workspace-core" not in manifest
+    assert set(re.findall(r"^fn ([A-Za-z_][A-Za-z_0-9]*)", native, re.MULTILINE)) == {
+        "declaration",
+        "help",
+        "parse",
+        "run",
+        "forward",
+        "main",
+    }
+    assert "source_decision_contract.json" in native
+    assert "json!({parsed.command: parsed.values})" in native
     assert not any(token in native for token in ("compile_value", "planning::", "assignment::", "proof_subject::", "decision_source::"))
 
 
