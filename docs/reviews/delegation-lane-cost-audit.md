@@ -280,3 +280,31 @@ The final focused three-case group passed in 104.67 seconds. The editable
 source adapter invokes Cargo to establish current core availability on each
 resolution; repeated short Cargo children were observed during this run. This
 cost is not attributed to provider inference or task execution quality.
+
+
+### Native owner integration follow-through (2026-09-08)
+
+The startup source and canonical artifact-profile layers passed their focused
+consumer checks; they do not establish instruction compliance or task proof.
+The Planning selector-switch integration preserved both retained invocation and
+explicit startup-source dependencies: 70 focused cases passed (81.80s), four
+additional switch-with-startup consumer cases passed (16.65s), and three Rust
+staleness/interruption cases passed (0.95s). The latter includes actual process
+exit and fresh-process recovery, not power-loss durability. Historical selector
+acquisition remains unavailable.
+
+Verification strategy integration passed 50 strategy/domain/producer cases
+(125.69s), resolving the earlier 106202-byte pre-integration discovery failure
+through the existing single-contract projection. A further startup-source,
+strategy and scope replay case passed (4.07s). No byte bound increased. Full
+receipt-index capacity now refuses a new process before it incurs execution
+cost; no numerical saving is inferred. Human/domain judgment still needs a
+current Assignment-owned review identity as well as actual returned evidence.
+
+Avoidable implementation-agent cost included attempting the ordinary wrapper
+while a cherry-pick still contained Rust conflict markers, a new-worktree
+runtime dependency synchronization, and another unsupported PowerShell glob
+search. Fixture integration detected and restored two accidentally re-encoded
+UTF-8 passages before publication. These are implementation costs, not provider
+or target-quality evidence. No new supported-host provider worker was launched;
+all previously incomplete workers remain censored, and monetary cost is unknown.

@@ -15,3 +15,12 @@ An explicit destination request can now switch an already native-owned selector.
 Fresh continuation accepts retained transition context only after producer validation and exact current postimage comparison. Stale preimages, changed destination semantics, forged invocation fields and unfamiliar postimages preserve current bytes. Public proof exercises all four consumers, and a child-process exit fixture proves recovery in another process after both attempt and commit retention. This proves these explicit publication boundaries, not power-loss durability or universal writer coordination. The owner recomputes the small current selector/source projection and reuses only exactly validated producer evidence; no memoisation framework is introduced (#2981).
 
 Historical local selectors still require authority-correct acquisition or transfer before replacement (#3001/#2984). Their old receipts, valid JSON and current hashes are observations, not release authority; malformed historical TypeScript scaffolds are not silently converted into a new semantic authority. No currently admitted native authority-holder acquisition adapter is supplied by this layer. It does not establish full native delegation, source configuration migration, independent acceptance or first-stable admission.
+
+A selected owner whose lifecycle or phase is explicitly closed, complete,
+completed or archived remains preserved read-only. Unrelated work need not
+acquire Planning state from that quiescent source. Same-task continuation keeps
+the exact Planning subject, scope and proof obligations visible and requires
+owner reentry; the status grants neither task completion nor Verification.
+Closeout remains active, and unknown lifecycle values fail closed. Explicit
+selection of another live owner continues to require native selector custody;
+historical selectors gain no transfer authority from being closed.
