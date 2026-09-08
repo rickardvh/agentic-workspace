@@ -87,6 +87,8 @@
           "default": "conservative"
         },
         "optimization_bias": {
+          "deprecated": true,
+          "readOnly": true,
           "description": "Preferred rendering bias for durable outputs; this does not change canonical truth or execution method.",
           "enum": [
             "agent-efficiency",
@@ -96,6 +98,8 @@
           "default": "balanced"
         },
         "advanced_features": {
+          "deprecated": true,
+          "readOnly": true,
           "description": "Explicit opt-ins for reusable diagnostics that are not ordinary startup requirements.",
           "type": "array",
           "items": {

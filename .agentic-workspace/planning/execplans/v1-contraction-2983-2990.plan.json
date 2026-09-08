@@ -1,6 +1,6 @@
 {
   "blockers": [
-    "Remaining native ordinary owner coverage and former semantic-host subtraction under #3077/#3020/#2987 remain incomplete.",
+    "Remaining native domain-owner coverage under #2986/#2987/#3020 is incomplete; the ordinary native CLI cutover itself is implemented and needs cumulative conformance under #3077.",
     "Consequential delegation (#2947/#2817/#2818/#2210) and positive lifecycle-derived target evidence (#2209) remain release-critical.",
     "#2909 still owns inherited review-schema and runtime-routing conformance findings; #2616 final behavior, exact #2990 admission and later #3014/#3138 cutover are not complete."
   ],
@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Merged base c2303e921 integrates #3166/#3167/#3168. PR #3170 repairs typed Assignment constructibility and admits retained-local implementation against unchanged lived-in config. PR #3171 transfers 49 unchanged Verification declarations from shared config into its existing manifest, reducing config from 945 to 122 lines. Native and retained readers recognize the destination, reject competing sources and bind source revisions. Shared baseline/escalation policy and local authority survive; unsupported subsystem semantics and former local setup/answer fields remain explicit gaps. Configuration guidance now uses native start/invoke; former setup, replacement and adaptive-observation schema fields are read-only transition inputs. All 34 open P0/P1 owners are classified exactly once: 4 candidate-complete, 19 implementation gaps and 11 evidence/conformance gaps. Next finish source/state disposition and remaining native owner implementation. No parent closure, independent admission or promotion is inferred.",
+    "frontier": "Merged base c2303e921 integrates #3166/#3167/#3168. PR #3170 repairs typed Assignment constructibility and admits retained-local implementation against unchanged lived-in config. PR #3171 transfers 49 unchanged Verification declarations from shared config into its existing manifest, reducing config from 945 to 122 lines; retiring two unconsumed posture aliases under #2613 comment 5552631756 leaves 120 lines. Native and retained readers recognize the destination, reject competing sources and bind source revisions. Shared baseline/escalation policy and local authority survive; unsupported subsystem semantics and former local setup/answer fields remain explicit gaps. Configuration guidance now uses native start/invoke; former setup, replacement and adaptive-observation schema fields are read-only transition inputs. All 34 open P0/P1 owners are classified exactly once: 4 candidate-complete, 19 implementation gaps and 11 evidence/conformance gaps. Next finish source/state disposition and remaining native owner implementation. No parent closure, independent admission or promotion is inferred.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -133,7 +133,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 17,
+  "revision": 18,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -185,18 +185,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/63837ea3abcace10fe4a52cee64a1ef897c8d737a78da87838e082c178dd4a10.attempt.json",
-        "revision": "sha256:1b7949d64282de04b60ca28fbca8214c620fe87ff4f7b6e544eda65ff2e0599b",
+        "path": ".agentic-workspace/local/effects/5963d72686c0ed68ab7dc1365279246dda1623c220728235458cd906485e2e87.attempt.json",
+        "revision": "sha256:76f4d8d60477179e5f9b5255ea370a0d5cb1cfdca3e5fbbb235801d96919328e",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/63837ea3abcace10fe4a52cee64a1ef897c8d737a78da87838e082c178dd4a10.result.json",
-        "revision": "sha256:cfb64de3fd68a6eefc98911809f70a06e5e14797c5ff9b0405f200e0592dff79",
+        "path": ".agentic-workspace/local/effects/5963d72686c0ed68ab7dc1365279246dda1623c220728235458cd906485e2e87.result.json",
+        "revision": "sha256:ce6a7ad3389e08e0ca59049363c06261f687af96939dd69e387df1abfb4690ec",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:5125ec426b875605ec88a429450e582628b24995fd5c4c9f482d01135157b337",
+    "invocation_revision": "sha256:eeaf0e07e412fe3a935fd8d8d05ca3d2b248851820ca2acae19625e23ff1edef",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -204,7 +204,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:735d7a1d2e2a78a186a6ee4bfc327c1a28cfb7b7a1c4bad98826f29525b81549",
+        "document_revision": "sha256:853e9be60aea8177dd9f0fedbe66d605de736e727456f208f8951f61ea38914d",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

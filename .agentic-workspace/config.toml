@@ -12,8 +12,6 @@ enabled = ["planning", "memory", "verification"]
 agent_instructions_file = "AGENTS.md"
 workflow_artifact_profile = "repo-owned"
 improvement_latitude = "proactive"
-optimization_bias = "agent-efficiency"
-advanced_features = ["review_artifacts", "external_adapters"]
 cli_invoke = "./target/debug/agentic-workspace"
 
 [assurance]
