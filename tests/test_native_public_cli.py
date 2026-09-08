@@ -378,8 +378,9 @@ def test_instruction_protection_reaches_actual_planning_writes(
 def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, planning: bool
 ) -> None:
-    # Deterministic producer fixture, not human/domain acceptance evidence.
-    from agentic_workspace.workspace_runtime_core import _proof_publication_identity, _write_trusted_producer_receipt
+    # Retained historical source fixture tests exact identity recognition only.
+    # It acquires no publication custody and supplies no human/domain acceptance.
+    from agentic_workspace.workspace_runtime_core import _proof_publication_identity
 
     (tmp_path / "a.txt").write_text("one")
     context = {"target": str(tmp_path), "task": "Establish the current document claim", "changed": ["a.txt"]}
@@ -400,7 +401,8 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
     request = initial["verification"]["requests"][0]
     requested = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     subject = requested["verification"]["judgment_request"]
-    receipt = json.loads((ROOT / "tests/fixtures/native_verification_publication.json").read_text())["receipt"]
+    historical = json.loads((ROOT / "tests/fixtures/native_verification_publication.json").read_text())
+    receipt = historical["receipt"]
     receipt["task_claim_judgment"].update(
         work_ref=subject["work_ref"], work_revision=subject["work_revision"], task_identity=subject["task_claim_identity"]
     )
@@ -409,9 +411,13 @@ def test_exact_published_judgment_is_recognized_without_manufacturing_evidence(
     ).hexdigest()[:16]
     receipt.update(publication_id=publication_id, receipt_id=publication_id)
     reference = f"proof://receipts/{publication_id}"
-    _write_trusted_producer_receipt(
-        target_root=tmp_path, producer_class="aw-proof", receipt_id=publication_id, receipt=receipt, source_ref=reference
-    )
+    receipt["source_ref"] = reference
+    old_entry = next(iter(historical["index"]["receipts"].values()))
+    entry = {**old_entry, "path": f"{publication_id}.json", "source_ref": reference}
+    receipts = tmp_path / ".agentic-workspace/proof/receipts"
+    receipts.mkdir(parents=True)
+    (receipts / f"{publication_id}.json").write_text(json.dumps(receipt))
+    (receipts / "index.json").write_text(json.dumps({**historical["index"], "receipts": {publication_id: entry}}))
     request["arguments"]["evidence_refs"] = [reference]
     current = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     evidence = current["verification"]["evidence"][0]

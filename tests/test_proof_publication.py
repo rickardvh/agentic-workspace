@@ -19,12 +19,21 @@ def test_current_manual_observation_does_not_gain_proof(tmp_path: Path, shared_c
     def call(value):
         return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
 
+    claim = call(context)["verification"]["requests"][0]
+    subject = call({**context, "request": claim})["verification"]["judgment_request"]
     request = call(context)["verification"]["record_requests"][0]
     request["arguments"]["result"] = "passed"
     request["arguments"]["reported_observation"] = {
         "authority": "aw-proof",
         "execution_kind": "native-aw-proof",
         "claim_sufficiency": "sufficient",
+        "task_claim_judgment": {
+            "work_ref": subject["work_ref"],
+            "work_revision": subject["work_revision"],
+            "task_identity": subject["task_claim_identity"],
+            "claim_class": "slice_complete",
+            "status": "sufficient",
+        },
     }
     selected = call({**context, "request": request})
     invocation = selected["decision_packet"]["primary_action"]
@@ -39,6 +48,11 @@ def test_current_manual_observation_does_not_gain_proof(tmp_path: Path, shared_c
     assert checked["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
     assert checked["verification"]["judgment_request"]["admitted_automated_evidence"] == []
     assert checked["verification"]["evidence"][0]["task_judgment"]["current_judgment_count"] == 0
+    assert checked["verification"]["evidence"][0]["task_judgment"]["matched_judgment_count"] == 0
+    publication_id = result["value"]["publication"]["reference"].rsplit("/", 1)[1]
+    receipt = json.loads((tmp_path / ".agentic-workspace/proof/receipts" / f"{publication_id}.json").read_text())
+    assert "task_claim_judgment" not in receipt
+    assert receipt["execution"]["reported_observation"]["reported_observation"] == request["arguments"]["reported_observation"]
     (tmp_path / "a.txt").write_text("new material")
     next_request = call(context)["verification"]["record_requests"][0]
     next_request["arguments"]["result"] = "passed"
