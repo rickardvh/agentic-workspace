@@ -84,14 +84,13 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         ));
     }
     let mut body = attempt_store::read_source(&input.target, source)?;
-    if crate::native_planning_create::inspect_origin(
-        &std::fs::canonicalize(&input.target).map_err(error)?,
-        &source.path,
-        &body,
-    )?
-    .is_some()
-    {
+    let target = std::fs::canonicalize(&input.target).map_err(error)?;
+    let origin = crate::native_planning_create::inspect_origin(&target, &source.path, &body)?;
+    let update = crate::native_planning_update::inspect(&target, &source.path, &body)?;
+    if origin.is_some() {
         body.as_object_mut().unwrap().remove("creation_provenance");
+    }
+    if update.is_some() {
         body.as_object_mut()
             .unwrap()
             .remove(crate::native_planning_update::PROVENANCE);

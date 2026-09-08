@@ -1,5 +1,6 @@
 //! Read current Planning selection through its owner contract. Public requests
-//! express applicability only; source evidence is derived from confined reads.
+//! express applicability or an explicit bounded human selector transfer answer;
+//! source evidence and effect bindings are derived from confined reads.
 use crate::{CoreError, decision_source, digest, prepare_request_value};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
@@ -103,6 +104,31 @@ fn inspect_carrier(
         ));
     }
     Ok(retained.clone())
+}
+
+/// Material mutation needs an acquired, committed owner relation, not a path
+/// or a former selector that merely looks familiar. Source currentness is
+/// checked separately so a genuine owner can reconcile later material edits.
+pub(crate) fn update_custody(target: &Path, reference: &str) -> Result<Option<Value>, CoreError> {
+    let root =
+        Dir::open_ambient_dir(target, ambient_authority()).map_err(|e| error(SELECTION, e))?;
+    let Some(bytes) = read(&root, SELECTION)? else {
+        return Ok(None);
+    };
+    let selection = parsed(SELECTION, &bytes)?;
+    if selection["selected_owner"]["ref"] != reference || selection.get(RETAINED).is_none() {
+        return Ok(None);
+    }
+    let retained = inspect_carrier(target, &selection, false)?;
+    if crate::attempt_store::inspect_committed(
+        target.to_str().unwrap(),
+        retained["custody"].clone(),
+    )
+    .is_err()
+    {
+        return Ok(None);
+    }
+    Ok(Some(retained))
 }
 
 fn retained_transition(target: &Path, selection: &Value) -> Result<Option<Value>, CoreError> {
@@ -532,6 +558,16 @@ fn resolve_context(
         let mut arguments = schema["$defs"]["operation_arguments"].clone();
         arguments["$schema"] = schema["$schema"].clone();
         arguments["$defs"] = schema["$defs"].clone();
+        // Public operation discovery needs its input graph, not the internal
+        // carrier, former-file reader or separate recovery request schemas.
+        for unused in [
+            "retained_reconciliation",
+            "former_execplan",
+            "update_recovery_request",
+            "operation_arguments",
+        ] {
+            arguments["$defs"].as_object_mut().unwrap().remove(unused);
+        }
         contract["owners"][0]["operations"] = json!([{"id":"planning.reconcile","semantic_revision":"planning-reconciliation-v1","input_schema":arguments,"result_kind":"agentic-planning/reconciliation-result/v1","effects":["planning-state"],"reads":["planning"]}]);
     }
     contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
@@ -553,6 +589,26 @@ fn resolve_context(
     if let Some(reference) = reference {
         template["arguments"]["owner_ref"] = json!(reference);
     }
+    // Recognition grants no mutation authority. The owner supplies the entire
+    // exact transition binding; only the bounded answer comes from the human.
+    let transfer = if let Some(previous) = selection.as_ref().filter(|s| s.get(RETAINED).is_none())
+    {
+        let bytes = read(&root, SELECTION)?
+            .ok_or_else(|| error(SELECTION, "selector disappeared during transfer proposal"))?;
+        if parsed(SELECTION, &bytes)? != *previous || selected["selection_source"] != SELECTION {
+            return Err(error(
+                SELECTION,
+                "selector changed during transfer proposal",
+            ));
+        }
+        let binding = json!({"target":target,"selector":{"path":SELECTION,"revision":format!("sha256:{:x}",Sha256::digest(&bytes))},"selected_owner":selected,"current_work":current_work,"operation":"planning.reconcile","destination":{"path":SELECTION,"selection":previous},"effect":"one-time-selector-custody-transfer","prior_native_custody":"absent"});
+        let mut request = template.clone();
+        request["arguments"] = json!({"transfer_revision":digest(&binding)?});
+        json!({"binding":binding,"request":request})
+    } else {
+        Value::Null
+    };
+    let mut transfer_authorized = false;
     let quiescent = selected["quiescent"] == true;
     let mut status = if selected.is_null() || quiescent {
         "direct"
@@ -583,6 +639,20 @@ fn resolve_context(
         if request["source_revision"] != revision {
             status = "stale";
             planning_input = Value::Null;
+        } else if request["arguments"]["answer"] == "authorize-selector-transfer" {
+            if transfer.is_null()
+                || request["arguments"]["transfer_revision"]
+                    != transfer["request"]["arguments"]["transfer_revision"]
+            {
+                return Err(error(
+                    SELECTION,
+                    "human selector transfer authorization is stale or already consumed",
+                ));
+            }
+            transfer_authorized = true;
+            transition = json!({"prior_sha256":transfer["binding"]["selector"]["revision"],"human_authorization":request,"selection":selection});
+            status = "current";
+            planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work}});
         } else if request["arguments"]["answer"] == "unrelated-direct" {
             status = "direct";
             planning_input = Value::Null;
@@ -607,7 +677,7 @@ fn resolve_context(
             }
         }
     }
-    if (quiescent || selected["blocked"] == true) && status != "stale" {
+    if (quiescent || selected["blocked"] == true) && status != "stale" && !transfer_authorized {
         let continuing = retained["current_work"] == *current_work
             || request.is_some_and(|r| r["arguments"]["answer"] == "continue-selected");
         let unrelated = request.is_some_and(|r| r["arguments"]["answer"] == "unrelated-direct");
@@ -622,14 +692,16 @@ fn resolve_context(
     if !planning_input.is_null() && !transition.is_null() {
         planning_input["selection_transition"] = transition.clone();
     }
-    let custody_required =
-        status == "current" && selected["selection_source"] == SELECTION && retained.is_null();
+    let custody_required = status == "current"
+        && selected["selection_source"] == SELECTION
+        && retained.is_null()
+        && !transfer_authorized;
     if custody_required {
         status = "custody-required";
         planning_input = Value::Null;
     }
     let blockers = if custody_required {
-        json!([{"code":"planning-selection-custody-required", "message":"The existing local Planning selection is readable source evidence, but has no retained producer custody for mutation. Preserve it and obtain authority-correct ownership transfer through its current owner; native transfer is not yet available.", "affects":["task"]}])
+        json!([{"code":"planning-selection-custody-required", "message":"The existing local Planning selection has no native producer custody. Preserve it unless a human explicitly authorizes the exact owner-generated selector_transfer.request. Supply only answer=authorize-selector-transfer; this transfers selector custody once and grants no Planning material, proof or completion effect.", "affects":["task"]}])
     } else {
         json!([])
     };
@@ -640,7 +712,7 @@ fn resolve_context(
     };
     let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"selected_owner":selected},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
     Ok(
-        json!({"status":status,"source_revision":revision,"current_work_id":work_id,"selected_owner":selected,"requests":if selected.is_null(){json!([])}else{json!([template])},"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
+        json!({"status":status,"source_revision":revision,"current_work_id":work_id,"selected_owner":selected,"requests":if selected.is_null(){json!([])}else{json!([template])},"selector_transfer":transfer,"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
     )
 }
 
@@ -685,6 +757,18 @@ fn resolve_execution(
         Some(current_full_contract),
         reference,
     )?;
+    if !view["selector_transfer"].is_null()
+        && let Some(request) = invocation
+            .and_then(|i| i["arguments"]["selection_transition"].get("human_authorization"))
+    {
+        view = resolve_context(
+            target,
+            current_work,
+            Some(request),
+            Some(current_full_contract),
+            reference,
+        )?;
+    }
     if view["selected_owner"].is_null()
         && let Some(reference) =
             crate::native_planning_create::created_reference(target, current_work)?
@@ -841,17 +925,28 @@ fn execute_checked(
         Dir::open_ambient_dir(&target, ambient_authority()).map_err(|e| error("target", e))?;
     // Exact continuation/invocation permits acquiring the absent local carrier.
     // Read-only discovery never creates it, and recognizable content cannot be
-    // acquired through this absent-only path.
+    // acquired through this absent-only path. An occupied legacy carrier needs
+    // the separately bound explicit human transfer, never ordinary continuation.
     let mut expected = read(&root, SELECTION)?;
     if let Some(bytes) = &expected {
         let value = parsed(SELECTION, bytes)?;
-        let retained = value.get(RETAINED).ok_or_else(|| {
-            error(
-                SELECTION,
-                "existing local selection requires producer custody before mutation; preserved",
-            )
-        })?;
-        validate_retained(retained)?;
+        if let Some(retained) = value.get(RETAINED) {
+            validate_retained(retained)?;
+        } else {
+            let view =
+                resolve_for_invocation(&target, current_work, current_full_contract, invocation)?;
+            let transition = &view["selection_transition"];
+            if transition["human_authorization"].is_null()
+                || *transition != invocation["arguments"]["selection_transition"]
+                || transition["prior_sha256"] != format!("sha256:{:x}", Sha256::digest(bytes))
+                || transition["selection"] != value
+            {
+                return Err(error(
+                    SELECTION,
+                    "existing local selection requires producer custody or exact human transfer authorization; preserved",
+                ));
+            }
+        }
     }
 
     root.create_dir_all(".agentic-workspace/local/planning")
@@ -1169,9 +1264,21 @@ mod tests {
     }
     #[test]
     fn native_selection_switch_process_exit_recovers_in_new_process() {
-        for boundary in ["attempt", "commit"] {
+        for (human_transfer, boundary) in [
+            (false, "attempt"),
+            (false, "commit"),
+            (true, "attempt"),
+            (true, "commit"),
+        ] {
             let target = shared_target();
-            let (invocation, contract, _) = switch_action(&target);
+            let (invocation, contract) = if human_transfer {
+                target.select();
+                human_transfer_action(&target)
+            } else {
+                let (invocation, contract, _) = switch_action(&target);
+                (invocation, contract)
+            };
+            let material = fs::read(target.0.join(PLAN)).unwrap();
             target.write(
                 "selector-test.json",
                 &json!({"invocation":invocation,"contract":contract}).to_string(),
@@ -1196,7 +1303,108 @@ mod tests {
                 );
             }
             assert!(fresh_current(&target));
+            assert_eq!(fs::read(target.0.join(PLAN)).unwrap(), material);
         }
+    }
+    fn human_transfer_action(target: &Target) -> (Value, Value) {
+        let view = continued(target);
+        let mut request = view["selector_transfer"]["request"].clone();
+        assert!(request["arguments"].get("answer").is_none());
+        request["arguments"]["answer"] = json!("authorize-selector-transfer");
+        let view = resolve(&target.0, &work(), Some(&request)).unwrap();
+        let contract = view["capability_contract"].clone();
+        let mut input = view["planning_input"].clone();
+        input["capability_contract"] = contract.clone();
+        let (input, _) = crate::planning::compose_input(input).unwrap();
+        (
+            crate::compile_value(input).unwrap()["primary_action"].clone(),
+            contract,
+        )
+    }
+    #[test]
+    fn human_selector_transfer_rejects_drift_and_substituted_authority() {
+        for drift in [
+            "selector-bytes",
+            "source-bytes",
+            "work",
+            "target",
+            "destination",
+            "answer",
+            "binding",
+            "missing-answer",
+            "owner-choice",
+        ] {
+            let target = shared_target();
+            target.select();
+            let (mut invocation, contract) = human_transfer_action(&target);
+            let mut current_work = work();
+            match drift {
+                "selector-bytes" => {
+                    let mut bytes = fs::read(target.0.join(SELECTION)).unwrap();
+                    bytes.push(b' ');
+                    fs::write(target.0.join(SELECTION), bytes).unwrap();
+                }
+                "source-bytes" => {
+                    let mut bytes = fs::read(target.0.join(PLAN)).unwrap();
+                    bytes.push(b' ');
+                    fs::write(target.0.join(PLAN), bytes).unwrap();
+                }
+                "work" => current_work["id"] = json!("different-work"),
+                "target" => invocation["arguments"]["target"] = json!("different-target"),
+                "destination" => {
+                    invocation["arguments"]["selection_transition"]["selection"]["selected_owner"]
+                        ["id"] = json!("different-owner")
+                }
+                "answer" => {
+                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"]
+                        ["answer"] = json!("continue-selected")
+                }
+                "binding" => {
+                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"]
+                        ["transfer_revision"] = json!("different-binding")
+                }
+                "owner-choice" => {
+                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"]
+                        ["owner_ref"] = json!(PLAN)
+                }
+                _ => {
+                    invocation["arguments"]["selection_transition"]["human_authorization"]["arguments"].as_object_mut().unwrap().remove("answer");
+                }
+            }
+            let selector = fs::read(target.0.join(SELECTION)).unwrap();
+            let source = fs::read(target.0.join(PLAN)).unwrap();
+            assert!(
+                execute(&target.0, &current_work, &invocation, &contract).is_err(),
+                "{drift}"
+            );
+            assert_eq!(
+                fs::read(target.0.join(SELECTION)).unwrap(),
+                selector,
+                "{drift}"
+            );
+            assert_eq!(fs::read(target.0.join(PLAN)).unwrap(), source, "{drift}");
+            assert!(
+                !target.0.join(".agentic-workspace/local/effects").exists(),
+                "{drift}"
+            );
+        }
+    }
+    #[test]
+    fn human_selector_transfer_is_consumed_and_foreign_postimage_is_preserved() {
+        let target = shared_target();
+        target.select();
+        let original = fs::read(target.0.join(SELECTION)).unwrap();
+        let (invocation, contract) = human_transfer_action(&target);
+        execute(&target.0, &work(), &invocation, &contract).unwrap();
+        let postimage = fs::read(target.0.join(SELECTION)).unwrap();
+        fs::write(target.0.join(SELECTION), &original).unwrap();
+        assert!(execute(&target.0, &work(), &invocation, &contract).is_err());
+        assert_eq!(fs::read(target.0.join(SELECTION)).unwrap(), original);
+        let mut changed = postimage;
+        changed.push(b' ');
+        fs::write(target.0.join(SELECTION), &changed).unwrap();
+        assert!(execute(&target.0, &work(), &invocation, &contract).is_err());
+        assert_eq!(fs::read(target.0.join(SELECTION)).unwrap(), changed);
     }
     #[test]
     fn native_planning_shared_continuation_acquires_selection_in_one_reconciliation() {

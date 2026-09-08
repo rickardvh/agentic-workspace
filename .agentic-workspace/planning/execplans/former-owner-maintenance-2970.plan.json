@@ -1,0 +1,185 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "former-owner-maintenance-2970",
+  "title": "Make selected former Planning custody maintainable through native updates",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "closeout",
+  "revision": 8,
+  "intent": {
+    "non_goals": [
+      "No promotion or inferred ownership from familiar local files"
+    ],
+    "outcome": "Make current former Planning custody maintainable without losing identity, constraints, dependencies, proof or frontier"
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Create a bounded plan for Make selected former Planning custody maintainable through native updates.",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "crates/agentic-workspace-core/src/native_planning.rs",
+      "crates/agentic-workspace-core/src/native_public.rs",
+      "crates/agentic-workspace-core/src/native_planning_update.rs",
+      "crates/agentic-workspace-core/src/planning.rs",
+      "src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json",
+      "tests/test_native_planning_create.py",
+      ".agentic-workspace/reconstruction/owner-audit.md"
+    ],
+    "effects": [
+      "planning-state"
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "selected-local",
+      "owner": "former-owner-maintenance-2970"
+    },
+    "proof_posture": {
+      "state": "accepted",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179",
+        ".agentic-workspace/reconstruction/owner-audit.md"
+      ]
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    },
+    "delegation": {
+      "state": "recorded",
+      "route": "keep-local",
+      "reason": "Three bounded reviewer-requested metadata and evidence corrections; independent review remains separate.",
+      "scope": "active-plan-work-unit",
+      "parent_task_custody": "retained-current",
+      "bounded_child_authority": "separate-binding-decision"
+    },
+    "integration": {
+      "status": "feature-complete-integration-pending",
+      "proposal_id": "former-owner-maintenance-2970-review",
+      "proposal_ref": ".agentic-workspace/planning/integration-proposals/former-owner-maintenance-2970-review.integration-proposal.json",
+      "requested_transition": "close-owner",
+      "proof_refs": [
+        "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179",
+        ".agentic-workspace/reconstruction/owner-audit.md",
+        "tests/test_native_planning_create.py",
+        "tests/test_planning_selection_custody.py"
+      ],
+      "authority": "feature-head declaration; target integration remains terminal authority"
+    }
+  },
+  "references": [],
+  "next_action": "Apply integration proposal 'former-owner-maintenance-2970-review' from admitted target authority.",
+  "blockers": [
+    "Native real-checkout admission still has 14 task-affecting configuration residuals; selector human authority is resolved."
+  ],
+  "proof": {
+    "claims": [
+      "Focused proof on 000e01a28c6110fe43ca90c63a6638fa8f475e6d validates the bounded former-owner update and exact human selector-transfer mechanism; independent re-review and larger #2970 closure remain pending."
+    ],
+    "refs": [
+      "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179",
+      ".agentic-workspace/reconstruction/owner-audit.md",
+      "tests/test_native_planning_create.py",
+      "tests/test_planning_selection_custody.py"
+    ],
+    "requirements": [
+      "Native/JSON/Python/TypeScript former-source, drift, replay, policy-refusal and fresh-session tests: 474 passed.",
+      "Rust library: 95 passed; CLI: 6 passed; shared Planning: 16 passed.",
+      "Current metadata correction must pass release changeset/semver validation and schema validation; hosted CI and independent re-review remain distinct."
+    ]
+  },
+  "continuation": {
+    "residual_intent": "Re-review this bounded mechanism after correcting metadata and evidence. #3165 carries live configuration admission, actual frontier update and native guidance; parent/release closure remains separate.",
+    "owner": "#3164 / #3165 / #2970"
+  },
+  "specialist_contracts": [
+    {
+      "kind": "planning-delegation/v1",
+      "target": "planning://delegation/keep-local",
+      "revision": 1
+    }
+  ],
+  "completion_criteria": [
+    "Real former owner fresh-session material maintenance preserves identity, future-useful context and unrelated work",
+    "Stale or unadmitted custody and substituted actions cannot mutate",
+    "Native Python TypeScript JSON parity; #2909 owns aggregate conformance"
+  ],
+  "validation_commands": [
+    "cargo test --locked -p agentic-workspace-core native_planning",
+    "uv run pytest tests/test_native_planning_create.py tests/test_planning_selection_custody.py -q"
+  ],
+  "execution_bounds": {
+    "ask-before-refactor threshold": "Change outside current former-owner maintenance boundary",
+    "stop before touching": "master, release admission, unrelated working trees",
+    "max changed files": "10",
+    "allowed paths": "crates/agentic-workspace-core/src/; src/agentic_workspace/contracts/schemas/planning_reconciliation.schema.json; tests/test_native_planning_create.py; tests/test_planning_selection_custody.py; .agentic-workspace/planning/execplans/former-owner-maintenance-2970.plan.json; .agentic-workspace/reconstruction/owner-audit.md; docs/",
+    "required validation commands": "cargo test --locked -p agentic-workspace-core native_planning; uv run pytest tests/test_native_planning_create.py tests/test_planning_selection_custody.py -q"
+  },
+  "goal": [
+    "Make a real former Planning owner maintainable through exact native custody and material update while preserving identity and currentness"
+  ],
+  "non_goals": [
+    "No master promotion, no new epic, no transcript archive, no self review approval"
+  ],
+  "intent_continuity": {
+    "this slice completes the larger intended outcome": "no",
+    "larger intended outcome": "First-stable reconstruction under #2983",
+    "continuation surface": "#2970 then #3077, #2909 and #2990"
+  },
+  "touched_paths": [
+    "crates/agentic-workspace-core/src/native_planning.rs",
+    "crates/agentic-workspace-core/src/native_planning_update.rs",
+    "crates/agentic-workspace-core/src/planning.rs",
+    "tests/test_native_planning_create.py",
+    "tests/test_planning_selection_custody.py"
+  ],
+  "proof_report": {
+    "validation proof": "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179, .agentic-workspace/reconstruction/owner-audit.md",
+    "proof achieved now": "yes; integration-propose recorded accepted feature-head proof.",
+    "evidence for \"proof achieved\" state": "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179, .agentic-workspace/reconstruction/owner-audit.md"
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "current planning owner",
+    "handoff source": "former-owner-maintenance-2970",
+    "what happened": "Exact human selector transfer and former-owner material updates passed focused native and binding proof.",
+    "scope touched": "#2970 bounded mechanism and reviewer-requested metadata",
+    "changed surfaces": "Native Planning core, former-source tests, patch changeset, current proof and audit",
+    "validations run": "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179, .agentic-workspace/reconstruction/owner-audit.md",
+    "result for continuation": "feature-head complete; terminal lifecycle remains target-authoritative",
+    "next step": "Apply integration proposal 'former-owner-maintenance-2970-review' from admitted target authority."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Independent reviewer found no authority defect; metadata corrections require independent re-review.",
+    "proof status": "passed",
+    "intent served": "yes; target integration remains the terminal lifecycle authority.",
+    "config compliance": "used planning integration-propose command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/integration-proposals/former-owner-maintenance-2970-review.integration-proposal.json"
+  },
+  "intent_satisfaction": {
+    "original intent": "Exact human selector transfer and former-owner material updates passed focused native and binding proof.",
+    "was original intent fully satisfied?": "feature-head complete; target integration pending",
+    "evidence of intent satisfaction": "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179, .agentic-workspace/reconstruction/owner-audit.md",
+    "unsolved intent passed to": ".agentic-workspace/planning/integration-proposals/former-owner-maintenance-2970-review.integration-proposal.json"
+  },
+  "execution_summary": {
+    "outcome delivered": "Bounded mechanism proved; live native continuation remains in #3165 and parent #2970 remains open.",
+    "validation confirmed": "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179, .agentic-workspace/reconstruction/owner-audit.md",
+    "follow-on routed to": ".agentic-workspace/planning/integration-proposals/former-owner-maintenance-2970-review.integration-proposal.json",
+    "post-work posterity capture": "target-authoritative integration proposal",
+    "resume from": "Apply integration proposal 'former-owner-maintenance-2970-review' from admitted target authority."
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "feature-complete-integration-pending",
+    "larger-intent status": "open-pending-target-integration",
+    "closure decision": "await-target-integration",
+    "why this decision is honest": "Feature-head proof is accepted; terminal lifecycle truth awaits target integration.",
+    "evidence carried forward": "https://github.com/rickardvh/agentic-workspace/pull/3164#issuecomment-5586002179, .agentic-workspace/reconstruction/owner-audit.md",
+    "reopen trigger": "New contradictory evidence or rejected target integration."
+  }
+}
