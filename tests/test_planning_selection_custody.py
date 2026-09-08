@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -25,14 +26,13 @@ def owner(root: Path) -> None:
 
 def select(surface: str, root: Path, **options: str) -> dict:
     if surface == "python":
-        from generated.planning.python.commands.planning_owner_select_lifecycle import invoke
-
-        return invoke({"owner": "existing-owner", "target": str(root), **options}).to_dict()
-    node = shutil.which("node")
-    assert node
+        command = [sys.executable, "-c", "from repo_planning_bootstrap.cli import main; raise SystemExit(main())"]
+    else:
+        node = shutil.which("node")
+        assert node
+        command = [node, str(ROOT / "generated/planning/typescript/src/cli.mjs")]
     args = [
-        node,
-        str(ROOT / "generated/planning/typescript/src/cli.mjs"),
+        *command,
         "owner-select",
         "--owner",
         "existing-owner",
