@@ -25,7 +25,8 @@
         "properties": {
           "id": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Nonempty owner-issued identity."
           },
           "force": {
             "enum": [
@@ -33,72 +34,83 @@
               "recommended",
               "required-before-closeout",
               "blocking"
-            ]
+            ],
+            "description": "Existing source requirement force; applicability does not establish satisfaction."
           },
           "applies_to_paths": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Source path selectors; any exact positive path match establishes applicability."
           },
           "applies_to_task_markers": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Former semantic scope hints retained for current judgment; raw task words do not decide applicability."
           },
           "applies_to_semantic_routes": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Source route selectors evaluated only against current agent-selected route facts."
           },
           "applies_to_planning_refs": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Source selectors for current Planning references; former prose references require current judgment."
           },
           "applies_to_proof_profiles": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Source selectors for proof profiles established by the Planning owner."
           },
           "applies_to_risk_refs": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Source selectors for risk references established by the Planning owner."
           },
           "applies_to_invariant_refs": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Source selectors for invariant references established by the Planning owner."
           },
           "blocking_claims": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1
-            }
+            },
+            "description": "Existing source claim restrictions retained when enforcing scope applies or remains unresolved."
           }
         }
-      }
+      },
+      "description": "Bounded current source requirements; identifiers must be unique."
     },
     "changed_paths": {
       "type": "array",
       "items": {
         "type": "string"
-      }
+      },
+      "description": "Current task change paths supplied by the source-owning ingress."
     },
     "planning_facts": {
       "type": "object",
@@ -110,7 +122,8 @@
           ],
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Current semantic Planning references, or unknown."
         },
         "proof_profiles": {
           "type": [
@@ -119,7 +132,8 @@
           ],
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Current owner-established proof profiles, or unknown."
         },
         "risk_refs": {
           "type": [
@@ -128,7 +142,8 @@
           ],
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Current owner-established risk references, or unknown."
         },
         "invariant_refs": {
           "type": [
@@ -137,7 +152,8 @@
           ],
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Current owner-established invariant references, or unknown."
         },
         "legacy_refs": {
           "type": [
@@ -146,19 +162,23 @@
           ],
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Former prose-derived Planning references retained as scope hints rather than exact facts."
         }
-      }
+      },
+      "description": "Current Planning owner facts; missing or null facts remain unknown, while empty arrays require established absence."
     },
     "route_fact": {
       "type": [
         "object",
         "null"
-      ]
+      ],
+      "description": "Current owner-classified semantic route selection, or unknown; stale routes cannot establish applicability."
     },
     "source_revision": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Exact revision of the requirement source and relevant owner facts."
     },
     "task_identity": {
       "type": "object",
@@ -168,9 +188,11 @@
       "properties": {
         "id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Nonempty owner-issued identity."
         }
-      }
+      },
+      "description": "Exact current task identity, independently bound from durable Planning work."
     },
     "current_work": {
       "type": "object",
@@ -180,9 +202,11 @@
       "properties": {
         "id": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Nonempty owner-issued identity."
         }
-      }
+      },
+      "description": "Exact current semantic work identity, including its available revision."
     },
     "judgment": {
       "type": [
@@ -198,7 +222,8 @@
       ],
       "properties": {
         "source_revision": {
-          "type": "string"
+          "type": "string",
+          "description": "Exact revision of the requirement source and relevant owner facts."
         },
         "task_identity": {
           "type": "object",
@@ -208,9 +233,11 @@
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Nonempty owner-issued identity."
             }
-          }
+          },
+          "description": "Exact current task identity, independently bound from durable Planning work."
         },
         "current_work": {
           "type": "object",
@@ -220,14 +247,18 @@
           "properties": {
             "id": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "description": "Nonempty owner-issued identity."
             }
-          }
+          },
+          "description": "Exact current semantic work identity, including its available revision."
         },
         "decisions": {
-          "$ref": "#/$defs/decisions"
+          "$ref": "#/$defs/decisions",
+          "description": "Applicability judgments keyed by current requirement identifier; unknown identifiers are rejected."
         }
-      }
+      },
+      "description": "Optional agent scope judgment bound to the exact source, task and work; it cannot waive exact positive facts or missing owner facts."
     }
   },
   "$defs": {
@@ -239,8 +270,10 @@
           "applicable",
           "not-applicable",
           "unresolved"
-        ]
-      }
+        ],
+        "description": "Current applicability disposition for the named requirement; unresolved preserves the obligation gap."
+      },
+      "description": "Applicability judgments keyed by current requirement identifier; unknown identifiers are rejected."
     },
     "arguments": {
       "type": "object",
@@ -250,9 +283,13 @@
       ],
       "properties": {
         "decisions": {
-          "$ref": "#/$defs/decisions"
+          "$ref": "#/$defs/decisions",
+          "description": "Applicability judgments keyed by current requirement identifier; unknown identifiers are rejected."
         }
-      }
+      },
+      "description": "Smallest current applicability judgment packet; source and task binding live in its public request envelope."
     }
-  }
+  },
+  "description": "Current source facts and exact agent applicability judgment; no evidence, waiver, execution or claim authority.",
+  "x-agentic-workspace-doc-role": "contract-reference"
 }
