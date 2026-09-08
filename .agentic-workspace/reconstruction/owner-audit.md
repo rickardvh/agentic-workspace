@@ -41,7 +41,7 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 14, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 17, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -110,8 +110,9 @@ pre-existing manifest content and remaining shared policy are unchanged.
 
 The installed no-CLI contract now describes the admitted native writer and source
 split; it no longer instructs agents to invoke retired setup commands or write
-new task continuation into local config. Former registry schema fields are marked
-read-only/deprecated for source transition, not advertised as ordinary authoring.
+new task continuation into local config. Former registry, setup continuation, replacement-answer and adaptive-observation
+schema fields are marked read-only/deprecated for source transition, not advertised
+as ordinary authoring. Configured prior provenance is explicitly human-authored.
 This is still a bounded #2613 implementation slice: complete schema retirement,
 local former-state transition and broader configure-once admission remain open.
 
@@ -124,6 +125,21 @@ continues to preserve its global requirement uncertainty. Verification retained
 reader: 51 pass. Native original-checkout Assignment still admits the current
 executor with no implementation blocker and no local config diff. Independent
 review and cumulative release conformance remain pending.
+
+The setup procedure now uses current configuration requests through start/invoke;
+retired setup/defaults commands and instructions to grow shared proof registries
+are removed. Read-only transition annotations preserve former setup, replacement
+and economic/evaluation source meaning without inviting new configuration state.
+The nine process-lifecycle cases pass, including rejection of stopped, malformed,
+truncated, wrong-identity and source-drift results; positive admitted target evidence
+leaves local configuration bytes unchanged. Fifteen former-owner/recovery cases
+and four native CLI black-box cases pass on the cumulative source. Two stale tests
+requiring retired setup command text and prompt-keyword review routing are removed;
+semantic route and authenticated independent-review admission proof remains.
+
+Fresh GitHub priority inventory: all 34 open P0/P1 owners have exactly one audit
+disposition (four candidate-complete, 19 bounded implementation gaps, 11 evidence/
+conformance gaps). Classification completeness is not release completion.
 
 ## Integrated children and later gates
 

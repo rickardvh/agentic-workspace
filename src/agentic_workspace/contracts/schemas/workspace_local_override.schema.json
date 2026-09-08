@@ -210,6 +210,9 @@
         "description": "Hard execution constraints checked before best-fit comparison. Only source-current adapter guarantees satisfy them; unknown names or unsupported guarantees leave a route ineligible. Names are extensible and do not select a provider or continuity mode."
       },
       "replacement": {
+          "deprecated": true,
+          "readOnly": true,
+          "x-agentic-workspace-source-owner": "assignment",
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -264,7 +267,7 @@
               "description": "Exact predecessor packet seal, binding inherited scope, constraints, and return authority."
             }
           },
-          "description": "One explicit human-owned answer for an exact current assignment and replacement execution configuration; never populated from ordinary command arguments."
+          "description": "Recognized former exact human replacement answer. Preserve for Assignment disposition; new answers use its current revision-bound decision request, not standing configuration."
         }
       },
       "additionalProperties": false,
@@ -288,6 +291,9 @@
       "description": "Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope."
     },
     "setup": {
+      "deprecated": true,
+      "readOnly": true,
+      "x-agentic-workspace-source-owner": "workspace-config",
       "type": "object",
       "properties": {
         "prompt_disposition": {
@@ -319,7 +325,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Machine-local setup prompt preference and compact revision-bound continuation identity; canonical applied policy remains with its owning surface."
+      "description": "Recognized former revision-bound setup continuation. Preserve unresolved source authority; new decisions and resume identity belong to the configuration owner, not durable local policy."
     },
     "local_memory": {
       "type": "object",
@@ -679,9 +685,12 @@
               "description": "Advisory relative cost class used for down-routing only when quality and proof remain safe."
             },
             "current_economic_evidence": {
+              "deprecated": true,
+              "readOnly": true,
+              "x-agentic-workspace-source-owner": "assignment",
               "type": "object",
               "additionalProperties": false,
-              "description": "Bounded provider-neutral evidence about this target's current marginal opportunity cost. Hard capability, proof, trust, and expected repair burden continue to outrank it.",
+              "description": "Recognized former provider-economic observation. New observations belong to the current Assignment evidence input, not configuration. Existing source bytes remain human-owned; this observation grants no discount, capability or authority by itself.",
               "properties": {
                 "status": {
                   "type": "string",
@@ -766,12 +775,15 @@
             "confidence_source": {
               "type": "string",
               "minLength": 1,
-              "description": "Optional source for the confidence estimate, such as human-declared, evaluation-derived, or agent-managed."
+              "description": "Optional provenance of the human-authored advisory prior. New evaluation or lifecycle observations belong to the target-evidence owner, not configuration."
             },
             "last_evaluation": {
+              "deprecated": true,
+              "readOnly": true,
+              "x-agentic-workspace-source-owner": "target-evidence",
               "type": "string",
               "minLength": 1,
-              "description": "Optional local note or date for the last capability evaluation used to tune this profile."
+              "description": "Recognized former evaluation residue. Preserve the source for target-evidence disposition; do not author or update this field in configuration."
             },
             "human_control_modes": {
               "type": "array",

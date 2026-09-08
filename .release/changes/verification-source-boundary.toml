@@ -1,4 +1,4 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "minor"
 summary = "Move operational Verification declarations into its existing manifest while preserving source authority, requirement force and currentness. Keep human configuration focused on durable policy."
-issues = [2613, 2334, 2981]
+issues = [2613, 2767, 2334, 2981]

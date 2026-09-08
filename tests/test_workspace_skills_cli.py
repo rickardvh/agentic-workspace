@@ -912,39 +912,6 @@ def test_skills_command_recommends_planning_reporting_for_setup_task(tmp_path: P
     assert "workspace setup jumpstart route" in payload["recommendations"][0]["reasons"][0]
 
 
-def test_skills_command_recommends_setup_jumpstart_for_mature_repo_seeding(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-
-    assert cli.main(["init", "--target", str(target)]) == 0
-    capsys.readouterr()
-
-    assert (
-        cli.main(
-            [
-                "skills",
-                "--target",
-                str(target),
-                "--task",
-                "populate surfaces after newly installed workspace in a lived-in repo",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
-    assert payload["recommendations"][0]["source_kind"] == "installed-workspace-skills"
-    assert payload["recommendations"][0]["scope"] == "specialized-subskill"
-    assert "pre-write and pre-seed discovery" in Path("docs/jumpstart-contract.md").read_text(encoding="utf-8")
-    skill_text = Path(".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md").read_text(encoding="utf-8")
-    assert "defaults --section assurance_onboarding" in skill_text
-    assert "defaults --section verification_onboarding" in skill_text
-
-
 def test_skills_command_recommends_jumpstart_for_assurance_verification_population(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1105,44 +1072,6 @@ def test_implement_open_issues_keeps_startup_authoritative_and_recommendations_b
     assert {item["activation_evidence_class"] for item in specialists} == {"semantic-task-route"}
     assert {item["recommendation_authority"] for item in specialists} == {"structured-applicability"}
     assert all("selected semantic task route: github/issues/create" in item["reasons"] for item in specialists)
-
-
-def test_review_skill_routes_only_to_independent_external_reviewer(capsys) -> None:
-    target = Path(__file__).resolve().parents[1]
-
-    assert (
-        cli.main(
-            [
-                "skills",
-                "--target",
-                str(target),
-                "--task",
-                "Address blocking review comments on my PR, implement the fixes, and push the branch",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    implementer_payload = json.loads(capsys.readouterr().out)
-    assert "pr-review-recheck" not in {entry["id"] for entry in implementer_payload["recommendations"]}
-
-    assert (
-        cli.main(
-            [
-                "skills",
-                "--target",
-                str(target),
-                "--task",
-                "Act as independent external reviewer and review a patch you did not implement",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    reviewer_payload = json.loads(capsys.readouterr().out)
-    assert "pr-review-recheck" in {entry["id"] for entry in reviewer_payload["recommendations"]}
 
 
 def test_selected_pr_review_route_surfaces_eligibility_procedure_without_review_authority(capsys, monkeypatch) -> None:
