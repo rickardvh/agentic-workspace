@@ -5190,44 +5190,49 @@ def test_target_evidence_lifecycle_supersession_replaces_current_signal() -> Non
 
 
 def test_target_evidence_normalizes_historical_context_inflation_as_transport_burden() -> None:
+    from dataclasses import replace
+
     from agentic_workspace.config import DelegationOutcomeRecord
     from agentic_workspace.target_evidence import target_evidence_posture
 
-    posture = target_evidence_posture(
-        target_root=None,
-        profiles=(),
-        records=[
-            DelegationOutcomeRecord(
-                recorded_at="2026-08-29",
-                delegation_target="worker",
-                task_class="implementation",
-                scope_class="bounded",
-                outcome="success",
-                handoff_sufficiency="sufficient",
-                review_burden="normal",
-                escalation_required=False,
-                authority="human-review",
-                confidence="high",
-                context_cost={
-                    "kind": "agentic-workspace/assignment-context-cost/v1",
-                    "transport": "cli",
-                    "adapter_revision": "sha256:adapter",
-                    "assignment_packet_bytes": 3662,
-                    "rendered_prompt_bytes": 3913,
-                    "effective_input_tokens": 81752,
-                    "cached_input_tokens": 62464,
-                    "output_tokens": 1591,
-                    "orientation_command_count": 0,
-                    "retry_count": 0,
-                    "repair_loop_count": 0,
-                    "elapsed_ms": 1000,
-                    "unknown_fields": [],
-                    "observation_authority": "adapter-sidecar-or-host-measurement",
-                    "raw_transcript_stored": False,
-                },
-            )
-        ],
-    )
+    records = [
+        DelegationOutcomeRecord(
+            recorded_at="2026-08-29",
+            delegation_target="worker",
+            task_class="implementation",
+            scope_class="bounded",
+            outcome="success",
+            handoff_sufficiency="sufficient",
+            review_burden="normal",
+            escalation_required=False,
+            authority="human-review",
+            confidence="high",
+            context_cost={
+                "kind": "agentic-workspace/assignment-context-cost/v1",
+                "transport": "cli",
+                "adapter_revision": "sha256:adapter",
+                "assignment_packet_bytes": 3662,
+                "rendered_prompt_bytes": 3913,
+                "effective_input_tokens": 81752,
+                "cached_input_tokens": 62464,
+                "output_tokens": 1591,
+                "orientation_command_count": 0,
+                "retry_count": 0,
+                "repair_loop_count": 0,
+                "elapsed_ms": 1000,
+                "unknown_fields": [],
+                "observation_authority": "adapter-sidecar-or-host-measurement",
+                "raw_transcript_stored": False,
+            },
+        )
+    ]
+    posture = target_evidence_posture(target_root=None, profiles=(), records=records)
+    assert posture["suitability"] == []
+    assert "target-quality-stronger-owner-required" in posture["uncertainty_accounts"][0]["uncertainty_reasons"]
+    # Synthetic local-operator control exercises arithmetic only. The historical
+    # provider observation above remains censored, not admitted target quality.
+    control = replace(records[0], authority="local-outcome-ledger", producer_class="local-operator", confidence="medium")
+    posture = target_evidence_posture(target_root=None, profiles=(), records=[control])
 
     costs = posture["suitability"][0]["transport_costs"]
     assert costs == [
@@ -5363,10 +5368,10 @@ def test_target_evidence_excludes_low_authority_records_from_assignment() -> Non
     assert posture["suitability"] == []
     assert posture["normalized_records"][0]["admission"]["routable"] is False
     assert posture["normalized_records"][1]["admission"]["routable"] is False
-    assert [item["uncertainty_reasons"][0] for item in posture["uncertainty_accounts"]] == [
-        "low-authority:model-self-report",
-        "low-confidence:low",
-    ]
+    assert "low-authority:model-self-report" in posture["uncertainty_accounts"][0]["uncertainty_reasons"]
+    assert {"target-quality-stronger-owner-required", "low-confidence:low"} <= set(
+        posture["uncertainty_accounts"][1]["uncertainty_reasons"]
+    )
 
 
 def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evidence(tmp_path: Path) -> None:
