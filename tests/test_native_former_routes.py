@@ -120,3 +120,20 @@ def test_no_former_source_direct_work_has_no_candidate_or_state(
     assert "former_selection" not in (result["semantic_routes"] or {})
     assert result["decision_packet"]["status"] == "direct"
     assert not (tmp_path / ".agentic-workspace").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "python", "typescript", "json"])
+def test_new_unreadable_former_source_stales_an_earlier_selection(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    fixture(tmp_path)
+    (tmp_path / REFERENCE).unlink()
+    context = {"target": str(tmp_path), "task": "Inspect the current route contract"}
+    initial = consume(surface, shared_core_binary, native_cli, context)
+    request = next(r for r in initial["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    request["arguments"] = {"posture": "none", "routes": []}
+    (tmp_path / REFERENCE).mkdir()
+    result = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert result["semantic_routes"]["former_selection"]["reason"] == "former-route-source-unreadable-or-linked"
+    assert result["decision_packet"]["semantic_task_routes"]["status"] == "stale"
+    assert (tmp_path / REFERENCE).is_dir()
