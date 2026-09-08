@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Seal ordinary manual assignment packets before exact source-authorized reassignment and preserve typed task judgment in public conformance."
+issues = [2210, 2947]
