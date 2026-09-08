@@ -12,11 +12,13 @@ to discard required checks.
 
 Remaining concrete owner gaps:
 
-- `modules.enabled` is projected but not consumed by native domain dispatch.
-  In particular, an explicit empty array currently escapes residual detection
-  while domain readers still run. This is an unresolved enablement bug, not proof
-  of disabled-owner behavior. Acquisition or suppression must preserve existing
-  source obligations; this correction does not change module availability.
+- Explicit `modules.enabled` now controls native owner availability. Absent
+  configuration retains current source discovery. Disabled owners expose no
+  requests or actions and acquire no state. Their own recognized source anchors
+  are observed without decoding domain state; existing or unreadable sources
+  retain affected reconciliation blockers, not inferred live custody or retirement.
+  This is the bounded first-party consumer; generic external-module lifecycle
+  admission remains unresolved under #2606.
 - `payload.policy="required-before-work"`, `target_release="source-current"`
   and installed capabilities still need the existing payload provenance/currentness
   owner. A native executable or matching package version alone is insufficient.
@@ -28,3 +30,11 @@ Remaining concrete owner gaps:
 
 These findings belong to #2613/#2767 and their current domain owners. They do not
 establish ordinary configured-checkout completion or independent acceptance.
+
+
+A current configuration revision participates in the capability contract. Changes
+conservatively stale returned Planning and proof actions through their existing
+`dependency_revision`, including enabling another owner while the selected owner
+remains enabled. Material Planning work/subject identity is unchanged. Disabling
+Verification also restores unresolved configured assurance constraints rather than
+waiving them. Read-only discovery never re-enables or transfers an owner.
