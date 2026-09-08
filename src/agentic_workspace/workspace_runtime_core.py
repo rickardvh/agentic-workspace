@@ -53062,14 +53062,13 @@ def _proof_receipt_redact_sensitive_data(value: Any, *, key: str = "") -> Any:
 
 def _proof_receipt_publication_paths(*, target_root: Path, producer_receipt_id: str) -> list[Path]:
     """Return every path the ordinary proof receipt publication may mutate."""
-    producer_store = _trusted_producer_store_root(target_root=target_root, producer_class="aw-proof")
+    # The Rust publication owner retains receipt/index truth; rollback must not
+    # erase a publication or another process's current index.
     delegation_path, _, _ = config_lib.load_delegation_outcomes(target_root=target_root)
     paths = {
         target_root / PROOF_RECEIPT_RELATIVE_PATH,
         target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH,
         target_root / PROOF_REUSE_RELATIVE_PATH,
-        producer_store / f"{producer_receipt_id}.json",
-        _trusted_producer_receipt_index_path(target_root=target_root, producer_class="aw-proof"),
         delegation_path,
     }
     reviews_root = target_root / ".agentic-workspace" / "planning" / "reviews"
@@ -53554,6 +53553,12 @@ def _record_proof_receipt_payload(
         "plan_id": str(plan_id or "").strip(),
         "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
     }
+    if publish_trusted_producer:
+        receipt["native_publication_boundary"] = {
+            "observation": "interoperability-report",
+            "native_execution_admission": "unproven",
+            "rule": "Publication preserves the reported evidence; only a current producer/Verification admission can establish its runtime, sufficiency or required authority.",
+        }
     aggregate_commands = [str(item).strip() for item in (proof_commands or []) if str(item).strip()]
     if aggregate_commands:
         selected_proof_material = json.dumps(aggregate_commands, sort_keys=True, ensure_ascii=True).encode("utf-8")
@@ -53790,6 +53795,7 @@ def _record_proof_receipt_payload(
             receipt = {key: value for key, value in existing_publication.items() if key not in producer_only_fields}
 
     def publish_receipt() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        nonlocal producer_receipt_ref
         proof_reuse = _write_proof_reuse_cache_from_receipt(
             target_root=target_root,
             command=command,
@@ -53815,9 +53821,10 @@ def _record_proof_receipt_payload(
                         + "\n"
                     )
             if publish_trusted_producer:
-                _write_trusted_producer_receipt(
+                producer_receipt_ref = _write_trusted_producer_receipt(
                     target_root=target_root,
                     producer_class="aw-proof",
+                    task_text=task_text,
                     receipt_id=producer_receipt_id,
                     source_ref=producer_receipt_ref,
                     receipt={
@@ -61903,7 +61910,40 @@ def _write_trusted_producer_receipt(
     receipt_id: str,
     receipt: dict[str, Any],
     source_ref: str,
+    task_text: str | None = None,
 ) -> str:
+    if producer_class == "aw-proof":
+        from agentic_workspace.decision import invoke as native_invoke
+        from agentic_workspace.decision import start as native_start
+
+        context = {"target": str(target_root), "task": str(task_text or ""), "changed": receipt.get("changed_paths", [])}
+        current = native_start(context)
+        requests = current.get("verification", {}).get("record_requests", [])
+        if not requests:
+            raise WorkspaceUsageError(
+                "proof-publication-current-owner-decision-required: current Verification owner exposes no record request; resolve module availability and current owner decisions before publication."
+            )
+        candidates = [request for request in requests if request["arguments"]["command"] == receipt.get("command")]
+        if len(candidates) > 1:
+            raise WorkspaceUsageError("proof-publication-strategy-ambiguous: select the current Verification route for this observation.")
+        request = candidates[0] if candidates else requests[-1]
+        request["arguments"]["command"] = str(receipt.get("command") or "")
+        request["arguments"]["result"] = "passed" if receipt.get("result") == "passed" else "failed"
+        request["arguments"]["reported_observation"] = receipt
+        selected = native_start({**context, "request": request})
+        action = selected["decision_packet"].get("primary_action")
+        if (
+            not isinstance(action, dict)
+            or action.get("operation_id") != "proof.report"
+            or not action.get("arguments", {}).get("record_receipt")
+        ):
+            raise WorkspaceUsageError(
+                "proof-publication-current-owner-decision-required: resolve the current Verification/Planning "
+                "decision before publication; no evidence or custody was inferred from the report."
+            )
+        published = native_invoke({**context, "invocation": action})
+        receipt["native_publication"] = published["value"]
+        return str(published["value"]["publication"]["reference"])
     safe_receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", receipt_id.strip()).strip("-")
     if not safe_receipt_id:
         raise WorkspaceUsageError("trusted producer receipt id is required.")

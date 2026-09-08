@@ -2144,3 +2144,5 @@ fn terminal_authority(
 }
 
 pub mod runtime_compatibility;
+
+pub(crate) mod proof_publication;
