@@ -6,7 +6,7 @@ The evidence layer's focused tests passed, then the routed complete orchestratio
 
 
 
-This records observed avoidable engineering and execution costs during the delegation reconstruction stack. Measurements, inferred design opportunities and agent mistakes are distinguished. Account-wide credit depletion does not establish this task’s monetary cost. Exact credits and dollars remain unknown.
+This records observed avoidable engineering and execution costs during the delegation reconstruction stack. Measurements, inferred design opportunities and agent mistakes are distinguished. Account-wide credit depletion does not establish this taskâ€™s monetary cost. Exact credits and dollars remain unknown.
 
 
 
@@ -24,7 +24,7 @@ The record preserves failures and subsequent corrections. Later entries supersed
 
 - Native selected aggregate passed four commands then hit inherited structured-inventory gaps, reproducible on accepted base: two unclassified files and 430929-byte generated resource against 430000 budget. Run cheap static/preflight blockers before expensive suites; baseline relevant validation early.
 
-- Tiny Codex probes cost 13.8k–18.6k effective input tokens per call despite short JSON output. Recorded four-mode round: input 13775/13804/13833/13833, cached 12544/13568/1792/13568, output 39/15/27/26, elapsed 5805/4802/5685/3998ms. Earlier probes and restarts incurred additional usage. No credit price or savings inferred. Prefer metadata-only protocol checks, one bounded opt-in live matrix per material contract change, cheap model sufficient for transport proof, and lifecycle proof reuse.
+- Tiny Codex probes cost 13.8kâ€“18.6k effective input tokens per call despite short JSON output. Recorded four-mode round: input 13775/13804/13833/13833, cached 12544/13568/1792/13568, output 39/15/27/26, elapsed 5805/4802/5685/3998ms. Earlier probes and restarts incurred additional usage. No credit price or savings inferred. Prefer metadata-only protocol checks, one bounded opt-in live matrix per material contract change, cheap model sufficient for transport proof, and lifecycle proof reuse.
 
 - Codex exec resume with a nonexistent reference unexpectedly started fresh and incurred 18568 input, 13056 cached, 7 output tokens. Validate exact continuation admission before launching a turn; no silent fresh fallback.
 
@@ -364,3 +364,18 @@ material revision from frontier changes. Interrupted postimage publication can
 resume its exact retained invocation; reworded same-semantic recovery remains an
 explicit owner-reentry implementation gap. No real provider work, target-quality
 observation or monetary saving is inferred from this deterministic run.
+
+### Material lifetime correction from integrated CI
+
+Linux CI on the native Planning update stack exposed a real Verification request
+lifetime regression: changing Planning's returned/integration-pending frontier
+invalidated an otherwise exact semantic request. The same failure reproduced
+locally. Assurance had hashed an entire Planning subject and physical owner
+context rather than the material identity and applicability facts it consumes.
+The correction recomputes that small semantic input; no memoisation is needed.
+Four native/Python/TypeScript/JSON creation-update-reconciliation cases passed in
+21.56 seconds, preserving requests across frontier updates and rejecting changed
+scope. The original failing Rust case passed. No proof or task completion is
+inferred from preserved request currentness; no provider calls were made.
+
+The integrated Rust boundary also caught an obsolete fixture expecting consumed transport authority to remain unsupported. Its replacement checks the actual Assignment policy and retained safety ceiling: automatic transport with safety false still forbids execution. The initial boundary had89 passes, one stale fixture failure and3 subprocess helpers ignored.
