@@ -308,3 +308,26 @@ search. Fixture integration detected and restored two accidentally re-encoded
 UTF-8 passages before publication. These are implementation costs, not provider
 or target-quality evidence. No new supported-host provider worker was launched;
 all previously incomplete workers remain censored, and monetary cost is unknown.
+
+### Follow-up report and Planning fixture audit (2026-09-08)
+
+Two exact follow-ups reproduced one failure and one pass in 45.67 seconds.
+The dynamic operating-loop fixture now uses actual selected execution and
+passes in 17.62 seconds. It preserves projection reuse and current Planning
+custody, while closeout remains blocked: the legacy new-plan scaffold still
+contains placeholder scope, and its former caller-supplied receipt plan ID
+bypassed that scope check. Native typed Planning creation already accepts scope;
+this is a legacy adapter/re-entry gap under #2970/#2334, not missing native
+creation. No task judgment or terminal acceptance is fabricated.
+
+The route-health test legitimately executes candidate and validation commands
+during guarded apply. However, a bounded counterexample changed the validated
+source after apply and before reported retirement; the old positive assertions
+still passed (28.15 seconds), declaring the finding retired and the route current.
+The probe was removed after preserving its log. Apply history records bind
+configuration revision and path names but not the executed source contents or
+runtime proof subject; retirement reads that JSONL as evidence. This remains
+counterevidence under #2334/#2647 and producer custody under #3000/#3001.
+Adding a fresh fingerprint only when reporting would not repair it. A genuine
+fix needs current, producer-admitted apply execution evidence rather than a
+reported pass or file-shaped validation record. No parent closure follows.
