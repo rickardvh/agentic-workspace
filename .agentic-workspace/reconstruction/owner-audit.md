@@ -1,6 +1,6 @@
 # First-stable owner audit — 2026-09-08
 
-Current cumulative base: `384473617acd395ebf66b3d449d7bd28bbe5bea9`, freshly
+Current merged base: `384473617acd395ebf66b3d449d7bd28bbe5bea9`, freshly
 fetched from `origin/reconstruct/first-stable` after #3164/#3165 integration.
 The original audit began at `5d4f0fa819d7888b9e63526cad8dd9e697b0e7f2`;
 historical proof below retains its actual subject rather than claiming a new run.
@@ -18,8 +18,10 @@ an implementation gap even when the former Python host supplies that behavior.
 
 ## P0/P1 dispositions
 
-Each owner has exactly one disposition against the fetched cumulative candidate.
-The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections remain proposed until their own integration.
+Each owner has exactly one disposition against cumulative implementation candidate
+`cdd374600` (#3168), including #3166 and #3167. Those three PRs remain open;
+classifying candidate behavior does not assert integration or independent
+admission. Historical evidence below retains its tested subject.
 
 | Owner | Classification | Current evidence and remaining admission boundary |
 | --- | --- | --- |
@@ -28,35 +30,35 @@ The #3164/#3165 mechanisms are integrated; subsequent owner-material corrections
 | #2997 | candidate-complete | Existing independent #3138 acceptance; `SYSTEM_INTENT.md` preserves authority, currentness, subtraction and repository-lifetime intent. |
 | #3020 | bounded implementation gap | The source checkout ordinary command is now native. Unresolved native owner routes and retained semantic hosts below still prevent one-core final satisfaction. |
 | #2989 | evidence/conformance gap | Shared reducer has explicit outcome authority and ready-set tests; final selected-outcome/optional-consequence and cumulative cross-owner acceptance remain to be assembled. |
-| #2984 | bounded implementation gap | Former authority remains intentionally retained; #2970 and configuration/native migration still prevent the final clean representation break. Do not delete legacy machinery to manufacture completion. |
+| #2984 | bounded implementation gap | Former authority remains intentionally retained; configuration/native migration still prevents the final clean representation break. The real #2970 transition is implemented in this candidate. Do not delete legacy machinery to manufacture completion. |
 | #3000 | evidence/conformance gap | Immutable attempt, process interruption, replay and owner recovery tests exist. Complete retained-operation coverage, including consequential delegation, is not yet admitted. |
 | #3001 | evidence/conformance gap | Native custody/collision/confinement negatives are present. Complete first-overwrite/deletion/module/de-adoption coverage still needs cumulative acceptance. |
 | #2987 | bounded implementation gap | Native/Python/TypeScript/JSON execute shared Rust for supported journeys; remaining ordinary Python semantics and native owner ingress omissions prevent final satisfaction. |
 | #2985 | bounded implementation gap | Final artifact topology includes the canonical native CLI; #3077 is not satisfied. Package-count or binding tests alone cannot close this owner. |
-| #3077 | bounded implementation gap | The real former-owner journey now works natively and this continuation cuts source-repository guidance over to the paired native binaries. Complete ordinary owner coverage, subtraction of former semantic hosts and release/platform artifact admission remain unresolved. |
+| #3077 | evidence/conformance gap | The paired native executable is the ordinary source and package command; the Python host is subtracted. Real former-owner recovery and isolated Windows/Linux wheel journeys pass. Exact supported-platform artifact identity and cumulative native/binding conformance remain unadmitted. Missing domain behavior remains with its semantic owners. |
 | #2606 | bounded implementation gap | Core capability effect/claim checks exist, but `native_public::owner_requests` has a fixed owner allowlist. A future independent module cannot use ordinary native ingress without core changes. |
-| #2986 | bounded implementation gap | Public native requests are typed, but do not yet expose the complete retained owner outcomes supplied through former host operations. The native Assignment allowlist admits only judgment and read-only transport. |
+| #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include configuration mutation, Memory promotion/retirement and correction; former operation names are not an ordinary native interface. |
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The real selected owner is now native-authored revision 7 with concrete scope/proof, current merged frontier and dependencies, and no obsolete three-PR cap. Native re-entry and fresh-process recovery report current custody; stale update requests fail without mutation. Full owner-specific cumulative conformance and independent acceptance remain under #2909; no parent closure is inferred. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 8, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
 | #2981 | evidence/conformance gap | Current reusable-conclusion tests exist under `test_resolved_decision_reuse.py`; native ordinary producer-lifetime and later-equivalent-work cost evidence remains to be established. |
 | #2767 | bounded implementation gap | Native config reads and preserves sources, but ordinary native requests do not include the setup/config owner mutation journey. Current unresolved configuration must not silently become defaults. |
 | #2916 | candidate-complete | Existing independent #3138 acceptance. Typed policy/currentness/override authority is distinct from the unresolved execution and return lifecycle. |
-| #2210 | bounded implementation gap | Comparative judgment and configuration binding exist; the ordinary native path lacks the complete consequential assignment lifecycle consuming those identities. |
-| #2209 | bounded implementation gap | The base lacks the positive native outcome path. #3167 proposes a current retained-and-checked contextual signal; explicit human/evaluation ingress, failure/dispute handling and repeated selection convergence remain unresolved. No general target quality is inferred. |
-| #2818 | bounded implementation gap | Bounded read-only capsule and burden semantics exist. Complete supported non-local and matched local successful-completion burden is absent; prior incomplete workers are counterevidence, not successes. |
-| #2947 | bounded implementation gap | `native_handoff.rs` seals read-only export/return; native ingress does not provide the required mutation attribution, consequential admission, execution/recovery and Planning/Verification re-entry lifecycle. |
-| #2817 | bounded implementation gap | Native best-fit can keep a non-local decision binding, but cannot complete the configured consequential lifecycle. Manual-only winners and retained-local controls must remain honest. |
+| #2210 | bounded implementation gap | Comparative judgment, exact execution identity, admitted return and a retained-and-checked contextual signal exist. Supported host-native/mutation lifecycles and complete consequential comparison remain unresolved; no inferred target winner or completion authority. |
+| #2209 | bounded implementation gap | The candidate derives one current retained-and-checked contextual target signal from admitted Planning consumption and native Verification. Task/source/config drift de-adopts it. Human/evaluation ingress, failure/dispute handling and repeated selection convergence remain unresolved; no general target quality is inferred. |
+| #2818 | bounded implementation gap | A real Codex process and matched retained-local extraction both reach Planning/Verification re-entry with bounded measured input/time and honest unknown provider costs. Host-native/mutation and pause/resume lifecycle burden remain unproved. Failed or censored workers are excluded from successful evidence. |
+| #2947 | bounded implementation gap | Read-only native process dispatch, exact execution custody, terminal-publication recovery, return admission and Planning/Verification re-entry are implemented and exercised with Codex. Supported host-native execution, shared-worktree/unapplied-delta attribution and live pause/resume/recovery remain gaps. |
+| #2817 | bounded implementation gap | The configured process route can execute and return through distinct Assignment, execution, Planning and Verification authorities. Complete supported host-native and mutation lifecycles remain absent; retained-local control is measured without claiming a non-local cost advantage. |
 | #2726 | bounded implementation gap | Trusted correction/disposition behavior exists in former host surfaces; ordinary native ingress has no correction owner route. A host signal cannot yet complete the intended smallest-owner native journey. |
 | #2929 | evidence/conformance gap | Generic route declarations and repo-owned shaping/creation skills exist. Current before-external-mutation, no-keyword procedure evidence must be admitted. |
 | #2995 | evidence/conformance gap | Native diagnostic capture, custody and advisory/disabled controls are integrated. Final release-current enabled/disabled/privacy/support proof remains required by this owner's completion rule. |
 | #2647 | bounded implementation gap | Native ordinary ingress has no source-owner adaptation mutation route. Former proposal/effectiveness evidence does not prove the native later-equivalent-work convergence outcome. |
 | #2648 | bounded implementation gap | The real initiative source remains an unresolved native control, and ordinary native bounded improvement/disposition is incomplete. Awareness must not be confused with initiative authority. |
-| #2809 | bounded implementation gap | Native ordinary ingress cannot complete the consequential outcome-to-owner-to-later-benefit loop; read-only context and negative evidence controls are not that positive path. |
+| #2809 | bounded implementation gap | The current native retained-and-checked result supports a bounded contextual signal. The broader consequential outcome-to-owner-to-later-benefit loop, including failures and durable convergence, remains incomplete. |
 
 ## Integrated children and later gates
 
@@ -72,7 +74,7 @@ acceptance, not a new review marker from this implementation session:
 | #2616 | evidence/conformance gap | Reconcile onboarding/support/cookbook truth after native owner behavior is admitted. No premature native/platform/stable claim. |
 | #2990 | evidence/conformance gap | No exact release-equivalent candidate artifact admission; P0/P1 prerequisites remain unresolved. |
 | #3014, #3138 | evidence/conformance gap | Cutover remains gated by #2990 and later explicit human promotion approval. No master promotion permission follows from this audit. |
-| #2983, #3020 | bounded implementation gap | The convergence parents retain the remaining native P0/P1 outcomes above; integrated transport and selected owner slices do not satisfy the complete reconstruction intent. |
+| #2983 | bounded implementation gap | The convergence parents retain the remaining native P0/P1 outcomes above; integrated transport and selected owner slices do not satisfy the complete reconstruction intent. |
 
 ## Bounded #2970 correction and proof
 
