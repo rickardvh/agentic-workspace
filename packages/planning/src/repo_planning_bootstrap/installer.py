@@ -17557,7 +17557,6 @@ def _promote_decomposition_lane_to_execplan(
         return result
 
     _write_execplan_record(record_path=record_path, record=plan_record)
-    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8")
     selection_result = select_existing_owner(
         slug,
         target=target_root,
@@ -17566,8 +17565,12 @@ def _promote_decomposition_lane_to_execplan(
         expected_planning_revision=str(planning_revision(target_root).get("revision_id") or ""),
     )
     if selection_result.reason_code:
-        result.add("manual review", record_path, f"local owner selection failed: {selection_result.reason_code}")
+        result.reason_code = selection_result.reason_code
+        result.recovery_command = selection_result.recovery_command
+        record_path.unlink()
+        result.add("manual review", record_path, f"local owner selection failed; promotion rolled back: {selection_result.reason_code}")
         return result
+    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8")
     result.add("created", record_path, "scaffolded canonical execplan record from decomposition lane")
     result.add("updated", target_root / PLANNING_OWNER_SELECTION_PATH, f"selected '{slug}' for the local work context")
     result.add("updated", matched_path, f"marked decomposition lane '{item_id}' as promoted")
@@ -17915,6 +17918,8 @@ def create_execplan_scaffold(
                 expected_planning_revision=str(planning_revision(target_root).get("revision_id") or ""),
             )
             if selection_result.reason_code:
+                result.reason_code = selection_result.reason_code
+                result.recovery_command = selection_result.recovery_command
                 raise OSError(f"local owner selection failed: {selection_result.reason_code}")
     except OSError as exc:
         if original_record is None:
@@ -28260,7 +28265,6 @@ def _migrate_legacy_planning_state(*, target_root: Path, result: InstallResult, 
         result.add("would remove", state_path, "retire planning-state/v1 after bounded-owner disposition")
         return receipt
 
-    state_path.unlink()
     if owner_id:
         current_revision = str(planning_revision(target_root).get("revision_id") or "")
         selection_result = select_existing_owner(
@@ -28271,13 +28275,19 @@ def _migrate_legacy_planning_state(*, target_root: Path, result: InstallResult, 
             expected_planning_revision=current_revision,
         )
         if selection_result.reason_code:
-            # The owner file remains canonical even when local attention cannot
-            # be inferred.  Do not recreate the aggregate to preserve a hint.
+            result.reason_code = selection_result.reason_code
+            result.recovery_command = selection_result.recovery_command
+            receipt["status"] = "blocked"
+            receipt["reason_code"] = selection_result.reason_code
             receipt["preserved_owner"]["selection_status"] = "not-selected"
             receipt["preserved_owner"]["reason_code"] = selection_result.reason_code
+            receipt["result"]["legacy_state_present"] = True
             receipt["result"]["local_selection_written"] = False
+            result.add("manual review", state_path, f"legacy source preserved: {selection_result.reason_code}")
+            return receipt
         else:
             receipt["preserved_owner"]["selection_status"] = "selected-local"
+    state_path.unlink()
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
     result.add("removed", state_path, "retired repository-global Planning aggregate after bounded-owner migration")
