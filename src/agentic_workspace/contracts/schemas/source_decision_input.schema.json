@@ -59,6 +59,44 @@
   "required": ["contributions"],
   "additionalProperties": false,
   "$defs": {
+    "assignment_comparative_judgment": {
+  "type": "object",
+  "description": "One current comparative execution assessment by the acting orchestrator; never a persistent preference, capability observation or proof.",
+  "additionalProperties": false,
+  "required": [
+    "revision",
+    "alternative",
+    "reason",
+    "uncertainties"
+  ],
+  "properties": {
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "alternative": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "uncertainties": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    }
+  }
+},
     "execution_configuration_choice": {
       "description": "Current feasible execution configuration choice; neither assignment nor launch authority.",
       "type": "object",

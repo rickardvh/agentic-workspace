@@ -419,7 +419,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         verification_probe
     };
     contributions.push(verification["contribution"].clone());
-    let requirements = native_requirements::view(
+    let mut requirements = native_requirements::view(
         target,
         &input.task,
         &input.changed,
@@ -439,6 +439,19 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &contract,
     )?;
     contributions.push(startup_adapter["contribution"].clone());
+    let mut assignment = crate::native_assignment::view(
+        &work,
+        &configuration,
+        &requirements,
+        requests.iter().find(|r| {
+            r["owner"] == "assignment" && r["request_kind"] == "assignment/assess-best-fit/v1"
+        }),
+        &requests,
+        &contract,
+    )?;
+    contributions.push(assignment["contribution"].clone());
+    assignment.as_object_mut().unwrap().remove("contribution");
+    requirements["assignment"] = assignment;
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.push(instructions["contribution"].clone());
@@ -583,6 +596,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                 Some(
                     "assignment/judge-task-requirements/v1"
                         | "assignment/select-execution-configuration/v1"
+                        | "assignment/assess-best-fit/v1"
                 )
             )
         {

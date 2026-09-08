@@ -205,9 +205,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
             assignment_policy=observed.policy;
             assignment_policy["source_revision"]=json!(observed.revision);
             for source in observed.sources {if !sources.iter().any(|s|s["reference"]==source["reference"]){sources.push(source);}}
-            if assignment_policy["binding"]==true {
-                blockers.push(json!({"code":if assignment_policy["enforceable"]==true{"current-binding-assignment-required"}else{"binding-policy-current-target-unresolved"},"message":"Current human policy requires best-fit assignment before implementation; configuration feasibility does not establish that assignment.","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}));
-            }
+
         },
         Err(error)=>blockers.push(json!({"code":"assignment-policy-source-unresolved","message":error.to_string(),"affects":["effect:implementation"]})),
     }

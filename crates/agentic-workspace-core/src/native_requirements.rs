@@ -15,7 +15,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let declaration = json!({"kind":"assignment/judge-task-requirements/v1",
         "result_kind":"agentic-workspace/task-requirements/v1","input_schema":arguments});
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
-        "owners":[{"owner":"assignment","revision":digest(&json!([declaration,crate::native_execution::declaration()]))?,"requests":[declaration,crate::native_execution::declaration()]}]});
+        "owners":[{"owner":"assignment","revision":digest(&json!([declaration,crate::native_execution::declaration(),crate::native_assignment::declaration()]))?,"requests":[declaration,crate::native_execution::declaration(),crate::native_assignment::declaration()]}],"restriction_authorities":[{"owner":"assignment","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}]});
     contract["revision"] = json!(digest(&contract)?);
     Ok(contract)
 }
