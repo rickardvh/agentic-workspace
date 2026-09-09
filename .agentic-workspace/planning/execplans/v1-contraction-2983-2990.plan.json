@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Merged base remains c2303e921. PR #3170 repairs Assignment constructibility against unchanged human local configuration. PR #3171 moves Verification declarations into their existing owner, preserves source floors, permits exact invocation insertion and excludes unrelated former answers only after current local Assignment; its reference-closure correction is at 834bc5d60. Native Memory disposition at 880c80183 uses the established manifest, exact bounded human answers, current independent receiving-decision admission and native attempt recovery. The real six-note corpus and advisory fact are unchanged; April provenance remains unresolved. Five Memory skills now share the native procedure. The audit remains 4 candidate-complete, 20 implementation gaps and 10 evidence/conformance gaps. Next resolve native typed fallback decisions (#2570/#3040/#3041), negative-result reuse/partial resolution (#2981), configuration lifetime (#2613/#2767), and full supported delegation lifecycle (#2947/#2817/#2818/#2210), with current cumulative proof under #2909. Read-only transport evidence and one #2209 target signal are useful slices, not full intent. Independent review, #2616, exact-candidate #2990 and promotion are not admitted.",
+    "frontier": "Merged base remains c2303e9212a067d306be14846824ff727bc59cb0. Existing PRs #3170-#3173 remain under independent review. #3171 now includes 68f3cab25: configuration writes/recovery retain exact selected Planning continuation, with four-interface currentness proof. #3172 includes d1bb7f5e9: the corresponding Memory correction and the explicitly human-authorized retirement of the April note. Fresh native selection suppresses that exact note, preserving its original bytes and human local configuration. Native typed fallback capture/new-decision admission remains unimplemented under #2570/#3040. The human clarified that Memory should not be populated merely to demonstrate usage before implementation is ready. Continue the approved implementation and source-authority boundary; do not invent new Memory material. All 34 P0/P1 owners remain classified once: 4 candidate-complete, 20 implementation gaps, 10 evidence/conformance gaps. Aggregate independent #2909, finalize #2616 and admit one exact release-equivalent #2990 candidate before #3014/#3138; no self-review or master promotion.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Continue the remaining P0/P1 implementation audit and cumulative conformance. Native Memory disposition is implemented at 880c80183; typed fallback-decision admission/effect and full configured non-local mutation/pause/resume remain gaps. Obtain independent review of the three coherent PRs, aggregate #2909, finalize #2616 and admit one exact candidate under #2990 before #3014/#3138 cutover.",
+  "next_action": "Implement the approved native typed fallback capture/admission boundary under #2570/#3040, then continue the remaining P0/P1 owner corrections and cumulative conformance. Existing open-issue plans are explicitly approved by the human; do not request duplicate capability approval. #3170/#3171/#3172/#3173 still need independent review. Aggregate #2909, finalize #2616 and admit one exact release candidate under #2990 before #3014/#3138 cutover.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -64,7 +64,10 @@
       "Merged c2303e921 current proof: source-built paired Rust binaries recover the real native Planning owner; all 16 native/JSON/Python/TypeScript Assignment comparison/currentness cases pass. Real original-local-source startup retains the implementation blocker after exact task and current-target comparative requests. This is observed failure-to-admit evidence, not successful implementation or target-failure evidence.",
       "Bounded Assignment repair: unchanged local config SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189; actual native route returns assigned-current-target and no implementation blockers. 66 neighboring parity/configuration cases pass with one Windows file-symlink skip; Rust core 96 pass/3 subprocess helpers ignored; generated package static proof passes. Original 16 refusal/currentness cases are retained. No worker launched and no configuration policy was rewritten.",
       "Verification source split: #3171 retains the detailed revision-specific implementation evidence in #2909 comment 5594433501 and subsequent commits. Source floors, former subsystem projection, source/currentness parity, exact configuration insertion, native proof publication and unrelated former-answer exclusion remain distinct from independent review. The reference registry and generated catalogue now agree at 834bc5d60; source/payload validation has zero warnings. Historical proof is not relabeled as exact final-candidate admission.",
-      "Memory disposition: implementation 880c80183 has 14 focused four-interface/confinement cases; the combined current Memory/real-decision-read selection has 30 passing cases. Rust library proof has 97 passed and three ignored helpers; retain interruption recovery passes before and after publication and fails on policy drift. Clippy, lint/typechecks, generated command/contract tooling and zero-warning source/payload proof pass. The larger neighboring run had 170 passing cases and one Windows file-symlink skip; four stale-decision diagnostic checks were subsequently corrected and passed. Fresh native Assignment still returns assigned-current-target with no implementation blocker and local SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Promotion/retirement tests use explicit fixture answers, not approval of the real corpus. Root .local scratch was relocated intact under the ignored package-local directory; all 17 file hashes matched. No issue closure, independent review, final release proof or master promotion is inferred."
+      "Memory disposition: implementation 880c80183 has 14 focused four-interface/confinement cases; the combined current Memory/real-decision-read selection has 30 passing cases. Rust library proof has 97 passed and three ignored helpers; retain interruption recovery passes before and after publication and fails on policy drift. Clippy, lint/typechecks, generated command/contract tooling and zero-warning source/payload proof pass. The larger neighboring run had 170 passing cases and one Windows file-symlink skip; four stale-decision diagnostic checks were subsequently corrected and passed. Fresh native Assignment still returns assigned-current-target with no implementation blocker and local SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Promotion/retirement tests use explicit fixture answers, not approval of the real corpus. Root .local scratch was relocated intact under the ignored package-local directory; all 17 file hashes matched. No issue closure, independent review, final release proof or master promotion is inferred.",
+      "Native constructibility follow-through: e108fd8b1 has 33 passing Assignment/configuration cases plus four repaired fixture cases, nine passing complete read-only process/admission/Planning/Verification journeys, and 97 Rust tests with three ignored helpers. Clippy and commit checks pass. The four initial failures were a test-only doubled Windows line-ending error, corrected without weakening the negatives. Fresh native Assignment against unchanged local SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189 returns assigned-current-target with no implementation blocker. No live worker was launched for this correction. Memory/source follow-through 6f64219c7 has 16 receiving/public-decision and 11 bounded-source/supersession/fallback cases; local 16-record/no-match fresh resolution fell from median350ms to118ms without cache state. #2909 comment5595137662 preserves that evidence and #2981 limits. These are implementation inputs, not independent review or exact-release admission.",
+      "Human implementation authorization: on 2026-09-09 the human explicitly approved the proposed typed fallback capability and everything planned in the open issues, and directed the dogfooding skill to reserve renewed human review for autonomously introduced changes beyond those approved plans. The skill clarification is committed at b21e322ce. This authorizes implementation of planned authority boundaries; it is not approval of later agent-added scope, a specific decision or April-note promotion, stale source effects, independent review, issue closure, release admission or master promotion. Do not ask again for the approved capabilities.",
+      "Current source-write continuation correction: eight configuration shared/local cases pass across native/JSON/Python/TypeScript, including selected Planning source drift and source preservation; Rust library 97 passed with 3 ignored helpers and Clippy passed. April retirement separately passed 18 Memory cases and final 8 disposition cases with Planning-source drift. Actual note SHA-256 remains 06332182cc9f0085b4c0d6d2bdf132ff607c8eb339b1c403f3700ac9031100fa; config.local.toml remains 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Cumulative native configuration, Memory and public-interface proof passed 200 cases with one skip in 205.48 seconds; no final conformance or owner completion admission is inferred."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -134,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 23,
+  "revision": 28,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -186,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/7c73511fbaf9f9b7f6a12a86c9805003b3fa4eafb08b12a9ce2768635ac5b27d.attempt.json",
-        "revision": "sha256:abb0d7710961c19c63a32f15a43d6766116e9080e085f00214ed661a57ddccf1",
+        "path": ".agentic-workspace/local/effects/fd8468926dfd22dbfa01992574f78b67e2b2a026663e38ef7480dd305bcd6ab3.attempt.json",
+        "revision": "sha256:eb0ef78e249c94a99868a10bb31d4b8d7ee831573ddd8660888636558e2d9135",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/7c73511fbaf9f9b7f6a12a86c9805003b3fa4eafb08b12a9ce2768635ac5b27d.result.json",
-        "revision": "sha256:35cbf35401579850a6bf4f3847943b422ce7d5b63abb560f1a7482cb1f57bf76",
+        "path": ".agentic-workspace/local/effects/fd8468926dfd22dbfa01992574f78b67e2b2a026663e38ef7480dd305bcd6ab3.result.json",
+        "revision": "sha256:56f228acac49c46829e4edf4f812d3cc3680f7d7511f10dac30f195e04ec2cf1",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:c5ed49022431cc24fbe7473ee7695efda2acabdc15803d2652b0399902b8a0a1",
+    "invocation_revision": "sha256:0a0fe4f207a77a7c5d76fe0886b0f04035a4739a69db3ef6850ba159325de85f",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -205,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:86f801bbeaed0d477721b1931fbbd0430fd1b13db3bc2ba3b22fa6fed945e4e3",
+        "document_revision": "sha256:b49d7c8b794a4c17539ef0493c4919213c253bab8a28041ff22d08fefbb7e9c0",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

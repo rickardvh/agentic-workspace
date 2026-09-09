@@ -234,10 +234,17 @@ pub(crate) fn view(
             if manual {
                 manual_targets.push(json!({"target":name,"source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"source_policy_eligible":authority&&profile_safe,"required_result_classes_supported":requirements["requirements"]["required_result_classes"].as_array().is_some_and(|classes| classes.iter().all(|class| class == "read-only")),"handoff_constructible":handoff_inputs["status"]=="ready","automatic_invocation":false,"gap":if handoff_inputs["status"]=="ready"{""}else{"native-manual-input-completeness-unresolved"},"target_best_fit":"unresolved-not-rejected"}));
             }
+            // Discovery must describe the same return path that dispatch implements.
+            let process = crate::native_delegation::supports_process(&transport);
+            let result_classes = if retained {
+                json!(["read-only", "unapplied-patch"])
+            } else {
+                json!(["read-only"])
+            };
             let capability = digest(
-                &json!({"profile":profile,"target_scope":target_scope[name],"transport":transport,"executable":observed,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
+                &json!({"profile":profile,"target_scope":target_scope[name],"transport":transport,"executable":observed,"process_supported":process,"result_classes":result_classes,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
             )?;
-            candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&matches!(method,"cli"|"api"),"result_classes":if manual{json!(["read-only"])}else{json!(["read-only","unapplied-patch"])},"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
+            candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&process,"result_classes":result_classes,"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
         }
     }
     let mut input = requirements["requirements"].clone();

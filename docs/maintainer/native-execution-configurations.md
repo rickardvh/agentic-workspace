@@ -1,54 +1,86 @@
 # Native current execution configurations
 
-The current Assignment requirements view now exposes source/runtime observations through the existing `ExecutionCandidate` and `assignment::configurations` owner. A complete returned request set retains the task requirements judgment and selects an exact current candidate/revision. It grants neither best-fit assignment nor execution, independent review, human authority or completion.
+Assignment observes current repository policy and host capabilities, then asks
+for a bounded comparison through the ordinary native `start` request. The exact
+work, requirements, source revisions, executable identity and eligible alternatives
+bind the answer. Choosing a configuration grants no execution, proof, review or
+completion authority.
 
-Canonical and former transport declarations use one Rust decoder. The retained Python configuration reader forwards transport interpretation to it. Generic process/API availability comes from resolving the configured executable and observing its current path, size, modification time and bounded streamed content digest; discovery never executes the command. This is the established generic process portability floor, not proof of remote model availability. Manual source policy eligibility is separate from automatic execution; native manual handoff constructibility is limited to the current read-only export owner after explicitly selected inputs have been observed and judged complete. File-changing handoffs remain unavailable. The target remains visible and is not rejected on quality. retained-local and manual configurations retain conservative result classes, no proof classes and no asserted independent context. A selected configuration is not an exported handoff or dispatch operation. Executable reads above 128 MiB, read failure or observed size/time drift yield unavailability. One view reuses the same canonical-path observation; no durable cache is introduced.
+## What is constructible
 
-Exact current task/work, requirements revision, source revisions, capability observations and candidate set bind selection. Changed executable observations stale a choice even when configuration text stays unchanged. A changed source or hard guarantee stales the request. Transport authority and independent safety remain separate predicates. No configuration updates or provider sessions occur during observation.
+| Path | Current native support |
+| --- | --- |
+| Retained current host | Read-only work and direct implementation remain with the current agent, after current Assignment admission. |
+| Process with stdout return | The configured executable can receive the sealed read-only capsule and return through the native dispatch/admission lifecycle. It cannot deliver a file-changing patch. |
+| Manual | Read-only handoff after the required bounded inputs have been observed and judged complete. It grants no automatic invocation. |
+| API, process JSON-file output, provider-native transport | The complete native action/return path is unavailable. An executable or configured label cannot make these routes constructible. |
 
-## Preserved gaps
+Discovery and dispatch share the process-support predicate. Result classes
+reflect the implemented path: external process and manual candidates advertise
+`read-only`; retained-local implementation can support `unapplied-patch`. A
+required patch excludes a read-only external route on capability grounds, without
+claiming target failure or target-quality inferiority. Unresolved viable
+alternatives still block rather than silently authorizing local work.
 
-- Current local policy supersedes the former root local source by the established source-owner rule. An explicitly selected shared local source is merged underneath local values. Missing or unreadable selected sources retain an exact implementation blocker. Repository config delegation fields are not implicitly treated as shared local policy. Source bytes remain unchanged.
-- Provider-native transport entries remain explicit adapter-observation gaps. This layer does not copy cached provider facts, invent a native provider session adapter, or prefer one-shot over native continuity.
-- Separate-actor, distinct-provider and human eligibility remain unresolved when current authenticated actor/authority facts are absent. Source `provider`, model strength or `review_owner` prose is never an actor grant.
-- Native current comparative policy now has a typed owner ingress; read-only manual export and unproven return observation are described below; durable assignment lifecycle and dispatch remain subsequent owner work. Existing source-level hard restrictions are retained.
-- Observation is bounded to 32 targets, 32 candidates and 8 KiB transport detail; overflow is an exact source-referenced gap. No bulk provider history or durable cache is added.
+Canonical and former declarations use the same Rust decoder. Discovery never
+runs the configured command. It observes the executable's current path, size,
+modification time and streamed content digest; files above 128 MiB or changed
+while reading are unavailable. This establishes only a local executable, not
+remote model readiness, history guarantees, independent identity or proof.
+Observation is bounded to 32 targets, 32 candidates and 8 KiB transport detail;
+overflow remains a source-referenced gap. No durable discovery cache is created.
 
-Four independent public consumers test current selection, capability/source drift, manual/local eligibility, missing executable, independent safety, disabled manual transport, former-source preservation and absence of effects. Existing configuration tests cover the retained Python decoder transition. No provider inference or monetary claims were used. Early fixture correction concerned the existing `reason_code` shape; Python error adaptation was corrected to preserve its WorkspaceUsageError contract. This is implementation evidence, not independent acceptance or parent closure.
+## Policy and currentness
 
-## Current policy reconciliation
+Current local policy supersedes the former root local source under the existing
+source-owner rule. An explicitly selected shared local source is merged underneath
+local values; missing or malformed sources remain blockers. Canonical assignment
+and transport fields supersede former aliases. All source bytes remain unchanged.
 
-One Rust reducer now supplies canonical assignment policy, transport authority, independent command safety and human override policy to native startup and retained Python consumers. Canonical fields supersede former aliases. The actual retained manual configuration consumer now uses that same result: canonical manual authority cannot be weakened by an old `manual_transport_policy = "disabled"` alias.
+Automatic transport authority and independent command safety are separate gates.
+Forbidden task classes require the current typed applicability answer; the agent
+cannot waive a prohibition. A current comparison binds the full alternatives and
+remaining uncertainty. An admitted local Assignment discharges only its matching
+implementation restriction. Other safety, source, proof and completion
+restrictions survive. Source or executable drift invalidates prior choices.
 
-| Current source intent | Native consequence | Remaining owner |
-| --- | --- | --- |
-| Binding best fit with recognized current target | Implementation and completion remain restricted pending current assignment | Initial Assignment and lifecycle |
-| Automatic transport with independent safety false | Automatic execution is unavailable; binding policy remains binding | Current safety authority |
-| Explicit shared local source with local overrides | Source revisions and exact established overlay bind current requests | Missing source is preserved as a blocker |
-| Former root local source when canonical source exists | Explicitly superseded under existing precedence; bytes preserved | No extra migration state |
-| Forbidden task classes | Exact task-scope judgment gap remains; prose is not a classifier | Typed task-class owner ingress |
+## Read-only handoff, execution and return
 
-This advances #2916/#2210/#2767 source and representation consistency. It does not close those owners: provider observation and the complete durable returned lifecycle remain unresolved; current comparative assignment and bounded read-only manual handoff are described below. Four public surfaces cover current policy, source drift and preservation; a retained-consumer regression proves the former manual-alias counterexample. Tests do not create conversations. An overly broad local test selector also reached an existing manual receipt assertion and failed; the narrowed policy/source selector passed 43 cases. This is implementation proof, not independent acceptance or a cost-saving estimate.
+The agent names required inputs, observes them through the current owner, then
+judges that exact bounded set complete. Changed paths do not automatically prove
+context completeness. Explicit export expands at most eight confined UTF-8 inputs,
+totaling at most 256 KiB, into the sealed packet. Outcome, role, scope, stop
+conditions, current assignment/configuration and typed return re-entry accompany
+the capsule; the worker does not need hidden parent-chat fields.
 
-## Current comparative assignment
+The current packet uses the established `unapplied-patch` delivery envelope with
+empty `changed_paths` and `patch`. That envelope does not advertise mutation
+support. File-changing returns fail admission. Packet checksums establish
+structural integrity only; they cannot grant Assignment or semantic authority.
 
-The Assignment owner now accepts one bounded comparative assessment against the exact current task/work, requirements, policy and full configuration revision. The acting orchestrator supplies the preferred alternative, reason and remaining uncertainty through the returned typed request. This is not a numeric ranking, persistent preference, override, capability assertion or proof. The view returns one request packet with compact alternatives rather than duplicating all prerequisite requests per candidate.
+For a supported process, the exact native dispatch action retains execution
+custody and publishes a bounded returned observation. Interrupted publication
+can recover through the same owner without treating an incomplete worker as a
+successful result. The current typed observation and return judgment must be
+admitted before Planning adoption and Verification re-entry. Process success,
+return acceptance, Planning consumption, Verification evidence and completion
+remain distinct authorities. Source/input/configuration drift rejects stale
+handoffs and results; unrelated work must remain preserved.
 
-Binding restrictions now come from Assignment composition. An absent judgment, missing current target, unresolved manual-only/provider alternative, preserves the local implementation prohibition. An admitted current local comparison satisfies only that assignment restriction; other source, safety and proof restrictions remain. An admitted nonlocal comparison retains an exact selected configuration identity and a handoff-required blocker. No dispatch action is constructed here. A preferred manual target without the real native sealed export owner remains a current unresolved assessment, not an executable assignment or target-quality rejection. No unavailable transport silently chooses local.
+The read-only process and matched local proof serve only their bounded outcome.
+Provider-native execution, mutation/shared-worktree attribution, and complete
+pause/resume/recovery remain open under #2947/#2817/#2818/#2210. A configured
+transport or incomplete worker cannot satisfy those gaps or establish lifecycle
+cost superiority.
 
-Four public consumers prove current local and nonlocal comparison, different admitted choice identities, task/source/capability drift, ineligible choice, explicit uncertainty, manual/provider preservation, binding without targets and an empty quiet checkout. No state store or provider session is created. #2210/#2767/#2817 remain open for actual native provider observation and the complete admitted ordinary lifecycle; the following section covers bounded read-only manual export. Native owner composition remains distinct from independent acceptance.
+## Evidence
 
-Comparative uncertainty stays attached to the exact assignment judgment and affects its revision. It is not a blanket prohibition that would require an agent to erase sparse cost evidence before making a bounded choice. Unresolved capability, source authority and task requirements still prevent admission; a nonlocal choice still requires its exact handoff.
-
-
-## Read-only manual capsule and return
-
-The current native Assignment owner can export a selected read-only manual assignment using the existing worker-context and delegated-return contracts. The acting agent first names the necessary input references, receives their current bounded observations, then judges that exact observed set complete. Changed paths are not presumed to supply all necessary context. A missing, unreadable, changed or incomplete input set keeps manual constructibility unavailable. Inputs may include required dependencies outside the changed paths, without granting writes to them.
-
-The ordinary view exposes compact references and content digests. Explicit export expands at most eight confined UTF-8 inputs, totaling at most 256 KiB, into the sealed worker context. Task outcome, role, unchanged task requirements, exact current assignment/configuration and proof references accompany the capsule. The packet carries its own typed return re-entry requests and task identity; no parent chat or hidden checkout reconstruction is required for the supplied input set. The input-completeness judgment is agent assessment, not authenticated human review.
-
-The only admitted result delivery in this slice is the existing `unapplied-patch` contract with empty `changed_paths` and `patch`. A current return becomes an unproven observation. It grants no proof, authenticated reviewer status, completion or local implementation. Source/configuration/input drift, another assignment identity and file-changing results are rejected. Human/domain authority and independence still require their genuine current owners; the manual transport label never grants either.
-
-Python and TypeScript worker projection/seal helpers now forward to one Rust packet owner. New seals use the established sorted ASCII-escaped JSON checksum. An exact existing normalized UTF-8 checksum from former TS/replacement packets is recognized without rewriting source bytes or adopting custody. Changed bytes and unknown checksums do not validate. A checksum is structural integrity only, never assignment authority or proof.
-
-This is a read-only packet/observation slice of #2947/#2210. It creates no custody store, provider session or filesystem publication. Durable lifecycle state, file-changing/shared-worktree delta admission, automatic dispatch and Verification/Planning reconciliation remain subsequent owner work. Synthetic returns in tests are not completed provider workers or evidence of target quality. Four public consumers cover the no-parent-chat capsule, source-current input judgment, identity and mutation negatives. Related fixture corrections explicitly decode UTF-8 JSON, permit only the shared semantic-core process in the commandless-worker guard, and replace a former invented `manual-only` policy value with canonical `manual`; original failures remain in local logs. No cost or monetary savings are inferred.
+`tests/test_native_execution_configurations.py` covers current feasibility,
+unsupported result/return paths, source/executable drift, safety and source
+preservation through native, JSON, Python and TypeScript. Assignment judgment
+tests retain the unresolved-alternative and currentness negatives.
+`tests/test_native_readonly_handoff.py` exercises the sealed capsule, actual
+process execution, failed/incomplete returns, exact observation/admission and
+Planning/Verification re-entry. Fixtures do not establish real provider readiness
+or independent review. #2909 aggregates conformance; #2990 admits the exact release
+candidate separately.
