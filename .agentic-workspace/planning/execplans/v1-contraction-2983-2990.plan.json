@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Integrated base b76ddddbc33c76c97e2e3529bb5d891a3fd5a99a remains reconstruct/first-stable. PR #3177 at 5700f4eecdeb275a7c2866017521fe07b9ba738d provides bounded human fallback capture, native publication/recovery and selective scoped recall; PR #3178 at fdeba23b8eb0caae8df26cae7bce3267db16ed45 adds durable configuration choices and missing canonical source creation. Both have green CI and scoped independent reviews without remaining findings. Ordinary human authority derives from exact owner-issued requests plus answers, with no trusted host, client authority labels or cryptographic identity claim. PR #3179 at 94d99f523 adds current checked-patch outcome evidence to the native lifecycle and implements existing UTF-8 process patch return/integration using sealed baselines, concrete scope, exact hunks, disjoint concurrent merge, LF/CRLF preservation, typed result/Planning admission, bounded carriers and serialized interruption recovery. Four public-surface lifecycle cases and 103 core tests plus4 vectors pass; broad regression reached253 passing and1 skipped; all4 obsolete capability assertions now pass in the13-case execution suite, and final patch/read-only checked-outcome lifecycles pass2 targeted cases, including missing-postimage coverage, drift and cross-scope exclusion. Independent implementation review/rechecks found no remaining substantive issues. PR #3180 on codex/3138-decision-archive consolidates repository decision and Planning migration evidence. It explicitly admits reviewed snapshot b4838e325757e523edbdccc51c27a769b8293f43 against current SYSTEM_INTENT.md without changing decision meaning, scope or authors. Live native traces restore3 current consequences for exact shared-core work, suppress ADR context for unrelated work, and retrieve current rationale through the exact returned request. Eight real-record public cases and9 supersession/source-admission controls pass. The April note remains exactly retired with original bytes preserved. Scoped independent review supports #3041 bounded acceptance once integrated. Planning evidence starts from real execplans;15 identity/creation/quietness cases and40 public migration cases pass. Python/TypeScript test payloads now use stdin after the real growing plan exposed Windows argv limits. CI explicitly ratchets public Planning continuation, and obsolete native-host/creation/decision-authority prose is reconciled. Scoped independent review finds no remaining substantive #2970 acceptance gap. Neither owner is closed before reviewed integration/promotion. PR #3179 final CI is green. The current human instruction is to stop after finishing #3180; do not start another owner slice in this run. Host-native launch/return, already-materialized attribution, visibility/retention, creation/deletion/binary/rename delivery and real supported-host dogfood remain open, alongside broader capture/configuration/correction/adaptation and cumulative release outcomes. Process nonmutation is protocol instruction, not OS isolation or authorship of dirty bytes. Generated Node conformance still reports unavailable native assignment close/reassign; static generation and contract tooling pass. Preserve preexisting adapter bytes and Assignment/proof residue. No repeated capability-approval request is needed for the approved human-decision implementation choice.",
+    "frontier": "Execution is governed by the current #2983 issue; #3020 owns architecture and #3138 is the promotion/closure ledger. The September 9 normalization comments supersede stale closure prose. reconstruct/first-stable integrated through #3180 at 127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Earlier #3177-3180 prove bounded fallback capture, durable configuration writes, checked patch delivery, archive/read and former Planning migration; current #3041/#2970 parent outcomes are broader and remain open. PR #3181 at c5452e391 retires superseded public assignment close/reassign exports while preserving canonical native lifecycle responsibilities and explicitly unfinished host/visibility/resume/replacement outcomes. All CI checks pass and distinct scoped review found no blockers. Six historical external conformance receipts are explicitly stale with original execution identity preserved; the old receipt refresh runner remains incompatible and supplies no new evidence. The stacked #2638 slice adds reconcile separately from read, exact updated/reviewed-current judgments, owner-built proposals and separate bounded human confirm/defer requests, scoped completion restrictions, relevant work/source/dependency/discovery reobservation, atomic receipt publication and recovery using existing Verification/effect custody, direct-path quietness and selected Planning re-entry. Twenty-three focused public cases plus oversized-carrier and foreign-receipt negatives pass, along with188 existing public/instruction cases; Rust workspace tests and Clippy pass. Distinct independent review found a carrier-size defect; the full escaped publication is now bounded before admission and final bytes are checked before writes. Independent recheck reran both negatives and found no remaining substantive findings. Authority remains the exact owner-issued request/proposal plus bound answer, never client actor/provenance labels or publication custody. No trusted host or cryptographic human identity is introduced; no unsupported delegated authority is invented. Independent reviewer authentication retains its separate boundary. No full #2638/#2334/#2970 closure is inferred from this slice. Independent Rust owner ingress needs a real admission boundary, not an owner-name allowlist removal. #2998 P3 harness credibility and #2824 PASS/HOLD/STOP remain gating; #3077 native host, #2929 real refinement replay, and earlier slices are preserved without reconstructing completed work. Finish the current stack then continue authorized reconstruction; the former stop-after-3180 instruction ended with that PR and the human has explicitly resumed. Preserve the six preexisting ordinary Assignment/proof artifacts.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Finish PR #3180 current documentation, independent review and checks, then stop as the human requested. A later requested continuation should resume remaining P0/P1 owner corrections and cumulative #2909/#2616/#2990 evidence. Native host/shared-worktree and lifecycle outcomes remain unfinished; no master promotion or parent completion is inferred.",
+  "next_action": "Finish independent review and integration evidence for the #2638 source-reconciliation stack, then continue the #2983 P0/P1 frontier. The native independent owner/module ingress (#2606/#2986), stronger repository decision owner input/output and capture/no-retention contrast (#3041), broader cross-owner Planning continuity (#2970), and cumulative #2909/#2616/#2990 outcomes remain open. Do not infer master promotion or parent completion.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -137,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 34,
+  "revision": 36,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -189,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/eed7a65f7c21b1b7555a7e858baebe394f6bfce4d372fc4f3db4e374ee261bc6.attempt.json",
-        "revision": "sha256:2f1a1c7c2ee507ec149e29e66435dbf3768fea2af95b59b0fde939c3df789b11",
+        "path": ".agentic-workspace/local/effects/98195f9758073cc4996d9eb8b3fe2eb94fc436443fa584454ccb3f28cf219fad.attempt.json",
+        "revision": "sha256:034f0d5c574d11e6259b20fb03eb4030d87b8e49f15bbc1715982e964e66d9aa",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/eed7a65f7c21b1b7555a7e858baebe394f6bfce4d372fc4f3db4e374ee261bc6.result.json",
-        "revision": "sha256:f278e6e2779229a4fc29bb5893d8e2658e9e629c24b9753e50640b9237a9bcb4",
+        "path": ".agentic-workspace/local/effects/98195f9758073cc4996d9eb8b3fe2eb94fc436443fa584454ccb3f28cf219fad.result.json",
+        "revision": "sha256:05d96e387554128dd153956e61ee5c4fcdf4df2b0bed0dc71c6bf2396b41dec5",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:06074eee55f50448e890ec63254ac799572481ad27a7478919b48993bea304d7",
+    "invocation_revision": "sha256:191da79a1be4cc768a8966631a59900a597d0e4e424928b659e655dba6e62a61",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -208,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:fac8ba869fd27ed9949f6d393abc75ab1edf81c0853d1049eae3f697483ef15a",
+        "document_revision": "sha256:98165e80457ae6420e1393aa16436104f68bb74ea0efceb5ff61a218919044d8",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

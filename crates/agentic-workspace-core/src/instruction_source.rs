@@ -47,7 +47,16 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
         let values = if !line.starts_with([' ', '-']) && value.contains(':') {
             let (key, rest) = value.split_once(':')?;
             field = key.trim();
-            if !["paths", "routes", "read", "use", "checks", "protect"].contains(&field)
+            if ![
+                "paths",
+                "routes",
+                "read",
+                "reconcile",
+                "use",
+                "checks",
+                "protect",
+            ]
+            .contains(&field)
                 || !seen.insert(field)
             {
                 return None;
@@ -88,10 +97,15 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
             if value.is_empty() {
                 return None;
             }
-            if matches!(field, "paths" | "read" | "protect")
+            if matches!(field, "paths" | "read" | "reconcile" | "protect")
                 && (value.starts_with(['/', '~'])
                     || value.contains(['\\', ':'])
                     || value.split('/').any(|p| p == ".."))
+            {
+                return None;
+            }
+            if field == "reconcile"
+                && (relative(value).is_err() || value.contains(['*', '?', '[', ']']))
             {
                 return None;
             }
@@ -106,7 +120,8 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
 }
 
 fn parsed(bytes: &[u8], include_body: bool) -> Value {
-    let mut fields = json!({"paths":[],"routes":[],"read":[],"use":[],"checks":[],"protect":[]});
+    let mut fields =
+        json!({"paths":[],"routes":[],"read":[],"reconcile":[],"use":[],"checks":[],"protect":[]});
     let body = metadata(bytes, &mut fields);
     json!({"metadata":fields,"valid":body.is_some(),"diagnostic":if body.is_some(){""}else{"invalid or unterminated scoped instruction metadata; preserve source and reconcile"},"has_guidance":body.as_ref().is_some_and(|b|!b.is_empty()),"body":if include_body{body.unwrap_or_default()}else{String::new()}})
 }
@@ -246,7 +261,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 "instruction source must be a unique exact scoped Markdown path",
             ));
         }
-        let mut row = json!({"source":{"reference":source}, "status":"unadmitted", "checks":[], "protect":[], "authority":{"effects":[],"target_patterns":[]}});
+        let mut row = json!({"source":{"reference":source}, "status":"unadmitted", "checks":[], "reconcile":[], "protect":[], "authority":{"effects":[],"target_patterns":[]}});
         if !revision.is_empty() && !snapshot_available {
             row["status"] = json!("unavailable");
         }
@@ -284,7 +299,11 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                             .expect("parser protect");
                         let hard_checks = checks
                             .iter()
-                            .any(|c| !c.as_str().is_some_and(|s| s.starts_with("requirement:")));
+                            .any(|c| !c.as_str().is_some_and(|s| s.starts_with("requirement:")))
+                            || !parsed["metadata"]["reconcile"]
+                                .as_array()
+                                .unwrap()
+                                .is_empty();
                         let mut effects = vec![];
                         let mut targets = vec![];
                         if hard_checks {
@@ -299,6 +318,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                         }
                         row["status"] = json!("current");
                         row["checks"] = json!(checks);
+                        row["reconcile"] = parsed["metadata"]["reconcile"].clone();
                         row["protect"] = json!(protect);
                         row["authority"] = json!({"effects":effects,"target_patterns":targets});
                     } else {
