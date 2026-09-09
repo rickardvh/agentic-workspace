@@ -25,9 +25,28 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
     before = f'version=1\n# Human corpus comment\n[notes."{reference}"]\nroutes_from=["src/**"] # retain\n\n[unrelated]\nvalue="preserve"\n'
     manifest.write_text(before, encoding="utf-8", newline="")
     context = {"target": str(tmp_path), "task": "Assess one former note", "changed": ["src/core.rs"]}
+    continuation = None
 
     def call(value: dict | None = None) -> dict:
-        return consume(surface, shared_core_binary, native_cli, value or context)
+        supplied = dict(value or context)
+        if continuation is not None and "invocation" not in supplied:
+            supplied["request"] = [continuation, *([supplied["request"]] if "request" in supplied else [])]
+        return consume(surface, shared_core_binary, native_cli, supplied)
+
+    if disposition == "retire":
+        plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+        plan = tmp_path / plan_ref
+        plan.parent.mkdir(parents=True)
+        plan.write_bytes((Path(__file__).resolve().parents[1] / plan_ref).read_bytes())
+        (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+            f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
+        )
+        continuation = call()["decision_packet"]["decision_request"]["response_request"]
+        continuation["arguments"]["answer"] = "continue-selected"
+        call({**context, "invocation": call()["decision_packet"]["primary_action"]})
+        continuation = None
+        continuation = call()["planning"]["requests"][0]
+        continuation["arguments"]["answer"] = "continue-selected"
 
     initial = call()
     request = initial["memory"]["disposition"]["requests"][0]
@@ -39,7 +58,7 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
     request["arguments"].update(disposition=disposition, reason=reason)
     proposed = call({**context, "request": request})
     assert manifest.read_text() == before
-    assert not (tmp_path / ".agentic-workspace/local").exists()
+    assert not list((tmp_path / ".agentic-workspace/local/effects").glob("memory-*"))
     answer = proposed["decision_packet"]["decision_request"]["response_request"]
     deferred = call({**context, "request": {**answer, "arguments": {**answer["arguments"], "answer": "defer"}}})
     assert deferred["memory"]["disposition"]["status"] == "deferred"
@@ -48,6 +67,14 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
     ready = call({**context, "request": answer})
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "memory.dispose"
+    if continuation is not None:
+        assert continuation in action["source_requests"]
+        plan_bytes = plan.read_bytes()
+        plan.write_bytes(plan_bytes + b"\n")
+        with pytest.raises(AssertionError, match="changed|stale|current"):
+            call({**context, "invocation": action})
+        assert manifest.read_text() == before
+        plan.write_bytes(plan_bytes)
     manifest.write_text(before + "# intervening human edit\n", encoding="utf-8")
     with pytest.raises(AssertionError, match="changed|stale"):
         call({**context, "invocation": action})

@@ -667,7 +667,10 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                 .into_iter()
                 .flatten()
             {
-                if action["operation_id"] == "proof.report" {
+                if matches!(
+                    action["operation_id"].as_str(),
+                    Some("proof.report" | "memory.dispose" | "memory.recover-disposition")
+                ) {
                     let mut dependencies = action["source_requests"]
                         .as_array()
                         .cloned()
