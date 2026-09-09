@@ -159,6 +159,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         "target":target,
         "archive":admissions["decision_record_target"].as_str().unwrap_or(""),
         "admitted_revision":admissions["decision_record_revision"].as_str().unwrap_or(""),
+        "fallback":if available("memory") {admissions["decision_record_fallback"].clone()} else {Value::Null},
         "applicable_scope":input.changed.iter().map(|path| format!("path:{path}")).collect::<Vec<_>>(),
         "semantic_routes":route_input
     }));
