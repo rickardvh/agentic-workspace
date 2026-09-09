@@ -546,14 +546,16 @@ fn resolve_context(
     let update_declaration = crate::native_planning_update::declaration();
     let recovery_declaration = crate::native_planning_update::recovery_declaration();
     let adoption_declaration = crate::native_planning_update::adoption_declaration();
+    let handoff_declaration = crate::native_planning_update::handoff_declaration();
     let owner_revision = digest(&json!([
         declaration,
         creation_declaration,
         update_declaration,
         recovery_declaration,
-        adoption_declaration
+        adoption_declaration,
+        handoff_declaration
     ]))?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
     {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);
@@ -638,7 +640,11 @@ fn resolve_context(
         if request["owner"] != "planning" {
             return Err(error("request", "another owner requested"));
         }
-        if request["source_revision"] != revision {
+        if request["source_revision"] != revision
+            && !crate::native_planning_update::retained_continuation_current(
+                &target, &selected, request,
+            )?
+        {
             status = "stale";
             planning_input = Value::Null;
         } else if request["arguments"]["answer"] == "authorize-selector-transfer" {

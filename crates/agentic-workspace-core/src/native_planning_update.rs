@@ -5,6 +5,13 @@ use sha2::{Digest, Sha256};
 use std::path::Path;
 pub(crate) const KIND: &str = "planning/update/v1";
 pub(crate) const ADOPT: &str = "planning/adopt-return/v1";
+pub(crate) const RETAIN_HANDOFF: &str = "planning/retain-handoff/v1";
+const HANDOFF: &str = "agentic-planning/handoff-continuation/v1";
+const HANDOFF_SLOTS: [(&str, &str); 3] = [
+    ("assignment", "attempt"),
+    ("returned", "result"),
+    ("integration_pending", "result"),
+];
 pub(crate) const RECOVER_KIND: &str = "planning/update-recovery/v1";
 pub(crate) const PROVENANCE: &str = "update_provenance";
 fn error(value: impl ToString) -> CoreError {
@@ -49,10 +56,301 @@ pub(crate) fn operation() -> Value {
         json!({"type":"object"});
     operation["input_schema"]["properties"]["consumed_return"]["properties"]["integration"] =
         crate::native_patch::result_schema();
+    operation["input_schema"]["properties"]["retained_handoff"] = json!({"type":"object"});
     operation
 }
 pub(crate) fn adoption_declaration() -> Value {
     json!({"kind":ADOPT,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"owner_ref":{"type":"string"},"destination":{"const":"continuation.frontier"}},"required":["owner_ref","destination"],"additionalProperties":false}})
+}
+
+pub(crate) fn handoff_declaration() -> Value {
+    json!({"kind":RETAIN_HANDOFF,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"owner_ref":{"type":"string"}},"required":["owner_ref"],"additionalProperties":false}})
+}
+
+fn update_material(body: &Value) -> Value {
+    let mut material = serde_json::Map::new();
+    for field in fields()
+        .iter()
+        .chain(crate::native_planning_create::ASSURANCE)
+        .chain(OPTIONAL_MATERIAL)
+    {
+        if let Some(value) = body.get(*field) {
+            material.insert((*field).to_owned(), value.clone());
+        }
+    }
+    json!(material)
+}
+
+fn held_handoff(body: &Value) -> Option<&Value> {
+    ["returned", "assignment"].iter().find_map(|field| {
+        let key = if *field == "assignment" {
+            "attempt"
+        } else {
+            "result"
+        };
+        let held = &body["relationships"][*field][key];
+        (held["kind"] == HANDOFF).then_some(held)
+    })
+}
+
+/// An observation-only update may preserve this exact earlier continuation.
+/// A material edit, selector switch, foreign source, or different answer cannot.
+pub(crate) fn retained_continuation_current(
+    target: &Path,
+    selected: &Value,
+    request: &Value,
+) -> Result<bool, CoreError> {
+    if request["arguments"]["answer"] != "continue-selected" {
+        return Ok(false);
+    }
+    let Some(reference) = selected["ref"].as_str() else {
+        return Ok(false);
+    };
+    let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
+    let Some(held) = held_handoff(&body) else {
+        return Ok(false);
+    };
+    if held["owner_ref"] != reference
+        || !held["reentry"]["request"]
+            .as_array()
+            .is_some_and(|rows| rows.contains(request))
+    {
+        return Ok(false);
+    }
+    let Some(retained) = inspect(target, reference, &body)? else {
+        return Ok(false);
+    };
+    if retained["committed"] != true
+        || payload(&retained["invocation"], &retained["custody"])? != body
+    {
+        return Ok(false);
+    }
+    let current = crate::planning::source_subject(target, &selected["source"])?;
+    Ok(held["planning_subject"] == json!({"id":current["id"],"revision":current["revision"]}))
+}
+
+fn clear_handoff(document: &mut Value, assignment: &Value) {
+    for (field, key) in HANDOFF_SLOTS {
+        let Some(record) = document["relationships"].get_mut(field) else {
+            continue;
+        };
+        if record[key]["kind"] == HANDOFF && record[key]["assignment_identity"] == *assignment {
+            record.as_object_mut().unwrap().remove(key);
+            record.as_object_mut().unwrap().remove("status");
+            if record.as_object().unwrap().is_empty() {
+                document["relationships"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove(field);
+            }
+        }
+    }
+}
+
+fn validate_document(document: &Value) -> Result<(), CoreError> {
+    crate::schema_validator(&schema(), "Planning handoff postimage")?
+        .validate(document)
+        .map_err(error)?;
+    if serde_json::to_vec_pretty(document)
+        .map_err(error)?
+        .len()
+        .saturating_add(8192)
+        > crate::decision_source::MAX_SOURCE_BYTES
+    {
+        return Err(error(
+            "Planning postimage exceeds bounded source size; narrow retained handoff material",
+        ));
+    }
+    Ok(())
+}
+
+/// Planning retains a route back to the responsible owners, not their authority.
+/// Observations use existing attempt/result fields and do not redefine the subject.
+pub(crate) fn retain_handoff(
+    target: &Path,
+    work: &Value,
+    contract: &Value,
+    planning: &Value,
+    context: &Value,
+    submitted: &[Value],
+) -> Result<Value, CoreError> {
+    let request = submitted
+        .iter()
+        .find(|r| r["request_kind"] == RETAIN_HANDOFF);
+    let template = &planning["update_requests"][0];
+    let mut result = json!({"requests":[],"action":null});
+    let handoff = &context["handoff"];
+    let observation = &context["delegation"]["observation"];
+    if planning["status"] != "current"
+        || !template.is_object()
+        || !matches!(
+            handoff["status"].as_str(),
+            Some("exported-read-only" | "exported-patch" | "returned-unproven")
+        )
+    {
+        if request.is_some() {
+            return Err(error(
+                "current selected Planning custody and sealed handoff required",
+            ));
+        }
+        return Ok(result);
+    }
+    let reference = template["arguments"]["owner_ref"].as_str().unwrap();
+    if planning["selected_owner"]["ref"] != reference {
+        return Err(error(
+            "handoff retention must use the selected Planning owner",
+        ));
+    }
+    let prerequisites: Vec<_> = submitted
+        .iter()
+        .filter(|r| r["request_kind"] != RETAIN_HANDOFF)
+        .cloned()
+        .collect();
+    if prerequisites.iter().any(|r| {
+        [KIND, RECOVER_KIND, ADOPT]
+            .iter()
+            .any(|k| r["request_kind"] == *k)
+    }) {
+        if request.is_some() {
+            return Err(error(
+                "handoff retention conflicts with another Planning material request",
+            ));
+        }
+        return Ok(result);
+    }
+    let assignment = &handoff["packet"]["assignment_identity"]["current_assignment"];
+    let observed = observation["status"] == "current-executed-observation";
+    if handoff["status"] == "returned-unproven" && !observed {
+        if request.is_some() {
+            return Err(error(
+                "retaining returned work requires the current execution owner observation",
+            ));
+        }
+        return Ok(result);
+    }
+    let status = if !observed {
+        "assigned"
+    } else if !observation["delta"].is_null()
+        && context["admission"]["integration"]["status"] != "integrated"
+    {
+        "integration-pending"
+    } else {
+        "returned"
+    };
+    let held = json!({"kind":HANDOFF,"status":status,"assignment_identity":assignment,"owner_ref":reference,
+        "planning_subject":{"id":context["planning_subject"]["id"],"revision":context["planning_subject"]["revision"]},
+        "reentry":{"task":context["task"],"changed":context["changed"],"request":prerequisites},
+        "execution_custody":observation["custody"],"returned_revision":if observed {json!(digest(&observation["returned"])?)} else {Value::Null},
+        "authority_effect":"continuation-only; revalidate through responsible owners"});
+    let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
+    if let Some(previous) = held_handoff(&body) {
+        if previous == &held {
+            if request.is_some() {
+                return Err(error(
+                    "Planning handoff request is stale; this continuation is already retained",
+                ));
+            }
+            return Ok(result);
+        }
+        if previous["assignment_identity"] != *assignment {
+            if request.is_some() {
+                return Err(error(
+                    "another unresolved Planning handoff must be reconciled before replacement",
+                ));
+            }
+            result["unresolved"] =
+                json!("another retained handoff requires responsible-owner reconciliation");
+            return Ok(result);
+        }
+        if previous["status"] != "assigned" && !observed {
+            if request.is_some() {
+                return Err(error("retained returned work cannot regress to assigned"));
+            }
+            return Ok(result);
+        }
+    }
+    for (field, key) in HANDOFF_SLOTS {
+        let prior = &body["relationships"][field][key];
+        if prior["kind"] == HANDOFF && prior["assignment_identity"] != *assignment {
+            if request.is_some() {
+                return Err(error(
+                    "another unresolved Planning handoff must be reconciled before replacement",
+                ));
+            }
+            return Ok(result);
+        }
+    }
+    let mut retention = template.clone();
+    retention["id"] = json!(RETAIN_HANDOFF);
+    retention["request_kind"] = json!(RETAIN_HANDOFF);
+    retention["source_revision"] = json!(digest(&json!([template["source_revision"], held]))?);
+    retention["arguments"] = json!({"owner_ref":reference});
+    let mut requests = prerequisites;
+    requests.push(retention.clone());
+    result["requests"] = json!([requests]);
+    let Some(request) = request else {
+        return Ok(result);
+    };
+    prepare_request_value(
+        json!({"request":request,"current_work":work,"capability_contract":contract}),
+    )?;
+    if *request != retention {
+        return Err(error(
+            "Planning handoff retention is stale or differs from the exact request",
+        ));
+    }
+    let mut update = template.clone();
+    update["arguments"]["material"] = update_material(&body);
+    let mut action =
+        view(target, work, contract, planning, Some(&update), None, None)?["action"].clone();
+    if !action.is_object() {
+        return Err(error("Planning did not admit handoff retention"));
+    }
+    clear_handoff(&mut action["arguments"]["document"], assignment);
+    let relationships = &mut action["arguments"]["document"]["relationships"];
+    let field = if observed { "returned" } else { "assignment" };
+    let key = if observed { "result" } else { "attempt" };
+    if relationships[field].is_null() {
+        relationships[field] = json!({});
+    }
+    if !relationships[field].is_object() || relationships[field].get("status").is_some() {
+        return Err(error("unknown Planning handoff observation preserved"));
+    }
+    if relationships[field]
+        .get(key)
+        .is_some_and(|old| !old.is_null() && old["kind"] != HANDOFF)
+    {
+        return Err(error("unknown Planning handoff observation preserved"));
+    }
+    relationships[field][key] = held.clone();
+    relationships[field]["status"] = json!(status);
+    if status == "integration-pending" {
+        if relationships["integration_pending"].is_null() {
+            relationships["integration_pending"] = json!({});
+        }
+        if !relationships["integration_pending"].is_object()
+            || relationships["integration_pending"].get("status").is_some()
+        {
+            return Err(error("unknown Planning integration observation preserved"));
+        }
+        if relationships["integration_pending"]
+            .get("result")
+            .is_some_and(|old| !old.is_null() && old["kind"] != HANDOFF)
+        {
+            return Err(error("unknown Planning integration observation preserved"));
+        }
+        relationships["integration_pending"]["result"] =
+            json!({"kind":HANDOFF,"assignment_identity":assignment});
+        relationships["integration_pending"]["status"] = json!(status);
+    }
+    validate_document(&action["arguments"]["document"])?;
+    action["dependency_revision"] = json!(digest(
+        &json!({"source":action["arguments"]["prior_revision"],"document":action["arguments"]["document"]})
+    )?);
+    action["arguments"]["retained_handoff"] = held;
+    action["source_requests"] = json!(submitted);
+    result["action"] = action;
+    Ok(result)
 }
 
 /// Consume the public Assignment admission. Only Planning reads/writes its own
@@ -119,17 +417,7 @@ pub(crate) fn adopt_return(
         ));
     }
     let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
-    let mut material = serde_json::Map::new();
-    for field in fields()
-        .iter()
-        .chain(crate::native_planning_create::ASSURANCE)
-        .chain(OPTIONAL_MATERIAL)
-    {
-        if let Some(value) = body.get(*field) {
-            material.insert((*field).to_owned(), value.clone());
-        }
-    }
-    let mut material = json!(material);
+    let mut material = update_material(&body);
     if !material["continuation"].is_object() {
         return Err(error("Planning continuation is not an object"));
     }
@@ -141,6 +429,14 @@ pub(crate) fn adopt_return(
     if !action.is_object() {
         return Err(error("Planning did not admit the bounded return update"));
     }
+    clear_handoff(
+        &mut action["arguments"]["document"],
+        &admission["assignment_identity"],
+    );
+    validate_document(&action["arguments"]["document"])?;
+    action["dependency_revision"] = json!(digest(
+        &json!({"source":action["arguments"]["prior_revision"],"document":action["arguments"]["document"]})
+    )?);
     action["arguments"]["consumed_return"] = json!({"request":adoption,"result_revision":digest(&admission["returned"])? ,"judgment_revision":admission["source_revision"],"assignment_identity":admission["assignment_identity"],"execution_custody":admission["execution_custody"]});
     action["arguments"]["consumed_return"]["context"] = admission["context"].clone();
     if !admission["integration"].is_null() {
@@ -379,6 +675,12 @@ pub(crate) fn view(
         return Ok(result);
     }
     let current_revision = revision(&bytes);
+    if planning["status"] == "current"
+        && let Some(held) = held_handoff(&body)
+    {
+        result["handoff_continuation"] = json!({"status":"revalidation-required","retained":held,
+            "authority_effect":"No execution, result-use, integration, proof or completion authority is renewed by retention."});
+    }
     // Only this owner inspects its producer records. A transported observation,
     // pending publication or later material edit is not a current consumed result.
     if planning["status"] == "current"
@@ -602,6 +904,7 @@ fn execute_checked(
     mut observe: impl FnMut(&str) -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
     use std::io::Write;
+    validate_document(&invocation["arguments"]["document"])?;
     let root =
         cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
     let _lock = crate::native_planning::owner_lock(&root)?;
@@ -622,6 +925,9 @@ fn execute_checked(
         .as_str()
         .ok_or_else(|| error("owner path missing"))?;
     let bytes = serde_json::to_vec_pretty(&body).map_err(error)?;
+    if bytes.len() > crate::decision_source::MAX_SOURCE_BYTES {
+        return Err(error("Planning publication exceeds bounded source size"));
+    }
     if read(target, relative)? != bytes {
         if revision(&read(target, relative)?) != invocation["arguments"]["prior_revision"] {
             return Err(error(

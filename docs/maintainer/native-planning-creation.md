@@ -93,3 +93,38 @@ Strategy regression negatives inspect the composed public decision's pending
 and ready operations. Two inherited assertions previously read the removed
 private `verification.contribution`; their replacement preserves the stale-work
 and disallowed-command no-operation invariants across all four consumers.
+
+For already Planning-owned work, a sealed Assignment handoff now exposes
+`planning.handoff_retention_requests`. Submit that exact request set to obtain
+the existing `planning.update` operation. Planning records assigned, returned,
+or integration-pending continuation in its existing relationship observations;
+it does not create another execution ledger or interpret worker success as
+acceptance. Direct work has no retention request and acquires no Plan.
+
+After interruption, continue/reconcile the selected owner normally.
+`planning.handoff_continuation` exposes the original task, scope and complete
+request set with `revalidation-required` status. Follow that reentry through
+ordinary `start`; Assignment, transport, integration and Verification each
+revalidate their own inputs. Changed dependencies, policy or work cannot renew
+an old result. Retention itself grants no execution, result-use, integration,
+proof or completion authority.
+
+Observation-only updates keep the semantic Planning subject unchanged. An
+earlier explicit Planning continuation can survive only when it is the exact
+request retained in the current committed owner payload, the same owner is
+selected and its semantic subject still matches. Modified answers, foreign or
+uncommitted payloads, different owners and material edits do not qualify.
+Source selection and capability/work validation remain independent checks.
+
+Later observations replace only the same assignment's retained observation;
+returned work cannot regress to assigned, and integrated work sheds obsolete
+integration-pending state. Unknown or other-assignment observations are
+preserved for responsible-owner reconciliation. Existing return adoption clears
+only its own retained continuation after actual result admission/integration.
+The final canonical document and serialized source bound are checked before
+admission, with exact published bytes checked again before writing.
+
+This advances proportional #2970/#2947 continuation without claiming complete
+independent-owner ingress, all transport/cancellation outcomes, or cumulative
+#2909/#2990 acceptance. Existing Planning creation, material maintenance and
+postimage recovery remain the same owner paths.

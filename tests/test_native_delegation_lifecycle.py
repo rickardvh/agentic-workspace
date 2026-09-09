@@ -15,7 +15,8 @@ from tests.test_native_readonly_handoff import BASE
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_core_binary, native_cli, surface):
+@pytest.mark.parametrize("planning_owned", [False, True])
+def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_core_binary, native_cli, surface, planning_owned):
     worker = tmp_path / "worker.py"
     worker.write_text(
         "import json,sys\nfrom pathlib import Path\n"
@@ -50,7 +51,7 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         return consume(surface, shared_core_binary, native_cli, {**context, **updates, **({"request": request} if request else {})})
 
     plan_path = None
-    if surface == "native":
+    if planning_owned:
         from tests.test_native_planning_create import material
 
         creation = call()["planning"]["creation_requests"][0]
@@ -130,6 +131,29 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     judged[-1]["arguments"].update(answer="use-result", reason="The returned delta satisfies the bounded assignment.")
     admitted = call(judged)
     assert admitted["planning"]["adoption_requests"] == []
+    if planning_owned:
+        retention = admitted["planning"]["handoff_retention_requests"][0]
+        retain_action = call(retention)["decision_packet"]["primary_action"]
+        assert retain_action["operation_id"] == "planning.update"
+        before_retention = main.read_bytes()
+        call(invocation=retain_action)
+        assert main.read_bytes() == before_retention
+        fresh = call()
+        call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+        held = call()["planning"]["handoff_continuation"]["retained"]
+        assert held["status"] == "integration-pending"
+        assert json.loads(plan_path.read_bytes())["relationships"]["integration_pending"]["status"] == "integration-pending"
+        dependency.write_text("Drift during opaque interruption.\n")
+        with pytest.raises(AssertionError, match="changed|stale"):
+            call(held["reentry"]["request"])
+        assert call()["planning"]["handoff_continuation"]["retained"] == held
+        dependency.write_bytes(old)
+        judged = held["reentry"]["request"]
+        admitted = call(judged)
+        assert admitted["planning"]["adoption_requests"] == []
+    else:
+        assert admitted["planning"]["handoff_retention_requests"] == []
+        assert not (tmp_path / ".agentic-workspace/planning").exists()
     proposal = admitted["task_requirements"]["patch_integration"]
     assert proposal["status"] == "proposal-ready", proposal
     request = proposal["requests"][0]
@@ -208,6 +232,13 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     assert sibling.read_bytes() == b"sibling\n"
     assert (tmp_path / "launches.txt").read_text() == "once\n"
     if plan_path is not None:
+        retention = call(integrated["value"]["reentry"]["request"])["planning"]["handoff_retention_requests"][0]
+        call(invocation=call(retention)["decision_packet"]["primary_action"])
+        fresh = call()
+        call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+        held = call()["planning"]["handoff_continuation"]["retained"]
+        assert held["status"] == "returned"
+        assert "integration_pending" not in json.loads(plan_path.read_bytes())["relationships"]
         adoption = call(integrated["value"]["reentry"]["request"])["planning"]["adoption_requests"][0]
         adopt_action = call(adoption)["decision_packet"]["primary_action"]
         assert adopt_action["operation_id"] == "planning.update"
@@ -216,6 +247,7 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         assert json.loads(plan_path.read_bytes())["continuation"]["frontier"] == "Replace the second line with worker."
         fresh = call()
         call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+        assert call()["planning"]["handoff_continuation"] is None
         proof_context = {**context, "changed": [plan_ref, "src/main.txt", "src/sibling.txt", "verify_patch.py"]}
 
         def proof_view(request=None, **updates):

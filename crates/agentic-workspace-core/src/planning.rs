@@ -73,6 +73,13 @@ fn semantic_subject(state: &Value) -> Value {
     subject
 }
 
+pub(crate) fn source_subject(target: &std::path::Path, source: &Value) -> Result<Value, CoreError> {
+    let input: Input =
+        serde_json::from_value(json!({"target":target,"source":source,"relevant":true}))
+            .map_err(error)?;
+    Ok(reconciliation(&input)?["subject"].clone())
+}
+
 fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     let source = input
         .source

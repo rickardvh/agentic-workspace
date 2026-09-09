@@ -327,6 +327,7 @@ pub(crate) fn view(
                         | "delegation/read-result/v1"
                         | "assignment/judge-return/v1"
                         | "planning/adopt-return/v1"
+                        | "planning/retain-handoff/v1"
                         | "assignment/integrate-patch/v1"
                         | PATCH_EXPORT
                         | PATCH_RETURN
