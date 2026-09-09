@@ -187,6 +187,14 @@ the combined current Assignment/policy/configuration suite passes 45 cases and
 Rust core passes 96 (three subprocess helpers ignored). Source bytes remain
 unchanged. The ordinary lived-in route still admits the current local executor.
 
+The native logging suite passes 23 cases covering disabled/enabled behavior,
+privacy, correlation, concurrent publication and failure isolation. #2995 still
+requires final installed-artifact proof under #2990. A fresh configuration action
+also rejects an effects-directory junction introduced after authorization,
+preserving both source and outside directory; the source/parent/effects link
+matrix passes two cases with one Windows file-symlink skip. No writer correction
+was needed for that #3001 confinement case.
+
 ### #2981 current lifetime disposition
 
 | Native constituent | Disposition | Current boundary |

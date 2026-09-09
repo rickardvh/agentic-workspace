@@ -259,7 +259,7 @@ def test_configuration_insertion_preserves_existing_source_and_exact_authorizati
     assert source.read_bytes() == b"schema_version=1\nworkspace={enabled=true}\n"
 
 
-@pytest.mark.parametrize("linked", ["source", "parent"])
+@pytest.mark.parametrize("linked", ["source", "parent", "effects"])
 def test_configuration_writer_preserves_linked_sources(tmp_path: Path, shared_core_binary: Path, native_cli: Path, linked: str) -> None:
     import os
     import subprocess
@@ -271,6 +271,30 @@ def test_configuration_writer_preserves_linked_sources(tmp_path: Path, shared_co
     body = b'schema_version=1\n[workspace]\ncli_invoke="original"\n'
     (outside / "config.toml").write_bytes(body)
     workspace = target / ".agentic-workspace"
+    context = {"target": str(target), "task": "Inspect linked configuration", "changed": []}
+    if linked == "effects":
+        workspace.mkdir()
+        (workspace / "config.toml").write_bytes(body)
+        initial = consume("native", shared_core_binary, native_cli, context)
+        request = initial["configuration_write"]["requests"][0]
+        request["arguments"]["value"] = "changed"
+        proposal = consume("native", shared_core_binary, native_cli, {**context, "request": request})
+        answer = proposal["decision_packet"]["decision_request"]["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        ready = consume("native", shared_core_binary, native_cli, {**context, "request": answer})
+        action = ready["decision_packet"]["primary_action"]
+        (workspace / "local").mkdir()
+        link = workspace / "local/effects"
+        if os.name == "nt":
+            result = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(outside)], capture_output=True)
+            assert result.returncode == 0, result.stderr
+        else:
+            link.symlink_to(outside, target_is_directory=True)
+        with pytest.raises(AssertionError, match="link|reparse|confined"):
+            consume("native", shared_core_binary, native_cli, {**context, "invocation": action})
+        assert (workspace / "config.toml").read_bytes() == body
+        assert sorted(p.name for p in outside.iterdir()) == ["config.toml"]
+        return
     if linked == "parent" and os.name == "nt":
         result = subprocess.run(["cmd", "/c", "mklink", "/J", str(workspace), str(outside)], capture_output=True)
         assert result.returncode == 0, result.stderr
@@ -283,7 +307,6 @@ def test_configuration_writer_preserves_linked_sources(tmp_path: Path, shared_co
                 (workspace / "config.toml").symlink_to(outside / "config.toml")
         except OSError:
             pytest.skip("Host does not permit file symlink creation; directory junction covered separately")
-    context = {"target": str(target), "task": "Inspect linked configuration", "changed": []}
     result = consume("native", shared_core_binary, native_cli, context)
     assert result.get("status", result.get("decision_packet", {}).get("status")) == "blocked"
     assert (outside / "config.toml").read_bytes() == body
