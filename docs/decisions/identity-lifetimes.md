@@ -18,6 +18,8 @@ Rejected: workspace revision as universal identity, random retry IDs as semantic
 
 Rickard supplied the product boundary in the linked owning issues and reconstruction instructions. Codex selected and condensed this record; that editorial contribution does not turn AW or Memory into its semantic author. The repository owner admits this provenance when accepting this record. Until that admission, it is a proposed source for automated consumption.
 
+Revalidated against repository intent on 2026-09-09: the intervening additions clarify repository-lifetime efficiency without changing this decision, consequence, authorship or scope. This is an agent-prepared source refresh; automated consumption still requires explicit repository-source admission of the reviewed snapshot.
+
 The structured authority basis binds the current repository intent document. The linked issues preserve the specific human boundary and discussion; they are evidence references, not runtime network dependencies. AW context informed the preservation work, without supplying deciding authority.
 
 ## Scope, evidence and supersession
@@ -56,7 +58,7 @@ No prior decision identity is fabricated. The rejected mechanisms above are alte
       {
         "owner": "repository",
         "reference": "SYSTEM_INTENT.md",
-        "revision": "sha256:b256160d13a2a8d47ab276cab83bf5beee3e77ecad5ca07358b2422239068e9a"
+        "revision": "sha256:5bce39a4fdbc3dd51e6a88e96f00f1160f8a3efaef14930177650e619fb5801d"
       }
     ]
   },
