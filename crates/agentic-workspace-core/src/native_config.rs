@@ -169,6 +169,9 @@ fn residual(source: &str, field: &str, value: &Value, config: &Value) -> Value {
     let mut result = json!({"source":source, "field":field, "owner":owner,
         "value_revision":digest(value).expect("JSON value hashes"),
         "affects":affects, "reason":"current-control-requires-native-owner"});
+    if field == "delegation.replacement" {
+        result["work_identity"] = json!({"id":value["work_id"],"revision":value["work_revision"]});
+    }
     if field == "workspace.improvement_latitude"
         || field.starts_with("workflow_obligations.")
         || matches!(
@@ -232,6 +235,11 @@ pub(crate) fn assignment_consumption(
                             })
                         })
                 })
+        } else if field == "delegation.replacement" {
+            let disposition = &assignment["former_replacement"];
+            disposition["status"] == "outside-current-work"
+                && disposition["source"] == residual["source"]
+                && disposition["value_revision"] == residual["value_revision"]
         } else {
             // Availability of a different worker/planner is not needed for the
             // exact admitted retained-local executor. No worker availability is granted.
@@ -412,6 +420,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 | "assurance.agent_may_escalate"
                                 | "assurance.agent_may_deescalate"
                                 | "assurance.proof_profiles"
+                                | "assurance.subsystem_profiles"
                         )
                         && shared["modules"]["enabled"]
                             .as_array()

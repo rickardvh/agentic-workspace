@@ -2,8 +2,9 @@
 
 Current merged base: `c2303e9212a067d306be14846824ff727bc59cb0`, freshly
 verified after #3166/#3167/#3168 integration. The current bounded follow-up
-repairs #2817/#2210's actual configured-source Assignment judgment path under
-explicit human maintainer authorization. It is not yet independently admitted.
+repairs #2817/#2210's configured-source Assignment judgment path in #3170 and
+transfers #2613 Verification declarations into the existing manifest. Both
+remain subject to independent review.
 Historical proof below retains its actual subject. Unrelated original-checkout
 assignments, proof receipts and local files remain outside this change.
 
@@ -18,7 +19,7 @@ an implementation gap even when the former Python host supplies that behavior.
 ## P0/P1 dispositions
 
 Each owner has exactly one disposition against the merged cumulative candidate
-plus this bounded Assignment correction. Integration of the former stack does
+plus the bounded Assignment and Verification source corrections. Integration of the former stack does
 not satisfy its parent owners. #2613's lived-in human-configuration boundary
 remains an implementation gap, as recorded in #2983 comment 5590398962.
 
@@ -40,12 +41,12 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 14, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 22, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
-| #2981 | evidence/conformance gap | Current reusable-conclusion tests exist under `test_resolved_decision_reuse.py`; native ordinary producer-lifetime and later-equivalent-work cost evidence remains to be established. |
-| #2767 | bounded implementation gap | The authorized native writer can edit an existing workspace.cli_invoke in either canonical TOML source through an exact human-bound proposal. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
+| #2981 | bounded implementation gap | Native proof receipts bind actual producer bytes and preserve current evidence across unrelated file churn. The older Python semantic-partition tests do not establish a native retained negative conclusion or focused cross-owner partial re-resolution. Those ordinary native outcomes are absent, not merely missing CI. Avoid a generic cache until a material conclusion justifies retention. |
+| #2767 | bounded implementation gap | The authorized native writer can set workspace.cli_invoke in either existing canonical TOML source through an exact human-bound proposal, including insertion when unrelated bytes can be preserved. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
 | #2916 | candidate-complete | Existing independent #3138 acceptance. Typed policy/currentness/override authority is distinct from the unresolved execution and return lifecycle. |
 | #2210 | bounded implementation gap | Comparative judgment, exact execution identity, admitted return and a retained-and-checked contextual signal exist. Supported host-native/mutation lifecycles and complete consequential comparison remain unresolved; no inferred target winner or completion authority. |
 | #2209 | bounded implementation gap | The candidate derives one current retained-and-checked contextual target signal from admitted Planning consumption and native Verification. Task/source/config drift de-adopts it. Human/evaluation ingress, failure/dispute handling and repeated selection convergence remain unresolved; no general target quality is inferred. |
@@ -90,6 +91,148 @@ ignored. Cumulative conformance and independent review remain separate gates.
 This removes the observed bootstrap defect; #2817/#2210/#2947 remain bounded
 implementation gaps for their full configured consequential lifecycle. Next:
 #2613's Verification/configuration source split, then the remaining P0/P1 owners.
+
+## #2613 current source/lifetime disposition
+
+The shared dogfood config shrinks from 945 to 122 lines without changing any
+retained value. Exact TOML comparison verifies that the destination contains all
+30 domain lanes, three profiles, 15 requirements and one subsystem profile; all
+pre-existing manifest content and remaining shared policy are unchanged.
+
+| Source family | Lifetime and disposition | Current boundary |
+| --- | --- | --- |
+| Verification routes/profiles/requirements/subsystem metadata | Transfer once, unchanged, to existing Verification manifest `assurance` | Native source selection fails on competing sections, malformed declarations or source drift. Requirement force and shared level/escalation policy survive. Unsupported subsystem semantics still block claims. |
+| Modules, workspace invocation/adapter choice, trust/admission pins, payload and source policy | Retain as durable repo choices | No capability enablement, source adoption or proof is inferred. |
+| Compatibility workflow obligations and advisory preferences | Retain pending existing-owner disposition | This transfer does not silently retire their policy or grant their former commands an ordinary native interface. |
+| Original local safety/delegation/target declarations | Retain unchanged human authority | Config SHA-256 remains `3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189`. Typed Assignment consumes current applicability/comparison, not configuration writes. |
+| Configured target confidence | Human-authored prior; derived lifecycle support stays with #2209 | Schema/guidance no longer invites agents to tune config from outcomes. Broader former observed/adaptive fields still need domain disposition. |
+| Former local setup/assignment-answer fields | Task/revision state; preserve source, no new authoring | An independently admitted local Assignment can exclude a former replacement answer bound to a different work id from implementation restrictions only. Matching ids, absent current Assignment, malformed sources and source drift remain blocking; no answer is adopted or retired. #2767/#2210 retain broader transition outcomes. |
+
+The installed no-CLI contract now describes the admitted native writer and source
+split; it no longer instructs agents to invoke retired setup commands or write
+new task continuation into local config. Former registry, setup continuation, replacement-answer and adaptive-observation
+schema fields are marked read-only/deprecated for source transition, not advertised
+as ordinary authoring. Configured prior provenance is explicitly human-authored.
+This is still a bounded #2613 implementation slice: complete schema retirement,
+local former-state transition and broader configure-once admission remain open.
+
+Proof: 40 native/JSON/Python/TypeScript domain/profile cases pass; the four
+transfer cases additionally exercise requirements at the destination. They retain
+positive command/publication/idempotency and negative currentness/conflict/unknown
+policy tests. Rust core: 96 pass, three subprocess-only helpers ignored. The quiet
+unrelated-path test now uses a genuinely path-scoped source; the real manifest
+continues to preserve its global requirement uncertainty. Verification retained
+reader: 51 pass. Native original-checkout Assignment still admits the current
+executor with no implementation blocker and no local config diff. Independent
+review and cumulative release conformance remain pending.
+
+The setup procedure now uses current configuration requests through start/invoke;
+retired setup/defaults commands and instructions to grow shared proof registries
+are removed. Read-only transition annotations preserve former setup, replacement
+and economic/evaluation source meaning without inviting new configuration state.
+The nine process-lifecycle cases pass, including rejection of stopped, malformed,
+truncated, wrong-identity and source-drift results; positive admitted target evidence
+leaves local configuration bytes unchanged. Fifteen former-owner/recovery cases
+and four native CLI black-box cases pass on the cumulative source. Two stale tests
+requiring retired setup command text and prompt-keyword review routing are removed;
+semantic route and authenticated independent-review admission proof remains.
+
+Fresh GitHub priority inventory: all 34 open P0/P1 owners have exactly one audit
+disposition (four candidate-complete, 19 bounded implementation gaps, 11 evidence/
+conformance gaps). Classification completeness is not release completion.
+
+The subsequent source audit retires the lived-in `workspace.optimization_bias`
+and `workspace.advanced_features` aliases under #2613 comment 5552631756. Native
+search finds no effect/claim consumer beyond advisory residual reporting; actual
+workflow artifact choice, initiative authority, diagnostic policy and capability
+admission remain in their distinct sources. Shared config is now 120 lines.
+Former alias inputs stay recognizable and read-only for other repositories;
+this retirement does not erase their sources or adopt their state.
+
+### Current Verification consequence follow-through
+
+The existing subsystem profile now projects current, bounded Ownership paths
+into the same assurance requirement owner. Missing/duplicate declarations,
+unknown scope semantics, conflicting level aliases and unconfined sources fail
+closed. Review owner, evidence vocabulary, workflow references and force remain
+visible requirements; scope selection cannot discharge them. Ownership remains
+unchanged. Changing its bytes invalidates prepared proof actions and admitted
+receipts through the strategy's source revision. No new registry or custody
+operation is added.
+
+Binding applicable requirement levels now form an effective strategy floor.
+Agent de-escalation cannot undercut that floor, and source-required escalation
+does not require an agent escalation permission. Returned requests use the valid
+current level. Recommended or unrelated requirements do not raise it.
+
+After the exact transfer, the Verification owner removes two retired optional
+proof/report command entries and replaces required test-evidence reporting and
+mirror-report methods with current native strategy and generated-package checks.
+Required manual/independent review and evidence intent stay unchanged. This is
+source-owner method maintenance, distinct from the earlier byte-preserving move.
+
+The subsystem/migration parity cases execute and admit current command evidence,
+then prove action rejection and receipt de-adoption on Ownership drift. Retained
+former config profiles use the same owner; unrelated malformed Ownership is not
+read when no subsystem profile requires it. The live dogfood profile is merged
+into the existing Verification requirement `subsystem:workspace-cli-runtime`,
+preserving its exact paths, level, force, evidence and review obligations. Future
+proof-scope maintenance now belongs to that requirement without editing the
+package-managed Ownership file. The former-source transition reader remains;
+Ownership bytes and payload integrity remain unchanged. This resolves the live
+indirection, not the broader mixed-source payload lifecycle under #2613/#2767.
+
+The former-answer disposition passes four native/JSON/Python/TypeScript cases;
+the combined current Assignment/policy/configuration suite passes 45 cases and
+Rust core passes 96 (three subprocess helpers ignored). Source bytes remain
+unchanged. The ordinary lived-in route still admits the current local executor.
+
+The native logging suite passes 23 cases covering disabled/enabled behavior,
+privacy, correlation, concurrent publication and failure isolation. #2995 still
+requires final installed-artifact proof under #2990. A fresh configuration action
+also rejects an effects-directory junction introduced after authorization,
+preserving both source and outside directory; the source/parent/effects link
+matrix passes two cases with one Windows file-symlink skip. No writer correction
+was needed for that #3001 confinement case.
+
+### #2981 current lifetime disposition
+
+| Native constituent | Disposition | Current boundary |
+| --- | --- | --- |
+| Selected command evidence | reuse | Existing producer-owned receipt/publication, exact semantic inputs, current selected strategy, native binary and shell identity. Fresh admission checks the retained execution; it does not rerun the command. Different tasks and dependent source changes do not inherit it. |
+| Proof sufficiency and current claim | stronger-owner/derive | Verification composes current evidence with applicable requirements. Receipt reuse never carries a historical completion answer forward. |
+| Planning subject | stronger-owner/derive | The current Planning producer owns subject meaning and retained material. Attempt/custody records are not independent semantic subjects. Cross-owner reuse still needs focused proof. |
+| Assignment eligibility and comparison | recompute | Current target restrictions, capability observations, policy and work bind admission. Sparse lifecycle evidence derives from current Planning/Verification owners; a previous target choice is not retained authority. |
+| Memory and procedure no-signal | recompute | Native selectors avoid unrelated body reads. Persisting these cheap absence checks has no demonstrated benefit; this is the no-memoise counterexample, not the required material negative-reuse path. |
+| Public decision and rendered context | recompute | Compose current owner constituents. No whole decision, local host object or prompt is adopted as semantic input. |
+
+The audit therefore has 4 candidate-complete owners, 20 bounded implementation
+gaps and 10 evidence/conformance gaps. The #2981 correction supersedes the earlier
+4/19/11 count: native proof reuse exists, but the required native negative-reuse
+and partial re-resolution path is not implemented by the former Python helper.
+
+### #2570 established corpus disposition
+
+The current manifest has six declared notes and one advisory durable fact. Native
+`memory/read-current-note/v1` retrieves the real April decision and package note
+in fresh processes at exact source revisions. Both remain review evidence;
+source identity does not confirm their factual currentness. The following is a
+maintainer inventory, not a Memory promotion/retirement mutation or admission.
+Paths below are relative to `.agentic-workspace/memory/repo/`.
+
+| Source | Disposition | Preserved value and current limit |
+| --- | --- | --- |
+| `index.md` | retain advisory, routing only | Sparse manifest selection and no bulk loading. It supplies no semantic authority. |
+| `domains/example-runtime-boundary.md` | retain advisory, reconcile | Preserve generated-source and installed-payload separation. Its Python runtime-owner statement is obsolete after native cutover; do not import it as current authority. |
+| `domains/memory-package-context.md` | retain advisory, reconcile | Preserve Memory/Planning separation and source versus dogfood install. Native implementation ownership now also includes Rust; old package paths are incomplete. |
+| `domains/planning-package-context.md` | retain advisory, reconcile | Preserve active-custody versus durable-knowledge separation. Legacy record/catalogue details cannot define the reconstructed native owner. |
+| `decisions/installed-system-consolidation-2026-04-05.md` | human-review-needed | Root-owned operational state under `.agentic-workspace/` remains useful, but deciding provenance is ambiguous and its state.toml/uninstall instructions are obsolete. Existing `docs/decisions/` explicitly does not admit this note; no promotion is inferred. |
+| `mistakes/recurring-failures.md` and fact `selected-plan-owned-next-task` | retain advisory, reconcile | Preserve selected-owner continuity and independent-review separation. Retired summary/roadmap commands are not executable guidance. Current native Planning recovery and review skill are stronger-owner candidates; mere references or passing tests do not authorize hiding the original lesson. |
+
+Templates, skill indexes and directory READMEs are operating/routing surfaces,
+not additional knowledge records to bulk-import. No corpus bytes were changed.
+Native source disposition/promotion and stronger-owner absorption admission remain
+the #2570 implementation gap; #3040/#3041 retain the decision-specific boundary.
 
 ## Integrated children and later gates
 

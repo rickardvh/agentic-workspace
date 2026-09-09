@@ -3666,6 +3666,33 @@ def validate_enabled_modules(value: Any, *, config_path: Path, known_modules: tu
     return tuple(enabled)
 
 
+def _verification_assurance_source(effective_root: Path, raw_assurance: Any) -> dict[str, Any]:
+    if not isinstance(raw_assurance, dict):
+        raise WorkspaceUsageError("Workspace assurance must be a table.")
+    raw_assurance = dict(raw_assurance)
+    strategy_path = effective_root / ".agentic-workspace/verification/manifest.toml"
+    if strategy_path.exists():
+        for path in (strategy_path, *strategy_path.parents):
+            if path == effective_root:
+                break
+            if path.is_symlink() or getattr(path, "is_junction", lambda: False)():
+                raise WorkspaceUsageError("Verification strategy source cannot traverse links.")
+        if strategy_path.stat().st_size > 1_048_576:
+            raise WorkspaceUsageError("Verification strategy source exceeds bounded read.")
+        strategy = load_toml_payload(path=strategy_path, surface_name="Verification manifest")
+        if "assurance" in strategy:
+            if strategy.get("schema_version") != "agentic-workspace/verification-manifest/v1":
+                raise WorkspaceUsageError("Invalid Verification strategy source version.")
+            owned = strategy["assurance"]
+            if not isinstance(owned, dict) or set(owned) - {"proof_profiles", "domain_proof_lanes", "requirements", "subsystem_profiles"}:
+                raise WorkspaceUsageError("Verification assurance contains unsupported owner fields.")
+            for field, value in owned.items():
+                if field in raw_assurance:
+                    raise WorkspaceUsageError(f"Competing Verification {field} sources: config and manifest; preserve both.")
+                raw_assurance[field] = value
+    return raw_assurance
+
+
 def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None = None) -> WorkspaceConfig:
     defaults = default_module_update_policies()
     if valid_presets is None:
@@ -3725,6 +3752,10 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         maintainer_mode_source = local_override.field_sources.get("workspace.maintainer_mode", "local-override")
 
     if not config_path.exists():
+        assurance, assurance_warnings = _load_assurance_config(
+            raw_assurance=_verification_assurance_source(effective_root, {}), config_path=WORKSPACE_CONFIG_PATH
+        )
+        warnings.extend(assurance_warnings)
         agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
             target_root=effective_root,
             configured=None,
@@ -3993,8 +4024,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(system_intent_warnings)
+    raw_assurance = _verification_assurance_source(effective_root, payload.get("assurance", {}))
     assurance, assurance_warnings = _load_assurance_config(
-        raw_assurance=payload.get("assurance", {}),
+        raw_assurance=raw_assurance,
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(assurance_warnings)

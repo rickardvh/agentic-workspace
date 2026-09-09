@@ -120,8 +120,8 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             .iter()
             .find(|request| request["owner"] == "verification" && request["request_kind"] == kind)
     };
-    let (route_source, former_routes) =
-        native_routes::former_selection(target, &native_routes::source(target)?)?;
+    let route_catalogue = native_routes::source(target)?;
+    let (route_source, former_routes) = native_routes::former_selection(target, &route_catalogue)?;
     let route_input = json!({
         "current_work":work, "source":route_source,
         "request":request_for("semantic-routes")
@@ -174,6 +174,27 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             candidate["selection_request"] = request;
         }
         view["former_selection"] = candidate;
+    }
+    if let Some(view) = routes.as_mut()
+        && view["status"] == "current"
+        && let Some(parent) = view["discovery"]["parent"].as_str()
+        && route_catalogue["routes"]
+            .as_array()
+            .is_some_and(|leaves| leaves.iter().any(|leaf| leaf == parent))
+    {
+        // The existing branch request also drills into a declared leaf. Only
+        // this explicit query loads procedure references; applicability and
+        // external mutation authority remain with their existing owners.
+        let detail = native_routes::discovery(json!({"target":target,"exact":parent}))?;
+        if detail["source_revision"] != route_catalogue["revision"]
+            || native_routes::former_selection(target, &native_routes::source(target)?)?.0
+                != route_source
+        {
+            return Err(CoreError::new(
+                "route sources changed during leaf discovery",
+            ));
+        }
+        view["discovery"]["detail"] = detail["routes"][0].clone();
     }
     let route_fact = routes
         .as_ref()
@@ -588,7 +609,10 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                 .into_iter()
                 .flatten()
             {
-                if action["operation_id"] == "proof.report" {
+                if matches!(
+                    action["operation_id"].as_str(),
+                    Some("proof.report" | "configuration.write" | "configuration.recover-write")
+                ) {
                     let mut dependencies = action["source_requests"]
                         .as_array()
                         .cloned()

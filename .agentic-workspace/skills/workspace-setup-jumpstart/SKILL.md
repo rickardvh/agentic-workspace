@@ -1,63 +1,47 @@
 ---
 name: workspace-setup-jumpstart
-description: Guide bounded post-bootstrap setup for newly installed or adopted Agentic Workspace in a lived-in repo after the main AW operating skill routes to setup jumpstart.
+description: Help configure Agentic Workspace through current source-owned decisions, using ordinary start/invoke and preserving human policy.
 ---
 
-# Workspace Setup Jumpstart
+# Configure Agentic Workspace
 
-Use this subskill when Agentic Workspace was newly installed or adopted in a lived-in or mature repo and the task is to populate, seed, or orient workspace surfaces after bootstrap.
-This subskill assumes the main AW operating skill or compact router has already selected the AW invocation and routed here.
+Use this procedure when the user asks for configuration help or the current
+operating decision routes a configuration concern here. It is a judgment aid;
+the responsible owner supplies current questions, operations and authority.
 
-## Route
+1. Use the invocation already selected by the adapter. Run
+   `start --target . --task "<configuration outcome>" --format json` and read its
+   `decision_packet`. Preserve any required source-read or Planning request.
+2. Inspect only the current concern and its named source. Derive technical facts
+   before asking questions; a cheap current fact need not be persisted. If the
+   requested outcome is already represented, leave configuration alone.
+3. Use an exact owner-returned request. For a configuration edit, select the
+   matching `configuration_write.requests` entry and supply the intended value.
+   Run `start --input <request.json>` with the same context and `--format json`.
+   The current writer sets `workspace.cli_invoke` in an existing canonical shared
+   or local TOML source, including a missing control when source bytes can be preserved. An unavailable control remains an owner gap;
+   this procedure does not authorize a direct edit or capability enablement.
+4. Present only the returned irreducible decision, including the exact source,
+   affected key and intended value. A previously explicit human answer may be
+   supplied only if it authorizes that exact current proposal. Keep all binding
+   fields; drift requires a fresh request. Guided use follows the same decisions.
+5. Invoke only the returned `primary_action` through
+   `invoke --input <action.json>` with the same context and `--format json`.
+   Resolve again to verify the result. Use a returned recovery request if a write
+   was interrupted. A successful write grants no continuing source custody.
+6. A returned `defer` answer changes no configuration and grants no readiness.
+   On resume, resolve the concern from current sources; do not replay a stale
+   answer or create setup history in local config. Report an unavailable durable
+   resume operation honestly rather than fabricating one.
 
-1. Run the configured invocation with `setup --target . --format json` for bounded post-bootstrap setup guidance.
-   When ordinary startup routed here from `configuration_readiness`, preserve that receipt identity and claim boundary: configured-workflow implementation waits, while unrelated read-only inspection remains allowed.
-2. Begin with `configuration_concerns`. Inspect only the strong repo-owned sources and exact selectors named by active concerns; do not scan the workspace tree, docs, backlog, scratch, or source merely to look for configuration ideas.
-3. Resolve only concerns whose returned `setup_pressure` is true, in this order. The current semantic/source concern set is authoritative; do not replay unchanged or retired receipts:
-   - accept `satisfied` and `not-applicable` without questions;
-   - send `inference-ready` work through its `apply_route` owner, then rerun setup;
-   - ask only the first `human-decision-required` question, in its outcome/consequence wording, send the answer to `answer_owner`, then rerun setup;
-   - send `bounded-route-required` analysis to its named Planning/human owner instead of expanding setup.
-4. Prefer the zero-question path. Explicit config, commands, CI, durable intent sources, and ownership maps may support technical inference. Generic filenames, keywords, directory names, scratch artifacts, and package-source-repo policy cannot independently authorize assurance, proof, ownership, capability, or other shared policy.
-   - For `source_obligation` concerns, explain the repository knowledge or policy needed before field/path detail. Bind one exact adequate configured source only when `auto_bind_safe` is true. Otherwise route the named owner to choose, create, enrich, defer, or narrow the dependent configuration. A scaffold may contain headings and ownership metadata only; never invent substantive domain policy. Required unresolved source obligations block readiness completion but only constrain their affected work or claims.
-5. Treat setup as pre-write and pre-seed discovery. This skill does not write shared config directly or maintain a separate wizard state. For a `config.policy-apply` route, select the exact returned decision object, keep its shared/local scope, setup identity, reported config revision, capability readiness basis, and semantic concern receipts, preview consequential changes with `--dry-run`, then apply and rerun setup. Readiness completion is a separate no-change decision and is rejected if any of those current inputs drift. Never translate the decision into a direct TOML edit.
-6. Promote only:
-   - durable operating knowledge to Memory;
-   - bounded follow-up to Planning;
-   - evidence-backed friction to repo-friction or improvement intake;
-   - low-confidence or generic findings to transient report only.
-7. Before writing seed surfaces, check promotion criteria in `.agentic-workspace/docs/setup-findings-contract.md` and the durable candidate rule in `.agentic-workspace/docs/jumpstart-contract.md`.
-8. After every named owner route is complete, use `configuration_concerns.mutation_context.reconciliation_completion` exactly as returned to mark that same readiness identity current, then rerun ordinary `start`. Do not complete readiness while a human question or bounded Planning route remains.
-9. If the user stops before unresolved concerns are complete, select `configuration_concerns.continuation.actions.defer` exactly as returned. Use `suppress_optional` only for an explicit local preference to hide optional prompts; neither action marks readiness current or hides an affected required prerequisite. To continue later, use the returned `resume` decision or rerun `setup`, which re-resolves from the compact revision-bound concern ids without the old transcript. Never turn a temporary local disposition into shared repo policy.
+Shared policy stays stronger than local preference. Preserve unrelated keys,
+comments and files. Former source intent must be represented, explicitly
+resolved, or remain an affected-behavior blocker before its source is retired.
 
-## Mutation ownership
+Keep task answers with Assignment, learned outcomes with target evidence, and
+proof strategy/evidence with Verification. Shared/local config holds durable
+human choices and necessary environment declarations. Do not seed generic
+obligations, copy package-repository policy, or tune human priors from outcomes.
 
-Use `configuration_concerns.mutation_inventory` as the authoritative setup write map. Module state goes through lifecycle/module commands, startup adapters through `init`, and compiled intent through `system-intent --sync`. Bounded shared defaults and local runtime policy go through `config.policy-apply`. Ownership declarations, nested assurance semantics, and repository-specific Verification strategy remain reviewed ordinary repo source only when the inventory says so; setup never treats that retention as permission for blind file editing.
-
-## Required Seed Surfaces
-
-When the task is to populate durable workspace surfaces after bootstrap, handle these files explicitly:
-
-- `.agentic-workspace/OWNERSHIP.toml`: keep package-managed module roots, managed surfaces, fences, and authority surfaces generic; add host-specific `[[subsystems]]` only from inspected repo structure, test commands, ownership boundaries, or clear user direction. Do not copy subsystem entries from the Agentic Workspace source repo into a host repo.
-- `.agentic-workspace/system-intent/intent.toml`: use the configured invocation with `system-intent --target . --sync --format json` first, then refine only reviewable interpreted fields that are supported by named repo intent sources such as `README.md`, `SYSTEM_INTENT.md`, product docs, or explicit user direction. Do not mechanically summarize every source file.
-- `.agentic-workspace/system-intent/subsystems.toml`: add scoped durable intent only for subsystem ids already declared in `.agentic-workspace/OWNERSHIP.toml [[subsystems]]`. Leave `subsystems = []` when no host subsystem boundary is clear.
-- `.agentic-workspace/config.toml [assurance]`: use the configured invocation with `defaults --section assurance_onboarding --format json` before seeding assurance. Add proof profiles, requirements, or subsystem profiles only when an inspected host-owned source names the risk, requirement, evidence burden, proof route, or claim boundary. Subsystem profiles must use existing `.agentic-workspace/OWNERSHIP.toml [[subsystems]]` ids.
-- `.agentic-workspace/verification/manifest.toml`: use the configured invocation with `defaults --section verification_onboarding --format json` before seeding Verification. Add protocols, scenarios, proof routes, bundles, or known gaps only when the host repo has a repeatable proof need that ordinary test or command selection does not already express.
-- `.agentic-workspace/verification/proof-strategy.toml`: seed only enum hints that the host repo explicitly owns. Do not summarize strategy prose or infer policy from filenames.
-
-Population rule: host repo values must be derived from the host repo. Package defaults may provide schema shape and managed-surface ownership, but not source-repo product intent, source-repo subsystem ids, source paths, proof commands, or issue references.
-
-Assurance and Verification population rule: AW surfaces questions and templates; the agent decides whether evidence is strong enough to write anything. Prefer leaving these surfaces absent over creating generic placeholder obligations.
-
-## Seed Bias
-
-Prefer compact durable boundaries over broad prose mirrors. First candidates for mature repos are contract-like surfaces that encode repeatable decisions, restart boundaries, task-shape guidance, or proof expectations.
-
-## Stop Conditions
-
-Stop and ask or create bounded Planning state if setup output points at broad repo analysis, non-obvious host policy, or active work rather than durable operating knowledge.
-
-## Output
-
-Report setup mode, strongest candidate surfaces, what will be seeded, promoted, or dismissed, and the proof command.
-Until a typed setup owner records the same readiness identity, capability basis, and current concern receipt set as current, do not claim repository configuration reconciliation is complete. These receipts are current-state evidence, not chronological setup history, and never authorize automatic module enablement or upgrade.
+Report the exact configuration effect and remaining concern. A successful edit
+is not evidence that broader configure-once, proof or completion intent is met.

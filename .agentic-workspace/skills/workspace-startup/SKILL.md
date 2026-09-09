@@ -26,7 +26,6 @@ Do not replace a configured invocation with a guessed bare command.
    - proof or claim boundaries;
    - routed owner, skill, operation, selector, or preferred invocation;
    - compatibility projections such as `planning_route_decision` or `planning_safety_gate` when the current runtime emits them.
-   - receipt-bound `configuration_readiness` when fresh or stale bootstrap authority requires repository setup reconciliation.
 4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name. **Do not reclassify the task** from prose, legacy task-switch fields, or another capability after a current authoritative route decision exists.
 5. If the compact result is insufficient, use only the smallest selector, skill, operation, or safe probe it routes to before broadening context.
 
@@ -42,7 +41,9 @@ Do not replace a configured invocation with a guessed bare command.
    the same context plus `--format json`. Do not construct actions yourself.
 2. Prefer a typed/routed operation, generated command, specialized skill, exact owner/selector, or explicit human decision over hand-editing managed state.
 3. Load a specialized capability procedure only when the current decision routes there.
-   A `reconcile-repository-configuration` action routes exactly to `workspace-setup-jumpstart` and its configured `setup --target . --format json` command; do not substitute task-keyword inference or broad repo discovery.
+   Use `workspace-setup-jumpstart` for explicit configuration help or a current
+   configuration concern. It uses the same native requests and start/invoke path;
+   it does not add setup commands or a second readiness authority.
 4. Keep direct work direct when the contract permits it. Do not create Planning, Memory, review, proof, handoff, or other artifacts merely to demonstrate AW use.
 5. Do not infer permission from advisory prose when a current hard gate or forbidden action says otherwise.
 
@@ -53,7 +54,7 @@ After the bounded action:
 1. Admit or refresh the result through the owner/operation named by the current route when required.
 2. Reconcile only concerns relevant to this work: changed state, proof/evidence, claim permission, future-relevant residue, continuation, or an explicit human decision.
 3. Preserve the difference between successful local action and permission to make a broader completion claim.
-4. If the user, review, orchestrator, or host explicitly corrects the acting agent's behavior, treat that correction as reconciliation input and submit it through `correction-event submit` (or a newer routed equivalent) when available. Do not substitute an apology, chat promise, or Memory note for correction admission.
+4. If the user, review, orchestrator, or host explicitly corrects the acting agent's behavior, treat that correction as reconciliation input and submit it through the current correction owner request when available. An unavailable native correction operation remains an explicit owner gap. Do not substitute an apology, chat promise, or Memory note for correction admission.
 5. If the result names another supported action or unresolved owner, resolve again from that current state.
 6. Stop when no further action is required and the intended claim is permitted. Terminal reconciliation is closeout; no separate closeout framework is assumed.
 
@@ -72,7 +73,7 @@ Use specialized skills only when routed or when the request directly maps to the
 
 - `workspace-intent-discovery` — ambiguous human intent or work-shape decision.
 - `workspace-proof-selection` — proof selection/interpretation when the current claim needs it.
-- `workspace-setup-jumpstart` — bounded post-bootstrap seeding in a lived-in repo.
+- `workspace-setup-jumpstart` — bounded source-owned configuration help.
 - `workspace-operating-loop` — interpret compact decision/state-delta behavior when a visible update or reconciliation needs deeper guidance.
 - `workspace-transition-gates` — interpret explicit allowed/forbidden actions, preferred invocation, or degraded fallback when the compact route is not self-explanatory.
 

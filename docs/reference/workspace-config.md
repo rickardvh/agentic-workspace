@@ -70,13 +70,13 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.decision_record_statuses` | array of string | no |  | Optional accepted status values for decision records. | `["proposed", "accepted", "dismissed"]` |  |
 | `assurance.invariant_registry` | string | no |  | Path to the repo invariant registry used during higher-assurance work. | `"docs/invariants.md"` |  |
 | `assurance.risk_registry` | string | no |  | Path to the repo risk registry used during higher-assurance work. | `"docs/risks.md"` |  |
-| `assurance.proof_profiles` | object | no | `{}` | Named proof profiles available to active planning assurance fields. |  |  |
+| `assurance.proof_profiles` | object | no | `{}` | Named proof profiles available to active planning assurance fields. |  | x-agentic-workspace-source-owner: ".agentic-workspace/verification/manifest.toml#assurance.proof_profiles" |
 | `assurance.proof_profiles.<name>` | object | no |  | Reusable command and review-aid set for a named proof profile. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.proof_profiles.<name>.required_commands` | array of string | no | `[]` | Commands that must pass for this proof profile. A command may occupy only one of the required, optional, or disallowed roles. |  |  |
 | `assurance.proof_profiles.<name>.optional_commands` | array of string | no | `[]` | Commands that are useful but not required for this proof profile. A command may occupy only one proof-command role. |  |  |
 | `assurance.proof_profiles.<name>.review_aids` | array of string | no | `[]` | Manual review aids or checklists associated with this proof profile. |  |  |
 | `assurance.proof_profiles.<name>.disallowed_commands` | array of string | no | `[]` | Commands that this proof profile disallows for the matched assurance concern. A command may occupy only one proof-command role. |  |  |
-| `assurance.requirements` | object | no | `{}` | Repo-declared assurance requirements that map work signals to authority refs, required evidence, proof profiles, review owners, and completion claim boundaries. |  |  |
+| `assurance.requirements` | object | no | `{}` | Repo-declared assurance requirements that map work signals to authority refs, required evidence, proof profiles, review owners, and completion claim boundaries. |  | x-agentic-workspace-source-owner: ".agentic-workspace/verification/manifest.toml#assurance.requirements" |
 | `assurance.requirements.<name>` | object | no |  | One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.requirements.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched requirement. |  |  |
 | `assurance.requirements.<name>.applies_to_paths` | array of string | no | `[]` | Path globs that activate this requirement when changed paths match. |  |  |
@@ -139,7 +139,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.requirements.<name>.measurement.source_revision` | string | yes |  | Revision of the evidence-producing fixture or measurement method. |  |  |
 | `assurance.requirements.<name>.measurement.producer_command` | string | yes |  | Exact bounded command selected by the ordinary proof path when current measurement evidence is absent or stale. |  |  |
 | `assurance.requirements.<name>.measurement.excluded_costs` | array of string | no | `[]` | Explicit costs excluded by the maintained measurement method. |  |  |
-| `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  |  |
+| `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  | x-agentic-workspace-source-owner: ".agentic-workspace/verification/manifest.toml#assurance.subsystem_profiles" |
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.subsystem_profiles.<name>.assurance_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched subsystem. |  |  |
 | `assurance.subsystem_profiles.<name>.level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no |  | Compatibility alias for assurance_level. It cannot be declared beside assurance_level; new configuration should use assurance_level. |  |  |
@@ -153,7 +153,7 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.subsystem_profiles.<name>.blocked_without_evidence` | array of string | no | `[]` | Claim ids or labels blocked while required subsystem evidence is missing. |  |  |
 | `assurance.subsystem_profiles.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this subsystem profile. |  |  |
 | `assurance.subsystem_profiles.<name>.notes` | string | no |  | Optional repo-local note about this subsystem profile. |  |  |
-| `assurance.domain_proof_lanes` | object | no | `{}` | Host-declared proof lanes for domain-specific changed-path or task-marker matches. |  |  |
+| `assurance.domain_proof_lanes` | object | no | `{}` | Host-declared proof lanes for domain-specific changed-path or task-marker matches. |  | x-agentic-workspace-source-owner: ".agentic-workspace/verification/manifest.toml#assurance.domain_proof_lanes" |
 | `assurance.domain_proof_lanes.<name>` | object | no |  | One host-defined domain proof lane. Domain meaning stays in repo-owned authority refs and evidence concepts. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.domain_proof_lanes.<name>.purpose` | string | yes |  | Human-readable reason this domain lane exists. |  |  |
 | `assurance.domain_proof_lanes.<name>.applies_to_paths` | array of string | no | `[]` | Path globs that activate this lane when changed paths match. |  |  |

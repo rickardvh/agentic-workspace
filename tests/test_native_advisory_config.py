@@ -17,10 +17,10 @@ def workspace_blockers(packet: dict) -> list:
     return [row for row in packet["decision_packet"]["blockers"] if row["owner"] == "workspace"]
 
 
-def write_config(target: Path, bias: str, obligation: dict) -> Path:
+def write_config(target: Path, obligation: dict) -> Path:
     source = target / ".agentic-workspace/config.toml"
     source.parent.mkdir(exist_ok=True)
-    lines = ["schema_version=1", "[workspace]", f"optimization_bias={json.dumps(bias)}", "[workflow_obligations.commit_after_proof]"]
+    lines = ["schema_version=1", "[workflow_obligations.commit_after_proof]"]
     lines.extend(f"{key}={json.dumps(value)}" for key, value in obligation.items())
     source.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return source
@@ -32,18 +32,16 @@ def test_actual_recommended_source_preserved_without_task_veto(
 ) -> None:
     actual = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
     obligation = actual["workflow_obligations"]["commit_after_proof"]
-    bias = actual["workspace"]["optimization_bias"]
     context = {"target": str(tmp_path), "task": "Inspect a documentation link", "changed": ["README.md"]}
     quiet = consume(surface, shared_core_binary, native_cli, context)
     assert quiet["configuration"]["residuals"] == []
-    source = write_config(tmp_path, bias, obligation)
+    source = write_config(tmp_path, obligation)
     original = source.read_bytes()
     result = consume(surface, shared_core_binary, native_cli, context)
     config = result["configuration"]
     assert workspace_blockers(result) == []
     assert result["decision_packet"]["status"] == "direct"
     fields = {item["field"]: item for item in config["residuals"]}
-    assert fields["workspace.optimization_bias"]["value"] == bias
     assert fields["workflow_obligations.commit_after_proof"]["value"] == obligation
     for item in fields.values():
         assert item["source"] == ".agentic-workspace/config.toml"
@@ -52,18 +50,18 @@ def test_actual_recommended_source_preserved_without_task_veto(
         assert item["satisfaction"] == "not-evidence"
     assert source.read_bytes() == original
     obligation = {**obligation, "summary": "A revised recommended method"}
-    write_config(tmp_path, bias, obligation)
+    write_config(tmp_path, obligation)
     changed = consume(surface, shared_core_binary, native_cli, context)
     assert changed["configuration"]["revision"] != config["revision"]
     assert workspace_blockers(changed) == []
     for force in ["blocking", "required-before-closeout"]:
-        write_config(tmp_path, bias, {**obligation, "force": force})
+        write_config(tmp_path, {**obligation, "force": force})
         hard = consume(surface, shared_core_binary, native_cli, context)
         blockers = workspace_blockers(hard)
         assert len(blockers) == 1
         assert blockers[0]["affects"] == ["task"]
         assert "workflow_obligations.commit_after_proof" in blockers[0]["code"]
-    write_config(tmp_path, bias, {**obligation, "unknown_future_constraint": "must remain unresolved"})
+    write_config(tmp_path, {**obligation, "unknown_future_constraint": "must remain unresolved"})
     unknown = consume(surface, shared_core_binary, native_cli, context)
     assert len(workspace_blockers(unknown)) == 1
     assert not (tmp_path / ".agentic-workspace/local").exists()
@@ -98,8 +96,6 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
     config = result["configuration"]
     advisory = {item["field"] for item in config["residuals"] if item["affects"] == []}
     assert advisory == {
-        "workspace.optimization_bias",
-        "workspace.advanced_features",
         "workflow_obligations.commit_after_proof",
         "workflow_obligations.system_intent_refresh",
         "cli_compatibility.enforcement",
@@ -132,29 +128,6 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_optional_diagnostic_preferences_preserve_direct_work_and_human_latitude(tmp_path, shared_core_binary, native_cli, surface):
-    context = {"target": str(tmp_path), "task": "Inspect a documentation link", "changed": ["README.md"]}
-    source = tmp_path / ".agentic-workspace/config.toml"
-    source.parent.mkdir()
-    actual = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
-    features = actual["workspace"]["advanced_features"]
-    text = "schema_version=1\n[workspace]\nadvanced_features=" + json.dumps(features) + "\n"
-    source.write_text(text, encoding="utf-8")
-    first = consume(surface, shared_core_binary, native_cli, context)
-    assert first["decision_packet"]["status"] == "direct"
-    preference = next(r for r in first["configuration"]["residuals"] if r["field"] == "workspace.advanced_features")
-    assert preference["value"] == features
-    assert preference["authority"] == "advisory" and preference["affects"] == []
-    assert preference["satisfaction"] == "not-evidence"
-    assert source.read_text(encoding="utf-8") == text
-    source.write_text(text + 'improvement_latitude="proactive"\n', encoding="utf-8")
-    initiative = consume(surface, shared_core_binary, native_cli, context)
-    assert initiative["configuration"]["revision"] != first["configuration"]["revision"]
-    assert any(b["code"].endswith(":workspace.improvement_latitude") for b in initiative["decision_packet"]["blockers"])
-    assert not (tmp_path / ".agentic-workspace/local").exists()
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 @pytest.mark.parametrize("source_name", ["config.toml", "config.local.toml"])
 def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, source_name: str
@@ -162,8 +135,15 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     import copy
 
     context = {"target": str(tmp_path), "task": "Correct the configured native invocation", "changed": []}
+    continuation = None
 
     def call(**extra):
+        nonlocal continuation
+        if continuation is not None and not extra:
+            continuation = consume(surface, shared_core_binary, native_cli, context)["planning"]["requests"][0]
+            continuation["arguments"]["answer"] = "continue-selected"
+        if continuation is not None and "invocation" not in extra:
+            extra["request"] = [continuation, *([extra["request"]] if "request" in extra else [])]
         return consume(surface, shared_core_binary, native_cli, {**context, **extra})
 
     assert call()["configuration_write"]["requests"] == []
@@ -171,12 +151,25 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     source.parent.mkdir()
     original = b"# Human-owned policy\r\nschema_version=1\r\n[workspace] # preserve table comment\r\ncli_invoke = 'old-command' # preserve inline comment\r\nenabled=true\r\n"
     source.write_bytes(original)
+    if source_name == "config.local.toml":
+        plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+        plan = tmp_path / plan_ref
+        plan.parent.mkdir(parents=True)
+        plan.write_bytes((Path(__file__).resolve().parents[1] / plan_ref).read_bytes())
+        (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+            f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
+        )
+        continuation = call()["decision_packet"]["decision_request"]["response_request"]
+        continuation["arguments"]["answer"] = "continue-selected"
+        call(invocation=call()["decision_packet"]["primary_action"])
+        continuation = None
+        continuation = call()["planning"]["requests"][0]
     unrelated = tmp_path / "unrelated.txt"
     unrelated.write_bytes(b"in-progress unrelated work")
     request = call()["configuration_write"]["requests"][0]
     # Same-value work is a deterministic no-op, without a human prompt or write.
     assert call(request=request)["configuration_write"]["status"] == "unchanged"
-    assert not (source.parent / "local").exists()
+    assert not list((source.parent / "local/effects").glob("configuration-*"))
     request["arguments"]["value"] = "agentic-workspace"
     proposal = call(request=request)["decision_packet"]
     assert proposal["status"] == "decision"
@@ -196,6 +189,14 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     ready = call(request=answer)
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "configuration.write"
+    if continuation is not None:
+        assert continuation in action["source_requests"]
+        plan_bytes = plan.read_bytes()
+        plan.write_bytes(plan_bytes + b"\n")
+        with pytest.raises(AssertionError, match="changed|stale|current"):
+            call(invocation=action)
+        assert source.read_bytes() == original
+        plan.write_bytes(plan_bytes)
     # A change to the other source also invalidates the exact write.
     local = source.with_name("config.local.toml" if source_name == "config.toml" else "config.toml")
     local.write_text('schema_version=1\n[workspace]\ncli_invoke="conflicting-command"\n')
@@ -245,7 +246,48 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     assert source.read_bytes() == b"[broken"
 
 
-@pytest.mark.parametrize("linked", ["source", "parent"])
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_configuration_insertion_preserves_existing_source_and_exact_authorization(tmp_path, shared_core_binary, native_cli, surface):
+    context = {"target": str(tmp_path), "task": "Configure invocation in the existing human source", "changed": []}
+
+    def call(**extra):
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+
+    source = tmp_path / ".agentic-workspace/config.toml"
+    source.parent.mkdir()
+    for original in [b"# human source\nschema_version=1\n", b"schema_version=1\n[workspace] # policy\nenabled=true # retain\n"]:
+        source.write_bytes(original)
+        before_files = sorted(source.parent.rglob("*"))
+        request = call()["configuration_write"]["requests"][0]
+        request["arguments"]["value"] = "configured-native"
+        proposal = call(request=request)
+        assert proposal["configuration_write"]["proposal"]["before"] is None
+        assert source.read_bytes() == original and sorted(source.parent.rglob("*")) == before_files
+        answer = proposal["decision_packet"]["decision_request"]["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        action = call(request=answer)["decision_packet"]["primary_action"]
+        source.write_bytes(original + b"# human drift\n")
+        with pytest.raises(AssertionError, match="stale|changed"):
+            call(invocation=action)
+        assert source.read_bytes() == original + b"# human drift\n"
+        source.write_bytes(original)
+        result = call(invocation=action)
+        assert result["value"]["continuing_custody"] is False
+        written = source.read_bytes()
+        assert written.startswith(original)
+        assert b'cli_invoke = "configured-native"' in written
+        assert call()["configuration"]["cli_invoke"] == "configured-native"
+        with pytest.raises(AssertionError):
+            call(invocation=action)
+
+    source.write_bytes(b"schema_version=1\nworkspace={enabled=true}\n")
+    request = call()["configuration_write"]["requests"][0]
+    with pytest.raises(AssertionError, match="ordinary workspace table"):
+        call(request=request)
+    assert source.read_bytes() == b"schema_version=1\nworkspace={enabled=true}\n"
+
+
+@pytest.mark.parametrize("linked", ["source", "parent", "effects"])
 def test_configuration_writer_preserves_linked_sources(tmp_path: Path, shared_core_binary: Path, native_cli: Path, linked: str) -> None:
     import os
     import subprocess
@@ -257,6 +299,30 @@ def test_configuration_writer_preserves_linked_sources(tmp_path: Path, shared_co
     body = b'schema_version=1\n[workspace]\ncli_invoke="original"\n'
     (outside / "config.toml").write_bytes(body)
     workspace = target / ".agentic-workspace"
+    context = {"target": str(target), "task": "Inspect linked configuration", "changed": []}
+    if linked == "effects":
+        workspace.mkdir()
+        (workspace / "config.toml").write_bytes(body)
+        initial = consume("native", shared_core_binary, native_cli, context)
+        request = initial["configuration_write"]["requests"][0]
+        request["arguments"]["value"] = "changed"
+        proposal = consume("native", shared_core_binary, native_cli, {**context, "request": request})
+        answer = proposal["decision_packet"]["decision_request"]["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        ready = consume("native", shared_core_binary, native_cli, {**context, "request": answer})
+        action = ready["decision_packet"]["primary_action"]
+        (workspace / "local").mkdir()
+        link = workspace / "local/effects"
+        if os.name == "nt":
+            result = subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(outside)], capture_output=True)
+            assert result.returncode == 0, result.stderr
+        else:
+            link.symlink_to(outside, target_is_directory=True)
+        with pytest.raises(AssertionError, match="link|reparse|confined"):
+            consume("native", shared_core_binary, native_cli, {**context, "invocation": action})
+        assert (workspace / "config.toml").read_bytes() == body
+        assert sorted(p.name for p in outside.iterdir()) == ["config.toml"]
+        return
     if linked == "parent" and os.name == "nt":
         result = subprocess.run(["cmd", "/c", "mklink", "/J", str(workspace), str(outside)], capture_output=True)
         assert result.returncode == 0, result.stderr
@@ -269,7 +335,6 @@ def test_configuration_writer_preserves_linked_sources(tmp_path: Path, shared_co
                 (workspace / "config.toml").symlink_to(outside / "config.toml")
         except OSError:
             pytest.skip("Host does not permit file symlink creation; directory junction covered separately")
-    context = {"target": str(target), "task": "Inspect linked configuration", "changed": []}
     result = consume("native", shared_core_binary, native_cli, context)
     assert result.get("status", result.get("decision_packet", {}).get("status")) == "blocked"
     assert (outside / "config.toml").read_bytes() == body

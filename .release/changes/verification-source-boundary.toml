@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Move operational Verification declarations into its existing manifest, enforce source requirements, support exact invocation insertion, scope former Assignment answers, and expose current procedure detail through ordinary route discovery without adopting source authority."
+issues = [2613, 2767, 2334, 2981, 2210, 2929, 2930]

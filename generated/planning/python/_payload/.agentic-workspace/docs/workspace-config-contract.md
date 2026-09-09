@@ -15,16 +15,45 @@ It is intentionally self-contained so a necessary-surface footprint does not dep
 
 When the configured CLI is unavailable, preserve the last known forbidden actions and avoid mutating managed Planning, Memory, Verification, provenance, or generated surfaces by hand. Read the installed startup skill and module map, then inspect only the named owner surface. Restore a compatible configured invocation before claiming implementation or closeout.
 
-When the CLI works, prefer compact `start`, `config`, `ownership`, `summary`, and `report` JSON over broad raw-file reads.
+When the CLI works, use its configured `start --target . --task "<task>" --format json` route. Follow the decision packet, submit only bounded answers in returned requests, and execute only the exact returned action through `invoke`.
+
+## Verification source boundary
+
+Keep durable workspace choices and general trust policy in shared configuration.
+Operational Verification requirements, proof profiles, domain lanes and subsystem
+metadata belong in `.agentic-workspace/verification/manifest.toml` under `[assurance]`.
+A source transfer preserves the declarations' force, provenance, commands and
+applicability; it does not grant proof, waive policy or acquire native custody.
+
+Former shared-config sections remain recognized for bounded transition. Do not
+author new operational registries there. A section present in both sources is an
+ownership conflict, even if its bytes look equivalent; preserve both until its
+owner resolves the transfer. Re-resolve current requests after a transfer or edit.
+The manifest cannot replace shared assurance level/escalation policy. Unsupported
+subsystem semantics remain an explicit Verification gap.
+
+Local target confidence is a human-authored prior. Lifecycle learning belongs to
+the target-evidence owner; it must not tune `config.local.toml`. Task answers,
+setup continuation and proof results are not durable configuration choices.
 
 ## Editing rule
 
 Edit shared config only for an intentional repo-policy change. Keep machine paths, credentials, and local execution preferences in local config. Module state is not workspace config and must be changed through its owning module when that command surface is available.
 
-For setup reconciliation, use the structured `config.policy-apply` operation returned by `setup`. It accepts only a bounded shared/local field inventory, requires both the exact config revision and setup identity, preserves unrelated TOML source, and rejects secret material or shared absolute machine paths. Nested ownership, assurance, and Verification semantics remain reviewed repository source; this bounded operation is not a general config patch language.
+Use the current configuration owner requests returned by native startup. The
+admitted writer can set `workspace.cli_invoke` in an existing canonical shared
+or local source, including insertion when unrelated bytes can be preserved. It binds the selected source bytes, effective policy,
+capability revision and exact value, revalidates immediately before writing, and
+preserves unrelated source text. An irreducible human choice requires the exact
+bounded human answer. It grants no continuing custody or capability enablement.
 
-Readiness completion is a separate no-change reconciliation decision. It must carry the exact current capability basis and semantic concern receipt map returned by `setup`; the operation recomputes both before writing. Receipts retain only the current applicable concern identities with semantic/source revisions, materiality, and owner. They are not a setup generation counter or history. Explicitly enabling a compatible module may add pressure, a semantic/source revision may invalidate its concern, cosmetic metadata stays quiet, and disabling the module retires that concern without enabling, upgrading, or mutating any capability automatically.
+Other keys, new source creation and the complete configure-once journey require
+their current owner; do not substitute a retired setup/config command. Preserve
+recognized unresolved sources and keep their blockers scoped to affected behavior.
 
-Effective configuration can also derive repo-source obligations when selected behavior depends on host-owned intent, assurance classification, invariant/risk registries, authority references, proof/runbooks, or enabled-module source declarations. Required unresolved sources cannot be recorded as fully current, but deferral and blocking remain limited to affected operations and claims. The source-owner and materiality inventory is in `docs/repo-source-obligation-contract.md`.
-
-Temporary setup deferral and optional-prompt suppression are local user dispositions, not configuration freshness. Select the exact decision under `configuration_concerns.continuation.actions`; it records only revision-bound unresolved concern ids in `.agentic-workspace/config.local.toml [setup]`. Deferred startup stays compact, affected required work re-elevates setup, explicit resume clears the local disposition, and successful readiness completion retires the local residue. A repository-wide decline or capability disable remains an explicit shared owner decision, never an inference from local deferral.
+Task answers, setup continuation, receipts and learned conclusions belong with
+their domain owners outside human-facing configuration. Preserve any former local
+`[setup]` or assignment-answer source until its owner explicitly dispositions it;
+do not write new task state there or infer that an old answer remains current.
+Interruption recovery for an admitted configuration write uses its exact retained
+attempt/result, without treating that record as future source ownership.

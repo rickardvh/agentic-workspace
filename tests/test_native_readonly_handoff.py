@@ -75,6 +75,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]",
     )
     source.write_text(config)
+    config_revision = hashlib.sha256(source.read_bytes()).hexdigest()
     dependency = tmp_path / "dependency.md"
     dependency.write_text("A bounded source observation.\n")
     unrelated = tmp_path / "unrelated.txt"
@@ -260,6 +261,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     assert len(evidence) == 1 and evidence[0]["claim"] == "result-retained-and-selected-command-passed"
     assert evidence[0]["support"]["observed_outcomes"] == 1 and not any(evidence[0]["claim_boundary"].values())
     assert proof_view(evidence_requests)["task_requirements"]["bounded_outcome_evidence"] == evidence
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == config_revision
     requirements = current["task_requirements"]["requests"][0]
     requirements["arguments"]["required_result_classes"] = ["read-only"]
     comparison = proof_view([*evidence_requests, requirements])["task_requirements"]["assignment"]

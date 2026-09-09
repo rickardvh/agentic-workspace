@@ -79,6 +79,14 @@ and selected-command check may supply contextual evidence for the matching
 eligible configuration. Source drift or native Planning supersession de-adopts
 that signal; it grants no target eligibility, task-success or completion authority.
 
+Semantic route discovery drills through the existing `parent` argument. Querying
+a declared leaf returns its capability bindings and exact procedure references,
+with observed revisions or explicit unavailable status. This detail appears only
+on request; it does not select applicability or grant external-write authority.
+For repository issue work, `github/issues/refine` selects shaping, while
+`github/issues/create` selects shaping followed by creation. Read the current
+procedures before the corresponding external mutation.
+
 For a bounded correction to an existing `workspace.cli_invoke` control, choose
 its source from `configuration_write.requests`, supply the intended value, and
 submit that exact request. The ordinary decision packet asks for a bounded human
