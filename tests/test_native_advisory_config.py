@@ -135,8 +135,15 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     import copy
 
     context = {"target": str(tmp_path), "task": "Correct the configured native invocation", "changed": []}
+    continuation = None
 
     def call(**extra):
+        nonlocal continuation
+        if continuation is not None and not extra:
+            continuation = consume(surface, shared_core_binary, native_cli, context)["planning"]["requests"][0]
+            continuation["arguments"]["answer"] = "continue-selected"
+        if continuation is not None and "invocation" not in extra:
+            extra["request"] = [continuation, *([extra["request"]] if "request" in extra else [])]
         return consume(surface, shared_core_binary, native_cli, {**context, **extra})
 
     assert call()["configuration_write"]["requests"] == []
@@ -144,12 +151,25 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     source.parent.mkdir()
     original = b"# Human-owned policy\r\nschema_version=1\r\n[workspace] # preserve table comment\r\ncli_invoke = 'old-command' # preserve inline comment\r\nenabled=true\r\n"
     source.write_bytes(original)
+    if source_name == "config.local.toml":
+        plan_ref = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
+        plan = tmp_path / plan_ref
+        plan.parent.mkdir(parents=True)
+        plan.write_bytes((Path(__file__).resolve().parents[1] / plan_ref).read_bytes())
+        (tmp_path / ".agentic-workspace/planning/state.toml").write_text(
+            f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
+        )
+        continuation = call()["decision_packet"]["decision_request"]["response_request"]
+        continuation["arguments"]["answer"] = "continue-selected"
+        call(invocation=call()["decision_packet"]["primary_action"])
+        continuation = None
+        continuation = call()["planning"]["requests"][0]
     unrelated = tmp_path / "unrelated.txt"
     unrelated.write_bytes(b"in-progress unrelated work")
     request = call()["configuration_write"]["requests"][0]
     # Same-value work is a deterministic no-op, without a human prompt or write.
     assert call(request=request)["configuration_write"]["status"] == "unchanged"
-    assert not (source.parent / "local").exists()
+    assert not list((source.parent / "local/effects").glob("configuration-*"))
     request["arguments"]["value"] = "agentic-workspace"
     proposal = call(request=request)["decision_packet"]
     assert proposal["status"] == "decision"
@@ -169,6 +189,14 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     ready = call(request=answer)
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "configuration.write"
+    if continuation is not None:
+        assert continuation in action["source_requests"]
+        plan_bytes = plan.read_bytes()
+        plan.write_bytes(plan_bytes + b"\n")
+        with pytest.raises(AssertionError, match="changed|stale|current"):
+            call(invocation=action)
+        assert source.read_bytes() == original
+        plan.write_bytes(plan_bytes)
     # A change to the other source also invalidates the exact write.
     local = source.with_name("config.local.toml" if source_name == "config.toml" else "config.toml")
     local.write_text('schema_version=1\n[workspace]\ncli_invoke="conflicting-command"\n')
