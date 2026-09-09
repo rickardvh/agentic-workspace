@@ -83,6 +83,12 @@
           "match": "exact",
           "priority": 10,
           "description": "Create repository issues through the repo-owned shaping and creation procedure."
+        },
+        {
+          "id": "github/issues/refine",
+          "match": "exact",
+          "priority": 10,
+          "description": "Refine an existing repository issue through its current shaping procedure."
         }
       ],
       "activation_hints": {

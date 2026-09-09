@@ -218,10 +218,26 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
                 {
                     entry["capability_bindings"].as_array_mut().unwrap().push(json!({"capability":capability,"priority":route.get("priority").and_then(Value::as_u64).unwrap_or(100)}));
                 }
-                entry["sources"]
-                    .as_array_mut()
-                    .unwrap()
-                    .push(json!({"source_ref":path,"skill_id":skill_id}));
+                let mut source = json!({"source_ref":path,"skill_id":skill_id});
+                if let Some(procedure) = skill.get("path").and_then(Value::as_str) {
+                    crate::decision_source::relative(procedure)?;
+                    let reference = format!("{}/{procedure}", path.rsplit_once('/').unwrap().0);
+                    source["procedure"] = match crate::native_planning::read(&root, &reference) {
+                        Ok(Some(bytes)) => {
+                            json!({"reference":reference,"revision":hash(&bytes),"status":"available"})
+                        }
+                        Ok(None) => {
+                            json!({"reference":reference,"status":"unavailable","reason":"declared-procedure-missing"})
+                        }
+                        Err(problem) => {
+                            json!({"reference":reference,"status":"unavailable","reason":problem.to_string()})
+                        }
+                    };
+                } else {
+                    source["procedure"] =
+                        json!({"status":"unavailable","reason":"procedure-path-undeclared"});
+                }
+                entry["sources"].as_array_mut().unwrap().push(source);
             }
         }
     }
