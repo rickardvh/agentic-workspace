@@ -40,6 +40,7 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     rows = {r["configuration"]["id"]: r for r in offered["configurations"]["candidates"]}
     assert rows["local:internal"]["eligible"] is True
     assert rows["worker:cli"]["eligible"] is True
+    assert rows["worker:cli"]["configuration"]["result_classes"] == ["read-only"]
     assert rows["worker:manual"]["eligible"] is False
     assert "execution-return-unconstructible" in rows["worker:manual"]["reasons"]
     manual = offered["manual_targets"][0]
@@ -50,6 +51,13 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     assert manual["target_best_fit"] == "unresolved-not-rejected"
     assert all(r["configuration"]["proof_classes"] == [] and r["configuration"]["independent_context"] is False for r in rows.values())
     request = next(r for r in offered["requests"] if r[-1]["arguments"]["candidate"] == "worker:cli")
+    judgment["arguments"]["required_result_classes"] = ["unapplied-patch"]
+    mutation = call({**context, "request": judgment})["task_requirements"]["execution_configurations"]
+    mutation_rows = {r["configuration"]["id"]: r for r in mutation["configurations"]["candidates"]}
+    assert mutation_rows["local:internal"]["eligible"] is True
+    assert mutation_rows["worker:cli"]["eligible"] is False
+    assert "result-class-unavailable" in mutation_rows["worker:cli"]["reasons"]
+    assert not any(r[-1]["arguments"]["candidate"] == "worker:cli" for r in mutation["requests"])
     selected = call({**context, "request": request})
     assert selected["task_requirements"]["execution_configurations"]["configurations"]["selected"]["id"] == "worker:cli"
     assert selected["decision_packet"].get("primary_action") is None
@@ -128,6 +136,20 @@ def test_native_adapter_and_unknown_transport_do_not_become_capabilities(tmp_pat
     assert any(row["gap"] == "native-provider-adapter-observation-unavailable" for row in result["unavailable_adapters"])
     assert source.read_bytes() == before
     assert not (tmp_path / "marker.txt").exists()
+
+    # An executable is insufficient when the native return path is unsupported.
+    for declaration in ('kind="api"', 'kind="process",output_mode="json-file"'):
+        source.write_text(before.decode().replace('kind="process"', declaration), newline="")
+        current = consume(surface, shared_core_binary, native_cli, context)
+        request = current["task_requirements"]["requests"][0]
+        request["arguments"]["required_result_classes"] = ["read-only"]
+        current = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+        rows = current["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+        worker = next(r for r in rows if r["configuration"]["target"] == "worker" and r["configuration"]["transport"] != "manual")
+        assert worker["eligible"] is False
+        assert "execution-return-unconstructible" in worker["reasons"]
+        assert not (tmp_path / "marker.txt").exists()
+    source.write_bytes(before)
 
     with source.open("a") as stream:
         stream.write('[delegation_targets.invalid]\nstrength="weak"\ntransports=[{kind="process",command=["ignored"],invented=true}]\n')

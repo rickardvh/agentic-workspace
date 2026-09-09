@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Match native Assignment feasibility to the implemented process return path and stop advertising unsupported external patch delivery."
+issues = [2817, 2210, 2947, 2909]

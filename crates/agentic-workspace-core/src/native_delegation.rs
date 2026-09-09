@@ -10,6 +10,11 @@ const OP: &str = "delegation.dispatch";
 fn error(value: impl ToString) -> CoreError {
     CoreError::new(value.to_string())
 }
+pub(crate) fn supports_process(transport: &Value) -> bool {
+    transport["method"] == "cli"
+        && transport["kind"] == "process"
+        && transport["output_mode"] == "stdout"
+}
 pub(crate) fn contract() -> Result<Value, CoreError> {
     let declaration = json!({"kind":KIND,"result_kind":"agentic-workspace/delegation-execution/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"handoff_revision":{"type":"string"}},"required":["handoff_revision"],"additionalProperties":false}});
     let read = json!({"kind":READ,"result_kind":"agentic-workspace/delegation-result-observation/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"custody":{"type":"object"}},"required":["custody"],"additionalProperties":false}});
@@ -42,8 +47,7 @@ pub(crate) fn view(
     let result_read = submitted.iter().find(|r| r["request_kind"] == READ);
     let ready = handoff["status"] == "exported-read-only"
         && selected["transport"] == "cli"
-        && selected["execution"]["adapter"]["kind"] == "process"
-        && selected["execution"]["adapter"]["output_mode"] == "stdout";
+        && supports_process(&selected["execution"]["adapter"]);
     let mut requests = Vec::new();
     let mut actions = Vec::new();
     let mut observation = Value::Null;
