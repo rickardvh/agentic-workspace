@@ -8,12 +8,12 @@
       "path": "foundation-stability-check/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "recheck that root-owned planning and memory remain the monorepo's operational authority",
+      "summary": "recheck current Planning and Memory ownership when install or operational-state authority may have shifted",
       "activation_hints": {
-        "verbs": ["recheck", "verify", "confirm"],
-        "nouns": ["planning authority", "memory authority", "operational authority"],
-        "phrases": ["check foundation stability", "recheck planning and memory authority"],
-        "when": ["authority drift", "operating contract recheck"]
+        "verbs": ["recheck", "verify", "audit"],
+        "nouns": ["planning ownership", "memory ownership", "competing operational source"],
+        "phrases": ["check foundation stability", "recheck Planning and Memory ownership", "check for competing operational state"],
+        "when": ["a change touches Planning or Memory install/state authority", "suspected competing operational source"]
       }
     },
     {
@@ -42,12 +42,12 @@
       "path": "path-consolidation-check/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "verify that root-owned operational paths still align with the package and install boundaries",
+      "summary": "verify that module-managed Planning and Memory install roots remain consolidated under .agentic-workspace",
       "activation_hints": {
         "verbs": ["verify", "align", "consolidate"],
-        "nouns": ["operational paths", "install boundaries", "package boundaries"],
-        "phrases": ["check path consolidation", "verify install boundaries align"],
-        "when": ["path drift", "boundary consolidation"]
+        "nouns": ["installed roots", "payload paths", "install boundaries"],
+        "phrases": ["check path consolidation", "verify Planning and Memory install roots", "verify install boundaries align"],
+        "when": ["install or payload topology changes", "former operational path may be reintroduced"]
       }
     },
     {
@@ -103,47 +103,12 @@
       "path": "self-improvement-dogfooding/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "run bounded repo-local improvement cycles that dogfood package surfaces without becoming shipped workflow",
+      "summary": "triage a new improvement finding discovered while dogfooding without turning the skill into an ambient implementation gate",
       "activation_hints": {
-        "verbs": ["continue", "repeat", "improve", "optimise", "optimize", "evaluate", "dogfood", "autopilot", "triage", "route"],
-        "nouns": [
-          "self-improvement",
-          "dogfooding",
-          "improvement lane",
-          "system intent",
-          "skill optimisation",
-          "skill optimization",
-          "evaluation loop",
-          "evaluation scenario",
-          "exploratory evaluation",
-          "findings issue",
-          "model CLI evaluation",
-          "dogfooding finding",
-          "friction signal"
-        ],
-        "phrases": [
-          "run self-improvement",
-          "repeat improvement work",
-          "run exploratory evaluation scenarios",
-          "file findings as issues",
-          "run skill optimisation evaluation loops",
-          "run skill optimization evaluation loops",
-          "skill optimisation evaluation loop",
-          "skill optimization evaluation loop",
-          "model cli optimisation loop",
-          "dogfood the package",
-          "system-intent-driven dogfooding",
-          "triage dogfooding finding",
-          "route friction signal"
-        ],
-        "when": [
-          "repo-local improvement loop",
-          "skill-routing optimisation",
-          "model CLI dogfooding loop",
-          "autonomous package dogfooding",
-          "system-intent follow-through",
-          "single observed dogfooding finding needs routing"
-        ]
+        "verbs": ["triage", "diagnose", "route"],
+        "nouns": ["dogfooding finding", "friction signal", "incidental improvement finding", "new dogfooding defect"],
+        "phrases": ["triage dogfooding finding", "route friction signal", "handle finding discovered while dogfooding", "new improvement finding outside the current task"],
+        "when": ["current work exposed a concrete incidental defect or friction outside its planned outcome", "single observed dogfooding finding needs routing"]
       }
     },
     {
@@ -151,7 +116,7 @@
       "path": "github-issue-creation/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "create GitHub issues from repo issue templates with correct fields, labels, and refresh/reconcile follow-through",
+      "summary": "create GitHub issues from current repo issue forms after shaping has established the issue boundary",
       "semantic_routes": [
         {
           "id": "github/issues/create",
