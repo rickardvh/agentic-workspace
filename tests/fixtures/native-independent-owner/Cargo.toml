@@ -1,0 +1,12 @@
+[package]
+name = "aw-independent-owner-fixture"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+agentic-workspace-core = { path = "../../../crates/agentic-workspace-core" }
+serde_json = "1"
+toml = "0.8"

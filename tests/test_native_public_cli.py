@@ -31,7 +31,7 @@ def test_retired_assignment_commands_do_not_become_hidden_owner_requests(
     request = initial["task_requirements"]["requests"][0]
     request["request_kind"] = f"assignment/{retired}/v1"
     before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    with pytest.raises(AssertionError, match="requested Assignment request kind is not available"):
+    with pytest.raises(AssertionError, match="undeclared request kind"):
         consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == before
 

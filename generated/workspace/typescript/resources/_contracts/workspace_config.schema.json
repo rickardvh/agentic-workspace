@@ -17,6 +17,101 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "independent": {
+          "description": "Durable admission of independently linked native owners. Installation alone grants no effects, claims, reads or restrictions. Operational state remains with the owner.",
+          "type": "object",
+          "maxProperties": 256,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "additionalProperties": {
+            "description": "Exact repository grant for one separately linked native owner.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "contract_revision",
+              "effects",
+              "claims",
+              "restrictions",
+              "reads",
+              "scope",
+              "settings"
+            ],
+            "properties": {
+              "revision": {
+                "description": "Exact admitted native implementation revision.",
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "contract_revision": {
+                "description": "Digest of the admitted capability and configuration descriptor.",
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "effects": {
+                "description": "Effect identifiers granted only within this owner domain.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 16,
+                "uniqueItems": true
+              },
+              "claims": {
+                "description": "Exclusive claim identifiers separately granted to this owner.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 16,
+                "uniqueItems": true
+              },
+              "restrictions": {
+                "description": "Exact task, effect or claim scopes this owner may restrict.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "reads": {
+                "description": "Bounded exact repository-relative sources the owner may observe.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "scope": {
+                "description": "Repository path prefixes that select this owner for current changed work.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "settings": {
+                "description": "Durable owner settings validated against its declared configuration schema.",
+                "type": "object"
+              }
+            }
+          }
+        },
         "enabled": {
           "type": "array",
           "items": {
