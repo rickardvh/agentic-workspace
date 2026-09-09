@@ -132,7 +132,14 @@ def _consumer_request(
 def _ok(payload: Mapping[str, Any], label: str) -> Any:
     if payload.get("status") != "ok":
         raise ReadinessCheckError(f"{label} failed: {json.dumps(payload, sort_keys=True)}")
-    return payload.get("result")
+    result = payload.get("result")
+    if isinstance(result, dict) and result.get("effect_outcome", {}).get("status") in {"uncertain", "rejected-before-effect"}:
+        raise ReadinessCheckError(f"{label} did not establish effect success: {json.dumps(result, sort_keys=True)}")
+    return result
+
+
+def _rejected(payload: Mapping[str, Any]) -> bool:
+    return payload.get("status") == "ok" and payload.get("result", {}).get("effect_outcome", {}).get("status") == "rejected-before-effect"
 
 
 def _reverse_dependency_violations() -> list[str]:
@@ -215,11 +222,13 @@ def exercise_native_lifecycle(call: Any, target: Path) -> dict[str, Any]:
     applied = _ok(invoke(action), "native update")
     before = _snapshot(target)
     duplicate = invoke(action)
-    assert duplicate["status"] == "error" or duplicate["result"] == applied, duplicate
+    assert _rejected(duplicate) or all(duplicate["result"][key] == applied[key] for key in ("status", "effects", "value", "custody")), (
+        duplicate
+    )
     assert _snapshot(target) == before, "an idempotent duplicate cannot publish again"
     _ok(invoke(admit(start()["planning"]["requests"][0])), "native reconcile")
     before = _snapshot(target)
-    assert invoke(stale_action)["status"] == "error", "an unconsumed stale action cannot survive owner reconciliation"
+    assert _rejected(invoke(stale_action)), "an unconsumed stale action cannot survive owner reconciliation"
     assert _snapshot(target) == before
     assert start()["planning"]["current_owner"]["current"] is True
     final = json.loads(path.read_bytes())
@@ -251,7 +260,7 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     invoke = {"action": "invoke", "context": {**context, "invocation": action}}
     source.write_bytes(original + b"# concurrent human edit\r\n")
     before = _snapshot(target)
-    assert call(invoke)["status"] == "error"
+    assert _rejected(call(invoke))
     assert _snapshot(target) == before
     source.write_bytes(original)
     result = _ok(call(invoke), "configuration write")
@@ -259,7 +268,7 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     assert source.read_bytes() == original.replace(b"'old-command'", b'"agentic-workspace"')
     assert start()["configuration"]["cli_invoke"] == "agentic-workspace"
     before = _snapshot(target)
-    assert call(invoke)["status"] == "error"
+    assert _rejected(call(invoke))
     assert _snapshot(target) == before
     for body, check in [
         ("schema_version=1\n[modules]\nenabled=[]\n", "disabled"),
@@ -322,7 +331,7 @@ def _verification_case(call: Any, target: Path) -> dict[str, str]:
     source.write_text("material change")
     before = _snapshot(target)
     assert start(claim)["verification"]["evidence"][0]["evidence_freshness"] != "reusable"
-    assert call(invocation)["status"] == "error"
+    assert _rejected(call(invocation))
     assert _snapshot(target) == before
     return {
         "exact_command_publication": "passed",

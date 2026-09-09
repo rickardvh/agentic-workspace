@@ -87,9 +87,13 @@ def test_exact_answer_and_action_carriage_preserve_full_effects(tmp_path, shared
     )
     assert result["status"] == "applied"
     assert result["effects"] == exact["effects"]
+    assert result["effect_outcome"]["status"] == "committed"
+    assert result["continuation"]["status"] == "current"
+    assert result["continuation"]["retry_effect"] is False
     assert 'cli_invoke = "aw-local"' in (tmp_path / ".agentic-workspace/config.toml").read_text()
     fresh = consume(surface, shared_core_binary, native_cli, context | {"request": None})
     assert fresh["configuration"]["cli_invoke"] == "aw-local"
+    assert result["continuation"]["result"] == fresh
     # No carrier or registry has been written into repository truth.
     assert not list(tmp_path.rglob("*carriage*"))
 

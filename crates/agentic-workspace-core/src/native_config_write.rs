@@ -698,7 +698,7 @@ mod tests {
     fn invoke(target: &Path, invocation: Value) -> Result<Value, CoreError> {
         let mut c = context(target);
         c["invocation"] = invocation;
-        crate::native_public::invoke(c)
+        crate::native_public::invoke_checked(c)
     }
     #[test]
     fn interrupted_configuration_write_recovers_without_rewriting_source() {

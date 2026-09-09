@@ -980,7 +980,7 @@ mod tests {
     fn invoke(target: &Path, action: Value) -> Result<Value, CoreError> {
         let mut value = context(target);
         value["invocation"] = action;
-        crate::native_public::invoke(value)
+        crate::native_public::invoke_checked(value)
     }
     fn material() -> Value {
         let source: Value = serde_json::from_str(include_str!(
@@ -1112,7 +1112,7 @@ mod tests {
                 let current_bytes = read(&target, &relative).unwrap();
                 reworded.as_object_mut().unwrap().remove("request");
                 reworded["invocation"] = recovered.clone();
-                assert!(crate::native_public::invoke(reworded.clone()).is_err());
+                assert!(crate::native_public::invoke_checked(reworded.clone()).is_err());
                 assert_eq!(read(&target, &relative).unwrap(), current_bytes);
                 reworded.as_object_mut().unwrap().remove("invocation");
                 let continuation = reentry["planning"]["requests"][0].clone();
@@ -1135,10 +1135,10 @@ mod tests {
                 let mut drift = current_bytes.clone();
                 drift.push(b' ');
                 std::fs::write(target.join(&relative), &drift).unwrap();
-                assert!(crate::native_public::invoke(reworded.clone()).is_err());
+                assert!(crate::native_public::invoke_checked(reworded.clone()).is_err());
                 assert_eq!(read(&target, &relative).unwrap(), drift);
                 std::fs::write(target.join(&relative), &current_bytes).unwrap();
-                let result = crate::native_public::invoke(reworded).unwrap();
+                let result = crate::native_public::invoke_checked(reworded).unwrap();
                 assert_eq!(result["status"], "applied");
                 assert_eq!(result["value"]["material_written"], false);
                 assert_eq!(
@@ -1271,7 +1271,7 @@ mod tests {
             context.as_object_mut().unwrap().remove("request");
             context["invocation"] = action.clone();
             assert!(
-                crate::native_public::invoke(context)
+                crate::native_public::invoke_checked(context)
                     .unwrap_err()
                     .to_string()
                     .contains("existing effect evidence")

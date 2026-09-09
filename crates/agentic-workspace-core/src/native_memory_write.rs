@@ -711,7 +711,7 @@ mod tests {
                         "memory.recover-disposition"
                     );
                 }
-                crate::native_public::invoke(invocation).unwrap();
+                crate::native_public::invoke_checked(invocation).unwrap();
                 let current = resolve(None);
                 assert!(
                     current["memory"]["disposition"]["recovery_requests"]

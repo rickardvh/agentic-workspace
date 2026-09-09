@@ -24,7 +24,9 @@ Use it after the main AW operating skill or compact router points at proof selec
    owner-returned requests. Preserve any selected Planning subject and blockers.
    Supply only bounded answers in the returned request through
    `start --input <request.json>` with the same context. Execute only the returned
-   `primary_action` through `invoke --input <action.json>`, then resolve again.
+   `primary_action` through `invoke --input <action.json>`, then use its current
+   continuation or exact re-entry. Effect outcome and continuation availability
+   are separate; continuation failure never authorizes retrying a committed effect.
    Source-read and other prerequisite requests may be combined in an array.
    An unavailable proof route remains an owner gap; retired commands are not a fallback.
 3. Select proof for both behavior and intent:

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Separate public invoke effect outcomes from usable compact, full, or carried continuations and exact recovery."
+issues = [2986, 2987, 3059, 2661, 2909]

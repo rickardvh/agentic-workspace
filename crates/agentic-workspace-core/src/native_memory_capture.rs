@@ -1469,10 +1469,10 @@ mod tests {
             invoke["invocation"] = next;
             if agent {
                 std::fs::write(&policy, "schema_version=1\n").unwrap();
-                assert!(crate::native_public::invoke(invoke.clone()).is_err());
+                assert!(crate::native_public::invoke_checked(invoke.clone()).is_err());
                 std::fs::write(&policy, policy_bytes).unwrap();
             }
-            crate::native_public::invoke(invoke).unwrap();
+            crate::native_public::invoke_checked(invoke).unwrap();
             assert_eq!(
                 start(None)["decision_packet"]["decision_context"]["states"]
                     .as_array()
