@@ -54,6 +54,11 @@ jobs:
         run: uv run pytest tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness tests/test_native_public_cli.py::test_current_public_route_survives_fresh_process_but_not_source_change tests/test_native_public_cli.py::test_real_instruction_protection_and_source_drift -q
       - name: Run routed workspace CLI and proof contracts
         run: uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q
+      - name: Preserve real Planning custody through public consumers
+        run: >-
+          uv run pytest tests/test_native_public_cli.py tests/test_native_planning_create.py
+          -k "real_former or requirements_preserve_planning or unrelated_claim_request_keeps_planning or public_creation_then_separate_selection or quiescent_selected_owner"
+          -q
       - name: Run shared operating-decision core proof
         run: |
           cargo +stable build --locked --workspace --bins

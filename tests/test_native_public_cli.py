@@ -112,20 +112,19 @@ def consume(surface: str, binary: Path, native: Path, context: dict, *, host_pat
         command = [
             sys.executable,
             "-c",
-            f"import json,sys; from agentic_workspace.decision import {verb}; print(json.dumps({verb}(json.loads(sys.argv[1]))))",
-            encoded,
+            f"import json,sys; from agentic_workspace.decision import {verb}; print(json.dumps({verb}(json.load(sys.stdin))))",
         ]
-        stdin = None
+        stdin = encoded
     else:
         module = (ROOT / "bindings/node/semantic-decision.mjs").as_uri()
         command = [
             "node",
             "--input-type=module",
             "-e",
-            f"import {{{verb}}} from {json.dumps(module)}; console.log(JSON.stringify({verb}(JSON.parse(process.argv[1]))));",
-            encoded,
+            f"import {{{verb}}} from {json.dumps(module)}; import {{readFileSync}} from 'node:fs'; "
+            f"console.log(JSON.stringify({verb}(JSON.parse(readFileSync(0, 'utf8')))));",
         ]
-        stdin = None
+        stdin = encoded
     environment = {**os.environ, "PATH": host_path} if surface == "native" else None
     result = subprocess.run(command, input=stdin, text=True, encoding="utf-8", capture_output=True, cwd=ROOT, check=False, env=environment)
     assert result.returncode == 0, result.stderr
