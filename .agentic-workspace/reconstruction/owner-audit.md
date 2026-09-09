@@ -40,7 +40,7 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include broader configuration mutation, Memory promotion/retirement and correction; former operation names are not an ordinary native interface. |
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
-| #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
+| #2570 | bounded implementation gap | Current stack adds exact native note/fact disposition and admitted repository-decision promotion; source authorship and former material survive. Native typed fallback-decision admission/effect remains unresolved with #3040/#3041; capability approval does not adjudicate the real April note. |
 | #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 22, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
@@ -231,8 +231,25 @@ Paths below are relative to `.agentic-workspace/memory/repo/`.
 
 Templates, skill indexes and directory READMEs are operating/routing surfaces,
 not additional knowledge records to bulk-import. No corpus bytes were changed.
-Native source disposition/promotion and stronger-owner absorption admission remain
-the #2570 implementation gap; #3040/#3041 retain the decision-specific boundary.
+The human authorized the capability proposed in #2570 comment 5594484566. The
+current stack adds native retain/retire/promote requests for a selected note or
+advisory fact, exact human authorization, byte-preserving manifest metadata edits,
+and native attempt recovery. Promotion requires an independently admitted current
+repository decision containing the entire lesson and referencing the exact note;
+a fact also preserves its stable identity in the receiver. Mere matching prose,
+an excerpt, a forged receiver, contradictions, source drift and stale deciding
+authority cannot supply promotion admission. Receiver loss exposes the retained
+note and blocks action. No real corpus disposition was authorized or applied.
+
+Four-interface journeys cover retirement, note/fact promotion, defer, source and
+receiver drift, ABA replay refusal, irrelevant-work silence and original material
+preservation. Native confinement covers linked scratch parents; interruption
+proof covers prepublication retry, postpublication recovery and policy drift.
+Suppression conservatively requires the exact manifest postimage: unrelated
+manifest edits can reopen advisory selection. Five former-command skill pages
+now share one bounded native disposition procedure. This does not implement
+native capture/prose/routing writes or typed fallback-decision admission/effect;
+#2570 and #3040/#3041 remain open for their complete intended outcomes.
 
 ## Integrated children and later gates
 

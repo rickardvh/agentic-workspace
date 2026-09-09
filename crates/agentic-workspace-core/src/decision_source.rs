@@ -379,6 +379,7 @@ pub(crate) fn read_contract() -> Result<Value, CoreError> {
     shape["$defs"] = json!({"decision_admission":canonical["$defs"]["decision_admission"],"decision_reference":canonical["$defs"]["decision_reference"]});
     let declaration = json!({"kind":READ_KIND,"result_kind":"agentic-workspace/decision-source-read-result/v1","input_schema":shape});
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":READ_OWNER,"revision":crate::digest(&declaration)?,"requests":[declaration]}]});
+    contract["restriction_authorities"] = json!([{"owner":READ_OWNER,"affects":["task"]}]);
     contract["revision"] = json!(crate::digest(&contract)?);
     Ok(contract)
 }
