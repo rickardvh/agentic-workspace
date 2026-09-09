@@ -1212,6 +1212,7 @@
         "relevant": {"type": "boolean"},
         "settled": {"type": "boolean"},
         "facts": {"type": "object"},
+        "material": {"description": "Owner-supplied current operating context that must remain visible in every projection, including delivered source text and applicable instruction guidance. It grants no effect, proof or acknowledgment authority."},
         "blockers": {"type": "array", "items": {"$ref": "#/$defs/blocker"}},
         "decisions": {"type": "array", "items": {"$ref": "#/$defs/decision"}},
         "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},

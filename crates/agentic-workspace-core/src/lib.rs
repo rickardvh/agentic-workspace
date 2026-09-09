@@ -98,6 +98,7 @@ struct ContributionInput {
     settled: bool,
     #[serde(default = "empty_object")]
     facts: Value,
+    material: Option<Value>,
     #[serde(default)]
     blockers: Vec<BlockerInput>,
     #[serde(default)]
@@ -327,6 +328,8 @@ struct NormalizedContribution {
     relevant: bool,
     settled: bool,
     facts: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    material: Option<Value>,
     blockers: Vec<NormalizedBlocker>,
     decisions: Vec<NormalizedDecision>,
     actions: Vec<NormalizedAction>,
@@ -958,6 +961,7 @@ fn normalize_contribution(
         relevant: input.relevant,
         settled: input.settled,
         facts: input.facts,
+        material: input.material,
         blockers,
         decisions,
         actions,
@@ -2038,6 +2042,13 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         "owner_states": relevant.iter().map(|item| json!({"owner": item.owner, "revision": item.revision, "settled": item.settled})).collect::<Vec<_>>(),
         "terminal_authority": terminal_authority,
     });
+    let material: BTreeMap<_, _> = relevant
+        .iter()
+        .filter_map(|owner| owner.material.as_ref().map(|value| (&owner.owner, value)))
+        .collect();
+    if !material.is_empty() {
+        answer["material"] = json!(material);
+    }
     if let Some(context) = decision_context {
         answer["decision_context"] = context;
     }

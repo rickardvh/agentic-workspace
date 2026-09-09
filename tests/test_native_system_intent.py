@@ -37,6 +37,10 @@ def test_real_governing_sources_are_lazy_exact_and_not_alignment(
     assert read["text"] == (tmp_path / MIRROR).read_bytes().decode("utf-8")
     assert "governing_intents" in read["text"]
     assert "grants no alignment" in read["authority_boundary"]
+    for projection in ("compact", "carried"):
+        delivered = consume(surface, shared_core_binary, native_cli, {**context, "request": request, "projection": projection})
+        visible = delivered["view"] if projection == "carried" else delivered
+        assert visible["decision_packet"]["material"]["system-intent"] == read
     with pytest.raises(AssertionError):
         consume(surface, shared_core_binary, native_cli, {**context, "task": "A different task", "request": request})
     forged = json.loads(json.dumps(request))

@@ -111,6 +111,9 @@ pub(crate) fn view(
         blockers.push(json!({"code":if unavailable{"configured-startup-source-unavailable"}else{"configured-startup-source-read-required"},"message":"Read the exact current configured startup source before affected implementation or completion judgment; preserve its contents and use source-owner repair if unavailable.","affects":if unavailable{scopes}else{vec![json!("effect:implementation"),json!("claim:complete")]}}));
     }
     let mut result = json!({"kind":"agentic-workspace/native-startup-adapter-view/v1","status":if reference.is_none(){"absent"}else if response.is_null(){"source-context-required"}else{"source-context-delivered"},"revision":revision,"source":source,"requests":requests,"response":response,"capability_contract":capability,"contribution":{"owner":"startup-adapter","revision":revision,"settled":blockers.is_empty(),"blockers":blockers}});
+    if !response.is_null() {
+        result["contribution"]["material"] = response;
+    }
     if let Some(contract) = contract {
         restrict_operations(&mut result, &[contract])?;
     }

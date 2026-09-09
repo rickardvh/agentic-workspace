@@ -22,6 +22,13 @@ before/after or publication proposal needed for judgment. The renderer never
 dispatches on owner names. Owners must include material that changes judgment;
 an opaque proposal digest alone is insufficient context for confirmation.
 
+Owner contributions also carry current operating `material` in the shared
+decision packet. Requested startup/System Intent source text and applicable
+instruction guidance remain visible in every projection. Unrequested source
+bodies stay lazy. Delivery still grants no acknowledgment, satisfaction, proof
+or effect authority; a compact projection cannot silently discard a requested
+source response and then call it delivered.
+
 ## Thin host carriage
 
 `projection: "carried"` returns two independent transport fields:

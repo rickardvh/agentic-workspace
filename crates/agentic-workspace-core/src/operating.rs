@@ -314,6 +314,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn owner_operating_material_is_current_identity_bound_and_not_a_grant() {
+        let input = json!({"contributions":[{"owner":"independent-context","revision":"current",
+            "material":{"read_first":"exact-source","restriction":"retain-foreign"}},
+            {"owner":"irrelevant","revision":"other","relevant":false,"material":{"large":"absent"}}]});
+        let decision = crate::compile_value(input.clone()).unwrap();
+        assert_eq!(
+            decision["material"],
+            json!({"independent-context":{"read_first":"exact-source","restriction":"retain-foreign"}})
+        );
+        assert!(decision["primary_action"].is_null());
+        let mut changed = input;
+        changed["contributions"][0]["material"]["restriction"] = json!("changed-current-guidance");
+        let next = crate::compile_value(changed).unwrap();
+        assert_ne!(decision["decision_id"], next["decision_id"]);
+        assert_eq!(decision["claim_boundary"], next["claim_boundary"]);
+    }
+
+    #[test]
     fn compact_preserves_peer_restrictions_claims_and_unknown_material() {
         let selected = json!({"operation_id":"independent.write","effects":["owned-write"],
             "arguments":{"destination":"exact","baseline":"current","new_owner_material":{"stop":"preserve-foreign"}},

@@ -28,12 +28,12 @@ def invoke(context: Mapping[str, Any]) -> dict[str, Any]:
 
 def answer_carried(carriage: Mapping[str, Any], reference: str, answer: Any) -> dict[str, Any]:
     """Carry exact owner material; Rust binds only the returned bounded answer."""
-    return start({"request": carriage, "reference": reference, "answer": answer, "projection": "carried"})
+    return _request({"start": {"request": carriage, "reference": reference, "answer": answer, "projection": "carried"}})
 
 
 def invoke_carried(carriage: Mapping[str, Any], reference: str) -> dict[str, Any]:
     """Execute one exact carried action, with native execution-time admission."""
-    return invoke({"invocation": carriage, "reference": reference})
+    return _request({"invoke": {"invocation": carriage, "reference": reference}})
 
 
 def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:
