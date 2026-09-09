@@ -88,6 +88,27 @@ pub(crate) fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
     std::str::from_utf8(&bytes).map_err(error)?;
     Ok(bytes)
 }
+fn read_repository_source(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
+    relative(path)?;
+    let mut current = std::path::PathBuf::new();
+    for part in path.split('/') {
+        current.push(part);
+        let metadata = root.symlink_metadata(&current).map_err(error)?;
+        #[cfg(windows)]
+        let linked = {
+            use cap_std::fs::MetadataExt;
+            metadata.file_attributes() & 0x400 != 0
+        };
+        #[cfg(not(windows))]
+        let linked = metadata.is_symlink();
+        if linked {
+            return Err(error(format!(
+                "linked decision source {path} is not admitted; reconcile exact provenance"
+            )));
+        }
+    }
+    read(root, path)
+}
 fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
     let text = std::str::from_utf8(bytes).map_err(error)?;
     let marker = "```aw-decision\n";
@@ -218,7 +239,7 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
     let mut records = Vec::new();
     for id in selected {
         let (normalized, bytes, path) = available.remove(&id).unwrap();
-        if hash(&read(&root, &path)?) != hash(&bytes) {
+        if hash(&read_repository_source(&root, &path)?) != hash(&bytes) {
             return Err(error(format!(
                 "stale decision source {path}; reconcile exact provenance before contribution"
             )));
@@ -236,7 +257,7 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
             if dependency["owner"] != "repository" {
                 continue;
             }
-            if let Ok(bytes) = read(&root, reference) {
+            if let Ok(bytes) = read_repository_source(&root, reference) {
                 dependencies.insert(
                     reference.to_owned(),
                     json!({"owner":"repository", "reference":reference, "revision":hash(&bytes)}),
@@ -438,7 +459,7 @@ pub(crate) fn public_read(
             .as_str()
             .ok_or_else(|| error("decision source reference missing"))?;
         let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
-        let bytes = read(&root, path)?;
+        let bytes = read_repository_source(&root, path)?;
         if hash(&bytes) != source["revision"] {
             return Err(error(
                 "decision source changed during read; reconcile current owner",
@@ -454,7 +475,7 @@ pub(crate) fn public_read(
             let reference = dependency["reference"]
                 .as_str()
                 .ok_or_else(|| error("decision dependency reference missing"))?;
-            if hash(&read(&root, reference)?) != dependency["revision"] {
+            if hash(&read_repository_source(&root, reference)?) != dependency["revision"] {
                 return Err(error(
                     "decision dependency changed during read; reconcile current owner",
                 ));

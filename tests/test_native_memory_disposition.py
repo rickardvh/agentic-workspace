@@ -217,6 +217,28 @@ def test_memory_receiver_needs_current_admitted_whole_lesson(
     assert len(admitted["selected_notes"]) == (1 if subject == "fact" else 0)
     assert admitted["suppressed_facts" if subject == "fact" else "suppressed_notes"][0]["status"] == "promote"
     assert note.read_bytes() == original[1]
+    # Matching bytes through a linked receiver are not current source custody.
+    import subprocess
+
+    archive = tmp_path / "design"
+    saved_archive = tmp_path / "receiver-copy"
+    assert archive.resolve().is_relative_to(tmp_path.resolve())
+    assert saved_archive.resolve().is_relative_to(tmp_path.resolve())
+    archive.rename(saved_archive)
+    if os.name == "nt":
+        linked = subprocess.run(["cmd", "/c", "mklink", "/J", str(archive), str(saved_archive)], capture_output=True)
+        assert linked.returncode == 0, linked.stderr
+    else:
+        archive.symlink_to("receiver-copy", target_is_directory=True)
+    linked_receiver = call()
+    assert len(linked_receiver["memory"]["selected_notes"]) == 1
+    assert linked_receiver["decision_packet"]["primary_action"] is None
+    assert any(b["code"] == "receiving-decision-source-unavailable" for b in linked_receiver["decision_packet"]["blockers"])
+    if os.name == "nt":
+        archive.rmdir()  # remove the junction only; the retained archive survives
+    else:
+        archive.unlink()
+    saved_archive.rename(archive)
     # Loss of the receiving owner exposes the retained note and blocks effects;
     # neither a historical result nor the manifest's promotion string suffices.
     (tmp_path / "design/choice.md").unlink()
