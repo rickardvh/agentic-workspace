@@ -1413,7 +1413,17 @@ fn current_work(intent: &Value) -> Result<Option<CurrentWorkIdentity>, CoreError
     Ok(Some(current))
 }
 
-fn schema_validator(schema: &Value, field: &str) -> Result<jsonschema::Validator, CoreError> {
+thread_local! {
+    // Only pure schema compilation is reused. Source observations, requests,
+    // grants, decisions and validation results are never cached here. Exact
+    // serialized schemas avoid relying on a caller revision or digest label.
+    static SCHEMA_VALIDATORS: std::cell::RefCell<std::collections::VecDeque<(String, std::sync::Arc<jsonschema::Validator>)>> = const { std::cell::RefCell::new(std::collections::VecDeque::new()) };
+}
+
+fn schema_validator(
+    schema: &Value,
+    field: &str,
+) -> Result<std::sync::Arc<jsonschema::Validator>, CoreError> {
     if schema.get("$schema").and_then(Value::as_str)
         != Some("https://json-schema.org/draft/2020-12/schema")
     {
@@ -1423,9 +1433,62 @@ fn schema_validator(schema: &Value, field: &str) -> Result<jsonschema::Validator
     }
     // Schemas are carried in the current capability contract. External HTTP/file
     // retrieval is disabled; local $defs/$ref remain ordinary JSON Schema.
-    jsonschema::draft202012::options()
-        .build(schema)
-        .map_err(|error| CoreError::new(format!("{field}.input_schema is invalid: {error}")))
+    let key = serde_json::to_string(schema).map_err(|error| CoreError::new(error.to_string()))?;
+    // Include the workspace configuration schema as well as small request
+    // schemas, with at most 4 MiB of retained keys per thread.
+    let cacheable = key.len() <= 65_536;
+    if cacheable
+        && let Some(validator) = SCHEMA_VALIDATORS.with(|cache| {
+            cache
+                .borrow()
+                .iter()
+                .find(|(schema, _)| schema == &key)
+                .map(|(_, validator)| validator.clone())
+        })
+    {
+        return Ok(validator);
+    }
+    let validator = std::sync::Arc::new(
+        jsonschema::draft202012::options()
+            .build(schema)
+            .map_err(|error| CoreError::new(format!("{field}.input_schema is invalid: {error}")))?,
+    );
+    if cacheable {
+        SCHEMA_VALIDATORS.with(|cache| {
+            let mut cache = cache.borrow_mut();
+            if cache.len() == 64 {
+                cache.pop_front();
+            }
+            cache.push_back((key, validator.clone()));
+        });
+    }
+    Ok(validator)
+}
+
+#[cfg(test)]
+mod schema_reuse_tests {
+    use super::*;
+
+    #[test]
+    fn exact_schema_reuse_does_not_reuse_a_validation_or_changed_contract() {
+        let mut schema = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"string","const":"current"});
+        let first = schema_validator(&schema, "first").unwrap();
+        let same = schema_validator(&schema, "second").unwrap();
+        assert!(std::sync::Arc::ptr_eq(&first, &same));
+        assert!(same.is_valid(&json!("current")));
+        assert!(!same.is_valid(&json!("stale")));
+        schema["const"] = json!("new");
+        let changed = schema_validator(&schema, "changed").unwrap();
+        assert!(!changed.is_valid(&json!("current")));
+        assert!(changed.is_valid(&json!("new")));
+        for n in 0..70 {
+            schema["const"] = json!(n.to_string());
+            schema_validator(&schema, "bounded").unwrap();
+        }
+        SCHEMA_VALIDATORS.with(|cache| assert!(cache.borrow().len() <= 64));
+        schema["type"] = json!("not-a-type");
+        assert!(schema_validator(&schema, "invalid").is_err());
+    }
 }
 
 fn validate_operation_arguments(
