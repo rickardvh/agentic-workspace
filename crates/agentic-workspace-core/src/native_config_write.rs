@@ -12,6 +12,42 @@ const LOCAL: &str = ".agentic-workspace/config.local.toml";
 const EDIT: &str = "configuration/edit-source/v1";
 const RECOVER: &str = "configuration/recover-write/v1";
 const EFFECT: &str = "configuration-source";
+// These are durable choices already consumed by current owners. Task answers,
+// learned target evidence, trust pins and operational registries are excluded.
+const CHOICES: &[(&str, &str)] = &[
+    (SHARED, "workspace.cli_invoke"),
+    (LOCAL, "workspace.cli_invoke"),
+    (SHARED, "modules.enabled"),
+    (SHARED, "workspace.agent_instructions_file"),
+    (SHARED, "system_intent.sources"),
+    (SHARED, "system_intent.preferred_source"),
+    (LOCAL, "safety.safe_to_auto_run_commands"),
+    (LOCAL, "safety.requires_human_verification_on_pr"),
+];
+fn choice_schema(source: &str, key: &str) -> Result<Value, CoreError> {
+    if !CHOICES.contains(&(source, key)) {
+        return Err(err(
+            "This field is outside the durable configuration writer boundary",
+        ));
+    }
+    let (section, field) = key.split_once('.').unwrap();
+    let schema: Value = serde_json::from_str(source_schema(source)?).map_err(err)?;
+    let mut value = schema["properties"][section]["properties"][field].clone();
+    if value.is_null() {
+        return Err(err("Current configuration choice schema is unavailable"));
+    }
+    value["$schema"] = json!("https://json-schema.org/draft/2020-12/schema");
+    if value["type"] == "string" {
+        value["maxLength"] = json!(4096);
+    }
+    if value["type"] == "array" {
+        value["maxItems"] = json!(32);
+        if value["items"]["type"] == "string" {
+            value["items"]["maxLength"] = json!(4096);
+        }
+    }
+    Ok(value)
+}
 fn err(e: impl ToString) -> CoreError {
     CoreError::new(e.to_string())
 }
@@ -60,10 +96,19 @@ fn sources(target: &Path) -> Result<Value, CoreError> {
     }
     Ok(values)
 }
-fn proposed(target: &Path, source: &str, value: &str) -> Result<Vec<u8>, CoreError> {
+fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec<u8>, CoreError> {
+    crate::schema_validator(&choice_schema(source, key)?, "configuration choice")?
+        .validate(value)
+        .map_err(err)?;
+    let (section, field) = key.split_once('.').unwrap();
+    let replacement = toml_edit::ser::to_document(&json!({"value":value})).map_err(err)?["value"]
+        .as_value()
+        .unwrap()
+        .clone();
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     sources(target)?;
-    let raw = read(&root, source)?;
+    let raw = crate::native_planning::read(&root, source)?
+        .unwrap_or_else(|| b"schema_version=1\n".to_vec());
     let text = std::str::from_utf8(&raw).map_err(err)?;
     if text.starts_with('\u{feff}') {
         return Err(err(
@@ -72,48 +117,64 @@ fn proposed(target: &Path, source: &str, value: &str) -> Result<Vec<u8>, CoreErr
     }
     let document = toml_edit::ImDocument::parse(text).map_err(err)?;
     let current = document
-        .get("workspace")
-        .and_then(|v| v.get("cli_invoke"))
+        .get(section)
+        .and_then(|v| v.get(field))
         .and_then(toml_edit::Item::as_value);
     let rendered = if let Some(current) = current {
-        if !current.is_str() {
-            return Err(err("configuration invocation is not a string"));
-        }
         let span = current
             .span()
             .ok_or_else(|| err("configuration literal span unavailable"))?;
         let mut rendered = text.to_owned();
-        rendered.replace_range(span, &toml_edit::Value::from(value).to_string());
+        rendered.replace_range(span, &replacement.to_string());
         rendered
     } else {
-        let mut edited = text.parse::<toml_edit::DocumentMut>().map_err(err)?;
-        let had_workspace = edited.contains_key("workspace");
-        if !had_workspace {
-            edited["workspace"] = toml_edit::Item::Table(toml_edit::Table::new());
+        let crlf = text.contains("\r\n");
+        if crlf && text.replace("\r\n", "").contains('\n') {
+            return Err(err(
+                "Mixed configuration line endings require source-owner repair",
+            ));
+        }
+        let normalized = text.replace("\r\n", "\n");
+        let mut edited = normalized.parse::<toml_edit::DocumentMut>().map_err(err)?;
+        let had_section = edited.contains_key(section);
+        if !had_section {
+            edited[section] = toml_edit::Item::Table(toml_edit::Table::new());
         }
         let table = edited
-            .get_mut("workspace")
+            .get_mut(section)
             .and_then(toml_edit::Item::as_table_mut)
-            .ok_or_else(|| err("invocation insertion requires an ordinary workspace table"))?;
-        table.insert("cli_invoke", toml_edit::value(value));
+            .ok_or_else(|| {
+                err(format!(
+                    "configuration insertion requires an ordinary {section} table"
+                ))
+            })?;
+        table.insert(field, toml_edit::Item::Value(replacement));
         let rendered = edited.to_string();
         // Admission is narrower than TOML equivalence: removing only the exact
         // insertion must recover all prior bytes, including comments and policy.
-        if had_workspace {
-            edited["workspace"]
-                .as_table_mut()
-                .unwrap()
-                .remove("cli_invoke");
+        if had_section {
+            edited[section].as_table_mut().unwrap().remove(field);
         } else {
-            edited.remove("workspace");
+            edited.remove(section);
         }
-        if edited.to_string() != text {
+        if edited.to_string() != normalized {
             return Err(err(
-                "invocation insertion cannot preserve unrelated source bytes",
+                "configuration insertion cannot preserve unrelated source bytes",
             ));
         }
-        rendered
+        if crlf {
+            rendered.replace('\n', "\r\n")
+        } else {
+            rendered
+        }
     };
+    if rendered.len()
+        > crate::native_config::MAX_SOURCE_BYTES.min(crate::decision_source::MAX_SOURCE_BYTES)
+    {
+        return Err(err(
+            "Configuration postimage exceeds the bounded source reader; source preserved",
+        ));
+    }
     let parsed: toml::Value = toml::from_str(&rendered).map_err(err)?;
     let parsed = serde_json::to_value(parsed).map_err(err)?;
     let schema: Value = serde_json::from_str(source_schema(source)?).map_err(err)?;
@@ -123,11 +184,12 @@ fn proposed(target: &Path, source: &str, value: &str) -> Result<Vec<u8>, CoreErr
     // This first slice does not arbitrate override policy. Explicit shared and
     // local values must agree after the edit; ambiguity cannot widen authority.
     let other = if source == SHARED { LOCAL } else { SHARED };
-    if let Some((other, _)) =
-        crate::native_config::load(&root, other, source_schema(other)?).map_err(err)?
+    if key == "workspace.cli_invoke"
+        && let Some((other, _)) =
+            crate::native_config::load(&root, other, source_schema(other)?).map_err(err)?
         && other["workspace"]["cli_invoke"]
             .as_str()
-            .is_some_and(|v| v != value)
+            .is_some_and(|v| Some(v) != value.as_str())
     {
         return Err(err(
             "shared/local invocation conflict; no override authority inferred",
@@ -136,10 +198,11 @@ fn proposed(target: &Path, source: &str, value: &str) -> Result<Vec<u8>, CoreErr
     Ok(rendered.into_bytes())
 }
 pub(crate) fn contract() -> Result<Value, CoreError> {
-    let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"const":"workspace.cli_invoke"},"value":{"type":"string","minLength":1,"maxLength":4096},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false});
+    let alternatives = CHOICES.iter().map(|(source,key)| Ok(json!({"properties":{"source":{"const":source},"key":{"const":key},"value":choice_schema(source,key)?}}))).collect::<Result<Vec<_>, CoreError>>()?;
+    let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
-    let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v2","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
-    let owner = json!({"owner":"configuration","revision":digest(&json!([args,recovery,"configuration-external-source-write-v2"]))?,"domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
+    let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v3","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
+    let owner = json!({"owner":"configuration","revision":digest(&json!([args,recovery,"configuration-external-source-write-v3"]))?,"domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
@@ -188,7 +251,7 @@ pub(crate) fn view(
         .iter()
         .find(|v| v["owner"] == "configuration")
         .unwrap();
-    let mut result = json!({"requests":[],"recovery_requests":[],"status":"not-applicable","contribution":{"owner":"configuration","revision":owner["revision"],"actions":[]}});
+    let mut result = json!({"requests":[],"creation_requests":[],"recovery_requests":[],"status":"not-applicable","contribution":{"owner":"configuration","revision":owner["revision"],"actions":[]}});
     let current = match sources(target) {
         Ok(v) => v,
         Err(e) => {
@@ -203,6 +266,29 @@ pub(crate) fn view(
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for source in [SHARED, LOCAL] {
+        if current[source].is_null() {
+            for (_, key) in CHOICES.iter().filter(|(s, _)| *s == source) {
+                let schema = choice_schema(source, key)?;
+                let value = if !schema["default"].is_null() {
+                    schema["default"].clone()
+                } else if schema["type"] == "boolean" {
+                    json!(false)
+                } else if schema["type"] == "array" {
+                    json!([])
+                } else if *key == "workspace.cli_invoke" {
+                    json!("agentic-workspace")
+                } else {
+                    json!("<explicit-source-choice>")
+                };
+                result["creation_requests"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(template(
+                        EDIT,
+                        json!({"source":source,"key":key,"value":value}),
+                    ));
+            }
+        }
         if let Some((v, revision)) =
             crate::native_config::load(&root, source, source_schema(source)?).map_err(err)?
         {
@@ -214,6 +300,29 @@ pub(crate) fn view(
                 EDIT,
                 json!({"source":source,"key":"workspace.cli_invoke","value":value}),
             ));
+            for (choice_source, key) in CHOICES
+                .iter()
+                .filter(|(s, k)| *s == source && *k != "workspace.cli_invoke")
+            {
+                let (section, field) = key.split_once('.').unwrap();
+                let schema = choice_schema(choice_source, key)?;
+                let value = if !v[section][field].is_null() {
+                    v[section][field].clone()
+                } else if !schema["default"].is_null() {
+                    schema["default"].clone()
+                } else if schema["type"] == "boolean" {
+                    json!(false)
+                } else if schema["type"] == "array" {
+                    json!([])
+                } else {
+                    json!("<explicit-source-choice>")
+                };
+                // Discovery is not a recommendation or standing permission.
+                result["requests"].as_array_mut().unwrap().push(template(
+                    EDIT,
+                    json!({"source":source,"key":key,"value":value}),
+                ));
+            }
             if let Some(record) = retained(target, source, &revision)? {
                 let prepared = crate::attempt_store::prepare_commit(
                     target.to_str().unwrap(),
@@ -237,6 +346,10 @@ pub(crate) fn view(
             }
         }
     }
+    result["requests"]
+        .as_array_mut()
+        .unwrap()
+        .sort_by_key(|r| r["arguments"]["key"] != "workspace.cli_invoke");
     let Some(request) = request else {
         return Ok(result);
     };
@@ -269,17 +382,27 @@ pub(crate) fn view(
         }
         "configuration.recover-write"
     } else if request["request_kind"] == EDIT {
-        let value = args["value"].as_str().ok_or_else(|| err("value missing"))?;
-        let bytes = proposed(target, source, value)?;
+        let value = &args["value"];
+        let key = args["key"]
+            .as_str()
+            .ok_or_else(|| err("configuration key missing"))?;
+        let (section, field) = key
+            .split_once('.')
+            .ok_or_else(|| err("configuration key malformed"))?;
+        let bytes = proposed(target, source, key, value)?;
         post = crate::native_intent::hash(&bytes);
-        let before = read(&root, source)?;
+        let before = crate::native_planning::read(&root, source)?
+            .unwrap_or_else(|| b"schema_version=1\n".to_vec());
         let parsed: toml::Value =
             toml::from_str(std::str::from_utf8(&before).map_err(err)?).map_err(err)?;
         let before_value = parsed
-            .get("workspace")
-            .and_then(|v| v.get("cli_invoke"))
-            .and_then(toml::Value::as_str);
-        if before_value == Some(value) {
+            .get(section)
+            .and_then(|v| v.get(field))
+            .map(serde_json::to_value)
+            .transpose()
+            .map_err(err)?
+            .unwrap_or(Value::Null);
+        if before_value == *value {
             result["status"] = json!("unchanged");
             return Ok(result);
         }
@@ -290,8 +413,8 @@ pub(crate) fn view(
             let mut answer = request.clone();
             answer["arguments"]["proposal_revision"] = json!(proposal);
             result["status"] = json!("human-decision-required");
-            result["proposal"] = json!({"before":before_value,"after":value,"source":source,"authority":"bounded-human-answer"});
-            result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":"Authorize this exact invocation-source edit? The source remains repo/human-owned.","response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
+            result["proposal"] = json!({"before":before_value,"after":value,"source":source,"key":key,"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"authority":"bounded-human-answer"});
+            result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":"Authorize this exact configuration-source edit? The source remains repo/human-owned.","response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
             return Ok(result);
         }
         if args["proposal_revision"] != proposal {
@@ -371,7 +494,8 @@ fn execute_checked(
     let bytes = proposed(
         target,
         source,
-        args["request"]["arguments"]["value"].as_str().unwrap(),
+        args["request"]["arguments"]["key"].as_str().unwrap(),
+        &args["request"]["arguments"]["value"],
     )?;
     if crate::native_intent::hash(&bytes) != post {
         return Err(err("configuration postimage changed"));
@@ -428,8 +552,9 @@ fn execute_checked(
         let mut f = root
             .open_with(&temporary, OpenOptions::new().write(true).create_new(true))
             .map_err(err)?;
-        f.set_permissions(root.metadata(source).map_err(err)?.permissions())
-            .map_err(err)?;
+        if let Ok(metadata) = root.metadata(source) {
+            f.set_permissions(metadata.permissions()).map_err(err)?;
+        }
         f.write_all(&bytes).map_err(err)?;
         f.sync_all().map_err(err)?;
     }
@@ -440,7 +565,12 @@ fn execute_checked(
     {
         return Err(err("configuration sources changed before publication"));
     }
-    root.rename(&temporary, &root, source).map_err(err)?;
+    if args["binding"]["sources"][source].is_null() {
+        root.hard_link(&temporary, &root, source).map_err(err)?;
+        root.remove_file(&temporary).map_err(err)?;
+    } else {
+        root.rename(&temporary, &root, source).map_err(err)?;
+    }
     observe("published")?;
     let committed = crate::attempt_store::commit(
         json!({"target":target,"custody":admission["custody"],"outcome":out}),
@@ -451,6 +581,71 @@ fn execute_checked(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn interrupted_source_creation_recovers_publication_without_rewriting() {
+        let target = std::env::temp_dir().join(format!(
+            "aw-config-create-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&target).unwrap();
+        let target = target.canonicalize().unwrap();
+        let mut request = resolve(&target, None)["configuration_write"]["creation_requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| {
+                r["arguments"]["source"] == SHARED
+                    && r["arguments"]["key"] == "workspace.cli_invoke"
+            })
+            .unwrap()
+            .clone();
+        request["arguments"]["value"] = json!("fixture-native");
+        let mut answer = resolve(&target,Some(request))["decision_packet"]["decision_request"]["response_request"].clone();
+        answer["arguments"]["answer"] = json!("authorize-write");
+        let ready = resolve(&target, Some(answer.clone()));
+        let action = &ready["decision_packet"]["primary_action"];
+        let failed = execute_checked(
+            &target,
+            &ready["decision_packet"],
+            action,
+            &mut || {
+                crate::admit_invocation_value(
+                    json!({"decision":resolve(&target,Some(answer.clone()))["decision_packet"],"invocation":action}),
+                )?;
+                Ok(())
+            },
+            &mut |stage| {
+                if stage == "published" {
+                    Err(err("fixture interruption"))
+                } else {
+                    Ok(())
+                }
+            },
+        );
+        assert!(
+            failed
+                .unwrap_err()
+                .to_string()
+                .contains("fixture interruption")
+        );
+        let bytes = std::fs::read(target.join(SHARED)).unwrap();
+        let recovery =
+            resolve(&target, None)["configuration_write"]["recovery_requests"][0].clone();
+        let next = resolve(&target, Some(recovery))["decision_packet"]["primary_action"].clone();
+        invoke(&target, next).unwrap();
+        assert_eq!(std::fs::read(target.join(SHARED)).unwrap(), bytes);
+        assert!(
+            resolve(&target, None)["configuration_write"]["recovery_requests"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        std::fs::remove_dir_all(target).unwrap();
+    }
     fn context(target: &Path) -> Value {
         json!({"target":target,"task":"Authorize exact existing configuration correction"})
     }

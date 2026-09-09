@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Apply bounded durable configuration choices and create missing canonical sources through exact native human-authorized proposals."
+issues = [2613, 2767]
