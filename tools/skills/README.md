@@ -1,15 +1,19 @@
 # Repo Tool Skills
 
-Repo-owned general workflow and contract-checking skills live here.
+Repo-owned maintainer procedures live here. They are selected procedures, not an ambient policy layer over ordinary repository work.
 
-`REGISTRY.json` is the explicit repo-owned general skill registry for this repository. Keep it in sync with the checked-in skill directories here and record the activation hints that help workspace-level skill recommendation stay explainable.
+`REGISTRY.json` is the explicit repo-owned registry. Keep it in sync with the checked-in skill directories and keep activation hints narrow enough that a skill is recommended for its actual procedure rather than for generic words such as `continue`, `improve`, or `review`.
 
-Use this directory for repeatable procedures that are not owned by planning, memory, or another shipped package domain.
-Do not use it for bundled package skills or for repo-owned workflows whose primary purpose is operating on checked-in memory.
+Use this directory for repeatable maintainer procedures that are not owned by Planning, Memory, Verification, or another shipped package domain. A repo-local skill may guide judgment or mechanics, but it does not acquire the authority of the domain it touches.
 
 Current repo-specific skills:
 
 - `foundation-stability-check`
 - `ownership-ledger-check`
 - `path-consolidation-check`
+- `pr-review-recheck`
+- `github-issue-shaping`
+- `github-issue-creation`
 - `self-improvement-dogfooding`
+
+Prefer exact semantic routes where one exists. Lexical activation hints are discovery aids only; they should not turn a narrow maintainer procedure into a mandatory workflow for unrelated work.
