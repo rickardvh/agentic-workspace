@@ -61,6 +61,15 @@ patch result waits for current integration. Verification remains responsible for
 proof and its current concrete subject. Neither worker success, result judgment,
 publication custody nor integration grants proof or parent completion.
 
+After Planning retains the integrated result, a current native Verification check
+can nominate one bounded target outcome. Its checked sources must include the
+exact retained Planning document and every integrated postimage. Partial checks,
+failed/stale receipts and later source changes cannot supply that outcome. The
+observation is context for the same role and delivery class among currently
+eligible configurations; it neither selects a target nor changes eligibility.
+This sparse owner projection adds no outcome store or general target ranking.
+Failure/repair history, compaction and broader learning under #2209 remain open.
+
 ## Remaining transport boundaries
 
 This process adapter gives the worker nonmutation instructions; it does not

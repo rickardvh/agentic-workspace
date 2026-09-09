@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import copy
 import json
+import os
+import shlex
 import sys
 
 import pytest
@@ -57,6 +59,22 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         plan_path = tmp_path / created["value"]["owner_path"]
         selection = call()["planning"]["created_owner"]["selection_request"]
         call(invocation=call(selection)["decision_packet"]["primary_action"])
+        plan_ref = plan_path.relative_to(tmp_path).as_posix()
+        (tmp_path / "verify_patch.py").write_text(
+            "from pathlib import Path\nassert b'worker' in Path('src/main.txt').read_bytes()\n"
+            "assert b'concurrent' in Path('src/main.txt').read_bytes()\n"
+            "assert Path('src/sibling.txt').read_bytes() == b'sibling\\n'\n"
+        )
+        executable = "& '" + sys.executable.replace("'", "''") + "'" if os.name == "nt" else shlex.quote(sys.executable)
+        manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(
+            'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols.patch]\napplies_to_paths=['
+            + json.dumps(plan_ref)
+            + ',"src/main.txt","src/sibling.txt","verify_patch.py"]\n[proof_routes.patch]\nprotocol_refs=["patch"]\ncommands=['
+            + json.dumps(executable + " verify_patch.py")
+            + "]\n"
+        )
 
     task = call()["task_requirements"]["requests"][0]
     task["arguments"]["required_result_classes"] = ["unapplied-patch"]
@@ -196,3 +214,58 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
         assert adopt_action["arguments"]["consumed_return"]["integration"]["changed_paths"] == ["src/main.txt", "src/sibling.txt"]
         call(invocation=adopt_action)
         assert json.loads(plan_path.read_bytes())["continuation"]["frontier"] == "Replace the second line with worker."
+        fresh = call()
+        call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+        proof_context = {**context, "changed": [plan_ref, "src/main.txt", "src/sibling.txt", "verify_patch.py"]}
+
+        def proof_view(request=None, **updates):
+            return consume(
+                surface,
+                shared_core_binary,
+                native_cli,
+                {**proof_context, **({"request": request} if request else {}), **updates},
+                host_path=os.environ["PATH"],
+            )
+
+        continuation = proof_view()["planning"]["requests"][0]
+        continuation["arguments"]["answer"] = "continue-selected"
+        assert proof_view(continuation)["task_requirements"]["bounded_outcome_evidence"] == []
+        proof_request = proof_view(continuation)["verification"]["execution_requests"][0]
+        proof_action = proof_view([continuation, proof_request])["decision_packet"]["primary_action"]
+        checked = proof_view(invocation=proof_action)
+        assert checked["value"]["process"]["status"] == "passed"
+        claim = proof_view(continuation)["verification"]["requests"][0]
+        claim["arguments"]["evidence_refs"] = [checked["value"]["publication"]["reference"]]
+        evidence_requests = [continuation, claim]
+        current = proof_view(evidence_requests)
+        evidence = current["task_requirements"]["bounded_outcome_evidence"]
+        assert len(evidence) == 1
+        assert evidence[0]["claim"] == "patch-integrated-result-retained-and-selected-command-passed"
+        assert evidence[0]["context"]["scope_class"] == "unapplied-patch"
+        assert evidence[0]["support"]["integration"]["postimages"] == integrated["value"]["postimages"]
+        assert not any(evidence[0]["claim_boundary"].values())
+        requirements = current["task_requirements"]["requests"][0]
+        requirements["arguments"]["required_result_classes"] = ["unapplied-patch"]
+        comparison = proof_view([*evidence_requests, requirements])["task_requirements"]["assignment"]
+        assert next(a for a in comparison["result"]["alternatives"] if a["target"] == "expert")["contextual_evidence"] == evidence
+        assert comparison["result"]["selected"] is None
+        requirements["arguments"]["required_result_classes"] = ["read-only"]
+        comparison = proof_view([*evidence_requests, requirements])["task_requirements"]["assignment"]
+        assert all(a["contextual_evidence"] == [] for a in comparison["result"]["alternatives"])
+        complete_scope = proof_context["changed"]
+        proof_context["changed"] = [plan_ref, "src/main.txt", "verify_patch.py"]
+        partial_continuation = proof_view()["planning"]["requests"][0]
+        partial_continuation["arguments"]["answer"] = "continue-selected"
+        partial_request = proof_view(partial_continuation)["verification"]["execution_requests"][0]
+        partial_action = proof_view([partial_continuation, partial_request])["decision_packet"]["primary_action"]
+        partial_checked = proof_view(invocation=partial_action)
+        assert partial_checked["value"]["process"]["status"] == "passed"
+        partial_claim = proof_view(partial_continuation)["verification"]["requests"][0]
+        partial_claim["arguments"]["evidence_refs"] = [partial_checked["value"]["publication"]["reference"]]
+        partial = proof_view([partial_continuation, partial_claim])
+        scope_paths = [s["path"] for s in partial["verification"]["evidence"][0]["checked_scope"]["source_inputs"]]
+        assert plan_ref in scope_paths and "src/main.txt" in scope_paths and "src/sibling.txt" not in scope_paths
+        assert partial["task_requirements"]["bounded_outcome_evidence"] == []
+        proof_context["changed"] = complete_scope
+        sibling.write_bytes(b"Changed after integration and proof.\n")
+        assert proof_view(evidence_requests)["task_requirements"]["bounded_outcome_evidence"] == []
