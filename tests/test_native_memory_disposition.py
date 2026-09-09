@@ -13,8 +13,9 @@ from tests.test_shared_core import _commit_native, _native_archive, _write_nativ
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("disposition", ["retain", "retire"])
 def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, disposition: str
 ) -> None:
     reference = ".agentic-workspace/memory/repo/decisions/former.md"
     note = tmp_path / reference
@@ -30,7 +31,12 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
 
     initial = call()
     request = initial["memory"]["disposition"]["requests"][0]
-    request["arguments"].update(disposition="retire", reason="Fixture human determines this note is obsolete and has no future value.")
+    reason = (
+        "Fixture human retains the useful principle as advisory; historical commands remain non-governing."
+        if disposition == "retain"
+        else "Fixture human determines this note is obsolete and has no future value."
+    )
+    request["arguments"].update(disposition=disposition, reason=reason)
     proposed = call({**context, "request": request})
     assert manifest.read_text() == before
     assert not (tmp_path / ".agentic-workspace/local").exists()
@@ -47,21 +53,31 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
         call({**context, "invocation": action})
     manifest.write_text(before, encoding="utf-8", newline="")
     result = call({**context, "invocation": action})
-    assert result["value"]["disposition"] == "retire"
+    assert result["value"]["disposition"] == disposition
     assert result["value"]["continuing_custody"] is False
     assert "# Human corpus comment\n" in manifest.read_text()
     assert 'routes_from=["src/**"] # retain' in manifest.read_text()
     assert '[unrelated]\nvalue="preserve"\n' in manifest.read_text()
     assert note.read_text() == "A faithful former-source lesson.\n"
-    retired = call()
-    assert retired["memory"]["selected_notes"] == []
-    assert retired["memory"]["suppressed_notes"][0]["status"] == "retire"
+    resolved = call()
+    if disposition == "retire":
+        assert resolved["memory"]["selected_notes"] == []
+        assert resolved["memory"]["suppressed_notes"][0]["status"] == "retire"
+    else:
+        retained = resolved["memory"]["selected_notes"][0]["disposition"]
+        assert retained["reason"] == reason
+        assert retained["authority_effect"] == "advisory-disposition-only"
+        read_request = resolved["memory"]["requests"][0]
+        detail = call({**context, "request": read_request})["memory"]["response"]["detail"]
+        assert detail["disposition"] == retained
+        assert detail["body"].encode("utf-8") == note.read_bytes()
     with pytest.raises(AssertionError, match="changed|stale"):
         call({**context, "invocation": action})
     note.write_text("A newly relevant lesson.\n", encoding="utf-8")
     renewed = call()
     assert len(renewed["memory"]["selected_notes"]) == 1
     assert renewed["memory"]["disposition"]["diagnostics"][0]["code"] == "disposition-currentness-lost"
+    assert "disposition" not in renewed["memory"]["selected_notes"][0]
 
     # Restoring the preimage cannot revive a consumed one-shot answer (ABA).
     note.write_text("A faithful former-source lesson.\n", encoding="utf-8")
