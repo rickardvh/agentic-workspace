@@ -6277,54 +6277,6 @@
         {
           "audience": "advanced_host_repo",
           "classification_note": "assignment lifecycle subcommand",
-          "help": "Run assignment.close.",
-          "mutates_state": false,
-          "name": "close",
-          "options": [
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
-            }
-          ],
-          "role": "core_context_router",
-          "uses_option_groups": [
-            "format"
-          ]
-        },
-        {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
           "help": "Run assignment.dispatch.",
           "mutates_state": false,
           "name": "dispatch",
@@ -6484,54 +6436,6 @@
           "help": "Run assignment.override.",
           "mutates_state": false,
           "name": "override",
-          "options": [
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
-            }
-          ],
-          "role": "core_context_router",
-          "uses_option_groups": [
-            "format"
-          ]
-        },
-        {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
-          "help": "Run assignment.reassign.",
-          "mutates_state": false,
-          "name": "reassign",
           "options": [
             {
               "flags": [

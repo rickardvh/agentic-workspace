@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Retire superseded Assignment close/reassign command exports and reject unavailable operations consistently without launching a runtime."
+issues = [2986, 3077, 2210]

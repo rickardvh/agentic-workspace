@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:11cb1ce6856567f0840e37fc8dd26a97703c05cc2072dcc0eef77f0a6a12eb2b",
+    "fingerprint": "sha256:5c8721e164932588341759ac62b88c8ce3000e8bf9583560508da8bf2a698a2a",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -11,11 +11,11 @@
     "kind": "agentic-workspace/external-readiness-authority/v1",
     "status": "current",
     "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
-    "client_semantics_revision": "sha256:b49ba51051a8246c0fa5bdef3fded46185ddb754c17df3816f192597159012f4",
+    "client_semantics_revision": "sha256:cb1280874c44f374d0ca9f73cfa8d5eaae67356bec03abf73040aef504130f55",
     "client_artifact_revisions": {
-      "public_python_client": "src/agentic_workspace/client.py@sha256:8269c72aa653ee28a46846f70ce3e7e12fa27ae67ac96bdf915c8056cbcc3ca1",
-      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:dbe669e73ff42e31b3627cbfd93bb2472d34c93fa65edd2f1fb50f70f46e4e90",
-      "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:99e55285734b7776d64794ffd0d810a6b9e0181c3ca11f55bc3cbb53d09e8a2c"
+      "public_python_client": "src/agentic_workspace/client.py@sha256:45f33803829acb173cd92b533613cb6e28c3ddb39061ef3f4f198d536fabc2fc",
+      "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:7a37e49df281703d6a83ee8366c2c3b28acf5edb5516089467b11c7cd2370ea4",
+      "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:ddf4db3a67bb20dbe18b3d6980d8116cea79d698c803ce97b81d3ef8f6c39497"
     }
   },
   "readiness_executors": {
@@ -1490,113 +1490,6 @@
       }
     },
     {
-      "id": "assignment.close",
-      "owner": "root-workspace",
-      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.close.json",
-      "operation_compatibility": {
-        "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:6e6280f480392b8fc1cf570ff41dfad7f9cacbebc4197a35b5f0820169d5a370"
-      },
-      "operation_resources": {
-        "python": {
-          "package": "agentic-workspace",
-          "path": "operations/assignment.close.json",
-          "exists": true
-        },
-        "typescript": {
-          "package": "@agentic-workspace/workspace-cli",
-          "path": "resources/operations/assignment.close.json",
-          "exists": true
-        }
-      },
-      "schemas": {
-        "input": [
-          "assignment_lifecycle_input.schema.json"
-        ],
-        "output": [
-          "assignment_lifecycle_result.schema.json"
-        ]
-      },
-      "effects": {
-        "destructive": false,
-        "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
-      },
-      "targets": {
-        "python": {
-          "package": "agentic-workspace",
-          "status": "mutation-capable-adapter",
-          "maturity": "mutation-capable-adapter",
-          "generated_root": "generated/workspace/python"
-        },
-        "typescript": {
-          "package": "@agentic-workspace/workspace-cli",
-          "status": "mutation-capable-adapter",
-          "maturity": "mutation-capable-adapter",
-          "generated_root": "generated/workspace/typescript"
-        },
-        "bash": {
-          "package": "agentic-workspace-shell",
-          "status": "deferred",
-          "maturity": "deferred",
-          "generated_root": "generated/shell/bash"
-        },
-        "powershell": {
-          "package": "AgenticWorkspace.PowerShell",
-          "status": "deferred",
-          "maturity": "deferred",
-          "generated_root": "generated/shell/powershell"
-        }
-      },
-      "conformance": [
-        "assignment.close.process"
-      ],
-      "external_consumption": {
-        "status": "runtime-backed",
-        "runtime_exceptions": [
-          {
-            "owner": "root-workspace",
-            "scope": "target root resolution",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.close.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "local assignment artifact writes",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.close.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "current authority validation",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.close.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "output emission",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.close.process"
-            ],
-            "migration_dependency": "#2044"
-          }
-        ],
-        "dependency": "#2044"
-      }
-    },
-    {
       "id": "assignment.dispatch",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.dispatch.json",
@@ -2124,113 +2017,6 @@
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "assignment.override.process"
-            ],
-            "migration_dependency": "#2044"
-          }
-        ],
-        "dependency": "#2044"
-      }
-    },
-    {
-      "id": "assignment.reassign",
-      "owner": "root-workspace",
-      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.reassign.json",
-      "operation_compatibility": {
-        "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:795886a12712ec7a1afbc9d44de813886a8c92bc425a1a4d2f8f94e6887d8555"
-      },
-      "operation_resources": {
-        "python": {
-          "package": "agentic-workspace",
-          "path": "operations/assignment.reassign.json",
-          "exists": true
-        },
-        "typescript": {
-          "package": "@agentic-workspace/workspace-cli",
-          "path": "resources/operations/assignment.reassign.json",
-          "exists": true
-        }
-      },
-      "schemas": {
-        "input": [
-          "assignment_lifecycle_input.schema.json"
-        ],
-        "output": [
-          "assignment_lifecycle_result.schema.json"
-        ]
-      },
-      "effects": {
-        "destructive": false,
-        "idempotent": true,
-        "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": true
-      },
-      "targets": {
-        "python": {
-          "package": "agentic-workspace",
-          "status": "mutation-capable-adapter",
-          "maturity": "mutation-capable-adapter",
-          "generated_root": "generated/workspace/python"
-        },
-        "typescript": {
-          "package": "@agentic-workspace/workspace-cli",
-          "status": "mutation-capable-adapter",
-          "maturity": "mutation-capable-adapter",
-          "generated_root": "generated/workspace/typescript"
-        },
-        "bash": {
-          "package": "agentic-workspace-shell",
-          "status": "deferred",
-          "maturity": "deferred",
-          "generated_root": "generated/shell/bash"
-        },
-        "powershell": {
-          "package": "AgenticWorkspace.PowerShell",
-          "status": "deferred",
-          "maturity": "deferred",
-          "generated_root": "generated/shell/powershell"
-        }
-      },
-      "conformance": [
-        "assignment.reassign.process"
-      ],
-      "external_consumption": {
-        "status": "runtime-backed",
-        "runtime_exceptions": [
-          {
-            "owner": "root-workspace",
-            "scope": "target root resolution",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.reassign.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "local assignment artifact writes",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.reassign.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "current authority validation",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.reassign.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "output emission",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "assignment.reassign.process"
             ],
             "migration_dependency": "#2044"
           }

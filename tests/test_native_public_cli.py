@@ -16,6 +16,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("retired", ["close", "reassign"])
+def test_retired_assignment_commands_do_not_become_hidden_owner_requests(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, retired: str
+) -> None:
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(
+        'schema_version=1\n[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
+        'strength="weak"\nlocation="external"\ntransports=[{kind="manual"}]\n'
+    )
+    context = {"target": str(tmp_path), "task": "Inspect the current work"}
+    initial = consume(surface, shared_core_binary, native_cli, context)
+    request = initial["task_requirements"]["requests"][0]
+    request["request_kind"] = f"assignment/{retired}/v1"
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    with pytest.raises(AssertionError, match="requested Assignment request kind is not available"):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == before
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_native_task_requirements_bind_current_judgment_and_preserve_owner_constraints(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:

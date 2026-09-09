@@ -23,13 +23,11 @@ from . import agent_guidance_suppress as _command_agent_guidance_suppress
 from . import agent_guidance_weaken as _command_agent_guidance_weaken
 from . import assignment_admit as _command_assignment_admit
 from . import assignment_cleanup as _command_assignment_cleanup
-from . import assignment_close as _command_assignment_close
 from . import assignment_dispatch as _command_assignment_dispatch
 from . import assignment_export as _command_assignment_export
 from . import assignment_import as _command_assignment_import
 from . import assignment_integrate as _command_assignment_integrate
 from . import assignment_override as _command_assignment_override
-from . import assignment_reassign as _command_assignment_reassign
 from . import assignment_reject as _command_assignment_reject
 from . import assignment_repair as _command_assignment_repair
 from . import assignment_status as _command_assignment_status
@@ -114,13 +112,11 @@ GENERATED_COMMAND_HANDLERS = {
     'agent-guidance.weaken': _command_agent_guidance_weaken.run,
     'assignment.admit': _command_assignment_admit.run,
     'assignment.cleanup': _command_assignment_cleanup.run,
-    'assignment.close': _command_assignment_close.run,
     'assignment.dispatch': _command_assignment_dispatch.run,
     'assignment.export': _command_assignment_export.run,
     'assignment.import': _command_assignment_import.run,
     'assignment.integrate': _command_assignment_integrate.run,
     'assignment.override': _command_assignment_override.run,
-    'assignment.reassign': _command_assignment_reassign.run,
     'assignment.reject': _command_assignment_reject.run,
     'assignment.repair': _command_assignment_repair.run,
     'assignment.status': _command_assignment_status.run,

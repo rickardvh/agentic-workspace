@@ -8,7 +8,7 @@
   },
   "kind": "agentic-workspace/external-operation-conformance-receipt-store/v1",
   "mirror_publication": {
-    "generation_id": "external-conformance-publication:0a664fa1f209a9c6f495661f",
+    "generation_id": "external-conformance-publication:4a1e88d9c0c72784ad795770",
     "kind": "agentic-workspace/external-operation-conformance-mirror-publication/v1",
     "path_count": 3,
     "paths": [
@@ -16,9 +16,9 @@
       "generated/workspace/python/external_operation_conformance_receipts.json",
       "generated/workspace/typescript/external_operation_conformance_receipts.json"
     ],
-    "payload_digest": "sha256:0a664fa1f209a9c6f495661f6596bf73dc2a8200f6a7e43ff469aa2e25adf41d",
-    "previous_digest": "bc79e7270bfe49df1dabd7254170bb551475fab631e32fd9c2488e365c28ddfe",
-    "publisher_pid": 7000,
+    "payload_digest": "sha256:4a1e88d9c0c72784ad795770f53d279720c4a5a89a9190d8c14a798400bc2cd6",
+    "previous_digest": "ca5b6276dc2b438d961d1856fbe67bfa4555ac7e2b8f578a3bbae6fb40d4fa17",
+    "publisher_pid": 30044,
     "reader_rule": "Readers must verify payload_digest before consuming receipts and reject stores without one published generation.",
     "status": "published"
   },
@@ -480,6 +480,7 @@
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
+      "retirement_reason": "The former generated command profile is superseded by the native start/invoke product. This executed historical receipt is not proof for the current profile; canonical native artifact admission remains with #2990.",
       "runtime_exception_admission": {
         "operation_id": "config.report",
         "revision": "github-2044-closure:config.report@pr-2256",
@@ -487,7 +488,7 @@
         "status": "admitted"
       },
       "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
-      "status": "passed",
+      "status": "stale",
       "transports": {
         "cli-json": {
           "evidence": [
@@ -817,13 +818,14 @@
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
+      "retirement_reason": "The former generated command profile is superseded by the native start/invoke product. This executed historical receipt is not proof for the current profile; canonical native artifact admission remains with #2990.",
       "runtime_exception_admission": {
         "reason": "missing-operation-specific-runtime-exception-revision",
         "rule": "Runtime exceptions must be admitted per operation/profile by an authority outside the conformance result.",
         "status": "rejected"
       },
       "runtime_exception_revision": "",
-      "status": "failed",
+      "status": "stale",
       "transports": {
         "cli-json": {
           "reason": "no CLI JSON operation result was produced",
@@ -1301,6 +1303,7 @@
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
+      "retirement_reason": "The former generated command profile is superseded by the native start/invoke product. This executed historical receipt is not proof for the current profile; canonical native artifact admission remains with #2990.",
       "runtime_exception_admission": {
         "operation_id": "delegation-outcome.append",
         "revision": "github-2044-closure:delegation-outcome.append@pr-2256",
@@ -1308,7 +1311,7 @@
         "status": "admitted"
       },
       "runtime_exception_revision": "github-2044-closure:delegation-outcome.append@pr-2256",
-      "status": "passed",
+      "status": "stale",
       "transports": {
         "cli-json": {
           "evidence": [
@@ -1791,6 +1794,7 @@
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
+      "retirement_reason": "The former generated command profile is superseded by the native start/invoke product. This executed historical receipt is not proof for the current profile; canonical native artifact admission remains with #2990.",
       "runtime_exception_admission": {
         "operation_id": "external-evidence.query",
         "revision": "github-2619-external-evidence-host-operation:v1",
@@ -1798,7 +1802,7 @@
         "status": "admitted"
       },
       "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
-      "status": "passed",
+      "status": "stale",
       "transports": {
         "cli-json": {
           "evidence": [
@@ -2281,6 +2285,7 @@
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
+      "retirement_reason": "The former generated command profile is superseded by the native start/invoke product. This executed historical receipt is not proof for the current profile; canonical native artifact admission remains with #2990.",
       "runtime_exception_admission": {
         "operation_id": "external-evidence.submit",
         "revision": "github-2619-external-evidence-host-operation:v1",
@@ -2288,7 +2293,7 @@
         "status": "admitted"
       },
       "runtime_exception_revision": "github-2619-external-evidence-host-operation:v1",
-      "status": "passed",
+      "status": "stale",
       "transports": {
         "cli-json": {
           "evidence": [
@@ -2771,6 +2776,7 @@
         "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
         "status": "current"
       },
+      "retirement_reason": "The former generated command profile is superseded by the native start/invoke product. This executed historical receipt is not proof for the current profile; canonical native artifact admission remains with #2990.",
       "runtime_exception_admission": {
         "operation_id": "instructions.explain",
         "revision": "github-2639:instructions.explain@pr-2627",
@@ -2778,7 +2784,7 @@
         "status": "admitted"
       },
       "runtime_exception_revision": "github-2639:instructions.explain@pr-2627",
-      "status": "passed",
+      "status": "stale",
       "transports": {
         "cli-json": {
           "evidence": [
