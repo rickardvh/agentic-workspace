@@ -142,6 +142,13 @@ def test_current_public_route_survives_fresh_process_but_not_source_change(
     context = {"target": str(tmp_path), "task": "Inspect the current repository"}
     initial = consume(surface, shared_core_binary, native_cli, context)
     assert initial["decision_packet"]["status"] == "direct"
+    assert "detail" not in initial["semantic_routes"]["discovery"]
+    discovery = next(item for item in initial["semantic_routes"]["requests"] if item["request_kind"] == "semantic-routes/discover/v1")
+    discovery["arguments"] = {"parent": "repository/inspect"}
+    detail = consume(surface, shared_core_binary, native_cli, {**context, "request": discovery})
+    leaf = detail["semantic_routes"]["discovery"]["detail"]
+    assert leaf["capabilities"] == ["skill:inspect"]
+    assert leaf["sources"][0]["procedure"]["reason"] == "procedure-path-undeclared"
     request = next(item for item in initial["semantic_routes"]["requests"] if item["request_kind"] == "semantic-routes/select/v1")
     request["arguments"] = {"posture": "selected", "routes": ["repository/inspect"]}
     selected = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
@@ -151,6 +158,9 @@ def test_current_public_route_survives_fresh_process_but_not_source_change(
     stale = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert stale["semantic_routes"]["status"] == "stale"
     assert stale["decision_packet"]["semantic_task_routes"]["status"] != "current"
+    stale_detail = consume(surface, shared_core_binary, native_cli, {**context, "request": discovery})
+    assert stale_detail["semantic_routes"]["status"] == "stale"
+    assert "detail" not in stale_detail["semantic_routes"]["discovery"]
     assert not (tmp_path / ".agentic-workspace").exists()
 
 
@@ -471,27 +481,59 @@ def test_real_instruction_protection_and_source_drift(surface: str, tmp_path: Pa
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("route", ["create", "refine"])
 def test_instruction_procedure_requires_current_route_not_task_words(
-    surface: str, tmp_path: Path, shared_core_binary: Path, native_cli: Path
+    surface: str, tmp_path: Path, shared_core_binary: Path, native_cli: Path, route: str
 ) -> None:
-    source = ".agentic-workspace/instructions/github-issue-creation.md"
+    name = "creation" if route == "create" else "refinement"
+    source = f".agentic-workspace/instructions/github-issue-{name}.md"
     instruction = tmp_path / source
     instruction.parent.mkdir(parents=True)
     instruction.write_bytes((ROOT / source).read_bytes())
     registry = tmp_path / "tools/skills/REGISTRY.json"
     registry.parent.mkdir(parents=True)
-    registry.write_text(json.dumps({"skills": [{"id": "issue", "semantic_routes": ["github/issues/create"]}]}))
-    context = {"target": str(tmp_path), "task": "Explain the words GitHub issue creation"}
+    registry.write_bytes((ROOT / "tools/skills/REGISTRY.json").read_bytes())
+    for skill in ["github-issue-shaping", "github-issue-creation"]:
+        procedure = tmp_path / f"tools/skills/{skill}/SKILL.md"
+        procedure.parent.mkdir()
+        procedure.write_bytes((ROOT / procedure.relative_to(tmp_path)).read_bytes())
+    context = {"target": str(tmp_path), "task": "Explain the words GitHub issue creation and refinement"}
     quiet = consume(surface, shared_core_binary, native_cli, context)
     assert not quiet["instructions"]["sources"][0]["guidance"]
+    discovery = next(item for item in quiet["semantic_routes"]["requests"] if item["request_kind"] == "semantic-routes/discover/v1")
+    discovery["arguments"] = {"parent": f"github/issues/{route}"}
+    detail = consume(surface, shared_core_binary, native_cli, {**context, "request": discovery})
+    leaf = detail["semantic_routes"]["discovery"]["detail"]
+    bindings = leaf["capability_bindings"]
+    expected = {"skill:github-issue-shaping"}
+    if route == "create":
+        expected.add("skill:github-issue-creation")
+    assert {binding["capability"] for binding in bindings} == expected
+    assert all(source["procedure"]["status"] == "available" for source in leaf["sources"])
+    missing = tmp_path / "tools/skills/github-issue-shaping/SKILL.md"
+    missing.unlink()
+    unavailable = consume(surface, shared_core_binary, native_cli, {**context, "request": discovery})
+    sources = unavailable["semantic_routes"]["discovery"]["detail"]["sources"]
+    assert next(source for source in sources if source["skill_id"] == "github-issue-shaping")["procedure"]["status"] == "unavailable"
     request = next(item for item in quiet["semantic_routes"]["requests"] if item["request_kind"] == "semantic-routes/select/v1")
-    request["arguments"] = {"posture": "selected", "routes": ["github/issues/create"]}
+    request["arguments"] = {"posture": "selected", "routes": [f"github/issues/{route}"]}
     selected = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     row = selected["instructions"]["sources"][0]
-    assert row["preferred_procedures"] == ["github-issue-shaping", "github-issue-creation"]
+    assert row["preferred_procedures"] == (
+        ["github-issue-shaping", "github-issue-creation"] if route == "create" else ["github-issue-shaping"]
+    )
     assert row["binding_admission"]["status"] == "not-required"
     assert not selected["decision_packet"]["ready_actions"]
     assert not selected["decision_packet"]["blockers"]
+    continued = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert continued["instructions"]["sources"][0]["preferred_procedures"] == row["preferred_procedures"]
+    stale = consume(surface, shared_core_binary, native_cli, {**context, "task": "A different issue discussion", "request": request})
+    assert stale["decision_packet"]["semantic_task_routes"]["status"] == "stale"
+    assert not stale["instructions"]["sources"][0]["guidance"]
+    registry.write_bytes(registry.read_bytes() + b"\n")
+    drifted = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert drifted["decision_packet"]["semantic_task_routes"]["status"] == "stale"
+    assert not drifted["instructions"]["sources"][0]["guidance"]
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
