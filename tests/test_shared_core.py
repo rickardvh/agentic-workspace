@@ -1776,6 +1776,29 @@ def test_native_exact_scope_does_not_depend_on_json_escaping(shared_core_binary:
     assert repository_decision_view(**context)["decision_context"]["states"][0]["status"] == "current"
 
 
+def test_native_decision_blob_boundaries_remain_bounded(shared_core_binary: Path, tmp_path: Path) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, record = _native_archive(tmp_path)
+    second = deepcopy(record)
+    second["id"] = "architecture/second"
+    second["scope"] = ["path:other.rs"]
+    path = tmp_path / "design/second record.md"
+    _write_native(path, second)
+    # Body newlines and header-like prose cannot shift the next blob boundary.
+    path.write_text(path.read_text() + "\n" + "a" * 40 + " blob 12\nretained rationale", encoding="utf-8", newline="\n")
+    context["admitted_revision"] = _commit_native(tmp_path)
+    assert repository_decision_view(**context)["decision_context"]["states"][0]["status"] == "current"
+    other = repository_decision_view(**{**context, "applicable_scope": ["path:other.rs"]})
+    assert other["decision_context"]["consequences"][0]["id"] == second["id"]
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    # Even an irrelevant admitted source must not bypass the bounded reader.
+    path.write_text(path.read_text() + "x" * 262144, encoding="utf-8", newline="\n")
+    context["admitted_revision"] = _commit_native(tmp_path)
+    with pytest.raises(DecisionContractError, match="exceeds bounded read"):
+        repository_decision_view(**context)
+
+
 def test_source_node_transport_builds_current_core_without_binary_override(shared_core_binary: Path) -> None:
     result = subprocess.run(
         [

@@ -1,56 +1,20 @@
 ---
 name: memory-hygiene
-description: Review and clean a repository's checked-in memory and workflow docs. Use when a task asks to prune `/memory`, run the freshness audit, update note metadata, merge duplicate notes, or clean up stale durable knowledge after code or workflow changes.
+description: Assess current selected Memory notes or advisory facts and request exact retain, retire, or receiving-owner-admitted promotion without adopting the corpus.
 ---
 
 # Memory Hygiene
 
-This is a bootstrap-managed core skill shipped with the payload under `.agentic-workspace/memory/skills/`. Add repo-specific sibling skills under `.agentic-workspace/memory/repo/skills/` instead of customising this core skill unless the shared reusable procedure itself changed.
+Use the configured AW invocation from the repository adapter. Run `start --target . --task "<task>" --format json`, repeating `--changed <path>` for known paths. Follow the current decision packet before effects.
 
-Use this skill to keep checked-in memory accurate, compact, and aligned with the codebase.
+1. Use `memory.selected_notes` and its exact read requests to inspect only relevant material. Supply owner-returned requests through `start --input <request.json>` with the same context. Source identity is not factual currentness.
+2. Select one entry from `memory.disposition.requests`. Preserve its source and optional fact identity. Supply the bounded disposition and reason: retain useful advisory value; retire only with a current obsolete/no-future-value judgment; promote only after a stronger owner has absorbed the complete selected lesson.
+3. For promotion, select an exact entry from `memory.receiving_admissions`. Copy its `receiving_admission` into the request's `receiver`. A whole note requires its complete lesson in a current admitted repository decision plus an exact source-context reference. An advisory fact additionally preserves its stable identity in that decision. A path, hash, matching excerpt, test result or agent assertion is insufficient.
+4. Resolve the request to obtain the exact proposed write and bounded human question. The human supplies the authorization answer; capability availability is not approval of a particular note. Do not answer for the human or reuse an unrelated authorization. Defer preserves all sources.
+5. Invoke only the returned `primary_action`, with the same target/task/changed context and JSON format. Resolve again. On interruption use the fresh `memory.disposition.recovery_requests`; never edit retained attempts or replay stale material.
 
-It operates on checked-in memory files. It does not replace them.
+The write changes only the selected entry's disposition metadata in the existing manifest. Notes, other entries, comments and external authorship remain preserved. It grants no continuing corpus custody, factual truth, Planning progress, proof, completion, target quality or policy authority.
 
-## Workflow
+Retirement and promotion suppress advisory selection only while current source and admitted attempt evidence support the disposition. Promotion also needs a current receiver. Source, policy, capability or receiving-authority drift can expose the retained lesson again. Unrelated manifest edits conservatively require renewed disposition evidence. Reconcile that result; do not delete the former note to hide it.
 
-1. Read the repo's local contract:
-   - `AGENTS.md`
-   - `.agentic-workspace/memory/repo/index.md`
-   - `.agentic-workspace/memory/SKILLS.md` when deciding whether a repo-specific skill should be created
-2. Load only the memory notes relevant to the files, commands, or behaviours that changed.
-3. Treat `.agentic-workspace/memory/WORKFLOW.md` as reference policy only when the cleanup touches the memory contract or policy boundary.
-4. Pull in `.agentic-workspace/memory/repo/current/routing-feedback.md` only for concrete routing-calibration cleanup. Treat legacy `project-state.md` or `task-context.md` files as migration residue.
-5. Run the memory freshness audit if the repo has one.
-6. Inspect the affected notes for:
-   - contradicted behaviour
-   - duplicate or overlapping guidance
-   - stale placeholders
-   - merge-conflict markers or repeated same-note merge collisions
-   - oversized history or narrative that no longer affects future work
-7. Update the smallest set of files needed:
-   - edit existing notes before creating new ones
-   - merge or delete stale notes instead of accumulating near-duplicates
-   - split broad notes by subsystem, decision, invariant, or runbook when they become merge hotspots
-   - keep the overview and task-context notes short and avoid turning current-memory files into task trackers
-   - ask whether a repeated note should instead become canonical docs, a skill, a script suggestion, a regression test suggestion, or a refactor suggestion
-8. If note names, roles, or routing changed, update `.agentic-workspace/memory/repo/index.md` and `.agentic-workspace/memory/repo/manifest.toml` in the same change when used.
-9. Before finishing, rerun the audit or explain why it could not be run.
-10. If a note still exists mainly because of friction, use `promotion-report` to choose the upstream target and the intended post-remediation memory shape before expanding the note further.
-
-## Guardrails
-
-- Keep the core operating model in checked-in docs; do not move repo purpose, invariants, or task state into a skill.
-- Keep durable knowledge in checked-in files so the result stays visible and reviewable in git.
-- Preserve useful current guidance; remove only what no longer helps the next contributor.
-- Do not move durable repo knowledge into task tooling.
-- Do not treat Memory as multi-writer safe; resolve note conflicts semantically and split broad notes when conflict pressure repeats.
-- Mark uncertain notes `Needs verification` instead of guessing.
-- If memory keeps compensating for the same awkward subsystem or workflow, suggest the upstream improvement instead of only expanding the note.
-- Do not assume good hygiene means fewer notes in every repo; it means clearer, cheaper, better-justified notes and less dependence on memory for avoidable complexity.
-
-## Typical outputs
-
-- pruned or merged memory notes
-- refreshed `Last confirmed` metadata
-- cleaner workflow docs and memory notes
-- an updated `.agentic-workspace/memory/repo/index.md` or `.agentic-workspace/memory/repo/manifest.toml` when routing changed
+No matching Memory means no corpus sweep or write. Creating notes, rewriting their prose, changing routing, resolving ambiguous historical provenance, and admitting a receiving decision remain separate owner work when no current operation offers them. Report that gap instead of using retired module commands or editing stale source bytes directly.

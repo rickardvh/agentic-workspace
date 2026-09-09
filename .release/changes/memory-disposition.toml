@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add exact native Memory disposition and admitted fallback recall with external source ownership, current receiving-decision admission, preserved former material, and interruption recovery."
+issues = [2570, 3040, 3041, 2981, 2909]

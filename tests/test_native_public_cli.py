@@ -959,8 +959,9 @@ def test_native_enablement_change_stales_proof_execution(tmp_path: Path, shared_
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("source_owner", ["repository", "memory"])
 def test_public_read_real_repository_decision_preserves_currentness(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, source_owner: str
 ) -> None:
     import tomllib
 
@@ -969,6 +970,8 @@ def test_public_read_real_repository_decision_preserves_currentness(
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
     reference = "docs/decisions/shared-semantic-authority.md"
     source = (ROOT / reference).read_bytes()
+    if source_owner == "memory":
+        reference = ".agentic-workspace/memory/repo/decisions/shared-semantic-authority.md"
     path = tmp_path / reference
     path.parent.mkdir(parents=True)
     path.write_bytes(source)
@@ -981,10 +984,13 @@ def test_public_read_real_repository_decision_preserves_currentness(
     assert record["authority"]["basis"][0]["revision"] == "sha256:" + hashlib.sha256(basis.replace(b"\r\n", b"\n")).hexdigest()
     revision = _commit_native(tmp_path)
     config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text(
-        f'schema_version=1\n[modules]\nenabled=[]\n[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n'
+    config.parent.mkdir(exist_ok=True)
+    admission = (
+        f'decision_record_fallback={{archive=".agentic-workspace/memory/repo/decisions",admitted_revision="{revision}"}}'
+        if source_owner == "memory"
+        else f'decision_record_target="docs/decisions"\ndecision_record_revision="{revision}"'
     )
+    config.write_text(f'schema_version=1\n[modules]\nenabled=["memory"]\n[assurance]\n{admission}\n')
     context = {
         "target": str(tmp_path),
         "task": "Review the public semantic boundary",
@@ -996,6 +1002,7 @@ def test_public_read_real_repository_decision_preserves_currentness(
 
     initial = call(context)
     request = initial["decision_sources"]["requests"][0]
+    assert request["arguments"]["source"]["owner"] == source_owner
     assert initial["decision_packet"]["decision_context"]["consequences"][0]["id"] == record["id"]
     assert "response" not in initial["decision_sources"]
     selected = call({**context, "request": request})
@@ -1008,6 +1015,50 @@ def test_public_read_real_repository_decision_preserves_currentness(
     assert call(quiet_context)["decision_sources"]["requests"] == []
     with pytest.raises(AssertionError):
         call({**quiet_context, "request": request})
+    if source_owner == "memory":
+        # The configured source admission, not readable bytes or actor strings,
+        # owns the consequence. Disabling Memory must also disable this ingress.
+        shared = config.read_text()
+        config.write_text(shared.replace('enabled=["memory"]', "enabled=[]"))
+        disabled = call(context)
+        assert disabled["decision_sources"]["requests"] == []
+        assert not disabled["decision_packet"].get("decision_context", {}).get("consequences")
+        with pytest.raises(AssertionError):
+            call({**context, "request": request})
+        config.write_text(shared.replace(revision, "0" * 40))
+        unadmitted = call(context)
+        assert not unadmitted["decision_packet"].get("decision_context", {}).get("consequences")
+        assert unadmitted["decision_packet"]["blockers"]
+        config.write_text(shared)
+
+        # A stronger owner must admit the exact value. A same-ID replacement or
+        # a lost destination cannot discard the independently admitted fallback.
+        from tests.test_shared_core import _write_native
+
+        receiver = tmp_path / "docs/decisions/received.md"
+        receiver.parent.mkdir(parents=True)
+        _write_native(receiver, {**record, "consequence": "A materially different fixture decision"})
+
+        def admit_receiver() -> None:
+            current_revision = _commit_native(tmp_path)
+            config.write_text(shared + f'decision_record_target="docs/decisions"\ndecision_record_revision="{current_revision}"\n')
+
+        admit_receiver()
+        pending = call(context)["decision_packet"]["decision_context"]
+        assert pending["reconciliation"][0]["status"] == "pending"
+        assert pending["consequences"][0]["source"]["owner"] == "memory"
+        receiver.write_bytes(source)
+        admit_receiver()
+        promoted = call(context)["decision_packet"]["decision_context"]
+        assert promoted["reconciliation"][0]["status"] == "repo-native"
+        assert promoted["consequences"][0]["source"]["owner"] == "repository"
+        receiver.write_bytes(b"Receiver no longer contains the admitted lesson\n")
+        reopened = call(context)["decision_packet"]["decision_context"]
+        assert reopened["reconciliation"][0]["status"] == "pending"
+        assert reopened["consequences"][0]["source"]["owner"] == "memory"
+        assert path.read_bytes() == source
+        config.write_text(shared)
+        request = call(context)["decision_sources"]["requests"][0]
     (tmp_path / "SYSTEM_INTENT.md").write_bytes(basis + b"\nChanged governing source\n")
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "request": request})

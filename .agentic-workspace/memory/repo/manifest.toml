@@ -76,6 +76,7 @@ subsystems = ["workspace-runtime", "memory-system", "planning-system"]
 surfaces = ["architecture", "ownership"]
 routes_from = [".agentic-workspace/**", "packages/memory/**", "packages/planning/**"]
 stale_when = [".agentic-workspace/config.toml", "src/agentic_workspace/contracts/module_registry.json", "packages/*/pyproject.toml"]
+disposition = { note_revision = "sha256:06332182cc9f0085b4c0d6d2bdf132ff607c8eb339b1c403f3700ac9031100fa", reason = "The human determined that this note is no longer necessary as a memory note. Retire it from active Memory selection; preserve the source text without promoting or confirming its historical claims.", status = "retire" }
 
 [notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"

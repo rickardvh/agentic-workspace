@@ -16,6 +16,7 @@ pub(crate) mod native_handoff;
 mod native_instructions;
 mod native_intent;
 mod native_memory;
+mod native_memory_write;
 mod native_payload;
 mod native_planning;
 mod native_planning_create;

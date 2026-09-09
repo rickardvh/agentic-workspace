@@ -15,7 +15,7 @@ Memory owns routed durable lessons, subsystem orientation, invariants, recurring
 Memory does not own:
 
 - active task sequencing, milestones, or backlog;
-- proof, completion, or mutation authority;
+- proof, completion, or general repository mutation authority;
 - raw session or execution logs;
 - duplicated canonical product/source documentation;
 - general ingestion, indexing, embeddings, RAG, or a knowledge graph.
@@ -37,6 +37,21 @@ agentic-workspace start --target . --task "<task>" --format json
 ```
 
 Follow a Memory selector, skill, or operation only when that current contract routes there. Use the generated [current CLI catalogue](../../docs/reference/cli-catalogue.md) for exact flags.
+
+The native route offers exact retain, retire and promotion requests for selected
+notes and advisory facts. These update only disposition metadata in the existing
+manifest after a bounded human decision; note text and external authorship remain
+preserved. Promotion requires a current independently admitted repository
+decision containing the complete lesson and referencing its exact source. A fact
+also preserves its stable identity in the receiving decision. Passing tests or
+naming a destination do not supply receiving authority.
+
+Retained attempt evidence supports only that exact write. Source, policy,
+capability or receiving-authority drift makes the advisory lesson visible again;
+unrelated manifest edits conservatively require renewed disposition evidence.
+Fresh recovery requests finish an interrupted publication without rewriting it.
+New capture, prose rewrites and routing edits still require their own native
+owner capability; disposition is not generic authority over the corpus.
 
 ## Installed shape
 

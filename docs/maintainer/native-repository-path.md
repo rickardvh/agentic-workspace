@@ -106,3 +106,13 @@ publication, fresh entry offers an exact `configuration_write.recovery_requests`
 request which finalizes the retained receipt without rewriting configuration.
 An old write action is stale after success; use fresh resolution for a new edit.
 This bounded writer does not satisfy #2767's broader configure-once outcome.
+
+When Memory is enabled, native startup consumes the existing shared
+`assurance.decision_record_fallback` archive and exact admitted Git revision.
+Relevant typed fallback decisions use the same continuity and bounded rationale
+read requests as repository decisions. A stronger repository destination must
+independently admit the exact material before it can replace the fallback;
+destination loss reopens reconciliation. An archive path, readable note or
+publication receipt alone does not admit a decision. Configuration remains
+repo/human-owned. This ingress restores admitted recall; it does not provide
+the still-missing native capture/admission writer tracked by #2570/#3040.

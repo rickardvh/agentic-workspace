@@ -277,6 +277,8 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
                 "stale-when-matched"
             } else if !superseded_by.is_empty() || !contradicted_by.is_empty() {
                 "declared-currentness-reconciliation"
+            } else if metadata.contains_key("disposition") {
+                "disposition-needs-current-admission"
             } else {
                 "no-admitted-currentness-baseline"
             };
@@ -353,6 +355,17 @@ pub(crate) fn public_view(
     let owner_revision = crate::digest(&declaration)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1", "revision":"pending",
         "owners":[{"owner":"memory", "revision":owner_revision,"requests":[declaration]}]});
+    if view["selected_notes"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .any(|note| note["source"]["revision"].is_string())
+    {
+        crate::native_memory_write::extend_owner(&mut contract["owners"][0])?;
+        contract["restriction_authorities"] =
+            json!([{"owner":"memory","affects":["task","effect:memory-state"]}]);
+    }
+    let owner_revision = contract["owners"][0]["revision"].clone();
     contract["revision"] = json!(crate::digest(&contract)?);
     let validation = full_contract.unwrap_or(&contract);
     let mut requests = Vec::new();
@@ -411,6 +424,142 @@ pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
         &[MANIFEST],
         &["effect:memory-state", "claim:complete"],
     )
+}
+
+/// Only the repository adapter supplies `owner_input`. Memory can recognize an
+/// independently admitted decision containing a whole lesson; it cannot admit
+/// that decision or infer that an excerpt absorbed the rest of a note.
+pub(crate) fn receiving_admissions(
+    target: &Path,
+    view: &Value,
+    owner_input: &Value,
+) -> Result<Value, CoreError> {
+    if view["selected_notes"].as_array().is_none_or(Vec::is_empty) {
+        return Ok(json!([]));
+    }
+    let context = &owner_input["decision_context"];
+    if context["admissions"].as_array().is_none_or(Vec::is_empty) {
+        return Ok(json!([]));
+    }
+    let projected = crate::compile_value(owner_input.clone())?;
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+    let manifest: toml::Value = toml::from_str(
+        std::str::from_utf8(&decision_source::read(&root, MANIFEST)?).map_err(error)?,
+    )
+    .map_err(error)?;
+    let mut result = Vec::new();
+    for note in view["selected_notes"].as_array().into_iter().flatten() {
+        let Some(revision) = note["source"]["revision"].as_str() else {
+            continue;
+        };
+        let reference = note["source"]["reference"].as_str().unwrap();
+        if !context["records"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|record| {
+                record["context"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|source| {
+                        source["owner"] == "repository"
+                            && source["reference"] == reference
+                            && source["revision"] == revision
+                    })
+            })
+        {
+            continue;
+        }
+        // Receiver discovery remains advisory. An unavailable note cannot veto
+        // unrelated direct work; a requested promotion will lack admission.
+        let Ok(detail) = read_selected(target, reference, revision) else {
+            continue;
+        };
+        let lesson = detail["body"].as_str().unwrap().trim();
+        if lesson.is_empty() {
+            continue;
+        }
+        let mut lessons = vec![(None, lesson.to_owned())];
+        for (id, fact) in manifest
+            .get("durable_facts")
+            .and_then(toml::Value::as_table)
+            .into_iter()
+            .flatten()
+            .take(128)
+        {
+            if fact
+                .get("note_ref")
+                .and_then(toml::Value::as_str)
+                .is_some_and(|r| r.split('#').next() == Some(reference))
+                && fact.get("authority_class").and_then(toml::Value::as_str) == Some("advisory")
+                && let Some(summary) = fact
+                    .get("summary")
+                    .and_then(toml::Value::as_str)
+                    .filter(|s| !s.trim().is_empty() && s.len() <= 8192)
+            {
+                lessons.push((Some(id), summary.trim().to_owned()));
+            }
+        }
+        for (fact, lesson) in lessons {
+            for admission in context["admissions"].as_array().into_iter().flatten() {
+                if admission["source"]["owner"] != "repository" {
+                    continue;
+                }
+                let current = projected["decision_context"]["states"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|state| {
+                        state["id"] == admission["id"]
+                            && state["material_revision"] == admission["material_revision"]
+                            && state["source"] == admission["source"]
+                            && state["status"] == "current"
+                    });
+                if !current {
+                    continue;
+                }
+                let absorbed =
+                    context["records"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .any(|record| {
+                            record["id"] == admission["id"]
+                                && fact.is_none_or(|id| record["id"] == *id)
+                                && record["material_revision"] == admission["material_revision"]
+                                && record["source"] == admission["source"]
+                                && ["decision", "consequence"].iter().any(|field| {
+                                    record[*field]
+                                        .as_str()
+                                        .is_some_and(|text| text.trim() == lesson)
+                                })
+                                && record["context"].as_array().into_iter().flatten().any(
+                                    |source| {
+                                        source["owner"] == "repository"
+                                            && source["reference"] == reference
+                                            && source["revision"] == revision
+                                    },
+                                )
+                        });
+                if absorbed {
+                    if result.len() == 12 {
+                        return Err(error(
+                            "more than 12 eligible receivers; narrow the current source scope",
+                        ));
+                    }
+                    let mut candidate = json!({"note":note["source"],"receiving_admission":admission,
+                    "authority_effect":"eligible-receiver-only",
+                    "disposition_authorized":false,"completion_authority":false});
+                    if let Some(fact) = fact {
+                        candidate["fact"] = json!(fact);
+                    }
+                    result.push(candidate);
+                }
+            }
+        }
+    }
+    Ok(json!(result))
 }
 
 #[cfg(test)]

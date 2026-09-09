@@ -8,8 +8,8 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    io::Read,
-    process::Command,
+    io::{BufRead, BufReader, Read, Write},
+    process::{Command, Stdio},
 };
 
 #[derive(Deserialize)]
@@ -49,20 +49,72 @@ pub(crate) fn relative(path: &str) -> Result<(), CoreError> {
     }
     Ok(())
 }
-fn git(input: &Input, arguments: &[String]) -> Result<Vec<u8>, CoreError> {
-    let output = Command::new("git")
+fn admitted_blobs(
+    input: &Input,
+    candidates: &[&[u8]],
+) -> Result<Vec<(String, Vec<u8>)>, CoreError> {
+    let mut child = Command::new("git")
         .arg("-C")
         .arg(&input.target)
-        .args(arguments)
+        .args(["cat-file", "--batch"])
         .env("GIT_LITERAL_PATHSPECS", "1")
-        .output()
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
         .map_err(error)?;
-    if !output.status.success() {
+    let result = (|| {
+        let mut request = child.stdin.take().unwrap();
+        let mut response = BufReader::new(child.stdout.take().unwrap());
+        let mut blobs = Vec::with_capacity(candidates.len());
+        for candidate in candidates {
+            let spec = std::str::from_utf8(candidate).map_err(error)?;
+            let (_, path) = spec
+                .split_once(':')
+                .ok_or_else(|| error("invalid decision source identity"))?;
+            relative(path)?;
+            writeln!(request, "{spec}").map_err(error)?;
+            request.flush().map_err(error)?;
+            let mut header = Vec::new();
+            response
+                .by_ref()
+                .take(128)
+                .read_until(b'\n', &mut header)
+                .map_err(error)?;
+            let fields: Vec<_> = std::str::from_utf8(&header)
+                .map_err(error)?
+                .split_whitespace()
+                .collect();
+            if header.last() != Some(&b'\n') || fields.len() != 3 || fields[1] != "blob" {
+                return Err(error(
+                    "admitted decision blob unavailable; reconcile admission",
+                ));
+            }
+            let size = fields[2].parse::<usize>().map_err(error)?;
+            if size > 262144 {
+                return Err(error("decision source exceeds bounded read"));
+            }
+            let mut bytes = vec![0; size];
+            response.read_exact(&mut bytes).map_err(error)?;
+            let mut delimiter = [0];
+            response.read_exact(&mut delimiter).map_err(error)?;
+            if delimiter[0] != b'\n' {
+                return Err(error("invalid admitted decision blob boundary"));
+            }
+            blobs.push((path.to_owned(), bytes));
+        }
+        Ok(blobs)
+    })();
+    if result.is_err() {
+        let _ = child.kill();
+    }
+    let status = child.wait().map_err(error)?;
+    if !status.success() && result.is_ok() {
         return Err(error(
             "admitted decision snapshot unavailable; preserve source and reconcile",
         ));
     }
-    Ok(output.stdout)
+    result
 }
 pub(crate) fn hash(bytes: &[u8]) -> String {
     format!(
@@ -87,6 +139,27 @@ pub(crate) fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
     }
     std::str::from_utf8(&bytes).map_err(error)?;
     Ok(bytes)
+}
+fn read_repository_source(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
+    relative(path)?;
+    let mut current = std::path::PathBuf::new();
+    for part in path.split('/') {
+        current.push(part);
+        let metadata = root.symlink_metadata(&current).map_err(error)?;
+        #[cfg(windows)]
+        let linked = {
+            use cap_std::fs::MetadataExt;
+            metadata.file_attributes() & 0x400 != 0
+        };
+        #[cfg(not(windows))]
+        let linked = metadata.is_symlink();
+        if linked {
+            return Err(error(format!(
+                "linked decision source {path} is not admitted; reconcile exact provenance"
+            )));
+        }
+    }
+    read(root, path)
 }
 fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
     let text = std::str::from_utf8(bytes).map_err(error)?;
@@ -166,17 +239,8 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
     let mut available = BTreeMap::new();
     let mut admissions = Vec::new();
     let mut dependencies = BTreeMap::new();
-    for candidate in candidates {
-        let spec = std::str::from_utf8(candidate).map_err(error)?;
-        let (_, path) = spec
-            .split_once(':')
-            .ok_or_else(|| error("invalid decision source identity"))?;
-        relative(path)?;
-        let bytes = git(input, &["show".into(), spec.into()])?;
-        if bytes.len() > 262144 {
-            return Err(error("decision source exceeds bounded read"));
-        }
-        let normalized = record(&bytes, path, owner)?;
+    for (path, bytes) in admitted_blobs(input, &candidates)? {
+        let normalized = record(&bytes, &path, owner)?;
         let id = normalized["id"].as_str().unwrap().to_owned();
         if available
             .insert(id, (normalized, bytes, path.to_owned()))
@@ -218,7 +282,7 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
     let mut records = Vec::new();
     for id in selected {
         let (normalized, bytes, path) = available.remove(&id).unwrap();
-        if hash(&read(&root, &path)?) != hash(&bytes) {
+        if hash(&read_repository_source(&root, &path)?) != hash(&bytes) {
             return Err(error(format!(
                 "stale decision source {path}; reconcile exact provenance before contribution"
             )));
@@ -236,7 +300,7 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
             if dependency["owner"] != "repository" {
                 continue;
             }
-            if let Ok(bytes) = read(&root, reference) {
+            if let Ok(bytes) = read_repository_source(&root, reference) {
                 dependencies.insert(
                     reference.to_owned(),
                     json!({"owner":"repository", "reference":reference, "revision":hash(&bytes)}),
@@ -379,6 +443,7 @@ pub(crate) fn read_contract() -> Result<Value, CoreError> {
     shape["$defs"] = json!({"decision_admission":canonical["$defs"]["decision_admission"],"decision_reference":canonical["$defs"]["decision_reference"]});
     let declaration = json!({"kind":READ_KIND,"result_kind":"agentic-workspace/decision-source-read-result/v1","input_schema":shape});
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":READ_OWNER,"revision":crate::digest(&declaration)?,"requests":[declaration]}]});
+    contract["restriction_authorities"] = json!([{"owner":READ_OWNER,"affects":["task"]}]);
     contract["revision"] = json!(crate::digest(&contract)?);
     Ok(contract)
 }
@@ -405,16 +470,18 @@ pub(crate) fn public_read(
         .into_iter()
         .flatten()
         .filter(|admission| {
-            admission["source"]["owner"] == "repository"
-                && decision["decision_context"]["states"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .any(|state| {
-                        state["id"] == admission["id"]
-                            && state["material_revision"] == admission["material_revision"]
-                            && state["source"] == admission["source"]
-                    })
+            matches!(
+                admission["source"]["owner"].as_str(),
+                Some("repository" | "memory")
+            ) && decision["decision_context"]["states"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|state| {
+                    state["id"] == admission["id"]
+                        && state["material_revision"] == admission["material_revision"]
+                        && state["source"] == admission["source"]
+                })
         })
         .cloned()
         .collect();
@@ -437,7 +504,7 @@ pub(crate) fn public_read(
             .as_str()
             .ok_or_else(|| error("decision source reference missing"))?;
         let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
-        let bytes = read(&root, path)?;
+        let bytes = read_repository_source(&root, path)?;
         if hash(&bytes) != source["revision"] {
             return Err(error(
                 "decision source changed during read; reconcile current owner",
@@ -453,7 +520,7 @@ pub(crate) fn public_read(
             let reference = dependency["reference"]
                 .as_str()
                 .ok_or_else(|| error("decision dependency reference missing"))?;
-            if hash(&read(&root, reference)?) != dependency["revision"] {
+            if hash(&read_repository_source(&root, reference)?) != dependency["revision"] {
                 return Err(error(
                     "decision dependency changed during read; reconcile current owner",
                 ));
