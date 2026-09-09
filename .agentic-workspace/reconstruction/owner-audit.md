@@ -1,4 +1,4 @@
-# First-stable owner audit — 2026-09-08
+# First-stable owner audit — 2026-09-09
 
 Current merged base: `c2303e9212a067d306be14846824ff727bc59cb0`, freshly
 verified after #3166/#3167/#3168 integration. The current bounded follow-up
@@ -42,10 +42,10 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include broader configuration mutation, typed fallback decision capture and correction. Native Memory disposition/promotion is implemented on this stack; former operation names are not an ordinary native interface. |
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
-| #2570 | bounded implementation gap | Native note/fact disposition, current receiving-owner promotion and independently admitted typed fallback recall now exist. Native capture and new-decision admission remain unresolved with #3040; source authorship and former material survive. Capability approval does not adjudicate the real April note. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 26, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2570 | bounded implementation gap | Native note/fact disposition, current receiving-owner promotion and independently admitted typed fallback recall now exist. Native capture and new-decision admission remain unresolved with #3040; source authorship and former material survive. The human separately retired the April note; no promotion or historical truth was inferred. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 28, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | bounded implementation gap | Shared continuity, current native source/rationale/supersession and admitted Memory promotion exist. Ordinary native typed fallback capture and its reconciliation consequence remain absent; final cross-thread authorship and cache-versus-authority proof also remain. This is not merely an unrun conformance gate. |
-| #3041 | evidence/conformance gap | The configured repo-owned `docs/decisions/` archive contains three reconstruction records; native relevant/unrelated/rationale/supersession proof and exact Memory disposition now exist. The real April note still needs a bounded owner/human disposition and aggregate admission. Capability approval does not authorize promotion or resolve its ambiguous provenance; no replacement archive is needed. |
+| #3041 | evidence/conformance gap | The configured repo-owned `docs/decisions/` archive contains three reconstruction records; native relevant/unrelated/rationale/supersession proof and exact Memory disposition now exist. The human has retired the real April note through the native owner, with fresh-session suppression and unchanged source bytes. Aggregate independent admission remains; no replacement archive or promotion is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
 | #2981 | bounded implementation gap | Native proof receipts bind actual producer bytes and preserve current evidence across unrelated file churn. The older Python semantic-partition tests do not establish a native retained negative conclusion or focused cross-owner partial re-resolution. Those ordinary native outcomes are absent, not merely missing CI. Avoid a generic cache until a material conclusion justifies retention. |
 | #2767 | bounded implementation gap | The authorized native writer can set workspace.cli_invoke in either existing canonical TOML source through an exact human-bound proposal, including insertion when unrelated bytes can be preserved. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
@@ -218,8 +218,8 @@ was needed for that #3001 confinement case.
 The audit therefore has 4 candidate-complete owners, 20 bounded implementation
 gaps and 10 evidence/conformance gaps. The #2981 correction supersedes the earlier
 4/19/11 count. The current #3040/#3041 reclassification preserves 4/20/10:
-#3040 lacks native fallback capture; #3041 awaits real-source disposition and
-admission rather than another archive or disposition implementation. In #2981, native proof reuse exists, but the required native negative-reuse
+#3040 lacks native fallback capture; #3041 awaits cumulative independent
+admission of the now-applied real-source disposition. In #2981, native proof reuse exists, but the required native negative-reuse
 and partial re-resolution path is not implemented by the former Python helper.
 
 The #3172 receiving-source follow-through reduces repeated acquisition without
@@ -236,10 +236,10 @@ satisfy the missing negative reuse or partial re-resolution criteria.
 ### #2570 established corpus disposition
 
 The current manifest has six declared notes and one advisory durable fact. Native
-`memory/read-current-note/v1` retrieves the real April decision and package note
-in fresh processes at exact source revisions. Both remain review evidence;
-source identity does not confirm their factual currentness. The following is a
-maintainer inventory, not a Memory promotion/retirement mutation or admission.
+`memory/read-current-note/v1` retrieved the real April decision before its
+human-authorized retirement. Fresh native selection now suppresses that exact note;
+its original bytes remain intact. The other rows remain a maintainer inventory,
+not blanket disposition or factual-currentness admission.
 Paths below are relative to `.agentic-workspace/memory/repo/`.
 
 | Source | Disposition | Preserved value and current limit |
@@ -248,7 +248,7 @@ Paths below are relative to `.agentic-workspace/memory/repo/`.
 | `domains/example-runtime-boundary.md` | retain advisory, reconcile | Preserve generated-source and installed-payload separation. Its Python runtime-owner statement is obsolete after native cutover; do not import it as current authority. |
 | `domains/memory-package-context.md` | retain advisory, reconcile | Preserve Memory/Planning separation and source versus dogfood install. Native implementation ownership now also includes Rust; old package paths are incomplete. |
 | `domains/planning-package-context.md` | retain advisory, reconcile | Preserve active-custody versus durable-knowledge separation. Legacy record/catalogue details cannot define the reconstructed native owner. |
-| `decisions/installed-system-consolidation-2026-04-05.md` | human-review-needed | Root-owned operational state under `.agentic-workspace/` remains useful, but deciding provenance is ambiguous and its state.toml/uninstall instructions are obsolete. Existing `docs/decisions/` explicitly does not admit this note; no promotion is inferred. |
+| `decisions/installed-system-consolidation-2026-04-05.md` | retired by explicit human decision | The human determined that it is no longer necessary as Memory. Native manifest-only retirement committed; fresh selection excludes it. Original text remains intact, with no promotion or confirmation of its ambiguous historical provenance. |
 | `mistakes/recurring-failures.md` and fact `selected-plan-owned-next-task` | retain advisory, reconcile | Preserve selected-owner continuity and independent-review separation. Retired summary/roadmap commands are not executable guidance. Current native Planning recovery and review skill are stronger-owner candidates; mere references or passing tests do not authorize hiding the original lesson. |
 
 Templates, skill indexes and directory READMEs are operating/routing surfaces,
@@ -261,7 +261,7 @@ repository decision containing the entire lesson and referencing the exact note;
 a fact also preserves its stable identity in the receiver. Mere matching prose,
 an excerpt, a forged receiver, contradictions, source drift and stale deciding
 authority cannot supply promotion admission. Receiver loss exposes the retained
-note and blocks action. No real corpus disposition was authorized or applied.
+note and blocks action. The April note was later retired through a separate explicit human decision.
 
 Four-interface journeys cover retirement, note/fact promotion, defer, source and
 receiver drift, ABA replay refusal, irrelevant-work silence and original material
@@ -303,7 +303,7 @@ older passing counts are not exact final-candidate admission.
 | #2947 / #3167 | A real ephemeral read-only process completed extraction, typed result admission, Planning retention and selected native Verification; a matched retained-local case completed the same bounded work. | Transport success is not parent completion. Missing, stopped, censored or malformed returns are excluded from successful evidence. No broader mutation/host-native/pause-resume claim follows. |
 | #2209 / #3167 | Exact current Planning consumption and current native Verification derive one attributable contextual target signal; source/task/configuration drift de-adopts it. | No general target quality, winner, human/evaluation ingress or completion authority. Repeated reads cannot multiply one observation. |
 | #3077 / #3168 | Paired native CLI/core became the ordinary source/package path. Installed wheel, npm and independent consumer fixtures exercise native startup/proof/currentness. | Faithful platform/artifact fixtures are distinct from exact release-equivalent admission under #2990. Retained Python maintainer analysis is not a fallback semantic host. |
-| #2767 / #3168, extended in #3171 | Exact shared/local invocation replacement/insertion preserves external authorship, unrelated bytes, comments and policy; interruption recovery and consumed-authorization rejection pass. | No source creation, optional enablement, trust-pin mutation, generic custody or complete configure-once claim. |
+| #2767 / #3168, extended in #3171 | Exact shared/local invocation replacement/insertion preserves external authorship, unrelated bytes, comments and policy. Returned writes/recovery also retain current Planning continuation; source drift, interruption recovery and consumed-authorization rejection pass. | No source creation, optional enablement, trust-pin mutation, generic custody or complete configure-once claim. |
 
 The final historical matched #2209 case measured local 7,806 ms/21 native calls
 and non-local 28,343 ms/25 calls, including 16,790 ms worker execution and 41,508
@@ -312,7 +312,7 @@ cost remain unknown. Local was cheaper in this case; no general delegation cost
 advantage is claimed. Full prior measurements and exclusions remain at the link.
 
 The actual selected reconstruction Plan is maintained only through its native
-writer. Revision 26 retains current identity, scope, relationships, proof and
+writer. Revision 28 retains current identity, scope, relationships, proof and
 frontier; independent acceptance remains pending. The original human local
 configuration still hashes to
 `3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189`.
@@ -343,3 +343,14 @@ and 24 former-route cases pass, including a non-GitHub route, plus 97 Rust tests
 These corrections remain in the four existing PRs. No capture writer, new deciding
 authority, external-write permission or owner closure is inferred from recall or
 procedure discovery; the 4/20/10 audit classification remains unchanged.
+
+Current source-write follow-through: #3171 includes `68f3cab25`, retaining the
+exact Planning continuation in configuration write/recovery actions. #3172
+includes `d1bb7f5e9`, the corresponding Memory correction and the human-authorized
+April retirement. Cumulative configuration, Memory and public-interface proof
+passes 200 cases with one skip; Rust passes 97 with three ignored helpers. The
+existing four-interface configuration cases now include a real former Plan
+fixture and reject Planning-source drift without changing configuration. No
+additional test family, actual configuration write or Memory capture was added.
+The human clarified that Memory need not be populated to demonstrate use while
+its capture implementation remains incomplete.
