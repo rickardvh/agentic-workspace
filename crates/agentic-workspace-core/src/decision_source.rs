@@ -470,16 +470,18 @@ pub(crate) fn public_read(
         .into_iter()
         .flatten()
         .filter(|admission| {
-            admission["source"]["owner"] == "repository"
-                && decision["decision_context"]["states"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .any(|state| {
-                        state["id"] == admission["id"]
-                            && state["material_revision"] == admission["material_revision"]
-                            && state["source"] == admission["source"]
-                    })
+            matches!(
+                admission["source"]["owner"].as_str(),
+                Some("repository" | "memory")
+            ) && decision["decision_context"]["states"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|state| {
+                    state["id"] == admission["id"]
+                        && state["material_revision"] == admission["material_revision"]
+                        && state["source"] == admission["source"]
+                })
         })
         .cloned()
         .collect();
