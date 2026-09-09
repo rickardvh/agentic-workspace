@@ -1,92 +1,111 @@
 ---
 name: self-improvement-dogfooding
-description: Run bounded repo-local improvement through the current AW owner path, preserving intent, proof and honest continuation.
+description: Handle new repo-local improvement findings discovered while dogfooding Agentic Workspace. Use when current work reveals a defect, friction, wasted work, misleading guidance, authority mismatch, or other improvement opportunity outside the task already being executed. Do not use as a general gate for implementing existing issues, Plans, review fixes, or explicit human instructions.
 ---
 
 # Self-Improvement Dogfooding
 
-This is maintainer guidance for this repository, not shipped product authority.
-Use it for autonomous improvement and reconstruction work. The human owns product
-direction; current domain owners retain mutation, proof and completion authority.
+This is maintainer guidance for handling **new findings discovered while Agentic
+Workspace uses itself**. It is not an ambient workflow for repository work and it
+grants no product, mutation, proof, review, or completion authority.
 
-## Operating path
+Ordinary implementation follows `AGENTS.md`, the current issue or Planning owner,
+and the relevant domain owner. Do not invoke this skill merely because the work is
+in this repository, is reconstruction work, or improves Agentic Workspace.
 
-Follow the configured invocation and source-build preparation in `AGENTS.md`.
-Use its native `start --target . --task "<task>" --format json` route before
-non-trivial work; repeat `--changed <path>` when paths are known. Read the current
-`decision_packet` before expanding into source files or choosing effects.
+## Activation boundary
 
-Supply only bounded answers/material in exact owner-returned requests through
-`start --input <request.json>`, preserving target/task/changed context. Invoke
-only the returned action with `invoke --input <action.json>`, then resolve again.
-Direct work stays direct when the current contract permits it.
+Use this skill only when both are true:
 
-Do not prepend a second summary/report/skills/reconcile loop or substitute the
-former Python host for unavailable native owner effects. Maintainer build,
-generation and test tools may validate source; they do not confer product
-mutation or completion authority. An unavailable owner outcome remains an
-explicit implementation gap with its existing issue owner.
+1. Current work exposes a concrete improvement finding that is not already the
+   intended outcome of the task, issue, approved Plan, review fix, or explicit
+   human instruction.
+2. The agent must decide whether and how to act on that newly discovered finding.
 
-Read `SYSTEM_INTENT.md` when the current issue requires product-direction context.
-Do not open broad workspace state merely to demonstrate use of AW.
+Once the human or an existing owner explicitly adopts the finding as planned work,
+execute that work through the ordinary owner path. This skill adds no second
+approval gate.
 
-## Bounded work
+Examples:
 
-1. Select the earliest unresolved outcome in the established issue/Planning
-   frontier. Inspect current implementation and proof; open status alone is not
-   a missing implementation, and an integrated slice is not satisfied intent.
-2. Extend the existing owner. Maintain a selected real plan through its native
-   writer when durable continuation is needed; do not hand-edit stale plan
-   bytes, create another epic, or scaffold a plan for direct work.
-3. Make the smallest complete correction. Prefer subtraction, merger and sharper
-   ownership over another command, store, registry or report. Use issue shaping
-   for a boundary refinement and issue creation only for a distinct missing owner.
-4. Run focused positive and negative currentness/admission proof and required
-   parity. Follow current Verification requests when applicable. Retain failed,
-   interrupted and censored outcomes honestly; do not count them as successes.
-5. Reconcile durable material through its owner and leave the next actionable
-   frontier. Commit/push coherent milestones without unrelated work. Independent
-   review remains separate from implementation evidence; never self-approve.
-6. Continue while authorized work remains. Do not stop merely because one useful
-   slice or test run succeeded.
+- An issue explicitly requires a typed authority boundary: implement it normally;
+  do not ask again because the change touches authority.
+- A test run reveals redundant proof work or misleading guidance: this is a
+  dogfooding finding; triage it here.
+- A discovered fix would redefine the package's product direction or authority
+  model: surface the finding and obtain human direction before implementing it.
+
+## Finding triage
+
+1. State the finding in terms of observed behavior, cost, or violated intent.
+   Preserve failed or censored evidence; do not upgrade suspicion into fact.
+2. Find the smallest existing owner. Prefer repairing that owner over adding a new
+   command, store, registry, report, workflow concept, or parallel state surface.
+3. Classify the finding:
+
+   - **Bounded defect or friction** — existing intended behavior is wrong,
+     misleading, redundant, unnecessarily expensive, or harder to continue than it
+     needs to be. If the correction preserves the human-owned why, existing
+     authority boundaries, and product shape, fix it autonomously when safe and
+     proportionate. No confirmation is required merely because the finding was not
+     in the original task.
+   - **Evidence or conformance gap** — deterministic behavior exists but current
+     proof is missing, stale, or too broad. Repair or run the smallest owner-aligned
+     proof and keep closure honest. Do not turn missing evidence into new product
+     machinery.
+   - **Distinct bounded follow-up** — the finding is real but should not enlarge the
+     current patch. Refine the existing issue when it has the same owner/outcome, or
+     create a distinct issue only when a genuinely separate owner is needed. Filing
+     work does not itself authorize a change of product direction.
+   - **Product-shaping change** — resolving the finding would change the human-owned
+     outcome, introduce or widen an authority/custody boundary, add or redefine a
+     first-line product surface, materially widen package scope, or contradict an
+     approved issue/Plan. Present the finding and proposed consequence to the human
+     before implementing that change.
+
+4. After a bounded autonomous repair, return to the original task unless the repair
+   invalidates its assumptions. Do not let incidental improvement work silently
+   replace the user's requested outcome.
 
 ## Human review boundary
 
-Request human review when you autonomously introduce a change of product direction,
-authority, first-line surface or scope beyond the approved issue plans or human
-instructions. Implementing an already approved plan, including its planned authority
-boundaries, does not require another approval merely because it touches authority.
-Routine implementation choices and bounded corrections within that plan should
-proceed autonomously.
+Ask for human direction because of this skill only when the **newly discovered
+finding** requires a product-shaping decision such as:
 
-Explicit approval of existing issue plans covers those plans and their stated
-constraints. It does not extend itself to later scope or authority changes you
-introduce by editing an issue. Do not ask again for an approved capability or plan.
-Still obtain any specific human judgment that the approved plan itself reserves
-for the human; capability approval does not supply that bounded answer, current
-source admission, independent review or completion proof.
+- changing the intended outcome or an accepted non-goal;
+- introducing or materially widening authority, custody, or permission;
+- adding or redefining a first-line human- or agent-facing product surface;
+- materially broadening an issue or Plan beyond its already approved outcome;
+- waiving or bypassing an existing policy, blocker, or owner boundary.
 
-If proof is insufficient, withhold the claim and continue available implementation
-or evidence work. If no safe next step exists, name the concrete blocker and the
-exact instruction requiring input.
+Do **not** ask for confirmation under this skill for:
 
-## Evidence and durable residue
+- implementing an existing issue, approved Plan, or explicit human instruction;
+- implementing a planned authority boundary that is already part of that work;
+- routine implementation choices and bounded corrections within approved scope;
+- addressing review comments or CI failures;
+- fixing code, tests, docs, or routing so they match already-established intent;
+- subtracting obsolete or redundant machinery when its disposition is already
+  determined;
+- collecting focused proof for an already-defined outcome.
 
-Prefer one compact existing owner or PR record over parallel checklists. Report:
+A domain owner may still require a specific bounded human judgment for its own
+operation. That requirement comes from the domain authority, not from dogfooding,
+and this skill neither supplies nor removes that judgment.
 
-- `what_landed`: actual integration state and affected owner.
-- `intent_served`: outcome achieved, separately from the larger intent.
-- `proof`: current subject, meaningful validation and failed/censored exclusions.
-- `unresolved`: remaining implementation, conformance or independent admission.
-- `closure_honest`: whether the owner may close, and who retains continuation.
+## Proof and residue
 
-Include a short cost assessment when relevant: what operating/architecture cost
-was found, whether the correct action is constructible before validation, what
-was removed or added, and whether total successful-completion cost improved or
-remains unknown. Preserve reusable lessons in their smallest durable owner;
-dismiss transient residue explicitly when it has no future decision value.
+Prove the finding and repair at the smallest useful boundary. Keep implementation
+proof separate from independent review and parent closure. Preserve only residue
+that makes recurrence, handoff, or verification cheaper; do not create a dogfood
+ledger or archive merely to show that the skill ran.
 
-For operational guidance changes, use `docs/maintainer/operational-affordance-design.md`:
-check that an unfamiliar agent sees one clear next action, resolved commands and
-bounded context, with deeper inspection available only when needed. Do not add
-text-snapshot tests for wording already covered by current behavioral tests.
+When reporting a material finding, keep it compact:
+
+- `finding`: what was newly observed;
+- `action`: fixed autonomously, routed to an owner, or escalated for human direction;
+- `proof`: current evidence for the finding and any repair;
+- `unresolved`: only the remaining decision or owner gap.
+
+If no new finding was discovered, this skill should leave no visible work or
+additional approval step.
