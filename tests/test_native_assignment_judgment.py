@@ -153,3 +153,96 @@ def test_unobserved_provider_cannot_be_dismissed_by_local_assessment(tmp_path, s
     assert result["task_requirements"]["assignment"]["result"]["status"] == "unresolved-assessment"
     assert any(b["code"] == "current-binding-assignment-required" for b in result["decision_packet"]["blockers"])
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_current_target_scope_and_known_manual_result_mismatch(tmp_path, shared_core_binary, native_cli, surface):
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    original = (
+        BASE
+        + '[delegation_targets.bounded]\nstrength="medium"\nforbidden_task_classes=["boundary-shaping"]\ntransports=[{kind="manual"}]\n'
+    )
+    original += "[runtime]\nsupports_internal_delegation=true\nstrong_planner_available=true\n"
+    source.write_text(original)
+    context = {"target": str(tmp_path), "task": "Repair an authority boundary", "changed": ["owner.rs"]}
+
+    def call(request=None, **updates):
+        return consume(
+            surface, shared_core_binary, native_cli, {**context, **updates, **({"request": request} if request is not None else {})}
+        )
+
+    task = call()["task_requirements"]["requests"][0]
+    task["arguments"]["required_result_classes"] = ["unapplied-patch"]
+    pending = call(task)["task_requirements"]
+    assert pending["execution_configurations"]["target_scope_questions"][0]["restrictions"] == ["boundary-shaping"]
+    assert pending["assignment"]["result"]["unresolved_alternatives"]
+    task = pending["requests"][0]
+    task["arguments"]["required_result_classes"] = ["unapplied-patch"]
+    task["arguments"]["target_scope"]["bounded"] = {"status": "applies", "reason": "This task changes an authority boundary."}
+    denied = call(task)["task_requirements"]
+    assert all(
+        not row["eligible"]
+        for row in denied["execution_configurations"]["configurations"]["candidates"]
+        if row["configuration"]["target"] == "bounded"
+    )
+    request = denied["assignment"]["requests"][0]
+    request[-1]["arguments"].update(alternative="local:internal", reason="Current target is the eligible patch executor.")
+    admitted = call(request)
+    assert admitted["task_requirements"]["assignment"]["result"]["local_assignment_satisfied"] is True
+    assert not any("effect:implementation" in b["affects"] for b in admitted["decision_packet"]["blockers"])
+    assert any("effect:delegation" in b["affects"] for b in admitted["decision_packet"]["blockers"])
+    assert source.read_text() == original
+
+    # A non-applicable restriction is not a capability grant: manual remains read-only.
+    task["arguments"]["target_scope"]["bounded"] = {
+        "status": "not-applicable",
+        "reason": "A bounded mechanical implementation of the already-decided boundary.",
+    }
+    observed = call(task)["task_requirements"]
+    manual = observed["execution_configurations"]["manual_targets"][0]
+    assert manual["required_result_classes_supported"] is False
+    request = observed["assignment"]["requests"][0]
+    request[-1]["arguments"].update(alternative="local:internal", reason="Only the current configuration can return the required patch.")
+    assert call(request)["task_requirements"]["assignment"]["result"]["local_assignment_satisfied"] is True
+    # The same manual alternative is viable for a read and must remain unresolved.
+    task["arguments"]["required_result_classes"] = ["read-only"]
+    assert call(task)["task_requirements"]["assignment"]["result"]["unresolved_alternatives"]
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(request, task="Different work")
+    forged = copy.deepcopy(task)
+    forged["arguments"]["target_scope"]["unknown"] = {"status": "not-applicable", "reason": "Unowned"}
+    with pytest.raises(AssertionError, match="restriction"):
+        call(forged)
+    source.write_text(original.replace("boundary-shaping", "reasoning-heavy"))
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(request)
+    source.write_text(original.replace("[runtime]", 'revision_policy="revalidate"\n[runtime]'))
+    fresh_task = call()["task_requirements"]["requests"][0]
+    fresh_task["arguments"].update(
+        required_result_classes=["unapplied-patch"],
+        target_scope={"bounded": {"status": "applies", "reason": "The boundary-shaping restriction applies."}},
+    )
+    fresh = call(fresh_task)["task_requirements"]["assignment"]["requests"][0]
+    fresh[-1]["arguments"].update(alternative="local:internal", reason="Current executor remains eligible.")
+    retained = call(fresh)
+    assert retained["task_requirements"]["assignment"]["result"]["local_assignment_satisfied"] is True
+    assert any(
+        b["code"].endswith("delegation_targets.bounded") and "effect:implementation" in b["affects"]
+        for b in retained["decision_packet"]["blockers"]
+    ), "Unconsumed lifecycle policy is not cleared by Assignment"
+    source.write_text(original.replace('strength="weak"', 'strength="weak"\nhuman_control_modes=["auto"]'))
+    mode_task = call()["task_requirements"]["requests"][0]
+    mode_task["arguments"].update(
+        required_result_classes=["unapplied-patch"],
+        target_scope={"bounded": {"status": "applies", "reason": "The boundary-shaping restriction applies."}},
+    )
+    mode_choice = call(mode_task)["task_requirements"]["assignment"]["requests"][0]
+    mode_choice[-1]["arguments"].update(alternative="local:internal", reason="A preference cannot consume unhandled mode policy.")
+    assert any(
+        b["code"].endswith("delegation_targets.local") and "effect:implementation" in b["affects"]
+        for b in call(mode_choice)["decision_packet"]["blockers"]
+    )
+    source.write_text(original)
+    assert source.read_text() == original
+    assert not (tmp_path / ".agentic-workspace/local").exists()

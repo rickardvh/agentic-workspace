@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Merged base remains 384473617acd395ebf66b3d449d7bd28bbe5bea9. #3167 at af247a793 reconciles its delivered delegation frontier; #3168 includes it via 9a8d33b95. The current follow-up replaces retired root install/init test journeys with installed native owner/configuration lifecycle proof, keeps payload conformance fail-closed, and reconciles Memory/Verification guidance. Three PRs remain unmerged. Exact-head hosted CI and independent review remain required.",
+    "frontier": "Merged base c2303e921 integrates #3166/#3167/#3168. The explicitly human-authorized maintainer repair adds current typed target-scope judgment to existing Assignment task requirements, preserves viable unresolved-alternative refusal, and distinguishes the current manual read-only result boundary from a patch-producing task. Exact admitted local Assignment consumes only matching configured target context for implementation; delegation, completion and unknown lifecycle controls survive. The unchanged original local configuration now yields a current Assignment identity and no implementation blockers. #2613 is the next bounded implementation gap. No parent closure or promotion is inferred.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Run and repair exact-head #3168 CI after the blocking-review follow-up, then request independent re-review of #3167/#3168. The native installed-consumer path, optional Memory ledger contract and Verification guidance are corrected in the follow-up. Preserve broader #2767, retained API/ownership, delegation and release owner gaps; no promotion or issue closure.",
+  "next_action": "Continue #2613: transfer implementation-coupled Verification routes out of human configuration through the existing owner, preserve irreducible repo policy and actual local authority, and finish the P0/P1 audit. The bounded #2817/#2210 typed scope repair now admits retained-local implementation against unchanged lived-in config; independent review and cumulative conformance remain required.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -60,7 +60,9 @@
       "#3167 native process/return/Planning/Verification and matched real Codex/local proof remain bounded; supported host-native/mutation/pause-resume outcomes and general target quality remain open.",
       "#3168 writer proof remains 21 advisory/configuration cases with one Windows file-symlink skip and passing directory-junction rejection, 96 Rust tests with three ignored helpers, and shared/local native/JSON/Python/TypeScript parity. No broader configuration custody or configure-once completion is inferred.",
       "Current follow-up: isolated installed Python and packed TypeScript consumers pass fresh-process Planning create/select/update/reconcile, idempotent result recovery and stale unconsumed-action rejection, exact configuration write/no-op/source-drift/replay rejection, disabled modules, incompatible reader and malformed source rejection, artifact-payload presence/currentness/drift/missing-byte admission, and consumer removal with ordinary native owner recovery. Payload bytes and initial human policy are explicit fixtures, not a claim that a native payload installer created them.",
-      "Five replacement installed-runtime/integration cases and 13 external-consumer/maintainer cases pass on Windows. Memory explicitly owns the optional-ledger rule; present malformed evidence still fails. Generated mirrors are current. Hosted exact-head and cumulative conformance remain pending; no release gate is waived."
+      "Five replacement installed-runtime/integration cases and 13 external-consumer/maintainer cases pass on Windows. Memory explicitly owns the optional-ledger rule; present malformed evidence still fails. Generated mirrors are current. Hosted exact-head and cumulative conformance remain pending; no release gate is waived.",
+      "Merged c2303e921 current proof: source-built paired Rust binaries recover the real native Planning owner; all 16 native/JSON/Python/TypeScript Assignment comparison/currentness cases pass. Real original-local-source startup retains the implementation blocker after exact task and current-target comparative requests. This is observed failure-to-admit evidence, not successful implementation or target-failure evidence.",
+      "Bounded Assignment repair: unchanged local config SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189; actual native route returns assigned-current-target and no implementation blockers. 66 neighboring parity/configuration cases pass with one Windows file-symlink skip; Rust core 96 pass/3 subprocess helpers ignored; generated package static proof passes. Original 16 refusal/currentness cases are retained. No worker launched and no configuration policy was rewritten."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -130,7 +132,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 12,
+  "revision": 14,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -182,18 +184,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/ccbddc908861bcd2034c1ea995d66b88f6f80f547c1a2b52d33a634b5e842fd2.attempt.json",
-        "revision": "sha256:42aa0eac7e460c0387c6944aa444d58cbec515315f8bef8a6686ad72e88e3d0c",
+        "path": ".agentic-workspace/local/effects/72652da00a092920f6b92754cce126e4c208a48005b9bbf7704c1a583cea3836.attempt.json",
+        "revision": "sha256:cd23b76442d5801cedea7df646a13df4cab05b5b6244772f47671db72ff1189b",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/ccbddc908861bcd2034c1ea995d66b88f6f80f547c1a2b52d33a634b5e842fd2.result.json",
-        "revision": "sha256:e7d51c328c236e716917f9d232872d964f74ec28bea68375d915fed982600bd8",
+        "path": ".agentic-workspace/local/effects/72652da00a092920f6b92754cce126e4c208a48005b9bbf7704c1a583cea3836.result.json",
+        "revision": "sha256:eb3ba091601241d6924149aa95f7b898d647ca361b5c080957bfa98d07d72b67",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:e86a83ade59650517d9df9772a9d7f44c166bfcda39933b2459f07b3fa537241",
+    "invocation_revision": "sha256:9b08602b6ea159b98c1460c2d255aa398625047a9626655c189407ed96cb7852",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -201,7 +203,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:c48a0b97cca98eb927944ff5d329bd2e1ce921070136eba42c9632856c719891",
+        "document_revision": "sha256:dbde77b9b46b74b67dfa7f658a13a53434a6f5909adc56f7e13cc9f68466a2fb",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

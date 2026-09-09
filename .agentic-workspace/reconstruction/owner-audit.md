@@ -1,12 +1,11 @@
 # First-stable owner audit — 2026-09-08
 
-Current merged base: `384473617acd395ebf66b3d449d7bd28bbe5bea9`, freshly
-fetched from `origin/reconstruct/first-stable` after #3164/#3165 integration.
-The original audit began at `5d4f0fa819d7888b9e63526cad8dd9e697b0e7f2`;
-historical proof below retains its actual subject rather than claiming a new run.
-This continuation reconciles the real selected owner through native custody.
-Unrelated original-checkout assignments, proof receipts and local files remain
-outside the patch. Integration of a mechanism does not close its parent intent.
+Current merged base: `c2303e9212a067d306be14846824ff727bc59cb0`, freshly
+verified after #3166/#3167/#3168 integration. The current bounded follow-up
+repairs #2817/#2210's actual configured-source Assignment judgment path under
+explicit human maintainer authorization. It is not yet independently admitted.
+Historical proof below retains its actual subject. Unrelated original-checkout
+assignments, proof receipts and local files remain outside this change.
 
 This is implementation/audit evidence, not independent review, a release
 admission, or a new execution epic. #2983 retains convergence ownership;
@@ -18,10 +17,10 @@ an implementation gap even when the former Python host supplies that behavior.
 
 ## P0/P1 dispositions
 
-Each owner has exactly one disposition against cumulative implementation candidate
-`9a8d33b95` plus this #3168 blocking-review follow-up, including #3166 and #3167. Those three PRs remain open;
-classifying candidate behavior does not assert integration or independent
-admission. Historical evidence below retains its tested subject.
+Each owner has exactly one disposition against the merged cumulative candidate
+plus this bounded Assignment correction. Integration of the former stack does
+not satisfy its parent owners. #2613's lived-in human-configuration boundary
+remains an implementation gap, as recorded in #2983 comment 5590398962.
 
 | Owner | Classification | Current evidence and remaining admission boundary |
 | --- | --- | --- |
@@ -41,7 +40,7 @@ admission. Historical evidence below retains its tested subject.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 9, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 14, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -59,6 +58,38 @@ admission. Historical evidence below retains its tested subject.
 | #2647 | bounded implementation gap | Native ordinary ingress has no source-owner adaptation mutation route. Former proposal/effectiveness evidence does not prove the native later-equivalent-work convergence outcome. |
 | #2648 | bounded implementation gap | The real initiative source remains an unresolved native control, and ordinary native bounded improvement/disposition is incomplete. Awareness must not be confused with initiative authority. |
 | #2809 | bounded implementation gap | The current native retained-and-checked result supports a bounded contextual signal. The broader consequential outcome-to-owner-to-later-benefit loop, including failures and durable convergence, remains incomplete. |
+
+## Current configured Assignment correction
+
+The original local source requires best-fit Assignment and preserves target-scope
+restrictions. An exact current-target comparison previously remained unadmitted:
+there was no typed applicability answer for those restrictions, and a manual
+read-only route remained unresolved even for a required patch result.
+
+The existing task-requirements request now supplies `target_scope` judgments and
+exposes the exact restrictions being judged. Missing/unresolved answers still
+block; applicable restrictions deny the target. Task, Planning, source, capability
+and candidate revisions bind subsequent comparison. Manual result-class mismatch
+is an observed capability exclusion, not a preference or failed-worker claim.
+Viable unresolved alternatives keep their existing blocking behavior.
+
+Only an admitted retained-local Assignment consumes the matching bounded target
+context for implementation. Unknown target lifecycle controls, delegation,
+completion and independent safety restrictions survive. No configuration write,
+worker launch, standing preference, authority transfer or completion grant occurs.
+
+The ordinary source-built route against the unchanged original local source now
+returns `assigned-current-target`, a non-null Assignment identity and no
+implementation blockers. Local config SHA-256 remains
+`3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189`.
+The original 16 parity/admission cases remain; four additional surface cases
+exercise scope answers, prohibitions, viable manual refusal, exact source/work
+drift and unknown-target rejection. Rust core: 96 pass, three subprocess helpers
+ignored. Cumulative conformance and independent review remain separate gates.
+
+This removes the observed bootstrap defect; #2817/#2210/#2947 remain bounded
+implementation gaps for their full configured consequential lifecycle. Next:
+#2613's Verification/configuration source split, then the remaining P0/P1 owners.
 
 ## Integrated children and later gates
 

@@ -93,6 +93,7 @@ fn executable(
     }
     None
 }
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn view(
     target: &Path,
     work: &Value,
@@ -101,6 +102,7 @@ pub(crate) fn view(
     contract: &Value,
     transport_work: &Value,
     handoff_inputs: &Value,
+    target_scope: &Value,
 ) -> Result<Value, CoreError> {
     let observed = match crate::native_assignment_policy::load(target) {
         Ok(value) => value,
@@ -117,7 +119,7 @@ pub(crate) fn view(
         gaps.push("binding-policy-current-target-unresolved");
     }
     let source_revision = digest(
-        &json!({"sources":observed.revision,"requirements":requirements["revision"],"handoff_inputs":handoff_inputs["revision"],"work":work}),
+        &json!({"sources":observed.revision,"requirements":requirements["revision"],"handoff_inputs":handoff_inputs["revision"],"work":work,"target_scope":target_scope}),
     )?;
     if requirements["status"] != "resolved" {
         return Ok(
@@ -130,6 +132,23 @@ pub(crate) fn view(
             "native configuration inventory exceeds 32 targets; preserve source and narrow owner scope",
         ));
     }
+    for name in target_scope
+        .as_object()
+        .into_iter()
+        .flatten()
+        .map(|(name, _)| name)
+    {
+        if !local["delegation_targets"][name]["forbidden_task_classes"]
+            .as_array()
+            .is_some_and(|v| !v.is_empty())
+        {
+            return Err(CoreError::new(
+                "target scope judgment names no current configured restriction",
+            ));
+        }
+    }
+    let mut scope_questions = Vec::new();
+    let mut target_context = Vec::new();
     let mut candidates = Vec::new();
     let mut unavailable = Vec::new();
     let mut manual_targets = Vec::new();
@@ -142,13 +161,24 @@ pub(crate) fn view(
                 continue;
             }
         };
+        if serde_json::to_vec(profile).is_ok_and(|bytes| bytes.len() <= 8192) {
+            target_context.push(json!({"target":name,"profile":profile,"revision":digest(profile)?,"claim_boundary":"Configured human priors and restrictions, not learned proof or capability grants."}));
+        } else {
+            unavailable.push(json!({"target":name,"gap":"target-context-exceeds-bound"}));
+        }
         let current = source_policy["current_target_status"] == "known-profile"
             && source_policy["current_profile"]["name"] == *name;
         if profile["forbidden_task_classes"]
             .as_array()
             .is_some_and(|v| !v.is_empty())
         {
-            unavailable.push(json!({"target":name,"source_ref":format!("delegation_targets.{name}.forbidden_task_classes"),"gap":"current-target-task-scope-judgment-required","claim_boundary":"Unknown current task taxonomy does not establish target failure or waive a source prohibition."}));
+            scope_questions.push(json!({"target":name,"source_ref":format!("delegation_targets.{name}.forbidden_task_classes"),"restrictions":profile["forbidden_task_classes"],"answer_field":format!("target_scope.{name}"),"choices":["applies","not-applicable","unresolved"],"judgment":target_scope[name],"authority":"acting-agent applicability only; no waiver"}));
+            if !matches!(
+                target_scope[name]["status"].as_str(),
+                Some("applies" | "not-applicable")
+            ) {
+                unavailable.push(json!({"target":name,"source_ref":format!("delegation_targets.{name}.forbidden_task_classes"),"gap":"current-target-task-scope-judgment-required","claim_boundary":"Unknown current task taxonomy does not establish target failure or waive a source prohibition."}));
+            }
         }
         let mut transports = transports;
         if current {
@@ -194,17 +224,18 @@ pub(crate) fn view(
                     });
             let profile_safe = (profile["identity_status"].is_null()
                 || profile["identity_status"] == "active")
-                && !profile["forbidden_task_classes"]
+                && (!profile["forbidden_task_classes"]
                     .as_array()
                     .is_some_and(|v| !v.is_empty())
+                    || target_scope[name]["status"] == "not-applicable")
                 && !profile["human_control_modes"]
                     .as_array()
                     .is_some_and(|v| v.iter().any(|i| i == "off"));
             if manual {
-                manual_targets.push(json!({"target":name,"source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"source_policy_eligible":authority&&profile_safe,"handoff_constructible":handoff_inputs["status"]=="ready","automatic_invocation":false,"gap":if handoff_inputs["status"]=="ready"{""}else{"native-manual-input-completeness-unresolved"},"target_best_fit":"unresolved-not-rejected"}));
+                manual_targets.push(json!({"target":name,"source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"source_policy_eligible":authority&&profile_safe,"required_result_classes_supported":requirements["requirements"]["required_result_classes"].as_array().is_some_and(|classes| classes.iter().all(|class| class == "read-only")),"handoff_constructible":handoff_inputs["status"]=="ready","automatic_invocation":false,"gap":if handoff_inputs["status"]=="ready"{""}else{"native-manual-input-completeness-unresolved"},"target_best_fit":"unresolved-not-rejected"}));
             }
             let capability = digest(
-                &json!({"profile":profile,"transport":transport,"executable":observed,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
+                &json!({"profile":profile,"target_scope":target_scope[name],"transport":transport,"executable":observed,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
             )?;
             candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&matches!(method,"cli"|"api"),"result_classes":if manual{json!(["read-only"])}else{json!(["read-only","unapplied-patch"])},"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
         }
@@ -237,6 +268,6 @@ pub(crate) fn view(
         .unwrap();
     let requests:Vec<Value>=preview["candidates"].as_array().into_iter().flatten().filter(|r|r["eligible"]==true).map(|r|json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/execution-configuration","owner":"assignment","owner_revision":owner["revision"],"source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":transport_work,"request_kind":"assignment/select-execution-configuration/v1","arguments":{"revision":preview["revision"],"candidate":r["configuration"]["id"]}})).collect();
     Ok(
-        json!({"status":"observed","source_revision":source_revision,"configurations":result,"requests":requests,"unavailable_adapters":unavailable,"manual_targets":manual_targets,"policy":source_policy,"gaps":gaps,"claim_boundary":"Feasibility and exact choice only; no best-fit assignment, dispatch, human authority, proof or completion. Provider adapter discovery remains separate."}),
+        json!({"status":"observed","source_revision":source_revision,"configurations":result,"requests":requests,"unavailable_adapters":unavailable,"manual_targets":manual_targets,"target_scope_questions":scope_questions,"target_context":target_context,"policy":source_policy,"gaps":gaps,"claim_boundary":"Feasibility and exact choice only; no best-fit assignment, dispatch, human authority, proof or completion. Provider adapter discovery remains separate."}),
     )
 }

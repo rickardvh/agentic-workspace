@@ -61,7 +61,7 @@ pub(crate) fn view(
         "configuration":configuration["revision"],"verification_strategy":verification["strategy_revision"]}))?;
     let declaration = self::contract()?;
     let owner_revision = &declaration["owners"][0]["revision"];
-    let template = json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/task-requirements",
+    let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/task-requirements",
         "owner":"assignment","owner_revision":owner_revision,"source_revision":source_revision,
         "capability_revision":contract["revision"],"task_identity":transport_work,
         "request_kind":"assignment/judge-task-requirements/v1","arguments":{
@@ -80,6 +80,10 @@ pub(crate) fn view(
     let mut judgment = request
         .map(|r| r["arguments"].clone())
         .unwrap_or(Value::Null);
+    let target_scope = judgment
+        .as_object_mut()
+        .and_then(|j| j.remove("target_scope"))
+        .unwrap_or_else(|| json!({}));
     let nested = judgment
         .as_object_mut()
         .and_then(|j| j.remove("verification_request"));
@@ -141,7 +145,16 @@ pub(crate) fn view(
         contract,
         transport_work,
         &handoff_inputs,
+        &target_scope,
     )?;
+    for question in execution["target_scope_questions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        let name = question["target"].as_str().expect("observed target");
+        template["arguments"]["target_scope"][name] = json!({"status":"unresolved","reason":"Current task applicability has not been judged."});
+    }
     if let Some(task_request) = request
         && let Some(choices) = execution["requests"].as_array_mut()
     {
