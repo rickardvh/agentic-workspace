@@ -284,6 +284,14 @@
       "modules": []
     },
     {
+      "source": ".agentic-workspace/docs/workspace-config-contract.md",
+      "target": ".agentic-workspace/verification/manifest.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["verification"],
+      "degraded_behavior": "Preserve shared assurance policy; absence of operational Verification declarations supplies no proof or completion authority."
+    },
+    {
       "source": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
       "target": ".agentic-workspace/WORKFLOW.md",
       "kind": "installed-local",
