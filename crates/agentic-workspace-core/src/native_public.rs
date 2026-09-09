@@ -669,7 +669,13 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             {
                 if matches!(
                     action["operation_id"].as_str(),
-                    Some("proof.report" | "memory.dispose" | "memory.recover-disposition")
+                    Some(
+                        "proof.report"
+                            | "configuration.write"
+                            | "configuration.recover-write"
+                            | "memory.dispose"
+                            | "memory.recover-disposition"
+                    )
                 ) {
                     let mut dependencies = action["source_requests"]
                         .as_array()
