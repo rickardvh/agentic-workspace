@@ -83,6 +83,7 @@ fn resolve_with_baseline(
                 && i["operation_id"] != "memory.recover-disposition"
                 && i["operation_id"] != "memory.capture-decision"
                 && i["operation_id"] != "memory.recover-decision"
+                && i["operation_id"] != crate::native_source_reconciliation::OP
                 && !(i["operation_id"] == "planning.update"
                     && i["arguments"]["consumed_return"].is_object())
         })
@@ -571,7 +572,7 @@ fn resolve_with_baseline(
     let subject = planning_detail
         .get("reconciliation")
         .and_then(|value| value.get("subject"));
-    let verification = if available("verification") {
+    let mut verification = if available("verification") {
         native_verification::view_with_applicability(
             target,
             &input.task,
@@ -608,6 +609,55 @@ fn resolve_with_baseline(
     } else {
         verification_probe
     };
+    if available("verification") {
+        let reconciliation = crate::native_source_reconciliation::view(
+            target,
+            &work,
+            &instructions,
+            &configuration,
+            &contract,
+            verification_request(crate::native_source_reconciliation::REQUEST),
+            crate::native_source_reconciliation::Context {
+                subject,
+                executing: executing
+                    && input.invocation.as_ref().is_some_and(|i| {
+                        i["operation_id"] == crate::native_source_reconciliation::OP
+                    }),
+            },
+        )?;
+        if reconciliation["status"] == "current" {
+            instructions["contribution"]["blockers"]
+                .as_array_mut()
+                .unwrap()
+                .retain(|b| {
+                    !b["code"]
+                        .as_str()
+                        .unwrap_or("")
+                        .ends_with(":source-reconciliation-required")
+                });
+        }
+        if reconciliation["action"].is_object() {
+            verification["contribution"]["actions"]
+                .as_array_mut()
+                .unwrap()
+                .push(reconciliation["action"].clone());
+        }
+        if !reconciliation["source_revision"].is_null() {
+            verification["contribution"]["revision"] = reconciliation["source_revision"].clone();
+        }
+        if reconciliation["decisions"]
+            .as_array()
+            .is_some_and(|a| !a.is_empty())
+        {
+            verification["contribution"]["decisions"] = reconciliation["decisions"].clone();
+        }
+        verification["source_reconciliation"] = reconciliation.clone();
+        // Reobserve these owner obligations on every selected-Plan entry. Direct
+        // work remains stateless; this projection never creates Planning.
+        if subject.is_some() {
+            planning["source_reconciliation"] = reconciliation;
+        }
+    }
     contributions.push(verification["contribution"].clone());
     let mut requirements = native_requirements::view(
         target,
@@ -788,6 +838,7 @@ fn resolve_with_baseline(
                             | "memory.recover-disposition"
                             | "memory.capture-decision"
                             | "memory.recover-decision"
+                            | "verification.record-source-reconciliation"
                     )
                 ) {
                     let mut dependencies = action["source_requests"]
@@ -922,6 +973,7 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                         | "verification/requirements/v1"
                         | "verification/authenticate-host-review/v1"
                         | "verification/assurance-applicability/v1"
+                        | "verification/reconcile-sources/v1"
                 )
             )
         {
@@ -1029,6 +1081,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "memory.recover-disposition"
         && invocation["operation_id"] != "memory.capture-decision"
         && invocation["operation_id"] != "memory.recover-decision"
+        && invocation["operation_id"] != crate::native_source_reconciliation::OP
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -1037,6 +1090,28 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if invocation["operation_id"] == crate::native_source_reconciliation::OP {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        let executed = crate::native_source_reconciliation::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":null}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     if matches!(
         invocation["operation_id"].as_str(),

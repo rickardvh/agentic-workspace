@@ -19,7 +19,7 @@ from agentic_workspace.semantic_task_routes import (
 )
 
 INSTRUCTION_DIR = Path(".agentic-workspace/instructions")
-FRONTMATTER_FIELDS = ("paths", "routes", "read", "use", "checks", "protect")
+FRONTMATTER_FIELDS = ("paths", "routes", "read", "reconcile", "use", "checks", "protect")
 _NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 _DISPOSITION_PREFIX = "<!-- agentic-workspace:context-disposition "
 
@@ -143,9 +143,9 @@ def _frontmatter(text: str, *, load_body: bool) -> tuple[dict[str, list[Any]], s
 
 def _validate_metadata(metadata: dict[str, list[Any]]) -> list[dict[str, str]]:
     diagnostics: list[dict[str, str]] = []
-    for field in ("paths", "read", "protect"):
+    for field in ("paths", "read", "reconcile", "protect"):
         for index, value in enumerate(metadata[field]):
-            if not isinstance(value, str) or not _valid_repo_pattern(value):
+            if not isinstance(value, str) or not _valid_repo_pattern(value) or (field == "reconcile" and any(c in value for c in "*?[]")):
                 diagnostics.append(
                     {
                         "field": f"{field}[{index}]",
@@ -328,7 +328,8 @@ def inspect_instructions(
             "authority": {"effects": [], "target_patterns": []},
         }
         if applies and (
-            document.metadata["protect"]
+            document.metadata["reconcile"]
+            or document.metadata["protect"]
             or any(not isinstance(check, str) or not check.startswith("requirement:") for check in document.metadata["checks"])
         ):
             # Machine-local preferences cannot admit repository restrictions.
@@ -409,6 +410,7 @@ def inspect_instructions(
                     ("guidance", document.has_guidance),
                     ("routes", bool(document.metadata["routes"])),
                     ("read", bool(document.metadata["read"])),
+                    ("reconcile", bool(document.metadata["reconcile"])),
                     ("use", bool(document.metadata["use"])),
                     ("checks", bool(document.metadata["checks"])),
                     ("protect", bool(document.metadata["protect"])),
@@ -417,6 +419,7 @@ def inspect_instructions(
             ],
             "guidance": document.body if applies else "",
             "read": document.metadata["read"] if applies else [],
+            "reconcile": document.metadata["reconcile"] if applies else [],
             "use": resolved_use if applies else [],
             "checks": resolved_checks if applies else [],
             "protect": admission["protect"] if applies else [],

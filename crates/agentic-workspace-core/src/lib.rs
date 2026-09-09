@@ -27,6 +27,7 @@ mod native_proof;
 pub mod native_public;
 mod native_requirements;
 pub mod native_routes;
+mod native_source_reconciliation;
 mod native_startup;
 mod native_verification;
 pub mod planning;

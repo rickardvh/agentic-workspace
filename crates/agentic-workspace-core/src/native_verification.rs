@@ -924,6 +924,8 @@ pub(crate) fn view_with_applicability(
     contract["owners"][0]["domains"] = json!(["verification"]);
     contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
     contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
+    crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
+    let owner_revision = contract["owners"][0]["revision"].clone();
     contract["revision"] = json!(digest(&contract)?);
     let admission_contract = applicability.contract.unwrap_or(&contract);
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":"verification/claim/v1","owner":"verification",

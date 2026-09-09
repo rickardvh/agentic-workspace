@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Admit exact updated or reviewed-current source judgments through native Verification with bounded human answers, source-set currentness, and Planning re-entry."
+issues = [2638, 2970, 2334]

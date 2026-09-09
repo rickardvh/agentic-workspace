@@ -59,6 +59,8 @@ jobs:
           uv run pytest tests/test_native_public_cli.py tests/test_native_planning_create.py
           -k "real_former or requirements_preserve_planning or unrelated_claim_request_keeps_planning or public_creation_then_separate_selection or quiescent_selected_owner"
           -q
+      - name: Admit exact current source reconciliation through public consumers
+        run: uv run pytest tests/test_native_source_reconciliation.py -q
       - name: Run shared operating-decision core proof
         run: |
           cargo +stable build --locked --workspace --bins

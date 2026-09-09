@@ -27,6 +27,7 @@ fn applicability(metadata: &Value, changed: &[String], route: &Value) -> Result<
 
 fn hard(metadata: &Value) -> bool {
     !strings(&metadata["protect"]).is_empty()
+        || !strings(&metadata["reconcile"]).is_empty()
         || metadata["checks"]
             .as_array()
             .into_iter()
@@ -102,6 +103,11 @@ pub fn resolve(
             {
                 affects.push("claim:complete".into());
             }
+            if !strings(&metadata["reconcile"]).is_empty() {
+                blockers.push(blocker(reference, "source-reconciliation-required",
+                    "Canonical sources require a current authorized updated or reviewed-current judgment against the resulting work.",
+                    vec!["claim:complete".into()]));
+            }
             for pattern in strings(&metadata["protect"]) {
                 affects.push(format!("effect:write:{pattern}"));
                 affects.extend(
@@ -125,6 +131,7 @@ pub fn resolve(
         };
         rows.push(json!({"source":document["source"],"metadata":metadata,"valid":valid,"applicable":applicable,
             "guidance":guidance,"read":if applicable {metadata["read"].clone()} else {json!([])},
+            "reconcile":if applicable {metadata["reconcile"].clone()} else {json!([])},
             "preferred_procedures":if applicable {metadata["use"].clone()} else {json!([])},
             "requirement_references":if applicable {json!(strings(&metadata["checks"]).into_iter().filter(|value| value.starts_with("requirement:")).collect::<Vec<_>>())} else {json!([])},
             "binding_admission":binding}));
@@ -137,7 +144,7 @@ pub fn resolve(
     Ok(
         json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
         "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers},
-        "authority_boundary":"read/guidance surface context; use prefers a replaceable procedure; requirement references retain their owner; only admitted checks/protect bind and none grants proof or execution"}),
+        "authority_boundary":"read/guidance surface context; reconcile requires a current source judgment; use prefers a replaceable procedure; requirement references retain their owner; only admitted reconcile/checks/protect bind and none grants proof or execution"}),
     )
 }
 
@@ -147,6 +154,32 @@ pub fn restrict_pending(
     route: &Value,
 ) -> Result<(), CoreError> {
     let mut additions = Vec::new();
+    for action in pending
+        .iter()
+        .filter(|a| a["operation_id"] == crate::native_source_reconciliation::OP)
+    {
+        let mut writes = crate::attempt_store::write_paths(
+            &json!({"idempotency_key":action["logical_effect_id"]}),
+        )?;
+        let destination = action["arguments"]["receipt_ref"].as_str().unwrap();
+        writes.extend([
+            destination.to_owned(),
+            format!("{destination}.tmp"),
+            ".agentic-workspace/local/effects/source-reconciliation.lock".into(),
+        ]);
+        for source in view["sources"].as_array().into_iter().flatten() {
+            if source["applicable"] == true
+                && strings(&source["metadata"]["protect"]).iter().any(|p| {
+                    writes
+                        .iter()
+                        .any(|w| instruction_applicability::patterns_overlap(p, w))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-proof-write",
+                    "Current protection forbids source judgment publication to its exact destination.", vec!["effect:proof-execution".into()]));
+            }
+        }
+    }
     if pending.iter().any(|action| {
         action["source_owner"] == "verification" && action["operation_id"] == "proof.report"
     }) {
