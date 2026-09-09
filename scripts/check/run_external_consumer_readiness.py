@@ -249,9 +249,13 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     source = target / ".agentic-workspace/config.toml"
     source.parent.mkdir()
     # Explicit human-owned input, not a product installation or custody grant.
-    original = b"# retained human policy\r\nschema_version=1\r\n[workspace]\r\ncli_invoke='old-command' # retain comment\r\n"
+    original = b"# retained human policy\r\nschema_version=1\r\n[workspace]\r\ncli_invoke='old-command' # retain comment\r\nagent_instructions_file='AGENTS.md'\r\n"
     source.write_bytes(original)
-    request = start()["configuration_write"]["requests"][0]
+    guidance = "Preserve human work. Delivery grants no proof or publication authority.\n"
+    (target / "AGENTS.md").write_text(guidance, encoding="utf-8", newline="\n")
+    initial = start()
+    assert initial["startup_adapter"]["response"]["text"] == guidance
+    request = next(r for r in initial["configuration_write"]["requests"] if r["arguments"]["key"] == "workspace.cli_invoke")
     assert start(request)["configuration_write"]["status"] == "unchanged"
     request["arguments"]["value"] = "agentic-workspace"
     answer = start(request)["decision_packet"]["decision_request"]["response_request"]
@@ -265,6 +269,8 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     source.write_bytes(original)
     result = _ok(call(invoke), "configuration write")
     assert result["value"]["completion_authority"] is False
+    assert any(r["owner"] == "startup-adapter" for r in action["source_requests"])
+    assert result["continuation"]["result"]["startup_adapter"]["response"]["text"] == guidance
     assert source.read_bytes() == original.replace(b"'old-command'", b'"agentic-workspace"')
     assert start()["configuration"]["cli_invoke"] == "agentic-workspace"
     before = _snapshot(target)

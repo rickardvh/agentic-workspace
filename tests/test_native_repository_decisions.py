@@ -436,25 +436,31 @@ def test_repository_capture_is_independent_of_memory_enablement(tmp_path, shared
     assert not (tmp_path / ".agentic-workspace/memory").exists()
 
 
-def test_repository_capture_obeys_current_startup_and_workspace_ceilings(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("source_repeats", [1, 256])
+def test_repository_capture_obeys_current_startup_and_workspace_ceilings(tmp_path, shared_core_binary, native_cli, source_repeats):
     context, material = repository(tmp_path)
     config = tmp_path / ".agentic-workspace/config.toml"
     config.write_text(config.read_text() + '\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
-    (tmp_path / "AGENTS.md").write_text("Observe the current repository owner boundary.\n")
+    (tmp_path / "AGENTS.md").write_text("Observe the current repository owner boundary.\n" * source_repeats)
 
     def call(**extra):
         return consume("json", shared_core_binary, native_cli, {**context, **extra})
 
     answer = capture_answer(call, material)
     guarded = call(request=answer)
-    assert guarded["decision_packet"]["primary_action"] is None
-    assert any(
-        "effect:decision-source" in b["affects"]
-        for b in guarded["decision_packet"]["blockers"]
-        if b["code"] == "configured-startup-source-read-required"
-    )
+    if source_repeats > 1:
+        assert guarded["decision_packet"]["primary_action"] is None
+        assert any(
+            "effect:decision-source" in b["affects"]
+            for b in guarded["decision_packet"]["blockers"]
+            if b["code"] == "configured-startup-source-read-required"
+        )
+    else:
+        assert guarded["startup_adapter"]["response"]["text"] == (tmp_path / "AGENTS.md").read_bytes().decode("utf-8")
     read = guarded["startup_adapter"]["requests"][0]
     permitted = call(request=[answer, read])
+    if source_repeats == 1:
+        assert guarded["decision_packet"]["primary_action"] == permitted["decision_packet"]["primary_action"]
     assert permitted["decision_packet"]["primary_action"]["operation_id"] == "decision-continuity.capture-decision"
     config.write_text(config.read_text() + "enabled=false\n")
     blocked = call()

@@ -4,6 +4,53 @@ use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
 use std::path::Path;
 
+// Certainly required first-line guidance can accompany entry; large sources
+// retain their exact lazy read request. This is a delivery bound, not authority.
+const REQUIRED_DELIVERY_MAX_BYTES: u64 = 8192;
+
+pub(crate) fn deliver_required(
+    mut initial: Value,
+    target: &Path,
+    work: &Value,
+    configuration: &Value,
+    contract: &Value,
+) -> Value {
+    bind_requests(&mut initial, contract);
+    if initial["source"]["status"] != "present"
+        || initial["source"]["bytes"]
+            .as_u64()
+            .is_none_or(|n| n > REQUIRED_DELIVERY_MAX_BYTES)
+    {
+        return initial;
+    }
+    // Use the same source owner and exact request as explicit delivery. Both
+    // paths re-read bytes and revalidate source/configuration before delivery.
+    let request = initial["requests"][0].clone();
+    match view(target, work, configuration, Some(&request), Some(contract)) {
+        Ok(delivered) => delivered,
+        Err(failure) => {
+            // Failure of an eager read cannot silently remove a restriction or
+            // turn unrelated read-only entry into an absent public decision.
+            initial["contribution"]["material"]["delivery_failure"] = json!({
+                "reason":failure.to_string(),
+                "recovery":"Repair or reobserve the exact configured source, then use fresh start; no delivery or satisfaction is established."});
+            for blocker in initial["contribution"]["blockers"].as_array_mut().unwrap() {
+                blocker["code"] = json!("configured-startup-source-delivery-unavailable");
+            }
+            initial
+        }
+    }
+}
+
+fn observe(root: &Dir, configuration: &Value) -> Result<(Value, String), CoreError> {
+    let source = configuration["agent_instructions_file"]
+        .as_str()
+        .map(|reference| native_intent::observation(root, reference))
+        .unwrap_or(Value::Null);
+    let revision = digest(&json!({"source":source,"configuration":configuration["revision"]}))?;
+    Ok((source, revision))
+}
+
 pub(crate) fn bind_requests(view: &mut Value, contract: &Value) {
     for request in view["requests"].as_array_mut().unwrap() {
         request["capability_revision"] = contract["revision"].clone();
@@ -59,10 +106,7 @@ pub(crate) fn view(
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     let reference = configuration["agent_instructions_file"].as_str();
-    let source = reference
-        .map(|r| native_intent::observation(&root, r))
-        .unwrap_or(Value::Null);
-    let revision = digest(&json!({"source":source,"configuration":configuration["revision"]}))?;
+    let (source, revision) = observe(&root, configuration)?;
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
     ))
@@ -70,7 +114,9 @@ pub(crate) fn view(
     let mut arguments = schema["$defs"]["system_intent_read_arguments"].clone();
     arguments["$schema"] = schema["$schema"].clone();
     let shape = json!({"kind":"startup-adapter/read-current-source/v1","result_kind":"agentic-workspace/startup-adapter-source-read/v1","input_schema":arguments});
-    let owner_revision = digest(&shape)?;
+    let owner_revision = digest(
+        &json!({"request":shape,"required_delivery_max_bytes":REQUIRED_DELIVERY_MAX_BYTES}),
+    )?;
     let mut scopes = vec![json!("effect:implementation"), json!("claim:complete")];
     if let Some(reference) = reference {
         scopes.push(json!(format!("effect:write:{reference}")));
@@ -108,9 +154,15 @@ pub(crate) fn view(
         let text = String::from_utf8(detail)
             .map_err(|_| CoreError::new("startup adapter is not UTF-8"))?;
         let current = crate::native_config::view(target)?;
-        if current["revision"] != configuration["revision"]
-            || view(target, work, &current, None, None)?["revision"] != revision
-        {
+        // Reopen and observe at the same currentness barrier as before. Only
+        // the source revision is needed here; rebuilding a complete contract,
+        // schema and blocker projection cannot strengthen this comparison.
+        let unchanged = current["revision"] == configuration["revision"] && {
+            let current_root = Dir::open_ambient_dir(target, ambient_authority())
+                .map_err(|e| CoreError::new(e.to_string()))?;
+            observe(&current_root, &current)?.1 == revision
+        };
+        if !unchanged {
             return Err(CoreError::new(
                 "startup adapter source or configuration changed during read",
             ));

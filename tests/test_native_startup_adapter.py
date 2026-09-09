@@ -96,7 +96,7 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     config.parent.mkdir()
     config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
     source = tmp_path / "AGENTS.md"
-    source.write_bytes((ROOT / "AGENTS.md").read_bytes() + b"\nHuman-owned outside-fence instruction.\n")
+    source.write_bytes((ROOT / "AGENTS.md").read_bytes() + b"\nHuman-owned outside-fence instruction.\n" + b"large context\n" * 800)
     original = source.read_bytes()
     context = {"target": str(tmp_path), "task": "Inspect existing source", "changed": ["src/example.rs"]}
     result = consume(surface, shared_core_binary, native_cli, context)
@@ -234,10 +234,11 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
     else:
         owner_request = current["decision_packet"]["decision_request"]["response_request"]
         owner_request["arguments"]["answer"] = "continue-selected"
-    unread = call({**context, "request": owner_request})
-    assert not unread["decision_packet"]["ready_actions"]
+    automatic = call({**context, "request": owner_request})
+    assert automatic["startup_adapter"]["status"] == "source-context-delivered"
     delivered = call({**context, "request": [read_request, owner_request]})
     action = delivered["decision_packet"]["primary_action"]
+    assert automatic["decision_packet"]["primary_action"] == action
     assert action["source_requests"] == [read_request]
     omitted = dict(action)
     omitted.pop("source_requests")
@@ -268,6 +269,69 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
     assert call({**context, "invocation": action})["status"] == "applied"
     assert call({**context, "invocation": action})["status"] == "applied"
     fresh = call(context)
-    assert fresh["startup_adapter"]["status"] == "source-context-required"
+    assert fresh["startup_adapter"]["status"] == "source-context-delivered"
     if operation in {"planning", "switch"}:
         assert fresh["planning"]["current_owner"]["current"] is True
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_small_required_source_arrives_without_read_ceremony(tmp_path, shared_core_binary, native_cli, surface):
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    source = tmp_path / "AGENTS.md"
+    original = b"Preserve human work. Stop before publication without exact authority.\n"
+    source.write_bytes(original)
+    context = {"target": str(tmp_path), "task": "Inspect this work", "changed": ["owned.txt"]}
+    full = consume(surface, shared_core_binary, native_cli, context)
+    read = full["startup_adapter"]["response"]
+    assert read["text"] == original.decode()
+    assert startup_blockers(full) == []
+    assert "no rule satisfaction, proof, acceptance or mutation custody" in read["authority_boundary"]
+    request = full["startup_adapter"]["requests"][0]
+    explicit = consume(surface, shared_core_binary, native_cli, context | {"request": request})
+    assert explicit["decision_packet"] == full["decision_packet"]
+    assert explicit["startup_adapter"] == full["startup_adapter"]
+    for projection in ("compact", "carried"):
+        result = consume(surface, shared_core_binary, native_cli, context | {"projection": projection})
+        visible = result["view"] if projection == "carried" else result
+        assert visible["decision_packet"]["material"]["startup-adapter"] == read
+        assert visible["decision_packet"]["claim_boundary"] == full["decision_packet"]["claim_boundary"]
+    source.write_bytes(original + b"New required stop.\n")
+    changed = consume(surface, shared_core_binary, native_cli, context)
+    assert changed["startup_adapter"]["response"]["text"] == source.read_text()
+    assert changed["decision_packet"]["decision_id"] != full["decision_packet"]["decision_id"]
+    with pytest.raises(AssertionError, match="stale"):
+        consume(surface, shared_core_binary, native_cli, context | {"request": request})
+    # A fresh consumer receives current bytes again: no durable understood/read grant.
+    assert consume(surface, shared_core_binary, native_cli, context)["startup_adapter"]["response"]["text"] == source.read_text()
+    # A changed configured source is new delivery context even with equal bytes.
+    alternate = tmp_path / "other.md"
+    alternate.write_bytes(source.read_bytes())
+    config.write_text(config.read_text().replace("AGENTS.md", "other.md"))
+    switched = consume(surface, shared_core_binary, native_cli, context)
+    assert switched["startup_adapter"]["response"]["source"]["reference"] == "other.md"
+    assert switched["startup_adapter"]["response"]["text"] == alternate.read_text()
+    assert switched["decision_packet"]["decision_id"] != changed["decision_packet"]["decision_id"]
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+def test_required_delivery_bound_and_invalid_source_remain_fail_closed(tmp_path, shared_core_binary, native_cli):
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    source = tmp_path / "AGENTS.md"
+    context = {"target": str(tmp_path), "task": "Inspect source", "projection": "compact"}
+    source.write_bytes(b"a" * 8192)
+    current = consume("json", shared_core_binary, native_cli, context)
+    assert len(current["decision_packet"]["material"]["startup-adapter"]["text"]) == 8192
+    source.write_bytes(b"a" * 8193)
+    lazy = consume("json", shared_core_binary, native_cli, context)
+    assert "text" not in lazy["decision_packet"]["material"]["startup-adapter"]
+    assert lazy["decision_packet"]["material"]["startup-adapter"]["read_request"]
+    assert startup_blockers(lazy)
+    source.write_bytes(b"invalid UTF-8: \xff")
+    invalid = consume("json", shared_core_binary, native_cli, context)
+    assert "UTF-8" in invalid["decision_packet"]["material"]["startup-adapter"]["delivery_failure"]["reason"]
+    assert startup_blockers(invalid)
+    assert invalid["decision_packet"]["primary_action"] is None

@@ -408,7 +408,13 @@ fn resolve_with_baseline(
             Some(&contract),
         )?;
     } else {
-        crate::native_startup::bind_requests(&mut startup_adapter, &contract);
+        startup_adapter = crate::native_startup::deliver_required(
+            startup_adapter,
+            target,
+            &work,
+            &configuration,
+            &contract,
+        );
     }
     if let Some(request) = request_for("system-intent") {
         system_intent = crate::native_intent::view(
@@ -611,7 +617,7 @@ fn resolve_with_baseline(
         context["capability_contract"] = contract.clone();
         if startup_adapter["status"] == "source-context-delivered" {
             context["source_requests"] =
-                json!([request_for("startup-adapter").expect("explicit current source request")]);
+                json!([request_for("startup-adapter").unwrap_or(&startup_adapter["requests"][0])]);
         }
         let (owner_input, detail) = if planning["status"] == "reentry-required" {
             planning::reentry_input(context)?
@@ -1036,7 +1042,7 @@ fn resolve_with_baseline(
     }
     if startup_adapter["status"] == "source-context-delivered" {
         let source_request =
-            request_for("startup-adapter").expect("delivery requires explicit request");
+            request_for("startup-adapter").unwrap_or(&startup_adapter["requests"][0]);
         owner_input["intent"]["current_work"] = work.clone();
         for contribution in owner_input["contributions"].as_array_mut().unwrap() {
             for action in contribution

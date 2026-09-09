@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Deliver small mandatory startup guidance with the current decision while preserving exact lazy reads and effect-time source admission."
+issues = [2986, 2987, 2930, 3059, 2661, 2981, 2909]
