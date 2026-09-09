@@ -17,10 +17,16 @@ Use it after the main AW operating skill or compact router points at proof selec
    - lane
    - epic
    - regression guard
-2. Read the structured proof route before broad inspection using the configured AW invocation:
-   - `implement --changed <paths> --format json` when changed paths are known
-   - `proof --changed <paths> --format json` for proof-only selection
-   - `summary --format json` when an active plan or lane determines the claim level
+2. Resolve with the configured AW invocation:
+   `start --target . --task "<task>" --changed <path> --format json`.
+   Repeat `--changed` for each known path; omit it when no paths are known.
+   Read `decision_packet` first, then the current Verification strategy and
+   owner-returned requests. Preserve any selected Planning subject and blockers.
+   Supply only bounded answers in the returned request through
+   `start --input <request.json>` with the same context. Execute only the returned
+   `primary_action` through `invoke --input <action.json>`, then resolve again.
+   Source-read and other prerequisite requests may be combined in an array.
+   An unavailable proof route remains an owner gap; retired commands are not a fallback.
 3. Select proof for both behavior and intent:
    - command success for changed behavior
    - targeted tests for the touched surface
@@ -42,14 +48,15 @@ Use it after the main AW operating skill or compact router points at proof selec
    - completion permission still belongs to the routed closeout/claim boundary, not this subskill alone
 6. Route gaps instead of hiding them:
    - run the missing focused proof
-   - narrow the completion claim to a slice
+   - report the bounded proof without substituting it for the requested completion
    - update the active plan with the gap
    - open or link follow-up work when the gap belongs outside the slice
 
 ## Guardrails
 
 - Red flag: Tests passed, so completion is claimable.
-- Use instead: Record proof execution evidence, inspect `completion_options`, and reconcile intent/residue before claiming completion.
+- Use instead: Admit current proof through Verification, inspect `decision_packet.claim_boundary`, and reconcile remaining intent before claiming completion.
+- A manually reported result is an interoperability observation, not authenticated native execution. A command receipt does not grant task judgment, independent review or completion.
 - Do not claim a lane or epic complete from proof that only covers a local slice.
 - Do not treat passing self-authored tests as sufficient when the parent intent, negative invariant, or user-visible behavior is unverified.
 - Do not ignore warnings, skipped tests, retries, crashes, or environment failures; classify them.

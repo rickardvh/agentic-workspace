@@ -74,16 +74,46 @@ fn proposed(target: &Path, source: &str, value: &str) -> Result<Vec<u8>, CoreErr
     let current = document
         .get("workspace")
         .and_then(|v| v.get("cli_invoke"))
-        .and_then(toml_edit::Item::as_value)
-        .ok_or_else(|| err("only an existing workspace.cli_invoke control is writable"))?;
-    if !current.is_str() {
-        return Err(err("configuration invocation is not a string"));
-    }
-    let span = current
-        .span()
-        .ok_or_else(|| err("configuration literal span unavailable"))?;
-    let mut rendered = text.to_owned();
-    rendered.replace_range(span, &toml_edit::Value::from(value).to_string());
+        .and_then(toml_edit::Item::as_value);
+    let rendered = if let Some(current) = current {
+        if !current.is_str() {
+            return Err(err("configuration invocation is not a string"));
+        }
+        let span = current
+            .span()
+            .ok_or_else(|| err("configuration literal span unavailable"))?;
+        let mut rendered = text.to_owned();
+        rendered.replace_range(span, &toml_edit::Value::from(value).to_string());
+        rendered
+    } else {
+        let mut edited = text.parse::<toml_edit::DocumentMut>().map_err(err)?;
+        let had_workspace = edited.contains_key("workspace");
+        if !had_workspace {
+            edited["workspace"] = toml_edit::Item::Table(toml_edit::Table::new());
+        }
+        let table = edited
+            .get_mut("workspace")
+            .and_then(toml_edit::Item::as_table_mut)
+            .ok_or_else(|| err("invocation insertion requires an ordinary workspace table"))?;
+        table.insert("cli_invoke", toml_edit::value(value));
+        let rendered = edited.to_string();
+        // Admission is narrower than TOML equivalence: removing only the exact
+        // insertion must recover all prior bytes, including comments and policy.
+        if had_workspace {
+            edited["workspace"]
+                .as_table_mut()
+                .unwrap()
+                .remove("cli_invoke");
+        } else {
+            edited.remove("workspace");
+        }
+        if edited.to_string() != text {
+            return Err(err(
+                "invocation insertion cannot preserve unrelated source bytes",
+            ));
+        }
+        rendered
+    };
     let parsed: toml::Value = toml::from_str(&rendered).map_err(err)?;
     let parsed = serde_json::to_value(parsed).map_err(err)?;
     let schema: Value = serde_json::from_str(source_schema(source)?).map_err(err)?;
@@ -108,8 +138,8 @@ fn proposed(target: &Path, source: &str, value: &str) -> Result<Vec<u8>, CoreErr
 pub(crate) fn contract() -> Result<Value, CoreError> {
     let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"const":"workspace.cli_invoke"},"value":{"type":"string","minLength":1,"maxLength":4096},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false});
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
-    let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
-    let owner = json!({"owner":"configuration","revision":digest(&json!([args,recovery,"configuration-external-source-write-v1"]))?,"domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
+    let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v2","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
+    let owner = json!({"owner":"configuration","revision":digest(&json!([args,recovery,"configuration-external-source-write-v2"]))?,"domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
@@ -176,12 +206,14 @@ pub(crate) fn view(
         if let Some((v, revision)) =
             crate::native_config::load(&root, source, source_schema(source)?).map_err(err)?
         {
-            if let Some(value) = v["workspace"]["cli_invoke"].as_str() {
-                result["requests"].as_array_mut().unwrap().push(template(
-                    EDIT,
-                    json!({"source":source,"key":"workspace.cli_invoke","value":value}),
-                ));
-            }
+            let value = v["workspace"]["cli_invoke"]
+                .as_str()
+                .or(config["cli_invoke"].as_str())
+                .unwrap_or("agentic-workspace");
+            result["requests"].as_array_mut().unwrap().push(template(
+                EDIT,
+                json!({"source":source,"key":"workspace.cli_invoke","value":value}),
+            ));
             if let Some(record) = retained(target, source, &revision)? {
                 let prepared = crate::attempt_store::prepare_commit(
                     target.to_str().unwrap(),
@@ -243,12 +275,11 @@ pub(crate) fn view(
         let before = read(&root, source)?;
         let parsed: toml::Value =
             toml::from_str(std::str::from_utf8(&before).map_err(err)?).map_err(err)?;
-        if parsed
+        let before_value = parsed
             .get("workspace")
             .and_then(|v| v.get("cli_invoke"))
-            .and_then(toml::Value::as_str)
-            == Some(value)
-        {
+            .and_then(toml::Value::as_str);
+        if before_value == Some(value) {
             result["status"] = json!("unchanged");
             return Ok(result);
         }
@@ -259,7 +290,7 @@ pub(crate) fn view(
             let mut answer = request.clone();
             answer["arguments"]["proposal_revision"] = json!(proposal);
             result["status"] = json!("human-decision-required");
-            result["proposal"] = json!({"before":parsed["workspace"]["cli_invoke"].as_str(),"after":value,"source":source,"authority":"bounded-human-answer"});
+            result["proposal"] = json!({"before":before_value,"after":value,"source":source,"authority":"bounded-human-answer"});
             result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":"Authorize this exact invocation-source edit? The source remains repo/human-owned.","response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
             return Ok(result);
         }

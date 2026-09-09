@@ -41,12 +41,12 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Native Memory exposes `memory/read-current-note/v1`; ordinary native promotion/retirement with stronger-owner admission is not established by that read slice. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 21, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 22, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
 | #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
 | #2981 | bounded implementation gap | Native proof receipts bind actual producer bytes and preserve current evidence across unrelated file churn. The older Python semantic-partition tests do not establish a native retained negative conclusion or focused cross-owner partial re-resolution. Those ordinary native outcomes are absent, not merely missing CI. Avoid a generic cache until a material conclusion justifies retention. |
-| #2767 | bounded implementation gap | The authorized native writer can edit an existing workspace.cli_invoke in either canonical TOML source through an exact human-bound proposal. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
+| #2767 | bounded implementation gap | The authorized native writer can set workspace.cli_invoke in either existing canonical TOML source through an exact human-bound proposal, including insertion when unrelated bytes can be preserved. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
 | #2916 | candidate-complete | Existing independent #3138 acceptance. Typed policy/currentness/override authority is distinct from the unresolved execution and return lifecycle. |
 | #2210 | bounded implementation gap | Comparative judgment, exact execution identity, admitted return and a retained-and-checked contextual signal exist. Supported host-native/mutation lifecycles and complete consequential comparison remain unresolved; no inferred target winner or completion authority. |
 | #2209 | bounded implementation gap | The candidate derives one current retained-and-checked contextual target signal from admitted Planning consumption and native Verification. Task/source/config drift de-adopts it. Human/evaluation ingress, failure/dispute handling and repeated selection convergence remain unresolved; no general target quality is inferred. |
@@ -202,6 +202,29 @@ The audit therefore has 4 candidate-complete owners, 20 bounded implementation
 gaps and 10 evidence/conformance gaps. The #2981 correction supersedes the earlier
 4/19/11 count: native proof reuse exists, but the required native negative-reuse
 and partial re-resolution path is not implemented by the former Python helper.
+
+### #2570 established corpus disposition
+
+The current manifest has six declared notes and one advisory durable fact. Native
+`memory/read-current-note/v1` retrieves the real April decision and package note
+in fresh processes at exact source revisions. Both remain review evidence;
+source identity does not confirm their factual currentness. The following is a
+maintainer inventory, not a Memory promotion/retirement mutation or admission.
+Paths below are relative to `.agentic-workspace/memory/repo/`.
+
+| Source | Disposition | Preserved value and current limit |
+| --- | --- | --- |
+| `index.md` | retain advisory, routing only | Sparse manifest selection and no bulk loading. It supplies no semantic authority. |
+| `domains/example-runtime-boundary.md` | retain advisory, reconcile | Preserve generated-source and installed-payload separation. Its Python runtime-owner statement is obsolete after native cutover; do not import it as current authority. |
+| `domains/memory-package-context.md` | retain advisory, reconcile | Preserve Memory/Planning separation and source versus dogfood install. Native implementation ownership now also includes Rust; old package paths are incomplete. |
+| `domains/planning-package-context.md` | retain advisory, reconcile | Preserve active-custody versus durable-knowledge separation. Legacy record/catalogue details cannot define the reconstructed native owner. |
+| `decisions/installed-system-consolidation-2026-04-05.md` | human-review-needed | Root-owned operational state under `.agentic-workspace/` remains useful, but deciding provenance is ambiguous and its state.toml/uninstall instructions are obsolete. Existing `docs/decisions/` explicitly does not admit this note; no promotion is inferred. |
+| `mistakes/recurring-failures.md` and fact `selected-plan-owned-next-task` | retain advisory, reconcile | Preserve selected-owner continuity and independent-review separation. Retired summary/roadmap commands are not executable guidance. Current native Planning recovery and review skill are stronger-owner candidates; mere references or passing tests do not authorize hiding the original lesson. |
+
+Templates, skill indexes and directory READMEs are operating/routing surfaces,
+not additional knowledge records to bulk-import. No corpus bytes were changed.
+Native source disposition/promotion and stronger-owner absorption admission remain
+the #2570 implementation gap; #3040/#3041 retain the decision-specific boundary.
 
 ## Integrated children and later gates
 

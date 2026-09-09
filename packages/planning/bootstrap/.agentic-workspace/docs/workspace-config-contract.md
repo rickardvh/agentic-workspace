@@ -41,8 +41,8 @@ setup continuation and proof results are not durable configuration choices.
 Edit shared config only for an intentional repo-policy change. Keep machine paths, credentials, and local execution preferences in local config. Module state is not workspace config and must be changed through its owning module when that command surface is available.
 
 Use the current configuration owner requests returned by native startup. The
-admitted writer can change an existing `workspace.cli_invoke` value in a canonical
-shared or local source. It binds the selected source bytes, effective policy,
+admitted writer can set `workspace.cli_invoke` in an existing canonical shared
+or local source, including insertion when unrelated bytes can be preserved. It binds the selected source bytes, effective policy,
 capability revision and exact value, revalidates immediately before writing, and
 preserves unrelated source text. An irreducible human choice requires the exact
 bounded human answer. It grants no continuing custody or capability enablement.

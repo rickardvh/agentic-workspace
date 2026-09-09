@@ -18,8 +18,8 @@ the responsible owner supplies current questions, operations and authority.
 3. Use an exact owner-returned request. For a configuration edit, select the
    matching `configuration_write.requests` entry and supply the intended value.
    Run `start --input <request.json>` with the same context and `--format json`.
-   The current writer supports an existing `workspace.cli_invoke` control in
-   canonical shared or local TOML. An unavailable control remains an owner gap;
+   The current writer sets `workspace.cli_invoke` in an existing canonical shared
+   or local TOML source, including a missing control when source bytes can be preserved. An unavailable control remains an owner gap;
    this procedure does not authorize a direct edit or capability enablement.
 4. Present only the returned irreducible decision, including the exact source,
    affected key and intended value. A previously explicit human answer may be
