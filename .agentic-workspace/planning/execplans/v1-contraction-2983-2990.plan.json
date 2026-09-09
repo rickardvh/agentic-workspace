@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Current integrated reconstruction subject is b76ddddbc33c76c97e2e3529bb5d891a3fd5a99a, the merge of #3176; #3170-#3173 have integrated. Work continues on codex/3138-decision-capture. The human explicitly corrected the implementation choice: #2570/#3040 uses the existing exact owner-issued bounded-human-answer pattern, not the independent-review signed-host adapter. The answer binds current work, scope, dependencies, policy/capabilities, destination/postimage and proposal revision; its authority is distinct from publication custody and from authenticated human identity. Client actor/authority/provenance labels cannot grant admission. Agent-taken authority requires mechanically admitted exact-scope policy/facts, otherwise request the bounded human answer. Native correction ingress remains unavailable under #2726; this records the current human implementation instruction and does not claim correction-owner admission. Native capture, declared-source publication, fresh recall and exact interruption recovery are implemented locally with four-interface fixture proof in progress; no real decision material was created, no parent issue is candidate-complete, and independent/cumulative release proof remains outstanding. Preserve the existing generated adapter and Assignment/proof residue. Continue all approved issue work; do not stop for the previously inferred trusted-host requirement.",
+    "frontier": "Integrated base b76ddddbc33c76c97e2e3529bb5d891a3fd5a99a remains reconstruct/first-stable. PR #3177 implements exact bounded-human-answer fallback capture, publication/recovery, selective current recall and native/Git scoped supersession. Head 5700f4eecdeb275a7c2866017521fe07b9ba738d has an independent scoped recheck with no remaining findings. It makes no cryptographic identity claim, rejects client authority labels, and keeps unattributed authorship explicit. Twenty four-interface capture tests, core99 plus4 vectors, and earlier172 public/capture tests pass. No real decision record was created for demonstration. Current branch codex/3138-config-choices extends exact native configuration writes to durable module/instruction/intent/safety choices and absent canonical sources:42 configuration tests pass with1 skipped,160 public-interface tests pass, and creation/update interruption recovery passes. Setup skill source/installed payloads are synchronized. General schema lifetime migration, target learning, revision-bound owner state, broader capture/configuration/delegation/correction and cumulative release outcomes remain open. Generated Node conformance still reports unavailable native assignment close/reassign cases; static generation and contract tooling pass. Preserve preexisting adapter bytes and Assignment/proof residue. Do not add trusted-host authentication for ordinary human decisions or request duplicate capability approval.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Finish current proof and publish the consolidated #2570/#3040 bounded-human-answer capture PR, then continue the remaining P0/P1 owner gaps and cumulative #2909/#2616/#2990 admission. Keep PRs stacked on reconstruct/first-stable and consolidate coherent work. Do not request another capability approval or add trusted-host authentication for ordinary bounded human decisions.",
+  "next_action": "Publish the consolidated native configuration-choice PR stacked on #3177, complete its independent review and CI, then continue the approved P0/P1 owner corrections and cumulative #2909/#2616/#2990 evidence. No master promotion or parent completion is inferred.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -137,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 29,
+  "revision": 30,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -189,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e10f7f60fab727e69ad19e8fba0cbb939a3df7bef6f12223b9e632dac36a3011.attempt.json",
-        "revision": "sha256:9f15a4bd828ab101ee91a598850cefd90a46859948010b90564ba7dae25509c8",
+        "path": ".agentic-workspace/local/effects/ddf796aa28c844b1a9a420ae657b3e0d97af3e19bb9d87d2f4bf4a4acc596ed9.attempt.json",
+        "revision": "sha256:0786619d04c23fa5c59d6d99597ad191231cb73d5bde30556a0fe8e668fd3e28",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e10f7f60fab727e69ad19e8fba0cbb939a3df7bef6f12223b9e632dac36a3011.result.json",
-        "revision": "sha256:73ef7c70358bc3cf96766005f6d4534d8722cd02ab83fef4ee2a169b31ba2e34",
+        "path": ".agentic-workspace/local/effects/ddf796aa28c844b1a9a420ae657b3e0d97af3e19bb9d87d2f4bf4a4acc596ed9.result.json",
+        "revision": "sha256:e9664e4923b65307fb5667d2049848d8f2efb45495571b7a243756c4fcf8b36a",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:37f0cb85647235fc91ab86d2b1a56b9d664c540157a039d4e8da0e026d8ef158",
+    "invocation_revision": "sha256:fd24c5d235cdb1e23b9eeb3dbe00868b74f0e623c5c0ab07be0b4482f69d9ccf",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -208,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:780685e1da4cd5c8793e7306ee8e8d2c9122269f70e46b6938b572c1eabd0b14",
+        "document_revision": "sha256:7f2f1cbecd2b669b4fe61bf89b5a09ce19b618d3712845473de669e83bb2c84e",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

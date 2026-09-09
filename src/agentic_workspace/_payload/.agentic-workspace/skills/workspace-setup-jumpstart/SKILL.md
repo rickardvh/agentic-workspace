@@ -17,12 +17,18 @@ the responsible owner supplies current questions, operations and authority.
    requested outcome is already represented, leave configuration alone.
 3. Use an exact owner-returned request. For a configuration edit, select the
    matching `configuration_write.requests` entry and supply the intended value.
+   If the canonical source is absent, use the matching optional
+   `configuration_write.creation_requests` entry. Discovery creates no source
+   and does not recommend enabling a capability.
    Run `start --input <request.json>` with the same context and `--format json`.
-   The current writer sets `workspace.cli_invoke` in an existing canonical shared
-   or local TOML source, including a missing control when source bytes can be preserved. An unavailable control remains an owner gap;
-   this procedure does not authorize a direct edit or capability enablement.
+   The current writer supports canonical shared/local invocation, shared module
+   selection, instruction and intent source choices, and local command/review
+   safety ceilings. The returned schema binds each field to its source and type.
+   Existing bytes are preserved; absent sources require exact creation authority.
+   An unavailable control remains an owner gap; this procedure supplies no
+   blanket edit or capability-enablement authority.
 4. Present only the returned irreducible decision, including the exact source,
-   affected key and intended value. A previously explicit human answer may be
+   affected key, intended value and complete proposed source. A previously explicit human answer may be
    supplied only if it authorizes that exact current proposal. Keep all binding
    fields; drift requires a fresh request. Guided use follows the same decisions.
 5. Invoke only the returned `primary_action` through

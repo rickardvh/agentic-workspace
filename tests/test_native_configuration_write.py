@@ -1,0 +1,111 @@
+"""Durable configuration choices use one exact source-owned human answer."""
+
+from __future__ import annotations
+
+import copy
+from pathlib import Path
+
+import pytest
+from tests.test_native_public_cli import consume
+from tests.test_native_public_cli import native_cli as native_cli
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize(
+    "key,value,source_name",
+    [
+        ("modules.enabled", [], "config.toml"),
+        ("safety.safe_to_auto_run_commands", False, "config.local.toml"),
+        ("safety.requires_human_verification_on_pr", True, "config.local.toml"),
+        ("workspace.agent_instructions_file", "GUIDE.md", "config.toml"),
+    ],
+)
+def test_durable_choices_are_exact_and_do_not_admit_operational_state(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, key: str, value: object, source_name: str
+) -> None:
+    source = tmp_path / ".agentic-workspace" / source_name
+    source.parent.mkdir()
+    before = b"# Human-owned configuration\r\nschema_version=1\r\n"
+    source.write_bytes(before)
+    (tmp_path / "GUIDE.md").write_text("Fixture instructions, retained as a source.\n")
+    context = {"target": str(tmp_path), "task": "Apply a deliberate fixture configuration choice", "changed": []}
+
+    def call(**extra: object) -> dict:
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+
+    current = call()
+    request = next(r for r in current["configuration_write"]["requests"] if r["arguments"]["key"] == key)
+    request["arguments"]["value"] = value
+    for forbidden in [
+        "delegation.human_override_policy",
+        "delegation.current_target",
+        "assurance.instruction_revision",
+        "runtime.learned_confidence",
+    ]:
+        wrong = copy.deepcopy(request)
+        wrong["arguments"]["key"] = forbidden
+        with pytest.raises(AssertionError):
+            call(request=wrong)
+    proposed = call(request=request)
+    proposal = proposed["configuration_write"]["proposal"]
+    assert proposal["postimage"].encode().startswith(before)
+    assert source.read_bytes() == before
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    deferred = copy.deepcopy(answer)
+    deferred["arguments"]["answer"] = "defer"
+    assert call(request=deferred)["configuration_write"]["status"] == "deferred"
+    answer["arguments"]["answer"] = "authorize-write"
+    action = call(request=answer)["decision_packet"]["primary_action"]
+    other = source.with_name("config.toml" if source_name == "config.local.toml" else "config.local.toml")
+    other.write_text("schema_version=1\n")
+    with pytest.raises(AssertionError):
+        call(invocation=action)
+    assert source.read_bytes() == before
+    other.unlink()
+    applied = call(invocation=action)
+    assert applied["value"]["continuing_custody"] is False
+    assert source.read_bytes() == proposal["postimage"].encode()
+    fresh = call()
+    if key == "modules.enabled":
+        assert fresh["configuration"]["modules"] == []
+    elif key.startswith("safety."):
+        assert fresh["configuration"]["safety"][key.split(".")[1]] == value
+        assert fresh["configuration"]["safety"]["automatic_execution_permitted"] is False
+    else:
+        assert fresh["configuration"]["agent_instructions_file"] == "GUIDE.md"
+    with pytest.raises(AssertionError):
+        call(invocation=action)
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_optional_configuration_creation_is_bound_to_absence(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    context = {"target": str(tmp_path), "task": "Set a deliberate local safety ceiling", "changed": []}
+
+    def call(**extra: object) -> dict:
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+
+    initial = call()
+    assert initial["decision_packet"]["status"] == "direct"
+    assert initial["configuration_write"]["requests"] == []
+    assert not (tmp_path / ".agentic-workspace").exists()
+    request = next(
+        r for r in initial["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "safety.safe_to_auto_run_commands"
+    )
+    request["arguments"]["value"] = False
+    proposed = call(request=request)
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    action = call(request=answer)["decision_packet"]["primary_action"]
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    raced = b"schema_version=1\n# Another author arrived first\n"
+    source.write_bytes(raced)
+    with pytest.raises(AssertionError):
+        call(invocation=action)
+    assert source.read_bytes() == raced
+    source.unlink()
+    call(invocation=action)
+    assert source.read_bytes() == proposed["configuration_write"]["proposal"]["postimage"].encode()
+    assert call()["configuration"]["safety"]["safe_to_auto_run_commands"] is False
