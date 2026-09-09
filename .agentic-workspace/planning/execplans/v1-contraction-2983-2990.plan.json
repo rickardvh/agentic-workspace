@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Merged base c2303e921 integrates #3166/#3167/#3168. PR #3170 repairs typed Assignment constructibility and admits retained-local implementation against unchanged lived-in config. PR #3171 transfers 49 unchanged Verification declarations from shared config into its existing manifest, reducing config from 945 to 122 lines; retiring two unconsumed posture aliases under #2613 comment 5552631756 leaves 120 lines. Native and retained readers recognize the destination, reject competing sources and bind source revisions. Shared baseline/escalation policy and local authority survive; the live subsystem profile now merges into the existing Verification requirement with exact scope and obligations preserved; former profiles still project current Ownership scope, while unsupported scope and former local setup/answer semantics remain explicit gaps. Binding source levels are enforced as a floor, and Ownership drift invalidates proof actions and receipts. Affected retired proof/report methods now use current checks. Configuration guidance now uses native start/invoke; former setup, replacement and adaptive-observation schema fields are read-only transition inputs. All 34 open P0/P1 owners are classified exactly once: 4 candidate-complete, 20 implementation gaps and 10 evidence/conformance gaps. An unrelated former exact Assignment answer is excluded only from implementation restrictions after independent local admission; matching or malformed answers remain unresolved. The #2981 audit identifies an actual missing native negative-reuse/partial-resolution path; existing receipt reuse does not satisfy it. The exact configuration writer can insert the invocation key in an existing source when all unrelated bytes survive; no source creation or broad configure-once outcome is inferred. The six-note Memory corpus and one fact now have a concrete retain/reconcile/human-review inventory, without source mutation. Native proof-selection guidance uses current start/invoke requests. Next finish source/state disposition and remaining native owner implementation. No parent closure, independent admission or promotion is inferred.",
+    "frontier": "Merged base remains c2303e921. PR #3170 repairs Assignment constructibility against unchanged human local configuration. PR #3171 moves Verification declarations into their existing owner, preserves source floors, permits exact invocation insertion and excludes unrelated former answers only after current local Assignment; its reference-closure correction is at 834bc5d60. Native Memory disposition at 880c80183 uses the established manifest, exact bounded human answers, current independent receiving-decision admission and native attempt recovery. The real six-note corpus and advisory fact are unchanged; April provenance remains unresolved. Five Memory skills now share the native procedure. The audit remains 4 candidate-complete, 20 implementation gaps and 10 evidence/conformance gaps. Next resolve native typed fallback decisions (#2570/#3040/#3041), negative-result reuse/partial resolution (#2981), configuration lifetime (#2613/#2767), and full supported delegation lifecycle (#2947/#2817/#2818/#2210), with current cumulative proof under #2909. Read-only transport evidence and one #2209 target signal are useful slices, not full intent. Independent review, #2616, exact-candidate #2990 and promotion are not admitted.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Continue the #2613 former-state and schema disposition audit after the Verification source split, keeping human local configuration unchanged. Independent review of #3170 and the source-split PR remains required; then close focused evidence gaps and aggregate #2909 before exact-candidate #2990.",
+  "next_action": "Continue the remaining P0/P1 implementation audit and cumulative conformance. Native Memory disposition is implemented at 880c80183; typed fallback-decision admission/effect and full configured non-local mutation/pause/resume remain gaps. Obtain independent review of the three coherent PRs, aggregate #2909, finalize #2616 and admit one exact candidate under #2990 before #3014/#3138 cutover.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -63,7 +63,8 @@
       "Five replacement installed-runtime/integration cases and 13 external-consumer/maintainer cases pass on Windows. Memory explicitly owns the optional-ledger rule; present malformed evidence still fails. Generated mirrors are current. Hosted exact-head and cumulative conformance remain pending; no release gate is waived.",
       "Merged c2303e921 current proof: source-built paired Rust binaries recover the real native Planning owner; all 16 native/JSON/Python/TypeScript Assignment comparison/currentness cases pass. Real original-local-source startup retains the implementation blocker after exact task and current-target comparative requests. This is observed failure-to-admit evidence, not successful implementation or target-failure evidence.",
       "Bounded Assignment repair: unchanged local config SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189; actual native route returns assigned-current-target and no implementation blockers. 66 neighboring parity/configuration cases pass with one Windows file-symlink skip; Rust core 96 pass/3 subprocess helpers ignored; generated package static proof passes. Original 16 refusal/currentness cases are retained. No worker launched and no configuration policy was rewritten.",
-      "Verification source split: exact TOML comparison preserves all 49 declarations, remaining shared values and existing manifest sections. 40 domain/profile parity cases pass, including four source-transfer cases strengthened to cover requirement force; 33 native config/advisory cases pass with one Windows file-symlink skip; 51 retained Verification cases and one absent-config/conflicting-source reader regression pass. Rust core 96 pass with three subprocess helpers ignored. Generated/static, schema reference and contract tooling checks pass. Actual fresh native Assignment still returns assigned-current-target with no implementation blocker and original local SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Nine process-lifecycle cases preserve config while admitting target evidence or rejecting failed/stale outputs; 15 former-owner recovery and 4 native CLI black-box cases pass. Two stale tests requiring retired setup commands and keyword review routing are removed; six relevant independent-review/semantic-route checks pass. The final subsystem/source-transfer matrix passes eight cases, including actual command publication, receipt de-adoption, unknown-scope refusal and binding-level enforcement; the 12 real config admission cases and Rust core 96/3 pass on that correction. After the live profile merger, the combined native configuration and Verification strategy suite passes 40 cases, and the actual-manifest Rust test plus contract tooling pass. Former-answer disposition passes four interface cases; the combined Assignment/policy/configuration suite passes 45, Rust core 96/3 and contract tooling pass. Original local policy remains unchanged and the native route admits current local work. The native proof producer suite passes 23 cases. Configuration insertion and refreshed advisory controls pass 21 cases with one Windows file-symlink skip; the separate directory-junction case passes. Writer interruption recovery, four final selected-command parity cases, generated static proof and contract tooling pass. One obsolete four-interface alias test was removed; current recommended-method and stronger-policy checks remain. These are implementation proofs, not independent review or release admission."
+      "Verification source split: #3171 retains the detailed revision-specific implementation evidence in #2909 comment 5594433501 and subsequent commits. Source floors, former subsystem projection, source/currentness parity, exact configuration insertion, native proof publication and unrelated former-answer exclusion remain distinct from independent review. The reference registry and generated catalogue now agree at 834bc5d60; source/payload validation has zero warnings. Historical proof is not relabeled as exact final-candidate admission.",
+      "Memory disposition: implementation 880c80183 has 14 focused four-interface/confinement cases; the combined current Memory/real-decision-read selection has 30 passing cases. Rust library proof has 97 passed and three ignored helpers; retain interruption recovery passes before and after publication and fails on policy drift. Clippy, lint/typechecks, generated command/contract tooling and zero-warning source/payload proof pass. The larger neighboring run had 170 passing cases and one Windows file-symlink skip; four stale-decision diagnostic checks were subsequently corrected and passed. Fresh native Assignment still returns assigned-current-target with no implementation blocker and local SHA-256 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Promotion/retirement tests use explicit fixture answers, not approval of the real corpus. Root .local scratch was relocated intact under the ignored package-local directory; all 17 file hashes matched. No issue closure, independent review, final release proof or master promotion is inferred."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -133,7 +134,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 22,
+  "revision": 23,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -185,18 +186,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/2292f83ff01776d194a9ef1917ef679af7773f825907468edbbd34eec424151e.attempt.json",
-        "revision": "sha256:0d5af8790dbaaf9fa2fb2dae24409e588f16c362fb7854fbb40ea84dc9d9266d",
+        "path": ".agentic-workspace/local/effects/7c73511fbaf9f9b7f6a12a86c9805003b3fa4eafb08b12a9ce2768635ac5b27d.attempt.json",
+        "revision": "sha256:abb0d7710961c19c63a32f15a43d6766116e9080e085f00214ed661a57ddccf1",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/2292f83ff01776d194a9ef1917ef679af7773f825907468edbbd34eec424151e.result.json",
-        "revision": "sha256:a2551ec674773ec4c7d4ce017c5345ca89cb0dfe22c8a381e6ac777bc779ad49",
+        "path": ".agentic-workspace/local/effects/7c73511fbaf9f9b7f6a12a86c9805003b3fa4eafb08b12a9ce2768635ac5b27d.result.json",
+        "revision": "sha256:35cbf35401579850a6bf4f3847943b422ce7d5b63abb560f1a7482cb1f57bf76",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:e2cce8e2f74db6acf1a08c4ba4b888fe4e1ccf4b81f9f4db245d04e4879b059a",
+    "invocation_revision": "sha256:c5ed49022431cc24fbe7473ee7695efda2acabdc15803d2652b0399902b8a0a1",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -204,7 +205,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:dc810317149e28729691a05903f9fc9b886ec502a949591f5e3c667f110568f5",
+        "document_revision": "sha256:86f801bbeaed0d477721b1931fbbd0430fd1b13db3bc2ba3b22fa6fed945e4e3",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

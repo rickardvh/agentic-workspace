@@ -15,7 +15,7 @@ Memory owns routed durable lessons, subsystem orientation, invariants, recurring
 Memory does not own:
 
 - active task sequencing, milestones, or backlog;
-- proof, completion, or mutation authority;
+- proof, completion, or general repository mutation authority;
 - raw session or execution logs;
 - duplicated canonical product/source documentation;
 - general ingestion, indexing, embeddings, RAG, or a knowledge graph.
