@@ -19,6 +19,16 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | (root) | object | yes |  | Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.toml. |  | x-agentic-workspace-doc-role: "public-reference"<br>x-agentic-workspace-see-also: [".agentic-workspace/docs/workspace-config-contract.md", "docs/reference", "docs/generated"]<br>x-agentic-workspace-unknown-properties: "warn" |
 | `schema_version` | const `1` | yes | `1` | Config contract version. Workspace config files must set this to 1. |  |  |
 | `modules` | object | no |  | Authoritative module enablement for this repository. |  |  |
+| `modules.independent` | object | no |  | Durable admission of independently linked native owners. Installation alone grants no effects, claims, reads or restrictions. Operational state remains with the owner. |  |  |
+| `modules.independent.<name>` | object | no |  | Exact repository grant for one separately linked native owner. |  |  |
+| `modules.independent.<name>.revision` | string | yes |  | Exact admitted native implementation revision. |  |  |
+| `modules.independent.<name>.contract_revision` | string | yes |  | Digest of the admitted capability and configuration descriptor. |  |  |
+| `modules.independent.<name>.effects` | array of string | yes |  | Effect identifiers granted only within this owner domain. |  |  |
+| `modules.independent.<name>.claims` | array of string | yes |  | Exclusive claim identifiers separately granted to this owner. |  |  |
+| `modules.independent.<name>.restrictions` | array of string | yes |  | Exact task, effect or claim scopes this owner may restrict. |  |  |
+| `modules.independent.<name>.reads` | array of string | yes |  | Bounded exact repository-relative sources the owner may observe. |  |  |
+| `modules.independent.<name>.scope` | array of string | yes |  | Repository path prefixes that select this owner for current changed work. |  |  |
+| `modules.independent.<name>.settings` | object | yes |  | Durable owner settings validated against its declared configuration schema. |  |  |
 | `modules.enabled` | array of enum `"planning"`, `"memory"`, `"verification"` | yes | `["planning", "memory"]` | Repo-owned enabled Agentic Workspace modules. Use [] for routing/config-only installs. |  |  |
 | `workspace` | object | no | `{}` | Repo-owned workspace policy for startup adapter shape, output posture, and advanced feature opt-ins. Module selection lives in top-level modules.enabled. |  | x-agentic-workspace-doc-role: "public"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `workspace.enabled` | boolean | no | `true` | Effective Agentic Workspace operation switch. Defaults to true; when false, ordinary AW workflow commands return a disabled-state packet while diagnostic and recovery commands remain available. Machine-local config.local.toml may override this value. |  | x-agentic-workspace-effective-default-source: "product-default-or-repo-config-or-local-override" |
