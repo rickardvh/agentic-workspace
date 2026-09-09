@@ -42,8 +42,8 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include broader configuration mutation, typed fallback decision capture and correction. Native Memory disposition/promotion is implemented on this stack; former operation names are not an ordinary native interface. |
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
-| #2570 | bounded implementation gap | Current stack adds exact native note/fact disposition and admitted repository-decision promotion; source authorship and former material survive. Native typed fallback-decision admission/effect remains unresolved with #3040/#3041; capability approval does not adjudicate the real April note. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 25, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2570 | bounded implementation gap | Native note/fact disposition, current receiving-owner promotion and independently admitted typed fallback recall now exist. Native capture and new-decision admission remain unresolved with #3040; source authorship and former material survive. Capability approval does not adjudicate the real April note. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 26, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | bounded implementation gap | Shared continuity, current native source/rationale/supersession and admitted Memory promotion exist. Ordinary native typed fallback capture and its reconciliation consequence remain absent; final cross-thread authorship and cache-versus-authority proof also remain. This is not merely an unrun conformance gate. |
 | #3041 | evidence/conformance gap | The configured repo-owned `docs/decisions/` archive contains three reconstruction records; native relevant/unrelated/rationale/supersession proof and exact Memory disposition now exist. The real April note still needs a bounded owner/human disposition and aggregate admission. Capability approval does not authorize promotion or resolve its ambiguous provenance; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -56,7 +56,7 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2947 | bounded implementation gap | Read-only native process dispatch, exact execution custody, terminal-publication recovery, return admission and Planning/Verification re-entry are implemented and exercised with Codex. Supported host-native execution, shared-worktree/unapplied-delta attribution and live pause/resume/recovery remain gaps. |
 | #2817 | bounded implementation gap | The configured process route can execute and return through distinct Assignment, execution, Planning and Verification authorities. Complete supported host-native and mutation lifecycles remain absent; retained-local control is measured without claiming a non-local cost advantage. |
 | #2726 | bounded implementation gap | Trusted correction/disposition behavior exists in former host surfaces; ordinary native ingress has no correction owner route. A host signal cannot yet complete the intended smallest-owner native journey. |
-| #2929 | evidence/conformance gap | Generic route declarations and repo-owned shaping/creation skills exist. Current before-external-mutation, no-keyword procedure evidence must be admitted. |
+| #2929 | evidence/conformance gap | Native leaf discovery now exposes current procedure references or explicit unavailability. Refinement selects shaping; creation selects shaping then creation. Four-interface real-registry, lexical-overlap, continuation and stale-work/source proof passes. Actual external-procedure replay and independent cumulative admission remain. |
 | #2995 | evidence/conformance gap | Native diagnostic capture, custody and advisory/disabled controls are integrated. Final release-current enabled/disabled/privacy/support proof remains required by this owner's completion rule. |
 | #2647 | bounded implementation gap | Native ordinary ingress has no source-owner adaptation mutation route. Former proposal/effectiveness evidence does not prove the native later-equivalent-work convergence outcome. |
 | #2648 | bounded implementation gap | The real initiative source remains an unresolved native control, and ordinary native bounded improvement/disposition is incomplete. Awareness must not be confused with initiative authority. |
@@ -312,7 +312,7 @@ cost remain unknown. Local was cheaper in this case; no general delegation cost
 advantage is claimed. Full prior measurements and exclusions remain at the link.
 
 The actual selected reconstruction Plan is maintained only through its native
-writer. Revision 25 retains current identity, scope, relationships, proof and
+writer. Revision 26 retains current identity, scope, relationships, proof and
 frontier; independent acceptance remains pending. The original human local
 configuration still hashes to
 `3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189`.
@@ -329,3 +329,17 @@ plans. Their source-specific human judgments and admission constraints remain:
 no particular record decision or April promotion was supplied. No issue closure,
 authoritative review marker, exact-release admission or master promotion is
 implied by this implementation authorization.
+
+Current ingress follow-through: #3172 includes `4e636d622` for configured,
+independently admitted Memory fallback recall and rationale retrieval. Relevant,
+unrelated, disabled, unadmitted, stronger-owner, receiver-loss and source/authority
+drift cases pass across native/JSON/Python/TypeScript. The cumulative Memory and
+public-interface selection passes 170 cases before the procedure follow-through.
+#3171 includes `d049d5bf5`: the existing route branch request drills into a leaf
+and supplies current procedure references or explicit unavailability. The real
+registry now distinguishes issue refinement from creation. Twelve procedure/route
+and 24 former-route cases pass, including a non-GitHub route, plus 97 Rust tests
+(three ignored helpers), Clippy, generated catalogues and generated-package proof.
+These corrections remain in the four existing PRs. No capture writer, new deciding
+authority, external-write permission or owner closure is inferred from recall or
+procedure discovery; the 4/20/10 audit classification remains unchanged.
