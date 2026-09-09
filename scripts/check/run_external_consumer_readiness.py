@@ -180,7 +180,7 @@ def exercise_native_lifecycle(call: Any, target: Path) -> dict[str, Any]:
     task = "Maintain the installed consumer Planning owner"
 
     def start(request=None):
-        context = {"target": str(target), "task": task}
+        context = {"target": str(target), "task": task, "projection": "full"}
         if request is not None:
             context["request"] = [request]
         return _ok(call({"action": "start", "context": context}), "native start")
@@ -232,7 +232,7 @@ def exercise_native_lifecycle(call: Any, target: Path) -> dict[str, Any]:
 
 def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     target.mkdir(parents=True)
-    context = {"target": str(target), "task": "Correct an explicit repository configuration"}
+    context = {"target": str(target), "task": "Correct an explicit repository configuration", "projection": "full"}
 
     def start(request=None):
         return _ok(call({"action": "start", "context": {**context, **({"request": [request]} if request else {})}}), "configuration start")
@@ -298,7 +298,7 @@ def _verification_case(call: Any, target: Path) -> dict[str, str]:
         + json.dumps(command)
         + "]\n"
     )
-    context = {"target": str(target), "task": "Check the current source", "changed": ["a.txt"]}
+    context = {"target": str(target), "task": "Check the current source", "changed": ["a.txt"], "projection": "full"}
 
     def start(request=None):
         return _ok(call({"action": "start", "context": {**context, **({"request": [request]} if request else {})}}), "Verification start")
@@ -336,7 +336,7 @@ def _verification_case(call: Any, target: Path) -> dict[str, str]:
 def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
     """Faithful artifact-byte fixtures; no claim of a native payload installer."""
     target.mkdir(parents=True)
-    context = {"target": str(target), "task": "Inspect optional artifact payload"}
+    context = {"target": str(target), "task": "Inspect optional artifact payload", "projection": "full"}
 
     def start():
         return _ok(call({"action": "start", "context": context}), "payload start")
@@ -460,7 +460,18 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
         shutil.rmtree(typescript_root)
         for target in targets:
             completed = _run(
-                [host_cli, "start", "--target", target, "--task", "Maintain the installed consumer Planning owner", "--format", "json"],
+                [
+                    host_cli,
+                    "start",
+                    "--target",
+                    target,
+                    "--task",
+                    "Maintain the installed consumer Planning owner",
+                    "--format",
+                    "json",
+                    "--projection",
+                    "full",
+                ],
                 cwd=target,
             )
             assert json.loads(completed.stdout)["planning"]["current_owner"]["current"] is True

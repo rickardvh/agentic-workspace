@@ -53,7 +53,18 @@ def test_lifecycle_preserves_zero_adapter_footprint_and_consumer_removal(tmp_pat
     assert not any("external_consumer_profile.json" in ref for ref in before)
     shutil.rmtree(consumer_root)
     result = subprocess.run(
-        [str(host_cli), "start", "--target", str(target), "--task", "Maintain the installed consumer Planning owner", "--format", "json"],
+        [
+            str(host_cli),
+            "start",
+            "--target",
+            str(target),
+            "--task",
+            "Maintain the installed consumer Planning owner",
+            "--format",
+            "json",
+            "--projection",
+            "full",
+        ],
         check=True,
         capture_output=True,
         text=True,
