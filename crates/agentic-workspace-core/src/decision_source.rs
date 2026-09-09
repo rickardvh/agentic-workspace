@@ -161,7 +161,7 @@ fn read_repository_source(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> 
     }
     read(root, path)
 }
-fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
+pub(crate) fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
     let text = std::str::from_utf8(bytes).map_err(error)?;
     let marker = "```aw-decision\n";
     let text = text.replace("\r\n", "\n");
@@ -183,7 +183,12 @@ fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
     continuity::normalize(value)
 }
 
-fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError> {
+fn load(
+    input: &Input,
+    owner: &str,
+    routes: &[Value],
+    required: &[Value],
+) -> Result<Value, CoreError> {
     relative(input.archive.trim_end_matches('/'))?;
     if input.admitted_revision.len() != 40
         || !input
@@ -250,6 +255,21 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
         }
     }
     let mut selected = BTreeSet::new();
+    for ancestor in required {
+        let record = &available
+            .get(ancestor["id"].as_str().unwrap())
+            .ok_or_else(|| {
+                error("Required supersession ancestor is absent from the admitted archive")
+            })?
+            .0;
+        if record["material_revision"] != ancestor["material_revision"]
+            || record["source"] != ancestor["source"]
+        {
+            return Err(error(
+                "Required supersession ancestor differs from its bound source admission",
+            ));
+        }
+    }
     let mut pending: Vec<_> = available
         .iter()
         .filter(|(_, (record, _, _))| {
@@ -264,6 +284,11 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
         })
         .map(|(id, _)| id.clone())
         .collect();
+    pending.extend(
+        required
+            .iter()
+            .map(|record| record["id"].as_str().unwrap().to_owned()),
+    );
     while let Some(id) = pending.pop() {
         if !selected.insert(id.clone()) {
             continue;
@@ -330,6 +355,13 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
 
 /// Preserve the owner input for one final composition with other current owners.
 pub(crate) fn resolve(value: Value) -> Result<(Value, Option<Value>), CoreError> {
+    resolve_with_native(value, None)
+}
+
+pub(crate) fn resolve_with_native(
+    value: Value,
+    native_fallback: Option<Value>,
+) -> Result<(Value, Option<Value>), CoreError> {
     let input: Input = serde_json::from_value(value).map_err(error)?;
     let (route_view, intent) = if let Some(routes) = &input.semantic_routes {
         let (view, intent) = crate::semantic_routes::resolve(routes.clone())?;
@@ -364,14 +396,29 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Option<Value>), CoreError>
             },
             "memory",
             &selected,
+            native_fallback
+                .as_ref()
+                .and_then(|v| v["required_records"].as_array())
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
         )?
     } else {
         empty_context(&input.applicable_scope)
     };
+    if let Some(native) = native_fallback {
+        for field in ["records", "admissions", "current_dependencies"] {
+            for row in native[field].as_array().into_iter().flatten() {
+                let rows = fallback[field].as_array_mut().unwrap();
+                if !rows.contains(row) {
+                    rows.push(row.clone());
+                }
+            }
+        }
+    }
     let has_residue = !fallback["records"].as_array().unwrap().is_empty();
     let native_configured = !input.archive.is_empty();
     let native = if native_configured {
-        match load(&input, "repository", &selected) {
+        match load(&input, "repository", &selected, &[]) {
             Ok(context) => context,
             // A failed destination cannot hide already admitted useful fallback.
             // The existing reconciliation contract exposes the pending owner.

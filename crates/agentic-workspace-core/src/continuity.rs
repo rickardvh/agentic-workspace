@@ -22,6 +22,7 @@ struct Actor {
 enum ActorKind {
     Agent,
     Human,
+    Unattributed,
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -236,6 +237,11 @@ fn normalized(mut record: Record) -> Result<Record, CoreError> {
         require_text(text, name)?;
     }
     reference(&record.source)?;
+    if record.authority.actor.kind == ActorKind::Unattributed {
+        return Err(error(
+            "Unattributed authorship cannot supply deciding authority",
+        ));
+    }
     if record.authors.is_empty() || record.authority.basis.is_empty() || record.scope.is_empty() {
         return Err(error(
             "decision requires authors, deciding authority basis and scope",
@@ -522,4 +528,26 @@ pub(crate) fn project(
         output["reconciliation"] = json!(reconciled.rows);
     }
     Ok(Some(output))
+}
+
+#[cfg(test)]
+mod authorship_tests {
+    use super::*;
+
+    #[test]
+    fn unattributed_material_does_not_invent_an_actor_or_deciding_authority() {
+        let mut record = json!({"id":"fixture","source":{"owner":"memory","reference":"fixture.md","revision":"s1"},
+            "decision":"A fixture choice","consequence":"A bounded fixture constraint","rationale_reference":"fixture.md",
+            "authors":[{"kind":"unattributed","id":"request-material:fixture"}],
+            "authority":{"actor":{"kind":"human","id":"bounded-answer:fixture"},"basis":[{"owner":"bounded-human-answer","reference":"request:fixture","revision":"r1"}]},
+            "scope":["path:fixture.rs"]});
+        assert!(normalize(record.clone()).is_ok());
+        record["authority"]["actor"]["kind"] = json!("unattributed");
+        assert!(
+            normalize(record)
+                .unwrap_err()
+                .to_string()
+                .contains("cannot supply deciding authority")
+        );
+    }
 }

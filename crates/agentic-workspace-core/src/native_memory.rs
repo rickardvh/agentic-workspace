@@ -342,6 +342,7 @@ pub(crate) fn public_view(
     work: &Value,
     request: Option<&Value>,
     full_contract: Option<&Value>,
+    capture_available: bool,
 ) -> Result<Value, CoreError> {
     let mut view = resolve(target, changed, route)?;
     let revision = crate::digest(&view)?;
@@ -355,13 +356,19 @@ pub(crate) fn public_view(
     let owner_revision = crate::digest(&declaration)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1", "revision":"pending",
         "owners":[{"owner":"memory", "revision":owner_revision,"requests":[declaration]}]});
-    if view["selected_notes"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .any(|note| note["source"]["revision"].is_string())
+    if capture_available
+        || view["selected_notes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|note| note["source"]["revision"].is_string())
     {
         crate::native_memory_write::extend_owner(&mut contract["owners"][0])?;
+        contract["restriction_authorities"] =
+            json!([{"owner":"memory","affects":["task","effect:memory-state"]}]);
+    }
+    if capture_available {
+        crate::native_memory_capture::extend_owner(&mut contract["owners"][0])?;
         contract["restriction_authorities"] =
             json!([{"owner":"memory","affects":["task","effect:memory-state"]}]);
     }
@@ -809,6 +816,7 @@ promotion_target="planning-current-owner"
             &json!({"kind":"current-work","id":"work"}),
             None,
             None,
+            false,
         )
         .unwrap();
         assert_eq!(view["contribution"]["settled"], true);

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Capture fallback decisions through exact bounded human answers, with native publication recovery and selective current recall."
+issues = [2570, 3040]
