@@ -20,12 +20,14 @@ const CHOICES: &[(&str, &str)] = &[
     (LOCAL, "workspace.cli_invoke"),
     (SHARED, "modules.enabled"),
     (SHARED, "modules.independent"),
+    (SHARED, "assurance.decision_delegations"),
     (SHARED, "workspace.agent_instructions_file"),
     (SHARED, "system_intent.sources"),
     (SHARED, "system_intent.preferred_source"),
     (LOCAL, "safety.safe_to_auto_run_commands"),
     (LOCAL, "safety.requires_human_verification_on_pr"),
 ];
+const PROGRESSIVE_CHOICES: &[&str] = &["modules.independent", "assurance.decision_delegations"];
 fn choice_schema(source: &str, key: &str) -> Result<Value, CoreError> {
     if !CHOICES.contains(&(source, key)) {
         return Err(err(
@@ -209,7 +211,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v3","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
     let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
-    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"const":SHARED},"key":{"const":"modules.independent"}}}}));
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"const":SHARED},"key":{"enum":PROGRESSIVE_CHOICES}}}}));
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
@@ -272,15 +274,17 @@ pub(crate) fn view(
     let binding = json!({"sources":current,"effective_policy_revision":config["revision"],"capability_revision":contract["revision"]});
     result["contribution"]["revision"] = json!(digest(&binding)?);
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
-    result["choice_requests"] = json!([template(
-        READ,
-        json!({"source":SHARED,"key":"modules.independent"})
-    )]);
+    result["choice_requests"] = json!(
+        PROGRESSIVE_CHOICES
+            .iter()
+            .map(|key| template(READ, json!({"source":SHARED,"key":key})))
+            .collect::<Vec<_>>()
+    );
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for source in [SHARED, LOCAL] {
         if current[source].is_null() {
             for (_, key) in CHOICES.iter().filter(|(s, _)| *s == source) {
-                if *key == "modules.independent" {
+                if PROGRESSIVE_CHOICES.contains(key) {
                     continue;
                 }
                 let schema = choice_schema(source, key)?;
@@ -316,7 +320,7 @@ pub(crate) fn view(
                 json!({"source":source,"key":"workspace.cli_invoke","value":value}),
             ));
             for (choice_source, key) in CHOICES.iter().filter(|(s, k)| {
-                *s == source && *k != "workspace.cli_invoke" && *k != "modules.independent"
+                *s == source && *k != "workspace.cli_invoke" && !PROGRESSIVE_CHOICES.contains(k)
             }) {
                 let (section, field) = key.split_once('.').unwrap();
                 let schema = choice_schema(choice_source, key)?;
@@ -377,14 +381,23 @@ pub(crate) fn view(
     }
     let args = &request["arguments"];
     if request["request_kind"] == READ {
+        let key = args["key"].as_str().unwrap();
+        let (section, field) = key.split_once('.').unwrap();
+        let schema = choice_schema(SHARED, key)?;
         let current =
             crate::native_config::load(&root, SHARED, source_schema(SHARED)?).map_err(err)?;
         let value = current
-            .map(|(source, _)| source["modules"]["independent"].clone())
-            .filter(Value::is_object)
-            .unwrap_or_else(|| json!({}));
+            .map(|(source, _)| source[section][field].clone())
+            .filter(|value| !value.is_null())
+            .unwrap_or_else(|| {
+                if schema["type"] == "array" {
+                    json!([])
+                } else {
+                    json!({})
+                }
+            });
         result["status"] = json!("choice-delivered");
-        result["selected_choice"] = json!({"source":SHARED,"key":"modules.independent","value":value,"schema":choice_schema(SHARED,"modules.independent")?,"edit_request":template(EDIT,json!({"source":SHARED,"key":"modules.independent","value":value}))});
+        result["selected_choice"] = json!({"source":SHARED,"key":key,"value":value,"schema":schema,"edit_request":template(EDIT,json!({"source":SHARED,"key":key,"value":value}))});
         return Ok(result);
     }
     let source = args["source"]

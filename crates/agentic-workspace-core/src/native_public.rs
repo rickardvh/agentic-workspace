@@ -1112,6 +1112,10 @@ fn resolve_with_baseline(
         .as_object_mut()
         .unwrap()
         .remove("independent_admissions");
+    public["configuration"]["admissions"]
+        .as_object_mut()
+        .unwrap()
+        .remove("decision_delegations");
     if independent_views
         .as_object()
         .is_some_and(|views| !views.is_empty())

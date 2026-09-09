@@ -411,6 +411,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                     | "assurance.decision_record_target"
                                     | "assurance.decision_record_revision"
                                     | "assurance.decision_record_fallback"
+                                    | "assurance.decision_delegations"
                                     | "assurance.instruction_revision"
                             ))
                         || (source == LOCAL
@@ -543,7 +544,8 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
             "decision_record_target":shared["assurance"]["decision_record_target"],
             "decision_record_revision":shared["assurance"]["decision_record_revision"],
-            "decision_record_fallback":shared["assurance"]["decision_record_fallback"]},
+            "decision_record_fallback":shared["assurance"]["decision_record_fallback"],
+            "decision_delegations":shared["assurance"]["decision_delegations"]},
         "safety":{"safe_to_auto_run_commands":safe,"requires_human_verification_on_pr":human_review,
             "automatic_execution_permitted":false},
         "contribution":{"owner":"workspace","revision":revision,"blockers":blockers}}),
