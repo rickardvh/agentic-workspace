@@ -308,7 +308,7 @@ pub(crate) fn view(
                 && old["effective_policy_revision"] == binding["effective_policy_revision"]
                 && old["capability_revision"] == binding["capability_revision"]
             {
-                result["admitted_disposition"] = json!({"source":source,"fact":args["fact"],"status":args["disposition"],
+                result["admitted_disposition"] = json!({"source":source,"fact":args["fact"],"status":args["disposition"],"reason":args["reason"],
                     "authority_effect":"advisory-disposition-only","completion_authority":false});
             } else {
                 result["diagnostics"] = json!([{"code":"disposition-currentness-lost","source":source,
@@ -455,6 +455,21 @@ pub(crate) fn apply_view(memory: &mut Value, disposition: Value) {
         }
     }
     let admitted = &disposition["admitted_disposition"];
+    if admitted["status"] == "retain" && admitted["fact"].is_null() {
+        for note in memory["selected_notes"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+        {
+            if note["source"]["reference"] == admitted["source"] {
+                note["disposition"] = admitted.clone();
+            }
+        }
+        if memory["response"]["detail"]["source"]["reference"] == admitted["source"] {
+            memory["response"]["detail"]["disposition"] = admitted.clone();
+        }
+        memory["contribution"]["facts"]["advisory_sources"] = memory["selected_notes"].clone();
+    }
     if matches!(admitted["status"].as_str(), Some("retire" | "promote")) {
         if let Some(fact) = admitted["fact"].as_str() {
             let reference = format!("{MANIFEST}#durable_facts.{fact}");
