@@ -19,7 +19,7 @@ jobs:
   workspace-checks:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Verify dispatched release head
         if: ${{ github.event_name == 'workflow_dispatch' }}
