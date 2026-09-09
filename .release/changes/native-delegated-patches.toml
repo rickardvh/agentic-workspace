@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Integrate bounded process-worker text deltas against owner-captured baselines while preserving concurrent work and exact recovery custody."
+issues = [2947, 2817, 2210, 2209]

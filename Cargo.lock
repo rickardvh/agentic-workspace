@@ -18,6 +18,7 @@ dependencies = [
  "base64",
  "cap-std",
  "chrono",
+ "diffy",
  "jsonschema",
  "process-wrap",
  "rsa",
@@ -220,6 +221,15 @@ checksum = "e7c1832837b905bbfb5101e07cc24c8deddf52f93225eee6ead5f4d63d53ddcb"
 dependencies = [
  "const-oid",
  "zeroize",
+]
+
+[[package]]
+name = "diffy"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e3dc2f773b6aaa63b1a7684b8589f670a8a0146a510b74d23a401c882364b49"
+dependencies = [
+ "hashbrown",
 ]
 
 [[package]]

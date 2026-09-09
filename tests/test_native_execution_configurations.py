@@ -40,7 +40,7 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     rows = {r["configuration"]["id"]: r for r in offered["configurations"]["candidates"]}
     assert rows["local:internal"]["eligible"] is True
     assert rows["worker:cli"]["eligible"] is True
-    assert rows["worker:cli"]["configuration"]["result_classes"] == ["read-only"]
+    assert rows["worker:cli"]["configuration"]["result_classes"] == ["read-only", "unapplied-patch"]
     assert rows["worker:manual"]["eligible"] is False
     assert "execution-return-unconstructible" in rows["worker:manual"]["reasons"]
     manual = offered["manual_targets"][0]
@@ -52,12 +52,19 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     assert all(r["configuration"]["proof_classes"] == [] and r["configuration"]["independent_context"] is False for r in rows.values())
     request = next(r for r in offered["requests"] if r[-1]["arguments"]["candidate"] == "worker:cli")
     judgment["arguments"]["required_result_classes"] = ["unapplied-patch"]
-    mutation = call({**context, "request": judgment})["task_requirements"]["execution_configurations"]
+    mutation_result = call({**context, "request": judgment})
+    mutation = mutation_result["task_requirements"]["execution_configurations"]
     mutation_rows = {r["configuration"]["id"]: r for r in mutation["configurations"]["candidates"]}
     assert mutation_rows["local:internal"]["eligible"] is True
-    assert mutation_rows["worker:cli"]["eligible"] is False
-    assert "result-class-unavailable" in mutation_rows["worker:cli"]["reasons"]
-    assert not any(r[-1]["arguments"]["candidate"] == "worker:cli" for r in mutation["requests"])
+    assert mutation_rows["worker:cli"]["eligible"] is True
+    assert any(r[-1]["arguments"]["candidate"] == "worker:cli" for r in mutation["requests"])
+    assert mutation_result["task_requirements"]["handoff"]["status"] == "not-ready"
+    assert mutation_result["decision_packet"]["primary_action"] is None
+    judgment["arguments"]["required_result_classes"] = ["already-materialized"]
+    unsupported = call({**context, "request": judgment})["task_requirements"]["execution_configurations"]
+    unsupported_worker = next(r for r in unsupported["configurations"]["candidates"] if r["configuration"]["id"] == "worker:cli")
+    assert unsupported_worker["eligible"] is False
+    assert "result-class-unavailable" in unsupported_worker["reasons"]
     selected = call({**context, "request": request})
     assert selected["task_requirements"]["execution_configurations"]["configurations"]["selected"]["id"] == "worker:cli"
     assert selected["decision_packet"].get("primary_action") is None

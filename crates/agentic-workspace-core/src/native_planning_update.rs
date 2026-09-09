@@ -47,6 +47,8 @@ pub(crate) fn operation() -> Value {
     operation["input_schema"]["properties"]["consumed_return"] = json!({"type":"object","properties":{"request":{"type":"object"},"result_revision":{"type":"string"},"judgment_revision":{"type":"string"},"assignment_identity":{"type":"object"},"execution_custody":{"type":"object"}},"required":["request","result_revision","judgment_revision","assignment_identity","execution_custody"],"additionalProperties":false});
     operation["input_schema"]["properties"]["consumed_return"]["properties"]["context"] =
         json!({"type":"object"});
+    operation["input_schema"]["properties"]["consumed_return"]["properties"]["integration"] =
+        crate::native_patch::result_schema();
     operation
 }
 pub(crate) fn adoption_declaration() -> Value {
@@ -67,6 +69,7 @@ pub(crate) fn adopt_return(
     let mut result = json!({"requests":[],"action":null});
     let template = &planning["update_requests"][0];
     if admission["result_use_allowed"] != true
+        || (!admission["delta"].is_null() && admission["integration"]["status"] != "integrated")
         || planning["status"] != "current"
         || !template.is_object()
     {
@@ -90,7 +93,7 @@ pub(crate) fn adopt_return(
     adoption["id"] = json!(ADOPT);
     adoption["request_kind"] = json!(ADOPT);
     adoption["source_revision"] = json!(digest(
-        &json!({"owner":template["source_revision"],"admission":admission["source_revision"],"judgment":admission["judgment"]})
+        &json!({"owner":template["source_revision"],"admission":admission["source_revision"],"judgment":admission["judgment"],"integration":admission["integration"]})
     )?);
     adoption["arguments"] = json!({"owner_ref":reference,"destination":"continuation.frontier"});
     let mut prerequisites = submitted
@@ -140,6 +143,9 @@ pub(crate) fn adopt_return(
     }
     action["arguments"]["consumed_return"] = json!({"request":adoption,"result_revision":digest(&admission["returned"])? ,"judgment_revision":admission["source_revision"],"assignment_identity":admission["assignment_identity"],"execution_custody":admission["execution_custody"]});
     action["arguments"]["consumed_return"]["context"] = admission["context"].clone();
+    if !admission["integration"].is_null() {
+        action["arguments"]["consumed_return"]["integration"] = admission["integration"].clone();
+    }
     action["source_requests"] = json!(submitted);
     result["action"] = action;
     Ok(result)

@@ -236,7 +236,7 @@ pub(crate) fn view(
             }
             // Discovery must describe the same return path that dispatch implements.
             let process = crate::native_delegation::supports_process(&transport);
-            let result_classes = if retained {
+            let result_classes = if retained || process {
                 json!(["read-only", "unapplied-patch"])
             } else {
                 json!(["read-only"])

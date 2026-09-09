@@ -4,6 +4,23 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 pub(crate) const JUDGE_RETURN: &str = "assignment/judge-return/v1";
+pub(crate) const PATCH_INPUTS: &str = "assignment/judge-patch-inputs/v1";
+const PATCH_EXPORT: &str = "assignment/export-patch/v1";
+const PATCH_RETURN: &str = "assignment/observe-patch-return/v1";
+pub(crate) fn return_shape(patch: bool) -> Value {
+    let schema: Value = serde_json::from_str(include_str!(
+        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
+    ))
+    .expect("schema");
+    let mut shape = schema["$defs"]["readonly_handoff_return"].clone();
+    shape["$schema"] = schema["$schema"].clone();
+    if patch {
+        shape["properties"]["returned"]["properties"]["patch"] =
+            json!({"type":"string","maxLength":262144});
+        shape["properties"]["returned"]["properties"]["changed_paths"] = json!({"type":"array","maxItems":8,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":256}});
+    }
+    shape
+}
 pub(crate) fn declarations() -> Vec<Value> {
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
@@ -11,6 +28,22 @@ pub(crate) fn declarations() -> Vec<Value> {
     .expect("schema");
     let mut declarations: Vec<Value> = [("assignment/judge-readonly-inputs/v1","readonly_handoff_inputs"),("assignment/export-readonly/v1","readonly_handoff_export"),("assignment/observe-readonly-return/v1","readonly_handoff_return")].iter().map(|(kind,key)|{let mut shape=schema["$defs"][*key].clone();shape["$schema"]=schema["$schema"].clone();json!({"kind":kind,"result_kind":"agentic-workspace/assignment-readonly-handoff/v1","input_schema":shape})}).collect();
     declarations.push(json!({"kind":JUDGE_RETURN,"result_kind":"agentic-workspace/assignment-result-admission/v1","input_schema":{"$schema":schema["$schema"],"type":"object","properties":{"answer":{"enum":["use-result","repair-required","reject-result"]},"reason":{"type":"string","minLength":1,"maxLength":4096}},"required":["answer","reason"],"additionalProperties":false}}));
+    let mut inputs = schema["$defs"]["readonly_handoff_inputs"].clone();
+    inputs["$schema"] = schema["$schema"].clone();
+    inputs["properties"]["mutation_paths"] = inputs["properties"]["input_refs"].clone();
+    inputs["required"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!("mutation_paths"));
+    let mut export = schema["$defs"]["readonly_handoff_export"].clone();
+    export["$schema"] = schema["$schema"].clone();
+    for (kind, shape) in [
+        (PATCH_INPUTS, inputs),
+        (PATCH_EXPORT, export),
+        (PATCH_RETURN, return_shape(true)),
+    ] {
+        declarations.push(json!({"kind":kind,"result_kind":"agentic-workspace/assignment-patch-handoff/v1","input_schema":shape}));
+    }
     declarations
 }
 
@@ -61,7 +94,7 @@ pub(crate) fn admission(
         contract,
     ));
     Ok(
-        json!({"kind":"agentic-workspace/assignment-result-admission/v1","status":status,"source_revision":source,"assignment_identity":execution["assignment_identity"],"context":execution["context"],"result_use_allowed":status=="admitted-for-use","judgment":{"source":"acting-orchestrator","reason":reason},"execution_custody":execution["custody"],"returned":execution["returned"],"requests":[prerequisites],"claim_boundary":{"proof":false,"independent_review":false,"completion":false,"target_quality":false}}),
+        json!({"kind":"agentic-workspace/assignment-result-admission/v1","status":status,"source_revision":source,"assignment_identity":execution["assignment_identity"],"context":execution["context"],"result_use_allowed":status=="admitted-for-use","judgment":{"source":"acting-orchestrator","reason":reason},"execution_custody":execution["custody"],"returned":execution["returned"],"delta":execution["delta"],"requests":[prerequisites],"claim_boundary":{"proof":false,"independent_review":false,"completion":false,"target_quality":false}}),
     )
 }
 fn request(kind: &str, args: Value, work: &Value, source: &str, contract: &Value) -> Value {
@@ -84,7 +117,12 @@ fn validate(value: &Value, work: &Value, source: &str, contract: &Value) -> Resu
     }
     Ok(())
 }
-fn read_inputs(target: &Path, refs: &Value, body: bool) -> Result<Value, CoreError> {
+fn read_inputs(
+    target: &Path,
+    refs: &Value,
+    body: bool,
+    baseline: Option<&Value>,
+) -> Result<Value, CoreError> {
     let root = cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     let mut inputs = Vec::new();
@@ -93,9 +131,23 @@ fn read_inputs(target: &Path, refs: &Value, body: bool) -> Result<Value, CoreErr
         let name = reference
             .as_str()
             .ok_or_else(|| CoreError::new("handoff input reference must be text"))?;
-        let bytes = crate::native_verification::read(&root, name)
-            .map_err(|e| CoreError::new(format!("handoff input {name}: {e}")))?
-            .ok_or_else(|| CoreError::new(format!("handoff input {name} is missing")))?;
+        let retained = baseline.and_then(|packet| {
+            packet["assignment_identity"]["mutation_paths"]
+                .as_array()
+                .filter(|v| v.iter().any(|p| p == name))?;
+            packet["assignment_identity"]["input_capsule"]
+                .as_array()?
+                .iter()
+                .find(|i| i["reference"] == name)?["content"]
+                .as_str()
+        });
+        let bytes = if let Some(content) = retained {
+            content.as_bytes().to_vec()
+        } else {
+            crate::native_verification::read(&root, name)
+                .map_err(|e| CoreError::new(format!("handoff input {name}: {e}")))?
+                .ok_or_else(|| CoreError::new(format!("handoff input {name} is missing")))?
+        };
         size += bytes.len();
         if size > 262144 {
             return Err(CoreError::new("handoff inputs exceed 256 KiB bound"));
@@ -118,13 +170,25 @@ pub(crate) fn inputs_view(
     requirements: &Value,
     submitted: Option<&Value>,
     contract: &Value,
+    baseline: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    let patch = requirements["requirements"]["required_result_classes"]
+        .as_array()
+        .is_some_and(|v| v.iter().any(|c| c == "unapplied-patch"));
     let source = digest(
         &json!({"work":work,"configuration":configuration["revision"],"requirements":requirements}),
     )?;
     let mut template = request(
-        "assignment/judge-readonly-inputs/v1",
-        json!({"input_refs":[],"complete":false,"reason":""}),
+        if patch {
+            PATCH_INPUTS
+        } else {
+            "assignment/judge-readonly-inputs/v1"
+        },
+        if patch {
+            json!({"input_refs":[],"mutation_paths":[],"complete":false,"reason":""})
+        } else {
+            json!({"input_refs":[],"complete":false,"reason":""})
+        },
         work,
         &source,
         contract,
@@ -143,7 +207,30 @@ pub(crate) fn inputs_view(
                 "read-only input completeness reason required",
             ));
         }
-        match read_inputs(target, &value["arguments"]["input_refs"], false) {
+        if value["request_kind"] != template["request_kind"] {
+            return Err(CoreError::new(
+                "handoff input kind differs from the current result class",
+            ));
+        }
+        for path in value["arguments"]["mutation_paths"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let path = path
+                .as_str()
+                .ok_or_else(|| CoreError::new("concrete mutation path required"))?;
+            crate::native_patch::concrete_source(target, path)?;
+            if !value["arguments"]["input_refs"]
+                .as_array()
+                .is_some_and(|v| v.iter().any(|p| p == path))
+            {
+                return Err(CoreError::new(
+                    "mutation path must have an owner-observed baseline input",
+                ));
+            }
+        }
+        match read_inputs(target, &value["arguments"]["input_refs"], false, baseline) {
             Ok(v) => inputs = v,
             Err(e) => gaps.push(e.to_string()),
         }
@@ -183,15 +270,25 @@ pub(crate) fn view(
     requirements: &Value,
     submitted: &[Value],
     contract: &Value,
+    baseline: Option<&Value>,
 ) -> Result<Value, CoreError> {
     let assessment = &requirements["assignment"]["result"];
     let selected = &assessment["selected"]["configuration"];
-    let export = submitted
-        .iter()
-        .find(|r| r["request_kind"] == "assignment/export-readonly/v1");
-    let returned = submitted
-        .iter()
-        .find(|r| r["request_kind"] == "assignment/observe-readonly-return/v1");
+    let patch = requirements["result"]["requirements"]["required_result_classes"]
+        .as_array()
+        .is_some_and(|v| v.iter().any(|c| c == "unapplied-patch"));
+    let export_kind = if patch {
+        PATCH_EXPORT
+    } else {
+        "assignment/export-readonly/v1"
+    };
+    let return_kind = if patch {
+        PATCH_RETURN
+    } else {
+        "assignment/observe-readonly-return/v1"
+    };
+    let export = submitted.iter().find(|r| r["request_kind"] == export_kind);
+    let returned = submitted.iter().find(|r| r["request_kind"] == return_kind);
     let inputs = &requirements["handoff_inputs"];
     let available = assessment["status"] == "assigned-nonlocal-handoff-required"
         && (selected["transport"] == "manual"
@@ -200,7 +297,11 @@ pub(crate) fn view(
         && inputs["status"] == "ready"
         && requirements["result"]["requirements"]["required_result_classes"]
             .as_array()
-            .is_some_and(|classes| classes.iter().all(|class| class == "read-only"));
+            .is_some_and(|classes| {
+                classes
+                    .iter()
+                    .all(|class| class == "read-only" || class == "unapplied-patch")
+            });
     if !available {
         if export.is_some() || returned.is_some() {
             return Err(CoreError::new(
@@ -226,13 +327,16 @@ pub(crate) fn view(
                         | "delegation/read-result/v1"
                         | "assignment/judge-return/v1"
                         | "planning/adopt-return/v1"
+                        | "assignment/integrate-patch/v1"
+                        | PATCH_EXPORT
+                        | PATCH_RETURN
                 )
             )
         })
         .cloned()
         .collect::<Vec<_>>();
     let export_request = request(
-        "assignment/export-readonly/v1",
+        export_kind,
         json!({"assignment_revision":assignment_revision}),
         work,
         &source,
@@ -249,7 +353,7 @@ pub(crate) fn view(
     if export["arguments"]["assignment_revision"] != assignment_revision {
         return Err(CoreError::new("handoff assignment revision changed"));
     }
-    let capsule = read_inputs(target, &inputs["judgment"]["input_refs"], true)?;
+    let capsule = read_inputs(target, &inputs["judgment"]["input_refs"], true, baseline)?;
     let mut compact = capsule.clone();
     for item in compact.as_array_mut().unwrap() {
         item.as_object_mut().unwrap().remove("content");
@@ -258,7 +362,7 @@ pub(crate) fn view(
         return Err(CoreError::new("handoff inputs changed before export"));
     }
     let return_request = request(
-        "assignment/observe-readonly-return/v1",
+        return_kind,
         json!({"returned":null}),
         work,
         &source,
@@ -266,11 +370,40 @@ pub(crate) fn view(
     );
     let mut reentry = prerequisites.clone();
     reentry.push(return_request);
-    let packet = crate::assignment_packet::seal(
+    let mut packet = crate::assignment_packet::seal(
         &json!({"kind":"agentic-workspace/assignment-export-packet/v1","assignment_id":format!("assignment:{assignment_revision}"),"assignment_revision":assignment_revision,"run_id":format!("readonly:{assignment_revision}"),"target":selected["target"],"transport":selected["transport"],"scope":changed,
     "assignment_identity":{"revision":assignment_revision,"human_intent":task,"task_class":"","role":requirements["result"]["role"].as_str().unwrap_or("executor"),"scope_class":"read-only","allowed_paths":changed,"allowed_effects":["read-provided-inputs","return-observations"],"prohibited_effects":["write-files","execute-commands","grant-proof","claim-completion"],"required_inputs":inputs["judgment"]["input_refs"],"read_first":inputs["judgment"]["input_refs"],"input_capsule":capsule,"task_requirements":requirements["result"],"proof_obligation_id":requirements["result"]["verification_identity"]["id"].as_str().unwrap_or(""),"proof_obligation_revision":requirements["result"]["verification_identity"]["revision"].as_str().unwrap_or(""),"stop_conditions":["Necessary input absent or ambiguous: return a blocker; do not infer missing parent context.","No file mutation or proof/authority claim is permitted."],"claim_authority":{"proof":false,"completion":false},"current_assignment":identity},
     "return_contract":{"kind":"agentic-workspace/delegated-return/v1","required_fields":["assignment_revision","run_id","target","changed_paths","patch","summary","stop_conditions_hit"],"result_delivery":{"field":"result_delivery","modes":["unapplied-patch"],"default":"unapplied-patch"},"worker_proof_authority":false,"worker_completion_authority":false,"rule":"Return observations with empty changed_paths and patch. Identity matching is not reviewer authentication or evidence sufficiency.","reentry":{"task":task,"changed":changed,"request":reentry}},"packet_integrity":""}),
     )?;
+    if patch {
+        let paths = &inputs["judgment"]["mutation_paths"];
+        for path in paths
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            if !changed
+                .iter()
+                .any(|pattern| crate::native_verification::matches(pattern, path))
+            {
+                return Err(CoreError::new(
+                    "mutation baseline is outside the current allowed scope",
+                ));
+            }
+        }
+        packet["run_id"] = json!(format!("patch:{assignment_revision}"));
+        packet["assignment_identity"]["scope_class"] = json!("unapplied-patch");
+        packet["assignment_identity"]["mutation_paths"] = paths.clone();
+        packet["assignment_identity"]["allowed_effects"] =
+            json!(["read-provided-inputs", "return-unapplied-delta"]);
+        packet["return_contract"]["rule"] = json!(
+            "Return patch as a JSON-encoded array of objects containing only path and diff. Each diff is one canonical unified diff with --- original and +++ modified headers, exact captured baseline line positions, no Git metadata or trailing text. LF and CRLF transport are equivalent. Only the listed concrete mutation paths may change. Return changed_paths equal to the delta paths. Do not modify the checkout. File creation, deletion, binary changes and renames require a different admitted delivery contract."
+        );
+        packet["return_contract"]["mutation_paths"] = paths.clone();
+        packet["return_contract"]["maximum_complete_stdout_bytes"] = json!(65536);
+        packet = crate::assignment_packet::seal(&packet)?;
+    }
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/assignment_worker_context.schema.json"
     ))
@@ -282,6 +415,9 @@ pub(crate) fn view(
     if let Some(value) = returned {
         validate(value, work, &source, contract)?;
         let result = &value["arguments"]["returned"];
+        if patch {
+            crate::native_patch::delta(&packet, result)?;
+        }
         for (key, expected) in packet["return_contract"]["required_identity"]
             .as_object()
             .unwrap()
@@ -295,6 +431,6 @@ pub(crate) fn view(
         observation = json!({"status":"current-unproven-observation","returned":result,"assignment_identity":identity,"proof_current":false,"completion_allowed":false,"authenticated_reviewer":false});
     }
     Ok(
-        json!({"status":if observation.is_null(){"exported-read-only"}else{"returned-unproven"},"packet":packet,"observation":observation,"requests":[],"claim_boundary":"Seal binds source and assignment integrity only. Return is an unproven observation; local implementation, Verification and Planning completion remain unavailable."}),
+        json!({"status":if observation.is_null(){if patch {"exported-patch"} else {"exported-read-only"}}else{"returned-unproven"},"packet":packet,"observation":observation,"requests":[],"claim_boundary":"Seal binds source and assignment integrity only. Return is an unproven observation; local implementation, Verification and Planning completion remain unavailable."}),
     )
 }

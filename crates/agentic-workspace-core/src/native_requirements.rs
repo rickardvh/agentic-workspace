@@ -20,8 +20,10 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
         crate::native_assignment::declaration(),
     ];
     declarations.extend(crate::native_handoff::declarations());
+    declarations.push(crate::native_patch::declaration());
+    let operation = crate::native_patch::operation();
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
-        "owners":[{"owner":"assignment","revision":digest(&json!(declarations))?,"requests":declarations}],"restriction_authorities":[{"owner":"assignment","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}]});
+        "owners":[{"owner":"assignment","revision":digest(&json!([declarations,operation]))?,"requests":declarations,"operations":[operation],"domains":["assignment"],"effects":[{"id":"implementation","domain":"assignment"}]}],"restriction_authorities":[{"owner":"assignment","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}]});
     contract["revision"] = json!(digest(&contract)?);
     Ok(contract)
 }
@@ -40,6 +42,7 @@ pub(crate) fn view(
     execution_request: Option<&Value>,
     input_request: Option<&Value>,
     contract: &Value,
+    baseline: Option<&Value>,
 ) -> Result<Value, CoreError> {
     if configuration["assignment_requirements"]["configured"] != true {
         if request.is_some()
@@ -123,6 +126,7 @@ pub(crate) fn view(
         &result,
         input_request,
         contract,
+        baseline,
     )?;
     let mut input_requests = Vec::new();
     if result["status"] == "resolved"

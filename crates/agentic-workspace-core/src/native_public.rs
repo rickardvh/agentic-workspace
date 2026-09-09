@@ -47,6 +47,15 @@ pub fn start(value: Value) -> Result<Value, CoreError> {
 }
 
 fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<Value, CoreError> {
+    resolve_with_baseline(input, target, executing, None)
+}
+
+fn resolve_with_baseline(
+    input: &Input,
+    target: &std::path::Path,
+    executing: bool,
+    baseline: Option<&Value>,
+) -> Result<Value, CoreError> {
     let compatibility = crate::runtime_compatibility::native(target)?;
     if compatibility["status"] == "blocked" {
         return Ok(compatibility);
@@ -62,9 +71,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
     } else {
         input.request.as_ref()
     })?;
+    let retained_baseline = crate::native_delegation::retained_packet(target, &requests)?;
+    let baseline = baseline.or(retained_baseline.as_ref());
     if executing
         && input.invocation.as_ref().is_none_or(|i| {
             i["operation_id"] != "delegation.dispatch"
+                && i["operation_id"] != crate::native_patch::OP
                 && i["operation_id"] != "configuration.write"
                 && i["operation_id"] != "configuration.recover-write"
                 && i["operation_id"] != "memory.dispose"
@@ -614,10 +626,12 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             r["owner"] == "assignment"
                 && r["request_kind"] == "assignment/select-execution-configuration/v1"
         }),
-        requests
-            .iter()
-            .find(|r| r["request_kind"] == "assignment/judge-readonly-inputs/v1"),
+        requests.iter().find(|r| {
+            r["request_kind"] == "assignment/judge-readonly-inputs/v1"
+                || r["request_kind"] == crate::native_handoff::PATCH_INPUTS
+        }),
         &contract,
+        baseline,
     )?;
     contributions.push(startup_adapter["contribution"].clone());
     requirements["bounded_outcome_evidence"] =
@@ -643,6 +657,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &configuration,
         &assignment["result"],
         &requirements["execution_configurations"],
+        None,
     );
     let mut assignment_contribution = assignment["contribution"].clone();
     assignment.as_object_mut().unwrap().remove("contribution");
@@ -655,6 +670,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &requirements,
         &requests,
         &contract,
+        baseline,
     )?;
     let mut delegation = crate::native_delegation::view(
         target,
@@ -673,7 +689,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             request: None,
             invocation: Some(original.clone()),
         };
-        let fresh = resolve(&original_input, target, true)?;
+        let fresh = resolve_with_baseline(&original_input, target, true, baseline)?;
         crate::admit_invocation_value(
             json!({"decision":fresh["decision_packet"],"invocation":original}),
         )?;
@@ -682,7 +698,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         .as_object_mut()
         .unwrap()
         .remove("observed_invocation");
-    let admission =
+    let mut admission =
         crate::native_handoff::admission(&work, &delegation["observation"], &requests, &contract)?;
     if admission["result_use_allowed"] == true {
         assignment_contribution["blockers"]
@@ -695,6 +711,39 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             admission["judgment"]
         ]))?);
     }
+    let integration = crate::native_patch::view(
+        target,
+        &work,
+        &admission,
+        &requests,
+        &contract,
+        executing
+            && input
+                .invocation
+                .as_ref()
+                .is_some_and(|i| i["operation_id"] == crate::native_patch::OP),
+    )?;
+    admission["integration"] = integration["result"].clone();
+    if admission["result_use_allowed"] == true && !admission["delta"].is_null() {
+        *contributions
+            .iter_mut()
+            .find(|c| c["owner"] == "workspace")
+            .unwrap() = native_config::assignment_consumption(
+            &configuration,
+            &requirements["assignment"]["result"],
+            &requirements["execution_configurations"],
+            Some(&admission),
+        );
+    }
+    if integration["action"].is_object() {
+        assignment_contribution["actions"] = json!([integration["action"]]);
+        assignment_contribution["settled"] = json!(false);
+        assignment_contribution["revision"] = json!(digest(&json!([
+            assignment_contribution["revision"],
+            integration["action"]
+        ]))?);
+    }
+    requirements["patch_integration"] = integration;
     contributions.push(assignment_contribution);
     let adopted = crate::native_planning_update::adopt_return(
         target, &work, &contract, &planning, &admission, &requests,
@@ -915,6 +964,10 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
                         | "assignment/judge-readonly-inputs/v1"
                         | "assignment/export-readonly/v1"
                         | "assignment/observe-readonly-return/v1"
+                        | "assignment/judge-patch-inputs/v1"
+                        | "assignment/export-patch/v1"
+                        | "assignment/observe-patch-return/v1"
+                        | "assignment/integrate-patch/v1"
                         | "assignment/judge-return/v1"
                 )
             )
@@ -969,6 +1022,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "planning.update"
         && invocation["operation_id"] != "planning.update-recover"
         && invocation["operation_id"] != "delegation.dispatch"
+        && invocation["operation_id"] != crate::native_patch::OP
         && invocation["operation_id"] != "configuration.write"
         && invocation["operation_id"] != "configuration.recover-write"
         && invocation["operation_id"] != "memory.dispose"
@@ -1037,13 +1091,33 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         result["custody"] = executed["custody"].clone();
         return Ok(result);
     }
+    if invocation["operation_id"] == crate::native_patch::OP {
+        let executed =
+            crate::native_patch::execute(&target, &current["decision_packet"], invocation, || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            })?;
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":null}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        result["value"]["reentry"] = json!({"task":input.task,"changed":input.changed,"request":invocation["source_requests"]});
+        return Ok(result);
+    }
     if invocation["operation_id"] == "delegation.dispatch" {
         let executed = crate::native_delegation::execute(
             &target,
             &current["decision_packet"],
             invocation,
-            || {
-                let fresh = resolve(&input, &target, true)?;
+            |after_worker| {
+                let baseline = (after_worker
+                    && invocation["arguments"]["packet"]["assignment_identity"]["scope_class"]
+                        == "unapplied-patch")
+                    .then_some(&invocation["arguments"]["packet"]);
+                let fresh = resolve_with_baseline(&input, &target, true, baseline)?;
                 crate::admit_invocation_value(
                     json!({"decision":fresh["decision_packet"],"invocation":invocation}),
                 )?;

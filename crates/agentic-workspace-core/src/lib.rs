@@ -18,6 +18,7 @@ mod native_intent;
 mod native_memory;
 mod native_memory_capture;
 mod native_memory_write;
+pub(crate) mod native_patch;
 mod native_payload;
 mod native_planning;
 mod native_planning_create;
