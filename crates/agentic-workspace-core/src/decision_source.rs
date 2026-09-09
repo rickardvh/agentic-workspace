@@ -183,7 +183,12 @@ pub(crate) fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, Cor
     continuity::normalize(value)
 }
 
-fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError> {
+fn load(
+    input: &Input,
+    owner: &str,
+    routes: &[Value],
+    required: &[Value],
+) -> Result<Value, CoreError> {
     relative(input.archive.trim_end_matches('/'))?;
     if input.admitted_revision.len() != 40
         || !input
@@ -250,6 +255,21 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
         }
     }
     let mut selected = BTreeSet::new();
+    for ancestor in required {
+        let record = &available
+            .get(ancestor["id"].as_str().unwrap())
+            .ok_or_else(|| {
+                error("Required supersession ancestor is absent from the admitted archive")
+            })?
+            .0;
+        if record["material_revision"] != ancestor["material_revision"]
+            || record["source"] != ancestor["source"]
+        {
+            return Err(error(
+                "Required supersession ancestor differs from its bound source admission",
+            ));
+        }
+    }
     let mut pending: Vec<_> = available
         .iter()
         .filter(|(_, (record, _, _))| {
@@ -264,6 +284,11 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
         })
         .map(|(id, _)| id.clone())
         .collect();
+    pending.extend(
+        required
+            .iter()
+            .map(|record| record["id"].as_str().unwrap().to_owned()),
+    );
     while let Some(id) = pending.pop() {
         if !selected.insert(id.clone()) {
             continue;
@@ -371,6 +396,11 @@ pub(crate) fn resolve_with_native(
             },
             "memory",
             &selected,
+            native_fallback
+                .as_ref()
+                .and_then(|v| v["required_records"].as_array())
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
         )?
     } else {
         empty_context(&input.applicable_scope)
@@ -388,7 +418,7 @@ pub(crate) fn resolve_with_native(
     let has_residue = !fallback["records"].as_array().unwrap().is_empty();
     let native_configured = !input.archive.is_empty();
     let native = if native_configured {
-        match load(&input, "repository", &selected) {
+        match load(&input, "repository", &selected, &[]) {
             Ok(context) => context,
             // A failed destination cannot hide already admitted useful fallback.
             // The existing reconciliation contract exposes the pending owner.

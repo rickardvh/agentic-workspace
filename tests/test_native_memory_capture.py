@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import copy
+import os
 from pathlib import Path
 
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
+from tests.test_shared_core import _commit_native, _native_archive
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -193,3 +195,44 @@ def test_unadmitted_archive_names_do_not_block_unrelated_work(
     assert result["decision_packet"]["status"] == "direct"
     assert not result["decision_packet"].get("decision_context", {}).get("consequences")
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_native_supersession_retains_git_admitted_ancestor_locator(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    _native_archive(tmp_path)
+    archive = tmp_path / ".agentic-workspace/memory/repo/decisions"
+    archive.mkdir(parents=True)
+    former = archive / "owner-chosen-name.md"
+    former.write_bytes((tmp_path / "design/choice.md").read_bytes())
+    original = former.read_bytes()
+    revision = _commit_native(tmp_path)
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version=1\n[modules]\nenabled=["memory"]\n[assurance]\n'
+        f'decision_record_fallback={{archive=".agentic-workspace/memory/repo/decisions",admitted_revision="{revision}"}}\n'
+    )
+    context = {"target": str(tmp_path), "task": "Fixture mixed-source supersession", "changed": ["src/core.rs", "src/new.rs"]}
+
+    def call(**extra: object) -> dict:
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    current = call()
+    admission = current["decision_sources"]["requests"][0]["arguments"]
+    request = current["memory"]["capture"]["requests"][0]
+    request["arguments"]["material"] = {
+        "id": "fixture:native-successor",
+        "decision": "A fixture successor to the Git-admitted choice",
+        "consequence": "Use the fixture successor",
+        "rationale": "Keep the exact former source and admitted basis",
+        "alternatives": [],
+        "dependency_paths": [],
+        "supersedes": [{"id": admission["id"], "material_revision": admission["material_revision"], "scope": ["path:src/core.rs"]}],
+    }
+    answer = call(request=request)["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "confirm-decision"
+    call(invocation=call(request=answer)["decision_packet"]["primary_action"])
+    for changed in [["src/core.rs"], ["src/new.rs"]]:
+        fresh = call(task="Fresh relevant session", changed=changed)["decision_packet"]["decision_context"]
+        assert [row["id"] for row in fresh["consequences"]] == ["fixture:native-successor"]
+    assert former.read_bytes() == original

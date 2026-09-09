@@ -503,7 +503,8 @@ pub(crate) fn view(
         let binding = json!({"semantics":SEMANTICS,"source":source,"before":null,"work":work,"scope":scope,
             "manifest_before":manifest_before,"manifest_postimage":manifest_postimage,
             "policy_revision":config["revision"],"capability_revision":contract["revision"],
-            "dependencies":dependencies(&root,&material["dependency_paths"])?});
+            "dependencies":dependencies(&root,&material["dependency_paths"])?,
+            "superseded_sources":material["supersedes"].as_array().unwrap().iter().map(|old| context["admissions"].as_array().unwrap().iter().find(|a| a["id"] == old["id"] && a["material_revision"] == old["material_revision"]).unwrap().clone()).collect::<Vec<_>>()});
         let bytes = material_bytes(material, &binding)?;
         let post = crate::native_intent::hash(&bytes);
         let proposal = proposal(material, &binding, &post)?;
@@ -660,8 +661,7 @@ fn execute_checked(
 /// Selected native sources join the existing continuity context. No scan or
 /// retained artifact is needed for work without an exact decision scope.
 pub(crate) fn context(target: &Path, config: &Value, scope: &[String]) -> Result<Value, CoreError> {
-    let mut result =
-        json!({"records":[],"admissions":[],"current_dependencies":[],"applicable_scope":scope});
+    let mut result = json!({"records":[],"admissions":[],"current_dependencies":[],"required_records":[],"applicable_scope":scope});
     if scope.is_empty() || !crate::native_config::module_enabled(config, "memory") {
         return Ok(result);
     }
@@ -731,7 +731,28 @@ pub(crate) fn context(target: &Path, config: &Value, scope: &[String]) -> Result
             ));
         }
         for ancestor in normalized["supersedes"].as_array().unwrap() {
-            pending.push(self::source(config, ancestor["id"].as_str().unwrap())?);
+            let admission = binding["superseded_sources"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|a| {
+                    a["id"] == ancestor["id"]
+                        && a["material_revision"] == ancestor["material_revision"]
+                })
+                .ok_or_else(|| err("Supersession lacks its bound source admission"))?;
+            let reference = admission["source"]["reference"]
+                .as_str()
+                .ok_or_else(|| err("Supersession source locator is missing"))?;
+            if reference == self::source(config, ancestor["id"].as_str().unwrap())?
+                && retained(target, reference)?.is_some()
+            {
+                pending.push(reference.to_owned());
+            } else {
+                result["required_records"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(admission.clone());
+            }
         }
         result["admissions"].as_array_mut().unwrap().push(json!({"id":normalized["id"],"material_revision":normalized["material_revision"],"source":normalized["source"],"rationale_reference":source}));
         for dependency in normalized["authority"]["basis"]
