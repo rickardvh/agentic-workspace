@@ -109,3 +109,29 @@ def test_optional_configuration_creation_is_bound_to_absence(
     call(invocation=action)
     assert source.read_bytes() == proposed["configuration_write"]["proposal"]["postimage"].encode()
     assert call()["configuration"]["safety"]["safe_to_auto_run_commands"] is False
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_configuration_postimage_cannot_exceed_its_reader(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
+    context = {"target": str(tmp_path), "task": "Fixture bounded configuration", "changed": []}
+
+    def call(**extra: object) -> dict:
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+
+    oversized = next(r for r in call()["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "system_intent.sources")
+    oversized["arguments"]["value"] = ["x" * 4097]
+    with pytest.raises(AssertionError):
+        call(request=oversized)
+    assert not (tmp_path / ".agentic-workspace").exists()
+    source = tmp_path / ".agentic-workspace/config.toml"
+    source.parent.mkdir()
+    prefix = b"schema_version=1\n[workspace]\ncli_invoke='a'\n#"
+    # Publication and recovery use the narrower confined source reader.
+    original = prefix + b"x" * (262_144 - len(prefix))
+    source.write_bytes(original)
+    request = call()["configuration_write"]["requests"][0]
+    request["arguments"]["value"] = "longer-invocation"
+    with pytest.raises(AssertionError, match="postimage exceeds"):
+        call(request=request)
+    assert source.read_bytes() == original
+    assert not (tmp_path / ".agentic-workspace/local").exists()

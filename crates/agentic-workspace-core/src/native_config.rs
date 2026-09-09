@@ -8,6 +8,7 @@ use std::{io::Read, path::Path};
 
 const SHARED: &str = ".agentic-workspace/config.toml";
 const LOCAL: &str = ".agentic-workspace/config.local.toml";
+pub(crate) const MAX_SOURCE_BYTES: usize = 1_048_576;
 
 pub(crate) fn load(
     root: &Dir,
@@ -37,10 +38,10 @@ pub(crate) fn load(
     let mut bytes = Vec::new();
     root.open(path)
         .map_err(|e| e.to_string())?
-        .take(1_048_577)
+        .take((MAX_SOURCE_BYTES + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(|e| e.to_string())?;
-    if bytes.len() > 1_048_576 {
+    if bytes.len() > MAX_SOURCE_BYTES {
         return Err("configuration source exceeds bounded read".into());
     }
     let revision = format!("sha256:{:x}", Sha256::digest(&bytes));

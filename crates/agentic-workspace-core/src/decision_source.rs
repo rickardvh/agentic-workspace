@@ -126,15 +126,16 @@ pub(crate) fn hash(bytes: &[u8]) -> String {
         )
     )
 }
+pub(crate) const MAX_SOURCE_BYTES: usize = 262144;
 pub(crate) fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
     relative(path)?;
     let mut bytes = Vec::new();
     root.open(path)
         .map_err(error)?
-        .take(262145)
+        .take((MAX_SOURCE_BYTES + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(error)?;
-    if bytes.len() > 262144 {
+    if bytes.len() > MAX_SOURCE_BYTES {
         return Err(error("decision source exceeds bounded read"));
     }
     std::str::from_utf8(&bytes).map_err(error)?;

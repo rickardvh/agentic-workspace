@@ -42,6 +42,9 @@ fn choice_schema(source: &str, key: &str) -> Result<Value, CoreError> {
     }
     if value["type"] == "array" {
         value["maxItems"] = json!(32);
+        if value["items"]["type"] == "string" {
+            value["items"]["maxLength"] = json!(4096);
+        }
     }
     Ok(value)
 }
@@ -165,6 +168,13 @@ fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec
             rendered
         }
     };
+    if rendered.len()
+        > crate::native_config::MAX_SOURCE_BYTES.min(crate::decision_source::MAX_SOURCE_BYTES)
+    {
+        return Err(err(
+            "Configuration postimage exceeds the bounded source reader; source preserved",
+        ));
+    }
     let parsed: toml::Value = toml::from_str(&rendered).map_err(err)?;
     let parsed = serde_json::to_value(parsed).map_err(err)?;
     let schema: Value = serde_json::from_str(source_schema(source)?).map_err(err)?;
