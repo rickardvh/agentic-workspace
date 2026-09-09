@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Integrated base b76ddddbc33c76c97e2e3529bb5d891a3fd5a99a remains reconstruct/first-stable. PR #3177 at 5700f4eecdeb275a7c2866017521fe07b9ba738d provides bounded human fallback capture, native publication/recovery and selective scoped recall; PR #3178 at fdeba23b8eb0caae8df26cae7bce3267db16ed45 adds durable configuration choices and missing canonical source creation. Both have green CI and scoped independent reviews without remaining findings. Ordinary human authority derives from exact owner-issued requests plus answers, with no trusted host, client authority labels or cryptographic identity claim. Current branch codex/3138-delegated-patches implements existing UTF-8 process patch return/integration using sealed baselines, concrete scope, exact hunks, disjoint concurrent merge, LF/CRLF preservation, typed result/Planning admission, bounded carriers and serialized interruption recovery. Four public-surface lifecycle cases and 103 core tests plus4 vectors pass; broad regression reached253 passing and1 skipped; all4 obsolete capability assertions now pass in the13-case execution suite, and final patch/read-only Planning adoption passes2 targeted cases. Independent implementation review/rechecks found no remaining substantive issues. Host-native launch/return, already-materialized attribution, visibility/retention, creation/deletion/binary/rename delivery and real supported-host dogfood remain open, alongside broader capture/configuration/correction/adaptation and cumulative release outcomes. Process nonmutation is protocol instruction, not OS isolation or authorship of dirty bytes. Generated Node conformance still reports unavailable native assignment close/reassign; static generation and contract tooling pass. Preserve preexisting adapter bytes and Assignment/proof residue. No repeated capability-approval request is needed for the approved human-decision implementation choice.",
+    "frontier": "Integrated base b76ddddbc33c76c97e2e3529bb5d891a3fd5a99a remains reconstruct/first-stable. PR #3177 at 5700f4eecdeb275a7c2866017521fe07b9ba738d provides bounded human fallback capture, native publication/recovery and selective scoped recall; PR #3178 at fdeba23b8eb0caae8df26cae7bce3267db16ed45 adds durable configuration choices and missing canonical source creation. Both have green CI and scoped independent reviews without remaining findings. Ordinary human authority derives from exact owner-issued requests plus answers, with no trusted host, client authority labels or cryptographic identity claim. PR #3179 at 94d99f523 adds current checked-patch outcome evidence to the native lifecycle and implements existing UTF-8 process patch return/integration using sealed baselines, concrete scope, exact hunks, disjoint concurrent merge, LF/CRLF preservation, typed result/Planning admission, bounded carriers and serialized interruption recovery. Four public-surface lifecycle cases and 103 core tests plus4 vectors pass; broad regression reached253 passing and1 skipped; all4 obsolete capability assertions now pass in the13-case execution suite, and final patch/read-only checked-outcome lifecycles pass2 targeted cases, including missing-postimage coverage, drift and cross-scope exclusion. Independent implementation review/rechecks found no remaining substantive issues. PR #3180 on codex/3138-decision-archive consolidates repository decision and Planning migration evidence. It explicitly admits reviewed snapshot b4838e325757e523edbdccc51c27a769b8293f43 against current SYSTEM_INTENT.md without changing decision meaning, scope or authors. Live native traces restore3 current consequences for exact shared-core work, suppress ADR context for unrelated work, and retrieve current rationale through the exact returned request. Eight real-record public cases and9 supersession/source-admission controls pass. The April note remains exactly retired with original bytes preserved. Scoped independent review supports #3041 bounded acceptance once integrated. Planning evidence starts from real execplans;15 identity/creation/quietness cases and40 public migration cases pass. Python/TypeScript test payloads now use stdin after the real growing plan exposed Windows argv limits. CI explicitly ratchets public Planning continuation, and obsolete native-host/creation/decision-authority prose is reconciled. Scoped independent review finds no remaining substantive #2970 acceptance gap. Neither owner is closed before reviewed integration/promotion. PR #3179 final CI is green. The current human instruction is to stop after finishing #3180; do not start another owner slice in this run. Host-native launch/return, already-materialized attribution, visibility/retention, creation/deletion/binary/rename delivery and real supported-host dogfood remain open, alongside broader capture/configuration/correction/adaptation and cumulative release outcomes. Process nonmutation is protocol instruction, not OS isolation or authorship of dirty bytes. Generated Node conformance still reports unavailable native assignment close/reassign; static generation and contract tooling pass. Preserve preexisting adapter bytes and Assignment/proof residue. No repeated capability-approval request is needed for the approved human-decision implementation choice.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Publish the consolidated native process-patch PR stacked on #3178 with completed focused regression and scoped independent review, then continue approved P0/P1 owner corrections and cumulative #2909/#2616/#2990 evidence. Native host/shared-worktree and lifecycle outcomes remain unfinished; no master promotion or parent completion is inferred.",
+  "next_action": "Finish PR #3180 current documentation, independent review and checks, then stop as the human requested. A later requested continuation should resume remaining P0/P1 owner corrections and cumulative #2909/#2616/#2990 evidence. Native host/shared-worktree and lifecycle outcomes remain unfinished; no master promotion or parent completion is inferred.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -137,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 31,
+  "revision": 33,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -189,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a3ef7fbe8a45206135bbcd2b64c60ca7a7676435765d3ef5f7ebef0291d4f8e2.attempt.json",
-        "revision": "sha256:1af77a1003ef038ca90e4ee1c5885aca18c0c6115cbf7a96b83e9357fa09fa6e",
+        "path": ".agentic-workspace/local/effects/20c25f6abb9e9fe8349da67779ba56daa2025e5ce8adbbb9be7f574a96922f7d.attempt.json",
+        "revision": "sha256:5839594b3a670e73d27024cc971113a8654101134a16ffeb9d955a6526f6acde",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a3ef7fbe8a45206135bbcd2b64c60ca7a7676435765d3ef5f7ebef0291d4f8e2.result.json",
-        "revision": "sha256:afb9bbb983da2cea9ac6d63b4500d897ed834725e40e11facdbb1d7c39140bfc",
+        "path": ".agentic-workspace/local/effects/20c25f6abb9e9fe8349da67779ba56daa2025e5ce8adbbb9be7f574a96922f7d.result.json",
+        "revision": "sha256:bdf0061fd2d8f75a7a535cbe980bd7482a37f5b9aa8131ca35d09b04be44fd08",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:2ce2df098375c6e5754d48fc71b41264c6f9b859fdc5c3e038be3e899ea92264",
+    "invocation_revision": "sha256:f428103f8e8a35ad1ae6822150d063ceee9f87215eef03d54b39a11dca2bd726",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -208,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:d8e090c56c6617d7a2829a5093f9d4adcc383d3c9946a448ff3c77a6ae1245ef",
+        "document_revision": "sha256:284a94cc437c7cf05a410a3953c76092e46932f7172f3c353a5187958fb1ef06",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

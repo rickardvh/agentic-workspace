@@ -186,7 +186,16 @@ The existing shared compiler accepts optional `decision_context`: a bounded host
 
 A stable source-assigned decision ID survives revision. The material revision covers the semantic choice, consequence, authors/contributors, deciding actor and authority basis, affected scope, material evidence/context and explicit supersession. The canonical source owner/reference/revision and rationale locator are independently admitted and excluded from this semantic digest: a host may attest that non-material source churn preserves the same choice. Material rationale evidence belongs in dependencies; moving its locator alone is not a new decision. Changed deciding authority or material dependencies cannot reuse the old semantic admission. Current dependency observations are separate from both stored expectations and aggregate operating-view revision.
 
-Authors develop a choice; contributors assist; the deciding actor supplies decisive authority through an admitted basis. An agent can decide within admitted delegation, a human can confirm an agent-authored choice, or a human can originate it. AW-informed context is retained as owner evidence references, never relabeled as AW semantic authorship. The trusted host must authenticate this provenance and current canonical source before admitting the exact `(id, material_revision, source, rationale_reference)` binding. An ordinary client cannot manufacture the independent admission by serializing a matching object. This is the existing trusted-host boundary, not cryptographic attestation or a new authority registry.
+Authors develop a choice; contributors assist; the deciding actor supplies decisive authority through an admitted basis. AW-informed context remains owner evidence references, never AW semantic authorship. The responsible owner admits the exact `(id, material_revision, source, rationale_reference)` binding; a client cannot manufacture that admission with actor, authority or provenance labels. An agent-taken decision requires current admitted policy/facts that mechanically establish delegation for the exact scope. Otherwise the owner must return a bounded human decision request. Ordinary human decisions do not require a trusted or cryptographically authenticated host.
+
+The native Memory capture path constructs the complete proposal and exact human
+response request, bound to work, scope, dependencies, policy/capability revisions,
+destination/postimages and proposal revision. On return it derives deciding
+authority from that request plus the bound answer. Publication custody is checked
+separately and cannot decide the question. The record truthfully identifies an
+exact bounded-human-answer basis; it does not claim authenticated human identity.
+The independent-review signed-host adapter remains a separate identity/separation
+of duty boundary and is not reused by ordinary capture.
 
 Supersession names a distinct prior ID, exact material revision and scope shared by both decisions. The host supplies the complete supersession closure for the bounded selection; missing targets, cycles and wrong revisions/scopes fail closed. Superseded scope does not revive merely because the replacement's dependencies later become stale. Unsuperseded scope remains separately eligible. Rationale and historical semantic records remain with their canonical source, referenced by the normalized record and its currentness state.
 
@@ -204,14 +213,14 @@ Every known residue ID receives `pending`, `repo-native`, `fallback`, `dismissed
 
 Dismissal separately names the decisive actor, reason and current authority basis, bound to the exact decision revision. It cannot be inferred from the original semantic author, a stale confirmation or a record field. A fully superseded decision reuses the already admitted explicit supersession relation. Partial supersession leaves unresolved remaining scope. Reconciliation and semantic currentness remain separate: a durable owner may hold a stale decision, and a known unresolved residue remains visible even when it has no currently applicable operating consequence. No disposition grants task-global blocking, mutation, proof or claim authority.
 
-The #2909 shared-core lane covers native-first/fallback outcomes, failed/stale/different-value destination admissions, later destination loss, current dismissal authority, explicit supersession and missing/unrelated residue. Actual Memory/native adapters, source custody retention, stronger-owner promotion mutations, ordinary typed write requests, archive discovery and #3041 dogfood remain unimplemented. The former April decision's provenance must be reconciled honestly before a real-source migration can claim its semantic author/decisive authority; commit authorship alone cannot establish that distinction.
+The #2909 shared-core lane covers native-first/fallback outcomes, failed/stale/different-value destination admissions, later destination loss, current dismissal authority, explicit supersession and missing/unrelated residue. Native ordinary capture, publication/recovery, selective fallback recall and disposition now use owner-returned requests. The repository archive has current selective #3041 dogfood evidence in `docs/maintainer/native-decision-archive-dogfood.md`. Stronger-owner capture/promotion mutations and broader lifecycle outcomes remain incomplete. The April note was explicitly retired by human judgment with original bytes preserved; that disposition does not establish its historical authorship or promote it into the ADR archive.
 
 
 ## Repository source admission
 
 The optional repository adapter reads Markdown containing one fenced `aw-decision` JSON record. It is an encoding of the existing material-decision contract, not a universal ADR convention. Human-readable rationale remains canonical repository content. The adapter derives `source` and `rationale_reference`; these fields cannot be asserted by the record.
 
-The trusted repository host configures `[assurance] decision_record_target` and `decision_record_revision`. The latter is a full immutable Git commit, explicitly admitting the records and their semantic provenance within that archive. It is a source-owner attestation, not simply a discovery hint. Do not automatically set it to HEAD or infer it from Git tracking, actor labels, path recognition, or installation. Configuration changes need the repository owner's normal authority/review. Ordinary requests cannot supply or override this admission. Python/Node/raw JSON adapter calls are trusted host APIs, like the existing source-contribution APIs, not public intention arguments.
+The repository's existing source owner configures `[assurance] decision_record_target` and `decision_record_revision`. The latter is a full immutable Git commit, explicitly admitting the records and their semantic provenance within that archive. It is source admission, not discovery or cryptographic human identity authentication. Do not automatically set it to HEAD or infer it from Git tracking, actor labels, path recognition, or installation. Configuration changes need the repository owner's normal authority/review. Ordinary requests cannot supply or override this admission. Low-level compiler/source-contribution APIs accept independently admitted owner facts; those inputs are not ordinary public intention arguments.
 
 `start --changed <exact paths> --format json` supplies path applicability. The adapter discovers typed records in a bounded admitted archive, then Rust validates parsed exact scope membership, source bytes and dependency revisions before projecting through the existing compiler. No task text is used. No applicable paths means no archive read or native invocation. This first adapter admits archives of at most 64 typed records; larger archives fail closed and require a bounded source-owner selection. It does not claim to solve large-archive discovery. The first adapter observes repository text dependencies only; unavailable external-owner dependencies remain stale. LF and CRLF represent the same text revision. It reads but never adopts, transfers, writes or deletes source files.
 
@@ -243,12 +252,11 @@ does not invalidate exact applicability. This API is stateless and does not adop
 the former local route-selection file. Remaining legacy route consumers require
 their own migration slices.
 
-Ordinary `start --select semantic_route_result --task "<current task>" --format
-json` returns those templates. Send a completed template through `start --request
-'<public request JSON>' --task "<same current task>" --format json`. The host
-derives work identity from the existing current-work binding plus the exact task,
-and derives source revision/leaf identities from current repository declarations.
-Clients cannot override either host input. Task text is hashed for identity, never
+Ordinary `start --target . --task "<current task>" --format json` returns current
+public route templates. Send a completed template through `start --input
+<request.json>` with the same target, task, changed paths and JSON format. Native
+owners derive current work, source revisions and leaf identities from current
+repository sources. Clients cannot override those facts. Task text is hashed for identity, never
 classified for applicability. Route selection does not depend on unrelated HEAD
 changes. Invalid declarations provide no selectable leaves.
 
@@ -259,13 +267,19 @@ semantic selection, while exact path applicability survives. No request/selector
 means no new route discovery, native call or state write. The shared-authority ADR
 is the real ownership-audit route example; no ADR prose is copied into Memory.
 
-The standalone generated TypeScript CLI lacks this repository host evidence
-adapter and reports explicit unavailability for the selector/request. It must not
-silently accept and ignore a public request. The configured Python host supplies
-the ordinary path; Python/Node/JSON shared semantic APIs remain equivalent with
-trusted host inputs. No caller JSON is promoted to substitute host admission.
+The native executable is the ordinary host. Python and TypeScript bindings and
+JSON consumers call the same native source admission and decision semantics;
+they do not supply a Python-host fallback or independent semantic implementation.
+Public real-source/currentness tests cover each surface. No caller JSON replaces
+owner admission.
 
-The same source adapter accepts an independently admitted Memory snapshot via the trusted host's optional `[assurance.decision_record_fallback]` table (`archive`, `admitted_revision`). This is explicit source-owner admission, including Memory custody/provenance, not discovery or an owner label supplied by the note. No default directory, caller-selected owner, or new public request fields are added. A host without native admission can retain and selectively surface this typed source under Memory's fallback role.
+The same source adapter accepts an independently admitted Memory snapshot via
+the existing optional `[assurance.decision_record_fallback]` table (`archive`,
+`admitted_revision`). This is explicit source-owner admission, not an owner label
+supplied by a note. Newly captured native fallback records instead require their
+exact owner-issued bounded answer basis and current publication/source bindings.
+The native fallback writer uses the existing Memory archive and refuses a
+competing fallback when a stronger repository decision owner is configured.
 
 With a native owner configured, Rust feeds both independently read snapshots into the existing #3043 reconciliation contract. A current destination must contain the same stable identity and material revision before the consequence points to it. Missing/unadmitted/changed/different-value native sources leave the admitted fallback contribution visible with pending reconciliation. Later destination loss reopens that route. Physical copying, retirement, custody transfer and write operations are not performed by this reader.
 
@@ -288,7 +302,7 @@ not passing evidence or claim-grant authority. `protect` grants no mutation or
 custody authority. `requirement:` references still defer to their existing owner;
 guidance and recommended `use` procedures remain non-binding.
 
-The Python clause adapter consumes these returned scopes; it no longer builds
+The native instruction owner consumes these returned scopes; it does not build
 hard authority from its own emitted effects. Existing path/route applicability
 is preserved, including conjunctive declarations. A shared current semantic route
 can select a source but cannot admit it. Unrelated sources require no Rust call.
@@ -301,7 +315,9 @@ staleness, lookalikes, conflicting identities, recommendation failures, route
 selection and ordinary proof routing. This does not close configuration/source
 reconciliation, proof-result admission or external effect enforcement.
 
-The standalone generated TypeScript host cannot independently admit this source snapshot. It exposes hard bindings as unavailable rather than echoing declarations as grants; the Node shared-core API accepts the same trusted host inputs as Python and JSON.
+Native, Python, TypeScript and JSON ordinary consumers use that same native
+instruction admission. A declaration or binding label supplied by a client does
+not grant hard authority.
 
 ### Scoped semantic applicability (#2930)
 

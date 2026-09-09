@@ -21,7 +21,7 @@ instruction_revision = "a6ee404328744515ee004d526c0d58980daf517c"
 # Source-owner admission of this exact archive snapshot and its provenance.
 # Never advance automatically from HEAD or an ordinary client request.
 decision_record_target = "docs/decisions"
-decision_record_revision = "ce9d6402c74f326120713e613f97578e1023feec"
+decision_record_revision = "b4838e325757e523edbdccc51c27a769b8293f43"
 default_level = "medium"
 agent_may_escalate = true
 agent_may_deescalate = false

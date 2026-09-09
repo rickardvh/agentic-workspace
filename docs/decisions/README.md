@@ -10,7 +10,11 @@ Keep prose useful without software: decision, consequence, rationale, meaningful
 
 Acceptance of a source record is distinct from configuring automatic consumption. The repository host must explicitly admit an exact Git commit for this archive, including the records' semantic provenance. A filename, tracked status, inline owner, or actor string alone is insufficient. New or changed records require source-owner admission; do not automatically advance that pin from HEAD.
 
-Prefer adding a few decisions with future value over summarizing history. The ambiguous April Memory note remains under its existing owner and is not silently promoted or replaced here.
+Prefer adding a few decisions with future value over summarizing history. The
+April `installed-system-consolidation-2026-04-05.md` Memory note has an explicit
+human-directed retirement in the Memory manifest. Its original text remains
+available as historical material; it is neither promoted here nor an active peer
+authority. Retirement does not confirm its historical authorship or claims.
 
 Ordinary native, Python, TypeScript and JSON `start` responses expose
 `decision_sources.requests` for rationale in the current selected decision
@@ -26,6 +30,12 @@ The public regression copies the real shared-semantic-authority decision and
 its admitted authority basis into a temporary repository, then independently
 consumes this path through all four surfaces. Its fixture admission does not
 supply independent acceptance of current repository changes. This read path
-also does not supply the still-missing native admission of an independently
-owned Memory fallback snapshot, promote the April note, author a decision or
-advance the repository's configured admission.
+also does not promote the April note, author a decision or advance the
+repository's configured admission. Native Memory fallback capture uses its own
+exact bounded-human-answer basis and publication/recovery path; that path cannot
+capture a competing fallback when this stronger repository owner is configured.
+
+The 2026-09-09 source refresh preserves the three existing decisions and scopes.
+It binds the later repository-lifetime intent additions without inventing new
+deciding actors. Source review and an explicit immutable snapshot admission
+remain distinct from record authorship and from proof of the implementation.
