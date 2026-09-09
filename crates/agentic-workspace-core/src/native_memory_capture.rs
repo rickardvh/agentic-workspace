@@ -1,4 +1,4 @@
-//! Exact bounded-human-answer decisions in the existing Memory fallback archive.
+//! Exact human-answer or policy-delegated decisions in the existing archives.
 //! Publication custody and deciding authority are checked separately. This is
 //! not identity authentication, a trust-pin writer, or generic archive custody.
 use crate::{CoreError, digest};
@@ -201,7 +201,11 @@ pub(crate) fn extend_destination(
     owner["requests"].as_array_mut().unwrap().extend([
         json!({"kind":destination.capture(),"result_kind":"agentic-memory/decision-proposal/v1","input_schema":args}),
         json!({"kind":destination.recover(),"result_kind":destination.result_kind(),"input_schema":recovery})]);
-    owner["revision"] = json!(digest(&json!([owner["requests"], owner["operations"]]))?);
+    owner["revision"] = json!(digest(&json!([
+        owner["requests"],
+        owner["operations"],
+        "exact-policy-delegation-v1"
+    ]))?);
     Ok(())
 }
 fn dependencies(root: &Dir, paths: &Value) -> Result<Value, CoreError> {
@@ -356,28 +360,106 @@ fn publish_manifest(root: &Dir, binding: &Value) -> Result<(), CoreError> {
     }
     Ok(())
 }
+// Per-decision subject stays in owner provenance, never standing Configuration.
+// Standing policy delegates only an exact owner/path set, not an actor label.
+fn delegation_subject(
+    target: &Path,
+    material: &Value,
+    binding: &Value,
+) -> Result<Value, CoreError> {
+    let subject = json!({"kind":"exact-material-decision-scope/v1","target":target,
+        "owner":Destination::from_binding(binding)?.owner(),"semantics":binding["semantics"],
+        "material":material,"work":binding["work"],"scope":binding["scope"],
+        "dependencies":binding["dependencies"],"source":binding["source"],"before":binding["before"],
+        "manifest_before":binding["manifest_before"],"manifest_postimage":binding["manifest_postimage"],
+        "repository_convention":binding["repository_convention"],"superseded_sources":binding["superseded_sources"],
+        "disposition":binding["disposition"].as_str().unwrap_or("retain")});
+    Ok(json!({"revision":digest(&subject)?,"subject":subject}))
+}
+fn grant_matches(grant: &Value, subject: &Value) -> bool {
+    let Some(fields) = grant.as_object() else {
+        return false;
+    };
+    if fields.len() != 2 || !fields.contains_key("owner") || !fields.contains_key("scope") {
+        return false;
+    }
+    let expected_owner = if subject["subject"]["owner"] == "memory" {
+        "memory"
+    } else {
+        "repository"
+    };
+    let Some(paths) = grant["scope"].as_array() else {
+        return false;
+    };
+    let Some(expected) = subject["subject"]["scope"].as_array() else {
+        return false;
+    };
+    let canonical = |paths: &[Value]| -> Option<std::collections::BTreeSet<String>> {
+        let mut result = std::collections::BTreeSet::new();
+        for path in paths {
+            let path = path.as_str()?.strip_prefix("path:")?;
+            if path.contains(['*', '?', '[', ']']) {
+                return None;
+            }
+            crate::decision_source::relative(path).ok()?;
+            if !result.insert(path.to_owned()) {
+                return None;
+            }
+        }
+        Some(result)
+    };
+    !paths.is_empty()
+        && paths.len() <= 32
+        && grant["owner"] == expected_owner
+        && canonical(paths).is_some_and(|paths| Some(paths) == canonical(expected))
+}
+fn delegated(config: &Value, subject: &Value) -> Option<Value> {
+    config["admissions"]["decision_delegations"]
+        .as_array()?
+        .iter()
+        .find(|grant| grant_matches(grant, subject))
+        .cloned()
+}
+fn delegated_basis(subject: &Value, binding: &Value, grant: &Value) -> Value {
+    json!({"kind":"exact-policy-delegated-decision","subject_revision":subject["revision"],
+        "grant":grant,
+        "policy_revision":binding["policy_revision"],"capability_revision":binding["capability_revision"],
+        "source":".agentic-workspace/config.toml#assurance.decision_delegations",
+        "identity_authentication":"not-claimed"})
+}
 fn material_bytes(material: &Value, binding: &Value) -> Result<Vec<u8>, CoreError> {
     let destination = Destination::from_binding(binding)?;
     let basis = digest(&json!([destination.semantics(), material, binding]))?;
-    let reference = json!({"owner":"bounded-human-answer","reference":basis,"revision":basis});
+    let agent = binding.get("decision_authority").is_some();
+    let reference = json!({"owner":if agent {"policy-delegated-decision"} else {"bounded-human-answer"},"reference":basis,"revision":basis});
+    let provenance = if agent {
+        "Deciding provenance is an exact current repository-policy delegation for this owner-computed material subject. The acting agent is not identified or authenticated. Publication alone does not admit this consequence."
+    } else {
+        "Deciding provenance is an exact bounded human answer, not cryptographically authenticated identity. Publication alone does not admit this consequence."
+    };
     let record = json!({"id":material["id"],"decision":material["decision"],"consequence":material["consequence"],
         "authors":[{"kind":"unattributed","id":format!("request-material:{}",digest(material)?)}],"contributors":[],
-        "authority":{"actor":{"kind":"human","id":format!("bounded-answer:{basis}")},"basis":[reference]},
+        "authority":{"actor":{"kind":if agent {"agent"} else {"human"},"id":if agent {format!("policy-delegation:{basis}")} else {format!("bounded-answer:{basis}")}},"basis":[reference]},
         "scope":binding["scope"],"dependencies":binding["dependencies"].as_object().unwrap().iter().map(|(p,r)|json!({"owner":"repository","reference":p,"revision":r})).collect::<Vec<_>>(),
         "context":[],"supersedes":material["supersedes"]});
     let mut text = format!(
-        "# Fallback decision\n\nMaterial supplied through an AW owner request. Deciding provenance is an exact bounded human answer, not cryptographically authenticated identity. Publication alone does not admit this consequence.\n\n{}\n\nRejected alternatives / trade-offs:\n{}\n\n```aw-decision\n{}\n```\n",
+        "# Fallback decision\n\nMaterial supplied through an AW owner request. {provenance}\n\n{}\n\nRejected alternatives / trade-offs:\n{}\n\n```aw-decision\n{}\n```\n",
         material["rationale"].as_str().unwrap(),
         serde_json::to_string(&material["alternatives"]).map_err(err)?,
         serde_json::to_string_pretty(&record).map_err(err)?
     );
     if destination == Destination::Repository {
         text = format!(
-            "# Repository decision\n\n## Decision\n\n{}\n\n## Consequence\n\n{}\n\n## Rationale and alternatives\n\n{}\n\n{}\n\n## Provenance\n\nMaterial authorship is unattributed. The deciding basis is the exact bounded human answer to the owner-issued proposal, not authenticated human identity. Publication is separate from deciding authority.\n\n```aw-decision\n{}\n```\n",
+            "# Repository decision\n\n## Decision\n\n{}\n\n## Consequence\n\n{}\n\n## Rationale and alternatives\n\n{}\n\n{}\n\n## Provenance\n\nMaterial authorship is unattributed. {}\n\n```aw-decision\n{}\n```\n",
             material["decision"].as_str().unwrap(),
             material["consequence"].as_str().unwrap(),
             material["rationale"].as_str().unwrap(),
             serde_json::to_string(&material["alternatives"]).map_err(err)?,
+            if agent {
+                provenance
+            } else {
+                "The deciding basis is the exact bounded human answer to the owner-issued proposal, not authenticated human identity. Publication is separate from deciding authority."
+            },
             serde_json::to_string_pretty(&record).map_err(err)?
         );
     }
@@ -432,12 +514,11 @@ fn retained(target: &Path, source: &str) -> Result<Option<Value>, CoreError> {
         || request["request_kind"] != destination.capture()
         || request["task_identity"] != binding["work"]
         || request["capability_revision"] != binding["capability_revision"]
-        || request["arguments"]["answer"] != "confirm-decision"
+        || (binding.get("decision_authority").is_none()
+            && request["arguments"]["answer"] != "confirm-decision")
         || record["outcome"] != outcome(i)
     {
-        return Err(err(
-            "Decision publication lacks its exact bounded-human-answer basis",
-        ));
+        return Err(err("Decision publication lacks its exact deciding basis"));
     }
     let mut owner = json!({"requests":[]});
     extend_destination(&mut owner, destination)?;
@@ -458,10 +539,18 @@ fn retained(target: &Path, source: &str) -> Result<Option<Value>, CoreError> {
     }
     let bytes = material_bytes(&request["arguments"]["material"], binding)?;
     let post = crate::native_intent::hash(&bytes);
-    if args["post_revision"] != post
-        || request["arguments"]["proposal_revision"]
-            != proposal(&request["arguments"]["material"], binding, &post)?
-    {
+    let exact_basis = if let Some(authority) = binding.get("decision_authority") {
+        let subject = delegation_subject(target, &request["arguments"]["material"], binding)?;
+        grant_matches(&authority["grant"], &subject)
+            && *authority == delegated_basis(&subject, binding, &authority["grant"])
+            && request["id"] == destination.capture()
+            && request["arguments"].get("answer").is_none()
+            && request["arguments"].get("proposal_revision").is_none()
+    } else {
+        request["arguments"]["proposal_revision"]
+            == proposal(&request["arguments"]["material"], binding, &post)?
+    };
+    if args["post_revision"] != post || !exact_basis {
         return Err(err(
             "Decision answer does not bind the complete proposal/postimage",
         ));
@@ -667,6 +756,16 @@ pub(crate) fn view_for(
             || binding["scope"] != json!(scope)
             || binding["policy_revision"] != config["revision"]
             || binding["capability_revision"] != contract["revision"]
+            || (binding.get("decision_authority").is_some()
+                && delegated(
+                    config,
+                    &delegation_subject(
+                        target,
+                        &record["invocation"]["arguments"]["request"]["arguments"]["material"],
+                        binding,
+                    )?,
+                )
+                .is_none())
             || committed(&root, target, &record)?
             || !manifest_current(&root, binding, true)?
             || read(&root, source)?.is_none_or(|b| crate::native_intent::hash(&b) != post)
@@ -746,6 +845,20 @@ pub(crate) fn view_for(
         if let Some(disposition) = args.get("disposition") {
             binding["disposition"] = disposition.clone();
         }
+        let subject = delegation_subject(target, material, &binding)?;
+        view["delegation_subject"] = subject.clone();
+        let grant = delegated(config, &subject);
+        let agent = args.get("answer").is_none() && grant.is_some();
+        if agent {
+            if request["id"] != destination.capture() || args.get("proposal_revision").is_some() {
+                return Err(err(
+                    "Delegated decision must use the exact issued material request",
+                ));
+            }
+            binding["decision_authority"] =
+                delegated_basis(&subject, &binding, grant.as_ref().unwrap());
+            view["agent_authority"] = json!("exact-current-policy-delegation");
+        }
         let bytes = material_bytes(material, &binding)?;
         let post = crate::native_intent::hash(&bytes);
         let proposal = proposal(material, &binding, &post)?;
@@ -754,7 +867,7 @@ pub(crate) fn view_for(
         answer["proposal_revision"] = json!(proposal);
         let decisions = json!([{"id":"material-decision-disposition","question":"Confirm this exact decision and disposition? Publication alone grants no deciding authority.",
             "response_request":{"request_kind":destination.capture(),"arguments":answer},"choices":[{"id":"confirm-decision","label":"Confirm this exact bounded decision"},{"id":"defer","label":"Defer without publication"}],"affects":["task",format!("effect:{}",destination.effect())]}]);
-        if args["answer"].is_null() {
+        if args["answer"].is_null() && !agent {
             if request["id"] != destination.capture() {
                 return Err(err(
                     "decision material must use the issued material request",
@@ -767,31 +880,37 @@ pub(crate) fn view_for(
             view["contribution"]["decisions"] = decisions;
             return Ok(view);
         }
-        if args["proposal_revision"] != proposal {
+        if !agent && args["proposal_revision"] != proposal {
             return Err(err(
                 "Human answer is stale or does not bind this exact decision proposal",
             ));
         }
-        let compiled = crate::compile_value(
-            json!({"intent":{"current_work":work},"capability_contract":contract,
+        if !agent {
+            let compiled = crate::compile_value(
+                json!({"intent":{"current_work":work},"capability_contract":contract,
             "contributions":[{"owner":destination.owner(),"revision":revision,"decisions":decisions}]}),
-        )?;
-        let mut exact =
-            compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
-        exact["arguments"]["answer"] = args["answer"].clone();
-        if exact != *request {
-            return Err(err(
-                "answer differs from the exact owner-issued bounded request",
-            ));
+            )?;
+            let mut exact =
+                compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
+            exact["arguments"]["answer"] = args["answer"].clone();
+            if exact != *request {
+                return Err(err(
+                    "answer differs from the exact owner-issued bounded request",
+                ));
+            }
+            if args["answer"] == "defer" {
+                view["status"] = json!("deferred");
+                return Ok(view);
+            }
         }
-        if args["answer"] == "defer" {
-            view["status"] = json!("deferred");
-            return Ok(view);
+        if agent {
+            view["proposal"] = json!({"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,
+                "post_revision":post,"proposal_revision":proposal,"authority_basis":binding["decision_authority"]});
         }
         if args["disposition"] == "no-retention" {
             view["status"] = json!("no-retention");
             view["response"] = json!({"kind":"agentic-workspace/decision-disposition/v1","disposition":"no-retention",
-                "proposal_revision":proposal,"authority_basis":{"kind":"exact-bounded-human-answer","request_revision":digest(request)?,"identity_authentication":"not-claimed"},"durable_state_created":false,"completion_authority":false});
+                "proposal_revision":proposal,"authority_basis":if agent {binding["decision_authority"].clone()} else {json!({"kind":"exact-bounded-human-answer","request_revision":digest(request)?,"identity_authentication":"not-claimed"})},"durable_state_created":false,"completion_authority":false});
             return Ok(view);
         }
         if let Some(record) = retained(target, &source)?
@@ -1189,8 +1308,20 @@ pub(crate) fn context_for(
             // Retain admitted history when policy or facts drift, but do not
             // invent current authority. Continuity suppresses stale consequences
             // and permits a new exact decision to supersede the former record.
-            if dependency["owner"] == "bounded-human-answer"
-                && binding["policy_revision"] != config["revision"]
+            if matches!(
+                dependency["owner"].as_str(),
+                Some("bounded-human-answer" | "policy-delegated-decision")
+            ) && (binding["policy_revision"] != config["revision"]
+                || (dependency["owner"] == "policy-delegated-decision"
+                    && delegated(
+                        config,
+                        &delegation_subject(
+                            target,
+                            &record["invocation"]["arguments"]["request"]["arguments"]["material"],
+                            binding,
+                        )?,
+                    )
+                    .is_none()))
             {
                 continue;
             }
@@ -1221,8 +1352,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn standing_delegation_rejects_patterns_even_without_schema_validation() {
+        for owner in ["memory", "repository"] {
+            let subject = |scope: Value| json!({"subject":{"owner":owner,"scope":scope}});
+            let concrete = json!(["path:src/a.rs", "path:src/b.rs"]);
+            let grant = json!({"owner":owner,"scope":concrete});
+            assert!(grant_matches(
+                &grant,
+                &subject(json!(["path:src/b.rs", "path:src/a.rs"]))
+            ));
+            for pattern in [
+                "path:src/*.rs",
+                "path:src/?.rs",
+                "path:src/[ab].rs",
+                "path:src/a[.rs",
+                "path:src/a].rs",
+            ] {
+                let scope = json!([pattern]);
+                let wildcard_grant = json!({"owner":owner,"scope":scope});
+                assert!(!grant_matches(&wildcard_grant, &subject(scope.clone())));
+                assert!(!grant_matches(&wildcard_grant, &subject(concrete.clone())));
+                assert!(!grant_matches(&grant, &subject(scope)));
+            }
+        }
+    }
+
+    #[test]
     fn bounded_answer_publication_recovers_each_interruption() {
-        for stage in ["prepared", "source-published", "manifest-published"] {
+        for (stage, agent) in ["prepared", "source-published", "manifest-published"]
+            .into_iter()
+            .flat_map(|stage| [false, true].map(|agent| (stage, agent)))
+        {
             let target = std::env::temp_dir().join(format!(
                 "aw-decision-{}-{}",
                 std::process::id(),
@@ -1241,10 +1401,21 @@ mod tests {
             };
             let mut request = start(None)["memory"]["capture"]["requests"][0].clone();
             request["arguments"]["material"] = json!({"id":"fixture:recovery","decision":"A deliberate fixture decision","consequence":"Preserve the fixture boundary","rationale":"Test interruption only; no actual repository decision.","alternatives":[],"dependency_paths":[],"supersedes":[]});
-            let mut answer =
-                start(Some(request))["decision_packet"]["decision_request"]["response_request"]
-                    .clone();
-            answer["arguments"]["answer"] = json!("confirm-decision");
+            let proposed = start(Some(request.clone()));
+            let policy = target.join(".agentic-workspace/config.toml");
+            let policy_bytes = "schema_version=1\n[assurance]\ndecision_delegations=[{owner=\"memory\",scope=[\"path:src/a.rs\"]}]\n";
+            let answer = if agent {
+                std::fs::create_dir_all(policy.parent().unwrap()).unwrap();
+                std::fs::write(&policy, policy_bytes).unwrap();
+                let mut current = start(None)["memory"]["capture"]["requests"][0].clone();
+                current["arguments"] = request["arguments"].clone();
+                current
+            } else {
+                let mut current =
+                    proposed["decision_packet"]["decision_request"]["response_request"].clone();
+                current["arguments"]["answer"] = json!("confirm-decision");
+                current
+            };
             let ready = start(Some(answer.clone()));
             let action = &ready["decision_packet"]["primary_action"];
             let revalidate = || {
@@ -1294,6 +1465,11 @@ mod tests {
             assert!(next.is_object(), "{fresh}");
             let mut invoke = input.clone();
             invoke["invocation"] = next;
+            if agent {
+                std::fs::write(&policy, "schema_version=1\n").unwrap();
+                assert!(crate::native_public::invoke(invoke.clone()).is_err());
+                std::fs::write(&policy, policy_bytes).unwrap();
+            }
             crate::native_public::invoke(invoke).unwrap();
             assert_eq!(
                 start(None)["decision_packet"]["decision_context"]["states"]

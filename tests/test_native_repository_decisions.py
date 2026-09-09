@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import subprocess
@@ -11,6 +12,128 @@ import pytest
 from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 from tests.test_shared_core import _commit_native
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("destination", ["repository", "memory"])
+def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_path, shared_core_binary, native_cli, surface, destination):
+    if destination == "repository":
+        context, material = repository(tmp_path)
+    else:
+        (tmp_path / ".agentic-workspace").mkdir()
+        (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version=1\n[assurance]\n")
+        (tmp_path / "constraint.md").write_text("Exact fixture constraint")
+        context = {"target": str(tmp_path), "task": "Settle the exact fixture boundary", "changed": ["src/core.rs"]}
+        material = {
+            "id": "fixture:delegated-decision",
+            "decision": "Use the bounded fixture boundary",
+            "consequence": "Preserve the fixture constraint",
+            "rationale": "Conformance fixture only",
+            "alternatives": ["Unbounded actor labels are not permission"],
+            "dependency_paths": ["constraint.md"],
+            "supersedes": [],
+        }
+    section = "decision_sources" if destination == "repository" else "memory"
+
+    def call(**extra):
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def propose(candidate=None, disposition="retain", **extra):
+        request = call(**extra)[section]["capture"]["requests"][0]
+        request["arguments"] = {"material": candidate or material, "disposition": disposition}
+        return call(request=request, **extra)
+
+    initial = propose()
+    assert initial[section]["capture"]["status"] == "human-decision-required"
+    subject = initial[section]["capture"]["delegation_subject"]
+    config = tmp_path / ".agentic-workspace/config.toml"
+    original = config.read_text()
+    scope = json.dumps(subject["subject"]["scope"])
+    grant = f'decision_delegations=[{{owner="{destination}",scope={scope}}}]\n'
+    local = tmp_path / ".agentic-workspace/config.local.toml"
+    local.write_text("schema_version=1\n[assurance]\n" + grant)
+    assert propose()[section]["capture"]["status"] == "human-decision-required"
+    local.unlink()
+    config.write_text(original + grant)  # Explicit fixture repository-policy admission.
+    for pattern in ["src/*.rs", "src/?.rs", "src/[ab].rs", "src/a[.rs", "src/a].rs"]:
+        fallback = propose(changed=[pattern])
+        assert fallback[section]["capture"]["status"] == "human-decision-required"
+        answer = fallback["decision_packet"]["decision_request"]["response_request"]
+        assert answer["arguments"]["proposal_revision"] == fallback[section]["capture"]["proposal"]["proposal_revision"]
+        assert "answer" not in answer["arguments"]
+        assert fallback["decision_packet"]["primary_action"] is None
+    assert propose(task="Different work")[section]["capture"]["status"] == "write-ready"
+    assert propose(changed=["src/other.rs"])[section]["capture"]["status"] == "human-decision-required"
+    changed = {**material, "consequence": "A different boundary"}
+    assert propose(changed)[section]["capture"]["status"] == "write-ready"
+    dependency = tmp_path / material["dependency_paths"][0]
+    before = dependency.read_bytes()
+    dependency.write_bytes(before + b"\nChanged constraint")
+    assert propose()[section]["capture"]["status"] == "write-ready"
+    dependency.write_bytes(before)
+    foreign = "memory" if destination == "repository" else "repository"
+    config.write_text(original + grant.replace(f'owner="{destination}"', f'owner="{foreign}"'))
+    assert propose()[section]["capture"]["status"] == "human-decision-required"
+    config.write_text(original + grant)
+    dismissed = propose(disposition="no-retention")
+    assert dismissed[section]["capture"]["response"]["authority_basis"]["kind"] == "exact-policy-delegated-decision"
+    assert dismissed["decision_packet"]["primary_action"] is None
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    ready = propose()
+    capture = ready[section]["capture"]
+    assert capture["agent_authority"] == "exact-current-policy-delegation"
+    assert capture["delegation_subject"] == subject
+    assert ready["decision_packet"]["decision_request"] is None
+    action = ready["decision_packet"]["primary_action"]
+    assert action["arguments"]["binding"]["decision_authority"]["identity_authentication"] == "not-claimed"
+    source = tmp_path / action["arguments"]["binding"]["source"]
+    assert not source.exists()
+    dependency.write_bytes(before + b"\nChanged constraint")
+    with pytest.raises(AssertionError, match="stale|changed|current"):
+        call(invocation=action)
+    dependency.write_bytes(before)
+    with pytest.raises(AssertionError, match="stale|changed|current"):
+        call(invocation=action, task="Different work")
+    forged = copy.deepcopy(action["arguments"]["request"])
+    forged["arguments"]["authority"] = {"kind": "agent", "grant": subject["revision"]}
+    with pytest.raises(AssertionError):
+        call(request=forged)
+    config.write_text(original)
+    with pytest.raises(AssertionError, match="stale|changed|current"):
+        call(invocation=action)
+    assert not source.exists()
+    config.write_text(original + grant)
+    result = call(invocation=action)
+    assert result["value"]["authority_effect"] == "publication-only"
+    assert source.read_bytes() == capture["proposal"]["postimage"].encode()
+    fresh = call(task="Fresh affected session")
+    consequence = fresh["decision_packet"]["decision_context"]["consequences"][0]
+    assert consequence["authority"]["actor"]["kind"] == "agent"
+    assert consequence["authority"]["basis"][0]["owner"] == "policy-delegated-decision"
+    assert not call(changed=["unrelated.md"])["decision_packet"].get("decision_context", {}).get("consequences")
+    successor = {
+        **material,
+        "id": "fixture:delegated-successor",
+        "decision": "Replace the bounded fixture choice",
+        "supersedes": [
+            {"id": consequence["id"], "material_revision": consequence["material_revision"], "scope": subject["subject"]["scope"]}
+        ],
+    }
+    outside = copy.deepcopy(successor)
+    outside["supersedes"][0]["scope"].append("path:outside.rs")
+    with pytest.raises(AssertionError, match="scope|supersed"):
+        propose(outside)
+    next_action = propose(successor)["decision_packet"]["primary_action"]
+    call(invocation=next_action)
+    current = call(task="Later affected session")["decision_packet"]["decision_context"]
+    assert [row["id"] for row in current["consequences"]] == [successor["id"]]
+    assert next(row for row in current["states"] if row["id"] == material["id"])["status"] == "superseded"
+    config.write_text(original)
+    revoked = call(task="Fresh affected session")
+    assert not revoked["decision_packet"]["decision_context"]["consequences"]
+    states = {row["id"]: row["status"] for row in revoked["decision_packet"]["decision_context"]["states"]}
+    assert states == {material["id"]: "superseded", successor["id"]: "stale"}
+    assert source.exists()
 
 
 def repository(root: Path):
@@ -39,6 +162,56 @@ def repository(root: Path):
         "changed": ["crates/agentic-workspace-core/src/lib.rs"],
     }
     return context, material
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_standing_decision_scope_uses_bounded_configuration_admission(tmp_path, shared_core_binary, native_cli, surface):
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("schema_version=1\n")
+    context = {"target": str(tmp_path), "task": "Fixture standing policy", "changed": ["src/a.rs", "src/b.rs"]}
+
+    def call(**extra):
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    read = next(r for r in call()["configuration_write"]["choice_requests"] if r["arguments"]["key"] == "assurance.decision_delegations")
+    selected = call(request=read)["configuration_write"]["selected_choice"]
+    assert selected["value"] == []
+    edit = selected["edit_request"]
+    for pattern in ["src/*.rs", "src/?.rs", "src/[ab].rs", "src/a[.rs", "src/a].rs"]:
+        invalid = copy.deepcopy(edit)
+        invalid["arguments"]["value"] = [{"owner": "memory", "scope": [f"path:{pattern}"]}]
+        with pytest.raises(AssertionError):
+            call(request=invalid)
+        assert config.read_text() == "schema_version=1\n"
+    edit["arguments"]["value"] = [{"owner": "memory", "scope": ["path:src/b.rs", "path:src/a.rs"]}]
+    proposed = call(request=edit)
+    assert config.read_text() == "schema_version=1\n"
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"  # Fixture human policy choice only.
+    call(invocation=call(request=answer)["decision_packet"]["primary_action"])
+    assert "decision_delegations" not in call()["configuration"]["admissions"]
+    request = call()["memory"]["capture"]["requests"][0]
+    request["arguments"]["material"] = {
+        "id": "fixture:standing-scope",
+        "decision": "Preserve a fixture boundary",
+        "consequence": "Keep the two declared paths coherent",
+        "rationale": "Explicit fixture policy",
+        "alternatives": [],
+        "dependency_paths": [".agentic-workspace/config.toml"],
+        "supersedes": [],
+    }
+    ready = call(request=request)
+    assert ready["memory"]["capture"]["status"] == "write-ready"
+    assert ready["decision_packet"]["decision_request"] is None
+    action = ready["decision_packet"]["primary_action"]
+    assert action["effects"] == ["memory-state"]
+    for paths in [["src/a.rs"], ["src/a.rs", "src/b.rs", "src/c.rs"]]:
+        smaller = call(changed=paths)["memory"]["capture"]["requests"][0]
+        smaller["arguments"] = request["arguments"]
+        assert call(request=smaller, changed=paths)["memory"]["capture"]["status"] == "human-decision-required"
+    call(invocation=action)
+    assert call(task="Later independent affected work")["decision_packet"]["decision_context"]["consequences"]
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Execution frontier #2983; architecture #3020; promotion ledger #3138. Integrated reconstruct/first-stable remains through #3180 at127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Open stack #3181 -> #3182 -> #3183 -> #3184 -> #3185 has scoped independent review and green current-head CI, including Planning handoff atc34d906e1 and independently linked owner ingress at52e3c83da. User resumed reconstruction after the former stop-after3180 instruction was fulfilled. Current #2909 consumer followthrough retires omitted old reassignment tests, adapts retained Python helper assertions, classifies the independent Rust fixture, and runs five migrated process contracts against the native entry point. Four retired command cases require specific native errors and no-write boundaries. Remaining generated cases are historical adapter evidence, not native command-support admission. Cumulative CLI run631passed/2skipped/5failed, session223passed/5failed, contract439passed/5failed exposed inherited command-family, old Python size-ratchet and historical validation-plan mismatches. Exact findings and evidence boundaries are in docs/maintainer/reconstruction-conformance.md; no ratchet relaxation or old receipt identity renewal is permitted to manufacture success. Broader #2606/#2986 owner acceptance, #2970 continuity/host lifecycle, #3040 current policy-delegated decision authority and supersession, #2929 real issue creation, #3041 repository-lifetime dogfood and #2909/#2616/#2990 cumulative admission remain open. No trusted human host or publication-as-deciding-authority introduced. Preserve six preexisting ordinary Assignment/proof artifacts.",
+    "frontier": "Execution frontier #2983; architecture #3020; promotion ledger #3138. Integrated reconstruct/first-stable remains through #3180 at127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Open stack #3181 -> #3182 -> #3183 -> #3184 -> #3185 -> #3186 has scoped independent review and green current-head CI. #3186 at9760a66bc distinguishes current native, historical generated and helper evidence while retaining explicit cumulative failures in docs/maintainer/reconstruction-conformance.md. Current #3040/#2570 slice admits agent decisions only under explicit shared standing policy for an exact durable owner/path set. Per-task material/work/dependencies/destination/postimage and policy/capability revisions remain in owner-held proposal/provenance, not Configuration. Missing or mismatched policy returns the complete bounded human request. Progressive Configuration read/edit uses existing exact human authorization; publication/recovery/recall revalidate and cannot manufacture deciding authority. No actor authentication, signed host, generic semantic classifier, execution grant or completion grant is introduced. New public parity tests cover owner/scope mismatch, local self-grant rejection, policy/dependency/work drift, no-retention, self-config dependencies and current consequences; existing human and agent interruption/revocation recovery pass. Broad75 decision/Memory cases and236 public/independent regressions pass, Rust104+3+3+4 and Clippy pass; the final8extended supersession/revocation parity cases and full check-planning-nosync pass. Independent scoped authority review found no substantive defect after separating standing policy from per-task material. Broader #3040 nomination/disposition/repository-lifetime proof, #2606/#2986 cumulative owner acceptance, #2970 continuity/host lifecycle, #2929 real issue creation, #3041 dogfood and #2909/#2616/#2990 exact cumulative admission remain open. Preserve six preexisting ordinary Assignment/proof artifacts. Review correction on #3187 after 5cb8dd668: exact-file standing delegation rejects wildcard metacharacters in both shared schema and runtime matcher; pattern-shaped current work returns the existing proposal-bound human decision request. Concrete multi-file set equality and all existing authority/lifetime boundaries remain unchanged. Final correction validation and external re-review remain required; stop after this PR.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Finish the coherent cumulative conformance consumer correction PR stacked on #3185, then continue the retained native owner and cumulative validation gaps under #2983/#2909. No master promotion is authorized.",
+  "next_action": "Finish the narrow #3187 review correction, validate and push it for external re-review, then stop as requested. No further reconstruction slice or master promotion is authorized.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -137,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 40,
+  "revision": 43,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -189,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/dbe1b06357940c2d7954179e1c1b84402492c320b37479b528c7e888a9c73736.attempt.json",
-        "revision": "sha256:aabbfe6d4a4dbefc31404c2e7405c9db313bc2806e541f81643cf364e6720283",
+        "path": ".agentic-workspace/local/effects/288a261f4f6cdb2819cb564cb033467ded00eac30446b1b3b6dfd7554ca07eee.attempt.json",
+        "revision": "sha256:45ee95c1165b1c66ffac77b7d30130edee649358dc0a06c9ace65a52528faabb",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/dbe1b06357940c2d7954179e1c1b84402492c320b37479b528c7e888a9c73736.result.json",
-        "revision": "sha256:b34ddd8e2b6d7296964b430b4ecf8759d1bd6f519dadfa47f7b685610dea04ea",
+        "path": ".agentic-workspace/local/effects/288a261f4f6cdb2819cb564cb033467ded00eac30446b1b3b6dfd7554ca07eee.result.json",
+        "revision": "sha256:06a94d6d29a7fc0d1fa9a9263cb03532b8cbfdfb56cf8acfbd96293b32ae3683",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:5a08407da32dec1828d504de741b76870be1360176a4eee5f51219e082ed6fc7",
+    "invocation_revision": "sha256:c4d8fe9842b070bafc607b3e427a0590b12a763715257344469817fefebdeeae",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -208,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:8fb6caadb65398a2c9031af66234e56a0ec6c47990e7203663a087c1e51e435c",
+        "document_revision": "sha256:19c41f63110b385c45a85a4677ea883fe8bb994041f11029a6c0ddda8f357b97",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

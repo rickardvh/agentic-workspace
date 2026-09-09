@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Admit scope-delegated agent decisions through current repository policy while retaining exact bounded human fallback."
+issues = [3040, 2570, 2983]

@@ -18,6 +18,13 @@ custody, not deciding authority. A filename, tracked status, inline actor label
 or successful write is insufficient. Changed records still require source-owner
 reconciliation; prior publication does not authorize later edits.
 
+An agent may also decide under current explicit shared policy delegating this
+durable owner and exact path set. The decision owner binds the full material,
+work, dependencies, destination/postimage and policy/capability revisions, and
+records the matching policy basis without claiming authenticated identity.
+Absent a matching grant, the complete bounded human request remains required.
+See [standing policy delegation](../maintainer/native-decision-archive-dogfood.md#standing-policy-delegation).
+
 Prefer adding a few decisions with future value over summarizing history. The
 April `installed-system-consolidation-2026-04-05.md` Memory note has an explicit
 human-directed retirement in the Memory manifest. Its original text remains
@@ -39,8 +46,9 @@ its admitted authority basis into a temporary repository, then independently
 consumes this path through all four surfaces. Its fixture admission does not
 supply independent acceptance of current repository changes. This read path
 also does not promote the April note, author a decision or advance the
-repository's configured admission. Native Memory fallback capture uses its own
-exact bounded-human-answer basis and publication/recovery path; that path cannot
+repository's configured admission. Native Memory fallback capture keeps its
+exact human-answer or current policy-delegation basis separate from its
+publication/recovery path; that path cannot
 capture a competing fallback when this stronger repository owner is configured.
 
 New repository capture preserves ordinary readable decision, consequence,

@@ -95,8 +95,45 @@ through the public consumers. Fixture answers prove the mechanism, not new
 authorization to create a real repository decision. No artificial ADR or April
 note promotion is added to the lived-in archive.
 
-This does not establish an agent grant that current policy lacks. The current
-bounded human path remains the fallback for that absence; explicit delegated
-authority and other repository conventions require their actual admitted owner
-contracts. Broader #3040 authority/disposition and #2909 lifetime acceptance remain
-open. The archive path here remains repository dogfood, not a portable default.
+## Standing policy delegation
+
+Shared Configuration can explicitly delegate future semantic decisions to the
+acting agent for an existing durable owner and an exact set of paths:
+
+```toml
+[assurance]
+decision_delegations = [
+  { owner = "repository", scope = ["path:src/parser.rs", "path:tests/parser.rs"] }
+]
+```
+
+This example is not an admission for this repository. The current Configuration
+owner exposes this field through `configuration/read-choice/v1`, then its normal
+bounded edit/proposal/human-answer path. Discovery grants nothing. Local config,
+record actor strings, client-supplied authority labels and publication receipts
+cannot supply this delegation. Configuration holds the standing owner/path policy;
+per-task material, dependency revisions and publication state stay with the
+decision owner.
+
+Matching uses exact path-set equality and the actual durable owner, without
+wildcards, subset matching, task keywords or semantic classification. The grant
+authorizes future material decisions within that scope; it is not approval of
+one particular proposal. A different scope or owner returns the complete bounded
+human request. A matching grant derives the agent basis inside the owner, which
+binds the complete material, current work, dependencies, supersession, destination,
+postimage, and policy/capability revisions before returning a publication action.
+The resulting record claims an unattributed acting agent with an exact policy
+basis, not authenticated identity. It grants no execution, foreign-owner, proof
+or completion authority. No-retention remains a successful bounded disposition.
+
+Current policy and facts are checked again on invocation and recovery. Revocation
+or drift cannot use an old prepared action; later resolution preserves stale
+history without projecting it as a current consequence. Supersession remains
+within the existing exact admitted predecessor and successor-scope checks.
+Configured policy may itself be a material dependency: there is no task-hash
+grant stored in that file that would require a self-referential policy hash.
+
+The current bounded human path remains the fallback wherever current policy does
+not establish delegation. Broader #3040 disposition/continuity, repository-lifetime
+dogfood and #2909 acceptance remain open. The archive path here remains repository
+dogfood, not a portable default.
