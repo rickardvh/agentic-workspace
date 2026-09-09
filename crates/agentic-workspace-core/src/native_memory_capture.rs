@@ -397,12 +397,6 @@ pub(crate) fn view(
                 if !name.starts_with("native-") || !name.ends_with(".md") {
                     continue;
                 }
-                count += 1;
-                if count > 64 {
-                    return Err(err(
-                        "Native decision archive exceeds bounded recovery selection",
-                    ));
-                }
                 let source = format!("{archive}/{name}");
                 let hint = read(&root, &marker(&source)?)?
                     .and_then(|b| serde_json::from_slice::<Value>(&b).ok());
@@ -414,6 +408,12 @@ pub(crate) fn view(
                     continue;
                 }
                 if let Some(record) = retained(target, &source)? {
+                    count += 1;
+                    if count > 64 {
+                        return Err(err(
+                            "Relevant native decision recovery exceeds bounded selection",
+                        ));
+                    }
                     let b = &record["invocation"]["arguments"]["binding"];
                     let published = committed(&root, target, &record)?;
                     if published && !declaration_current(&root, b)? {
@@ -473,6 +473,14 @@ pub(crate) fn view(
         (binding.clone(), post.to_owned(), "memory.recover-decision")
     } else {
         let material = &args["material"];
+        if context["records"]
+            .as_array()
+            .is_some_and(|records| records.len() >= 64)
+        {
+            return Err(err(
+                "Relevant decision closure is at its bounded capacity; preserve source and narrow the proposed decision scope",
+            ));
+        }
         let source = source(config, material["id"].as_str().unwrap())?;
         if read(&root, &source)?.is_some() {
             return Err(err(
@@ -670,48 +678,42 @@ pub(crate) fn context(target: &Path, config: &Value, scope: &[String]) -> Result
         // native declaration/retained answer can introduce a governing blocker.
         return Ok(result);
     };
-    let entries = manifest
-        .get("notes")
-        .and_then(toml::Value::as_table)
+    let entries = manifest.get("notes").and_then(toml::Value::as_table);
+    let mut pending: Vec<String> = entries
         .into_iter()
-        .flatten();
-    let mut count = 0;
-    for (source, entry) in entries {
-        if entry.get("native_decision").and_then(toml::Value::as_bool) != Some(true) {
+        .flatten()
+        .filter(|(_, entry)| {
+            entry.get("native_decision").and_then(toml::Value::as_bool) == Some(true)
+                && entry
+                    .get("decision_scope")
+                    .and_then(toml::Value::as_array)
+                    .is_some_and(|rows| {
+                        rows.iter()
+                            .any(|s| s.as_str().is_some_and(|s| scope.iter().any(|p| p == s)))
+                    })
+        })
+        .map(|(source, _)| source.clone())
+        .collect();
+    let mut selected = std::collections::BTreeSet::new();
+    while let Some(source) = pending.pop() {
+        if !selected.insert(source.clone()) {
             continue;
         }
-        count += 1;
-        if count > 64 {
-            return Err(err("Native decision archive exceeds bounded selection"));
-        }
-        if !entry
-            .get("decision_scope")
-            .and_then(toml::Value::as_array)
-            .is_some_and(|rows| {
-                rows.iter()
-                    .any(|s| s.as_str().is_some_and(|s| scope.iter().any(|p| p == s)))
-            })
-        {
-            continue;
+        if selected.len() > 64 {
+            return Err(err(
+                "Relevant native decision supersession closure exceeds bounded selection",
+            ));
         }
         if !source.starts_with(&format!("{archive}/native-")) {
             return Err(err(
                 "Native decision declaration is outside current fallback archive",
             ));
         }
-        let bytes = read(&root, source)?.ok_or_else(|| {
+        let bytes = read(&root, &source)?.ok_or_else(|| {
             err("Native decision source disappeared; preserve declaration and reconcile")
         })?;
-        let normalized = crate::decision_source::record(&bytes, source, "memory")?;
-        if !normalized["scope"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|s| scope.iter().any(|p| s == p))
-        {
-            continue;
-        }
-        let record = retained(target, source)?
+        let normalized = crate::decision_source::record(&bytes, &source, "memory")?;
+        let record = retained(target, &source)?
             .ok_or_else(|| err("Native decision lacks bounded answer; source remains advisory"))?;
         let args = &record["invocation"]["arguments"];
         let binding = &args["binding"];
@@ -727,6 +729,9 @@ pub(crate) fn context(target: &Path, config: &Value, scope: &[String]) -> Result
             return Err(err(
                 "Native decision source changed; reconcile bounded answer",
             ));
+        }
+        for ancestor in normalized["supersedes"].as_array().unwrap() {
+            pending.push(self::source(config, ancestor["id"].as_str().unwrap())?);
         }
         result["admissions"].as_array_mut().unwrap().push(json!({"id":normalized["id"],"material_revision":normalized["material_revision"],"source":normalized["source"],"rationale_reference":source}));
         for dependency in normalized["authority"]["basis"]

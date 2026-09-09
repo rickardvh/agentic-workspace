@@ -172,3 +172,24 @@ def test_supersession_preserves_rationale_and_narrows_only_admitted_scope(
     relevant = call(task="Fresh narrower work", changed=["src/a.rs"])["decision_packet"]["decision_context"]
     assert [row["id"] for row in relevant["consequences"]] == ["fixture:new"]
     assert not call(changed=["src/a.rs.extra"])["decision_packet"].get("decision_context", {}).get("consequences")
+    context["changed"] = ["src/a.rs", "src/c.rs"]
+    admission = next(row for row in call()["decision_sources"]["requests"] if row["arguments"]["id"] == "fixture:new")["arguments"]
+    capture("fixture:expanded", [{"id": admission["id"], "material_revision": admission["material_revision"], "scope": ["path:src/a.rs"]}])
+    expanded = call(task="Fresh expansion scope", changed=["src/c.rs"])["decision_packet"]["decision_context"]
+    assert [row["id"] for row in expanded["consequences"]] == ["fixture:expanded"]
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_unadmitted_archive_names_do_not_block_unrelated_work(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    archive = tmp_path / ".agentic-workspace/memory/repo/decisions"
+    archive.mkdir(parents=True)
+    for index in range(65):
+        (archive / f"native-unowned-{index}.md").write_text("Unrelated advisory source, no deciding authority.\n")
+    result = consume(
+        surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Unrelated direct work", "changed": ["other.rs"]}
+    )
+    assert result["decision_packet"]["status"] == "direct"
+    assert not result["decision_packet"].get("decision_context", {}).get("consequences")
+    assert not (tmp_path / ".agentic-workspace/local").exists()
