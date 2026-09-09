@@ -29,10 +29,14 @@
     },
     "stdout": {
       "format": "text",
-      "field_assertions": []
+      "field_assertions": [],
+      "allow_empty": true
     },
     "stderr": {
-      "allow_non_empty": true
+      "allow_non_empty": true,
+      "contains": [
+        "unknown command: report"
+      ]
     },
     "filesystem": {
       "allowed_write_paths": [],

@@ -32,7 +32,6 @@ PACKED_ARTIFACT_CONTEXT ?= local
 WORKSPACE_TEST_CLI = \
 	tests/test_assignment_burden.py \
 	tests/test_assignment_no_change_prompt.py \
-	tests/test_assignment_override_policy.py \
 	tests/test_assignment_planning_requirements.py \
 	tests/test_bounded_external_issue_route.py \
 	tests/test_direct_task_identity.py \

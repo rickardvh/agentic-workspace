@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 from repo_planning_bootstrap import installer as planning
@@ -42,20 +41,24 @@ def test_proof_receipt_input_and_result_boundaries() -> None:
         review_stack_transition={"status": "skipped"},
         repair_retry_ladder={"status": "available"},
         failure_summary=None,
+        trusted_producer_published=False,
     )
 
     assert payload["status"] == "written"
     assert "review_stack_transition" not in payload
     assert payload["repair_retry_ladder"] == {"status": "available"}
+    assert payload["publication"] == {
+        "trusted_producer_published": False,
+        "policy": "selected-execution-local-only",
+    }
 
 
-def test_planning_summary_work_item_precedence_and_schema_copy(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_planning_summary_selected_owner_and_schema_copy(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     state = {"todo": {"active_items": [{"id": "canonical"}]}}
     monkeypatch.setattr(planning, "_read_state_from_toml", lambda _root: state)
-    monkeypatch.setattr(planning, "_state_active_items", lambda _state: [{"id": "canonical"}])
-    monkeypatch.setattr(planning, "_state_queued_items", lambda _state: [{"id": "queued"}])
-    monkeypatch.setattr(planning, "_state_roadmap_lanes", lambda _state: [])
-    monkeypatch.setattr(planning, "_state_roadmap_candidates", lambda _state: [])
+    monkeypatch.setattr(planning, "_selected_owner_resolution", lambda _root: {"owner_id": "selected"})
+    monkeypatch.setattr(planning, "_selected_owner_active_item", lambda **_kwargs: {"id": "selected"})
+    monkeypatch.setattr(planning, "_planning_lane_projection", lambda **_kwargs: {"records": [{"id": "lane"}]})
     monkeypatch.setattr(planning, "_read_todo_items", lambda _path: pytest.fail("legacy reader ran despite canonical state"))
 
     items = planning._planning_summary_work_items(
@@ -65,27 +68,21 @@ def test_planning_summary_work_item_precedence_and_schema_copy(monkeypatch: pyte
         roadmap_path=tmp_path / "ROADMAP.md",
     )
 
-    assert items["active_items"] == [{"id": "canonical"}]
+    assert items["active_items"] == [{"id": "selected"}]
+    assert items["queued_items"] == []
+    assert items["roadmap_lanes"] == [{"id": "lane"}]
     first = planning._planning_summary_schema()
     first["canonical_docs"].append("mutated")
     assert "mutated" not in planning._planning_summary_schema()["canonical_docs"]
 
 
-def test_planning_summary_legacy_source_precedes_todo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_planning_summary_does_not_promote_legacy_todo_without_selected_owner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     legacy = tmp_path / "legacy.md"
     todo = tmp_path / "TODO.md"
     monkeypatch.setattr(planning, "_read_state_from_toml", lambda _root: {})
-    monkeypatch.setattr(
-        planning,
-        "_read_todo_items",
-        lambda path: (
-            (["legacy"], [SimpleNamespace(fields={"id": "legacy", "status": "active", "surface": "plan"})])
-            if path == legacy
-            else (["todo"], [SimpleNamespace(fields={"id": "todo", "status": "active", "surface": "plan"})])
-        ),
-    )
-    monkeypatch.setattr(planning, "_roadmap_candidate_lanes", lambda _path: [])
-    monkeypatch.setattr(planning, "_roadmap_candidates", lambda _path: [])
+    legacy.write_text("legacy active work", encoding="utf-8")
+    todo.write_text("todo active work", encoding="utf-8")
+    monkeypatch.setattr(planning, "_read_todo_items", lambda _path: pytest.fail("legacy work became selected authority"))
 
     items = planning._planning_summary_work_items(
         target_root=tmp_path,
@@ -94,7 +91,8 @@ def test_planning_summary_legacy_source_precedes_todo(monkeypatch: pytest.Monkey
         roadmap_path=tmp_path / "ROADMAP.md",
     )
 
-    assert items["active_items"] == [{"id": "legacy", "surface": "plan", "why_now": ""}]
+    assert items["active_items"] == []
+    assert items["queued_items"] == []
 
 
 def test_reconciliation_prior_apply_rejects_invalid_and_reuses_receipt(tmp_path: Path) -> None:
@@ -152,6 +150,8 @@ def test_integration_record_writer_preserves_owner_proposal_receipt_order(monkey
         owner_path=owner_path,
         owner_changed_fields=["phase"],
         owner_schema_path=Path("owner.schema.json"),
+        related_lane_path=None,
+        related_lane_update=None,
         proposal_path=proposal_path,
         updated_record={"id": "proposal"},
         receipt_path=receipt_path,
@@ -175,6 +175,7 @@ def test_pending_integration_finalization_dry_run_has_no_write_effect(monkeypatc
         owner_overrides={},
         proposals_applied=["proposal"],
         receipts=[receipt],
+        skipped_proposals=[],
         proposal_dir=tmp_path / "proposals",
         current_target_id="before",
         dry_run=True,

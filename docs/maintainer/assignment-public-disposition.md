@@ -6,6 +6,16 @@ runtime, which is not the canonical native product. Their contracts, generated
 exports/resources, catalogue entries and command conformance cases are removed
 together. No equivalent hidden `start` request or new CLI verb is introduced.
 
+The former `test_assignment_override_policy.py` journey is retired with that
+command. It imported `assignment_reassign` and asserted mutation of the former
+assignment/run representation through the Python host. Its policy labels and
+recorded reasons do not establish a current native replacement authority.
+Current source drift and hard eligibility constraints remain covered by
+`test_native_execution_configurations.py`; disguised retired requests remain
+rejected by `test_native_public_cli.py`. Full native attempt replacement remains
+an owner gap below, rather than a former-host success expectation in the active
+public conformance suite.
+
 The source for this disposition is the former implementation at
 `127950fa15a11efe5f73cd7cbbc86d3d7fd8b162`, including
 `src/agentic_workspace/contracts/operations/assignment.close.json` and
