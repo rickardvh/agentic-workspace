@@ -714,7 +714,7 @@ fn resolve_context(
         json!([])
     };
     let decisions = if matches!(status, "unresolved" | "stale") {
-        json!([{"id":"planning-continuation","question":"Does the current task continue the selected Planning owner?","response_request":{"request_kind":"planning/continuation/v1","arguments":{}},"choices":[{"id":"continue-selected","label":"Continue the selected Planning owner"},{"id":"unrelated-direct","label":"Unrelated bounded direct work"}],"affects":["task"]}])
+        json!([{"id":"planning-continuation","question":"Does the current task continue the selected Planning owner?","material":{"selected_owner":selected},"response_request":{"request_kind":"planning/continuation/v1","arguments":{}},"choices":[{"id":"continue-selected","label":"Continue the selected Planning owner"},{"id":"unrelated-direct","label":"Unrelated bounded direct work"}],"affects":["task"]}])
     } else {
         json!([])
     };

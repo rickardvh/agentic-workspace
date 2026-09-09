@@ -32,6 +32,17 @@
     "unknown_variants": "fail-closed",
     "execution": "invoke only the exact returned operation envelope"
   },
+  "operating_projections": {
+    "default": "compact",
+    "full": "Original current owner views and capability/detail contracts.",
+    "compact": "Decision-bearing material and exact selected executable envelope; no required action-detail fetch.",
+    "carried": "Separate model-facing view and disposable host carriage; only the view belongs in model context.",
+    "reference_identity": ["exact immutable envelope", "selector", "original work context"],
+    "admission": "Digest is identity, not authority. Rust reobserves questions/detail and executes exact actions through current native admission.",
+    "bounded_answer": "Fill only the absent answer slot of the exact current selected decision; preserve every supplied owner argument.",
+    "context": "Carry unchanged target/task/changed/request; explicit differences require fresh start.",
+    "recovery": "Unknown, changed or lost carriage requires fresh source-owner resolution; no durable registry."
+  },
   "capability_ownership": {
     "domains": "exclusive among current declared owners",
     "effects": "bound to one owned domain and admitted operation",
@@ -84,6 +95,22 @@
           "json"
         ],
         "description": "Output format (json)."
+      },
+      {
+        "flag": "--projection",
+        "field": "projection",
+        "choices": ["compact", "full", "carried"],
+        "description": "Compact executable decision (default), full detail, or view plus disposable exact carriage for a thin host."
+      },
+      {
+        "flag": "--reference",
+        "field": "reference",
+        "description": "Exact immutable reference from carried output; --input supplies the machine-carried object."
+      },
+      {
+        "flag": "--answer",
+        "field": "answer",
+        "description": "JSON bounded answer for an exact carried decision reference; all owner material remains unchanged."
       },
       {
         "flag": "--input",

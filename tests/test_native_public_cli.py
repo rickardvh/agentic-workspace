@@ -118,10 +118,17 @@ def native_cli(shared_core_binary: Path) -> Path:
 
 
 def consume(surface: str, binary: Path, native: Path, context: dict, *, host_path: str = "") -> dict:
+    context = {"projection": "full", **context}
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
     if surface == "native":
-        command = [str(native), verb, "--target", context["target"], "--task", context["task"], "--format", "json"]
+        command = [str(native), verb, "--format", "json"]
+        for field in ("target", "task", "reference"):
+            if field in context:
+                command += [f"--{field}", context[field]]
+        if "answer" in context:
+            command += ["--answer", json.dumps(context["answer"])]
+        command += ["--projection", context["projection"]]
         for path in context.get("changed", []):
             command += ["--changed", path]
         if context.get("request") or context.get("invocation"):

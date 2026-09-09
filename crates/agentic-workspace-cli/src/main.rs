@@ -130,6 +130,19 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
         return Err("--input is required for this command".to_owned());
     }
     values.remove("format");
+    if values.contains_key("reference") {
+        // Absent context must stay absent when carrying exact work. Explicit
+        // context remains in the request for Rust's equality check.
+        for field in ["target", "task", "changed"] {
+            if !seen.contains(field) && !(field == "changed" && values[field] != json!([])) {
+                values.remove(field);
+            }
+        }
+    }
+    if let Some(answer) = values.get_mut("answer") {
+        *answer = serde_json::from_str(answer.as_str().unwrap())
+            .map_err(|_| "--answer must be JSON".to_owned())?;
+    }
     Ok(Some(Parsed {
         command: args[0].clone(),
         values: Value::Object(values),

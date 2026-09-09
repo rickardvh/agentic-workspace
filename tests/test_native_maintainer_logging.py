@@ -25,7 +25,7 @@ def call(binary: Path, target: Path, *, enabled=True, task="Inspect current sour
     if not enabled:
         env["AW_SESSION_LOGGING_DISABLE"] = "1"
     operation = "invoke" if invoke else "start"
-    body = {"target": str(target), "task": task, "changed": []}
+    body = {"target": str(target), "task": task, "changed": [], "projection": "full"}
     if invoke:
         body["invocation"] = {}
     return subprocess.run([str(binary)], input=json.dumps({operation: body}), text=True, capture_output=True, env=env, timeout=30)

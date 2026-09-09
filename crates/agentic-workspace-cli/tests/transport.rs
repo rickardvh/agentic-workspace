@@ -49,6 +49,8 @@ fn empty_target_is_direct_without_python_or_node() {
     );
     let decision: Value = serde_json::from_slice(&result.stdout).unwrap();
     assert_eq!(decision["decision_packet"]["status"], "direct");
+    assert!(decision.get("capability_contract").is_none());
+    assert!(decision.get("planning").is_none());
     assert_eq!(fs::read_dir(&target.0).unwrap().count(), 0);
 }
 
@@ -65,6 +67,7 @@ fn actual_registry_selection_is_current_then_stale_without_language_runtimes() {
             .args(["start", "--target"])
             .arg(&target.0)
             .args(["--task", "Inspect the repository boundaries"])
+            .args(["--projection", "full"])
             .env_clear()
             .env("PATH", "");
         if let Some(input) = input {

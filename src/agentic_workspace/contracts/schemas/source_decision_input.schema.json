@@ -1178,6 +1178,7 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "question": {"type": "string", "minLength": 1},
+        "material": {"description": "Owner-supplied context needed to judge this exact question, such as selected subject or before/after proposal. Included unchanged in compact and full projections and bound into question identity; grants no authority."},
         "response_request": {"type": "object", "properties": {"request_kind": {"type": "string", "minLength": 1}, "arguments": {"type": "object", "not": {"required": ["answer"]}}}, "required": ["request_kind", "arguments"], "additionalProperties": false, "description": "Owner request kind and fixed arguments; only the answer slot is human/domain supplied."},
         "choices": {
           "type": "array",

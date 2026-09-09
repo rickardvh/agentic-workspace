@@ -29,6 +29,15 @@ Do not replace a configured invocation with a guessed bare command.
 4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name. **Do not reclassify the task** from prose, legacy task-switch fields, or another capability after a current authoritative route decision exists.
 5. If the compact result is insufficient, use only the smallest selector, skill, operation, or safe probe it routes to before broadening context.
 
+`start` defaults to compact output with the exact selected request/action included.
+Use `--projection full` for owner detail. Thin hosts may use `--projection carried`,
+keep the returned `carriage` locally and show only `view` to the model. Use the
+returned exact reference with `--input <carriage.json> --reference <ref>`; a bounded
+decision also accepts `--answer <JSON-choice>`. Unchanged context is carried;
+explicit context changes require fresh resolution. Carriage grants no authority
+and its loss recovers through fresh `start`. No extra detail fetch is required to
+execute the selected action. Optional detail references are revalidated by Rust.
+
 ## Act
 
 1. Follow the supported next action before inventing a different command path.

@@ -427,6 +427,7 @@ pub(crate) fn view(
             result["contribution"]["decisions"] = json!([{"id":"memory-disposition-authorization",
                 "question":"Authorize this exact Memory disposition? Retire means obsolete with no future value. Source authorship and all former material remain preserved; promotion needs independent receiving admission.",
                 "response_request":{"request_kind":EDIT,"arguments":answer},
+                "material":result["proposal"],
                 "choices":[{"id":"authorize-disposition","label":"Authorize this exact disposition"},{"id":"defer","label":"Defer without mutation"}],
                 "affects":["task","effect:memory-state"]}]);
             return Ok(result);

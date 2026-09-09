@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Default to a compact executable decision and support exact disposable envelope carriage with bounded answers through one Rust authority."
+issues = [2986, 2987, 3059, 2909]

@@ -84,12 +84,12 @@ pub fn run_stdio() {
         .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("start"))
     {
-        crate::native_public::start(request["start"].clone())
+        crate::operating::start(request["start"].clone())
     } else if request
         .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("invoke"))
     {
-        crate::native_public::invoke(request["invoke"].clone())
+        crate::operating::invoke(request["invoke"].clone())
     } else if request
         .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("attribute_assignment_outcome"))
