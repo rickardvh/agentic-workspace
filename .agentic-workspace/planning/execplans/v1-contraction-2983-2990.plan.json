@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Execution is governed by the current #2983 issue; #3020 owns architecture and #3138 is the promotion/closure ledger. The September 9 normalization comments supersede stale closure prose. reconstruct/first-stable integrated through #3180 at 127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Earlier #3177-3180 prove bounded fallback capture, durable configuration writes, checked patch delivery, archive/read and former Planning migration; current #3041/#2970 parent outcomes are broader and remain open. PR #3181 at c5452e391 retires superseded public assignment close/reassign exports while preserving canonical native lifecycle responsibilities and explicitly unfinished host/visibility/resume/replacement outcomes. All CI checks pass and distinct scoped review found no blockers. Six historical external conformance receipts are explicitly stale with original execution identity preserved; the old receipt refresh runner remains incompatible and supplies no new evidence. The stacked #2638 slice adds reconcile separately from read, exact updated/reviewed-current judgments, owner-built proposals and separate bounded human confirm/defer requests, scoped completion restrictions, relevant work/source/dependency/discovery reobservation, atomic receipt publication and recovery using existing Verification/effect custody, direct-path quietness and selected Planning re-entry. Twenty-three focused public cases plus oversized-carrier and foreign-receipt negatives pass, along with188 existing public/instruction cases; Rust workspace tests and Clippy pass. Distinct independent review found a carrier-size defect; the full escaped publication is now bounded before admission and final bytes are checked before writes. Independent recheck reran both negatives and found no remaining substantive findings. Authority remains the exact owner-issued request/proposal plus bound answer, never client actor/provenance labels or publication custody. No trusted host or cryptographic human identity is introduced; no unsupported delegated authority is invented. Independent reviewer authentication retains its separate boundary. No full #2638/#2334/#2970 closure is inferred from this slice. Independent Rust owner ingress needs a real admission boundary, not an owner-name allowlist removal. #2998 P3 harness credibility and #2824 PASS/HOLD/STOP remain gating; #3077 native host, #2929 real refinement replay, and earlier slices are preserved without reconstructing completed work. Finish the current stack then continue authorized reconstruction; the former stop-after-3180 instruction ended with that PR and the human has explicitly resumed. Preserve the six preexisting ordinary Assignment/proof artifacts.",
+    "frontier": "Current execution authority is #2983; #3020 owns architecture and #3138 is only the promotion/closure ledger. September 9 comments supersede stale closure prose. reconstruct/first-stable is integrated through #3180 at 127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Open stacked #3181 retires obsolete public assignment exports; #3182 admits exact source reconciliation separately from read. Both have all CI checks passing and distinct scoped reviews without remaining blockers. The next coherent #3040/#3041 slice publishes owner-built exact bounded decision proposals to the configured repository archive, preserves stronger-owner precedence over Memory, and offers explicit no-retention with no durable state. It reuses existing decision-continuity and effect custody, binds dependencies/current decision context/conventions/scope/policy/capability/postimage/proposal, rejects client authority labels, and keeps publication separate from deciding authority. No trusted host or authenticated human identity is introduced, and no delegated authority is invented. Twenty-five repository cases plus twenty fallback capture cases pass across native/JSON/Python/TypeScript surfaces; 193 existing public/reconciliation cases, Rust workspace tests and Clippy pass. Independent review found request-ID acceptance and unrelated malformed recovery coupling; full compiled request equality and source-specific relevant custody selection now fix both, with seven independent regression rechecks passing and no remaining scoped blockers. Existing real decision material is replayed in isolated fixtures only, with no artificial ADR in this checkout. Earlier archive/read/April retirement slices remain valid without closing the broader stronger-owner lifetime outcome. #2606/#2986 requires independent Rust ingress preserving authority, not owner-name allowlist removal. #2970 broader returned/integration-pending continuity and cumulative #2909/#2616/#2990 remain open; #2998 P3 harness credibility and #2824 PASS/HOLD/STOP gate experiments. Human explicitly resumed reconstruction after the earlier stop-after-3180 instruction was fulfilled. Preserve the six preexisting ordinary Assignment/proof artifacts.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Finish independent review and integration evidence for the #2638 source-reconciliation stack, then continue the #2983 P0/P1 frontier. The native independent owner/module ingress (#2606/#2986), stronger repository decision owner input/output and capture/no-retention contrast (#3041), broader cross-owner Planning continuity (#2970), and cumulative #2909/#2616/#2990 outcomes remain open. Do not infer master promotion or parent completion.",
+  "next_action": "Publish and validate the coherent stronger repository decision capture/no-retention PR stacked on #3182, then continue the #2983 execution frontier. Independent owner ingress #2606/#2986, broader cross-owner continuity #2970, delegated exact-scope policy authority #3040 and cumulative lifetime/readiness outcomes remain open. No master promotion is authorized.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -137,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 36,
+  "revision": 37,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -189,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/98195f9758073cc4996d9eb8b3fe2eb94fc436443fa584454ccb3f28cf219fad.attempt.json",
-        "revision": "sha256:034f0d5c574d11e6259b20fb03eb4030d87b8e49f15bbc1715982e964e66d9aa",
+        "path": ".agentic-workspace/local/effects/16fab66cacef82e4dab616252c708e34749f1700f79f28d40a7729db7410a738.attempt.json",
+        "revision": "sha256:34b8c10088eaf5251dd293b369eaab4c90d1063311872bcb62edf6fd5f691460",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/98195f9758073cc4996d9eb8b3fe2eb94fc436443fa584454ccb3f28cf219fad.result.json",
-        "revision": "sha256:05d96e387554128dd153956e61ee5c4fcdf4df2b0bed0dc71c6bf2396b41dec5",
+        "path": ".agentic-workspace/local/effects/16fab66cacef82e4dab616252c708e34749f1700f79f28d40a7729db7410a738.result.json",
+        "revision": "sha256:8091cfc863add247ca6d485e5d564cfad56791b7e853dbcf08fe6a2ae49a9e80",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:191da79a1be4cc768a8966631a59900a597d0e4e424928b659e655dba6e62a61",
+    "invocation_revision": "sha256:f4edbd46405b7d96e3a2ead5065bb9ca0c5f1640f109c30a0aebe0565fb097f5",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -208,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:98165e80457ae6420e1393aa16436104f68bb74ea0efceb5ff61a218919044d8",
+        "document_revision": "sha256:a3352757e710b6bd6d20db868b9a1748f03bd1a15b6ccee44e73fe4c0025aeee",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

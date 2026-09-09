@@ -61,6 +61,8 @@ jobs:
           -q
       - name: Admit exact current source reconciliation through public consumers
         run: uv run pytest tests/test_native_source_reconciliation.py -q
+      - name: Preserve stronger and fallback decision ownership through public consumers
+        run: uv run pytest tests/test_native_repository_decisions.py tests/test_native_memory_capture.py -q
       - name: Run shared operating-decision core proof
         run: |
           cargo +stable build --locked --workspace --bins

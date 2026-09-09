@@ -8,7 +8,15 @@ This sparse archive preserves current choices whose rationale prevents repeated 
 
 Keep prose useful without software: decision, consequence, rationale, meaningful rejected alternatives, actual authors and deciding authority, scope, evidence and supersession. The optional fenced `aw-decision` block is a projection source for AW's existing material-decision contract, not executable permission.
 
-Acceptance of a source record is distinct from configuring automatic consumption. The repository host must explicitly admit an exact Git commit for this archive, including the records' semantic provenance. A filename, tracked status, inline owner, or actor string alone is insufficient. New or changed records require source-owner admission; do not automatically advance that pin from HEAD.
+Acceptance of a source record is distinct from configuring automatic consumption.
+Existing records are admitted from an explicitly reviewed exact Git snapshot,
+including their semantic provenance; that pin never advances automatically from
+HEAD. A newly captured decision can instead carry the repository owner's exact
+proposal and bounded deciding answer, bound to its complete source postimage,
+scope, dependencies and current policy. Its publication receipt is separate
+custody, not deciding authority. A filename, tracked status, inline actor label
+or successful write is insufficient. Changed records still require source-owner
+reconciliation; prior publication does not authorize later edits.
 
 Prefer adding a few decisions with future value over summarizing history. The
 April `installed-system-consolidation-2026-04-05.md` Memory note has an explicit
@@ -34,6 +42,12 @@ also does not promote the April note, author a decision or advance the
 repository's configured admission. Native Memory fallback capture uses its own
 exact bounded-human-answer basis and publication/recovery path; that path cannot
 capture a competing fallback when this stronger repository owner is configured.
+
+New repository capture preserves ordinary readable decision, consequence,
+rationale and alternatives. Unknown material authorship remains unattributed;
+an exact bounded human answer does not claim cryptographic identity. A successful
+no-retention disposition creates no new decision record. Do not add a record
+solely to exercise capture or reopen the already settled April-note disposition.
 
 The 2026-09-09 source refresh preserves the three existing decisions and scopes.
 It binds the later repository-lifetime intent additions without inventing new
