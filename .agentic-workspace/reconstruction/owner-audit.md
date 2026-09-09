@@ -43,7 +43,7 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Current stack adds exact native note/fact disposition and admitted repository-decision promotion; source authorship and former material survive. Native typed fallback-decision admission/effect remains unresolved with #3040/#3041; capability approval does not adjudicate the real April note. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 24, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 25, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
 | #3040 | bounded implementation gap | Shared continuity, current native source/rationale/supersession and admitted Memory promotion exist. Ordinary native typed fallback capture and its reconciliation consequence remain absent; final cross-thread authorship and cache-versus-authority proof also remain. This is not merely an unrun conformance gate. |
 | #3041 | evidence/conformance gap | The configured repo-owned `docs/decisions/` archive contains three reconstruction records; native relevant/unrelated/rationale/supersession proof and exact Memory disposition now exist. The real April note still needs a bounded owner/human disposition and aggregate admission. Capability approval does not authorize promotion or resolve its ambiguous provenance; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
@@ -312,7 +312,7 @@ cost remain unknown. Local was cheaper in this case; no general delegation cost
 advantage is claimed. Full prior measurements and exclusions remain at the link.
 
 The actual selected reconstruction Plan is maintained only through its native
-writer. Revision 24 retains current identity, scope, relationships, proof and
+writer. Revision 25 retains current identity, scope, relationships, proof and
 frontier; independent acceptance remains pending. The original human local
 configuration still hashes to
 `3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189`.
@@ -320,9 +320,12 @@ Unrelated Assignment/proof files and local custody remain in their original
 checkout. Root `.local` scratch moved intact to the already ignored
 `.agentic-workspace/local/former-root-scratch`; all 17 file hashes matched.
 
-The next typed fallback capture/admission boundary is proposed under
+The next typed fallback capture/admission boundary is approved under
 [#2570 comment 5595216228](https://github.com/rickardvh/agentic-workspace/issues/2570#issuecomment-5595216228).
-It needs its distinct capability decision; the authorized disposition writer
-does not grant deciding authority to a new record or to the April note. Other
-admitted work can continue. No issue closure, authoritative review marker,
-exact-release admission or master promotion is implied by this audit.
+On 2026-09-09 the human approved that capability and the plans in all currently
+open issues. Implement those plans without duplicate capability questions; the
+dogfooding skill reserves renewed review for autonomous departures from approved
+plans. Their source-specific human judgments and admission constraints remain:
+no particular record decision or April promotion was supplied. No issue closure,
+authoritative review marker, exact-release admission or master promotion is
+implied by this implementation authorization.
