@@ -185,15 +185,22 @@ fn residual(source: &str, field: &str, value: &Value, config: &Value) -> Value {
     result
 }
 
-/// An admitted retained-local Assignment consumes only its exact source context.
-/// Other target lifecycle/control fields and all delegation/claim gaps survive.
+/// A retained-local Assignment or typed admitted patch return consumes only its
+/// exact target source context. Other lifecycle/control and claim gaps survive.
 pub(crate) fn assignment_consumption(
     configuration: &Value,
     assignment: &Value,
     execution: &Value,
+    admitted_return: Option<&Value>,
 ) -> Value {
     let mut contribution = configuration["contribution"].clone();
-    if assignment["local_assignment_satisfied"] != true
+    let consumed_return = admitted_return.is_some_and(|r| {
+        r["result_use_allowed"] == true
+            && r["assignment_identity"] == assignment["assignment_identity"]
+            && r["context"]["scope_class"] == "unapplied-patch"
+            && r["execution_custody"].is_object()
+    });
+    if (assignment["local_assignment_satisfied"] != true && !consumed_return)
         || assignment["assignment_identity"].is_null()
     {
         return contribution;
@@ -244,10 +251,11 @@ pub(crate) fn assignment_consumption(
         } else {
             // Availability of a different worker/planner is not needed for the
             // exact admitted retained-local executor. No worker availability is granted.
-            matches!(
-                field,
-                "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
-            )
+            !consumed_return
+                && matches!(
+                    field,
+                    "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
+                )
         };
         if consumed {
             let code = format!("native-config-owner:{LOCAL}:{field}");

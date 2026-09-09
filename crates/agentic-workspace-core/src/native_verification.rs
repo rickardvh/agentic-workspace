@@ -9,6 +9,7 @@ use std::{io::Read, path::Path};
 const MANIFEST: &str = ".agentic-workspace/verification/manifest.toml";
 const RECEIPTS: &str = ".agentic-workspace/proof/receipts";
 
+pub(crate) const MAX_SOURCE_BYTES: usize = 1_048_576;
 pub(crate) fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
     if path.is_empty()
         || path.contains('\\')
@@ -41,10 +42,10 @@ pub(crate) fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, String> {
     let mut bytes = Vec::new();
     root.open(path)
         .map_err(|_| "Verification source is unreadable")?
-        .take(1_048_577)
+        .take((MAX_SOURCE_BYTES + 1) as u64)
         .read_to_end(&mut bytes)
         .map_err(|_| "Verification source is unreadable")?;
-    if bytes.len() > 1_048_576 {
+    if bytes.len() > MAX_SOURCE_BYTES {
         return Err("Verification source exceeds bounded read".into());
     }
     Ok(Some(bytes))

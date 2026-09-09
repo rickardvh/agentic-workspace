@@ -7,6 +7,30 @@ use std::{io::Write, path::Path, process::Command, time::Duration};
 const KIND: &str = "delegation/dispatch/v1";
 pub(crate) const READ: &str = "delegation/read-result/v1";
 const OP: &str = "delegation.dispatch";
+/// Custody recovers only the original mutation baseline. Current work, policy,
+/// dependencies and exact packet identity are still re-derived by the owners.
+pub(crate) fn retained_packet(
+    target: &Path,
+    requests: &[Value],
+) -> Result<Option<Value>, CoreError> {
+    let Some(request) = requests.iter().find(|r| r["request_kind"] == READ) else {
+        return Ok(None);
+    };
+    let held = crate::attempt_store::inspect_committed(
+        &target.to_string_lossy(),
+        request["arguments"]["custody"].clone(),
+    )?;
+    if held["invocation"]["source_owner"] != "delegation"
+        || held["invocation"]["operation_id"] != OP
+        || held["outcome"]["value"]["status"] != "returned-unproven"
+    {
+        return Err(error(
+            "committed delegation result required for baseline observation",
+        ));
+    }
+    let packet = &held["invocation"]["arguments"]["packet"];
+    Ok((packet["assignment_identity"]["scope_class"] == "unapplied-patch").then(|| packet.clone()))
+}
 fn error(value: impl ToString) -> CoreError {
     CoreError::new(value.to_string())
 }
@@ -18,7 +42,7 @@ pub(crate) fn supports_process(transport: &Value) -> bool {
 pub(crate) fn contract() -> Result<Value, CoreError> {
     let declaration = json!({"kind":KIND,"result_kind":"agentic-workspace/delegation-execution/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"handoff_revision":{"type":"string"}},"required":["handoff_revision"],"additionalProperties":false}});
     let read = json!({"kind":READ,"result_kind":"agentic-workspace/delegation-result-observation/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"custody":{"type":"object"}},"required":["custody"],"additionalProperties":false}});
-    let operation = json!({"id":OP,"semantic_revision":"native-delegation-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"packet":{"type":"object"},"execution":{"type":"object"}},"required":["target","packet","execution"],"additionalProperties":false},"effects":["delegation-execution"],"reads":["delegation"],"result_kind":"agentic-workspace/delegation-execution/v1"});
+    let operation = json!({"id":OP,"semantic_revision":"native-delegation-v2","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"packet":{"type":"object"},"execution":{"type":"object"}},"required":["target","packet","execution"],"additionalProperties":false},"effects":["delegation-execution"],"reads":["delegation"],"result_kind":"agentic-workspace/delegation-execution/v1"});
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"delegation","revision":digest(&json!([declaration,read,operation]))?,"requests":[declaration,read],"operations":[operation],"domains":["delegation"],"effects":[{"id":"delegation-execution","domain":"delegation"}]}]});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
@@ -45,7 +69,8 @@ pub(crate) fn view(
     )?;
     let submitted_request = submitted.iter().find(|r| r["request_kind"] == KIND);
     let result_read = submitted.iter().find(|r| r["request_kind"] == READ);
-    let ready = handoff["status"] == "exported-read-only"
+    let ready = (handoff["status"] == "exported-read-only"
+        || handoff["status"] == "exported-patch")
         && selected["transport"] == "cli"
         && supports_process(&selected["execution"]["adapter"]);
     let mut requests = Vec::new();
@@ -84,7 +109,10 @@ pub(crate) fn view(
         }
         observed_invocation = invocation.clone();
         observation = json!({"kind":"agentic-workspace/delegation-result-observation/v1","status":"current-executed-observation","assignment_identity":requirements["assignment"]["result"]["assignment_identity"],"returned":value["returned"],"process":value["process"],"context_cost":value["context_cost"],"custody":request["arguments"]["custody"],"claim_boundary":value["claim_boundary"]});
-        observation["context"] = json!({"task":packet["assignment_identity"]["human_intent"],"role":packet["assignment_identity"]["role"],"scope_class":"read-only","context_cost":value["context_cost"]});
+        observation["context"] = json!({"task":packet["assignment_identity"]["human_intent"],"role":packet["assignment_identity"]["role"],"scope_class":packet["assignment_identity"]["scope_class"],"context_cost":value["context_cost"]});
+        if packet["assignment_identity"]["scope_class"] == "unapplied-patch" {
+            observation["delta"] = crate::native_patch::delta(packet, &value["returned"])?;
+        }
     } else if ready {
         let template = json!({"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"delegation","owner_revision":owner["revision"],"source_revision":source,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"handoff_revision":digest(packet)?}});
         if let Some(request) = submitted_request {
@@ -153,7 +181,7 @@ pub(crate) fn execute(
     target: &Path,
     decision: &Value,
     invocation: &Value,
-    mut revalidate: impl FnMut() -> Result<(), CoreError>,
+    mut revalidate: impl FnMut(bool) -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
     let path = format!(
@@ -206,7 +234,7 @@ pub(crate) fn execute(
         {
             return Err(error("delegation terminal custody mismatch; preserved"));
         }
-        revalidate()?;
+        revalidate(false)?;
         let committed_path = held["custody"]["committed"]["path"]
             .as_str()
             .ok_or_else(|| error("terminal commit identity missing"))?;
@@ -238,7 +266,7 @@ pub(crate) fn execute(
     }
     let mut carrier = json!({"kind":"agentic-workspace/delegation-run/v1","invocation":invocation,"custody":admission["custody"]});
     create(&root, &path, &carrier)?;
-    revalidate()?;
+    revalidate(false)?;
     let execution = &invocation["arguments"]["execution"];
     let adapter = &execution["adapter"];
     let executable = execution["observed_executable"]["path"]
@@ -269,7 +297,7 @@ pub(crate) fn execute(
                 .ok_or_else(|| error("current process deadline missing"))?,
         ),
     )?;
-    let current = revalidate().is_ok();
+    let current = revalidate(true).is_ok();
     let complete =
         process["status"] == "passed" && process["output"]["stdout"]["truncated"] == false;
     let returned = if complete {
@@ -283,15 +311,15 @@ pub(crate) fn execute(
         packet["return_contract"]["required_identity"]
             .as_object()
             .is_some_and(|identity| identity.iter().all(|(k, v)| r.get(k) == Some(v)))
-            && r["changed_paths"] == json!([])
-            && r["patch"] == ""
+            && if packet["assignment_identity"]["scope_class"] == "unapplied-patch" {
+                crate::native_patch::delta(packet, r).is_ok()
+            } else {
+                r["changed_paths"] == json!([]) && r["patch"] == ""
+            }
     });
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked return schema");
-    let mut return_shape = schema["$defs"]["readonly_handoff_return"].clone();
-    return_shape["$schema"] = schema["$schema"].clone();
+    let return_shape = crate::native_handoff::return_shape(
+        packet["assignment_identity"]["scope_class"] == "unapplied-patch",
+    );
     let valid_return = crate::schema_validator(&return_shape, "delegation return")?
         .is_valid(&json!({"returned":returned}));
     let accepted = current
