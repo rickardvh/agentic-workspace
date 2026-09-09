@@ -1,21 +1,31 @@
 ---
 name: path-consolidation-check
-description: Recheck that memory and planning installs still live under .agentic-workspace and that package docs and tests still reflect the consolidated path contract.
+description: Verify current module-managed Planning and Memory install roots remain consolidated under .agentic-workspace when install, payload, or path topology changes.
 ---
 
 # Path Consolidation Check
 
-Use this skill when a change may affect installed bootstrap paths, payload roots, or docs that reference `.agentic-workspace/{memory,planning}`.
+Use this skill only when a change may alter installed roots, bootstrap/payload
+paths, upgrade behavior, or durable documentation of the Planning/Memory path
+contract. It is not an ambient check for ordinary package work.
 
 ## Check
 
-1. Verify package docs, payloads, and tests still point at `.agentic-workspace/memory/` and `.agentic-workspace/planning/`.
-2. Verify upgrade or install flows still render the consolidated paths.
-3. Update decision or domain notes only if the durable boundary changed.
+1. Verify the current ownership ledger still places the installed Planning and
+   Memory module roots under `.agentic-workspace/planning/` and
+   `.agentic-workspace/memory/`.
+2. Verify package bootstrap, generated payload, docs, and tests project those paths
+   without becoming live repository operational state themselves.
+3. Verify install/upgrade/uninstall behavior preserves the declared ownership and
+   path boundary rather than reintroducing former top-level or package-local
+   operational roots.
+4. Update durable decision/domain notes only when the path or ownership boundary
+   actually changed. Do not refresh prose merely because implementation moved.
 
 ## Typical surfaces
 
+- `.agentic-workspace/OWNERSHIP.toml`
 - `packages/memory/`
 - `packages/planning/`
-- `README.md`
-- installer tests
+- generated/bootstrap payload surfaces
+- install and upgrade tests

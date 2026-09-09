@@ -1,36 +1,44 @@
 ---
 name: github-issue-creation
-description: Create GitHub issues from this repo while preserving issue-template fields, labels, and post-create planning refresh.
+description: Create GitHub issues for this repository from the current issue forms after issue shaping has established the problem, owner, scope, and closure boundary.
 ---
 
 # GitHub Issue Creation
 
-Use this repo-owned skill before creating GitHub issues for this repository.
-For any nontrivial issue or refinement, use `github-issue-shaping` first; this skill owns template mechanics and must not bypass the assumption, ownership, scope, or closure audit.
+Use this repo-owned skill only when a new GitHub issue has already been selected as
+the right durable action. Use `github-issue-shaping` first for nontrivial findings;
+this skill owns creation mechanics, not product diagnosis or issue hierarchy.
 
-## Required Shape
+## Procedure
 
-1. Inspect or use the current `.github/ISSUE_TEMPLATE/*.yml` forms instead of hand-authoring an ad hoc issue body.
-2. Pick the matching template kind:
-   - `direction` for product direction, architecture, lanes, and bounded planning slices.
-   - `bug` for correctness, reliability, or regression problems.
-   - `review` for dogfooding friction, review gaps, trust gaps, and continuation or handoff friction.
-3. Generate a template-shaped body with:
-   - `uv run python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --kind <kind> --title "<title>" --field <id>=<value> ... --format json`
-4. Create the issue with the generated title, labels, and body.
-5. Refresh and reconcile external intent after creating or editing issues:
-   - `uv run agentic-workspace external-intent refresh-github --target . --state all --storage cache --format json`
-   - `uv run agentic-workspace reconcile --format json`
+1. Preserve the issue kind, owner, scope, acceptance criteria, non-solutions, and
+   closure boundary produced by shaping. Do not reclassify the problem here.
+2. Inspect the current `.github/ISSUE_TEMPLATE/*.yml` form for that issue kind.
+   The checked-in form is the authority for required fields and headings.
+3. Build a template-shaped body. The repo helper
+   `.agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py`
+   may be used when it is current and cheaper than constructing the form directly;
+   it is a maintainer aid, not an independent source of issue semantics.
+4. Create the issue through the authorized GitHub transport using the shaped title,
+   body, and labels. Fill required fields with concrete information; do not create
+   an issue containing `TODO` placeholders merely to reserve a number.
+5. Inspect the returned issue once to confirm the intended title, labels, and body
+   landed. Do not add a second issue, comment, or Planning record just to prove the
+   creation step happened.
+6. Refresh external intent or reconcile Planning only when the current AW route or
+   owning Planning continuation says subsequent work depends on that refreshed
+   state. Issue creation does **not** require an unconditional
+   `external-intent refresh-github` + `reconcile` loop.
 
 ## Rules
 
-- Preserve the template headings in the body.
-- Apply the labels emitted by the helper.
-- Fill required fields with concrete evidence; do not leave `TODO` values in a created issue.
-- Use `review` for dogfooding findings unless the finding is clearly a product direction or bug.
-- Preserve the completion boundary fields:
-  - `final_satisfaction`: what must be true before the issue is complete.
-  - `bounded_slice_success`: useful partial progress that may land without final closure.
-  - `partial_pr_may_close`: default `no` for direction/proposal work unless the issue owner says otherwise.
-  - `required_follow_up_owner`, `required_residual_intent`, and `evidence_required_for_final_completion`: where remaining intent lives and what proves final completion.
-- If the helper output and the YAML template disagree, trust the YAML template and fix the helper.
+- Preserve the current template headings.
+- Use the issue kind selected by shaping; this skill does not turn all dogfooding
+  findings into `review` issues or all architecture findings into `direction`.
+- Apply labels required by the current form/shaping result. If the helper and form
+  disagree, the form wins and the helper should be repaired separately.
+- Preserve completion-boundary fields such as `final_satisfaction`,
+  `bounded_slice_success`, `partial_pr_may_close`, residual-intent ownership, and
+  evidence required for final completion when the selected template defines them.
+- Do not create a new issue when shaping concluded that a direct fix, existing issue
+  update, or PR comment is the smaller durable owner.

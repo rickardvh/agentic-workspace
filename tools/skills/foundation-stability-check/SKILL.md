@@ -1,22 +1,36 @@
 ---
 name: foundation-stability-check
-description: Recheck that root-owned planning and memory remain the monorepo's operational authority and that new work is still routed through bounded planning surfaces.
+description: Recheck current Planning and Memory authority after a change to their install, state, or ownership boundaries. Use to detect competing operational sources; do not use as a general reconstruction checklist.
 ---
 
 # Foundation Stability Check
 
-Use this skill when a repo change might affect whether the monorepo still behaves as one root-owned operational install.
+Use this skill only when a change may alter which source owns Planning continuity,
+Memory knowledge, or their installed repository state. Ordinary implementation does
+not need this check merely because it touches Planning or Memory code.
 
 ## Check
 
-1. Confirm `.agentic-workspace/planning/state.toml`, `.agentic-workspace/planning/execplans/`, and root memory remain the live operational surfaces.
-2. Confirm package-local fixtures or payload copies are not acting as operational state.
-3. Confirm the relevant root validation lanes still pass.
+1. Read the current `.agentic-workspace/OWNERSHIP.toml` and relevant system intent
+   before asserting an authority boundary. Do not preserve an older topology merely
+   because this skill once described it.
+2. Confirm Planning semantic continuity remains with the current Planning owner and
+   its declared execution-plan authority. Selector state, indexes, receipts, caches,
+   generated payloads, and package fixtures may project or transport that authority;
+   they must not become a competing semantic owner.
+3. Confirm Memory remains durable advisory knowledge under its current owner. It
+   must not become active Planning state, backlog authority, proof, or completion
+   authority merely because a note is selected or persisted.
+4. Confirm package bootstrap/generated copies are distribution artifacts rather
+   than live repository operational state, and repo-owned sources remain repo-owned
+   where the ownership ledger says so.
+5. Run only the focused validation needed for the boundary actually changed. A
+   broad root validation loop is not part of this skill by default.
 
 ## Typical surfaces
 
-- `.agentic-workspace/planning/state.toml`
+- `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/planning/execplans/`
-- `AGENTS.md`
-- `Makefile`
-- package READMEs
+- `.agentic-workspace/planning/state.toml`
+- `.agentic-workspace/memory/`
+- package bootstrap/generated payload copies
