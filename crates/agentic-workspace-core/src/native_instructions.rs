@@ -150,12 +150,63 @@ pub fn resolve(
     )
 }
 
+/// The instruction owner retains its existing protection authority over newly
+/// admitted effects. Extensions cannot grant this authority to themselves.
+pub(crate) fn restrict_operations(view: &mut Value, contract: &Value) -> Result<(), CoreError> {
+    let scopes = view["capability_contract"]["restriction_authorities"][0]["affects"]
+        .as_array_mut()
+        .unwrap();
+    for effect in contract["owners"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|owner| owner["effects"].as_array().into_iter().flatten())
+    {
+        let scope = json!(format!("effect:{}", effect["id"].as_str().unwrap()));
+        if !scopes.contains(&scope) {
+            scopes.push(scope);
+        }
+    }
+    view["capability_contract"]["revision"] = json!("pending");
+    view["capability_contract"]["revision"] = json!(digest(&view["capability_contract"])?);
+    Ok(())
+}
+
 pub fn restrict_pending(
     view: &mut Value,
     pending: &[Value],
     route: &Value,
 ) -> Result<(), CoreError> {
     let mut additions = Vec::new();
+    for action in pending.iter().filter(|action| {
+        action["source_owner"]
+            .as_str()
+            .is_some_and(crate::native_independent::linked)
+    }) {
+        let writes = crate::native_independent_publication::write_scope(action)?;
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            if source["valid"] == true
+                && applicability(metadata, &[], route)?["route_applies"] == true
+                && (source["applicable"] == true
+                    || strings(&metadata["paths"]).is_empty()
+                    || strings(&metadata["paths"]).iter().any(|pattern| {
+                        writes
+                            .iter()
+                            .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                    }))
+                && strings(&metadata["protect"]).iter().any(|pattern| {
+                    writes
+                        .iter()
+                        .any(|path| instruction_applicability::patterns_overlap(pattern, path))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-independent-write",
+                    "Current protection forbids this independent owner's exact publication or custody write.",
+                    action["effects"].as_array().into_iter().flatten().filter_map(Value::as_str).map(|effect|format!("effect:{effect}")).collect()));
+            }
+        }
+    }
     for action in pending.iter().filter(|a| {
         matches!(
             a["operation_id"].as_str(),

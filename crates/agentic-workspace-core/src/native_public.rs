@@ -75,7 +75,10 @@ fn resolve_with_baseline(
     let baseline = baseline.or(retained_baseline.as_ref());
     if executing
         && input.invocation.as_ref().is_none_or(|i| {
-            i["operation_id"] != "delegation.dispatch"
+            !i["source_owner"]
+                .as_str()
+                .is_some_and(crate::native_independent::linked)
+                && i["operation_id"] != "delegation.dispatch"
                 && i["operation_id"] != crate::native_patch::OP
                 && i["operation_id"] != "configuration.write"
                 && i["operation_id"] != "configuration.recover-write"
@@ -147,6 +150,13 @@ fn resolve_with_baseline(
         "request":request_for("semantic-routes")
     });
     let configuration = native_config::view(target)?;
+    let independent = crate::native_independent::Runtime::discover(
+        target,
+        &work,
+        &input.changed,
+        &requests,
+        &configuration,
+    )?;
     let available = |owner: &str| native_config::module_enabled(&configuration, owner);
     for request in &requests {
         if matches!(
@@ -168,7 +178,7 @@ fn resolve_with_baseline(
             "invoked owner is disabled by current module enablement",
         ));
     }
-    let config_write_contract = crate::native_config_write::contract()?;
+    let mut config_write_contract = crate::native_config_write::contract()?;
     let mut startup_adapter =
         crate::native_startup::view(target, &work, &configuration, None, None)?;
     let mut system_intent = crate::native_intent::view(target, &work, &configuration, None, None)?;
@@ -304,6 +314,52 @@ fn resolve_with_baseline(
         decision_read_contract["revision"] = json!(digest(&decision_read_contract)?);
     }
     crate::native_startup::restrict_operations(&mut startup_adapter, &[&decision_read_contract])?;
+    crate::native_startup::restrict_operations(&mut startup_adapter, &[&independent.contract])?;
+    native_instructions::restrict_operations(&mut instructions, &independent.contract)?;
+    // A missing native-owner setting permits only its Configuration repair.
+    // Keep all other declared effects and completion claims restricted while
+    // that repair action is available; a read request never releases the task.
+    let mut configuration_gap_scopes =
+        vec![json!("effect:implementation"), json!("claim:complete")];
+    for fragment in [
+        &decision_read_contract,
+        &configuration["capability_contract"],
+        &system_intent["capability_contract"],
+        &startup_adapter["capability_contract"],
+        &planning_probe["capability_contract"],
+        &verification_probe["capability_contract"],
+        &instructions["capability_contract"],
+        &memory["capability_contract"],
+        &native_requirements::contract()?,
+        &crate::native_delegation::contract()?,
+        &independent.contract,
+    ] {
+        for owner in fragment["owners"].as_array().into_iter().flatten() {
+            for effect in owner["effects"].as_array().into_iter().flatten() {
+                let scope = json!(format!("effect:{}", effect["id"].as_str().unwrap()));
+                if scope != "effect:configuration-source"
+                    && !configuration_gap_scopes.contains(&scope)
+                {
+                    configuration_gap_scopes.push(scope);
+                }
+            }
+        }
+        for claim in fragment["claim_authorities"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let scope = json!(format!("claim:{}", claim["claim"].as_str().unwrap()));
+            if !configuration_gap_scopes.contains(&scope) {
+                configuration_gap_scopes.push(scope);
+            }
+        }
+    }
+    config_write_contract["restriction_authorities"][0]["affects"]
+        .as_array_mut()
+        .unwrap()
+        .extend(configuration_gap_scopes.clone());
+    config_write_contract["revision"] = json!(digest(&config_write_contract)?);
     let contract = combined_contract(&[
         &config_write_contract,
         &decision_read_contract,
@@ -316,7 +372,33 @@ fn resolve_with_baseline(
         &memory["capability_contract"],
         &native_requirements::contract()?,
         &crate::native_delegation::contract()?,
+        &independent.contract,
     ])?;
+    for request in &requests {
+        // Route selection has its own independently bound read-only contract and
+        // is already validated by its responsible owner above.
+        if request["owner"] != "semantic-routes" {
+            // Each responsible owner validates its exact request below. Check
+            // membership here without recompiling every schema for every input.
+            if !contract["owners"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|owner| {
+                    owner["owner"] == request["owner"]
+                        && owner["requests"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .any(|kind| kind["kind"] == request["request_kind"])
+                })
+            {
+                return Err(CoreError::new("undeclared request kind or owner"));
+            }
+        }
+    }
+    let (independent_contributions, independent_views) =
+        independent.resolve(target, &work, &contract, &requests)?;
     if let Some(request) = request_for("startup-adapter") {
         startup_adapter = crate::native_startup::view(
             target,
@@ -457,13 +539,34 @@ fn resolve_with_baseline(
     if let Some(request) = planning["selector_transfer"].get_mut("request") {
         request["capability_revision"] = contract["revision"].clone();
     }
-    let config_write = crate::native_config_write::view(
+    let mut config_write = crate::native_config_write::view(
         target,
         &work,
         &configuration,
         &contract,
         request_for("configuration"),
     )?;
+    if independent_views
+        .as_object()
+        .into_iter()
+        .flat_map(|views| views.values())
+        .any(|view| view["status"] == "configuration-required")
+    {
+        let repairing = config_write["contribution"]["actions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|action| {
+                action["operation_id"] == "configuration.write"
+                    && action["arguments"]["request"]["arguments"]["key"] == "modules.independent"
+            });
+        let affects = if repairing {
+            json!(configuration_gap_scopes)
+        } else {
+            json!(["task"])
+        };
+        config_write["contribution"]["blockers"] = json!([{"code":"independent-owner-configuration-required","message":"A relevant admitted native owner requires durable settings. Follow its exact Configuration request before affected work.","affects":affects}]);
+    }
     let mut contributions = vec![
         configuration["contribution"].clone(),
         config_write["contribution"].clone(),
@@ -894,6 +997,7 @@ fn resolve_with_baseline(
     requirements["handoff"] = handoff;
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
+    contributions.extend(independent_contributions);
     contributions.push(instructions["contribution"].clone());
     owner_input["contributions"] = json!(contributions);
     owner_input["capability_contract"] = contract.clone();
@@ -1004,6 +1108,26 @@ fn resolve_with_baseline(
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    public["configuration"]
+        .as_object_mut()
+        .unwrap()
+        .remove("independent_admissions");
+    if independent_views
+        .as_object()
+        .is_some_and(|views| !views.is_empty())
+    {
+        public["independent_owners"] = independent_views;
+        let request = public["configuration_write"]["choice_requests"][0].clone();
+        for view in public["independent_owners"]
+            .as_object_mut()
+            .unwrap()
+            .values_mut()
+        {
+            if view["status"] == "configuration-required" {
+                view["configuration_request"] = request.clone();
+            }
+        }
+    }
     // Requests bind the composed contract above. Owner-local fragments remain
     // internal composition inputs, not additional public authorities.
     for owner in public.as_object_mut().unwrap().values_mut() {
@@ -1043,72 +1167,6 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
         let owner = request["owner"].as_str().unwrap();
-        if owner == "verification"
-            && !matches!(
-                request["request_kind"].as_str(),
-                Some(
-                    "verification/claim/v1"
-                        | "verification/execute-selected/v1"
-                        | "verification/record-receipt/v1"
-                        | "verification/strategy/v1"
-                        | "verification/requirements/v1"
-                        | "verification/authenticate-host-review/v1"
-                        | "verification/assurance-applicability/v1"
-                        | "verification/reconcile-sources/v1"
-                )
-            )
-        {
-            return Err(CoreError::new(
-                "requested Verification request kind is not available",
-            ));
-        }
-        if !matches!(
-            owner,
-            "planning"
-                | "configuration"
-                | "semantic-routes"
-                | "verification"
-                | "memory"
-                | "assignment"
-                | "system-intent"
-                | "startup-adapter"
-                | "decision-continuity"
-                | "delegation"
-        ) {
-            return Err(CoreError::new("requested native owner is not available"));
-        }
-        if owner == "delegation"
-            && !matches!(
-                request["request_kind"].as_str(),
-                Some("delegation/dispatch/v1" | "delegation/read-result/v1")
-            )
-        {
-            return Err(CoreError::new(
-                "requested Delegation request kind is not available",
-            ));
-        }
-        if owner == "assignment"
-            && !matches!(
-                request["request_kind"].as_str(),
-                Some(
-                    "assignment/judge-task-requirements/v1"
-                        | "assignment/select-execution-configuration/v1"
-                        | "assignment/assess-best-fit/v1"
-                        | "assignment/judge-readonly-inputs/v1"
-                        | "assignment/export-readonly/v1"
-                        | "assignment/observe-readonly-return/v1"
-                        | "assignment/judge-patch-inputs/v1"
-                        | "assignment/export-patch/v1"
-                        | "assignment/observe-patch-return/v1"
-                        | "assignment/integrate-patch/v1"
-                        | "assignment/judge-return/v1"
-                )
-            )
-        {
-            return Err(CoreError::new(
-                "requested Assignment request kind is not available",
-            ));
-        }
         let key = if matches!(owner, "verification" | "planning" | "assignment") {
             format!("{owner}:{}", request["request_kind"].as_str().unwrap())
         } else {
@@ -1149,7 +1207,11 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         ));
     }
     let invocation = input.invocation.as_ref().unwrap();
-    if invocation["operation_id"] != "planning.reconcile"
+    let independent = invocation["source_owner"]
+        .as_str()
+        .is_some_and(crate::native_independent::linked);
+    if !independent
+        && invocation["operation_id"] != "planning.reconcile"
         && invocation["operation_id"] != "proof.report"
         && invocation["operation_id"] != "planning.create"
         && invocation["operation_id"] != "planning.update"
@@ -1173,6 +1235,28 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
         return Ok(current);
+    }
+    if independent {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        let executed = crate::native_independent_publication::execute(
+            &target,
+            &current["decision_packet"],
+            invocation,
+            || {
+                let fresh = resolve(&input, &target, true)?;
+                crate::admit_invocation_value(
+                    json!({"decision":fresh["decision_packet"],"invocation":invocation}),
+                )?;
+                Ok(())
+            },
+        )?;
+        let mut result = crate::operation_result_value(
+            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":null}),
+        )?;
+        result["custody"] = executed["custody"].clone();
+        return Ok(result);
     }
     if invocation["operation_id"] == crate::native_source_reconciliation::OP {
         crate::admit_invocation_value(

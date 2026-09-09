@@ -11,13 +11,15 @@ const SHARED: &str = ".agentic-workspace/config.toml";
 const LOCAL: &str = ".agentic-workspace/config.local.toml";
 const EDIT: &str = "configuration/edit-source/v1";
 const RECOVER: &str = "configuration/recover-write/v1";
+const READ: &str = "configuration/read-choice/v1";
 const EFFECT: &str = "configuration-source";
-// These are durable choices already consumed by current owners. Task answers,
-// learned target evidence, trust pins and operational registries are excluded.
+// Durable choices consumed by current owners, including explicit native module
+// admission. Task answers, learned evidence and operational registries stay out.
 const CHOICES: &[(&str, &str)] = &[
     (SHARED, "workspace.cli_invoke"),
     (LOCAL, "workspace.cli_invoke"),
     (SHARED, "modules.enabled"),
+    (SHARED, "modules.independent"),
     (SHARED, "workspace.agent_instructions_file"),
     (SHARED, "system_intent.sources"),
     (SHARED, "system_intent.preferred_source"),
@@ -148,12 +150,16 @@ fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec
                     "configuration insertion requires an ordinary {section} table"
                 ))
             })?;
-        table.insert(field, toml_edit::Item::Value(replacement));
+        let prior = table.insert(field, toml_edit::Item::Value(replacement));
         let rendered = edited.to_string();
         // Admission is narrower than TOML equivalence: removing only the exact
         // insertion must recover all prior bytes, including comments and policy.
         if had_section {
-            edited[section].as_table_mut().unwrap().remove(field);
+            if let Some(prior) = prior {
+                edited[section].as_table_mut().unwrap().insert(field, prior);
+            } else {
+                edited[section].as_table_mut().unwrap().remove(field);
+            }
         } else {
             edited.remove(section);
         }
@@ -202,7 +208,9 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v3","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
-    let owner = json!({"owner":"configuration","revision":digest(&json!([args,recovery,"configuration-external-source-write-v3"]))?,"domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
+    let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"const":SHARED},"key":{"const":"modules.independent"}}}}));
+    owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
@@ -264,10 +272,17 @@ pub(crate) fn view(
     let binding = json!({"sources":current,"effective_policy_revision":config["revision"],"capability_revision":contract["revision"]});
     result["contribution"]["revision"] = json!(digest(&binding)?);
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
+    result["choice_requests"] = json!([template(
+        READ,
+        json!({"source":SHARED,"key":"modules.independent"})
+    )]);
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for source in [SHARED, LOCAL] {
         if current[source].is_null() {
             for (_, key) in CHOICES.iter().filter(|(s, _)| *s == source) {
+                if *key == "modules.independent" {
+                    continue;
+                }
                 let schema = choice_schema(source, key)?;
                 let value = if !schema["default"].is_null() {
                     schema["default"].clone()
@@ -300,10 +315,9 @@ pub(crate) fn view(
                 EDIT,
                 json!({"source":source,"key":"workspace.cli_invoke","value":value}),
             ));
-            for (choice_source, key) in CHOICES
-                .iter()
-                .filter(|(s, k)| *s == source && *k != "workspace.cli_invoke")
-            {
+            for (choice_source, key) in CHOICES.iter().filter(|(s, k)| {
+                *s == source && *k != "workspace.cli_invoke" && *k != "modules.independent"
+            }) {
                 let (section, field) = key.split_once('.').unwrap();
                 let schema = choice_schema(choice_source, key)?;
                 let value = if !v[section][field].is_null() {
@@ -362,6 +376,17 @@ pub(crate) fn view(
         ));
     }
     let args = &request["arguments"];
+    if request["request_kind"] == READ {
+        let current =
+            crate::native_config::load(&root, SHARED, source_schema(SHARED)?).map_err(err)?;
+        let value = current
+            .map(|(source, _)| source["modules"]["independent"].clone())
+            .filter(Value::is_object)
+            .unwrap_or_else(|| json!({}));
+        result["status"] = json!("choice-delivered");
+        result["selected_choice"] = json!({"source":SHARED,"key":"modules.independent","value":value,"schema":choice_schema(SHARED,"modules.independent")?,"edit_request":template(EDIT,json!({"source":SHARED,"key":"modules.independent","value":value}))});
+        return Ok(result);
+    }
     let source = args["source"]
         .as_str()
         .ok_or_else(|| err("configuration source missing"))?;

@@ -17,6 +17,92 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "independent": {
+          "description": "Durable admission of independently linked native owners. Installation alone grants no effects, claims, reads or restrictions. Operational state remains with the owner.",
+          "type": "object",
+          "maxProperties": 256,
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "revision",
+              "contract_revision",
+              "effects",
+              "claims",
+              "restrictions",
+              "reads",
+              "scope",
+              "settings"
+            ],
+            "properties": {
+              "revision": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "contract_revision": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "effects": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 16,
+                "uniqueItems": true
+              },
+              "claims": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 16,
+                "uniqueItems": true
+              },
+              "restrictions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "reads": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "scope": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                "maxItems": 32,
+                "uniqueItems": true
+              },
+              "settings": {
+                "type": "object"
+              }
+            }
+          }
+        },
         "enabled": {
           "type": "array",
           "items": {

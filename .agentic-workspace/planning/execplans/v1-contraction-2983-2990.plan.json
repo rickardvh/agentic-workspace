@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Current execution frontier is #2983; architecture is #3020; #3138 is only promotion/closure ledger. reconstruct/first-stable remains integrated through #3180 at 127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Open stacked #3181 retires superseded Assignment exports and #3182 admits exact source reconciliation separately from read; both CI suites pass. #3183 adds stronger repository capture/recovery and explicit no-retention, preserving fallback ownership and exact bounded human-answer authority without trusted host, client actor labels or publication-as-authority. Its 45 focused cases and distinct review pass; hosted workspace CI exceeded the former20-minute budget after focused tests passed, so3540a70bd increases that job to35minutes and current-head CI is running. The next #2970/#2947 slice retains assigned, returned and integration-pending handoff reentry through existing Planning update and relationship observations. Fresh entry exposes exact original task/scope/requests for responsible-owner revalidation, with no execution/result/integration/proof/completion authority renewed. Observation-only updates keep subject meaning; exact old Planning continuation survives only inspected committed payload and matching selected semantic owner. Material changes, changed answers, missing custody, foreign payload and different owners are rejected. Unknown/other-assignment slots survive; same-assignment obsolete slots clear and returned cannot regress to assigned. Final canonical/escaped source bounds precede admission; exact operation replay retains original custody.33 handoff/delegation cases and258 other public/Planning/source cases pass; an editing-time Windows rebuild collision affected8 setup cases which passed in the stable33-case rerun. Rust workspace/Clippy/precommit pass; distinct review and final replay recheck found no remaining scoped blockers. Existing real Planning creation/update/migration/recovery and earlier repository archive/read/April retirement remain foundations, not parent completion. Independent Rust owner ingress #2606/#2986, broader transport/cancellation/visibility and cross-owner continuity, actual delegated policy authority #3040 and cumulative #2909/#2616/#2990 remain open. No new Planning model or execution ledger was added. #2998 harness credibility and #2824 PASS/HOLD/STOP gate experiments. Human resumed reconstruction after the earlier stop-after3180 request was fulfilled. Preserve six preexisting ordinary Assignment/proof artifacts.",
+    "frontier": "Execution frontier remains #2983; architecture #3020; #3138 promotion/closure ledger. reconstruct/first-stable remains integrated through #3180 at127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Stacked #3181 retires superseded Assignment exports, #3182 admits exact source reconciliation, and #3183 supplies repository capture/recovery and no-retention using bounded human-answer authority; all three have green CI and scoped independent review. #3184 preserves existing Planning handoff continuation; scoped review and local tests pass, but hosted workspace exceeded35minutes, so94e877255 isolates handoff checks with per-test diagnostics; current-head CI remains pending. Current independent native owner slice for #2606/#2986 links separately compiled Rust semantics into the same public runtime. Installation grants no authority; exact repository admission supplies revision, descriptor, owned effects, exclusive claims, restrictions, bounded source reads and settings. Relevant disappearance, incompatible admission, foreign claims/state and stale requests fail closed. Current Configuration owns settings repair and cannot release other effects. Immutable owned publication preserves exact attempt custody, handles prepared/published recovery and refuses lost committed sources; mutable update and carrier-less uncertainty remain explicit owner boundaries. Independent native/Python/TypeScript/JSON fixtures exercise actual discovery, request, action, publication and return; foreign Planning material enters only via Planning admission. Broad run364passed with one packaging setup failure from local core.bare=true, repaired and rerun;31 independent cases plus packed-case rerun pass;169 public/mixed Configuration regression cases pass; Rust103+3+3+4 tests, Clippy, generated static proof and precommit pass. Distinct reviewer found no remaining scoped defect after path-alias and Configuration-blocker fixes. No signed human host, client actor authority or publication-as-decision authority introduced. Broader #2606/#2986 acceptance, #2970 transport/cancellation/visibility and cross-owner continuity, #3040 agent policy authority/supersession/currentness, actual issue creation #2929, #3041 lifetime dogfood and cumulative #2909/#2616/#2990 remain open. #2998 harness credibility and #2824 PASS/HOLD/STOP govern experiments. Human resumed after prior stop-after3180 was fulfilled. Preserve six preexisting ordinary Assignment/proof artifacts.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Publish the coherent Planning handoff continuity PR stacked on #3183, finish current stack CI, then continue independent native owner ingress under #2606/#2986 and the remaining #2983 frontier. Preserve one Rust authority, exact capability admission, owner effect/state/claim boundaries and bounded discovery; no master promotion is authorized.",
+  "next_action": "Publish independent native owner ingress as one coherent PR stacked on #3184, finish current stack CI, then continue the remaining #2983 frontier including exact delegated decision authority and durable decision continuity under #3040. No master promotion is authorized.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -137,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 38,
+  "revision": 39,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -189,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f2c8138b8593b2cb1d0f4e082499f16e041b42813c037c580e61065c06a297b8.attempt.json",
-        "revision": "sha256:ff2ddc4f18f09cc709f1280a022ec48310f4c5f0311c9967cf7fb9acb3eee329",
+        "path": ".agentic-workspace/local/effects/a1fd9cbcf10e02fc2ce2cae3018a211f748daa3c46324f78aa0c4ae95d6ba2d7.attempt.json",
+        "revision": "sha256:b3d335988c369f5c2ad1a0e27f22a136a0cdc549eaf30bb6c86e441443c42e37",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/f2c8138b8593b2cb1d0f4e082499f16e041b42813c037c580e61065c06a297b8.result.json",
-        "revision": "sha256:f043b19cc9db4d334ad92fdc6fb95fc50a65714554342ed45574374124b5fc25",
+        "path": ".agentic-workspace/local/effects/a1fd9cbcf10e02fc2ce2cae3018a211f748daa3c46324f78aa0c4ae95d6ba2d7.result.json",
+        "revision": "sha256:286fa2a10c543f3ddc8777142da7e37b7e77975eed8c6c236ae75ebc74a53f61",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:cab9ebe56f2e9cd76976fc508ab89511606b8d44ea90f93b891c8a3869d1a47b",
+    "invocation_revision": "sha256:12ba179b896fa1f783696519f112e27948883007d9251228b1a4c21ec18558be",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -208,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:a1d3f04afa488ad4a19a996530fb27937ba7cf03ecce8d2a39da3a552cf8955f",
+        "document_revision": "sha256:4c0f1a030ae4f2026529a56bae2e33271c13f88e5355a5311ec42ff8da4c8abc",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
