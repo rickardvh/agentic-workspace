@@ -52,12 +52,23 @@ Do not open broad workspace state merely to demonstrate use of AW.
 
 ## Human review boundary
 
-Request human review for a change of product direction or authority, a new
-first-line surface, or a scope/subjective judgment not covered by the existing
-issue or human decision. Existing explicit authorization remains authoritative;
-do not ask again for the same decision. If proof is insufficient, withhold the
-claim and continue available implementation or evidence work. If no safe next
-step exists, name the concrete blocker and the exact instruction requiring input.
+Request human review when you autonomously introduce a change of product direction,
+authority, first-line surface or scope beyond the approved issue plans or human
+instructions. Implementing an already approved plan, including its planned authority
+boundaries, does not require another approval merely because it touches authority.
+Routine implementation choices and bounded corrections within that plan should
+proceed autonomously.
+
+Explicit approval of existing issue plans covers those plans and their stated
+constraints. It does not extend itself to later scope or authority changes you
+introduce by editing an issue. Do not ask again for an approved capability or plan.
+Still obtain any specific human judgment that the approved plan itself reserves
+for the human; capability approval does not supply that bounded answer, current
+source admission, independent review or completion proof.
+
+If proof is insufficient, withhold the claim and continue available implementation
+or evidence work. If no safe next step exists, name the concrete blocker and the
+exact instruction requiring input.
 
 ## Evidence and durable residue
 
