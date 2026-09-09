@@ -687,7 +687,9 @@ def invoke_operation(
     state = detect_workspace(target)
     if state["status"] != "enabled":
         raise AWClientError(state["status"], "workspace is not available", state)
-    entry = next(item for item in external_consumer_profile()["operations"] if item["id"] == operation_id)
+    entry = next((item for item in external_consumer_profile()["operations"] if item["id"] == operation_id), None)
+    if entry is None:
+        raise AWClientError("incompatible", "operation is not available", {"operation_id": operation_id})
     for schema_name in entry["schemas"]["input"]:
         _validate_schema(entry, schema_name, dict(values), phase="input")
     resource_ref = entry["operation_resources"]["python"]

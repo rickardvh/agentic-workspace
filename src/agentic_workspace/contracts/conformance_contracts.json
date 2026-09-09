@@ -782,12 +782,6 @@
     },
     {
       "adapter_kind": "process",
-      "id": "assignment.close.process",
-      "operation_id": "assignment.close",
-      "path": "conformance/assignment.close.process.json"
-    },
-    {
-      "adapter_kind": "process",
       "id": "assignment.dispatch.process",
       "operation_id": "assignment.dispatch",
       "path": "conformance/assignment.dispatch.process.json"
@@ -821,12 +815,6 @@
       "id": "assignment.override.process",
       "operation_id": "assignment.override",
       "path": "conformance/assignment.override.process.json"
-    },
-    {
-      "adapter_kind": "process",
-      "id": "assignment.reassign.process",
-      "operation_id": "assignment.reassign",
-      "path": "conformance/assignment.reassign.process.json"
     },
     {
       "adapter_kind": "process",

@@ -41,12 +41,64 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     assert module.conformance_receipt_freshness_errors(profile) == []
 
     stale_receipts = copy.deepcopy(json.loads(module.CONFORMANCE_RECEIPT_OUTPUTS[0].read_text(encoding="utf-8")))
+    stale_receipts["receipts"][0]["status"] = "passed"
     stale_receipts["receipts"][0]["profile_fingerprint"] = "sha256:stale"
     errors = module.conformance_receipt_freshness_errors(
         profile,
         receipt_payloads={"fixture-receipts.json": stale_receipts},
     )
     assert errors == [f"fixture-receipts.json: {stale_receipts['receipts'][0]['operation_id']} receipt has a stale profile fingerprint"]
+
+
+@pytest.mark.parametrize("status", ["stale", "revoked", "superseded"])
+def test_explicit_receipt_retirement_preserves_history_without_readiness(status: str) -> None:
+    from agentic_workspace import AWClientError, require_operations
+
+    module = _module()
+    profile = json.loads(module.render())
+    store = json.loads(module.CONFORMANCE_RECEIPT_OUTPUTS[0].read_text())
+    original = copy.deepcopy(store["receipts"][0])
+    store["receipts"][0]["status"] = status
+    assert module.conformance_receipt_freshness_errors(profile, receipt_payloads={"retired": store}) == []
+    assert store["receipts"][0]["profile_fingerprint"] == original["profile_fingerprint"]
+    with pytest.raises(AWClientError, match="incompatible"):
+        require_operations([original["operation_id"]], allow_runtime_backed=True)
+    store["receipts"][0].pop("retirement_reason")
+    assert module.conformance_receipt_freshness_errors(profile, receipt_payloads={"retired": store}) == [
+        "retired: retired receipt must explain its disposition"
+    ]
+
+
+@pytest.mark.parametrize("operation", ["assignment.close", "assignment.reassign"])
+def test_retired_assignment_exports_cannot_launch_a_runtime(tmp_path: Path, operation: str) -> None:
+    from agentic_workspace import AWClientError, generated_operations, invoke_operation
+
+    source = tmp_path / ".agentic-workspace/config.toml"
+    source.parent.mkdir()
+    source.write_text("[workspace]\nenabled = true\n")
+    assert not hasattr(generated_operations, operation.replace(".", "_"))
+    assert not (ROOT / "generated/workspace/python/commands" / f"{operation.replace('.', '_')}.py").exists()
+    for directory in (
+        "src/agentic_workspace/contracts/operations",
+        "generated/workspace/python/operations",
+        "generated/workspace/typescript/resources/operations",
+    ):
+        assert not (ROOT / directory / f"{operation}.json").exists()
+    with pytest.raises(AWClientError, match="incompatible"):
+        invoke_operation(operation, {}, target=tmp_path, invocation=["must-not-launch"], allow_runtime_backed=True)
+    script = """
+import {invokeOperation} from './generated/workspace/typescript/src/client.mjs';
+try {
+  invokeOperation(process.argv[1], {}, {target: process.argv[2], invocation: ['must-not-launch'], allowRuntimeBacked: true});
+  process.exit(7);
+} catch (error) { console.log(error.kind); }
+"""
+    result = subprocess.run(
+        ["node", "--input-type=module", "-e", script, operation, str(tmp_path)], cwd=ROOT, text=True, capture_output=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "incompatible"
+    assert [p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file()] == [".agentic-workspace/config.toml"]
 
 
 def test_operation_resources_share_the_command_package_rendering_authority() -> None:

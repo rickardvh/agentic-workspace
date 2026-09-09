@@ -236,6 +236,7 @@ function validateSchema(schema, value, path = '$') {
 }
 export function invokeOperation(operationId, values, { target, invocation, allowRuntimeBacked = false } = {}) {
   const entry = externalConsumerProfile().operations.find((item) => item.id === operationId);
+  if (!entry) throw new AWClientError('incompatible', 'operation is not available', { operation_id: operationId });
   if (entry.operation_resources.typescript.package !== '@agentic-workspace/workspace-cli') {
     throw new AWClientError('unsupported', 'operation belongs to a separate generated package', { operation: operationId });
   }

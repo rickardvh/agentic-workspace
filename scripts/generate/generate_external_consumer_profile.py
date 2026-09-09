@@ -66,13 +66,11 @@ PYTHON_TYPED_OPERATIONS = REPO_ROOT / "src/agentic_workspace/generated_operation
 ASSIGNMENT_OPERATION_IDS = (
     "assignment.admit",
     "assignment.cleanup",
-    "assignment.close",
     "assignment.dispatch",
     "assignment.export",
     "assignment.import",
     "assignment.integrate",
     "assignment.override",
-    "assignment.reassign",
     "assignment.reject",
     "assignment.repair",
 )
@@ -658,7 +656,7 @@ def conformance_receipt_freshness_errors(
     *,
     receipt_payloads: dict[str, object] | None = None,
 ) -> list[str]:
-    """Reject receipt mirrors that no longer prove the generated profile."""
+    """Reject undeclared drift; explicitly retired evidence grants no readiness."""
 
     current_profile_fingerprint = str((profile.get("compatibility") or {}).get("fingerprint") or "")
     operations = {
@@ -691,6 +689,12 @@ def conformance_receipt_freshness_errors(
         for receipt in receipts:
             if not isinstance(receipt, dict):
                 errors.append(f"{label}: conformance receipt entry is malformed")
+                continue
+            # Consumers already exclude these statuses from readiness. Preserve
+            # historical evidence without rewriting its executed fingerprints.
+            if receipt.get("status") in {"revoked", "superseded", "stale"}:
+                if not str(receipt.get("retirement_reason") or "").strip():
+                    errors.append(f"{label}: retired receipt must explain its disposition")
                 continue
             operation_id = str(receipt.get("operation_id") or "")
             entry = operations.get(operation_id)

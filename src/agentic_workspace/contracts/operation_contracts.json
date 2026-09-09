@@ -834,12 +834,6 @@
     },
     {
       "command": "assignment",
-      "id": "assignment.close",
-      "migration_status": "runtime-consumed",
-      "path": "operations/assignment.close.json"
-    },
-    {
-      "command": "assignment",
       "id": "assignment.dispatch",
       "migration_status": "runtime-consumed",
       "path": "operations/assignment.dispatch.json"
@@ -867,12 +861,6 @@
       "id": "assignment.override",
       "migration_status": "runtime-consumed",
       "path": "operations/assignment.override.json"
-    },
-    {
-      "command": "assignment",
-      "id": "assignment.reassign",
-      "migration_status": "runtime-consumed",
-      "path": "operations/assignment.reassign.json"
     },
     {
       "command": "assignment",

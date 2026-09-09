@@ -7020,13 +7020,11 @@
           "admit",
           "cleanup",
           "status",
-          "close",
           "dispatch",
           "export",
           "import",
           "integrate",
           "override",
-          "reassign",
           "reject",
           "repair"
         ]
@@ -7035,13 +7033,11 @@
         "assignment.admit.process",
         "assignment.cleanup.process",
         "assignment.status.process",
-        "assignment.close.process",
         "assignment.dispatch.process",
         "assignment.export.process",
         "assignment.import.process",
         "assignment.integrate.process",
         "assignment.override.process",
-        "assignment.reassign.process",
         "assignment.reject.process",
         "assignment.repair.process"
       ],
