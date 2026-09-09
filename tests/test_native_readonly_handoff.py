@@ -95,6 +95,18 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         selection = call()["planning"]["created_owner"]["selection_request"]
         call(invocation=call(selection)["decision_packet"]["primary_action"])
         original_plan = json.loads(plan_path.read_bytes())
+        if surface == "json":
+            oversized = call()["planning"]["update_requests"][0]
+            oversized["arguments"]["material"] = material()
+            oversized["arguments"]["material"].update(lifecycle=original_plan["lifecycle"], phase=original_plan["phase"])
+            oversized["arguments"]["material"]["next_action"] = "\x01" * 60000
+            oversized_action = call(oversized)["decision_packet"]["primary_action"]
+            saved = plan_path.read_bytes()
+            effects = set((tmp_path / ".agentic-workspace/local/effects").iterdir())
+            with pytest.raises(AssertionError, match="bounded source size"):
+                call(invocation=oversized_action)
+            assert plan_path.read_bytes() == saved
+            assert set((tmp_path / ".agentic-workspace/local/effects").iterdir()) == effects
         plan_ref = plan_path.relative_to(tmp_path).as_posix()
         (tmp_path / "verify_frontier.py").write_text(
             "import json\nfrom pathlib import Path\np=json.loads(Path(" + repr(plan_ref) + ").read_bytes())\n"
@@ -113,6 +125,8 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
 
     task = call()["task_requirements"]["requests"][0]
     task["arguments"]["required_result_classes"] = ["read-only"]
+    if fault is None:
+        task = [call()["planning"]["requests"][0], task]
     inputs = call(task)["task_requirements"]["handoff_inputs"]["requests"][0]
     inputs[-1]["arguments"].update(
         input_refs=["dependency.md"], complete=False, reason="The one source is sufficient for this bounded task."
@@ -132,6 +146,27 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     assert local["task_requirements"]["delegation"]["requests"] == []
     assert not (tmp_path / ".agentic-workspace/local/delegation-runs").exists()
     export = call(assessment)["task_requirements"]["handoff"]["requests"][0]
+    if fault is None:
+        export.append(call()["planning"]["requests"][0])
+        before_retention = call(export)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"]
+        retention = call(export)["planning"]["handoff_retention_requests"][0]
+        forged_retention = copy.deepcopy(retention)
+        forged_retention[-1]["id"] = "client-chosen-retention"
+        with pytest.raises(AssertionError, match="exact request"):
+            call(forged_retention)
+        retain_action = call(retention)["decision_packet"]["primary_action"]
+        assert retain_action["operation_id"] == "planning.update"
+        call(invocation=retain_action)
+        assert call(invocation=retain_action)["status"] == "applied"
+        fresh = call()
+        if fresh["planning"]["status"] != "current":
+            call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+        fresh = call()
+        held = fresh["planning"]["handoff_continuation"]["retained"]
+        assert held["status"] == "assigned"
+        assert held["reentry"]["task"] == context["task"]
+        export = held["reentry"]["request"]
+        assert call(export)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] == before_retention
     dispatch = call(export)["task_requirements"]["delegation"]["requests"][0]
     action = call(dispatch)["decision_packet"]["primary_action"]
     assert action["operation_id"] == "delegation.dispatch"
@@ -193,6 +228,72 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     assert execution["returned"] == result["value"]["returned"]
     assert execution["context_cost"] == cost
     assert not any(execution["claim_boundary"].values())
+    retention = observed["planning"]["handoff_retention_requests"][0]
+    retain_action = call(retention)["decision_packet"]["primary_action"]
+    assert retain_action["operation_id"] == "planning.update"
+    call(invocation=retain_action)
+    assert call(invocation=retain_action)["status"] == "applied"
+    fresh = call()
+    if fresh["planning"]["status"] != "current":
+        call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+    held = call()["planning"]["handoff_continuation"]["retained"]
+    assert held["status"] == "returned"
+    assert call(export)["planning"]["handoff_retention_requests"] == []
+    assert "assignment" not in json.loads(plan_path.read_bytes())["relationships"]
+    if surface == "json":
+        # Only the exact prior continuation survives an observation-only update.
+        changed_envelope = copy.deepcopy(held["reentry"]["request"])
+        next(r for r in changed_envelope if r["request_kind"] == "planning/continuation/v1")["id"] = "different-answer"
+        with pytest.raises(AssertionError, match="changed|stale"):
+            call(changed_envelope)
+        original_bytes = plan_path.read_bytes()
+        original_body = json.loads(original_bytes)
+        commit = tmp_path / original_body["update_provenance"]["custody"]["committed"]["path"]
+        committed_bytes = commit.read_bytes()
+        commit.unlink()
+        with pytest.raises(AssertionError, match="changed|stale|pending|uncertain"):
+            call(held["reentry"]["request"])
+        commit.write_bytes(committed_bytes)
+        foreign = copy.deepcopy(original_body)
+        foreign["phase"] = "review"
+        plan_path.write_text(json.dumps(foreign))
+        with pytest.raises(AssertionError, match="changed|stale"):
+            call(held["reentry"]["request"])
+        plan_path.write_bytes(original_bytes)
+        material = copy.deepcopy(retain_action["arguments"]["request"]["arguments"]["material"])
+        material["relationships"] = original_body["relationships"]
+        update = call()["planning"]["update_requests"][0]
+        update["arguments"]["material"] = copy.deepcopy(material)
+        update["arguments"]["material"]["next_action"] = "A materially different continuation."
+        call(invocation=call(update)["decision_packet"]["primary_action"])
+        with pytest.raises(AssertionError, match="changed|stale"):
+            call(held["reentry"]["request"])
+        update = call()["planning"]["update_requests"][0]
+        update["arguments"]["material"] = material
+        call(invocation=call(update)["decision_packet"]["primary_action"])
+        fresh = call()
+        call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
+        from tests.test_native_planning_create import material as new_material
+
+        def other_call(request=None, **updates):
+            return call(request, task="A different independent Planning task", **updates)
+
+        unrelated_request = other_call()["planning"]["requests"][0]
+        unrelated_request["arguments"]["answer"] = "unrelated-direct"
+        creation = other_call(unrelated_request)["planning"]["creation_requests"][0]
+        creation["arguments"] = {"material": new_material()}
+        creation["arguments"]["material"]["title"] = "A different selected Planning owner"
+        other_call(invocation=other_call([unrelated_request, creation])["decision_packet"]["primary_action"])
+        selection = other_call()["planning"]["created_owner"]["selection_request"]
+        other_call(invocation=other_call(selection)["decision_packet"]["primary_action"])
+        with pytest.raises(AssertionError, match="changed|stale"):
+            call(held["reentry"]["request"])
+        selection = call()["planning"]["requests"][0]
+        selection["arguments"]["owner_ref"] = plan_ref
+        selection = call(selection)["planning"]["requests"][0]
+        call(invocation=call(selection)["decision_packet"]["primary_action"])
+    observed = call(held["reentry"]["request"])
+    assert observed["task_requirements"]["assignment"]["result_admission"]["status"] == "judgment-required"
     judgment = observed["task_requirements"]["assignment"]["result_admission"]["requests"][0]
     judgment[-1]["arguments"] = {"answer": "use-result", "reason": "The returned observation exactly matches the supplied source."}
     admitted = call(judgment)
@@ -234,6 +335,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     fresh = call()
     call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
     assert call()["planning"]["current_owner"]["current"] is True
+    assert call()["planning"]["handoff_continuation"] is None
     proof_context = {**context, "changed": [plan_ref, "dependency.md", "verify_frontier.py"]}
     proof_start = consume(surface, shared_core_binary, native_cli, proof_context, host_path=os.environ["PATH"])
     continuation = proof_start["planning"]["requests"][0]
@@ -294,6 +396,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         call(judgment)
     supersede = call()["planning"]["update_requests"][0]
     supersede["arguments"]["material"] = copy.deepcopy(adopt_action["arguments"]["request"]["arguments"]["material"])
+    supersede["arguments"]["material"]["relationships"] = adopted_plan["relationships"]
     supersede["arguments"]["material"]["next_action"] = "The owner now continues beyond the consumed result."
     call(invocation=call(supersede)["decision_packet"]["primary_action"])
     recovery = call()["planning"]["requests"][0]

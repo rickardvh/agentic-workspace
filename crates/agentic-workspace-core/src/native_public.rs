@@ -87,7 +87,8 @@ fn resolve_with_baseline(
                 && i["operation_id"] != "decision-continuity.recover-decision"
                 && i["operation_id"] != crate::native_source_reconciliation::OP
                 && !(i["operation_id"] == "planning.update"
-                    && i["arguments"]["consumed_return"].is_object())
+                    && (i["arguments"]["consumed_return"].is_object()
+                        || i["arguments"]["retained_handoff"].is_object()))
         })
         && requests.iter().any(|request| {
             !(request["owner"] == "startup-adapter"
@@ -545,6 +546,7 @@ fn resolve_with_baseline(
     planning["update_requests"] = update["requests"].clone();
     planning["update_retained"] = update["retained"].clone();
     planning["consumed_result"] = update["consumed_result"].clone();
+    planning["handoff_continuation"] = update["handoff_continuation"].clone();
     planning["pending_update"] = update["pending"].clone();
     planning["update_recovery_requests"] = update["recovery_requests"].clone();
     if update["pending"].is_object() {
@@ -559,7 +561,8 @@ fn resolve_with_baseline(
         && !input.invocation.as_ref().is_some_and(|i| {
             executing
                 && i["operation_id"] == "planning.update"
-                && i["arguments"]["consumed_return"].is_object()
+                && (i["arguments"]["consumed_return"].is_object()
+                    || i["arguments"]["retained_handoff"].is_object())
         })
     {
         let owner = contributions
@@ -850,16 +853,39 @@ fn resolve_with_baseline(
         target, &work, &contract, &planning, &admission, &requests,
     )?;
     planning["adoption_requests"] = adopted["requests"].clone();
-    if adopted["action"].is_object() {
+    let retained_handoff = if executing
+        && input.invocation.as_ref().is_some_and(|i| {
+            i["arguments"]["retained_handoff"].is_object() && update["retained"]["invocation"] == *i
+        }) {
+        let mut action = update["action"].clone();
+        action["source_requests"] = json!(requests);
+        json!({"requests":[],"action":action})
+    } else {
+        crate::native_planning_update::retain_handoff(
+            target,
+            &work,
+            &contract,
+            &planning,
+            &json!({"task":input.task,"changed":input.changed,"handoff":handoff,"delegation":delegation,"admission":admission,"planning_subject":planning_detail["reconciliation"]["subject"]}),
+            &requests,
+        )?
+    };
+    planning["handoff_retention_requests"] = retained_handoff["requests"].clone();
+    let planning_action = if adopted["action"].is_object() {
+        &adopted["action"]
+    } else {
+        &retained_handoff["action"]
+    };
+    if planning_action.is_object() {
         let owner = contributions
             .iter_mut()
             .find(|c| c["owner"] == "planning")
             .ok_or_else(|| CoreError::new("Planning owner unavailable for result adoption"))?;
-        owner["actions"] = json!([adopted["action"]]);
+        owner["actions"] = json!([planning_action]);
         owner["decisions"] = json!([]);
         owner["blockers"] = json!([]);
         owner["settled"] = json!(false);
-        owner["revision"] = json!(digest(&json!([owner["revision"], adopted["action"]]))?);
+        owner["revision"] = json!(digest(&json!([owner["revision"], planning_action]))?);
     }
     requirements["assignment"]["result_admission"] = admission;
     contributions.push(delegation["contribution"].clone());
