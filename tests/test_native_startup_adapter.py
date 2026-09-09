@@ -107,6 +107,11 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     assert not any(r["field"] == "workspace.agent_instructions_file" for r in result["configuration"]["residuals"])
     assert {"effect:implementation", "claim:complete"} <= set(startup_blockers(result)[0]["affects"])
     request = owner["requests"][0]
+    for projection in ("compact", "carried"):
+        offered = consume(surface, shared_core_binary, native_cli, {**context, "projection": projection})
+        visible = offered["view"] if projection == "carried" else offered
+        assert visible["decision_packet"]["material"]["startup-adapter"]["read_request"] == request
+        assert "Human-owned" not in json.dumps(visible)
     read_packet = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     read = read_packet["startup_adapter"]
     assert read["response"]["text"] == original.decode("utf-8")

@@ -28,6 +28,8 @@ instruction guidance remain visible in every projection. Unrequested source
 bodies stay lazy. Delivery still grants no acknowledgment, satisfaction, proof
 or effect authority; a compact projection cannot silently discard a requested
 source response and then call it delivered.
+The required startup source-read request accompanies its source identity, so
+obtaining that text needs no preparatory detail fetch.
 
 ## Thin host carriage
 
