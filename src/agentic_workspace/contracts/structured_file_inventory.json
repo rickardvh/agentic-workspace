@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "checked_in_justification": "A separate Rust crate proves independently linked public owner ingress without core owner-name branches.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Build fixture only; linking does not supply capability admission.",
+      "owner": "workspace-reconstruction",
+      "pattern": "tests/fixtures/native-independent-owner/Cargo.toml",
+      "schema_or_validator": "parser: Python tomllib",
+      "status": "typed-validator-backed",
+      "storage_class": "diagnostic-fixture"
+    },
+    {
       "checked_in_justification": "Temporary reconstruction disposition preserves the accepted salvage boundaries until corrected owners admit retained semantics.",
       "editable_by_agents": true,
       "format": "toml",

@@ -18,6 +18,17 @@ CLI_SHIM = (
     "from generated.workspace.python.cli import main; "
     "raise SystemExit(main(sys.argv[1:]))"
 )
+NATIVE_CLI_SHIM = CLI_SHIM.replace("from generated.workspace.python.cli import main", "from agentic_workspace.cli import main")
+# These process contracts already describe native admission or explicit retirement.
+# The remaining generated fixtures still exercise historical adapter behavior;
+# they do not establish current native command support.
+NATIVE_PROCESS_CONTRACTS = {
+    "final-response.admit.process",
+    "implement.context.process",
+    "proof.report.process",
+    "report.combined.process",
+    "start.context.process",
+}
 PLANNING_CLI_SHIM = (
     "import sys; "
     f"sys.path.insert(0, {str(REPO_ROOT / 'packages' / 'planning' / 'src')!r}); "
@@ -52,7 +63,11 @@ def test_generated_tool_process_conformance_contracts(contract_ref: dict[str, st
         fixture_root=fixture_root,
         repo_root=fixture_root,
         command_overrides={
-            "agentic_workspace_cli": [sys.executable, "-c", CLI_SHIM],
+            "agentic_workspace_cli": [
+                sys.executable,
+                "-c",
+                NATIVE_CLI_SHIM if contract_ref["id"] in NATIVE_PROCESS_CONTRACTS else CLI_SHIM,
+            ],
             "agentic_planning_cli": [sys.executable, "-c", PLANNING_CLI_SHIM],
             "agentic_memory_cli": [sys.executable, "-c", MEMORY_CLI_SHIM],
         },
@@ -186,7 +201,12 @@ def test_process_conformance_setup_step_uses_recursive_directory_scope(tmp_path:
     fixture_root = tmp_path / "setup-directory-write-fixture"
     materialize_fixture(fixture=contract["fixtures"][0], fixture_root=fixture_root)
 
-    run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
+    run_process_conformance(
+        contract=contract,
+        fixture_root=fixture_root,
+        repo_root=fixture_root,
+        command_overrides={"agentic_workspace_cli": [sys.executable, "-c", CLI_SHIM]},
+    )
 
 
 def test_conformance_registry_points_at_schema_valid_contracts() -> None:

@@ -178,8 +178,8 @@ def test_changed_path_inventory_checks_narrow_structured_paths(monkeypatch) -> N
         ],
         "generated_mirrors": [],
     }
-    monkeypatch.setattr(check_structured_file_inventory, "load_inventory", lambda: inventory)
-    monkeypatch.setattr(check_structured_file_inventory, "validate_inventory_shape", lambda payload: [])
+    monkeypatch.setattr(check_structured_file_inventory, "load_inventory", lambda _root: inventory)
+    monkeypatch.setattr(check_structured_file_inventory, "validate_inventory_shape", lambda payload, _root: [])
     monkeypatch.setattr(
         check_structured_file_inventory, "_tracked_files", lambda root=check_structured_file_inventory.REPO_ROOT: ["known.json"]
     )
