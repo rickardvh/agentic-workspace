@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Execution frontier #2983; architecture #3020; promotion ledger #3138. Integrated reconstruct/first-stable remains through #3180 at127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Open stack #3181 -> #3182 -> #3183 -> #3184 -> #3185 -> #3186 has scoped independent review and green current-head CI. #3186 at9760a66bc distinguishes current native, historical generated and helper evidence while retaining explicit cumulative failures in docs/maintainer/reconstruction-conformance.md. Current #3040/#2570 slice admits agent decisions only under explicit shared standing policy for an exact durable owner/path set. Per-task material/work/dependencies/destination/postimage and policy/capability revisions remain in owner-held proposal/provenance, not Configuration. Missing or mismatched policy returns the complete bounded human request. Progressive Configuration read/edit uses existing exact human authorization; publication/recovery/recall revalidate and cannot manufacture deciding authority. No actor authentication, signed host, generic semantic classifier, execution grant or completion grant is introduced. New public parity tests cover owner/scope mismatch, local self-grant rejection, policy/dependency/work drift, no-retention, self-config dependencies and current consequences; existing human and agent interruption/revocation recovery pass. Broad75 decision/Memory cases and236 public/independent regressions pass, Rust104+3+3+4 and Clippy pass; the final8extended supersession/revocation parity cases and full check-planning-nosync pass. Independent scoped authority review found no substantive defect after separating standing policy from per-task material. Broader #3040 nomination/disposition/repository-lifetime proof, #2606/#2986 cumulative owner acceptance, #2970 continuity/host lifecycle, #2929 real issue creation, #3041 dogfood and #2909/#2616/#2990 exact cumulative admission remain open. Preserve six preexisting ordinary Assignment/proof artifacts.",
+    "frontier": "Execution frontier #2983; architecture #3020; promotion ledger #3138. Integrated reconstruct/first-stable remains through #3180 at127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Open stack #3181 -> #3182 -> #3183 -> #3184 -> #3185 -> #3186 has scoped independent review and green current-head CI. #3186 at9760a66bc distinguishes current native, historical generated and helper evidence while retaining explicit cumulative failures in docs/maintainer/reconstruction-conformance.md. Current #3040/#2570 slice admits agent decisions only under explicit shared standing policy for an exact durable owner/path set. Per-task material/work/dependencies/destination/postimage and policy/capability revisions remain in owner-held proposal/provenance, not Configuration. Missing or mismatched policy returns the complete bounded human request. Progressive Configuration read/edit uses existing exact human authorization; publication/recovery/recall revalidate and cannot manufacture deciding authority. No actor authentication, signed host, generic semantic classifier, execution grant or completion grant is introduced. New public parity tests cover owner/scope mismatch, local self-grant rejection, policy/dependency/work drift, no-retention, self-config dependencies and current consequences; existing human and agent interruption/revocation recovery pass. Broad75 decision/Memory cases and236 public/independent regressions pass, Rust104+3+3+4 and Clippy pass; the final8extended supersession/revocation parity cases and full check-planning-nosync pass. Independent scoped authority review found no substantive defect after separating standing policy from per-task material. Broader #3040 nomination/disposition/repository-lifetime proof, #2606/#2986 cumulative owner acceptance, #2970 continuity/host lifecycle, #2929 real issue creation, #3041 dogfood and #2909/#2616/#2990 exact cumulative admission remain open. Preserve six preexisting ordinary Assignment/proof artifacts. Review correction on #3187 after 5cb8dd668: exact-file standing delegation rejects wildcard metacharacters in both shared schema and runtime matcher; pattern-shaped current work returns the existing proposal-bound human decision request. Concrete multi-file set equality and all existing authority/lifetime boundaries remain unchanged. Final correction validation and external re-review remain required; stop after this PR.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Publish the coherent policy-delegated decision slice stacked on #3186, finish its current-head checks, then continue current #2983 owner gaps and cumulative #2909 conformance. No master promotion is authorized.",
+  "next_action": "Finish the narrow #3187 review correction, validate and push it for external re-review, then stop as requested. No further reconstruction slice or master promotion is authorized.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -137,7 +137,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 42,
+  "revision": 43,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -189,18 +189,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e7ef9fbfe54f868e9401c41ab2da847ec08405eb30ea4785167af63b2ff80ca2.attempt.json",
-        "revision": "sha256:878da8b9a9d11c74b27f210ddfad343043647fe6dbfc18f65db67eee9a8a266c",
+        "path": ".agentic-workspace/local/effects/288a261f4f6cdb2819cb564cb033467ded00eac30446b1b3b6dfd7554ca07eee.attempt.json",
+        "revision": "sha256:45ee95c1165b1c66ffac77b7d30130edee649358dc0a06c9ace65a52528faabb",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e7ef9fbfe54f868e9401c41ab2da847ec08405eb30ea4785167af63b2ff80ca2.result.json",
-        "revision": "sha256:2f086dba0363863c42ef2de0abaa36bc07334203cb5e058f5debdd2eed9d5d61",
+        "path": ".agentic-workspace/local/effects/288a261f4f6cdb2819cb564cb033467ded00eac30446b1b3b6dfd7554ca07eee.result.json",
+        "revision": "sha256:06a94d6d29a7fc0d1fa9a9263cb03532b8cbfdfb56cf8acfbd96293b32ae3683",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:543325b576d46bb02fd9414d1737feb537a070a9c9f01c3045899edea8511ee7",
+    "invocation_revision": "sha256:c4d8fe9842b070bafc607b3e427a0590b12a763715257344469817fefebdeeae",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -208,7 +208,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:8961d1e28005ceef69fcd19b6ba06a282daef9a2a8a0e33999026af97fe4e771",
+        "document_revision": "sha256:19c41f63110b385c45a85a4677ea883fe8bb994041f11029a6c0ddda8f357b97",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

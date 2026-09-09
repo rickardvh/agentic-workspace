@@ -55,6 +55,13 @@ def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_pa
     assert propose()[section]["capture"]["status"] == "human-decision-required"
     local.unlink()
     config.write_text(original + grant)  # Explicit fixture repository-policy admission.
+    for pattern in ["src/*.rs", "src/?.rs", "src/[ab].rs", "src/a[.rs", "src/a].rs"]:
+        fallback = propose(changed=[pattern])
+        assert fallback[section]["capture"]["status"] == "human-decision-required"
+        answer = fallback["decision_packet"]["decision_request"]["response_request"]
+        assert answer["arguments"]["proposal_revision"] == fallback[section]["capture"]["proposal"]["proposal_revision"]
+        assert "answer" not in answer["arguments"]
+        assert fallback["decision_packet"]["primary_action"] is None
     assert propose(task="Different work")[section]["capture"]["status"] == "write-ready"
     assert propose(changed=["src/other.rs"])[section]["capture"]["status"] == "human-decision-required"
     changed = {**material, "consequence": "A different boundary"}
@@ -171,6 +178,12 @@ def test_standing_decision_scope_uses_bounded_configuration_admission(tmp_path, 
     selected = call(request=read)["configuration_write"]["selected_choice"]
     assert selected["value"] == []
     edit = selected["edit_request"]
+    for pattern in ["src/*.rs", "src/?.rs", "src/[ab].rs", "src/a[.rs", "src/a].rs"]:
+        invalid = copy.deepcopy(edit)
+        invalid["arguments"]["value"] = [{"owner": "memory", "scope": [f"path:{pattern}"]}]
+        with pytest.raises(AssertionError):
+            call(request=invalid)
+        assert config.read_text() == "schema_version=1\n"
     edit["arguments"]["value"] = [{"owner": "memory", "scope": ["path:src/b.rs", "path:src/a.rs"]}]
     proposed = call(request=edit)
     assert config.read_text() == "schema_version=1\n"

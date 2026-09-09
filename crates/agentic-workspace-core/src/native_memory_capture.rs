@@ -398,6 +398,9 @@ fn grant_matches(grant: &Value, subject: &Value) -> bool {
         let mut result = std::collections::BTreeSet::new();
         for path in paths {
             let path = path.as_str()?.strip_prefix("path:")?;
+            if path.contains(['*', '?', '[', ']']) {
+                return None;
+            }
             crate::decision_source::relative(path).ok()?;
             if !result.insert(path.to_owned()) {
                 return None;
@@ -1347,6 +1350,32 @@ pub(crate) fn context_for(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn standing_delegation_rejects_patterns_even_without_schema_validation() {
+        for owner in ["memory", "repository"] {
+            let subject = |scope: Value| json!({"subject":{"owner":owner,"scope":scope}});
+            let concrete = json!(["path:src/a.rs", "path:src/b.rs"]);
+            let grant = json!({"owner":owner,"scope":concrete});
+            assert!(grant_matches(
+                &grant,
+                &subject(json!(["path:src/b.rs", "path:src/a.rs"]))
+            ));
+            for pattern in [
+                "path:src/*.rs",
+                "path:src/?.rs",
+                "path:src/[ab].rs",
+                "path:src/a[.rs",
+                "path:src/a].rs",
+            ] {
+                let scope = json!([pattern]);
+                let wildcard_grant = json!({"owner":owner,"scope":scope});
+                assert!(!grant_matches(&wildcard_grant, &subject(scope.clone())));
+                assert!(!grant_matches(&wildcard_grant, &subject(concrete.clone())));
+                assert!(!grant_matches(&grant, &subject(scope)));
+            }
+        }
+    }
 
     #[test]
     fn bounded_answer_publication_recovers_each_interruption() {
