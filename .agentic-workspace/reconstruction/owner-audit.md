@@ -3,8 +3,9 @@
 Current merged base: `c2303e9212a067d306be14846824ff727bc59cb0`, freshly
 verified after #3166/#3167/#3168 integration. The current bounded follow-up
 repairs #2817/#2210's configured-source Assignment judgment path in #3170 and
-transfers #2613 Verification declarations into the existing manifest. Both
-remain subject to independent review.
+transfers #2613 Verification declarations into the existing manifest in #3171,
+and implements the explicitly authorized #2570 disposition capability in #3172.
+All three remain subject to independent review.
 Historical proof below retains its actual subject. Unrelated original-checkout
 assignments, proof receipts and local files remain outside this change.
 
@@ -19,7 +20,7 @@ an implementation gap even when the former Python host supplies that behavior.
 ## P0/P1 dispositions
 
 Each owner has exactly one disposition against the merged cumulative candidate
-plus the bounded Assignment and Verification source corrections. Integration of the former stack does
+plus the bounded Assignment, Verification source and Memory corrections. Integration of the former stack does
 not satisfy its parent owners. #2613's lived-in human-configuration boundary
 remains an implementation gap, as recorded in #2983 comment 5590398962.
 
@@ -37,13 +38,13 @@ remains an implementation gap, as recorded in #2983 comment 5590398962.
 | #2985 | bounded implementation gap | Final artifact topology includes the canonical native CLI; #3077 is not satisfied. Package-count or binding tests alone cannot close this owner. |
 | #3077 | evidence/conformance gap | The paired native executable is the ordinary source and package command; the Python host is subtracted. Real former-owner recovery and isolated Windows/Linux wheel journeys pass. Exact supported-platform artifact identity and cumulative native/binding conformance remain unadmitted. Missing domain behavior remains with its semantic owners. |
 | #2606 | bounded implementation gap | Core capability effect/claim checks exist, but `native_public::owner_requests` has a fixed owner allowlist. A future independent module cannot use ordinary native ingress without core changes. |
-| #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include broader configuration mutation, Memory promotion/retirement and correction; former operation names are not an ordinary native interface. |
+| #2986 | bounded implementation gap | Public native requests now include process dispatch, executed-return judgment and Planning adoption. Remaining owner omissions include broader configuration mutation, typed fallback decision capture and correction. Native Memory disposition/promotion is implemented on this stack; former operation names are not an ordinary native interface. |
 | #2613 | bounded implementation gap | Current correction preserves advisory compatibility, closeout-only obligations and separately scoped initiative/runtime restrictions; native payload conformance admits the real target. Complete source-owner configuration behavior remains broader than this correction. |
 | #2930 | evidence/conformance gap | Shared semantic routes, native former-route selection, direct and stale-route negatives exist. Complete multi-owner and non-GitHub ordinary procedure proof remains to be admitted. |
 | #2570 | bounded implementation gap | Current stack adds exact native note/fact disposition and admitted repository-decision promotion; source authorship and former material survive. Native typed fallback-decision admission/effect remains unresolved with #3040/#3041; capability approval does not adjudicate the real April note. |
-| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 22, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
-| #3040 | evidence/conformance gap | Shared continuity and native source/rationale/supersession tests exist. Final cross-thread authorship, fallback promotion and cache-versus-authority proof remain distinct from #3041. |
-| #3041 | bounded implementation gap | The configured repo-owned `docs/decisions/` archive already contains three reconstruction records and native rationale-read support. The earlier absent-archive claim was incorrect. Current source/provenance admission and explicit disposition of the ambiguous April fallback remain to be established; no replacement archive is needed. |
+| #2970 | evidence/conformance gap | The actual selected owner is native-authored revision 23, preserving identity, outcome, scope, dependencies, constraints, proof and frontier. Exact transfer/update, fresh-process recovery and stale-request rejection pass. Independent acceptance and aggregate #2909 admission remain; no implementation absence is inferred from the open issue. |
+| #3040 | bounded implementation gap | Shared continuity, current native source/rationale/supersession and admitted Memory promotion exist. Ordinary native typed fallback capture and its reconciliation consequence remain absent; final cross-thread authorship and cache-versus-authority proof also remain. This is not merely an unrun conformance gate. |
+| #3041 | evidence/conformance gap | The configured repo-owned `docs/decisions/` archive contains three reconstruction records; native relevant/unrelated/rationale/supersession proof and exact Memory disposition now exist. The real April note still needs a bounded owner/human disposition and aggregate admission. Capability approval does not authorize promotion or resolve its ambiguous provenance; no replacement archive is needed. |
 | #2334 | evidence/conformance gap | Native proof, subject identity, strategy, assurance and authenticated review slices exist. Strict complete parent claims and cumulative source/platform/review admission remain open. |
 | #2981 | bounded implementation gap | Native proof receipts bind actual producer bytes and preserve current evidence across unrelated file churn. The older Python semantic-partition tests do not establish a native retained negative conclusion or focused cross-owner partial re-resolution. Those ordinary native outcomes are absent, not merely missing CI. Avoid a generic cache until a material conclusion justifies retention. |
 | #2767 | bounded implementation gap | The authorized native writer can set workspace.cli_invoke in either existing canonical TOML source through an exact human-bound proposal, including insertion when unrelated bytes can be preserved. Sources retain external ownership. Other keys, source creation, safe inference, independent-module configuration and the broader configure-once journey remain incomplete; no defaults or generic custody are inferred. |
@@ -204,12 +205,26 @@ was needed for that #3001 confinement case.
 | Planning subject | stronger-owner/derive | The current Planning producer owns subject meaning and retained material. Attempt/custody records are not independent semantic subjects. Cross-owner reuse still needs focused proof. |
 | Assignment eligibility and comparison | recompute | Current target restrictions, capability observations, policy and work bind admission. Sparse lifecycle evidence derives from current Planning/Verification owners; a previous target choice is not retained authority. |
 | Memory and procedure no-signal | recompute | Native selectors avoid unrelated body reads. Persisting these cheap absence checks has no demonstrated benefit; this is the no-memoise counterexample, not the required material negative-reuse path. |
+| Admitted repository decision selection | recompute | Read the exact pinned Git blobs through one bounded process, then derive current applicability. Working sources and authority dependencies are still checked independently. No retained negative or local cache acquires authority. |
 | Public decision and rendered context | recompute | Compose current owner constituents. No whole decision, local host object or prompt is adopted as semantic input. |
 
 The audit therefore has 4 candidate-complete owners, 20 bounded implementation
 gaps and 10 evidence/conformance gaps. The #2981 correction supersedes the earlier
-4/19/11 count: native proof reuse exists, but the required native negative-reuse
+4/19/11 count. The current #3040/#3041 reclassification preserves 4/20/10:
+#3040 lacks native fallback capture; #3041 awaits real-source disposition and
+admission rather than another archive or disposition implementation. In #2981, native proof reuse exists, but the required native negative-reuse
 and partial re-resolution path is not implemented by the former Python helper.
+
+The #3172 receiving-source follow-through reduces repeated acquisition without
+introducing memoisation. On Windows with the source-built debug binaries, five
+fresh-process samples against the same faithful 16-record/no-match fixture gave
+median ordinary resolution of 350 ms before and 118 ms after batching. Separately,
+the exact same Git blob bytes took 230 ms through individual processes versus
+17 ms through one batch process. These are local measurements, not release-platform
+latency guarantees or retained-conclusion validation measurements. Both paths
+produce no local cache residue. The bounded reader preserves exact blob framing,
+source-size refusal, currentness and receiving-owner admission. This does not
+satisfy the missing negative reuse or partial re-resolution criteria.
 
 ### #2570 established corpus disposition
 
@@ -243,7 +258,7 @@ note and blocks action. No real corpus disposition was authorized or applied.
 
 Four-interface journeys cover retirement, note/fact promotion, defer, source and
 receiver drift, ABA replay refusal, irrelevant-work silence and original material
-preservation. Native confinement covers linked scratch parents; interruption
+preservation. Native confinement covers linked scratch parents and receiving-source links; interruption
 proof covers prepublication retry, postpublication recovery and policy drift.
 Suppression conservatively requires the exact manifest postimage: unrelated
 manifest edits can reopen advisory selection. Five former-command skill pages

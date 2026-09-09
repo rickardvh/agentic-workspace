@@ -8,8 +8,8 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, BTreeSet},
-    io::Read,
-    process::Command,
+    io::{BufRead, BufReader, Read, Write},
+    process::{Command, Stdio},
 };
 
 #[derive(Deserialize)]
@@ -49,20 +49,72 @@ pub(crate) fn relative(path: &str) -> Result<(), CoreError> {
     }
     Ok(())
 }
-fn git(input: &Input, arguments: &[String]) -> Result<Vec<u8>, CoreError> {
-    let output = Command::new("git")
+fn admitted_blobs(
+    input: &Input,
+    candidates: &[&[u8]],
+) -> Result<Vec<(String, Vec<u8>)>, CoreError> {
+    let mut child = Command::new("git")
         .arg("-C")
         .arg(&input.target)
-        .args(arguments)
+        .args(["cat-file", "--batch"])
         .env("GIT_LITERAL_PATHSPECS", "1")
-        .output()
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
         .map_err(error)?;
-    if !output.status.success() {
+    let result = (|| {
+        let mut request = child.stdin.take().unwrap();
+        let mut response = BufReader::new(child.stdout.take().unwrap());
+        let mut blobs = Vec::with_capacity(candidates.len());
+        for candidate in candidates {
+            let spec = std::str::from_utf8(candidate).map_err(error)?;
+            let (_, path) = spec
+                .split_once(':')
+                .ok_or_else(|| error("invalid decision source identity"))?;
+            relative(path)?;
+            writeln!(request, "{spec}").map_err(error)?;
+            request.flush().map_err(error)?;
+            let mut header = Vec::new();
+            response
+                .by_ref()
+                .take(128)
+                .read_until(b'\n', &mut header)
+                .map_err(error)?;
+            let fields: Vec<_> = std::str::from_utf8(&header)
+                .map_err(error)?
+                .split_whitespace()
+                .collect();
+            if header.last() != Some(&b'\n') || fields.len() != 3 || fields[1] != "blob" {
+                return Err(error(
+                    "admitted decision blob unavailable; reconcile admission",
+                ));
+            }
+            let size = fields[2].parse::<usize>().map_err(error)?;
+            if size > 262144 {
+                return Err(error("decision source exceeds bounded read"));
+            }
+            let mut bytes = vec![0; size];
+            response.read_exact(&mut bytes).map_err(error)?;
+            let mut delimiter = [0];
+            response.read_exact(&mut delimiter).map_err(error)?;
+            if delimiter[0] != b'\n' {
+                return Err(error("invalid admitted decision blob boundary"));
+            }
+            blobs.push((path.to_owned(), bytes));
+        }
+        Ok(blobs)
+    })();
+    if result.is_err() {
+        let _ = child.kill();
+    }
+    let status = child.wait().map_err(error)?;
+    if !status.success() && result.is_ok() {
         return Err(error(
             "admitted decision snapshot unavailable; preserve source and reconcile",
         ));
     }
-    Ok(output.stdout)
+    result
 }
 pub(crate) fn hash(bytes: &[u8]) -> String {
     format!(
@@ -187,17 +239,8 @@ fn load(input: &Input, owner: &str, routes: &[Value]) -> Result<Value, CoreError
     let mut available = BTreeMap::new();
     let mut admissions = Vec::new();
     let mut dependencies = BTreeMap::new();
-    for candidate in candidates {
-        let spec = std::str::from_utf8(candidate).map_err(error)?;
-        let (_, path) = spec
-            .split_once(':')
-            .ok_or_else(|| error("invalid decision source identity"))?;
-        relative(path)?;
-        let bytes = git(input, &["show".into(), spec.into()])?;
-        if bytes.len() > 262144 {
-            return Err(error("decision source exceeds bounded read"));
-        }
-        let normalized = record(&bytes, path, owner)?;
+    for (path, bytes) in admitted_blobs(input, &candidates)? {
+        let normalized = record(&bytes, &path, owner)?;
         let id = normalized["id"].as_str().unwrap().to_owned();
         if available
             .insert(id, (normalized, bytes, path.to_owned()))
