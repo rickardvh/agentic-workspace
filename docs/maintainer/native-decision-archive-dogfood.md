@@ -66,3 +66,37 @@ The archive remains ordinary readable Markdown when AW is absent. No ADR
 generator, new registry, archive-wide workflow or copied Memory rationale was
 added. Broader #2570/#3040 capture, promotion and learning obligations remain
 with their existing owners.
+
+## Stronger-owner output and no-retention contrast
+
+The ordinary `decision_sources.capture` request now nominates material directly
+to a configured repository archive supporting the existing decision-source
+contract. It does not first create a fallback Memory record. The owner constructs
+the complete Markdown postimage and confirm/defer request, including current
+scope, dependencies, selected decision context, policy/capability revisions and
+the destination convention. `no-retention` returns an exact bounded disposition
+without a file or publication attempt. Ordinary work without nominated material
+does not acquire a decision review phase.
+
+The repository and fallback owners share bounded proposal/publication checks
+but keep separate effect, source and durable ownership. Only fallback publication
+updates Memory's manifest. Repository publication remains ordinary Markdown,
+and later rationale reads retain their non-authoritative boundary. Existing
+immutable publication carriers support recovery and detect a lost repository
+source; they are not a second canonical decision archive. Serialized carriers
+are bounded before admission, and configured source protection applies to their
+exact write destinations, including recovery custody.
+
+`tests/test_native_repository_decisions.py` uses the actual shared-semantic
+decision and this repository's existing archive convention in isolated temporary
+repositories. It proves repository output, no-retention, fresh affected recall,
+unrelated quietness, source/convention loss, bounded publication and recovery
+through the public consumers. Fixture answers prove the mechanism, not new
+authorization to create a real repository decision. No artificial ADR or April
+note promotion is added to the lived-in archive.
+
+This does not establish an agent grant that current policy lacks. The current
+bounded human path remains the fallback for that absence; explicit delegated
+authority and other repository conventions require their actual admitted owner
+contracts. Broader #3040 authority/disposition and #2909 lifetime acceptance remain
+open. The archive path here remains repository dogfood, not a portable default.

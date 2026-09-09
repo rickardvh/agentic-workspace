@@ -83,6 +83,8 @@ fn resolve_with_baseline(
                 && i["operation_id"] != "memory.recover-disposition"
                 && i["operation_id"] != "memory.capture-decision"
                 && i["operation_id"] != "memory.recover-decision"
+                && i["operation_id"] != "decision-continuity.capture-decision"
+                && i["operation_id"] != "decision-continuity.recover-decision"
                 && i["operation_id"] != crate::native_source_reconciliation::OP
                 && !(i["operation_id"] == "planning.update"
                     && i["arguments"]["consumed_return"].is_object())
@@ -170,17 +172,24 @@ fn resolve_with_baseline(
         crate::native_startup::view(target, &work, &configuration, None, None)?;
     let mut system_intent = crate::native_intent::view(target, &work, &configuration, None, None)?;
     let admissions = &configuration["admissions"];
+    let repository_capture_available = admissions["decision_record_target"]
+        .as_str()
+        .is_some_and(|s| !s.is_empty());
     let decision_scope: Vec<_> = input.changed.iter().map(|p| format!("path:{p}")).collect();
     let native_decisions =
         crate::native_memory_capture::context(target, &configuration, &decision_scope);
-    let decision_observation = native_decisions.and_then(|native| decision_source::resolve_with_native(json!({
+    let decision_observation = native_decisions.and_then(|native| {
+        let repository = if repository_capture_available {
+            Some(crate::native_memory_capture::context_for(target, &configuration, &decision_scope, crate::native_memory_capture::Destination::Repository)?)
+        } else { None };
+        decision_source::resolve_with_publications(json!({
         "target":target,
         "archive":admissions["decision_record_target"].as_str().unwrap_or(""),
         "admitted_revision":admissions["decision_record_revision"].as_str().unwrap_or(""),
         "fallback":if available("memory") {admissions["decision_record_fallback"].clone()} else {Value::Null},
         "applicable_scope":input.changed.iter().map(|path| format!("path:{path}")).collect::<Vec<_>>(),
         "semantic_routes":route_input
-    }), Some(native)));
+    }), Some(native), repository)});
     let mut decision_source_problem = None;
     let (mut owner_input, mut routes) = match decision_observation {
         Ok(observed) => observed,
@@ -283,7 +292,17 @@ fn resolve_with_baseline(
             &instructions["capability_contract"],
         ],
     )?;
-    let decision_read_contract = decision_source::read_contract()?;
+    let mut decision_read_contract = decision_source::read_contract()?;
+    if repository_capture_available {
+        crate::native_memory_capture::extend_destination(
+            &mut decision_read_contract["owners"][0],
+            crate::native_memory_capture::Destination::Repository,
+        )?;
+        decision_read_contract["restriction_authorities"][0]["affects"] =
+            json!(["task", "effect:decision-source"]);
+        decision_read_contract["revision"] = json!(digest(&decision_read_contract)?);
+    }
+    crate::native_startup::restrict_operations(&mut startup_adapter, &[&decision_read_contract])?;
     let contract = combined_contract(&[
         &config_write_contract,
         &decision_read_contract,
@@ -448,6 +467,38 @@ fn resolve_with_baseline(
         configuration["contribution"].clone(),
         config_write["contribution"].clone(),
     ];
+    let repository_capture = if repository_capture_available {
+        let mut capture = crate::native_memory_capture::view_for(
+            target,
+            &work,
+            &decision_scope,
+            &configuration,
+            &contract,
+            (
+                crate::native_memory_capture::Destination::Repository,
+                &owner_input["decision_context"],
+            ),
+            request_for("decision-continuity").filter(|r| {
+                matches!(
+                    r["request_kind"].as_str(),
+                    Some(
+                        crate::native_memory_capture::REPOSITORY_CAPTURE
+                            | crate::native_memory_capture::REPOSITORY_RECOVER
+                    )
+                )
+            }),
+        )?;
+        capture["contribution"]["relevant"] = json!(
+            request_for("decision-continuity").is_some()
+                || capture["contribution"]["blockers"].is_array()
+        );
+        if decision_source_problem.is_none() {
+            contributions.push(capture["contribution"].clone());
+        }
+        capture
+    } else {
+        json!({"status":"not-configured","requests":[]})
+    };
     if let Some(problem) = decision_source_problem {
         contributions.push(json!({"owner":"decision-continuity","revision":digest(&json!([admissions,problem]))?,
             "settled":false,"blockers":[{"code":"receiving-decision-source-unavailable","message":problem,"affects":["task"]}]}));
@@ -838,6 +889,8 @@ fn resolve_with_baseline(
                             | "memory.recover-disposition"
                             | "memory.capture-decision"
                             | "memory.recover-decision"
+                            | "decision-continuity.capture-decision"
+                            | "decision-continuity.recover-decision"
                             | "verification.record-source-reconciliation"
                     )
                 ) {
@@ -912,14 +965,16 @@ fn resolve_with_baseline(
     }
     let decision_context = owner_input["decision_context"].clone();
     let decision = compile_value(owner_input)?;
-    let decision_sources = decision_source::public_read(
+    let mut decision_sources = decision_source::public_read(
         target,
         &decision_context,
         &decision,
         &work,
         &contract,
-        request_for("decision-continuity"),
+        request_for("decision-continuity")
+            .filter(|r| r["request_kind"] == "decision-continuity/read-current-source/v1"),
     )?;
+    decision_sources["capture"] = repository_capture;
     planning.as_object_mut().unwrap().remove("planning_input");
     planning["current_owner"] = planning_detail;
     let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
@@ -1081,6 +1136,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "memory.recover-disposition"
         && invocation["operation_id"] != "memory.capture-decision"
         && invocation["operation_id"] != "memory.recover-decision"
+        && invocation["operation_id"] != "decision-continuity.capture-decision"
+        && invocation["operation_id"] != "decision-continuity.recover-decision"
         && invocation["operation_id"] != crate::native_source_reconciliation::OP
     {
         return Err(CoreError::new(
@@ -1122,6 +1179,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 | "memory.recover-disposition"
                 | "memory.capture-decision"
                 | "memory.recover-decision"
+                | "decision-continuity.capture-decision"
+                | "decision-continuity.recover-decision"
         )
     ) {
         crate::admit_invocation_value(
@@ -1136,7 +1195,12 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         };
         let executed = if matches!(
             invocation["operation_id"].as_str(),
-            Some("memory.capture-decision" | "memory.recover-decision")
+            Some(
+                "memory.capture-decision"
+                    | "memory.recover-decision"
+                    | "decision-continuity.capture-decision"
+                    | "decision-continuity.recover-decision"
+            )
         ) {
             crate::native_memory_capture::execute(
                 &target,

@@ -363,6 +363,13 @@ pub(crate) fn resolve_with_native(
     value: Value,
     native_fallback: Option<Value>,
 ) -> Result<(Value, Option<Value>), CoreError> {
+    resolve_with_publications(value, native_fallback, None)
+}
+pub(crate) fn resolve_with_publications(
+    value: Value,
+    native_fallback: Option<Value>,
+    repository_publications: Option<Value>,
+) -> Result<(Value, Option<Value>), CoreError> {
     let input: Input = serde_json::from_value(value).map_err(error)?;
     let (route_view, intent) = if let Some(routes) = &input.semantic_routes {
         let (view, intent) = crate::semantic_routes::resolve(routes.clone())?;
@@ -418,8 +425,17 @@ pub(crate) fn resolve_with_native(
     }
     let has_residue = !fallback["records"].as_array().unwrap().is_empty();
     let native_configured = !input.archive.is_empty();
-    let native = if native_configured {
-        match load(&input, "repository", &selected, &[]) {
+    let mut native = if native_configured {
+        match load(
+            &input,
+            "repository",
+            &selected,
+            repository_publications
+                .as_ref()
+                .and_then(|v| v["required_records"].as_array())
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
+        ) {
             Ok(context) => context,
             // A failed destination cannot hide already admitted useful fallback.
             // The existing reconciliation contract exposes the pending owner.
@@ -429,6 +445,16 @@ pub(crate) fn resolve_with_native(
     } else {
         empty_context(&input.applicable_scope)
     };
+    if let Some(published) = repository_publications {
+        for field in ["records", "admissions", "current_dependencies"] {
+            for row in published[field].as_array().into_iter().flatten() {
+                let rows = native[field].as_array_mut().unwrap();
+                if !rows.contains(row) {
+                    rows.push(row.clone());
+                }
+            }
+        }
+    }
     if !has_residue {
         return finish(Some(native));
     }

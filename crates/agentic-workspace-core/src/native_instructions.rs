@@ -57,6 +57,8 @@ pub fn resolve(
         "claim:complete",
         "effect:planning-state",
         "effect:proof-execution",
+        "effect:memory-state",
+        "effect:decision-source",
     ]
     .map(str::to_owned)
     .into();
@@ -154,6 +156,41 @@ pub fn restrict_pending(
     route: &Value,
 ) -> Result<(), CoreError> {
     let mut additions = Vec::new();
+    for action in pending.iter().filter(|a| {
+        matches!(
+            a["operation_id"].as_str(),
+            Some(
+                "memory.capture-decision"
+                    | "memory.recover-decision"
+                    | "decision-continuity.capture-decision"
+                    | "decision-continuity.recover-decision"
+            )
+        )
+    }) {
+        let writes = crate::native_memory_capture::write_scope(action)?;
+        for source in view["sources"].as_array().into_iter().flatten() {
+            let metadata = &source["metadata"];
+            let patterns = strings(&metadata["paths"]);
+            if source["valid"] == true
+                && (source["applicable"] == true
+                    || (applicability(metadata, &[], route)?["route_applies"] == true
+                        && (patterns.is_empty()
+                            || patterns.iter().any(|p| {
+                                writes
+                                    .iter()
+                                    .any(|w| instruction_applicability::patterns_overlap(p, w))
+                            }))))
+                && strings(&metadata["protect"]).iter().any(|p| {
+                    writes
+                        .iter()
+                        .any(|w| instruction_applicability::patterns_overlap(p, w))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-decision-write",
+                    "Current source protection forbids this exact decision publication or custody write.", action["effects"].as_array().unwrap().iter().map(|e| format!("effect:{}",e.as_str().unwrap())).collect()));
+            }
+        }
+    }
     for action in pending
         .iter()
         .filter(|a| a["operation_id"] == crate::native_source_reconciliation::OP)
