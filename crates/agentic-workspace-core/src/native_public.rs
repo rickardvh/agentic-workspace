@@ -69,6 +69,8 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                 && i["operation_id"] != "configuration.recover-write"
                 && i["operation_id"] != "memory.dispose"
                 && i["operation_id"] != "memory.recover-disposition"
+                && i["operation_id"] != "memory.capture-decision"
+                && i["operation_id"] != "memory.recover-decision"
                 && !(i["operation_id"] == "planning.update"
                     && i["arguments"]["consumed_return"].is_object())
         })
@@ -155,14 +157,17 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         crate::native_startup::view(target, &work, &configuration, None, None)?;
     let mut system_intent = crate::native_intent::view(target, &work, &configuration, None, None)?;
     let admissions = &configuration["admissions"];
-    let decision_observation = decision_source::resolve(json!({
+    let decision_scope: Vec<_> = input.changed.iter().map(|p| format!("path:{p}")).collect();
+    let native_decisions =
+        crate::native_memory_capture::context(target, &configuration, &decision_scope);
+    let decision_observation = native_decisions.and_then(|native| decision_source::resolve_with_native(json!({
         "target":target,
         "archive":admissions["decision_record_target"].as_str().unwrap_or(""),
         "admitted_revision":admissions["decision_record_revision"].as_str().unwrap_or(""),
         "fallback":if available("memory") {admissions["decision_record_fallback"].clone()} else {Value::Null},
         "applicable_scope":input.changed.iter().map(|path| format!("path:{path}")).collect::<Vec<_>>(),
         "semantic_routes":route_input
-    }));
+    }), Some(native)));
     let mut decision_source_problem = None;
     let (mut owner_input, mut routes) = match decision_observation {
         Ok(observed) => observed,
@@ -228,8 +233,20 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
         &route_fact,
         admissions["instruction_revision"].as_str().unwrap_or(""),
     )?;
+    let capture_available = !decision_scope.is_empty()
+        && configuration["admissions"]["decision_record_target"]
+            .as_str()
+            .is_none_or(str::is_empty);
     let mut memory = if available("memory") {
-        native_memory::public_view(target, &input.changed, &route_fact, &work, None, None)?
+        native_memory::public_view(
+            target,
+            &input.changed,
+            &route_fact,
+            &work,
+            None,
+            None,
+            capture_available,
+        )?
     } else {
         native_memory::disabled(target)?
     };
@@ -303,6 +320,7 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             &work,
             Some(request),
             Some(&contract),
+            capture_available,
         )?;
     } else {
         for request in memory["requests"].as_array_mut().unwrap() {
@@ -335,9 +353,53 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
             &memory,
             &configuration,
             &contract,
-            request_for("memory").filter(|r| r["request_kind"] != "memory/read-current-note/v1"),
+            request_for("memory").filter(|r| {
+                matches!(
+                    r["request_kind"].as_str(),
+                    Some("memory/dispose-source/v1" | "memory/recover-disposition/v1")
+                )
+            }),
         )?;
         crate::native_memory_write::apply_view(&mut memory, disposition);
+    }
+    if available("memory") {
+        let capture = crate::native_memory_capture::view(
+            target,
+            &work,
+            &decision_scope,
+            &configuration,
+            &contract,
+            &owner_input["decision_context"],
+            request_for("memory").filter(|r| {
+                matches!(
+                    r["request_kind"].as_str(),
+                    Some(
+                        crate::native_memory_capture::CAPTURE
+                            | crate::native_memory_capture::RECOVER
+                    )
+                )
+            }),
+        )?;
+        if request_for("memory").is_some_and(|r| {
+            matches!(
+                r["request_kind"].as_str(),
+                Some(crate::native_memory_capture::CAPTURE | crate::native_memory_capture::RECOVER)
+            )
+        }) {
+            memory["contribution"]["relevant"] = json!(true);
+            memory["contribution"]["settled"] = json!(false);
+            for field in ["revision", "actions", "decisions"] {
+                if let Some(v) = capture["contribution"].get(field) {
+                    memory["contribution"][field] = v.clone();
+                }
+            }
+        }
+        if let Some(blockers) = capture["contribution"].get("blockers") {
+            memory["contribution"]["relevant"] = json!(true);
+            memory["contribution"]["settled"] = json!(false);
+            memory["contribution"]["blockers"] = blockers.clone();
+        }
+        memory["capture"] = capture;
     }
     let mut planning = if executing
         && input
@@ -675,6 +737,8 @@ fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<V
                             | "configuration.recover-write"
                             | "memory.dispose"
                             | "memory.recover-disposition"
+                            | "memory.capture-decision"
+                            | "memory.recover-decision"
                     )
                 ) {
                     let mut dependencies = action["source_requests"]
@@ -909,6 +973,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         && invocation["operation_id"] != "configuration.recover-write"
         && invocation["operation_id"] != "memory.dispose"
         && invocation["operation_id"] != "memory.recover-disposition"
+        && invocation["operation_id"] != "memory.capture-decision"
+        && invocation["operation_id"] != "memory.recover-decision"
     {
         return Err(CoreError::new(
             "requested native operation is not available",
@@ -925,6 +991,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 | "configuration.recover-write"
                 | "memory.dispose"
                 | "memory.recover-disposition"
+                | "memory.capture-decision"
+                | "memory.recover-decision"
         )
     ) {
         crate::admit_invocation_value(
@@ -937,7 +1005,17 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
             )?;
             Ok(())
         };
-        let executed = if invocation["source_owner"] == "memory" {
+        let executed = if matches!(
+            invocation["operation_id"].as_str(),
+            Some("memory.capture-decision" | "memory.recover-decision")
+        ) {
+            crate::native_memory_capture::execute(
+                &target,
+                &current["decision_packet"],
+                invocation,
+                revalidate,
+            )?
+        } else if invocation["source_owner"] == "memory" {
             crate::native_memory_write::execute(
                 &target,
                 &current["decision_packet"],

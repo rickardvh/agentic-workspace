@@ -612,19 +612,20 @@
     },
     "decision_actor": {
       "type": "object",
-      "description": "Semantic actor. AW context is evidence, not an actor.",
+      "description": "Semantic actor or explicitly unattributed material. AW context is evidence, not an actor.",
       "properties": {
         "kind": {
           "enum": [
             "agent",
-            "human"
+            "human",
+            "unattributed"
           ],
-          "description": "Semantic actor kind, independently admitted by the host."
+          "description": "Admitted semantic actor kind, or unattributed when the source supplies no authorship evidence."
         },
         "id": {
           "type": "string",
           "minLength": 1,
-          "description": "Stable actor identity."
+          "description": "Stable actor or bounded-answer identity; unattributed material uses a source reference, not a claimed person or agent identity."
         }
       },
       "required": [
@@ -639,6 +640,7 @@
       "properties": {
         "actor": {
           "$ref": "#/$defs/decision_actor",
+          "properties": {"kind": {"enum": ["agent", "human"]}},
           "description": "The actor supplying the decisive authority."
         },
         "basis": {
