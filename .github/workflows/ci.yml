@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       expected_head_sha:
-        description: Exact generated release head that must receive validation.
+        description: Exact generated release or explicitly escalated head that must receive exhaustive validation.
         required: true
         type: string
 
@@ -16,8 +16,63 @@ permissions:
   contents: read
 
 jobs:
+  merge-sufficiency:
+    name: Merge sufficiency
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+      - name: Admit Rust stable core toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - name: Verify frozen dependency graph
+        run: |
+          uv lock --check
+          uv sync --locked --all-groups
+      - name: Run universal static merge checks
+        run: |
+          cargo +stable check --locked --workspace --all-targets
+          cargo +stable fmt --all -- --check
+          make lint-workspace
+          make typecheck-nosync
+      - name: Run compact public integration guard
+        run: >-
+          uv run pytest
+          tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness
+          tests/test_native_public_cli.py::test_current_public_route_survives_fresh_process_but_not_source_change
+          tests/test_native_public_cli.py::test_real_instruction_protection_and_source_drift
+          tests/test_native_source_reconciliation.py
+          tests/test_native_operating_carriage.py
+          tests/test_native_invoke_continuation.py
+          tests/test_native_independent_owner.py
+          -q
+      - name: Preserve representative Planning custody
+        run: >-
+          uv run pytest tests/test_native_planning_create.py
+          -k "public_creation_then_separate_selection or quiescent_selected_owner"
+          -q
+
+  # The remaining jobs are exhaustive candidate/release admission. They are
+  # intentionally absent from ordinary pull_request execution. The generated
+  # release path dispatches this workflow against the exact release head, and
+  # master push retains the support-bearing server check expected by the stable
+  # release publisher. A high-risk PR may explicitly dispatch this workflow at
+  # its exact head when its own claim needs the broader evidence.
   workspace-checks:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -80,7 +135,7 @@ jobs:
         run: uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   planning-handoff-checks:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -108,7 +163,7 @@ jobs:
         run: uv run pytest tests/test_native_readonly_handoff.py tests/test_native_delegation_lifecycle.py -vv -o faulthandler_timeout=120
 
   independent-owner-ingress:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -136,7 +191,7 @@ jobs:
         run: uv run pytest tests/test_native_independent_owner.py -vv -o faulthandler_timeout=120
 
   workspace-package-artifacts:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -176,7 +231,7 @@ jobs:
           if-no-files-found: error
 
   package-checks:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -206,7 +261,7 @@ jobs:
         run: make check-${{ matrix.package }}-nosync
 
   declared-runtime-matrix:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ github.event_name != 'pull_request' }}
     name: Runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -253,12 +308,12 @@ jobs:
 
   support-bearing-promotion:
     name: Support-bearing promotion
-    if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
+    if: ${{ always() && github.event_name != 'pull_request' }}
     needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require every support-bearing PR check
+      - name: Require every support-bearing candidate check
         env:
           WORKSPACE_CHECKS: ${{ needs.workspace-checks.result }}
           PLANNING_HANDOFF: ${{ needs.planning-handoff-checks.result }}
