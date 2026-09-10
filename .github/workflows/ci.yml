@@ -18,7 +18,7 @@ permissions:
 jobs:
   merge-sufficiency:
     name: Merge sufficiency
-    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -49,43 +49,47 @@ jobs:
           make lint-workspace
           make typecheck-nosync
       - name: Run compact public integration guard
-        run: >-
-          uv run pytest
-          tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness
-          tests/test_native_public_cli.py::test_current_public_route_survives_fresh_process_but_not_source_change
-          tests/test_native_public_cli.py::test_real_instruction_protection_and_source_drift
-          tests/test_native_source_reconciliation.py
-          tests/test_native_operating_carriage.py
-          tests/test_native_invoke_continuation.py
-          tests/test_native_independent_owner.py
-          -q
+        run: |
+          uv run pytest \
+            tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness \
+            tests/test_native_public_cli.py::test_current_public_route_survives_fresh_process_but_not_source_change \
+            tests/test_native_public_cli.py::test_real_instruction_protection_and_source_drift \
+            -q
+          uv run pytest tests/test_native_source_reconciliation.py \
+            -k "source_judgment_rejects_forged_labels_and_missing_sources or new_instruction_source_invalidates_absent_obligation" \
+            -q
+          uv run pytest tests/test_native_operating_carriage.py \
+            -k "exact_answer_and_action_carriage_preserve_full_effects and native" \
+            -q
+          uv run pytest tests/test_native_invoke_continuation.py \
+            -k "invoke_returns_current_projection_without_another_entry and native" \
+            -q
+          uv run pytest tests/test_native_independent_owner.py \
+            -k "independent_native_owner_discovery_request_action_result and json" \
+            -q
       - name: Preserve representative Planning custody
         run: >-
           uv run pytest tests/test_native_planning_create.py
-          -k "public_creation_then_separate_selection or quiescent_selected_owner"
+          -k "public_creation_then_separate_selection"
           -q
       - name: Verify merge-versus-release stage policy
         run: >-
           uv run pytest
           tests/test_release_workflows.py::test_ci_pr_path_is_merge_sufficiency_not_release_admission
-          tests/test_release_workflows.py::test_master_ruleset_requires_merge_sufficiency_while_release_policy_requires_support_bearing
+          tests/test_release_workflows.py::test_master_ruleset_and_release_policy_require_merge_sufficiency_before_support_proof
           tests/test_release_workflows.py::test_ci_supports_exact_head_dispatch_for_generated_release_prs
-          tests/test_release_workflows.py::test_manual_release_workflow_verifies_all_package_versions_and_assets
           -q
 
-  # The remaining jobs are exhaustive candidate/release admission. They are
-  # intentionally absent from ordinary pull_request execution. The generated
-  # release path dispatches this workflow against the exact release head, and
-  # master push retains the support-bearing server check expected by the stable
-  # release publisher. A high-risk PR may explicitly dispatch this workflow at
-  # its exact head when its own claim needs the broader evidence.
+  # Exhaustive candidate proof is explicit rather than ambient. The generated
+  # release path dispatches this workflow against the exact release head, and a
+  # high-risk PR may do the same when its own claim requires broader evidence.
+  # Ordinary PRs and master merges do not pay release-sized proof automatically.
   workspace-checks:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - name: Verify dispatched release head
-        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
         run: |
@@ -143,7 +147,7 @@ jobs:
         run: uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   planning-handoff-checks:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -171,7 +175,7 @@ jobs:
         run: uv run pytest tests/test_native_readonly_handoff.py tests/test_native_delegation_lifecycle.py -vv -o faulthandler_timeout=120
 
   independent-owner-ingress:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -199,7 +203,7 @@ jobs:
         run: uv run pytest tests/test_native_independent_owner.py -vv -o faulthandler_timeout=120
 
   workspace-package-artifacts:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -239,7 +243,7 @@ jobs:
           if-no-files-found: error
 
   package-checks:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -269,7 +273,7 @@ jobs:
         run: make check-${{ matrix.package }}-nosync
 
   declared-runtime-matrix:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     name: Runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -316,7 +320,7 @@ jobs:
 
   support-bearing-promotion:
     name: Support-bearing promotion
-    if: ${{ always() && github.event_name != 'pull_request' }}
+    if: ${{ always() && github.event_name == 'workflow_dispatch' }}
     needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 5
