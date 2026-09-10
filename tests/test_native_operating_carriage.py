@@ -91,7 +91,11 @@ def test_exact_answer_and_action_carriage_preserve_full_effects(tmp_path, shared
     assert result["continuation"]["status"] == "current"
     assert result["continuation"]["retry_effect"] is False
     assert 'cli_invoke = "aw-local"' in (tmp_path / ".agentic-workspace/config.toml").read_text()
-    fresh = consume(surface, shared_core_binary, native_cli, context | {"request": None})
+    continuation_context = result["continuation"]["reentry"]["context"]
+    assert continuation_context["changed"] == [".agentic-workspace/config.toml"]
+    # Compare the same post-effect work, including the owner's newly changed
+    # source; resolving the former scope is a different currentness oracle.
+    fresh = consume(surface, shared_core_binary, native_cli, continuation_context)
     assert fresh["configuration"]["cli_invoke"] == "aw-local"
     assert result["continuation"]["result"] == fresh
     # No carrier or registry has been written into repository truth.
