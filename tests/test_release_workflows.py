@@ -205,6 +205,7 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert "gh workflow run ci.yml" in workflow
     assert '--ref "${RELEASE_PR_BRANCH}"' in workflow
     assert '-f expected_head_sha="${RELEASE_PR_HEAD_SHA}"' in workflow
+    assert '-f reason="coordinated release candidate exact-head admission"' in workflow
     assert "Resolve pending release tag" in workflow
     assert "git tag -a" in workflow
     assert '"${{ steps.release-commit.outputs.release_commit }}"' in workflow
@@ -354,6 +355,7 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     exhaustive = workflow.partition("\n  workspace-checks:\n")[2]
 
     assert "name: Merge sufficiency" in merge
+    assert "github.event_name == 'push'" in merge
     assert "github.event_name == 'pull_request'" in merge
     assert "cargo +stable check --locked --workspace --all-targets" in merge
     assert "make lint-workspace" in merge
@@ -375,8 +377,8 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     ):
         assert release_only not in merge
 
-    assert workflow.count("if: ${{ github.event_name != 'pull_request' }}") == 6
-    assert "if: ${{ always() && github.event_name != 'pull_request' }}" in exhaustive
+    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 6
+    assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in exhaustive
     assert "name: Support-bearing promotion" in exhaustive
     assert "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in exhaustive
     assert "uv build --wheel --sdist --out-dir dist" in exhaustive
@@ -385,15 +387,20 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     assert "cargo +stable test --workspace" in exhaustive
 
 
-def test_master_ruleset_requires_merge_sufficiency_while_release_policy_requires_support_bearing() -> None:
+def test_master_ruleset_and_release_policy_require_merge_sufficiency_before_support_proof() -> None:
     ruleset = json.loads(RULESET_PATH.read_text(encoding="utf-8"))
     support_policy = json.loads(SUPPORT_POLICY_PATH.read_text(encoding="utf-8"))
+    release = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
     status_rule = next(rule for rule in ruleset["rules"] if rule["type"] == "required_status_checks")
     contexts = [item["context"] for item in status_rule["parameters"]["required_status_checks"]]
 
     assert contexts == ["Merge sufficiency", "Review approval"]
-    assert support_policy["required_check"] == "Support-bearing promotion"
+    assert support_policy["required_check"] == "Merge sufficiency"
     assert support_policy["protected_branch"] == "master"
+    assert "support_bearing_promotion.py compose" in release
+    assert "support-bearing-promotion.json" in release
+    assert "release-runtime-matrix:" in release
+    assert "workspace-package-artifacts" not in support_policy
 
 
 def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
@@ -402,11 +409,13 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
     assert "workflow_dispatch:" in workflow
     assert "expected_head_sha:" in workflow
     assert "explicitly escalated head" in workflow
+    assert "reason:" in workflow
+    assert "Why exhaustive proof is required for this exact head." in workflow
     assert "Verify dispatched release head" in workflow
     assert "${{ inputs.expected_head_sha }}" in workflow
     assert '"${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}"' in workflow
-    assert workflow.count("if: ${{ github.event_name != 'pull_request' }}") == 6
-    assert "if: ${{ always() && github.event_name != 'pull_request' }}" in workflow
+    assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 6
+    assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in workflow
 
 
 def test_release_notes_classify_compatibility_significant_changes() -> None:
