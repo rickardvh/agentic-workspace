@@ -11,8 +11,18 @@ from tests.test_native_public_cli import native_cli as native_cli
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 @pytest.mark.parametrize("projection", ["full", "compact", "carried"])
 def test_invoke_returns_current_projection_without_another_entry(tmp_path, shared_core_binary, native_cli, surface, projection):
+    from tests.test_scoped_instructions import _admit, _write
+
+    guidance = "Review the configuration source after it changes."
+    _write(
+        tmp_path,
+        "configuration",
+        "---\npaths: [.agentic-workspace/config.toml]\nchecks:\n  - run: echo configuration-reviewed\n---\n" + guidance,
+    )
+    _admit(tmp_path)
     context = proposal(surface, shared_core_binary, native_cli, tmp_path)
     offered = consume(surface, shared_core_binary, native_cli, context | {"projection": "carried"})
+    assert guidance not in json.dumps(offered["view"]["decision_packet"].get("material", {}))
     selected = consume(
         surface,
         shared_core_binary,
@@ -38,6 +48,7 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
     continuation = result["continuation"]
     assert continuation["status"] == "current"
     assert continuation["retry_effect"] is False
+    assert continuation["context"]["changed"] == [".agentic-workspace/config.toml"]
     # This fresh call is the correctness oracle, not a required operating call.
     fresh = consume(
         surface,
@@ -50,6 +61,8 @@ def test_invoke_returns_current_projection_without_another_entry(tmp_path, share
     )
     assert continuation["result"] == fresh
     packet = fresh["view"]["decision_packet"] if projection == "carried" else fresh["decision_packet"]
+    assert guidance in json.dumps(packet["material"])
+    assert "configuration-reviewed" in json.dumps(packet)
     assert packet["primary_action"] is None  # Return control; no invented next mutation.
     if projection == "carried":
         # The next exact optional detail remains usable with no reconstructed context.

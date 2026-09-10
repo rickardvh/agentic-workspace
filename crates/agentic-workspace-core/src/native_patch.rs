@@ -235,7 +235,8 @@ pub(crate) fn execute(
     )?;
     if admission["disposition"] == "replay" {
         return Ok(
-            json!({"outcome":admission["record"]["outcome"],"custody":admission["custody"]}),
+            json!({"outcome":admission["record"]["outcome"],"custody":admission["custody"],
+                "post_effect_changed_paths":admission["record"]["outcome"]["value"]["changed_paths"]}),
         );
     }
     if admission["disposition"] != "execute"
@@ -318,7 +319,8 @@ pub(crate) fn execute(
     let committed = crate::attempt_store::commit(
         json!({"target":target,"custody":admission["custody"],"outcome":out}),
     )?;
-    Ok(json!({"outcome":out,"custody":committed["custody"]}))
+    Ok(json!({"outcome":out,"custody":committed["custody"],
+        "post_effect_changed_paths":out["value"]["changed_paths"]}))
 }
 
 fn error(value: impl ToString) -> CoreError {

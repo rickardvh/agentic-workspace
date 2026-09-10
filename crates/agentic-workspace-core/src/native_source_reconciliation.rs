@@ -519,5 +519,5 @@ pub(crate) fn execute(
     let committed = crate::attempt_store::commit(
         json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
     )?;
-    Ok(json!({"outcome":outcome,"custody":committed["custody"]}))
+    Ok(json!({"outcome":outcome,"custody":committed["custody"],"post_effect_changed_paths":[path]}))
 }

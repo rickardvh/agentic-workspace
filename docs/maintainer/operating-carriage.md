@@ -37,6 +37,28 @@ obtaining that text needs no preparatory detail fetch.
 
 ## Thin host carriage
 
+Post-effect continuation combines the incoming changed set with exact semantic
+source paths reported by the execution owner (`post_effect_changed_paths` on
+the internal native execution result). Configuration, Memory, source receipts,
+Planning publications/selection, independent publications and patch integration
+report their exact paths, including on retained recovery. The shared public
+boundary validates and deduplicates them before resolving the next decision.
+It does not interpret arbitrary result material or scan dirty state for paths.
+Owner custody records remain separately inspectable; temporary lock/attempt
+files are not task-source changes.
+
+Process execution cannot generically establish a complete changed-path set.
+Proof commands and delegated processes therefore retain their committed outcome
+and owner return/recovery contract, but expose an unavailable generic continuation
+with required changed-path material. A worker's proposed patch paths are not a
+committed-effect report. After native patch integration, the integration owner's
+exact `changed_paths` establishes the expanded continuation scope.
+
+Planning creation returns `value.selection_request` together with
+`value.selection_context`; use that exact context to select the new owner.
+The request is freshly bound to the expanded post-creation scope. Neither it nor
+the generic continuation silently grants a selection, proof or completion claim.
+
 `projection: "carried"` returns two independent transport fields:
 
 - `view`: model-facing compact decision, including exact references;

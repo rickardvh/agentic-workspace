@@ -192,6 +192,7 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
                 direct["arguments"]["answer"] = "unrelated-direct"
                 requests.insert(0, direct)
             created = setup({**context, "invocation": setup({**context, "request": requests})["decision_packet"]["primary_action"]})
+            context = created["value"]["selection_context"]
             switch_choice = created["value"]["selection_request"]
             if not index:
                 setup({**context, "invocation": setup({**context, "request": switch_choice})["decision_packet"]["primary_action"]})

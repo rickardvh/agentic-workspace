@@ -829,9 +829,11 @@ pub(crate) fn execute(
     retained: &Value,
     revalidate: impl FnMut() -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
-    execute_checked(target, decision, invocation, retained, revalidate, |_| {
+    let mut result = execute_checked(target, decision, invocation, retained, revalidate, |_| {
         Ok(())
-    })
+    })?;
+    result["post_effect_changed_paths"] = json!([result["value"]["owner_path"]]);
+    Ok(result)
 }
 /// A current re-entry has its own admitted effect. It finalizes only the old
 /// retained outcome, without replaying that operation's material mutation.
@@ -842,9 +844,12 @@ pub(crate) fn recover(
     retained: &Value,
     revalidate: impl FnMut() -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
-    recover_checked(target, decision, invocation, retained, revalidate, |_| {
+    let mut result = recover_checked(target, decision, invocation, retained, revalidate, |_| {
         Ok(())
-    })
+    })?;
+    result["post_effect_changed_paths"] =
+        json!([result["outcome"]["value"]["original_outcome"]["value"]["owner_path"]]);
+    Ok(result)
 }
 fn recover_checked(
     target: &Path,
@@ -1002,8 +1007,12 @@ mod tests {
             request(target, create)["decision_packet"]["primary_action"].clone(),
         )
         .unwrap();
-        let select = request(target, created["value"]["selection_request"].clone());
-        invoke(target, select["decision_packet"]["primary_action"].clone()).unwrap();
+        let mut selection_context = created["value"]["selection_context"].clone();
+        selection_context["request"] = created["value"]["selection_request"].clone();
+        let select = crate::native_public::start(selection_context.clone()).unwrap();
+        selection_context.as_object_mut().unwrap().remove("request");
+        selection_context["invocation"] = select["decision_packet"]["primary_action"].clone();
+        crate::native_public::invoke_checked(selection_context).unwrap();
         created["value"]["owner_path"].as_str().unwrap().to_owned()
     }
     fn ready(target: &Path) -> Value {

@@ -147,7 +147,10 @@ pub(crate) fn execute(
                 "Committed independent publication disappeared; retained evidence preserved; an owner restoration decision is required",
             ));
         }
-        return Ok(json!({"outcome":outcome(invocation),"custody":previous.unwrap()["custody"]}));
+        return Ok(
+            json!({"outcome":outcome(invocation),"custody":previous.unwrap()["custody"],
+            "post_effect_changed_paths":[invocation["arguments"]["publication"]["path"]]}),
+        );
     }
     let mut custody = match &previous {
         Some(previous) => previous["custody"].clone(),
@@ -195,5 +198,8 @@ pub(crate) fn execute(
     let committed = attempt_store::commit(
         json!({"target":target,"custody":custody,"outcome":outcome(invocation)}),
     )?;
-    Ok(json!({"outcome":outcome(invocation),"custody":committed["custody"]}))
+    Ok(
+        json!({"outcome":outcome(invocation),"custody":committed["custody"],
+        "post_effect_changed_paths":[invocation["arguments"]["publication"]["path"]]}),
+    )
 }

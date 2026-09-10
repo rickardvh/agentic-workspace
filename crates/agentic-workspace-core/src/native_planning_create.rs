@@ -142,7 +142,8 @@ pub(crate) fn inspect_origin(
     }
     crate::native_planning_update::inspect(target, relative, body)?;
     Ok(Some(
-        json!({"invocation":invocation,"outcome":record["outcome"],"custody":prepared["custody"]}),
+        json!({"invocation":invocation,"outcome":record["outcome"],"custody":prepared["custody"],
+            "post_effect_changed_paths":[record["outcome"]["value"]["owner_path"]]}),
     ))
 }
 pub(crate) fn view(
@@ -267,6 +268,7 @@ pub(crate) fn execute(
     )?;
     let mut result = outcome;
     result["custody"] = committed["custody"].clone();
+    result["post_effect_changed_paths"] = json!([result["value"]["owner_path"]]);
     Ok(result)
 }
 

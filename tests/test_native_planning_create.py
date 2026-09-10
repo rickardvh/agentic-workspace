@@ -261,6 +261,7 @@ def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared
     creation["arguments"] = {"material": material()}
     action = call({**context, "request": creation})["decision_packet"]["primary_action"]
     created = call({**context, "invocation": action})
+    context = created["value"]["selection_context"]
     select = call({**context, "request": created["value"]["selection_request"]})["decision_packet"]["primary_action"]
     call({**context, "invocation": select})
     update = call(context)["planning"]["update_requests"][0]
@@ -293,6 +294,8 @@ def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared
         call({**current, "task": "Unrelated new work", "invocation": action})
     finalized = call({**current, "invocation": action})
     assert finalized["status"] == "applied" and finalized["value"]["material_written"] is False
+    assert finalized["continuation"]["status"] == "current"
+    assert created["value"]["owner_path"] in finalized["continuation"]["context"]["changed"]
     assert finalized["value"]["original_outcome"]["status"] == "applied"
     assert finalized["custody"] != finalized["value"]["original_custody"]
     assert path.read_bytes() == before
@@ -384,11 +387,21 @@ def test_creation_retention_never_adopts_changed_or_uncertain_source(
     with pytest.raises(AssertionError):
         consume("native", shared_core_binary, native_cli, {**context, "invocation": action})
     if damage == "material":
-        stale = consume("native", shared_core_binary, native_cli, {**context, "request": result["value"]["selection_request"]})
+        stale = consume(
+            "native",
+            shared_core_binary,
+            native_cli,
+            {**result["value"]["selection_context"], "request": result["value"]["selection_request"]},
+        )
         assert stale["planning"]["status"] == "stale"
     else:
         with pytest.raises(AssertionError):
-            consume("native", shared_core_binary, native_cli, {**context, "request": result["value"]["selection_request"]})
+            consume(
+                "native",
+                shared_core_binary,
+                native_cli,
+                {**result["value"]["selection_context"], "request": result["value"]["selection_request"]},
+            )
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
 
 
@@ -456,6 +469,7 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     request = call(context)["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
     first = call({**context, "invocation": call({**context, "request": request})["decision_packet"]["primary_action"]})
+    context = first["value"]["selection_context"]
     choice = first["value"]["selection_request"]
     call({**context, "invocation": call({**context, "request": choice})["decision_packet"]["primary_action"]})
     selector = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
@@ -471,6 +485,7 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     action = call({**context, "request": [unrelated, request]})["decision_packet"]["primary_action"]
     second = call({**context, "invocation": action})
     assert selector.read_bytes() == before
+    context = second["value"]["selection_context"]
     choice = second["value"]["selection_request"]
     selected = call({**context, "request": choice})
     action = selected["decision_packet"]["primary_action"]
@@ -606,6 +621,7 @@ def test_quiescent_selected_owner_preserves_task_and_allows_unrelated_work(
     request["arguments"] = {"material": material()}
     action = call({**context, "request": request})["decision_packet"]["primary_action"]
     created = call({**context, "invocation": action})
+    context = created["value"]["selection_context"]
     select = created["value"]["selection_request"]
     action = call({**context, "request": select})["decision_packet"]["primary_action"]
     call({**context, "invocation": action})
@@ -639,6 +655,7 @@ def test_quiescent_selected_owner_preserves_task_and_allows_unrelated_work(
     request["arguments"] = {"material": material()}
     action = call({**other, "request": request})["decision_packet"]["primary_action"]
     created_other = call({**other, "invocation": action})
+    other = created_other["value"]["selection_context"]
     action = call({**other, "request": created_other["value"]["selection_request"]})["decision_packet"]["primary_action"]
     call({**other, "invocation": action})
     assert call(other)["planning"]["selected_owner"]["ref"] == created_other["value"]["owner_path"]
@@ -700,6 +717,7 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
     authored = {**material(), "adaptive_assurance": {"proof_profiles": []}, "risk_registry_refs": ["risk:original"], "invariant_refs": []}
     request["arguments"] = {"material": authored}
     created = call({**context, "invocation": call({**context, "request": request})["decision_packet"]["primary_action"]})
+    context = created["value"]["selection_context"]
     selected = call({**context, "request": created["value"]["selection_request"]})
     call({**context, "invocation": selected["decision_packet"]["primary_action"]})
     old = call(context)

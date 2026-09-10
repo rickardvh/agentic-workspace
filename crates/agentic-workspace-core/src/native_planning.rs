@@ -11,6 +11,9 @@ const SELECTION: &str = ".agentic-workspace/local/planning/owner-selection.json"
 const THREADS: &str = ".agentic-workspace/local/work-threads/index.json";
 const STATE: &str = ".agentic-workspace/planning/state.toml";
 const RETAINED: &str = "reconciliation";
+pub(crate) fn post_effect_paths() -> Value {
+    json!([SELECTION])
+}
 /// Footprint of this owner's already normalized pending action. Patterned
 /// temporary names stay bounded to the exact selected-owner carrier directory.
 /// The public host uses these paths only to intersect current restrictions.
@@ -756,7 +759,11 @@ fn resolve_execution(
     invocation: Option<&Value>,
 ) -> Result<Value, CoreError> {
     let reference = invocation
-        .filter(|i| i["arguments"].get("selection_transition").is_some())
+        // The exact invocation names its source even when creation expanded
+        // the work scope and the old deterministic creation path no longer
+        // follows from current_work. This is a selector, never a custody grant;
+        // resolve_context and invocation admission still validate it fully.
+        .filter(|i| i["operation_id"] == "planning.reconcile")
         .and_then(|i| i["arguments"]["reconciliation"]["former_source"]["path"].as_str());
     let mut view = resolve_context(
         target,

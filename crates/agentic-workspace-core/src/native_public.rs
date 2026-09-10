@@ -1291,9 +1291,46 @@ fn finish_invocation(
     progress.confirmed = Some(result.clone());
     // This is precisely fresh public entry, without replaying the mutation's
     // request or treating its previous source snapshot as current.
-    let context = json!({"target":target,"task":input.task,"changed":input.changed});
-    let current = start(context.clone());
-    Ok(attach_continuation(result, current, &context))
+    let mut context = json!({"target":target,"task":input.task,"changed":input.changed});
+    match post_effect_changed_paths(&input.changed, executed, &outcome) {
+        Ok(changed) => {
+            context["changed"] = json!(changed);
+            let current = start(context.clone());
+            Ok(attach_continuation(result, current, &context))
+        }
+        Err(error) => {
+            let mut result = attach_continuation(result, Err(error), &context);
+            // The old context is a recovery starting point, not a complete
+            // post-effect work scope. Never infer paths from dirty state or
+            // accept worker/caller claims as owner-established effect facts.
+            result["continuation"]["reentry"]["required_material"] = json!({
+                "changed":"Establish the complete post-effect changed-path set through the effect owner before continuing affected work."});
+            Ok(result)
+        }
+    }
+}
+
+fn post_effect_changed_paths(
+    before: &[String],
+    executed: &Value,
+    outcome: &Value,
+) -> Result<Vec<String>, CoreError> {
+    let mut changed = before.to_vec();
+    if let Some(paths) = executed.get("post_effect_changed_paths") {
+        let paths: Vec<String> = serde_json::from_value(paths.clone())
+            .map_err(|_| CoreError::new("Owner post-effect changed-path identity is invalid"))?;
+        for path in paths {
+            decision_source::relative(&path)?;
+            changed.push(path);
+        }
+    } else if outcome["effects"] != json!([]) {
+        return Err(CoreError::new(
+            "Owner post-effect changed-path identity is unavailable; effect outcome remains established; do not retry the effect",
+        ));
+    }
+    changed.sort();
+    changed.dedup();
+    Ok(changed)
 }
 
 fn attach_continuation(
@@ -1551,6 +1588,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         let executed = if committed.is_object() {
             let mut result = committed["outcome"].clone();
             result["custody"] = committed["custody"].clone();
+            result["post_effect_changed_paths"] = committed["post_effect_changed_paths"].clone();
             result
         } else {
             crate::native_planning_create::execute(
@@ -1567,11 +1605,23 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             )?
         };
         let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
-        // Reuse the post-result owner projection instead of another source read.
+        // Creation is bound to the former work identity, so its deterministic
+        // discovery path need not be rediscovered by the expanded work scope.
+        // Ask Planning about the exact published owner using the fresh context.
         if let Some(next) = result["continuation"].get("result").cloned() {
-            for key in ["selection_request", "selection_gap"] {
-                if let Some(value) = next["planning"]["created_owner"].get(key) {
-                    result["value"][key] = value.clone();
+            if let Some(reference) = result["value"]["owner_path"].as_str() {
+                match native_planning::candidate(
+                    &target,
+                    &next["current_work"],
+                    reference,
+                    &next["capability_contract"],
+                ) {
+                    Ok(candidate) => {
+                        result["value"]["selection_request"] = candidate["requests"][0].clone();
+                        result["value"]["selection_context"] =
+                            result["continuation"]["context"].clone();
+                    }
+                    Err(error) => result["value"]["selection_gap"] = json!(error.to_string()),
                 }
             }
         } else {
@@ -1602,7 +1652,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             "previous_invocation":committed.get("invocation")}),
     )?;
     progress.entered_effect_owner = true;
-    let executed = if committed.is_object() {
+    let mut executed = if committed.is_object() {
         let mut result = committed["outcome"].clone();
         result["custody"] = committed["custody"].clone();
         result
@@ -1621,6 +1671,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             },
         )?
     };
+    executed["post_effect_changed_paths"] = native_planning::post_effect_paths();
     let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
     Ok(result)
 }
@@ -1628,6 +1679,47 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
 #[cfg(test)]
 mod continuation_tests {
     use super::*;
+
+    #[test]
+    fn missing_or_invalid_owner_paths_preserve_effect_without_claiming_currentness() {
+        let input: Input = serde_json::from_value(
+            json!({"target":"unused","task":"same work","changed":["existing.txt"]}),
+        )
+        .unwrap();
+        let invocation = json!({"operation_id":"fixture.write","effects":["implementation"]});
+        // Neither a caller's proposal nor arbitrary result material is a path
+        // report by the responsible execution owner.
+        let executed = json!({"outcome":{"status":"applied","effects":["implementation"],
+            "value":{"changed_paths":["untrusted.txt"]}}});
+        for paths in [
+            None,
+            Some(Value::Null),
+            Some(json!(["../foreign.txt"])),
+            Some(json!([7])),
+        ] {
+            let mut reported = executed.clone();
+            if let Some(paths) = paths {
+                reported["post_effect_changed_paths"] = paths;
+            }
+            let result = finish_invocation(
+                &input,
+                std::path::Path::new("unused"),
+                &invocation,
+                &reported,
+                &mut InvocationProgress::default(),
+            )
+            .unwrap();
+            assert_eq!(result["effect_outcome"]["status"], "committed");
+            assert_eq!(result["value"], executed["outcome"]["value"]);
+            assert_eq!(result["continuation"]["status"], "unavailable");
+            assert_eq!(result["continuation"]["retry_effect"], false);
+            assert!(result["continuation"]["reentry"]["required_material"].is_object());
+            assert_eq!(
+                result["continuation"]["reentry"]["context"]["changed"],
+                json!(["existing.txt"])
+            );
+        }
+    }
 
     #[test]
     fn committed_effect_survives_failed_or_blocked_continuation() {
