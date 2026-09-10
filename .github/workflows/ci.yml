@@ -11,6 +11,10 @@ on:
         description: Exact generated release or explicitly escalated head that must receive exhaustive validation.
         required: true
         type: string
+      reason:
+        description: Why exhaustive proof is required for this exact head.
+        required: true
+        type: string
 
 permissions:
   contents: read
