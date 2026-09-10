@@ -168,6 +168,11 @@ def test_verify_preview_binds_tagged_artifact_commit_to_exact_source_parent(tmp_
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "Preview v0.52.0")
     artifact_commit = _git(tmp_path, "rev-parse", "HEAD")
+    _git(tmp_path, "branch", "preview-v0.52.0")
+    import pytest
+
+    with pytest.raises(SystemExit, match="must resolve to exact artifact commit"):
+        module.verify_preview_release(ownership, tag="preview-v0.52.0", source_commit=source_commit)
     _git(tmp_path, "tag", "preview-v0.52.0")
 
     result = module.verify_preview_release(ownership, tag="preview-v0.52.0", source_commit=source_commit)

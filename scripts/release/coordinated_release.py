@@ -447,7 +447,7 @@ def verify_preview_release(ownership: dict[str, Any], *, tag: str, source_commit
         raise SystemExit(
             f"Preview artifact commit {artifact_commit} must have exactly reconstruction source {expected_source} as its parent"
         )
-    tag_target = _run(["git", "rev-list", "-n", "1", tag], check=False)
+    tag_target = _run(["git", "rev-list", "-n", "1", f"refs/tags/{tag}"], check=False)
     if tag_target.returncode != 0 or tag_target.stdout.strip() != artifact_commit:
         raise SystemExit(f"Preview tag {tag} must resolve to exact artifact commit {artifact_commit}")
     # Read the allowlist from the source, so the artifact cannot grant itself

@@ -35,7 +35,7 @@ def _resolve_commit(ref: str, *, cwd: Path = ROOT) -> str:
 
 
 def _tag_commit(tag: str) -> str | None:
-    result = _git("rev-list", "-n", "1", tag, check=False)
+    result = _git("rev-list", "-n", "1", f"refs/tags/{tag}", check=False)
     if result.returncode != 0:
         return None
     value = result.stdout.strip()
