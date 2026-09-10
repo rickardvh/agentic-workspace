@@ -106,6 +106,42 @@ jobs:
           fi
           test ! -e support-bearing-promotion.json
 
+      - name: Verify release-only preview delta
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
+          allowed = [str(path) for path in ownership["preview_release_commit_allowed_paths"]]
+          source = subprocess.run(
+              ["git", "rev-parse", "HEAD^"], check=True, capture_output=True, text=True
+          ).stdout.strip()
+          artifact = subprocess.run(
+              ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+          ).stdout.strip()
+          changed = subprocess.run(
+              ["git", "diff", "--name-only", "--no-renames", source, artifact],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout.splitlines()
+
+          def allowed_path(path: str) -> bool:
+              for candidate in allowed:
+                  normalized = candidate.rstrip("/")
+                  if path == normalized or (candidate.endswith("/") and path.startswith(candidate)):
+                      return True
+              return False
+
+          unexpected = sorted(path for path in changed if not allowed_path(path))
+          if not changed:
+              raise SystemExit("Preview artifact commit contains no release-only normalization delta")
+          if unexpected:
+              raise SystemExit(f"Preview artifact changed non-release-only paths: {unexpected}")
+          PY
+
       - name: Sync exact preview dependency graph
         run: |
           uv lock --check
