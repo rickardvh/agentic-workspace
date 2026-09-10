@@ -83,27 +83,46 @@ jobs:
           tests/test_release_workflows.py::test_ci_pr_path_is_merge_sufficiency_not_release_admission
           tests/test_release_workflows.py::test_master_ruleset_and_release_policy_require_merge_sufficiency_before_support_proof
           tests/test_release_workflows.py::test_ci_supports_exact_head_dispatch_for_generated_release_prs
+          tests/test_ci_exhaustive_admission.py
           tests/test_support_bearing_promotion.py::test_checked_in_master_ruleset_requires_review_and_merge_sufficiency
           tests/test_workspace_packaging.py::test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch
           -q
+
+  # Refuse stale or reasonless exhaustive dispatches before any broad proof
+  # runner is eligible to allocate. The aggregate may still report a failed
+  # dispatch, but the release-sized fan-out remains behind this one tiny gate.
+  exhaustive-admission:
+    name: Exhaustive admission
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify dispatched release head
+        env:
+          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}" ]; then
+            echo "Dispatched CI resolved ${GITHUB_SHA}, expected ${EXPECTED_HEAD_SHA}" >&2
+            exit 1
+          fi
+          if [ -z "$(printf '%s' "${REASON}" | tr -d '[:space:]')" ]; then
+            echo "Exhaustive CI dispatch requires a non-empty reason" >&2
+            exit 1
+          fi
+          echo "Admitted exhaustive proof for ${GITHUB_SHA}: ${REASON}"
 
   # Exhaustive candidate proof is explicit rather than ambient. The generated
   # release path dispatches this workflow against the exact release head, and a
   # high-risk PR may do the same when its own claim requires broader evidence.
   # Ordinary PRs and master merges do not pay release-sized proof automatically.
   workspace-checks:
+    needs: exhaustive-admission
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Verify dispatched release head
-        env:
-          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-        run: |
-          if [ "${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}" ]; then
-            echo "Dispatched CI resolved ${GITHUB_SHA}, expected ${EXPECTED_HEAD_SHA}" >&2
-            exit 1
-          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -154,6 +173,7 @@ jobs:
         run: uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   planning-handoff-checks:
+    needs: exhaustive-admission
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -182,6 +202,7 @@ jobs:
         run: uv run pytest tests/test_native_readonly_handoff.py tests/test_native_delegation_lifecycle.py -vv -o faulthandler_timeout=120
 
   independent-owner-ingress:
+    needs: exhaustive-admission
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -210,6 +231,7 @@ jobs:
         run: uv run pytest tests/test_native_independent_owner.py -vv -o faulthandler_timeout=120
 
   workspace-package-artifacts:
+    needs: exhaustive-admission
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -250,6 +272,7 @@ jobs:
           if-no-files-found: error
 
   package-checks:
+    needs: exhaustive-admission
     if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -280,6 +303,7 @@ jobs:
         run: make check-${{ matrix.package }}-nosync
 
   declared-runtime-matrix:
+    needs: exhaustive-admission
     if: ${{ github.event_name == 'workflow_dispatch' }}
     name: Runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
