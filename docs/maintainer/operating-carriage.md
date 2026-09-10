@@ -9,6 +9,10 @@ semantic route and claim limits. Duplicate blockers and selected consequences
 are removed; capability schemas, owner validation states and other owner detail
 remain available with `--projection full`. The selected exact request/action is
 included in ordinary compact output: executing it requires no detail fetch.
+When multiple independent actions are ready, `primary_action` is null and
+`ready_actions` retains every exact invocation. Carried output replaces each
+with its own immutable action reference; the host uses the same invoke helper.
+Selecting one never grants authority to execute another without revalidation.
 
 Consumers needing all former top-level owner views must explicitly request
 `projection: "full"` (CLI `--projection full`). The native owner implementation

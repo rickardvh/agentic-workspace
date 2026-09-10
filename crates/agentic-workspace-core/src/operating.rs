@@ -49,6 +49,20 @@ fn entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
             result.push(entry(context, selector, value)?);
         }
     }
+    if full["decision_packet"]["primary_action"].is_null() {
+        for (index, action) in full["decision_packet"]["ready_actions"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .enumerate()
+        {
+            result.push(entry(
+                context,
+                &format!("/decision_packet/ready_actions/{index}"),
+                action,
+            )?);
+        }
+    }
     // Exact top-level selectors expose optional detail without a catalogue of
     // every nested schema/procedure. Their bytes remain in this local carrier.
     for (key, value) in full.as_object().into_iter().flatten() {
@@ -64,13 +78,11 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     }
     let mut packet = full["decision_packet"].clone();
     let object = packet.as_object_mut().unwrap();
-    for key in [
-        "operation_revisions",
-        "owner_states",
-        "capability_revision",
-        "ready_actions",
-    ] {
+    for key in ["operation_revisions", "owner_states", "capability_revision"] {
         object.remove(key);
+    }
+    if !full["decision_packet"]["primary_action"].is_null() {
+        object.remove("ready_actions"); // Only the duplicate single action.
     }
     // Blockers appear once. Peer actions and questions remain visible: selection
     // never erases a competing restriction or unresolved judgment.
@@ -81,7 +93,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     for item in entries(full, context)? {
         let selector = item["selector"].as_str().unwrap();
         refs.insert(selector.to_owned(), item["reference"].clone());
-        if carried && selector == "/decision_packet/primary_action" {
+        if carried && action_selector(selector) {
             // Effect-bearing arguments stay visible until owners expose a
             // separate decision-bearing summary. Only validation is carried.
             let mut action = item["envelope"].clone();
@@ -103,7 +115,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
                 );
                 object.insert("transport".into(), json!("use-exact-carried-envelope"));
             }
-            packet["primary_action"] = action;
+            *packet
+                .pointer_mut(selector.strip_prefix("/decision_packet").unwrap())
+                .unwrap() = action;
         }
         if carried && selector == "/decision_packet/decision_request" {
             let question = &mut packet["decision_request"];
@@ -137,6 +151,17 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     Ok(json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":{"target":context["target"],"task":context["task"],"changed":context["changed"]},
         "detail_rule":"Exact optional detail: use carried reference, or fresh start with projection full. Carriage grants no authority."}))
+}
+
+fn action_selector(selector: &str) -> bool {
+    selector == "/decision_packet/primary_action"
+        || selector
+            .strip_prefix("/decision_packet/ready_actions/")
+            .is_some_and(|index| {
+                index
+                    .parse::<usize>()
+                    .is_ok_and(|value| value.to_string() == index)
+            })
 }
 
 /// Shared by JSON and all thin consumers. The optional carrier is disposable;
@@ -218,7 +243,7 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
             return Err(error("altered carried envelope"));
         }
         if invoking {
-            if selector != "/decision_packet/primary_action" || answer.is_some() {
+            if !action_selector(selector) || answer.is_some() {
                 return Err(error(
                     "invoke requires an exact carried action without answer",
                 ));
@@ -264,7 +289,7 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
             next["projection"] = projection;
             return operate(next, false);
         }
-        if answer.is_some() || selector == "/decision_packet/primary_action" {
+        if answer.is_some() || action_selector(selector) {
             return Err(error(
                 "detail selection does not accept answers or invoke actions",
             ));
@@ -312,6 +337,75 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn multiple_ready_actions_remain_exactly_constructible_without_detail() {
+        let vectors: Value =
+            serde_json::from_str(include_str!("../../../tests/vectors/source_decision.json"))
+                .unwrap();
+        let input = vectors["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|case| case["id"] == "two-independent-ready-actions")
+            .unwrap()["input"]
+            .clone();
+        let decision = crate::compile_value(input.clone()).unwrap();
+        assert!(decision["primary_action"].is_null());
+        assert_eq!(decision["ready_actions"].as_array().unwrap().len(), 2);
+        let full = json!({"decision_packet":decision});
+        let context =
+            json!({"target":"fixture","task":"two exact independent effects","changed":[]});
+        let envelopes = entries(&full, &context).unwrap();
+        let mut drift = input;
+        drift["capability_contract"]["owners"][1]["operations"][0]["reads"] = json!(["a"]);
+        let stale = crate::compile_value(drift).unwrap();
+        for carried in [false, true] {
+            let view = compact(&full, &context, carried).unwrap();
+            let packet = &view["decision_packet"];
+            assert_eq!(packet["status"], decision["status"]);
+            assert_eq!(packet["claim_boundary"], decision["claim_boundary"]);
+            assert_eq!(packet["blockers"], decision["blockers"]);
+            for (index, action) in packet["ready_actions"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .enumerate()
+            {
+                let exact = if carried {
+                    let entry = envelopes
+                        .iter()
+                        .find(|e| e["reference"] == action["reference"])
+                        .unwrap();
+                    assert!(action_selector(entry["selector"].as_str().unwrap()));
+                    assert_eq!(action["effects"], entry["envelope"]["effects"]);
+                    assert_eq!(action["authority"], entry["envelope"]["authority"]);
+                    assert_eq!(action["arguments"], entry["envelope"]["arguments"]);
+                    &entry["envelope"]
+                } else {
+                    action
+                };
+                assert_eq!(exact, &decision["ready_actions"][index]);
+                assert_eq!(
+                    crate::admit_invocation_value(json!({"decision":decision,"invocation":exact}))
+                        .unwrap()["disposition"],
+                    "execute"
+                );
+                assert!(
+                    crate::admit_invocation_value(json!({"decision":stale,"invocation":exact}))
+                        .is_err()
+                );
+                let mut altered = exact.clone();
+                altered["arguments"] = json!({"widen":true});
+                assert!(
+                    crate::admit_invocation_value(
+                        json!({"decision":decision,"invocation":altered})
+                    )
+                    .is_err()
+                );
+            }
+        }
+    }
 
     #[test]
     fn owner_operating_material_is_current_identity_bound_and_not_a_grant() {
