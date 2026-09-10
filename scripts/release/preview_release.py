@@ -101,7 +101,7 @@ def _assert_source_is_reconstruction_candidate(source_commit: str, *, remote: st
         raise SystemExit(f"Preview source {source_commit} is not reachable from {remote}/{reconstruction_ref}")
 
 
-def _verify_existing_preview(tag: str, source_commit: str) -> dict[str, Any]:
+def _verify_existing_preview(tag: str, source_commit: str | None = None) -> dict[str, Any]:
     artifact_commit = _tag_commit(tag)
     if artifact_commit is None:
         raise SystemExit(f"Preview tag {tag} does not exist")
@@ -262,12 +262,15 @@ def create_preview_subject(
     tag = f"{coordinated_release.PREVIEW_TAG_PREFIX}{version_obj}"
 
     fetched_reconstruction_ref = _fetch_reconstruction_ref(remote=remote, reconstruction_ref=reconstruction_ref)
-    source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)
-    _assert_source_is_reconstruction_candidate(source_commit, remote=remote, reconstruction_ref=reconstruction_ref)
-
     existing = _tag_commit(tag)
     if existing is not None:
-        verified = _verify_existing_preview(tag, source_commit)
+        # Recovery belongs to the immutable tag, not today's branch head.
+        # The verifier binds its recorded source to its exact single parent.
+        expected_source = _resolve_commit(source_ref) if source_ref is not None else None
+        verified = _verify_existing_preview(tag, expected_source)
+        _assert_source_is_reconstruction_candidate(
+            verified["reconstruction_source_commit"], remote=remote, reconstruction_ref=reconstruction_ref
+        )
         recovery = {}
         if push:
             already_remote = bool(_git("ls-remote", "--refs", remote, f"refs/tags/{tag}").stdout.strip())
@@ -282,6 +285,8 @@ def create_preview_subject(
             **recovery,
         }
 
+    source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)
+    _assert_source_is_reconstruction_candidate(source_commit, remote=remote, reconstruction_ref=reconstruction_ref)
     temporary_root = Path(tempfile.mkdtemp(prefix="aw-preview-create-"))
     worktree = temporary_root / "subject"
     tag_created = False

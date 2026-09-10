@@ -210,10 +210,13 @@ def existing_release_versions(ownership: dict[str, Any]) -> list[Version]:
         return versions
     for tag in result.stdout.splitlines():
         try:
-            _, version = parse_release_tag(tag)
+            release_class, version = parse_release_tag(tag)
         except ValueError:
             continue
-        if _tag_declares_coordinated_release_version(ownership, tag=tag, version=version):
+        # A canonical preview name reserves its version permanently, even when
+        # its subject is invalid or future package topology no longer matches.
+        # Reservation is not publication/admission verification.
+        if release_class == "preview" or _tag_declares_coordinated_release_version(ownership, tag=tag, version=version):
             versions.append(version)
     return versions
 

@@ -45,11 +45,15 @@ The next coordinated version must be greater than:
 - every existing public `vMAJOR.MINOR.PATCH` stable tag; and
 - every existing public `preview-vMAJOR.MINOR.PATCH` package identity.
 
+Every canonical preview tag reserves its numeric package version independently
+of later package additions, removals, or moves. Even an invalid subject under a
+canonical preview tag burns the version; reservation does not admit publication.
 A public preview therefore burns its numeric package version. The same version is
 never reused later for different stable or preview bytes.
 
-Existing malformed public tags are treated as burned identities. They are not
-moved or reused by default; the next valid release moves forward past them.
+Existing public tags are never moved or reused by default. Canonical preview
+tags reserve versions even when their subjects fail validation; noncanonical
+preview spellings are rejected rather than admitted as release identities.
 
 Independent package releases are out of scope until the repo explicitly changes
 release model and updates the release ownership manifest, workflows, tests, and
@@ -295,7 +299,10 @@ bearing evidence is inconsistent, the stable workflow must fail before publishin
 the release.
 
 For an existing preview, repeat the helper with the same numeric version and
-explicit `--source-commit C --push`. It verifies the immutable tag using the
+`--push`. Recovery derives C from the immutable tag's metadata and exact parent,
+even after reconstruction advances. An optional `--source-commit C` must match
+that recorded source; C must still be reachable from the fetched reconstruction
+branch. It verifies the immutable tag using the
 current verifier, including the source-owned release-only delta and package
 metadata. A complete prerelease with matching source/artifact manifest and asset
 checksums is a no-op. Otherwise it selects only the exact preview workflow's

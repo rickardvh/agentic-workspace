@@ -428,3 +428,129 @@ def test_existing_release_assets_are_idempotent_and_mismatches_fail_closed(tmp_p
         helper.verify_published_preview(repo="owner/repo", verified=verified)
     del assets["agentic-workspace.spdx.json"]
     assert not helper.verify_published_preview(repo="owner/repo", verified=verified)
+
+
+def test_existing_preview_recovery_uses_recorded_source_after_branch_advances(tmp_path, monkeypatch):
+    import pytest
+
+    helper = _load_helper()
+    module = helper.coordinated_release
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ownership = _fixture(repo)
+    _git(repo, "init", "-b", "reconstruct/first-stable")
+    _git(repo, "config", "user.name", "Test")
+    _git(repo, "config", "user.email", "test@example.com")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "source")
+    source = _git(repo, "rev-parse", "HEAD")
+    monkeypatch.setattr(module, "ROOT", repo)
+    _git(repo, "switch", "--detach", source)
+    module.prepare_preview_release(ownership, tag="preview-v0.52.0", source_commit=source)
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "preview")
+    artifact = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "tag", "-a", "preview-v0.52.0", "-m", "immutable preview")
+    tag_object = _git(repo, "rev-parse", "refs/tags/preview-v0.52.0")
+    _git(repo, "switch", "reconstruct/first-stable")
+    (repo / "later.txt").write_text("later reconstruction work")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "advance reconstruction")
+    advanced = _git(repo, "rev-parse", "HEAD")
+    remote = tmp_path / "remote.git"
+    _git(repo, "clone", "--bare", str(repo), str(remote))
+    _git(repo, "remote", "add", "origin", str(remote))
+    effects = []
+
+    def git(*args, cwd=repo, check=True):
+        if args[0] == "push":
+            effects.append(args)
+        return subprocess.run(["git", *args], cwd=cwd, check=check, capture_output=True, text=True)
+
+    monkeypatch.setattr(helper, "_git", git)
+    monkeypatch.setattr(helper, "_resolve_commit", lambda ref: _git(repo, "rev-parse", f"{ref}^{{commit}}"))
+
+    def recover(**kwargs):
+        assert kwargs["verified"]["reconstruction_source_commit"] == source
+        assert kwargs["verified"]["artifact_commit"] == artifact
+        effects.append("recover")
+        return {"publication_status": "publisher-complete"}
+
+    monkeypatch.setattr(helper, "_recover_publisher", recover)
+    arguments = dict(version="0.52.0", remote="origin", reconstruction_ref="reconstruct/first-stable", push=True)
+    for source_ref in (None, source):
+        result = helper.create_preview_subject(**arguments, source_ref=source_ref)
+        assert result["status"] == "existing-current"
+        assert result["artifact_commit"] == artifact
+        assert result["reconstruction_source_commit"] == source
+    assert effects.count("recover") == 2
+    before = list(effects)
+    with pytest.raises(SystemExit, match="metadata mismatch"):
+        helper.create_preview_subject(**arguments, source_ref=advanced)
+    assert effects == before
+    assert _git(repo, "rev-parse", "refs/tags/preview-v0.52.0") == tag_object
+    assert _git(repo, "rev-parse", "reconstruct/first-stable") == advanced
+    assert _git(repo, "status", "--porcelain") == ""
+    assert _git(remote, "rev-parse", "refs/tags/preview-v0.52.0") == tag_object
+
+    # Even a valid immutable subject cannot recover outside the currently
+    # allowed reconstruction ancestry.
+    unrelated = _git(repo, "commit-tree", "HEAD^{tree}", "-m", "unrelated root")
+    _git(repo, "update-ref", "refs/remotes/origin/reconstruct/first-stable", unrelated)
+    monkeypatch.setattr(helper, "_fetch_reconstruction_ref", lambda **kw: "refs/remotes/origin/reconstruct/first-stable")
+    with pytest.raises(SystemExit, match="not reachable"):
+        helper.create_preview_subject(**arguments, source_ref=None)
+    assert effects == before
+
+
+def test_preview_version_reservation_survives_package_topology_changes(tmp_path, monkeypatch):
+    import copy
+
+    import pytest
+
+    module = _load_module()
+    ownership = _fixture(tmp_path)
+    _git(tmp_path, "init", "-b", "reconstruct/first-stable")
+    _git(tmp_path, "config", "user.name", "Test")
+    _git(tmp_path, "config", "user.email", "test@example.com")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "source")
+    source = _git(tmp_path, "rev-parse", "HEAD")
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    _git(tmp_path, "switch", "--detach", source)
+    module.prepare_preview_release(ownership, tag="preview-v0.52.0", source_commit=source)
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "published preview")
+    _git(tmp_path, "tag", "preview-v0.52.0")
+    _git(tmp_path, "switch", "reconstruct/first-stable")
+
+    added = copy.deepcopy(ownership)
+    path = tmp_path / "packages/new/pyproject.toml"
+    path.parent.mkdir()
+    path.write_text('[project]\nname = "agentic-workspace-new"\nversion = "0.51.0"\n')
+    added["packages"].append({"name": "agentic-workspace-new", "pyproject": "packages/new/pyproject.toml"})
+    moved = copy.deepcopy(ownership)
+    moved["packages"][1]["pyproject"] = "packages/new/moved.toml"
+    (path.parent / "moved.toml").write_text((tmp_path / "packages/memory/pyproject.toml").read_text())
+    removed = copy.deepcopy(ownership)
+    removed["packages"].pop()
+    removed["typescript_packages"] = []
+    for changed in (added, moved, removed):
+        assert module.Version.parse("0.52.0") in module.existing_release_versions(changed)
+        assert module.plan_release(changed)["version"] == "0.52.1"
+        with pytest.raises(SystemExit, match="must be greater than"):
+            module.prepare_preview_release(changed, tag="preview-v0.52.0", source_commit=source)
+
+    # A forged canonical preview still burns the identity; reservation never
+    # legitimizes its mismatched subject. Stable tag admission stays unchanged.
+    _git(tmp_path, "tag", "preview-v0.60.0")
+    _git(tmp_path, "tag", "v0.70.0")
+    assert module.plan_release(added)["version"] == "0.60.1"
+    assert module.Version.parse("0.70.0") not in module.existing_release_versions(added)
+    with pytest.raises(SystemExit, match="requires workspace version"):
+        module.verify_preview_release(ownership, tag="preview-v0.60.0")
+    with pytest.raises(SystemExit, match="must be greater than"):
+        module.prepare_preview_release(ownership, tag="preview-v0.60.0", source_commit=source)
+    for malformed in ("preview-v0.060.0", "preview-v0.60.0-extra"):
+        with pytest.raises(ValueError):
+            module.parse_release_tag(malformed)
