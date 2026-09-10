@@ -9,7 +9,7 @@ testing previews use the distinct `preview-vMAJOR.MINOR.PATCH` namespace.
 
 ## Support-bearing promotion boundary
 
-`master` is protected by a repository ruleset whose required status is the stable `Support-bearing promotion` aggregate from `.github/workflows/ci.yml`. CI also runs on pushes to `master`, so the exact integrated commit receives that server-observed check before release preparation can proceed.
+The checked-in master ruleset requires `Merge sufficiency` and `Review approval`. Ordinary non-draft PRs and pushes to `master` run the compact merge check; the integrated commit receives that server-observed prerequisite before release preparation can proceed. It does not establish release readiness. The live master ruleset is a separate cutover: this reconstruction change does not replace its existing requirements before the new check exists on the protected line.
 
 The support-bearing release workflows begin with read-only admission jobs. They query GitHub check runs for the exact source commit through `scripts/release/support_bearing_promotion.py`; only a downstream job receives tag, release, pull-request, or dispatch write permissions. Stable publication additionally composes `support-bearing-promotion.json` from exact-commit server and runtime receipts plus the existing packed-artifact semantic, install, distribution/license, and security receipts. Missing, stale, mismatched, failed, or unsupported evidence fails closed.
 

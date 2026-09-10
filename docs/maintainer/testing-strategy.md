@@ -60,6 +60,21 @@ These budgets are advisory until a maintainer chooses enforcement. Use them as c
 
 ## Validation Runtime Composition
 
+Ordinary non-draft PRs and `master` pushes run the single `Merge sufficiency`
+CI job: frozen dependencies, Rust compile/format, Workspace lint/types, and
+representative public integration and stage-policy contracts. Focused proof for
+the changed owner or claim remains part of the existing AW/review evidence path;
+the compact job does not replace it with another changed-path test router.
+
+Exhaustive pre-merge proof is an explicit escalation. Dispatch `ci.yml` at the
+intended ref with its exact `expected_head_sha` and a visible `reason` describing
+the cross-cutting or high-risk claim. Only that event allocates the broad suites,
+package builds/install proof, packed conformance, runtime matrix, and aggregate.
+The coordinated release preparer supplies its release-candidate reason through
+the same entrypoint. Preview and stable publishers independently prove their
+actual candidate artifacts before publication; earlier PR checks cannot stand
+in for that evidence.
+
 Use setup-bearing public targets for ordinary local entrypoints and setup-free
 `*-nosync` targets when a caller has already synchronized the environment.
 This keeps validation observable without silently repeating dependency setup:

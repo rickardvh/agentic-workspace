@@ -50,11 +50,11 @@ def test_server_check_receipt_binds_required_check_to_exact_commit() -> None:
     assert mismatched["status"] == "blocked"
 
 
-def test_checked_in_master_ruleset_requires_pr_and_support_bearing_check() -> None:
+def test_checked_in_master_ruleset_requires_review_and_merge_sufficiency() -> None:
     policy = json.loads((ROOT / ".github/support-bearing-promotion.json").read_text(encoding="utf-8"))
     ruleset = json.loads((ROOT / ".github/rulesets/master-support-bearing.json").read_text(encoding="utf-8"))
     assert policy["live_ruleset_id"] == 20615912
-    assert policy["required_check"] == "Support-bearing promotion"
+    assert policy["required_check"] == "Merge sufficiency"
     assert policy["python_support"] == {
         "declared": ["3.11", "3.12", "3.13", "3.14"],
         "minimum": "3.11",
@@ -76,7 +76,7 @@ def test_checked_in_master_ruleset_requires_pr_and_support_bearing_check() -> No
     assert "non_fast_forward" in rules
     assert rules["pull_request"]["parameters"]["required_review_thread_resolution"] is True
     assert rules["required_status_checks"]["parameters"]["required_status_checks"] == [
-        {"context": "Support-bearing promotion"},
+        {"context": "Merge sufficiency"},
         {"context": "Review approval"},
     ]
 

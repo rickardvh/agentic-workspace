@@ -153,23 +153,23 @@ def test_workspace_package_declares_semver_identity() -> None:
     assert re.fullmatch(r"\d+\.\d+\.\d+", pyproject["project"]["version"])
 
 
-def test_ci_builds_and_uploads_root_package_artifacts() -> None:
+def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() -> None:
     ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    artifact_job = ci_text.partition("  workspace-package-artifacts:\n")[2].partition("\n  package-checks:\n")[0]
 
     assert "ready_for_review" in ci_text
-    assert ci_text.count("if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}") == 6
-    assert "workspace-package-artifacts:" in ci_text
-    assert "uv build --wheel --sdist --out-dir dist" in ci_text
-    assert "uv build --wheel --sdist --out-dir dist packages/memory" in ci_text
-    assert "uv build --wheel --sdist --out-dir dist packages/planning" in ci_text
-    assert "uv build --wheel --sdist --out-dir dist packages/verification" in ci_text
-    assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in ci_text
-    assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in ci_text
+    assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in artifact_job
+    assert "uv build --wheel --sdist --out-dir dist" in artifact_job
+    assert "uv build --wheel --sdist --out-dir dist packages/memory" in artifact_job
+    assert "uv build --wheel --sdist --out-dir dist packages/planning" in artifact_job
+    assert "uv build --wheel --sdist --out-dir dist packages/verification" in artifact_job
+    assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in artifact_job
+    assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in artifact_job
     assert (
         "make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist "
         "PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci"
-    ) in ci_text
-    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in ci_text
+    ) in artifact_job
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1" in artifact_job
 
 
 def test_typescript_instruction_runtime_has_no_source_checkout_python_dependency() -> None:

@@ -1,6 +1,6 @@
 {
   "kind": "agentic-workspace/support-bearing-promotion-policy/v1",
-  "required_check": "Support-bearing promotion",
+  "required_check": "Merge sufficiency",
   "protected_branch": "master",
   "live_ruleset_id": 20615912,
   "live_ruleset_recheck": "gh api repos/rickardvh/agentic-workspace/rulesets/20615912",
