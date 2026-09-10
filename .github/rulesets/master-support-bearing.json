@@ -1,5 +1,5 @@
 {
-  "name": "Protect support-bearing master",
+  "name": "Protect master with merge-sufficiency review",
   "target": "branch",
   "enforcement": "active",
   "bypass_actors": [],
@@ -29,7 +29,7 @@
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          {"context": "Support-bearing promotion"},
+          {"context": "Merge sufficiency"},
           {"context": "Review approval"}
         ]
       }
