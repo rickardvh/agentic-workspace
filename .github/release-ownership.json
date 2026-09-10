@@ -86,6 +86,8 @@
     ".agentic-workspace/payload-provenance.json",
     ".release/releases/",
     ".release/previews/",
+    "generated/workspace/python/external_contract_bundle.json",
+    "generated/workspace/typescript/external_contract_bundle.json",
     "uv.lock",
     "generated/workspace/.agentic-workspace-cli-fingerprint.json",
     "generated/memory/.agentic-workspace-cli-fingerprint.json",

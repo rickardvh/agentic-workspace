@@ -475,6 +475,16 @@ def verify_preview_release(ownership: dict[str, Any], *, tag: str, source_commit
     before["release_identity"].update(version=str(version), tag=tag)
     if before != json.loads((ROOT / provenance_ref).read_text(encoding="utf-8")):
         raise SystemExit("Preview changed non-release payload provenance")
+    for language in ("python", "typescript"):
+        relative = f"generated/workspace/{language}/external_contract_bundle.json"
+        if relative not in allowed:
+            continue
+        before = json.loads(_run(["git", "show", f"{expected_source}:{relative}"]).stdout)
+        before["versions"]["client_package"] = str(version)
+        before["versions"]["python_package"]["version"] = str(version)
+        before["versions"]["typescript_package"]["version"] = str(version)
+        if before != json.loads((ROOT / relative).read_text(encoding="utf-8")):
+            raise SystemExit(f"Preview changed non-version external contract: {relative}")
     note_path = preview_release_note_path(ownership, tag)
     if not note_path.is_file() or expected_source not in note_path.read_text(encoding="utf-8"):
         raise SystemExit(f"Preview release note {_repo_path(note_path)} must identify reconstruction source {expected_source}")
