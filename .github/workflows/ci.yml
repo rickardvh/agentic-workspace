@@ -64,6 +64,14 @@ jobs:
           uv run pytest tests/test_native_planning_create.py
           -k "public_creation_then_separate_selection or quiescent_selected_owner"
           -q
+      - name: Verify merge-versus-release stage policy
+        run: >-
+          uv run pytest
+          tests/test_release_workflows.py::test_ci_pr_path_is_merge_sufficiency_not_release_admission
+          tests/test_release_workflows.py::test_master_ruleset_requires_merge_sufficiency_while_release_policy_requires_support_bearing
+          tests/test_release_workflows.py::test_ci_supports_exact_head_dispatch_for_generated_release_prs
+          tests/test_release_workflows.py::test_manual_release_workflow_verifies_all_package_versions_and_assets
+          -q
 
   # The remaining jobs are exhaustive candidate/release admission. They are
   # intentionally absent from ordinary pull_request execution. The generated
