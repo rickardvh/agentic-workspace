@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -34,6 +33,11 @@ def _require_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _preview_base_url(ownership: dict[str, Any], version: str) -> str:
+    template = str(ownership["distribution_identity"]["preview_release_base_url_template"])
+    return template.format(version=version)
+
+
 def _write_preview_readiness_receipts(
     *,
     ownership: dict[str, Any],
@@ -48,7 +52,7 @@ def _write_preview_readiness_receipts(
         package for package in package_entries if package["ecosystem"] == "python" and package["name"] == root_name
     )
     root_wheel = root_package["wheel"]
-    base_url = f"https://github.com/rickardvh/agentic-workspace/releases/download/{tag}"
+    base_url = _preview_base_url(ownership, version)
     identity_digest = _sha256(OWNERSHIP_PATH)
 
     distribution_receipt = str(distribution["canonical_install_receipt"])
@@ -214,7 +218,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
         "project_identity": ownership["project_identity"],
         "distribution_identity": {
             **ownership["distribution_identity"],
-            "release_base_url": f"https://github.com/rickardvh/agentic-workspace/releases/download/{tag}",
+            "release_base_url": _preview_base_url(ownership, version),
         },
         "packages": package_entries,
         "preview_subject": {
