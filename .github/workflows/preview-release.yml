@@ -292,3 +292,15 @@ jobs:
             dist/security-supply-chain-readiness.json
             dist/agentic-workspace.spdx.json
           fail_on_unmatched_files: true
+
+      - name: Smoke published preview from public bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/release/preview_public_smoke.py --tag "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" | tee preview-public-smoke.json
+          {
+            echo "### Published preview smoke"
+            echo '```json'
+            cat preview-public-smoke.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
