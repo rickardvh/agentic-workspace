@@ -56,6 +56,9 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
     assert "support_bearing_promotion.py" not in preview
     assert "dist/support-bearing-promotion.json" not in preview
     assert "test ! -e dist/support-bearing-promotion.json" in preview
+    assert "preview_release_commit_allowed_paths" in preview
+    assert "Preview artifact changed non-release-only paths" in preview
+    assert '"git", "diff", "--name-only", "--no-renames", source, artifact' in preview
     assert "support_bearing_promotion.py github-checks" in stable
     assert "support_bearing_promotion.py compose" in stable
 
