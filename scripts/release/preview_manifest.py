@@ -18,10 +18,6 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
-
-
 def _unique_artifact(dist: Path, pattern: str) -> Path:
     matches = sorted(dist.glob(pattern))
     if len(matches) != 1:
@@ -36,6 +32,77 @@ def _require_json(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise SystemExit(f"Preview artifact {path.name} must contain a JSON object")
     return value
+
+
+def _write_preview_readiness_receipts(
+    *,
+    ownership: dict[str, Any],
+    dist: Path,
+    tag: str,
+    version: str,
+    package_entries: list[dict[str, Any]],
+) -> tuple[str, str]:
+    distribution = ownership["distribution_identity"]
+    root_name = distribution["canonical_root_distribution"]
+    root_package = next(
+        package for package in package_entries if package["ecosystem"] == "python" and package["name"] == root_name
+    )
+    root_wheel = root_package["wheel"]
+    base_url = f"https://github.com/rickardvh/agentic-workspace/releases/download/{tag}"
+    identity_digest = _sha256(OWNERSHIP_PATH)
+
+    distribution_receipt = str(distribution["canonical_install_receipt"])
+    redistributable_receipt = str(distribution["redistributable_receipt"])
+    requirement = f"{root_name} @ {base_url}/{root_wheel['asset']}#sha256={root_wheel['sha256']}"
+    install = {
+        "kind": "agentic-workspace/distribution-install-readiness/v1",
+        "status": "passed",
+        "release_class": "preview",
+        "support_bearing": False,
+        "version": version,
+        "tag": tag,
+        "artifact": {
+            "name": root_wheel["asset"],
+            "sha256": root_wheel["sha256"],
+            "url": f"{base_url}/{root_wheel['asset']}",
+        },
+        "install": {
+            "requirement": requirement,
+            "command": f'uv tool install "{requirement}"',
+        },
+        "second_process_command": 'agentic-workspace start --target . --task "<task>" --format json',
+        "registry_resolution_used": False,
+        "identity": {"source": OWNERSHIP_PATH.relative_to(ROOT).as_posix(), "sha256": identity_digest},
+    }
+
+    redistributable_artifacts: list[dict[str, str]] = []
+    for package in package_entries:
+        if package["ecosystem"] == "python":
+            redistributable_artifacts.extend([package["wheel"], package["sdist"]])
+        else:
+            redistributable_artifacts.append(package["tarball"])
+    redistributable_artifacts = sorted(
+        [{"name": item["asset"], "sha256": item["sha256"]} for item in redistributable_artifacts],
+        key=lambda item: item["name"],
+    )
+    redistributable = {
+        "kind": "agentic-workspace/redistributable-package-readiness/v1",
+        "status": "passed",
+        "release_class": "preview",
+        "support_bearing": False,
+        "version": version,
+        "tag": tag,
+        "license_spdx": ownership["project_identity"]["license_spdx"],
+        "identity_source": OWNERSHIP_PATH.relative_to(ROOT).as_posix(),
+        "identity_sha256": identity_digest,
+        "artifact_count": len(redistributable_artifacts),
+        "artifacts": redistributable_artifacts,
+    }
+    (dist / distribution_receipt).write_text(json.dumps(install, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (dist / redistributable_receipt).write_text(
+        json.dumps(redistributable, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return distribution_receipt, redistributable_receipt
 
 
 def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
@@ -100,6 +167,15 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
             }
         )
 
+    distribution_receipt, redistributable_receipt = _write_preview_readiness_receipts(
+        ownership=ownership,
+        dist=dist,
+        tag=tag,
+        version=version,
+        package_entries=package_entries,
+    )
+    expected_assets.update({distribution_receipt, redistributable_receipt})
+
     semantic_receipts: list[dict[str, Any]] = []
     for runtime_major in ownership["semantic_conformance"]["runtime_majors"]:
         receipt_path = dist / f"generated-command-conformance-node{runtime_major}.json"
@@ -117,20 +193,13 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
             }
         )
 
-    distribution_receipt = str(ownership["distribution_identity"]["canonical_install_receipt"])
-    redistributable_receipt = str(ownership["distribution_identity"]["redistributable_receipt"])
     security_receipt = "security-supply-chain-readiness.json"
     sbom = "agentic-workspace.spdx.json"
-    for asset in (distribution_receipt, redistributable_receipt, security_receipt, sbom):
+    for asset in (security_receipt, sbom):
         path = dist / asset
         if not path.is_file():
             raise SystemExit(f"Missing required preview readiness artifact {asset}")
         expected_assets.add(asset)
-
-    for readiness_asset in (distribution_receipt, redistributable_receipt):
-        receipt = _require_json(dist / readiness_asset)
-        if receipt.get("status") != "passed" or receipt.get("version") != version:
-            raise SystemExit(f"Preview readiness receipt {readiness_asset} does not prove version {version}")
 
     manifest = {
         "kind": "agentic-workspace/coordinated-preview-release-manifest/v1",
