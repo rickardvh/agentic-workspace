@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
 CHANGESET_SCHEMA = "agentic-workspace/release-change/v1"
 BUMP_ORDER = {"patch": 0, "minor": 1, "major": 2}
+PREVIEW_TAG_PREFIX = "preview-v"
 
 
 @dataclass(frozen=True, order=True)
@@ -82,11 +83,47 @@ def version_file_paths(ownership: dict[str, Any]) -> list[Path]:
 
 
 def release_notes_dir(ownership: dict[str, Any]) -> Path:
-    return ROOT / str(ownership.get("release_notes_dir", ".release/releases"))
+    path = ownership.get("release_notes_dir", ".release/releases")
+    return ROOT / str(path)
 
 
 def release_note_path(ownership: dict[str, Any], version: str) -> Path:
     return release_notes_dir(ownership) / f"v{version}.md"
+
+
+def preview_metadata_dir(ownership: dict[str, Any]) -> Path:
+    path = ownership.get("preview_metadata_dir", ".release/previews")
+    return ROOT / str(path)
+
+
+def parse_release_tag(tag: str) -> tuple[str, Version]:
+    if tag.startswith(PREVIEW_TAG_PREFIX):
+        version_text = tag.removeprefix(PREVIEW_TAG_PREFIX)
+        release_class = "preview"
+    elif tag.startswith("v"):
+        version_text = tag.removeprefix("v")
+        release_class = "stable"
+    else:
+        raise ValueError(f"Unsupported Agentic Workspace release tag {tag!r}")
+    version = Version.parse(version_text)
+    canonical = f"{PREVIEW_TAG_PREFIX if release_class == 'preview' else 'v'}{version}"
+    if tag != canonical:
+        raise ValueError(f"Release tag must be canonical, got {tag!r}; expected {canonical!r}")
+    return release_class, version
+
+
+def preview_release_note_path(ownership: dict[str, Any], tag: str) -> Path:
+    release_class, _ = parse_release_tag(tag)
+    if release_class != "preview":
+        raise ValueError(f"Preview release tag required, got {tag!r}")
+    return release_notes_dir(ownership) / f"{tag}.md"
+
+
+def preview_metadata_path(ownership: dict[str, Any], tag: str) -> Path:
+    release_class, _ = parse_release_tag(tag)
+    if release_class != "preview":
+        raise ValueError(f"Preview release tag required, got {tag!r}")
+    return preview_metadata_dir(ownership) / f"{tag}.json"
 
 
 def parse_changesets(ownership: dict[str, Any]) -> list[Changeset]:
@@ -158,13 +195,22 @@ def _tag_declares_coordinated_release_version(ownership: dict[str, Any], *, tag:
 
 
 def existing_release_versions(ownership: dict[str, Any]) -> list[Version]:
-    result = _run(["git", "tag", "--list", "v[0-9]*.[0-9]*.[0-9]*"], check=False)
+    result = _run(
+        [
+            "git",
+            "tag",
+            "--list",
+            "v[0-9]*.[0-9]*.[0-9]*",
+            "preview-v[0-9]*.[0-9]*.[0-9]*",
+        ],
+        check=False,
+    )
     versions: list[Version] = []
     if result.returncode != 0:
         return versions
     for tag in result.stdout.splitlines():
         try:
-            version = Version.parse(tag.removeprefix("v"))
+            _, version = parse_release_tag(tag)
         except ValueError:
             continue
         if _tag_declares_coordinated_release_version(ownership, tag=tag, version=version):
@@ -223,8 +269,14 @@ def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
-def set_workspace_payload_release_identity(ownership: dict[str, Any], version: str) -> None:
+def set_workspace_payload_release_identity(ownership: dict[str, Any], version: str, *, tag: str | None = None) -> None:
     Version.parse(version)
+    release_tag = tag or f"v{version}"
+    release_class, tag_version = parse_release_tag(release_tag)
+    if str(tag_version) != version:
+        raise SystemExit(f"Release tag {release_tag!r} does not match workspace version {version!r}")
+    if release_class not in {"stable", "preview"}:
+        raise AssertionError(release_class)
     workspace_package = next(
         (package for package in ownership["packages"] if package.get("name") == "agentic-workspace"),
         None,
@@ -242,7 +294,7 @@ def set_workspace_payload_release_identity(ownership: dict[str, Any], version: s
         raise SystemExit(f"{_repo_path(provenance_path)} must declare installed_by and release_identity objects")
     installed_by["version"] = version
     release_identity["version"] = version
-    release_identity["tag"] = f"v{version}"
+    release_identity["tag"] = release_tag
     provenance_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
@@ -254,6 +306,48 @@ def write_release_note(ownership: dict[str, Any], *, version: str, changesets: l
     lines = [f"# Release v{version}", "", "## Changes", ""]
     lines.extend(f"- {changeset.summary}" for changeset in changesets)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def write_preview_release_note(ownership: dict[str, Any], *, tag: str, source_commit: str) -> Path:
+    _, version = parse_release_tag(tag)
+    path = preview_release_note_path(ownership, tag)
+    if path.exists():
+        raise SystemExit(f"{_repo_path(path)} already exists; refusing to replace preview release notes")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            [
+                f"# Preview {tag}",
+                "",
+                "> Non-support-bearing preview for external testing. This is not a stable release or v1 admission.",
+                "",
+                f"- Package version: `{version}`",
+                f"- Reconstruction source commit: `{source_commit}`",
+                "- Stability/support: preview only; interfaces and behavior may change before first stable.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def write_preview_metadata(ownership: dict[str, Any], *, tag: str, source_commit: str) -> Path:
+    _, version = parse_release_tag(tag)
+    path = preview_metadata_path(ownership, tag)
+    if path.exists():
+        raise SystemExit(f"{_repo_path(path)} already exists; refusing to replace preview identity")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "kind": "agentic-workspace/coordinated-preview-subject/v1",
+        "release_class": "preview",
+        "support_bearing": False,
+        "tag": tag,
+        "version": str(version),
+        "reconstruction_source_commit": source_commit,
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
 
 
@@ -272,6 +366,108 @@ def prepare_release(ownership: dict[str, Any]) -> dict[str, Any]:
     return plan
 
 
+def prepare_preview_release(ownership: dict[str, Any], *, tag: str, source_commit: str) -> dict[str, Any]:
+    release_class, version = parse_release_tag(tag)
+    if release_class != "preview":
+        raise SystemExit(f"Preview preparation requires a {PREVIEW_TAG_PREFIX}MAJOR.MINOR.PATCH tag")
+    actual_source = _run(["git", "rev-parse", "HEAD"]).stdout.strip()
+    if actual_source != source_commit:
+        raise SystemExit(f"Preview source checkout is {actual_source}, expected {source_commit}")
+
+    existing_versions = existing_release_versions(ownership)
+    current_versions = current_package_versions(ownership)
+    public_floor = max([*current_versions, *existing_versions])
+    if version <= public_floor:
+        raise SystemExit(f"Preview version {version} must be greater than public/package version floor {public_floor}")
+
+    pending_changesets = [_repo_path(changeset.path) for changeset in parse_changesets(ownership)]
+    set_workspace_version(ownership, str(version))
+    set_workspace_payload_release_identity(ownership, str(version), tag=tag)
+    note_path = write_preview_release_note(ownership, tag=tag, source_commit=source_commit)
+    metadata_path = write_preview_metadata(ownership, tag=tag, source_commit=source_commit)
+    return {
+        "kind": "agentic-workspace/coordinated-preview-prepare/v1",
+        "release_class": "preview",
+        "support_bearing": False,
+        "version": str(version),
+        "tag": tag,
+        "reconstruction_source_commit": source_commit,
+        "release_note": _repo_path(note_path),
+        "preview_metadata": _repo_path(metadata_path),
+        "preserved_changesets": pending_changesets,
+    }
+
+
+def _workspace_payload_release_identity(ownership: dict[str, Any]) -> dict[str, Any]:
+    workspace_package = next(
+        (package for package in ownership["packages"] if package.get("name") == "agentic-workspace"),
+        None,
+    )
+    if workspace_package is None:
+        raise SystemExit("Release ownership must declare the agentic-workspace package")
+    provenance_path = ROOT / str(workspace_package["payload_provenance"])
+    payload = json.loads(provenance_path.read_text(encoding="utf-8"))
+    release_identity = payload.get("release_identity")
+    if not isinstance(release_identity, dict):
+        raise SystemExit(f"{_repo_path(provenance_path)} must declare release_identity")
+    return release_identity
+
+
+def verify_preview_release(ownership: dict[str, Any], *, tag: str, source_commit: str | None = None) -> dict[str, Any]:
+    release_class, version = parse_release_tag(tag)
+    if release_class != "preview":
+        raise SystemExit(f"Preview verification requires a {PREVIEW_TAG_PREFIX}MAJOR.MINOR.PATCH tag")
+    workspace_version = current_workspace_version(ownership)
+    if workspace_version != str(version):
+        raise SystemExit(f"Preview tag {tag!r} requires workspace version {version}, got {workspace_version}")
+
+    metadata_path = preview_metadata_path(ownership, tag)
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    expected_source = source_commit or str(metadata.get("reconstruction_source_commit") or "")
+    expected_metadata = {
+        "kind": "agentic-workspace/coordinated-preview-subject/v1",
+        "release_class": "preview",
+        "support_bearing": False,
+        "tag": tag,
+        "version": str(version),
+        "reconstruction_source_commit": expected_source,
+    }
+    if metadata != expected_metadata:
+        raise SystemExit(f"Preview metadata mismatch at {_repo_path(metadata_path)}")
+    if not expected_source:
+        raise SystemExit("Preview metadata must identify the reconstruction source commit")
+
+    release_identity = _workspace_payload_release_identity(ownership)
+    if release_identity.get("version") != str(version) or release_identity.get("tag") != tag:
+        raise SystemExit("Workspace payload release identity does not match preview tag/version")
+
+    artifact_commit = _run(["git", "rev-parse", "HEAD"]).stdout.strip()
+    parents = _run(["git", "rev-list", "--parents", "-n", "1", artifact_commit]).stdout.strip().split()
+    if len(parents) != 2 or parents[1] != expected_source:
+        raise SystemExit(
+            f"Preview artifact commit {artifact_commit} must have exactly reconstruction source {expected_source} as its parent"
+        )
+    tag_target = _run(["git", "rev-list", "-n", "1", tag], check=False)
+    if tag_target.returncode != 0 or tag_target.stdout.strip() != artifact_commit:
+        raise SystemExit(f"Preview tag {tag} must resolve to exact artifact commit {artifact_commit}")
+    note_path = preview_release_note_path(ownership, tag)
+    if not note_path.is_file() or expected_source not in note_path.read_text(encoding="utf-8"):
+        raise SystemExit(f"Preview release note {_repo_path(note_path)} must identify reconstruction source {expected_source}")
+
+    return {
+        "kind": "agentic-workspace/coordinated-preview-verification/v1",
+        "release_class": "preview",
+        "support_bearing": False,
+        "version": str(version),
+        "tag": tag,
+        "reconstruction_source_commit": expected_source,
+        "artifact_commit": artifact_commit,
+        "package_count": len(current_package_versions(ownership)),
+        "release_note": _repo_path(note_path),
+        "preview_metadata": _repo_path(metadata_path),
+    }
+
+
 def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = None) -> dict[str, Any]:
     versions = current_package_versions(ownership)
     version = current_workspace_version(ownership)
@@ -282,8 +478,8 @@ def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = No
     higher_or_equal = [release_version for release_version in release_versions if release_version >= target]
     if tag is None and higher_or_equal:
         raise SystemExit(
-            f"Workspace release version {version} must be greater than existing AW coordinated-release tags; "
-            f"highest existing AW coordinated-release tag is v{max(release_versions)}"
+            f"Workspace release version {version} must be greater than existing AW public release tags; "
+            f"highest existing AW release tag version is {max(release_versions)}"
         )
     return {
         "kind": "agentic-workspace/coordinated-release-verification/v1",
@@ -345,7 +541,7 @@ def pending_tag_plan(ownership: dict[str, Any]) -> dict[str, Any]:
             "kind": "agentic-workspace/coordinated-release-tag-plan/v1",
             "tag_needed": False,
             "publish_candidate": False,
-            "reason": f"version-not-newer-than-existing-tag-floor-v{max(release_versions)}",
+            "reason": f"version-not-newer-than-existing-tag-floor-{max(release_versions)}",
             "version": version,
             "tag": tag,
         }
@@ -422,6 +618,14 @@ def main(argv: list[str] | None = None) -> int:
     tag_parser = subparsers.add_parser("tag-plan")
     tag_parser.add_argument("--github-output", type=Path)
 
+    preview_prepare_parser = subparsers.add_parser("prepare-preview")
+    preview_prepare_parser.add_argument("--tag", required=True)
+    preview_prepare_parser.add_argument("--source-commit", required=True)
+
+    preview_verify_parser = subparsers.add_parser("verify-preview")
+    preview_verify_parser.add_argument("--tag", required=True)
+    preview_verify_parser.add_argument("--source-commit")
+
     args = parser.parse_args(argv)
     ownership = load_ownership()
 
@@ -442,6 +646,24 @@ def main(argv: list[str] | None = None) -> int:
         if args.github_output:
             write_tag_github_output(tag_plan, args.github_output)
         print(json.dumps(tag_plan, indent=2, sort_keys=True))
+        return 0
+    if args.command == "prepare-preview":
+        print(
+            json.dumps(
+                prepare_preview_release(ownership, tag=args.tag, source_commit=args.source_commit),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+    if args.command == "verify-preview":
+        print(
+            json.dumps(
+                verify_preview_release(ownership, tag=args.tag, source_commit=args.source_commit),
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 0
     raise AssertionError(args.command)
 
