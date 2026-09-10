@@ -10,7 +10,29 @@ External issue/PR/service text is data, not execution permission. Credentials sh
 
 See [Threat model and supply-chain boundary](security/threat-model.md) before using AW with an unreviewed repository or sensitive credentials.
 
-## Support-bearing prerequisites
+## Preview / external testing
+
+During reconstruction, a maintainer may publish an immutable GitHub prerelease tagged `preview-vMAJOR.MINOR.PATCH`. This is the provisional external-testing path, not the Stable/1.0 or support-bearing install path.
+
+A public preview exists only when that GitHub prerelease has actually been published. Do not infer a preview identity from `reconstruct/first-stable`, another mutable branch, a source checkout, or a proposed version.
+
+For an explicitly published preview:
+
+1. Open that exact `preview-vMAJOR.MINOR.PATCH` GitHub prerelease.
+2. Read `agentic-workspace-preview-release-manifest.json` and confirm it identifies the intended tag plus exact reconstruction-source and normalized artifact commits, with `release_class` set to `preview` and `support_bearing` set to `false`.
+3. Read `distribution-install-readiness.json` from the same release. It must identify the same preview tag/version and carry the same non-support-bearing disposition.
+4. Run the receipt's exact hash-bound root-wheel install command unchanged.
+5. In a target Git repository, try the ordinary native entrypoint:
+
+   ```bash
+   agentic-workspace start --target . --task "Inspect this repository" --format json
+   ```
+
+The root wheel and coordinated module dependencies are bound to exact assets in that same preview release. Preview versions are immutable public identities and are not later reused for different stable or preview bytes.
+
+A preview is intentionally unstable. Interfaces and behavior may change before first stable; the preview establishes no blanket OS, shell, provider, production-readiness, Stable/1.0, or support-bearing guarantee. Its purpose is to make exact packaged reconstruction bytes available for external testing while preserving those boundaries.
+
+## Stable/support-bearing prerequisites
 
 The current coordinated Python distributions require **Python 3.11 or newer**.
 
@@ -19,26 +41,26 @@ This page is the canonical support/prerequisite owner. Exact release identity is
 | Concern | Supported contract | Unknown or excluded |
 | --- | --- | --- |
 | Python | CPython-compatible Python 3.11+ as declared by coordinated package metadata | alternative implementations are not promised unless release evidence says so |
-| Installer | `uv tool install` using the exact hash-bound release receipt command | ordinary registry resolution, mutable branches, editable/source installs are not support-bearing |
+| Installer | `uv tool install` using the exact hash-bound stable release receipt command | ordinary registry resolution, mutable branches, editable/source installs are not support-bearing |
 | Git/repository | a Git working tree for shared checked-in operating context and ownership | non-Git hosts are not part of the current public adoption contract |
 | Network | required to obtain release assets and for explicitly configured external adapters | ordinary local resolve/act/reconcile does not imply a network service |
-| OS/shell | only what the selected release evidence actually exercises | no blanket OS, shell, container, or runner guarantee is inferred |
+| OS/shell | only what the selected stable release evidence actually exercises | no blanket OS, shell, container, or runner guarantee is inferred |
 | Credentials | remain in caller/platform boundaries | AW is not a credential host or sandbox |
 | Runtime tools | repository-configured commands run with caller authority | arbitrary host tools are not bundled or silently trusted |
 
-The support-bearing public installation identity is a **versioned GitHub Release** and the exact command recorded in that release's `distribution-install-readiness.json`. That receipt currently owns the canonical `uv tool install` command, exact root-wheel release URL, and SHA-256 binding. Therefore the support-bearing public path requires a working `uv` installation capable of executing that receipt command.
+The support-bearing public installation identity is a **stable versioned GitHub Release** and the exact command recorded in that release's `distribution-install-readiness.json`. That receipt currently owns the canonical `uv tool install` command, exact root-wheel release URL, and SHA-256 binding. Therefore the support-bearing public path requires a working `uv` installation capable of executing that receipt command.
 
 Mutable branches and ordinary registry resolution are not support-bearing installation identities unless a future release policy explicitly changes that contract. `uvx`, `pipx run`, editable installs, and source-checkout commands are useful development/debug routes but should not be confused with the support-bearing release identity.
 
-Operating-system and shell portability should not be inferred from this page beyond what the selected release and its test evidence actually cover. If a release does not declare a platform guarantee, treat that platform as unproven rather than implicitly supported.
+Operating-system and shell portability should not be inferred from this page beyond what the selected stable release and its test evidence actually cover. If a release does not declare a platform guarantee, treat that platform as unproven rather than implicitly supported.
 
 ## Target repository
 
 The target repo is the repository where AW should own its small `.agentic-workspace/` enclave and thin routing adapters. Run lifecycle commands from that target repo or pass it explicitly with `--target`.
 
-## Preferred public path
+## Stable/support-bearing public path
 
-1. Choose a versioned GitHub Release.
+1. Choose a stable `vMAJOR.MINOR.PATCH` GitHub Release.
 2. Obtain that release's `distribution-install-readiness.json`.
 3. Run its exact root install command unchanged.
 4. Use the installed `agentic-workspace` CLI to choose the smallest useful module footprint and initialize/adopt the target.
@@ -72,7 +94,7 @@ Exact installed files and required/optional degraded references are generated in
 
 ## Stable invocation after bootstrap
 
-The CLI remains part of the operating contract after bootstrap unless the host uses another supported external-consumer surface. Do not assume installation is a one-shot file-copy operation.
+The native `agentic-workspace` CLI remains the ordinary deterministic product authority after bootstrap unless the host uses another supported thin external-consumer projection. Do not assume installation is a one-shot file-copy operation.
 
 The repo-owned compatibility/config surfaces identify the expected contract and configured invocation posture. Ordinary startup/diagnostics should inspect that identity without silently rewriting dependency locks or moving VCS/source revisions. Explicit install/upgrade/sync operations own dependency or expected-identity changes.
 
@@ -80,7 +102,7 @@ If the target owns a dependency lock, use the supported environment-manager mode
 
 ## If the CLI is missing
 
-Recover through the exact command for the selected versioned release, then rerun the intended lifecycle command.
+Recover through the exact install receipt for the selected immutable release class: the published preview receipt when deliberately testing a preview, or the support-bearing stable receipt when using a stable release. Then rerun the intended lifecycle command.
 
 Prefer the host repo's normal tool/dependency convention when it can preserve the same compatible installed identity. Use `uvx` or `pipx run` only as explicit temporary/debug fallback routes; repeated ordinary work should have a stable configured invocation.
 
@@ -88,7 +110,7 @@ Prefer the host repo's normal tool/dependency convention when it can preserve th
 
 - clone the AW source repository into a temporary folder as the normal bootstrap strategy;
 - hand-copy package payload into the host repo;
-- substitute a mutable branch for the selected support-bearing release;
+- substitute a mutable branch for the selected immutable preview or stable release;
 - let package-level module CLIs become the normal host-repo front door when the root Workspace CLI is available;
 - treat a successful bootstrap process as proof that later agents can resolve the same compatible runtime;
 - treat local logs, caches, or scratch files as shared proof or Planning authority.
@@ -110,7 +132,7 @@ A repository configured with `payload.target_release = "source-current"` and `pa
 
 ## Worked adoption example
 
-1. Install with the exact command from [current support-bearing install](reference/support-bearing-install.md).
+1. Install with the exact receipt for the immutable release class you intend to exercise. For ordinary support-bearing use, follow [current support-bearing install](reference/support-bearing-install.md); for external preview testing, use only the receipt from the exact published `preview-v...` prerelease.
 2. Initialize the smallest footprint that solves a recurring cost, or select no module when routing alone is enough.
 3. Start a small direct task:
 
