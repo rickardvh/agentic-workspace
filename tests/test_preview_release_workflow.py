@@ -55,6 +55,14 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
     assert "support_bearing_promotion.py" not in preview
     assert "test ! -e dist/support-bearing-promotion.json" in preview
     assert "overwrite_files: false" in preview
+    assert preview.count("ref: ${{ github.sha }}") == 2
+    assert "make_latest: false" in preview
+    permissions = json.loads((ROOT / ".github/workflow-write-permissions.json").read_text())
+    assert set(permissions["allowed_write_permissions"][".github/workflows/preview-release.yml"]) == {
+        "contents",
+        "id-token",
+        "attestations",
+    }
     assert "--check-published" in preview
     assert "support_bearing_promotion.py github-checks" in stable
     assert "support_bearing_promotion.py compose" in stable
