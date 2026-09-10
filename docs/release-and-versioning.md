@@ -303,6 +303,10 @@ tag-push run for P and that tag. Failed or cancelled runs are rerun in place;
 active runs are left running. A missing, mismatched, or otherwise nonrecoverable
 run fails closed. The tag is never moved, deleted, or recreated for recovery.
 
+Preview normalization refreshes the four exact generator-owned fingerprint
+receipts after version and lockfile normalization, using the existing generator.
+These release-only receipt updates stay on P.
+
 Publisher retries inspect existing release bytes before building and again
 before upload. Existing assets must be byte-identical; replacement is disabled,
 and previews cannot update the latest-release pointer. If a partial publication

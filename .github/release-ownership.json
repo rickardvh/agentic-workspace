@@ -86,7 +86,11 @@
     ".agentic-workspace/payload-provenance.json",
     ".release/releases/",
     ".release/previews/",
-    "uv.lock"
+    "uv.lock",
+    "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+    "generated/memory/.agentic-workspace-cli-fingerprint.json",
+    "generated/planning/.agentic-workspace-cli-fingerprint.json",
+    "generated/verification/.agentic-workspace-cli-fingerprint.json"
   ],
   "package_affecting_paths": [
     ".release/changes/",

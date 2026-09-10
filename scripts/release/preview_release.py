@@ -301,6 +301,7 @@ def create_preview_subject(
             cwd=worktree,
         )
         _run(["uv", "lock"], cwd=worktree)
+        _run([sys.executable, "scripts/generate/generate_command_packages.py"], cwd=worktree)
         changed = _verify_release_only_paths(worktree, ownership)
         _git("diff", "--check", cwd=worktree)
         _git("add", "--", *changed, cwd=worktree)
