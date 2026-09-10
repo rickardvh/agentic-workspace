@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Separate compact PR merge proof from exact-candidate release readiness and document the protected-commit admission boundary."
+issues = [3202]
