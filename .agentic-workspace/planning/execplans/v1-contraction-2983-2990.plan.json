@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Execution frontier #2983; architecture #3020; promotion ledger #3138. Integrated reconstruct/first-stable remains through #3180 at127950fa15a11efe5f73cd7cbbc86d3d7fd8b162. Open stack #3181 -> #3182 -> #3183 -> #3184 -> #3185 -> #3186 has scoped independent review and green current-head CI. #3186 at9760a66bc distinguishes current native, historical generated and helper evidence while retaining explicit cumulative failures in docs/maintainer/reconstruction-conformance.md. Current #3040/#2570 slice admits agent decisions only under explicit shared standing policy for an exact durable owner/path set. Per-task material/work/dependencies/destination/postimage and policy/capability revisions remain in owner-held proposal/provenance, not Configuration. Missing or mismatched policy returns the complete bounded human request. Progressive Configuration read/edit uses existing exact human authorization; publication/recovery/recall revalidate and cannot manufacture deciding authority. No actor authentication, signed host, generic semantic classifier, execution grant or completion grant is introduced. New public parity tests cover owner/scope mismatch, local self-grant rejection, policy/dependency/work drift, no-retention, self-config dependencies and current consequences; existing human and agent interruption/revocation recovery pass. Broad75 decision/Memory cases and236 public/independent regressions pass, Rust104+3+3+4 and Clippy pass; the final8extended supersession/revocation parity cases and full check-planning-nosync pass. Independent scoped authority review found no substantive defect after separating standing policy from per-task material. Broader #3040 nomination/disposition/repository-lifetime proof, #2606/#2986 cumulative owner acceptance, #2970 continuity/host lifecycle, #2929 real issue creation, #3041 dogfood and #2909/#2616/#2990 exact cumulative admission remain open. Preserve six preexisting ordinary Assignment/proof artifacts. Review correction on #3187 after 5cb8dd668: exact-file standing delegation rejects wildcard metacharacters in both shared schema and runtime matcher; pattern-shaped current work returns the existing proposal-bound human decision request. Concrete multi-file set equality and all existing authority/lifetime boundaries remain unchanged. Final correction validation and external re-review remain required; stop after this PR. Current 2026-09-09 user-authorized continuation: reconstruct/first-stable remains 071514455987cbd967095ac35934c3bb15ead77d. The next bounded slice implements shared Rust compact/full/carried projections, exact disposable envelope references, unchanged work carriage and absent-answer-only helpers across native/JSON/Python/TypeScript. Native owners retain admission, currentness, effect, authority and claim semantics; proposal judgment material stays visible. Local evidence: 375 broad tests, 14 focused carriage cases, Rust workspace tests, clippy, lint/typecheck and generated adapter conformance passed. The measured configuration trace reduces model protocol bytes 4241 to 114 and model turns 2 to 1 with no detail calls; extra internal answer resolution and local carriage cost remain explicit. See docs/maintainer/operating-carriage.md. This is a review candidate, not merged acceptance or parent closure. Stacked continuation on codex/3059-truthful-invoke-continuation now separates effect outcome from current/unavailable continuation across public Rust, native, JSON, Python and TypeScript. All ten effect-return branches share post-effect continuation and retain execution-time revalidation. A confirmed result survives post-effect resolution/projection failure; uncertain effects require exact re-entry. This remains an unmerged review candidate. A third bounded stack slice on codex/3059-required-startup-delivery now supplies configured startup guidance up to 8 KiB directly through the existing owner, carries the exact read dependency into every affected action, and leaves larger/unavailable sources lazy/restricted. Profiled source revision validation no longer rebuilds an unused schema/contract; all fresh source/configuration/effect barriers remain.",
+    "frontier": "Current 2026-09-10 review correction frontier: reconstruct/first-stable remains 071514455987cbd967095ac35934c3bb15ead77d. PR #3188 at e404dfffe preserves all exact ready actions in compact/carried output when there is no single primary action, without a detail hop. PR #3189 at 94415f54d incorporates that repair and binds generic continuation to owner-established post-effect source paths. Unknown process effect paths produce an explicit continuation gap while committed outcome and owner return/recovery survive; no dirty-state inference or worker-proposal authority is introduced. Planning selection carries the exact expanded context and retains source/custody/human-transfer admission. PR #3190 rebased cleanly at 6d82f9922 with an unchanged source-delivery patch; it inherits both corrections. All remain unmerged implementation candidates requiring independent re-review. Preserve the six preexisting ordinary Assignment/proof artifacts.",
     "owner": "#2983",
     "residual_intent": "Complete the current P0/P1 owner audit and native implementation gaps, then #2909/#2616/#2990 before human-approved #3014/#3138 cutover. Immediate operation-efficiency residuals remain at existing owners: general bounded material helpers and truthful post-effect continuation (#2986/#2987/#2947), route/source delivery and same-work breadth (#2661/#2930), measured derivation reuse (#2981), worker entry/effective host context (#2818/#2947), and cumulative #2909/#3059 acceptance."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Continue existing-owner residuals while independently reviewing #3188, #3189 and the required-startup-delivery stack: continuing-consumer source suppression/same-work breadth (#2661), richer owner material inputs (#2986/#2987), semantic route breadth (#2930), wider positive/negative lifetime reuse (#2981), and worker entry/effective host context (#2818/#2947/#2210), then cumulative #2909/#3059. The user directed work to proceed without waiting for CI; no eventual review/release gate, parent completion, or master promotion is inferred.",
+  "next_action": "Request independent re-review of the repaired #3188/#3189/#3190 stack. No parent issue is closable. Continue existing-owner residuals for richer bounded material and generic process post-effect path accounting (#2986/#2987/#2947), same-work source delivery (#2661), semantic discovery (#2930), wider measured reuse (#2981), worker entry/effective host context (#2818/#2947/#2210), and cumulative #2909/#3059. Do not wait for CI as a work gate or infer review/release admission, merge, parent completion or master promotion.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -69,7 +69,8 @@
       "Human implementation authorization: on 2026-09-09 the human explicitly approved the proposed typed fallback capability and everything planned in the open issues, and directed the dogfooding skill to reserve renewed human review for autonomously introduced changes beyond those approved plans. The skill clarification is committed at b21e322ce. This authorizes implementation of planned authority boundaries; it is not approval of later agent-added scope, a specific decision or April-note promotion, stale source effects, independent review, issue closure, release admission or master promotion. Do not ask again for the approved capabilities.",
       "Current source-write continuation correction: eight configuration shared/local cases pass across native/JSON/Python/TypeScript, including selected Planning source drift and source preservation; Rust library 97 passed with 3 ignored helpers and Clippy passed. April retirement separately passed 18 Memory cases and final 8 disposition cases with Planning-source drift. Actual note SHA-256 remains 06332182cc9f0085b4c0d6d2bdf132ff607c8eb339b1c403f3700ac9031100fa; config.local.toml remains 3b35a053756ee5001ed15b846ddf2a944812e165884a65c34149457a1ca30189. Cumulative native configuration, Memory and public-interface proof passed 200 cases with one skip in 205.48 seconds; no final conformance or owner completion admission is inferred.",
       "Truthful invoke local proof: 329 broad owner cases passed before a previously loaded logging assertion stopped the run; the updated logging and remaining independent-owner cases plus carriage/continuation cases then passed, 84 total. Rust library: 109 passed, three subprocess helpers intentionally ignored. Fresh installed Python/TypeScript lifecycle, stale rejection and removal/no-residue proof passed. The deterministic config trace uses 4022 versus 114 model protocol bytes, 4 versus 3 public calls and 3 versus 1 modeled interactions, zero required detail calls. Failure injection at the shared continuation boundary preserves a real configuration write and custody. These observations do not authenticate independent review or parent completion.",
-      "Required-startup delivery proof: 108 focused source/System Intent/repository decision/Assignment cases passed across final and follow-up runs; an earlier Windows Python process access violation passed isolated retry and subsequent neighboring runs. Fixtures retain eager-small and lazy-large ceilings and exact CRLF bytes. Rust library 109 passed/3 intentionally ignored subprocess helpers; clippy and generated static proof passed. Fresh installed Python/TypeScript lifecycle with configured required guidance passed. Against 6ef11535b, a 70-byte source journey falls from 7651 to 3383 total compact bytes, 685 to zero generated read-request bytes, 2 to 1 public calls, with source delivered once and equal claim/effect limits. Transient release profiling shows startup schema parses 3 to 2 per start and 12 to 8 per config invoke; governing-source read attempts remain 5 and 20. Instrumentation was removed, no cache added, and no end-to-end latency or parent-completion claim is made."
+      "Required-startup delivery proof: 108 focused source/System Intent/repository decision/Assignment cases passed across final and follow-up runs; an earlier Windows Python process access violation passed isolated retry and subsequent neighboring runs. Fixtures retain eager-small and lazy-large ceilings and exact CRLF bytes. Rust library 109 passed/3 intentionally ignored subprocess helpers; clippy and generated static proof passed. Fresh installed Python/TypeScript lifecycle with configured required guidance passed. Against 6ef11535b, a 70-byte source journey falls from 7651 to 3383 total compact bytes, 685 to zero generated read-request bytes, 2 to 1 public calls, with source delivered once and equal claim/effect limits. Transient release profiling shows startup schema parses 3 to 2 per start and 12 to 8 per config invoke; governing-source read attempts remain 5 and 20. Instrumentation was removed, no cache added, and no end-to-end latency or parent-completion claim is made.",
+      "Review correction proof: 12 multi-ready-action cases cover native/JSON/Python/TypeScript times full/compact/carried, with exact envelope/effect/claim parity and stale rejection; all 14 prior carriage cases pass. The continuation correction passed 112 focused Planning creation/recovery, delegated patch lifecycle, startup and assurance cases across a run and focused follow-up, plus 16 multi-action/recovery checks and 16 invoke projection/rejection cases. Configuration and concrete patch paths activate scoped obligations in the returned continuation; missing or malformed owner path reports preserve committed effects but do not claim current continuation. Rust library 111 passed with 3 intentional subprocess-only skips; a parallel temporary-directory collision passed serial rerun. Clippy and commit hooks pass. The rebased source-delivery head passed all 46 startup/invoke cases; range-diff confirms its product patch unchanged. A stale assurance test fixture was corrected to read the current Verification manifest and full detail. These are local implementation results, not independent review or containing-issue acceptance; CI was not awaited per user direction."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -83,7 +84,12 @@
       "https://github.com/rickardvh/agentic-workspace/issues/2909#issuecomment-5589567494",
       "https://github.com/rickardvh/agentic-workspace/issues/2767#issuecomment-5590211138",
       "docs/maintainer/operating-carriage.md",
-      "tests/test_native_operating_carriage.py"
+      "tests/test_native_operating_carriage.py",
+      "https://github.com/rickardvh/agentic-workspace/pull/3188#issuecomment-5614530740",
+      "https://github.com/rickardvh/agentic-workspace/pull/3189#issuecomment-5614651904",
+      "tests/test_native_invoke_continuation.py",
+      "tests/test_native_independent_owner.py",
+      "tests/test_native_delegation_lifecycle.py"
     ],
     "requirements": [
       "Prove this real owner is materially current through native update, fresh-session recovery, source-drift rejection and preservation of unrelated work.",
@@ -141,7 +147,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 46,
+  "revision": 47,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -193,18 +199,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/ca2cc390614b0e66f4d4f15c4d1f1e98a6fd6df333753f141eaf497249b569c0.attempt.json",
-        "revision": "sha256:cfac5cfb9a9bc3323c82b51d92fa94d878af682b2b83570aaa201c24b4b0afa7",
+        "path": ".agentic-workspace/local/effects/199dd03e10e92c2393f58f1afea0f575227d1c272515787b11bbea0e3b18c2f0.attempt.json",
+        "revision": "sha256:6c4c3d9988e4e75b07c2e4a33b0a195119422d3d7375930448b59fa099530628",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/ca2cc390614b0e66f4d4f15c4d1f1e98a6fd6df333753f141eaf497249b569c0.result.json",
-        "revision": "sha256:6a056a142b887c41ed971d95ee8e8129c8ab03383904463425324c90867a77f3",
+        "path": ".agentic-workspace/local/effects/199dd03e10e92c2393f58f1afea0f575227d1c272515787b11bbea0e3b18c2f0.result.json",
+        "revision": "sha256:84e71c2885135cf42641b5da1e603bdf080b815e0709887214975623529b1546",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:c22c72d2c28a5b9cb08123aecebabe56b82c922a494e45c8d13d30803659630c",
+    "invocation_revision": "sha256:18971207109ef63d1fc6d0be4b4da3e20e89dc0a1247378cec644a7cf4a9f9dd",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -212,7 +218,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:ba9e880ed8e4ab367fe0826d7e819e0f5e83b60ae369846064c92a4e08b881f0",
+        "document_revision": "sha256:a99e009f2801f2ff9909a9581b6bbd8f05e36465ae3388c2938c6169cf8ba5a5",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
