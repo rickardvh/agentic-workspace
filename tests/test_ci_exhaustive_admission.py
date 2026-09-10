@@ -37,4 +37,7 @@ def test_exhaustive_dispatch_is_admitted_before_broad_runner_fanout() -> None:
         assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in block
         assert "Verify dispatched release head" not in block
 
+    aggregate = workflow.partition("  support-bearing-promotion:\n")[2]
+    assert "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in aggregate
+    assert "always() && github.event_name == 'workflow_dispatch'" in aggregate
     assert workflow.index("  exhaustive-admission:\n") < workflow.index("  workspace-checks:\n")
