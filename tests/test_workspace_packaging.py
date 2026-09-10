@@ -157,7 +157,7 @@ def test_ci_builds_and_uploads_root_package_artifacts() -> None:
     ci_text = (WORKSPACE_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 
     assert "ready_for_review" in ci_text
-    assert ci_text.count("if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}") == 4
+    assert ci_text.count("if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}") == 6
     assert "workspace-package-artifacts:" in ci_text
     assert "uv build --wheel --sdist --out-dir dist" in ci_text
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in ci_text
@@ -287,9 +287,18 @@ def test_wheel_native_cli_runs_without_language_hosts_or_checkout(workspace_whee
     environment = {**os.environ, "PATH": "", "PYTHONHOME": str(tmp_path / "absent-python")}
     # Only the extracted binaries and empty target are available to the process;
     # neither language package, the source checkout, nor Cargo supplies semantics.
-    context = {"target": str(repository), "task": "Inspect the repository"}
+    context = {"target": str(repository), "task": "Inspect the repository", "projection": "full"}
     native = subprocess.run(
-        [str(binary_dir / f"agentic-workspace{suffix}"), "start", "--target", str(repository), "--task", context["task"]],
+        [
+            str(binary_dir / f"agentic-workspace{suffix}"),
+            "start",
+            "--target",
+            str(repository),
+            "--task",
+            context["task"],
+            "--projection",
+            "full",
+        ],
         cwd=repository,
         env=environment,
         capture_output=True,
@@ -320,7 +329,16 @@ def test_wheel_native_cli_runs_without_language_hosts_or_checkout(workspace_whee
     selection.parent.mkdir(parents=True)
     selection.write_bytes(b"unknown content must not be interpreted or rewritten")
     blocked = subprocess.run(
-        [str(binary_dir / f"agentic-workspace{suffix}"), "start", "--target", str(repository), "--task", context["task"]],
+        [
+            str(binary_dir / f"agentic-workspace{suffix}"),
+            "start",
+            "--target",
+            str(repository),
+            "--task",
+            context["task"],
+            "--projection",
+            "full",
+        ],
         cwd=repository,
         env=environment,
         capture_output=True,
