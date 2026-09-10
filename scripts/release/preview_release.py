@@ -79,8 +79,28 @@ def _verify_release_only_paths(worktree: Path, ownership: dict[str, Any]) -> lis
     return changed
 
 
+def _reconstruction_head_ref(reconstruction_ref: str) -> str:
+    if reconstruction_ref.startswith("refs/heads/"):
+        return reconstruction_ref
+    if reconstruction_ref.startswith("refs/"):
+        raise SystemExit(f"Preview reconstruction ref must be a branch ref, got {reconstruction_ref!r}")
+    return f"refs/heads/{reconstruction_ref}"
+
+
+def _remote_tracking_ref(remote: str, reconstruction_ref: str) -> str:
+    branch = _reconstruction_head_ref(reconstruction_ref).removeprefix("refs/heads/")
+    return f"refs/remotes/{remote}/{branch}"
+
+
+def _fetch_reconstruction_ref(*, remote: str, reconstruction_ref: str) -> str:
+    head_ref = _reconstruction_head_ref(reconstruction_ref)
+    tracking_ref = _remote_tracking_ref(remote, reconstruction_ref)
+    _git("fetch", remote, f"{head_ref}:{tracking_ref}", "--tags")
+    return tracking_ref
+
+
 def _assert_source_is_reconstruction_candidate(source_commit: str, *, remote: str, reconstruction_ref: str) -> None:
-    remote_ref = f"refs/remotes/{remote}/{reconstruction_ref}"
+    remote_ref = _remote_tracking_ref(remote, reconstruction_ref)
     if _git("show-ref", "--verify", "--quiet", remote_ref, check=False).returncode != 0:
         raise SystemExit(f"Missing fetched reconstruction ref {remote_ref}")
     result = _git("merge-base", "--is-ancestor", source_commit, remote_ref, check=False)
@@ -116,7 +136,7 @@ def _verify_existing_preview(tag: str, source_commit: str) -> dict[str, Any]:
 def create_preview_subject(
     *,
     version: str,
-    source_ref: str,
+    source_ref: str | None,
     remote: str,
     reconstruction_ref: str,
     push: bool,
@@ -124,8 +144,8 @@ def create_preview_subject(
     version_obj = coordinated_release.Version.parse(version)
     tag = f"{coordinated_release.PREVIEW_TAG_PREFIX}{version_obj}"
 
-    _git("fetch", remote, reconstruction_ref, "--tags")
-    source_commit = _resolve_commit(source_ref)
+    fetched_reconstruction_ref = _fetch_reconstruction_ref(remote=remote, reconstruction_ref=reconstruction_ref)
+    source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)
     _assert_source_is_reconstruction_candidate(source_commit, remote=remote, reconstruction_ref=reconstruction_ref)
 
     existing = _tag_commit(tag)
@@ -216,7 +236,10 @@ def main(argv: list[str] | None = None) -> int:
         description="Create an immutable release-only preview subject without modifying the reconstruction branch."
     )
     parser.add_argument("--version", required=True, help="Unused coordinated numeric package version, for example 0.52.0")
-    parser.add_argument("--source-commit", default="HEAD", help="Exact reconstruction commit/ref to preview (default: HEAD)")
+    parser.add_argument(
+        "--source-commit",
+        help="Exact reconstruction commit/ref to preview (default: freshly fetched reconstruction branch head)",
+    )
     parser.add_argument("--remote", default=DEFAULT_REMOTE)
     parser.add_argument("--reconstruction-ref", default=DEFAULT_RECONSTRUCTION_REF)
     parser.add_argument(
