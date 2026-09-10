@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = ROOT / ".github" / "workflows"
 OWNERSHIP_PATH = ROOT / ".github" / "release-ownership.json"
+RULESET_PATH = ROOT / ".github" / "rulesets" / "master-support-bearing.json"
+SUPPORT_POLICY_PATH = ROOT / ".github" / "support-bearing-promotion.json"
 GENERATOR_PATH = ROOT / "scripts" / "generate" / "workspace_command_generation.py"
 RELEASE_OWNERSHIP_CLASSIFIER_PATH = ROOT / "scripts" / "release" / "release_ownership.py"
 
@@ -346,24 +348,52 @@ def test_release_asset_patterns_exclude_incidental_dist_files() -> None:
     ]
 
 
-def test_ci_required_aggregate_uses_routed_proof_and_declared_support() -> None:
+def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
+    merge = workflow.partition("  merge-sufficiency:\n")[2].partition("\n  workspace-checks:\n")[0]
+    exhaustive = workflow.partition("\n  workspace-checks:\n")[2]
 
-    assert "push:\n    branches: [master]" in workflow
-    assert "name: Support-bearing promotion" in workflow
-    assert "needs: [workspace-checks, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in workflow
-    assert "uv run pytest tests -q" not in workflow
-    assert "tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py" in workflow
-    assert "test_generated_tool_process_conformance_contracts[modules.report.process]" in workflow
-    assert "uv lock --check" in workflow
-    assert "uv sync --locked" in workflow
-    assert "windows-latest" in workflow
-    assert 'python: "3.14"' in workflow
-    assert 'python: "3.11"' in workflow
-    assert 'python: "3.13"' in workflow
-    assert 'node: "20"' in workflow
-    assert 'node: "24"' in workflow
-    assert workflow.count("timeout-minutes:") == 5
+    assert "name: Merge sufficiency" in merge
+    assert "github.event_name == 'pull_request'" in merge
+    assert "cargo +stable check --locked --workspace --all-targets" in merge
+    assert "make lint-workspace" in merge
+    assert "make typecheck-nosync" in merge
+    assert "test_public_read_real_repository_decision_preserves_currentness" in merge
+    assert "tests/test_native_source_reconciliation.py" in merge
+    assert "tests/test_native_operating_carriage.py" in merge
+    assert "tests/test_native_invoke_continuation.py" in merge
+    assert "tests/test_native_independent_owner.py" in merge
+    assert "public_creation_then_separate_selection" in merge
+
+    for release_only in (
+        "cargo +stable test --workspace",
+        "uv build --wheel --sdist --out-dir dist",
+        "packed-artifact-conformance",
+        "windows-latest",
+        "Support-bearing promotion",
+        "tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py",
+    ):
+        assert release_only not in merge
+
+    assert workflow.count("if: ${{ github.event_name != 'pull_request' }}") == 6
+    assert "if: ${{ always() && github.event_name != 'pull_request' }}" in exhaustive
+    assert "name: Support-bearing promotion" in exhaustive
+    assert "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in exhaustive
+    assert "uv build --wheel --sdist --out-dir dist" in exhaustive
+    assert "packed-artifact-conformance" in exhaustive
+    assert "windows-latest" in exhaustive
+    assert "cargo +stable test --workspace" in exhaustive
+
+
+def test_master_ruleset_requires_merge_sufficiency_while_release_policy_requires_support_bearing() -> None:
+    ruleset = json.loads(RULESET_PATH.read_text(encoding="utf-8"))
+    support_policy = json.loads(SUPPORT_POLICY_PATH.read_text(encoding="utf-8"))
+    status_rule = next(rule for rule in ruleset["rules"] if rule["type"] == "required_status_checks")
+    contexts = [item["context"] for item in status_rule["parameters"]["required_status_checks"]]
+
+    assert contexts == ["Merge sufficiency", "Review approval"]
+    assert support_policy["required_check"] == "Support-bearing promotion"
+    assert support_policy["protected_branch"] == "master"
 
 
 def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
@@ -371,10 +401,12 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "expected_head_sha:" in workflow
+    assert "explicitly escalated head" in workflow
     assert "Verify dispatched release head" in workflow
     assert "${{ inputs.expected_head_sha }}" in workflow
     assert '"${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}"' in workflow
-    assert workflow.count("github.event_name != 'pull_request' || github.event.pull_request.draft == false") == 5
+    assert workflow.count("if: ${{ github.event_name != 'pull_request' }}") == 6
+    assert "if: ${{ always() && github.event_name != 'pull_request' }}" in workflow
 
 
 def test_release_notes_classify_compatibility_significant_changes() -> None:
