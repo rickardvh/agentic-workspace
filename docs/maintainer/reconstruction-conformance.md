@@ -9,6 +9,7 @@ public operation has a current native disposition.
 | Surface | Current evidence and limit |
 | --- | --- |
 | Native ordinary consumers | `test_native_public_cli.py`, the native owner suites and `test_shared_core.py` exercise the Rust authority through native, JSON, Python and TypeScript consumers. Each owner retains its own currentness and authority assertions. |
+| Compact operating carriage | `test_native_operating_carriage.py` compares exact actions/claims and bounded answers across four consumers, rejects unknown/altered/forged/stale/work-rebound carriage, and measures a predetermined host-composed configuration journey. Existing owner tests explicitly request full detail. This first #3059 slice does not admit the broader continuation, reuse or worker-entry outcomes; see `operating-carriage.md`. |
 | Independently linked owner | `test_native_independent_owner.py` builds a separate Rust fixture. Its manifest is classified as a diagnostic fixture; linking supplies no repository admission. |
 | Generated process contracts | `test_generated_tool_conformance.py` runs the migrated startup and four explicit retirement contracts through Python's native entry point. Remaining cases exercise historical generated adapters and cannot prove current native command support. |
 | Extracted Python helpers | `test_review_scale_extracted_boundaries.py` retains publication, selected-owner, write-order and dry-run compatibility assertions. These are helper tests, not native owner acceptance. |

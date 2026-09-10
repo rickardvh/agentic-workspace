@@ -118,10 +118,17 @@ def native_cli(shared_core_binary: Path) -> Path:
 
 
 def consume(surface: str, binary: Path, native: Path, context: dict, *, host_path: str = "") -> dict:
+    context = {"projection": "full", **context}
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
     if surface == "native":
-        command = [str(native), verb, "--target", context["target"], "--task", context["task"], "--format", "json"]
+        command = [str(native), verb, "--format", "json"]
+        for field in ("target", "task", "reference"):
+            if field in context:
+                command += [f"--{field}", context[field]]
+        if "answer" in context:
+            command += ["--answer", json.dumps(context["answer"])]
+        command += ["--projection", context["projection"]]
         for path in context.get("changed", []):
             command += ["--changed", path]
         if context.get("request") or context.get("invocation"):
@@ -545,6 +552,11 @@ def test_instruction_procedure_requires_current_route_not_task_words(
     assert row["binding_admission"]["status"] == "not-required"
     assert not selected["decision_packet"]["ready_actions"]
     assert not selected["decision_packet"]["blockers"]
+    for projection in ("compact", "carried"):
+        projected = consume(surface, shared_core_binary, native_cli, {**context, "request": request, "projection": projection})
+        visible = projected["view"] if projection == "carried" else projected
+        assert visible["decision_packet"]["material"]["scoped-instructions"] == [row]
+    assert "material" not in quiet["decision_packet"]
     continued = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     assert continued["instructions"]["sources"][0]["preferred_procedures"] == row["preferred_procedures"]
     stale = consume(surface, shared_core_binary, native_cli, {**context, "task": "A different issue discussion", "request": request})

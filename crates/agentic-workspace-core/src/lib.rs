@@ -33,6 +33,7 @@ pub mod native_routes;
 mod native_source_reconciliation;
 mod native_startup;
 mod native_verification;
+pub mod operating;
 pub mod planning;
 mod process_execution;
 pub mod proof_receipt;
@@ -97,6 +98,7 @@ struct ContributionInput {
     settled: bool,
     #[serde(default = "empty_object")]
     facts: Value,
+    material: Option<Value>,
     #[serde(default)]
     blockers: Vec<BlockerInput>,
     #[serde(default)]
@@ -239,6 +241,7 @@ struct BoundedDecisionInput {
     id: String,
     #[serde(default)]
     question: String,
+    material: Option<Value>,
     response_request: AnswerRequestInput,
     #[serde(default)]
     choices: Vec<Choice>,
@@ -325,6 +328,8 @@ struct NormalizedContribution {
     relevant: bool,
     settled: bool,
     facts: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    material: Option<Value>,
     blockers: Vec<NormalizedBlocker>,
     decisions: Vec<NormalizedDecision>,
     actions: Vec<NormalizedAction>,
@@ -424,6 +429,8 @@ struct NormalizedDecision {
     owner: String,
     revision: String,
     question: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    material: Option<Value>,
     response_request: Value,
     response_schema: Value,
     choices: Vec<Choice>,
@@ -954,6 +961,7 @@ fn normalize_contribution(
         relevant: input.relevant,
         settled: input.settled,
         facts: input.facts,
+        material: input.material,
         blockers,
         decisions,
         actions,
@@ -1187,16 +1195,20 @@ fn normalize_decision(
         input.affects,
         &format!("{owner}.decisions[{index}].affects"),
     )?;
-    let identity = json!({
+    let mut identity = json!({
         "id": id, "owner": owner, "revision": revision, "question": question,
         "response_request": input.response_request, "response_schema": shape.input_schema, "current_work": current, "capability_revision": contract.revision, "choices": choices, "affects": affected,
     });
+    if let Some(material) = &input.material {
+        identity["material"] = material.clone();
+    }
     let consequence_id = format!("decision:{owner}:{revision}:{}", digest(&identity)?);
     let response_request = json!({"kind": PUBLIC_REQUEST_KIND, "id": format!("answer:{consequence_id}"),
         "owner": owner, "owner_revision": capability.revision, "source_revision": revision,
         "request_kind": input.response_request.request_kind, "capability_revision": contract.revision,
         "task_identity": current, "arguments": input.response_request.arguments});
     Ok(NormalizedDecision {
+        material: input.material,
         consequence_id,
         response_request,
         response_schema: shape.input_schema.clone(),
@@ -2030,6 +2042,13 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         "owner_states": relevant.iter().map(|item| json!({"owner": item.owner, "revision": item.revision, "settled": item.settled})).collect::<Vec<_>>(),
         "terminal_authority": terminal_authority,
     });
+    let material: BTreeMap<_, _> = relevant
+        .iter()
+        .filter_map(|owner| owner.material.as_ref().map(|value| (&owner.owner, value)))
+        .collect();
+    if !material.is_empty() {
+        answer["material"] = json!(material);
+    }
     if let Some(context) = decision_context {
         answer["decision_context"] = context;
     }

@@ -182,7 +182,7 @@ pub(crate) fn view(
     Ok(
         json!({"kind":"agentic-workspace/native-system-intent-view/v1","status":if sources.is_empty(){"absent"}else{"source-owned"},"revision":revision,
         "declaration":declaration,"preferred_source":preferred,"sources":sources,"interpretation":interpretation,"gaps":gaps,"requests":requests,"response":response,
-        "capability_contract":contract,"contribution":{"owner":"system-intent","revision":revision,"blockers":blockers,"settled":gaps.is_empty()},
+        "capability_contract":contract,"contribution":{"owner":"system-intent","revision":revision,"blockers":blockers,"settled":gaps.is_empty(),"material":response},
         "remaining_owner_contract":"Typed Planning update for newly judged larger-outcome alignment remains unavailable; existing intent_continuity is preserved."}),
     )
 }

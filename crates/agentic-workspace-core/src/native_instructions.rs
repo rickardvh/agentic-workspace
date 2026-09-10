@@ -143,9 +143,14 @@ pub fn resolve(
         "owners":[{"owner":"scoped-instructions","revision":"native-scoped-instructions/v1"}],
         "restriction_authorities":[{"owner":"scoped-instructions","affects":scopes}]});
     contract["revision"] = json!(digest(&contract)?);
+    let material: Vec<_> = rows
+        .iter()
+        .filter(|row| row["applicable"] == true)
+        .collect();
     Ok(
         json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
-        "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers},
+        "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers,
+            "material":if material.is_empty(){Value::Null}else{json!(material)}},
         "authority_boundary":"read/guidance surface context; reconcile requires a current source judgment; use prefers a replaceable procedure; requirement references retain their owner; only admitted reconcile/checks/protect bind and none grants proof or execution"}),
     )
 }

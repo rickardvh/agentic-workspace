@@ -469,7 +469,7 @@ def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path,
     task = "Maintain the native packaged Planning owner"
 
     def call(request=None, invocation=None):
-        args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--format", "json"]
+        args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--format", "json", "--projection", "full"]
         if request is not None or invocation is not None:
             packet = tmp_path / "native-request.json"
             packet.write_text(json.dumps(invocation if invocation is not None else request))

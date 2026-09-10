@@ -408,9 +408,7 @@ fn resolve_with_baseline(
             Some(&contract),
         )?;
     } else {
-        for request in startup_adapter["requests"].as_array_mut().unwrap() {
-            request["capability_revision"] = contract["revision"].clone();
-        }
+        crate::native_startup::bind_requests(&mut startup_adapter, &contract);
     }
     if let Some(request) = request_for("system-intent") {
         system_intent = crate::native_intent::view(

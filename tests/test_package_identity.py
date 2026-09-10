@@ -274,6 +274,8 @@ def test_install_survives_into_fresh_second_process(coordinated_artifacts: tuple
         context = request["context"]
         packet = tmp_path / "packet.json"
         args = [str(executable), request["action"], "--target", context["target"], "--task", context["task"], "--format", "json"]
+        if "projection" in context:
+            args.extend(["--projection", context["projection"]])
         value = context.get("invocation", context.get("request"))
         if value is not None:
             packet.write_text(json.dumps(value))

@@ -4,6 +4,18 @@ use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
 use std::path::Path;
 
+pub(crate) fn bind_requests(view: &mut Value, contract: &Value) {
+    for request in view["requests"].as_array_mut().unwrap() {
+        request["capability_revision"] = contract["revision"].clone();
+    }
+    if view["contribution"]["material"]
+        .get("read_request")
+        .is_some()
+    {
+        view["contribution"]["material"]["read_request"] = view["requests"][0].clone();
+    }
+}
+
 /// Startup text can govern every currently declared effectful owner operation.
 /// Read requests remain available: their contracts declare no operation effects.
 pub(crate) fn restrict_operations(view: &mut Value, contracts: &[&Value]) -> Result<(), CoreError> {
@@ -111,6 +123,14 @@ pub(crate) fn view(
         blockers.push(json!({"code":if unavailable{"configured-startup-source-unavailable"}else{"configured-startup-source-read-required"},"message":"Read the exact current configured startup source before affected implementation or completion judgment; preserve its contents and use source-owner repair if unavailable.","affects":if unavailable{scopes}else{vec![json!("effect:implementation"),json!("claim:complete")]}}));
     }
     let mut result = json!({"kind":"agentic-workspace/native-startup-adapter-view/v1","status":if reference.is_none(){"absent"}else if response.is_null(){"source-context-required"}else{"source-context-delivered"},"revision":revision,"source":source,"requests":requests,"response":response,"capability_contract":capability,"contribution":{"owner":"startup-adapter","revision":revision,"settled":blockers.is_empty(),"blockers":blockers}});
+    if !response.is_null() {
+        result["contribution"]["material"] = response;
+    } else if reference.is_some() {
+        // The required read must itself be directly constructible in compact
+        // output; hiding its request behind detail would add a discovery hop.
+        result["contribution"]["material"] =
+            json!({"source":source,"read_request":requests.first()});
+    }
     if let Some(contract) = contract {
         restrict_operations(&mut result, &[contract])?;
     }

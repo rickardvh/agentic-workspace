@@ -60,6 +60,8 @@ def test_source_repository_configured_native_route_is_stateful(tmp_path: Path, s
         "src/example.rs",
         "--format",
         "json",
+        "--projection",
+        "full",
     ]
     git_path = str(Path(shutil.which("git")).parent)
     assert shutil.which("python", path=git_path) is None
@@ -105,6 +107,11 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     assert not any(r["field"] == "workspace.agent_instructions_file" for r in result["configuration"]["residuals"])
     assert {"effect:implementation", "claim:complete"} <= set(startup_blockers(result)[0]["affects"])
     request = owner["requests"][0]
+    for projection in ("compact", "carried"):
+        offered = consume(surface, shared_core_binary, native_cli, {**context, "projection": projection})
+        visible = offered["view"] if projection == "carried" else offered
+        assert visible["decision_packet"]["material"]["startup-adapter"]["read_request"] == request
+        assert "Human-owned" not in json.dumps(visible)
     read_packet = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     read = read_packet["startup_adapter"]
     assert read["response"]["text"] == original.decode("utf-8")
@@ -112,6 +119,11 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     assert startup_blockers(read_packet) == []
     assert "no rule satisfaction, proof, acceptance or mutation custody" in read["response"]["authority_boundary"]
     assert source.read_bytes() == original
+    for projection in ("compact", "carried"):
+        delivered = consume(surface, shared_core_binary, native_cli, {**context, "request": request, "projection": projection})
+        visible = delivered["view"] if projection == "carried" else delivered
+        assert visible["decision_packet"]["material"]["startup-adapter"] == read["response"]
+        assert visible["decision_packet"]["claim_boundary"] == read_packet["decision_packet"]["claim_boundary"]
     assert not (tmp_path / ".agentic-workspace/local").exists()
     # Fresh clients must consume the current source themselves; no persisted read grant.
     assert consume(surface, shared_core_binary, native_cli, context)["startup_adapter"]["status"] == "source-context-required"

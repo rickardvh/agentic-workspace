@@ -88,6 +88,14 @@ export function answerDecision(decision, consequenceId, answer, capabilityContra
   return request({answer_decision: {decision, question: consequenceId, answer, capability_contract: capabilityContract}});
 }
 
+export function answerCarried(carriage, reference, answer) {
+  return request({start: {request: carriage, reference, answer, projection: "carried"}});
+}
+
+export function invokeCarried(carriage, reference) {
+  return request({invoke: {invocation: carriage, reference}});
+}
+
 function request(payload) {
   const result = spawnSync(coreBinary(), [], {
     input: JSON.stringify(payload),

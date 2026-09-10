@@ -866,6 +866,8 @@ pub(crate) fn view_for(
         answer.as_object_mut().unwrap().remove("answer");
         answer["proposal_revision"] = json!(proposal);
         let decisions = json!([{"id":"material-decision-disposition","question":"Confirm this exact decision and disposition? Publication alone grants no deciding authority.",
+            "material":{"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,
+                "disposition":args["disposition"].as_str().unwrap_or("retain"),"publishes_source":args["disposition"] != "no-retention"},
             "response_request":{"request_kind":destination.capture(),"arguments":answer},"choices":[{"id":"confirm-decision","label":"Confirm this exact bounded decision"},{"id":"defer","label":"Defer without publication"}],"affects":["task",format!("effect:{}",destination.effect())]}]);
         if args["answer"].is_null() && !agent {
             if request["id"] != destination.capture() {

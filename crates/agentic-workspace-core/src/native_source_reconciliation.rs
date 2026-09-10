@@ -365,6 +365,7 @@ pub(crate) fn view(
         view["proposal"] = proposal;
         let arguments = json!({"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
         let decisions = json!([{"id":"source-reconciliation","question":"Confirm these exact source judgments against the bound resulting work?",
+                "material":view["proposal"],
                 "response_request":{"request_kind":REQUEST,"arguments":arguments},
                 "choices":[{"id":"confirm","label":"Confirm these exact judgments"},{"id":"defer","label":"Leave reconciliation unresolved"}],"affects":["claim:complete"]}]);
         if request["arguments"]["answer"].is_null() {

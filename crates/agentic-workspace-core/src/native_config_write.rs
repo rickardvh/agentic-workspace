@@ -453,6 +453,7 @@ pub(crate) fn view(
             result["status"] = json!("human-decision-required");
             result["proposal"] = json!({"before":before_value,"after":value,"source":source,"key":key,"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"authority":"bounded-human-answer"});
             result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":"Authorize this exact configuration-source edit? The source remains repo/human-owned.","response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
+            result["contribution"]["decisions"][0]["material"] = result["proposal"].clone();
             return Ok(result);
         }
         if args["proposal_revision"] != proposal {

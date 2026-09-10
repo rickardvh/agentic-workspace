@@ -329,7 +329,11 @@ fn capture_inner(
     if trim_identity(&identity).is_empty() || identity.len() > 8192 {
         return Ok(());
     }
-    let target = input["target"].as_str().unwrap_or(".");
+    let target = if input.get("reference").is_some() {
+        crate::operating::carried_target(input).ok_or("carried target unavailable")?
+    } else {
+        input["target"].as_str().unwrap_or(".")
+    };
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(|e| e.to_string())?;
     let Some((local, _)) =
         native_config::load(&root, ".agentic-workspace/config.local.toml", LOCAL_SCHEMA)?

@@ -45,6 +45,49 @@ def independent_cli(independent_binary, native_cli, tmp_path_factory):
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+@pytest.mark.parametrize("projection", ["full", "compact", "carried"])
+def test_multiple_ready_actions_need_no_detail_fetch(tmp_path, independent_binary, independent_cli, surface, projection, monkeypatch):
+    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(independent_binary))
+    context = setup(tmp_path, independent_binary, "fixture-lens")
+    config = tmp_path / ".agentic-workspace/config.toml"
+    other = subprocess.check_output([str(independent_binary), "fixture-notebook"]).decode()
+    config.write_text(config.read_text() + other[other.index("[modules.independent.") :])
+
+    def call(**extra):
+        return consume(surface, independent_binary, independent_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    first = call()
+    requests = [first["independent_owners"][owner]["requests"][0] for owner in ("fixture-lens", "fixture-notebook")]
+    for request in requests:
+        request["arguments"]["text"] = "Exact independent material"
+    full = call(request=requests)
+    selected = call(request=requests, projection=projection)
+    packet = selected["view"]["decision_packet"] if projection == "carried" else selected["decision_packet"]
+    assert packet["primary_action"] is None
+    assert len(packet["ready_actions"]) == 2
+    assert packet["claim_boundary"] == full["decision_packet"]["claim_boundary"]
+    assert packet["blockers"] == full["decision_packet"]["blockers"]
+    for index, action in enumerate(packet["ready_actions"]):
+        exact = full["decision_packet"]["ready_actions"][index]
+        if projection == "carried":
+            envelope = next(e["envelope"] for e in selected["carriage"]["envelopes"] if e["reference"] == action["reference"])
+            assert envelope == exact
+            result = call(invocation=selected["carriage"], reference=action["reference"])
+        else:
+            assert action == exact
+            result = call(invocation=action)
+        assert result["effects"] == exact["effects"]
+        assert result["value"]["text"] == "Exact independent material"
+    # Same returned envelopes are currentness-bound, including each ready ref.
+    (tmp_path / "fixture-input.txt").write_text("Changed source")
+    with pytest.raises(AssertionError):
+        if projection == "carried":
+            call(invocation=selected["carriage"], reference=packet["ready_actions"][0]["reference"])
+        else:
+            call(invocation=packet["ready_actions"][0])
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 @pytest.mark.parametrize("owner", ["fixture-lens", "fixture-notebook"])
 def test_independent_native_owner_discovery_request_action_result(
     tmp_path, independent_binary, independent_cli, surface, owner, monkeypatch
