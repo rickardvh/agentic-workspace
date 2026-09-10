@@ -17,21 +17,30 @@
   "distribution_identity": {
     "strategy": "exact-github-release-assets",
     "release_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/v{version}",
+    "preview_release_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/preview-v{version}",
     "canonical_root_distribution": "agentic-workspace",
     "canonical_install_receipt": "distribution-install-readiness.json",
     "redistributable_receipt": "redistributable-package-readiness.json",
     "digest_algorithm": "sha256",
     "mutable_branch_install_supported": false,
     "registry_resolution_supported": false,
-    "rule": "Support-bearing installs use the exact root wheel URL and digest recorded in the release receipt; coordinated module dependencies use same-release wheel URLs and digests."
+    "rule": "Support-bearing installs use the exact root wheel URL and digest recorded in the release receipt; coordinated module dependencies use same-release wheel URLs and digests. Preview installs use the same exact-asset model but are explicitly non-support-bearing."
   },
   "changeset_dir": ".release/changes",
   "release_notes_dir": ".release/releases",
+  "preview_metadata_dir": ".release/previews",
   "release_pr_branch": "automation/coordinated-release",
   "publisher": {
     "workflow": ".github/workflows/release.yml",
     "trigger": "existing-tag-only",
     "tag_rule": "vMAJOR.MINOR.PATCH must point at a commit whose coordinated package manifests declare the same version"
+  },
+  "preview_publisher": {
+    "workflow": ".github/workflows/preview-release.yml",
+    "trigger": "workflow_dispatch on reconstruct/first-stable with immutable preview tag and exact artifact SHA",
+    "release_class": "preview",
+    "support_bearing": false,
+    "tag_rule": "preview-vMAJOR.MINOR.PATCH must point at a release-only commit whose single parent is the exact reconstruction source commit"
   },
   "semantic_conformance": {
     "required_for_support_bearing_typescript_release": true,
@@ -64,6 +73,26 @@
     "generated/verification/typescript/package.json",
     ".release/releases/",
     "uv.lock"
+  ],
+  "preview_release_commit_allowed_paths": [
+    "pyproject.toml",
+    "packages/memory/pyproject.toml",
+    "packages/planning/pyproject.toml",
+    "packages/verification/pyproject.toml",
+    "generated/workspace/typescript/package.json",
+    "generated/memory/typescript/package.json",
+    "generated/planning/typescript/package.json",
+    "generated/verification/typescript/package.json",
+    ".agentic-workspace/payload-provenance.json",
+    ".release/releases/",
+    ".release/previews/",
+    "generated/workspace/python/external_contract_bundle.json",
+    "generated/workspace/typescript/external_contract_bundle.json",
+    "uv.lock",
+    "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+    "generated/memory/.agentic-workspace-cli-fingerprint.json",
+    "generated/planning/.agentic-workspace-cli-fingerprint.json",
+    "generated/verification/.agentic-workspace-cli-fingerprint.json"
   ],
   "package_affecting_paths": [
     ".release/changes/",
@@ -202,5 +231,5 @@
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],
-  "version_floor_rule": "The next coordinated version must be greater than every shipped package version and every AW coordinated-release vMAJOR.MINOR.PATCH tag; tags from other package domains do not set the AW release floor."
+  "version_floor_rule": "The next coordinated version must be greater than every shipped package version, every AW coordinated-release vMAJOR.MINOR.PATCH tag, and every preview-vMAJOR.MINOR.PATCH package identity; tags from other package domains do not set the AW release floor."
 }

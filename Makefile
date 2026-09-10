@@ -141,6 +141,8 @@ WORKSPACE_TEST_GENERATED_RELEASE = \
 	tests/test_command_generation_integration.py \
 	tests/test_command_generation_release_promotion.py \
 	tests/test_coordinated_release.py \
+	tests/test_preview_release.py \
+	tests/test_preview_release_workflow.py \
 	tests/test_generated_tool_conformance.py \
 	tests/test_package_identity.py \
 	tests/test_release_recovery_status.py \

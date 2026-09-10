@@ -1,0 +1,294 @@
+name: Preview Release
+
+on:
+  # Register the workflow when it lands on reconstruction, even while master
+  # lacks it. This event cannot admit or publish a preview.
+  push:
+    branches: [reconstruct/first-stable]
+    paths: [.github/workflows/preview-release.yml]
+  workflow_dispatch:
+    inputs:
+      preview_tag:
+        description: Existing immutable preview tag
+        required: true
+        type: string
+      artifact_commit:
+        description: Exact artifact commit SHA bound to the tag
+        required: true
+        type: string
+
+concurrency:
+  group: preview-${{ inputs.preview_tag || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preview-registration:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/reconstruct/first-stable'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Preview publisher registered; publication requires explicit dispatch."
+
+  preview-admission:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/reconstruct/first-stable'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.admit.outputs.tag }}
+      artifact_commit: ${{ steps.admit.outputs.artifact_commit }}
+    steps:
+      - name: Checkout trusted dispatch authority
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Admit tag as data with the trusted verifier
+        id: admit
+        env:
+          PREVIEW_TAG: ${{ inputs.preview_tag }}
+          ARTIFACT_COMMIT: ${{ inputs.artifact_commit }}
+        run: python scripts/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"
+
+  preview-runtime-matrix:
+    needs: preview-admission
+    name: Preview runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: "3.11"
+            node: "20"
+          - os: ubuntu-latest
+            python: "3.13"
+            node: "24"
+          - os: windows-latest
+            python: "3.14"
+            node: "24"
+    steps:
+      - name: Checkout exact preview subject
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.preview-admission.outputs.artifact_commit }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Verify lock and runtime-specific behavior
+        run: |
+          uv lock --check
+          uv sync --locked --all-groups
+          uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
+          uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
+
+  preview-package:
+    needs: [preview-admission, preview-runtime-matrix]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_TAG: ${{ needs.preview-admission.outputs.tag }}
+    steps:
+      - name: Checkout exact preview subject
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.preview-admission.outputs.artifact_commit }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Verify exact preview identity and reconstruction source
+        run: |
+          set -euo pipefail
+          git fetch origin "refs/heads/reconstruct/first-stable:refs/remotes/origin/reconstruct/first-stable" --tags
+          TAG_COMMIT="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          HEAD_COMMIT="$(git rev-parse HEAD)"
+          if [ "${TAG_COMMIT}" != "${HEAD_COMMIT}" ]; then
+            echo "Preview tag ${RELEASE_TAG} resolves to ${TAG_COMMIT}, checkout is ${HEAD_COMMIT}" >&2
+            exit 1
+          fi
+          python scripts/release/coordinated_release.py verify-preview --tag "${RELEASE_TAG}" > preview-subject.json
+          SOURCE_COMMIT="$(python -c 'import json; print(json.load(open("preview-subject.json", encoding="utf-8"))["reconstruction_source_commit"])')"
+          if ! git merge-base --is-ancestor "${SOURCE_COMMIT}" refs/remotes/origin/reconstruct/first-stable; then
+            echo "Preview source ${SOURCE_COMMIT} is not reachable from reconstruct/first-stable" >&2
+            exit 1
+          fi
+          if [ "$(git rev-parse HEAD^)" != "${SOURCE_COMMIT}" ]; then
+            echo "Preview artifact commit must have the exact reconstruction source as its single parent" >&2
+            exit 1
+          fi
+          test ! -e support-bearing-promotion.json
+
+      - name: Inspect existing immutable preview release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Sync exact preview dependency graph
+        run: |
+          uv lock --check
+          uv sync --locked --all-groups
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Build coordinated preview package artifacts
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          uv build --wheel --sdist --out-dir dist
+          uv build --wheel --sdist --out-dir dist packages/memory
+          uv build --wheel --sdist --out-dir dist packages/planning
+          uv build --wheel --sdist --out-dir dist packages/verification
+          python scripts/release/patch_workspace_release_wheel.py \
+            --dist-dir dist \
+            --version "${RELEASE_TAG#preview-v}" \
+            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
+          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm"
+          for package in generated/*/typescript; do
+            if [ "$package" = "generated/workspace/typescript" ]; then
+              (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+            else
+              (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+            fi
+          done
+          uv run python scripts/check/check_package_identity.py \
+            --artifact-dir dist \
+            --require-exact-urls
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Run built preview package smoke tests
+        env:
+          AW_PREVIEW_ARTIFACT_DIR: dist
+        run: uv run pytest tests/test_preview_release.py::test_built_preview_root_urls_digests_and_external_install tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Generate preview SBOM
+        uses: anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638 # v0.24.1
+        with:
+          path: dist
+          format: spdx-json
+          output-file: dist/agentic-workspace.spdx.json
+          upload-artifact: false
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Prove exact preview npm artifacts on Node 24
+        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node24.json PACKED_ARTIFACT_CONTEXT=hosted-ci
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Set up minimum Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Prove exact preview npm artifacts on Node 20
+        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node20.json PACKED_ARTIFACT_CONTEXT=hosted-ci
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Set up current Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "25"
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Prove exact preview npm artifacts on Node 25
+        run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node25.json PACKED_ARTIFACT_CONTEXT=hosted-ci
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Verify semantic-conformance receipts
+        run: |
+          for runtime_major in 20 24 25; do
+            receipt="dist/generated-command-conformance-node${runtime_major}.json"
+            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
+          done
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Generate preview security readiness
+        run: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Compose non-support-bearing preview manifest and checksums
+        run: |
+          python scripts/release/preview_manifest.py --tag "${RELEASE_TAG}" --artifact-dir dist > preview-manifest-result.json
+          test -f dist/agentic-workspace-preview-release-manifest.json
+          test -f dist/SHA256SUMS
+          test ! -e dist/support-bearing-promotion.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("dist/agentic-workspace-preview-release-manifest.json").read_text(encoding="utf-8"))
+          assert manifest["release_class"] == "preview"
+          assert manifest["support_bearing"] is False
+          assert manifest["support_bearing_promotion"]["required"] is False
+          assert manifest["artifact_commit"] != manifest["reconstruction_source_commit"]
+          PY
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Reject replacement of existing preview bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --artifact-dir dist
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Attest exact preview subjects
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Publish GitHub prerelease assets
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Preview ${{ env.RELEASE_TAG }}
+          prerelease: true
+          overwrite_files: false
+          make_latest: false
+          body_path: .release/releases/${{ env.RELEASE_TAG }}.md
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/*.tgz
+            dist/generated-command-conformance-node*.json
+            dist/SHA256SUMS
+            dist/agentic-workspace-preview-release-manifest.json
+            dist/distribution-install-readiness.json
+            dist/redistributable-package-readiness.json
+            dist/security-supply-chain-readiness.json
+            dist/agentic-workspace.spdx.json
+          fail_on_unmatched_files: true

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Publish exact reconstruction candidates as immutable non-support-bearing preview release assets without release-only branch churn."
+issues = [3198]
