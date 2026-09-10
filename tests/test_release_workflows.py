@@ -296,7 +296,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "--require-exact-urls" in workflow
     assert "--write-receipts" in workflow
     assert "agentic-workspace.spdx.json" in workflow
-    assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in workflow
+    assert "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638" in workflow
     assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
     assert "fail_on_unmatched_files: true" in workflow
     assert "support-bearing-promotion.json" in workflow
@@ -380,7 +380,10 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 6
     assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in exhaustive
     assert "name: Support-bearing promotion" in exhaustive
-    assert "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in exhaustive
+    assert (
+        "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]"
+        in exhaustive
+    )
     assert "uv build --wheel --sdist --out-dir dist" in exhaustive
     assert "packed-artifact-conformance" in exhaustive
     assert "windows-latest" in exhaustive
@@ -456,7 +459,7 @@ def test_release_model_uses_existing_tags_instead_of_stale_bootstrap_floor() -> 
     helper = (ROOT / "scripts" / "release" / "coordinated_release.py").read_text(encoding="utf-8")
 
     assert "existing_release_versions" in helper
-    assert 'git", "tag", "--list"' in helper
+    assert '"git",' in helper and '"tag",' in helper and '"--list",' in helper
     assert "floor = max([*package_versions, *tag_versions])" in helper
     assert "_tag_declares_coordinated_release_version" in helper
     assert "pending_tag_plan" in helper

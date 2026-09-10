@@ -287,9 +287,18 @@ def test_wheel_native_cli_runs_without_language_hosts_or_checkout(workspace_whee
     environment = {**os.environ, "PATH": "", "PYTHONHOME": str(tmp_path / "absent-python")}
     # Only the extracted binaries and empty target are available to the process;
     # neither language package, the source checkout, nor Cargo supplies semantics.
-    context = {"target": str(repository), "task": "Inspect the repository"}
+    context = {"target": str(repository), "task": "Inspect the repository", "projection": "full"}
     native = subprocess.run(
-        [str(binary_dir / f"agentic-workspace{suffix}"), "start", "--target", str(repository), "--task", context["task"]],
+        [
+            str(binary_dir / f"agentic-workspace{suffix}"),
+            "start",
+            "--target",
+            str(repository),
+            "--task",
+            context["task"],
+            "--projection",
+            "full",
+        ],
         cwd=repository,
         env=environment,
         capture_output=True,
@@ -320,7 +329,16 @@ def test_wheel_native_cli_runs_without_language_hosts_or_checkout(workspace_whee
     selection.parent.mkdir(parents=True)
     selection.write_bytes(b"unknown content must not be interpreted or rewritten")
     blocked = subprocess.run(
-        [str(binary_dir / f"agentic-workspace{suffix}"), "start", "--target", str(repository), "--task", context["task"]],
+        [
+            str(binary_dir / f"agentic-workspace{suffix}"),
+            "start",
+            "--target",
+            str(repository),
+            "--task",
+            context["task"],
+            "--projection",
+            "full",
+        ],
         cwd=repository,
         env=environment,
         capture_output=True,

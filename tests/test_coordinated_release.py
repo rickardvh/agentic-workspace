@@ -217,3 +217,32 @@ def test_tag_plan_targets_protected_merge_commit_not_release_side_parent(tmp_pat
 
     assert plan["release_commit"] == protected_merge
     assert plan["release_commit"] != side_parent
+
+
+def test_preview_release_workflow_remains_separate_from_stable_support_bearing_publisher() -> None:
+    preview = (ROOT / ".github/workflows/preview-release.yml").read_text(encoding="utf-8")
+    stable = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in preview
+    assert "    tags:" not in preview
+    assert '"v[0-9]+.[0-9]+.[0-9]+"' in stable
+    assert "preview-v" not in stable
+    assert "verify-preview" in preview
+    assert "prerelease: true" in preview
+    assert "agentic-workspace-preview-release-manifest.json" in preview
+    assert "support_bearing_promotion.py" not in preview
+    assert "test ! -e dist/support-bearing-promotion.json" in preview
+    assert "support_bearing_promotion.py github-checks" in stable
+    assert "support_bearing_promotion.py compose" in stable
+    assert "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638" in preview
+    assert "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638" in stable
+
+
+def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref() -> None:
+    helper = (ROOT / "scripts/release/preview_release.py").read_text(encoding="utf-8")
+
+    assert 'f"{head_ref}:{tracking_ref}"' in helper
+    assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper
+    assert 'default="HEAD"' not in helper
+    assert "freshly fetched reconstruction branch head" in helper
+    assert '"merge-base", "--is-ancestor", source_commit, remote_ref' in helper
