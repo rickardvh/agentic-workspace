@@ -37,6 +37,10 @@ decision also accepts `--answer <JSON-choice>`. Unchanged context is carried;
 explicit context changes require fresh resolution. Carriage grants no authority
 and its loss recovers through fresh `start`. No extra detail fetch is required to
 execute the selected action. Optional detail references are revalidated by Rust.
+Configured required startup guidance up to 8 KiB arrives in the decision directly.
+Read its exact text before acting; delivery is not understanding or satisfaction.
+Larger guidance keeps an exact read request. Both paths bind the source to effect
+admission and revalidate it; a changed or unavailable source never inherits delivery.
 
 ## Act
 

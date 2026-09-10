@@ -200,3 +200,63 @@ entry calls 1 become 0, required detail calls stay 0, and bounded judgments stay
 1. These are deterministic interaction-trace counts, not a provider-token or
 live-model timing benchmark. The first-slice measurement above used a different
 temporary target and omitted the post-effect entry context.
+
+
+## Small required startup source
+
+The configured startup source owner now delivers exact UTF-8 guidance of at most
+8,192 source bytes with ordinary entry. This is a delivery bound, not a semantic
+or authority threshold. It uses the same owner-issued read request and read/config
+revalidation as explicit delivery. That exact request is still attached to every
+affected action and revalidated at execution. Larger sources retain the compact
+exact read request; optional capability or procedure catalogs are not loaded.
+
+Automatic delivery failures remain explicit and restricted, with the exact source
+and recovery in the decision. Missing, changed, invalid or unavailable sources do
+not gain authority. Delivery grants no understanding, rule satisfaction, source
+adoption, proof or completion. Fresh clients receive current bytes; no read grant
+or acknowledgment database is written. Continuing-consumer redelivery suppression
+remains separate #2661 work.
+
+The 70-byte required-guidance fixture was compared with the paired native binary
+from `6ef11535b`: total compact model-visible JSON over the journey fell from
+7,651 to 3,383 bytes, source read request generation from 685 to 0 bytes, and
+public calls from 2 to 1. Required read/detail hops fell from 1 to 0; exact source
+text was delivered once in each journey. Claim limits and effects were identical.
+No latency claim is made. Current conformance covers full/compact/carried text,
+explicit-versus-automatic exact action equivalence, 8 KiB boundary, invalid UTF-8,
+source/configured-source changes, omitted/forged/stale action dependencies,
+Planning/proof/create/switch execution, and no durable delivery residue.
+
+Evidence owner: #2909 with #2986/#2930/#3059. The trust question is whether removing
+a deterministic read hop preserves current source admission and every claim
+boundary. Keep these regressions until that public owner contract is replaced
+with equally direct cross-surface and negative-currentness evidence; test counts
+alone are not acceptance or closure.
+
+
+### Profiled source-owner derivation
+
+Transient release instrumentation counted startup schema parsing and governing-source
+read attempts during one small-source `start` and an authorized configuration `invoke`.
+Before removing the unused recursive view construction, `start` parsed the 58,763-byte
+startup input schema three times and `invoke` twelve times. Afterwards those counts
+are two and eight. Instrumented governing-source read attempts remain five and twenty:
+currentness and effect barriers still reopen/reobserve current inputs. The owner uses
+one source-revision formula; the final comparison needs that current observation,
+not another schema, capability contract or blocker projection.
+
+Sampled schema-parse phase totals were 0.474 -> 0.373 ms for `start` and 1.690 ->
+1.140 ms for `invoke`. These are single sampled phase totals, not end-to-end latency
+or statistical performance claims. Instrumentation was removed after measurement.
+No new observation is reused across a currentness barrier and no retained cache exists.
+
+Deliberately not memoized: a governing-source observation still needs current bytes,
+source selection and configuration identity. A cache would add validation/storage
+work without removing those required observations. A cross-process cache for this
+sub-millisecond schema derivation was not justified by this profile: serialized
+JSON would still require parsing while adding cache I/O, producer validation and
+maintenance. No cross-process cache was implemented or benchmarked; deleting the
+unused construction avoids that residue. Wider positive/negative semantic reuse and selective invalidation
+remain #2981 work; this measurement establishes only the bounded within-operation
+elimination required by #2981/#3059.
