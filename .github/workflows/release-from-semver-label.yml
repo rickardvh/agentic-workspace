@@ -102,7 +102,8 @@ jobs:
         run: |
           gh workflow run ci.yml \
             --ref "${RELEASE_PR_BRANCH}" \
-            -f expected_head_sha="${RELEASE_PR_HEAD_SHA}"
+            -f expected_head_sha="${RELEASE_PR_HEAD_SHA}" \
+            -f reason="coordinated release candidate exact-head admission"
 
       - name: Resolve pending release tag
         id: release-commit
