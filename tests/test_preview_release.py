@@ -218,7 +218,7 @@ def test_existing_tag_recovery_never_normalizes_or_recreates_tag(monkeypatch):
     monkeypatch.setattr(helper, "_assert_source_is_reconstruction_candidate", lambda *a, **kw: None)
     monkeypatch.setattr(helper, "_tag_commit", lambda tag: "b" * 40)
     monkeypatch.setattr(helper, "_verify_existing_preview", lambda tag, source: verified)
-    monkeypatch.setattr(helper, "_recover_publisher", lambda **kw: {"publication_status": "publisher-rerun-requested"})
+    monkeypatch.setattr(helper, "_recover_publisher", lambda **kw: {"publication_status": "publisher-dispatch-requested"})
 
     def git(*args, **kw):
         calls.append(args)
@@ -229,66 +229,121 @@ def test_existing_tag_recovery_never_normalizes_or_recreates_tag(monkeypatch):
         version="0.52.0", source_ref="a" * 40, remote="origin", reconstruction_ref="reconstruct/first-stable", push=True
     )
     assert result["artifact_commit"] == "b" * 40
-    assert result["publication_status"] == "publisher-rerun-requested"
-    assert calls == [("ls-remote", "--refs", "origin", "refs/tags/preview-v0.52.0"), ("push", "origin", "refs/tags/preview-v0.52.0")]
+    assert result["publication_status"] == "publisher-dispatch-requested"
+    assert calls == [("push", "origin", "refs/tags/preview-v0.52.0")]
 
 
-def test_recovery_selects_only_exact_failed_or_cancelled_push_run(monkeypatch):
+def test_recovery_dispatches_trusted_branch_with_exact_immutable_subject(monkeypatch):
     import pytest
 
     helper = _load_helper()
     artifact = "b" * 40
     verified = {"tag": "preview-v0.52.0", "artifact_commit": artifact}
-    run = {
-        "id": 21,
-        "head_sha": artifact,
-        "head_branch": verified["tag"],
-        "event": "push",
-        "path": ".github/workflows/preview-release.yml",
-        "repository": {"full_name": "owner/repo"},
-        "status": "completed",
-        "conclusion": "failure",
-    }
-    monkeypatch.setattr(helper, "verify_published_preview", lambda **kw: False)
+    complete = False
+    remote_artifact = artifact
+    monkeypatch.setattr(helper, "verify_published_preview", lambda **kw: complete)
     monkeypatch.setattr(
         helper,
         "_git",
         lambda *a, **kw: subprocess.CompletedProcess(
-            a, 0, f"{artifact}\trefs/tags/preview-v0.52.0\n" if a[0] == "ls-remote" else "https://github.com/owner/repo", ""
+            a, 0, f"{remote_artifact}\trefs/tags/preview-v0.52.0\n" if a[0] == "ls-remote" else "https://github.com/owner/repo", ""
         ),
     )
     calls = []
 
     def command(args, **kw):
         calls.append(args)
-        output = "owner/repo" if args[1] == "repo" else json.dumps({"workflow_runs": [run]})
-        return subprocess.CompletedProcess(args, 0, output, "")
+        return subprocess.CompletedProcess(args, 0, "owner/repo" if args[1] == "repo" else "", "")
 
     monkeypatch.setattr(helper, "_run", command)
-    for conclusion in ("failure", "cancelled"):
-        run["conclusion"] = conclusion
-        assert helper._recover_publisher(remote="origin", verified=verified)["publication_status"] == "publisher-rerun-requested"
-        assert calls[-1] == ["gh", "api", "--method", "POST", "repos/owner/repo/actions/runs/21/rerun"]
-    for key, bad in (
-        ("head_sha", "c" * 40),
-        ("head_branch", "another-tag"),
-        ("event", "workflow_dispatch"),
-        ("path", ".github/workflows/release.yml"),
-        ("repository", {"full_name": "fork/repo"}),
-    ):
-        original = run[key]
-        run[key] = bad
-        calls.clear()
-        with pytest.raises(SystemExit, match="No exact tag-push"):
-            helper._recover_publisher(remote="origin", verified=verified)
-        assert not any("POST" in call for call in calls)
-        run[key] = original
-    for conclusion in ("success", "skipped", "timed_out"):
-        run["conclusion"] = conclusion
-        calls.clear()
-        with pytest.raises(SystemExit):
-            helper._recover_publisher(remote="origin", verified=verified)
-        assert not any("POST" in call for call in calls)
+    assert helper._recover_publisher(remote="origin", verified=verified)["publication_status"] == "publisher-dispatch-requested"
+    assert calls[-1] == [
+        "gh",
+        "workflow",
+        "run",
+        "preview-release.yml",
+        "--repo",
+        "owner/repo",
+        "--ref",
+        "reconstruct/first-stable",
+        "-f",
+        "preview_tag=preview-v0.52.0",
+        "-f",
+        f"artifact_commit={artifact}",
+    ]
+    # A changed remote subject must not receive a substitute dispatch.
+    remote_artifact = "c" * 40
+    calls.clear()
+    with pytest.raises(SystemExit, match="Remote preview tag"):
+        helper._recover_publisher(remote="origin", verified=verified)
+    assert not any("workflow" in call for call in calls)
+    complete = True
+    calls.clear()
+    assert helper._recover_publisher(remote="origin", verified=verified)["publication_status"] == "publisher-complete"
+    assert not any("workflow" in call for call in calls)
+
+
+def test_trusted_admission_never_executes_forged_tag_authority(tmp_path, monkeypatch):
+    import pytest
+
+    helper = _load_helper()
+    module = helper.coordinated_release
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    ownership = _fixture(repo)
+    _git(repo, "init", "-b", "reconstruct/first-stable")
+    _git(repo, "config", "user.name", "Test")
+    _git(repo, "config", "user.email", "test@example.com")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "source")
+    source = _git(repo, "rev-parse", "HEAD")
+    monkeypatch.setattr(module, "ROOT", repo)
+    _git(repo, "switch", "--detach", source)
+    module.prepare_preview_release(ownership, tag="preview-v0.52.0", source_commit=source)
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-m", "preview")
+    artifact = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "tag", "preview-v0.52.0")
+    _git(repo, "switch", "reconstruct/first-stable")
+    remote = tmp_path / "remote.git"
+    _git(repo, "clone", "--bare", str(repo), str(remote))
+    _git(repo, "remote", "add", "origin", str(remote))
+
+    def git(*args, cwd=repo, check=True):
+        return subprocess.run(["git", *args], cwd=cwd, check=check, capture_output=True, text=True)
+
+    monkeypatch.setattr(helper, "_git", git)
+    assert helper.admit_preview_subject(tag="preview-v0.52.0", artifact_commit=artifact)["artifact_commit"] == artifact
+    with pytest.raises(SystemExit, match="requested artifact"):
+        helper.admit_preview_subject(tag="preview-v0.52.0", artifact_commit="f" * 40)
+    for invalid in ("HEAD", "-bad", artifact + "\ntag=forged"):
+        with pytest.raises(SystemExit, match="exact artifact commit SHA"):
+            helper.admit_preview_subject(tag="preview-v0.52.0", artifact_commit=invalid)
+    for tag in ("v0.52.0", "preview-v0.052.0", "preview-v0.52.0\ntag=forged"):
+        with pytest.raises((SystemExit, ValueError)):
+            helper.admit_preview_subject(tag=tag, artifact_commit=artifact)
+
+    # The tag contains a replacement verifier AND workflow. Neither gets to
+    # decide admission: the invoking helper checks their delta as inert data.
+    _git(repo, "switch", "--detach", artifact)
+    sentinel = tmp_path / "executed"
+    verifier = repo / "scripts/release/coordinated_release.py"
+    verifier.parent.mkdir(parents=True, exist_ok=True)
+    verifier.write_text(f"from pathlib import Path\nPath({str(sentinel)!r}).touch()\n")
+    workflow = repo / ".github/workflows/preview-release.yml"
+    workflow.parent.mkdir(parents=True, exist_ok=True)
+    workflow.write_text("on: [push]\npermissions: write-all\njobs: {}\n")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "--amend", "--no-edit")
+    forged = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "tag", "preview-v0.52.0-forged", forged)
+    # Adversarial fixture replaces its tag, never production recovery code.
+    _git(repo, "tag", "-f", "preview-v0.52.0", forged)
+    _git(repo, "push", "--force", "origin", "refs/tags/preview-v0.52.0")
+    _git(repo, "switch", "reconstruct/first-stable")
+    with pytest.raises(SystemExit, match="non-release-only"):
+        helper.admit_preview_subject(tag="preview-v0.52.0", artifact_commit=forged)
+    assert not sentinel.exists()
 
 
 def test_preview_rejects_forged_delta_and_subjects(tmp_path, monkeypatch):

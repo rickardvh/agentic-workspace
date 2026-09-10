@@ -116,8 +116,14 @@ by `preview_release_commit_allowed_paths`, writes preview release metadata/notes
 updates the coordinated lockfile, and creates the immutable
 `preview-vMAJOR.MINOR.PATCH` tag. With `--push`, only that tag is pushed.
 
-The tag triggers `.github/workflows/preview-release.yml`, which verifies the exact
-source/artifact relationship, builds the same coordinated Python and TypeScript
+The helper explicitly dispatches `.github/workflows/preview-release.yml` on
+`reconstruct/first-stable` with the existing tag and exact artifact SHA. Tag pushes
+do not trigger this publisher. Its read-only admission job checks out the trusted
+dispatch commit and runs that verifier against the tag as data, including source
+ancestry and the release-only delta. A tag cannot substitute its own verifier or
+workflow to admit itself. Only successful admission allows downstream jobs to
+check out the admitted artifact SHA and acquire publication permissions. The
+workflow then builds the same coordinated Python and TypeScript
 release assets, patches the root wheel to exact same-preview dependency URLs and
 digests, exercises packaged install and generated-command semantics, emits security
 readiness and an SBOM, creates checksums and artifact attestations, and publishes a
@@ -305,10 +311,16 @@ that recorded source; C must still be reachable from the fetched reconstruction
 branch. It verifies the immutable tag using the
 current verifier, including the source-owned release-only delta and package
 metadata. A complete prerelease with matching source/artifact manifest and asset
-checksums is a no-op. Otherwise it selects only the exact preview workflow's
-tag-push run for P and that tag. Failed or cancelled runs are rerun in place;
-active runs are left running. A missing, mismatched, or otherwise nonrecoverable
-run fails closed. The tag is never moved, deleted, or recreated for recovery.
+checksums is a no-op. Otherwise it rechecks the remote tag and dispatches the
+current reconstruction publisher with that same tag and P. This also recovers
+failed/cancelled publication without trusting or selecting an earlier tag-owned
+run. Per-tag concurrency serializes dispatches; a queued retry sees a complete
+publication as a no-op. Missing or mismatched tags fail admission. The tag is never
+moved, deleted, or recreated for recovery. A read-only registration run on a
+reconstruction push that changes the workflow makes it discoverable by GitHub's
+dispatch API before it exists on master. That registration event cannot admit or
+publish a preview. Publication requires explicit dispatch on reconstruction;
+an unavailable dispatch remains an explicit failure with the tag retained.
 
 Preview normalization refreshes the four exact generator-owned fingerprint
 receipts after version and lockfile normalization, using the existing generator.

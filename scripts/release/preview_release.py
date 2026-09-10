@@ -122,60 +122,55 @@ def _verify_existing_preview(tag: str, source_commit: str | None = None) -> dict
         shutil.rmtree(temporary_root, ignore_errors=True)
 
 
+def admit_preview_subject(*, tag: str, artifact_commit: str) -> dict[str, Any]:
+    """Run from the trusted dispatch checkout; inspect P without executing it."""
+    release_class, _ = coordinated_release.parse_release_tag(tag)
+    if release_class != "preview":
+        raise SystemExit("Publication admission requires a canonical preview tag")
+    if len(artifact_commit) != 40 or any(character not in "0123456789abcdef" for character in artifact_commit):
+        raise SystemExit("Publication admission requires an exact artifact commit SHA")
+    _fetch_reconstruction_ref(remote=DEFAULT_REMOTE, reconstruction_ref=DEFAULT_RECONSTRUCTION_REF)
+    if _tag_commit(tag) != artifact_commit:
+        raise SystemExit("Remote preview tag does not match the requested artifact commit")
+    verified = _verify_existing_preview(tag)
+    if verified["artifact_commit"] != artifact_commit:
+        raise SystemExit("Preview tag changed during admission")
+    _assert_source_is_reconstruction_candidate(
+        verified["reconstruction_source_commit"], remote=DEFAULT_REMOTE, reconstruction_ref=DEFAULT_RECONSTRUCTION_REF
+    )
+    return verified
+
+
 def _recover_publisher(*, remote: str, verified: dict[str, Any]) -> dict[str, Any]:
-    """Rerun only the existing tag-push run for the verified immutable commit."""
+    """Dispatch current reconstruction authority for the same immutable subject."""
     tag, artifact = verified["tag"], verified["artifact_commit"]
     remote_url = _git("remote", "get-url", remote).stdout.strip()
     repo = _run(["gh", "repo", "view", remote_url, "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).stdout.strip()
-    complete = verify_published_preview(repo=repo, verified=verified)
-    if complete:
+    if verify_published_preview(repo=repo, verified=verified):
         return {"publication_status": "publisher-complete", "publisher_head_sha": artifact}
-    workflow = ".github/workflows/preview-release.yml"
-    runs = json.loads(
-        _run(
-            [
-                "gh",
-                "api",
-                "--method",
-                "GET",
-                f"repos/{repo}/actions/workflows/preview-release.yml/runs",
-                "-f",
-                f"head_sha={artifact}",
-                "-f",
-                "event=push",
-                "-f",
-                "per_page=100",
-            ]
-        ).stdout
-    )["workflow_runs"]
-    exact = [
-        run
-        for run in runs
-        if run.get("head_sha") == artifact
-        and run.get("head_branch") == tag
-        and run.get("event") == "push"
-        and run.get("path") == workflow
-        and run.get("repository", {}).get("full_name") == repo
-    ]
-    if not exact:
-        raise SystemExit(f"No exact tag-push publisher run found for {tag} at {artifact}; tag retained, no substitute run created")
-    run = max(exact, key=lambda item: item["id"])
-    status = "publisher-active"
-    if run["status"] == "completed":
-        if run["conclusion"] == "success":
-            raise SystemExit("Publisher succeeded but exact complete release assets are missing; tag retained")
-        elif run["conclusion"] in {"failure", "cancelled"}:
-            # Re-read the remote ref immediately before the effect. Never force,
-            # delete, or recreate a tag to manufacture a new push event.
-            refs = _git("ls-remote", remote, f"refs/tags/{tag}", f"refs/tags/{tag}^{{}}").stdout.splitlines()
-            targets = {line.split()[1]: line.split()[0] for line in refs}
-            if targets.get(f"refs/tags/{tag}^{{}}", targets.get(f"refs/tags/{tag}")) != artifact:
-                raise SystemExit("Remote preview tag no longer matches the verified artifact commit")
-            _run(["gh", "api", "--method", "POST", f"repos/{repo}/actions/runs/{run['id']}/rerun"])
-            status = "publisher-rerun-requested"
-        else:
-            raise SystemExit(f"Publisher conclusion {run['conclusion']!r} is not recoverable automatically; tag retained")
-    return {"publication_status": status, "publisher_run_id": run["id"], "publisher_head_sha": artifact}
+    # Never move or recreate a tag to manufacture an event. Dispatch inputs bind
+    # the trusted branch workflow to P; admission independently verifies them.
+    refs = _git("ls-remote", remote, f"refs/tags/{tag}", f"refs/tags/{tag}^{{}}").stdout.splitlines()
+    targets = {line.split()[1]: line.split()[0] for line in refs}
+    if targets.get(f"refs/tags/{tag}^{{}}", targets.get(f"refs/tags/{tag}")) != artifact:
+        raise SystemExit("Remote preview tag no longer matches the verified artifact commit")
+    _run(
+        [
+            "gh",
+            "workflow",
+            "run",
+            "preview-release.yml",
+            "--repo",
+            repo,
+            "--ref",
+            DEFAULT_RECONSTRUCTION_REF,
+            "-f",
+            f"preview_tag={tag}",
+            "-f",
+            f"artifact_commit={artifact}",
+        ]
+    )
+    return {"publication_status": "publisher-dispatch-requested", "publisher_head_sha": artifact}
 
 
 def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_dir: Path | None = None) -> bool:
@@ -273,10 +268,8 @@ def create_preview_subject(
         )
         recovery = {}
         if push:
-            already_remote = bool(_git("ls-remote", "--refs", remote, f"refs/tags/{tag}").stdout.strip())
             _git("push", remote, f"refs/tags/{tag}")
-            if already_remote:
-                recovery = _recover_publisher(remote=remote, verified=verified)
+            recovery = _recover_publisher(remote=remote, verified=verified)
         return {
             "kind": "agentic-workspace/preview-publication-subject/v1",
             "status": "existing-current",
@@ -341,12 +334,15 @@ def create_preview_subject(
                 cwd=worktree,
             ).stdout
         )
+        recovery = {}
         if push:
             _git("push", remote, f"refs/tags/{tag}")
+            recovery = _recover_publisher(remote=remote, verified=verified)
         return {
             "kind": "agentic-workspace/preview-publication-subject/v1",
             "status": "created",
             **verified,
+            **recovery,
             "release_only_paths": changed,
             "pushed": push,
         }
@@ -366,6 +362,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--version", help="Unused coordinated numeric package version, for example 0.52.0")
     parser.add_argument("--check-published", metavar="TAG")
+    parser.add_argument("--admit-tag", metavar="TAG")
+    parser.add_argument("--artifact-commit")
     parser.add_argument("--repo")
     parser.add_argument("--artifact-dir", type=Path)
     parser.add_argument(
@@ -377,10 +375,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--push",
         action="store_true",
-        help="Push only the immutable preview tag. Tag push triggers the preview publisher; no branch is pushed.",
+        help="Push only the immutable preview tag and dispatch the trusted reconstruction publisher; no branch is pushed.",
     )
     args = parser.parse_args(argv)
 
+    if args.admit_tag:
+        if not args.artifact_commit:
+            parser.error("--admit-tag requires --artifact-commit")
+        verified = admit_preview_subject(tag=args.admit_tag, artifact_commit=args.artifact_commit)
+        print(f"tag={verified['tag']}")
+        print(f"artifact_commit={verified['artifact_commit']}")
+        return 0
     if args.check_published:
         if not args.repo:
             parser.error("--check-published requires --repo")

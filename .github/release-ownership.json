@@ -37,7 +37,7 @@
   },
   "preview_publisher": {
     "workflow": ".github/workflows/preview-release.yml",
-    "trigger": "preview-vMAJOR.MINOR.PATCH tag",
+    "trigger": "workflow_dispatch on reconstruct/first-stable with immutable preview tag and exact artifact SHA",
     "release_class": "preview",
     "support_bearing": false,
     "tag_rule": "preview-vMAJOR.MINOR.PATCH must point at a release-only commit whose single parent is the exact reconstruction source commit"

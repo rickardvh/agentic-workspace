@@ -223,7 +223,8 @@ def test_preview_release_workflow_remains_separate_from_stable_support_bearing_p
     preview = (ROOT / ".github/workflows/preview-release.yml").read_text(encoding="utf-8")
     stable = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
 
-    assert '"preview-v[0-9]+.[0-9]+.[0-9]+"' in preview
+    assert "workflow_dispatch:" in preview
+    assert "    tags:" not in preview
     assert '"v[0-9]+.[0-9]+.[0-9]+"' in stable
     assert "preview-v" not in stable
     assert "verify-preview" in preview

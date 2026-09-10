@@ -22,7 +22,7 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
     assert stable["trigger"] == "existing-tag-only"
     assert preview == {
         "workflow": ".github/workflows/preview-release.yml",
-        "trigger": "preview-vMAJOR.MINOR.PATCH tag",
+        "trigger": "workflow_dispatch on reconstruct/first-stable with immutable preview tag and exact artifact SHA",
         "release_class": "preview",
         "support_bearing": False,
         "tag_rule": (
@@ -45,7 +45,8 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
     preview = (WORKFLOW_ROOT / "preview-release.yml").read_text(encoding="utf-8")
     stable = (WORKFLOW_ROOT / "release.yml").read_text(encoding="utf-8")
 
-    assert '"preview-v[0-9]+.[0-9]+.[0-9]+"' in preview
+    assert "workflow_dispatch:" in preview
+    assert "    tags:" not in preview
     assert '"v[0-9]+.[0-9]+.[0-9]+"' in stable
     assert "preview-v" not in stable
     assert "verify-preview" in preview
@@ -55,7 +56,8 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
     assert "support_bearing_promotion.py" not in preview
     assert "test ! -e dist/support-bearing-promotion.json" in preview
     assert "overwrite_files: false" in preview
-    assert preview.count("ref: ${{ github.sha }}") == 2
+    assert preview.count("ref: ${{ github.sha }}") == 1
+    assert preview.count("ref: ${{ needs.preview-admission.outputs.artifact_commit }}") == 2
     assert "make_latest: false" in preview
     permissions = json.loads((ROOT / ".github/workflow-write-permissions.json").read_text())
     assert set(permissions["allowed_write_permissions"][".github/workflows/preview-release.yml"]) == {
@@ -127,3 +129,37 @@ def test_release_docs_describe_preview_as_testing_not_stable_admission() -> None
     assert "only that tag is pushed" in docs
     assert "A public preview therefore burns its numeric package version" in docs
     assert "only support-bearing GitHub Release" in docs
+
+
+def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> None:
+    import yaml
+
+    workflow = yaml.safe_load((WORKFLOW_ROOT / "preview-release.yml").read_text())
+    # PyYAML treats the YAML 1.1 word "on" as True.
+    assert set(workflow[True]) == {"workflow_dispatch", "push"}
+    assert workflow[True]["push"] == {"branches": ["reconstruct/first-stable"], "paths": [".github/workflows/preview-release.yml"]}
+    jobs = workflow["jobs"]
+    registration = jobs["preview-registration"]
+    assert registration["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/reconstruct/first-stable'"
+    assert registration["steps"] == [{"run": 'echo "Preview publisher registered; publication requires explicit dispatch."'}]
+    assert "permissions" not in registration
+    admission = jobs["preview-admission"]
+    assert admission["if"] == "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/reconstruct/first-stable'"
+    assert workflow["permissions"] == admission["permissions"] == {"contents": "read"}
+    checkout = admission["steps"][0]
+    assert checkout["with"]["ref"] == "${{ github.sha }}"
+    assert checkout["with"]["persist-credentials"] is False
+    gate = admission["steps"][-1]
+    assert (
+        gate["run"]
+        == 'python scripts/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"'
+    )
+    assert gate["env"] == {"PREVIEW_TAG": "${{ inputs.preview_tag }}", "ARTIFACT_COMMIT": "${{ inputs.artifact_commit }}"}
+    assert not any("${{ inputs." in step.get("run", "") for step in admission["steps"])
+    assert jobs["preview-runtime-matrix"]["needs"] == "preview-admission"
+    assert jobs["preview-package"]["needs"] == ["preview-admission", "preview-runtime-matrix"]
+    for name in ("preview-runtime-matrix", "preview-package"):
+        checkout = jobs[name]["steps"][0]
+        assert checkout["with"]["ref"] == "${{ needs.preview-admission.outputs.artifact_commit }}"
+        assert checkout["with"]["persist-credentials"] is False
+    assert workflow["concurrency"] == {"group": "preview-${{ inputs.preview_tag || github.ref }}", "cancel-in-progress": False}

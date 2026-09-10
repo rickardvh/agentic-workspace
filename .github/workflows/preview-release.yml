@@ -1,19 +1,64 @@
 name: Preview Release
 
 on:
+  # Register the workflow when it lands on reconstruction, even while master
+  # lacks it. This event cannot admit or publish a preview.
   push:
-    tags:
-      - "preview-v[0-9]+.[0-9]+.[0-9]+"
+    branches: [reconstruct/first-stable]
+    paths: [.github/workflows/preview-release.yml]
+  workflow_dispatch:
+    inputs:
+      preview_tag:
+        description: Existing immutable preview tag
+        required: true
+        type: string
+      artifact_commit:
+        description: Exact artifact commit SHA bound to the tag
+        required: true
+        type: string
 
 concurrency:
-  group: preview-${{ github.ref }}
+  group: preview-${{ inputs.preview_tag || github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  preview-registration:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/reconstruct/first-stable'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Preview publisher registered; publication requires explicit dispatch."
+
+  preview-admission:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/reconstruct/first-stable'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.admit.outputs.tag }}
+      artifact_commit: ${{ steps.admit.outputs.artifact_commit }}
+    steps:
+      - name: Checkout trusted dispatch authority
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - name: Admit tag as data with the trusted verifier
+        id: admit
+        env:
+          PREVIEW_TAG: ${{ inputs.preview_tag }}
+          ARTIFACT_COMMIT: ${{ inputs.artifact_commit }}
+        run: python scripts/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"
+
   preview-runtime-matrix:
+    needs: preview-admission
     name: Preview runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
@@ -35,7 +80,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.sha }}
+          ref: ${{ needs.preview-admission.outputs.artifact_commit }}
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -46,11 +92,6 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
-      - name: Verify exact non-support-bearing preview subject
-        shell: bash
-        run: |
-          git fetch origin --tags
-          python scripts/release/coordinated_release.py verify-preview --tag "${GITHUB_REF_NAME}"
       - name: Verify lock and runtime-specific behavior
         run: |
           uv lock --check
@@ -59,7 +100,7 @@ jobs:
           uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   preview-package:
-    needs: preview-runtime-matrix
+    needs: [preview-admission, preview-runtime-matrix]
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -67,13 +108,14 @@ jobs:
       id-token: write
       attestations: write
     env:
-      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_TAG: ${{ needs.preview-admission.outputs.tag }}
     steps:
       - name: Checkout exact preview subject
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.sha }}
+          ref: ${{ needs.preview-admission.outputs.artifact_commit }}
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
