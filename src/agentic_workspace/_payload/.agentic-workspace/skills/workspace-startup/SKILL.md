@@ -64,7 +64,14 @@ After the bounded action:
 2. Reconcile only concerns relevant to this work: changed state, proof/evidence, claim permission, future-relevant residue, continuation, or an explicit human decision.
 3. Preserve the difference between successful local action and permission to make a broader completion claim.
 4. If the user, review, orchestrator, or host explicitly corrects the acting agent's behavior, treat that correction as reconciliation input and submit it through the current correction owner request when available. An unavailable native correction operation remains an explicit owner gap. Do not substitute an apology, chat promise, or Memory note for correction admission.
-5. If the result names another supported action or unresolved owner, resolve again from that current state.
+5. Inspect `effect_outcome` separately from `continuation`. Use a `current`
+   continuation directly, with the same compact/full/carried projection as `start`.
+   Its decision is current at observation; execution still revalidates. If continuation
+   is unavailable, use its exact `reentry`. A committed effect remains committed;
+   never retry it merely because continuation failed. An uncertain effect requires
+   current owner recovery and permits no committed or absent-effect claim.
+   Return control at an unresolved judgment, currentness, capability, authority,
+   proof/review or uncertainty boundary; do not loop over primary actions.
 6. Stop when no further action is required and the intended claim is permitted. Terminal reconciliation is closeout; no separate closeout framework is assumed.
 
 ## Progressive Disclosure

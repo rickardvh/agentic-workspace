@@ -45,6 +45,11 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     sibling = tmp_path / "src/sibling.txt"
     sibling.write_bytes(b"before\n")
     (tmp_path / "dependency.txt").write_text("Current exact task constraint.\n")
+    from tests.test_scoped_instructions import _admit, _write
+
+    guidance = "Review the concrete sibling postimage before claiming completion."
+    _write(tmp_path, "sibling", "---\npaths: [src/sibling.txt]\nchecks:\n  - run: echo sibling-reviewed\n---\n" + guidance)
+    _admit(tmp_path)
     context = {"target": str(tmp_path), "task": "Update the second line from the supplied source", "changed": ["src/*.txt"]}
 
     def call(request=None, **updates):
@@ -106,6 +111,13 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     assert sealed["worker_context"]["scope"]["class"] == "unapplied-patch"
     result = call(invocation=action)
     assert result["value"]["status"] == "returned-unproven", result
+    # A worker's proposed changed_paths are not committed repository effects.
+    # The process may have written outside its declared inputs (launches.txt in
+    # this fixture); no trustworthy complete path report exists at this boundary.
+    assert result["effect_outcome"]["status"] == "committed"
+    assert result["continuation"]["status"] == "unavailable"
+    assert "required_material" in result["continuation"]["reentry"]
+    assert result["continuation"]["retry_effect"] is False
     assert main.read_bytes() == before.replace("\n", "\r\n").encode()
     assert call(invocation=action)["value"] == result["value"]
     reentry = result["value"]["reentry"]["request"]
@@ -174,6 +186,7 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     integrate = ready["decision_packet"]["primary_action"]
     assert integrate is not None, json.dumps(ready["decision_packet"], indent=2)
     assert integrate["operation_id"] == "assignment.integrate-patch"
+    assert guidance not in json.dumps(ready["decision_packet"].get("material", {}))
     concurrent_before = main.read_bytes()
     main.write_bytes(concurrent_before.replace(b"two", b"conflicting"))
     with pytest.raises(AssertionError, match="overlaps|changed"):
@@ -207,6 +220,12 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     expected = before.replace("two", "worker").replace("six", "concurrent").replace("\n", "\r\n").encode()
     assert main.read_bytes() == expected
     assert integrated["value"]["changed_paths"] == ["src/main.txt", "src/sibling.txt"]
+    assert integrated["continuation"]["status"] == "current"
+    assert integrated["continuation"]["context"]["changed"] == ["src/*.txt", "src/main.txt", "src/sibling.txt"]
+    fresh = consume(surface, shared_core_binary, native_cli, integrated["continuation"]["context"])
+    assert integrated["continuation"]["result"] == fresh
+    assert guidance in json.dumps(fresh["decision_packet"]["material"])
+    assert "sibling-reviewed" in json.dumps(fresh["decision_packet"])
     assert sibling.read_bytes() == b"sibling\n"
     assert integrated["value"]["proof_authority"] is False
     assert integrated["value"]["completion_authority"] is False

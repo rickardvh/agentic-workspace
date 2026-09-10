@@ -93,7 +93,7 @@ export function answerCarried(carriage, reference, answer) {
 }
 
 export function invokeCarried(carriage, reference) {
-  return request({invoke: {invocation: carriage, reference}});
+  return request({invoke: {invocation: carriage, reference, projection: "carried"}});
 }
 
 function request(payload) {

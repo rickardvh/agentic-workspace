@@ -479,9 +479,11 @@ pub(crate) fn execute(
     invocation: &Value,
     mut revalidate: impl FnMut() -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
-    execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
+    let mut result = execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
         Ok(())
-    })
+    })?;
+    result["post_effect_changed_paths"] = json!([result["outcome"]["value"]["source"]]);
+    Ok(result)
 }
 fn execute_checked(
     target: &Path,
@@ -698,7 +700,7 @@ mod tests {
     fn invoke(target: &Path, invocation: Value) -> Result<Value, CoreError> {
         let mut c = context(target);
         c["invocation"] = invocation;
-        crate::native_public::invoke(c)
+        crate::native_public::invoke_checked(c)
     }
     #[test]
     fn interrupted_configuration_write_recovers_without_rewriting_source() {

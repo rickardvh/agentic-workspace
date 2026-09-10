@@ -37,6 +37,28 @@ obtaining that text needs no preparatory detail fetch.
 
 ## Thin host carriage
 
+Post-effect continuation combines the incoming changed set with exact semantic
+source paths reported by the execution owner (`post_effect_changed_paths` on
+the internal native execution result). Configuration, Memory, source receipts,
+Planning publications/selection, independent publications and patch integration
+report their exact paths, including on retained recovery. The shared public
+boundary validates and deduplicates them before resolving the next decision.
+It does not interpret arbitrary result material or scan dirty state for paths.
+Owner custody records remain separately inspectable; temporary lock/attempt
+files are not task-source changes.
+
+Process execution cannot generically establish a complete changed-path set.
+Proof commands and delegated processes therefore retain their committed outcome
+and owner return/recovery contract, but expose an unavailable generic continuation
+with required changed-path material. A worker's proposed patch paths are not a
+committed-effect report. After native patch integration, the integration owner's
+exact `changed_paths` establishes the expanded continuation scope.
+
+Planning creation returns `value.selection_request` together with
+`value.selection_context`; use that exact context to select the new owner.
+The request is freshly bound to the expanded post-creation scope. Neither it nor
+the generic continuation silently grants a selection, proof or completion claim.
+
 `projection: "carried"` returns two independent transport fields:
 
 - `view`: model-facing compact decision, including exact references;
@@ -121,12 +143,60 @@ include the fixture's target spelling and may vary with the temporary path):
 The carried question uses 114,115 adapter-local bytes. The fixture observes zero
 protocol repairs and one bounded human decision in both paths. It does not
 measure provider tokens, hidden host context, source/procedure redelivery, worker
-setup or a latency improvement. It does not remove the post-invoke resolve.
+setup or a latency improvement. These measurements describe the first carriage slice.
 
 No parent closes from this slice. Remaining acceptance includes general bounded
-material helpers, more aggressive owner-provided material summaries, truthful
-post-effect continuation/uncertainty across every effect owner (#2986/#2947),
+material helpers, more aggressive owner-provided material summaries,
 source-delivery and route continuation (#2661/#2930), profiled derivation reuse
 (#2981), worker entry and effective host-context measurement (#2818/#2947), and
-cumulative #2909/release admission. `invoke` retains its existing result and
-recovery contract here; a committed effect is not evidence of parent completion.
+cumulative #2909/release admission. A committed effect is not evidence of parent completion.
+
+
+## Truthful invoke continuation
+
+Every ordinary public `invoke` reports effect and continuation separately:
+
+| Effect outcome | Continuation | Safe interpretation |
+| --- | --- | --- |
+| `committed` | `current` | Exact owner result established; use `continuation.result` directly. |
+| `committed` | `unavailable` | Preserve the result; use exact `continuation.reentry`, never retry because next resolution failed. |
+| `uncertain` | `reentry-required` | Execution entered without a confirmed result; fresh owner recovery is required. Neither commitment nor absence is inferred. |
+| `rejected-before-effect` | `reentry-required` | Admission rejected before execution; fresh entry can supply a current action. |
+
+Owner status, effects, value and custody retain their exact meaning. An unchanged
+or replayed result does not claim another mutation. Uncertainty is conservative:
+errors after owner entry may precede its actual write. Public Rust, CLI, JSON, Python and TypeScript return explicit operation results
+including rejection. A killed process with no result remains
+transport uncertainty. Unknown effects are `null`, not an empty-effects claim.
+Transport exit success alone establishes neither effect success nor completion;
+optional diagnostics record separate effect and continuation status tags.
+
+The continuation is a fresh post-effect observation using exact target/task/changed
+context without replaying mutation requests. All execution-time revalidation stays
+in place. No pre-effect observation crosses this barrier. This slice does not
+rebind prior owner decisions across changed dependencies: an unresolved or
+invalidated question returns control. No primary-action loop is supplied.
+
+Full projection retains legacy `next_decision` and includes the full next `start`
+result. Compact and carried avoid that duplicate and use `continuation.result`.
+Carried helpers request `carried`, so the next result has its own `{view, carriage}`
+with exact immutable refs. No extra detail call is required. Projection or
+post-effect metadata failure preserves a confirmed effect and returns unavailable
+continuation with exact re-entry. Source truth remains recoverable after adapter loss.
+
+The configuration-write conformance journey consumes the returned continuation
+instead of a model-mediated post-invoke `start`: one fewer public entry call and
+one fewer semantic interaction, with zero compensating detail calls. The test's
+fresh entry is a correctness oracle, not part of the operating journey. Carriage
+still removes envelope transcription as measured above. All four surfaces and
+three projections produce identical current decisions. Internal post-effect
+resolution still runs once, including owners that previously returned no next
+decision; no latency reduction is claimed. No registry or executor was introduced.
+
+Measured fixture on 2026-09-10 (UTF-8 JSON bytes; temporary target path length
+contributes to the baseline): 4,022 model-generated protocol bytes become 114;
+public calls 4 become 3, explicitly modeled interactions 3 become 1, post-invoke
+entry calls 1 become 0, required detail calls stay 0, and bounded judgments stay
+1. These are deterministic interaction-trace counts, not a provider-token or
+live-model timing benchmark. The first-slice measurement above used a different
+temporary target and omitted the post-effect entry context.

@@ -33,7 +33,7 @@ def answer_carried(carriage: Mapping[str, Any], reference: str, answer: Any) -> 
 
 def invoke_carried(carriage: Mapping[str, Any], reference: str) -> dict[str, Any]:
     """Execute one exact carried action, with native execution-time admission."""
-    return _request({"invoke": {"invocation": carriage, "reference": reference}})
+    return _request({"invoke": {"invocation": carriage, "reference": reference, "projection": "carried"}})
 
 
 def direct_task_subject(task: str, paths: list[str]) -> dict[str, Any]:

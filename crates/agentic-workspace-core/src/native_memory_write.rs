@@ -502,9 +502,11 @@ pub(crate) fn execute(
     invocation: &Value,
     mut revalidate: impl FnMut() -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
-    execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
+    let mut result = execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
         Ok(())
-    })
+    })?;
+    result["post_effect_changed_paths"] = json!([result["outcome"]["value"]["source"]]);
+    Ok(result)
 }
 fn execute_checked(
     target: &Path,
@@ -711,7 +713,7 @@ mod tests {
                         "memory.recover-disposition"
                     );
                 }
-                crate::native_public::invoke(invocation).unwrap();
+                crate::native_public::invoke_checked(invocation).unwrap();
                 let current = resolve(None);
                 assert!(
                     current["memory"]["disposition"]["recovery_requests"]

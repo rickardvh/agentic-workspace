@@ -469,7 +469,15 @@ fn capture_inner(
             .display()
             .to_string(),
     };
-    let entry = json!({"id":id,"timestamp":timestamp,"duration_ms":elapsed.as_millis().min(u64::MAX as u128) as u64,"command":format!("agentic-workspace {operation}"),"argv":[],"target":normalized_target,"exit_status":if result.is_ok(){0}else{2},"exit_class":if result.is_ok(){"success"}else{"failure"},"origin":{"classification":"unknown","source":"native-transport"},"output_bytes":result_measure.0,"output_digest":result_measure.1,"request_bytes":input_measure.0,"request_sha256":input_measure.1,"storage_mode":"metadata-only","omissions":["argv","task","operation arguments","result body","stdout/stderr","caller origin","process interruption before completion","unadmitted historical registry"],"path_mode":policy["path_mode"]});
+    let mut entry = json!({"id":id,"timestamp":timestamp,"duration_ms":elapsed.as_millis().min(u64::MAX as u128) as u64,"command":format!("agentic-workspace {operation}"),"argv":[],"target":normalized_target,"exit_status":if result.is_ok(){0}else{2},"exit_class":if result.is_ok(){"success"}else{"failure"},"origin":{"classification":"unknown","source":"native-transport"},"output_bytes":result_measure.0,"output_digest":result_measure.1,"request_bytes":input_measure.0,"request_sha256":input_measure.1,"storage_mode":"metadata-only","omissions":["argv","task","operation arguments","result body","stdout/stderr","caller origin","process interruption before completion","unadmitted historical registry"],"path_mode":policy["path_mode"]});
+    if let Ok(value) = result {
+        // Transport success is distinct from admitted effect and continuation.
+        // Record only bounded status tags, never owner material or diagnostics.
+        if value["effect_outcome"]["status"].is_string() {
+            entry["effect_status"] = value["effect_outcome"]["status"].clone();
+            entry["continuation_status"] = value["continuation"]["status"].clone();
+        }
+    }
     let event = json!({"kind":"agentic-workspace/session-log-event/v1","schema_version":1,"event_id":id,"event_type":"command.completed","timestamp":timestamp,"sequence":next_sequence,"logical_session_id":logical,"physical_session_id":session["session_id"],"parent_logical_session_id":session["parent_logical_session_id"],"correlation_id":session["correlation_id"],"payload":{"entry":entry},"local_only":true,"authoritative":false});
     let mut line = serde_json::to_vec(&event).unwrap();
     line.push(b'\n');

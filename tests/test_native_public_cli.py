@@ -117,7 +117,7 @@ def native_cli(shared_core_binary: Path) -> Path:
     return shared_core_binary.with_name("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
 
 
-def consume(surface: str, binary: Path, native: Path, context: dict, *, host_path: str = "") -> dict:
+def consume(surface: str, binary: Path, native: Path, context: dict, *, host_path: str = "", allow_failure: bool = False) -> dict:
     context = {"projection": "full", **context}
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
@@ -156,7 +156,10 @@ def consume(surface: str, binary: Path, native: Path, context: dict, *, host_pat
     environment = {**os.environ, "PATH": host_path} if surface == "native" else None
     result = subprocess.run(command, input=stdin, text=True, encoding="utf-8", capture_output=True, cwd=ROOT, check=False, env=environment)
     assert result.returncode == 0, result.stderr
-    return json.loads(result.stdout)
+    decoded = json.loads(result.stdout)
+    if not allow_failure:
+        assert decoded.get("status") not in {"rejected", "uncertain"}, json.dumps(decoded)
+    return decoded
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -752,8 +755,11 @@ def test_native_reader_admission_precedes_every_domain_source(
     assert blocked["failed_checks"] == ["minimum_reader_epoch", "required_reader_capabilities"]
     assert blocked["managed_state_interpreted"] is False
     assert "decision_packet" not in blocked
-    invoked = consume(surface, shared_core_binary, native_cli, {**context, "invocation": {"operation_id": "planning.reconcile"}})
-    assert invoked["status"] == "blocked"
+    invoked = consume(
+        surface, shared_core_binary, native_cli, {**context, "invocation": {"operation_id": "planning.reconcile"}}, allow_failure=True
+    )
+    assert invoked["effect_outcome"]["status"] == "rejected-before-effect"
+    assert invoked["blockers"] == blocked
     assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
 
 

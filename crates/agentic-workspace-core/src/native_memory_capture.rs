@@ -934,9 +934,11 @@ pub(crate) fn execute(
     invocation: &Value,
     mut revalidate: impl FnMut() -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
-    execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
+    let mut result = execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
         Ok(())
-    })
+    })?;
+    result["post_effect_changed_paths"] = json!([result["outcome"]["value"]["source"]]);
+    Ok(result)
 }
 
 pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
@@ -1469,10 +1471,10 @@ mod tests {
             invoke["invocation"] = next;
             if agent {
                 std::fs::write(&policy, "schema_version=1\n").unwrap();
-                assert!(crate::native_public::invoke(invoke.clone()).is_err());
+                assert!(crate::native_public::invoke_checked(invoke.clone()).is_err());
                 std::fs::write(&policy, policy_bytes).unwrap();
             }
-            crate::native_public::invoke(invoke).unwrap();
+            crate::native_public::invoke_checked(invoke).unwrap();
             assert_eq!(
                 start(None)["decision_packet"]["decision_context"]["states"]
                     .as_array()

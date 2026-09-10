@@ -171,7 +171,26 @@ pub fn start(value: Value) -> Result<Value, CoreError> {
 }
 
 pub fn invoke(value: Value) -> Result<Value, CoreError> {
-    operate(value, true)
+    match operate(value.clone(), true) {
+        Ok(result) => Ok(result),
+        Err(failure) => {
+            let mut context = value.clone();
+            if value["invocation"]["kind"] == CARRIAGE {
+                context = value["invocation"]["context"].clone();
+                if context.is_object() {
+                    for field in ["target", "task", "changed"] {
+                        if let Some(supplied) = value.get(field) {
+                            context[field] = supplied.clone();
+                        }
+                    }
+                }
+            }
+            Ok(native_public::rejected_invocation(
+                &context,
+                &failure.to_string(),
+            ))
+        }
+    }
 }
 
 fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
@@ -253,7 +272,10 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
             execution["invocation"] = selected_entry["envelope"].clone();
             // Existing native admission reobserves the execution snapshot and
             // preserves replay/recovery; a carriage digest is not a grant.
-            return native_public::invoke(execution);
+            return Ok(project_invocation(
+                native_public::invoke_operating(execution),
+                &projection,
+            ));
         }
         let current = native_public::start(carrier.context.clone())?;
         if current.pointer(selector) != Some(&selected_entry["envelope"]) {
@@ -302,9 +324,36 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
         return Err(error("answer requires exact carried reference"));
     }
     if invoking {
-        return native_public::invoke(value);
+        return Ok(project_invocation(
+            native_public::invoke_operating(value),
+            &projection,
+        ));
     }
     let full = native_public::start(value.clone())?;
+    project_start(full, value, &projection)
+}
+
+fn project_invocation(mut result: Value, projection: &Value) -> Value {
+    if result["continuation"]["status"] == "current" {
+        let full = result["continuation"]["result"].take();
+        let context = result["continuation"]["context"].clone();
+        match project_start(full, context, projection) {
+            Ok(projected) => result["continuation"]["result"] = projected,
+            Err(failure) => {
+                result["continuation_status"] = json!("unavailable");
+                result["next_decision"] = Value::Null;
+                result["continuation"]["status"] = json!("unavailable");
+                result["continuation"]["diagnostic"] = json!(failure.to_string());
+            }
+        }
+    }
+    if projection != "full" {
+        result.as_object_mut().unwrap().remove("next_decision");
+    }
+    result
+}
+
+fn project_start(full: Value, mut value: Value, projection: &Value) -> Result<Value, CoreError> {
     if projection == "full" {
         return Ok(full);
     }
@@ -325,6 +374,9 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
         value["changed"] = json!([]);
     }
     value.as_object_mut().unwrap().remove("invocation");
+    if value["request"].is_null() {
+        value.as_object_mut().unwrap().remove("request");
+    }
     let view = compact(&full, &value, projection == "carried")?;
     if projection == "carried" {
         return Ok(

@@ -67,7 +67,9 @@ def test_native_logging_paths_large_input_and_stable_identity(tmp_path, shared_c
     assert len(rows) == 2
     assert [r["sequence"] for r in rows] == [1, 2]
     assert len({r["logical_session_id"] for r in rows}) == 1
-    assert rows[1]["payload"]["entry"]["exit_status"] == 2
+    assert rows[1]["payload"]["entry"]["exit_status"] == 0
+    assert rows[1]["payload"]["entry"]["effect_status"] == "rejected-before-effect"
+    assert rows[1]["payload"]["entry"]["continuation_status"] == "reentry-required"
     assert rows[1]["payload"]["entry"]["request_bytes"] > 1000000
     text = json.dumps(rows)
     assert "secret-argument-" not in text and "private-session-secret" not in text

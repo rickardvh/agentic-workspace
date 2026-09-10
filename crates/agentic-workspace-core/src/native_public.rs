@@ -1201,7 +1201,165 @@ fn combined_contract(contracts: &[&Value]) -> Result<Value, CoreError> {
     Ok(combined)
 }
 
+#[derive(Default)]
+struct InvocationProgress {
+    entered_effect_owner: bool,
+    confirmed: Option<Value>,
+}
+
+fn reentry(value: &Value) -> Value {
+    json!({"operation":"start","context":{"target":value["target"],
+        "task":value.get("task").cloned().unwrap_or(json!("")),
+        "changed":value.get("changed").cloned().unwrap_or(json!([]))}})
+}
+
+pub(crate) fn rejected_invocation(value: &Value, message: &str) -> Value {
+    invocation_failure(value, message, &InvocationProgress::default())
+}
+
+fn invocation_failure(value: &Value, message: &str, progress: &InvocationProgress) -> Value {
+    if let Some(confirmed) = &progress.confirmed {
+        let mut result = confirmed.clone();
+        result["continuation_status"] = json!("unavailable");
+        result["next_decision"] = Value::Null;
+        result["continuation"] = json!({"status":"unavailable","reentry":reentry(value),
+            "diagnostic":message,"retry_effect":false});
+        return result;
+    }
+    let uncertain = progress.entered_effect_owner;
+    json!({"kind":"agentic-workspace/operation-result/v1",
+        "operation_id":value["invocation"]["operation_id"],
+        "status":if uncertain{"uncertain"}else{"rejected"},"effects":if uncertain{Value::Null}else{json!([])},
+        "effect_outcome":{"status":if uncertain{"uncertain"}else{"rejected-before-effect"},
+            "claim_boundary":if uncertain{"The effect owner was entered; no committed or absent effect is inferred. Re-enter current recovery before any retry."}else{"Rejected before effect-owner entry; no effect was attempted."}},
+        "error":{"message":message},"next_decision":null,"continuation_status":"unavailable",
+        "continuation":{"status":"reentry-required","reentry":reentry(value),"retry_effect":false},
+        "recovery":{"submitted_invocation":value["invocation"],"reentry":reentry(value),
+            "authority":"Submitted material is recovery context only; current source owners retain admission."}})
+}
+
+/// Public Rust callers receive the same explicit effect/continuation result as
+/// CLI, JSON and thin bindings, including pre-effect rejection and uncertainty.
 pub fn invoke(value: Value) -> Result<Value, CoreError> {
+    Ok(invoke_operating(value))
+}
+
+// Existing interruption fixtures assert diagnostic text as an error. Translate
+// the explicit public result for those assertions; never bypass public admission.
+#[cfg(test)]
+pub(crate) fn invoke_checked(value: Value) -> Result<Value, CoreError> {
+    let result = invoke(value)?;
+    if matches!(
+        result["effect_outcome"]["status"].as_str(),
+        Some("uncertain" | "rejected-before-effect")
+    ) {
+        Err(CoreError::new(
+            result["error"]["message"]
+                .as_str()
+                .unwrap_or("effect not established"),
+        ))
+    } else {
+        Ok(result)
+    }
+}
+
+pub(crate) fn invoke_operating(value: Value) -> Value {
+    let mut progress = InvocationProgress::default();
+    match invoke_inner(value.clone(), &mut progress) {
+        Ok(result) => result,
+        Err(error) => invocation_failure(&value, &error.to_string(), &progress),
+    }
+}
+
+fn finish_invocation(
+    input: &Input,
+    target: &std::path::Path,
+    invocation: &Value,
+    executed: &Value,
+    progress: &mut InvocationProgress,
+) -> Result<Value, CoreError> {
+    let outcome = executed.get("outcome").cloned().unwrap_or_else(|| {
+        json!({"status":executed["status"],"effects":executed["effects"],"value":executed["value"]})
+    });
+    let mut result = crate::operation_result_value(
+        json!({"invocation":invocation,"outcome":outcome,"decision":null}),
+    )?;
+    result["custody"] = executed["custody"].clone();
+    result["effect_outcome"] = json!({"status":if outcome["status"] == "rejected"{"rejected-before-effect"}else{"committed"},
+        "owner_status":outcome["status"],"reported_effects":outcome["effects"],
+        "claim_boundary":"Only the exact owner result is established; continuation and task completion are separate facts."});
+    progress.confirmed = Some(result.clone());
+    // This is precisely fresh public entry, without replaying the mutation's
+    // request or treating its previous source snapshot as current.
+    let mut context = json!({"target":target,"task":input.task,"changed":input.changed});
+    match post_effect_changed_paths(&input.changed, executed, &outcome) {
+        Ok(changed) => {
+            context["changed"] = json!(changed);
+            let current = start(context.clone());
+            Ok(attach_continuation(result, current, &context))
+        }
+        Err(error) => {
+            let mut result = attach_continuation(result, Err(error), &context);
+            // The old context is a recovery starting point, not a complete
+            // post-effect work scope. Never infer paths from dirty state or
+            // accept worker/caller claims as owner-established effect facts.
+            result["continuation"]["reentry"]["required_material"] = json!({
+                "changed":"Establish the complete post-effect changed-path set through the effect owner before continuing affected work."});
+            Ok(result)
+        }
+    }
+}
+
+fn post_effect_changed_paths(
+    before: &[String],
+    executed: &Value,
+    outcome: &Value,
+) -> Result<Vec<String>, CoreError> {
+    let mut changed = before.to_vec();
+    if let Some(paths) = executed.get("post_effect_changed_paths") {
+        let paths: Vec<String> = serde_json::from_value(paths.clone())
+            .map_err(|_| CoreError::new("Owner post-effect changed-path identity is invalid"))?;
+        for path in paths {
+            decision_source::relative(&path)?;
+            changed.push(path);
+        }
+    } else if outcome["effects"] != json!([]) {
+        return Err(CoreError::new(
+            "Owner post-effect changed-path identity is unavailable; effect outcome remains established; do not retry the effect",
+        ));
+    }
+    changed.sort();
+    changed.dedup();
+    Ok(changed)
+}
+
+fn attach_continuation(
+    mut result: Value,
+    current: Result<Value, CoreError>,
+    context: &Value,
+) -> Value {
+    result["next_decision"] = Value::Null;
+    result["continuation_status"] = json!("unavailable");
+    match current {
+        Ok(full) if full["decision_packet"].is_object() => {
+            result["continuation_status"] = json!("current");
+            result["next_decision"] = full["decision_packet"].clone();
+            result["continuation"] = json!({"status":"current","result":full,"context":context,
+                "reentry":reentry(context),"retry_effect":false});
+        }
+        Ok(blocked) => {
+            result["continuation"] = json!({"status":"unavailable","reentry":reentry(context),
+                "blocked":blocked,"retry_effect":false});
+        }
+        Err(error) => {
+            result["continuation"] = json!({"status":"unavailable","reentry":reentry(context),
+                "diagnostic":error.to_string(),"retry_effect":false});
+        }
+    }
+    result
+}
+
+fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value, CoreError> {
     let (input, target) = input(value)?;
     if input.request.is_some() || input.invocation.is_none() {
         return Err(CoreError::new(
@@ -1236,12 +1394,19 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     }
     let current = resolve(&input, &target, true)?;
     if current["status"] == "blocked" {
-        return Ok(current);
+        let mut rejected = rejected_invocation(
+            &json!({"target":target,"task":input.task,
+            "changed":input.changed,"invocation":invocation}),
+            "Current runtime blocks invocation",
+        );
+        rejected["blockers"] = current;
+        return Ok(rejected);
     }
     if independent {
         crate::admit_invocation_value(
             json!({"decision":current["decision_packet"],"invocation":invocation}),
         )?;
+        progress.entered_effect_owner = true;
         let executed = crate::native_independent_publication::execute(
             &target,
             &current["decision_packet"],
@@ -1254,16 +1419,14 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 Ok(())
             },
         )?;
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":null}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         return Ok(result);
     }
     if invocation["operation_id"] == crate::native_source_reconciliation::OP {
         crate::admit_invocation_value(
             json!({"decision":current["decision_packet"],"invocation":invocation}),
         )?;
+        progress.entered_effect_owner = true;
         let executed = crate::native_source_reconciliation::execute(
             &target,
             &current["decision_packet"],
@@ -1276,10 +1439,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 Ok(())
             },
         )?;
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":null}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         return Ok(result);
     }
     if matches!(
@@ -1305,6 +1465,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
             )?;
             Ok(())
         };
+        progress.entered_effect_owner = true;
         let executed = if matches!(
             invocation["operation_id"].as_str(),
             Some(
@@ -1335,14 +1496,11 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 revalidate,
             )?
         };
-        let next = resolve(&input, &target, false).ok();
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         return Ok(result);
     }
     if invocation["operation_id"] == crate::native_patch::OP {
+        progress.entered_effect_owner = true;
         let executed =
             crate::native_patch::execute(&target, &current["decision_packet"], invocation, || {
                 let fresh = resolve(&input, &target, true)?;
@@ -1351,14 +1509,12 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 )?;
                 Ok(())
             })?;
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":null}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         result["value"]["reentry"] = json!({"task":input.task,"changed":input.changed,"request":invocation["source_requests"]});
         return Ok(result);
     }
     if invocation["operation_id"] == "delegation.dispatch" {
+        progress.entered_effect_owner = true;
         let executed = crate::native_delegation::execute(
             &target,
             &current["decision_packet"],
@@ -1375,11 +1531,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 Ok(())
             },
         )?;
-        let next = resolve(&input, &target, false).ok();
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         result["value"]["reentry"] =
             crate::native_delegation::result_reentry(&executed, invocation)?;
         return Ok(result);
@@ -1388,6 +1540,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         crate::admit_invocation_value(
             json!({"decision":current["decision_packet"],"invocation":invocation}),
         )?;
+        progress.entered_effect_owner = true;
         let executed = crate::native_planning_update::recover(
             &target,
             &current["decision_packet"],
@@ -1401,11 +1554,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 Ok(())
             },
         )?;
-        let next = resolve(&input, &target, false).ok();
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":executed["outcome"],"decision":next.as_ref().map(|v|&v["decision_packet"])}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         return Ok(result);
     }
     if invocation["operation_id"] == "planning.update" {
@@ -1413,6 +1562,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         crate::admit_invocation_value(
             json!({"decision":current["decision_packet"],"invocation":invocation,"previous_invocation":retained.get("invocation")}),
         )?;
+        progress.entered_effect_owner = true;
         let executed = crate::native_planning_update::execute(
             &target,
             &current["decision_packet"],
@@ -1426,11 +1576,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 Ok(())
             },
         )?;
-        let next = resolve(&input, &target, false).ok();
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|v|&v["decision_packet"])}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         return Ok(result);
     }
     if invocation["operation_id"] == "planning.create" {
@@ -1438,9 +1584,11 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         crate::admit_invocation_value(
             json!({"decision":current["decision_packet"],"invocation":invocation,"previous_invocation":committed.get("invocation")}),
         )?;
+        progress.entered_effect_owner = true;
         let executed = if committed.is_object() {
             let mut result = committed["outcome"].clone();
             result["custody"] = committed["custody"].clone();
+            result["post_effect_changed_paths"] = committed["post_effect_changed_paths"].clone();
             result
         } else {
             crate::native_planning_create::execute(
@@ -1456,16 +1604,24 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
                 },
             )?
         };
-        let next = resolve(&input, &target, false).ok();
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|v|&v["decision_packet"])}),
-        )?;
-        result["custody"] = executed["custody"].clone();
-        // Reuse the post-result owner projection instead of another source read.
-        if let Some(next) = next {
-            for key in ["selection_request", "selection_gap"] {
-                if let Some(value) = next["planning"]["created_owner"].get(key) {
-                    result["value"][key] = value.clone();
+        let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
+        // Creation is bound to the former work identity, so its deterministic
+        // discovery path need not be rediscovered by the expanded work scope.
+        // Ask Planning about the exact published owner using the fresh context.
+        if let Some(next) = result["continuation"].get("result").cloned() {
+            if let Some(reference) = result["value"]["owner_path"].as_str() {
+                match native_planning::candidate(
+                    &target,
+                    &next["current_work"],
+                    reference,
+                    &next["capability_contract"],
+                ) {
+                    Ok(candidate) => {
+                        result["value"]["selection_request"] = candidate["requests"][0].clone();
+                        result["value"]["selection_context"] =
+                            result["continuation"]["context"].clone();
+                    }
+                    Err(error) => result["value"]["selection_gap"] = json!(error.to_string()),
                 }
             }
         } else {
@@ -1479,6 +1635,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         crate::admit_invocation_value(
             json!({"decision":current["decision_packet"],"invocation":invocation}),
         )?;
+        progress.entered_effect_owner = true;
         let executed = crate::native_proof::execute(&target, &current, invocation, || {
             let fresh = resolve(&input, &target, true)?;
             crate::admit_invocation_value(
@@ -1486,11 +1643,7 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
             )?;
             Ok(())
         })?;
-        let next = resolve(&input, &target, false).ok();
-        let mut result = crate::operation_result_value(
-            json!({"invocation":invocation,"outcome":{"status":executed["status"],"effects":executed["effects"],"value":executed["value"]},"decision":next.as_ref().map(|view| &view["decision_packet"])}),
-        )?;
-        result["custody"] = executed["custody"].clone();
+        let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
         return Ok(result);
     }
     let committed = &current["planning"]["current_owner"]["committed_operation"];
@@ -1498,7 +1651,8 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
         json!({"decision":current["decision_packet"], "invocation":invocation,
             "previous_invocation":committed.get("invocation")}),
     )?;
-    let executed = if committed.is_object() {
+    progress.entered_effect_owner = true;
+    let mut executed = if committed.is_object() {
         let mut result = committed["outcome"].clone();
         result["custody"] = committed["custody"].clone();
         result
@@ -1517,10 +1671,133 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
             },
         )?
     };
-    let next = resolve(&input, &target, false).ok();
-    let mut result = crate::operation_result_value(json!({"invocation":invocation,
-        "outcome":{"status":executed["status"], "effects":executed["effects"], "value":executed["value"]},
-        "decision":next.as_ref().map(|view| &view["decision_packet"])}))?;
-    result["custody"] = executed["custody"].clone();
+    executed["post_effect_changed_paths"] = native_planning::post_effect_paths();
+    let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
     Ok(result)
+}
+
+#[cfg(test)]
+mod continuation_tests {
+    use super::*;
+
+    #[test]
+    fn missing_or_invalid_owner_paths_preserve_effect_without_claiming_currentness() {
+        let input: Input = serde_json::from_value(
+            json!({"target":"unused","task":"same work","changed":["existing.txt"]}),
+        )
+        .unwrap();
+        let invocation = json!({"operation_id":"fixture.write","effects":["implementation"]});
+        // Neither a caller's proposal nor arbitrary result material is a path
+        // report by the responsible execution owner.
+        let executed = json!({"outcome":{"status":"applied","effects":["implementation"],
+            "value":{"changed_paths":["untrusted.txt"]}}});
+        for paths in [
+            None,
+            Some(Value::Null),
+            Some(json!(["../foreign.txt"])),
+            Some(json!([7])),
+        ] {
+            let mut reported = executed.clone();
+            if let Some(paths) = paths {
+                reported["post_effect_changed_paths"] = paths;
+            }
+            let result = finish_invocation(
+                &input,
+                std::path::Path::new("unused"),
+                &invocation,
+                &reported,
+                &mut InvocationProgress::default(),
+            )
+            .unwrap();
+            assert_eq!(result["effect_outcome"]["status"], "committed");
+            assert_eq!(result["value"], executed["outcome"]["value"]);
+            assert_eq!(result["continuation"]["status"], "unavailable");
+            assert_eq!(result["continuation"]["retry_effect"], false);
+            assert!(result["continuation"]["reentry"]["required_material"].is_object());
+            assert_eq!(
+                result["continuation"]["reentry"]["context"]["changed"],
+                json!(["existing.txt"])
+            );
+        }
+    }
+
+    #[test]
+    fn committed_effect_survives_failed_or_blocked_continuation() {
+        let root = std::env::temp_dir().join(format!(
+            "aw-continuation-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let context = json!({"target":root,"task":"Set configured invocation","changed":[]});
+        let initial = start(context.clone()).unwrap();
+        let mut request = initial["configuration_write"]["creation_requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["key"] == "workspace.cli_invoke")
+            .unwrap()
+            .clone();
+        request["arguments"]["value"] = json!("exact-native");
+        let mut proposed = context.clone();
+        proposed["request"] = request;
+        let question = start(proposed).unwrap();
+        let mut answer =
+            question["decision_packet"]["decision_request"]["response_request"].clone();
+        answer["arguments"]["answer"] = json!("authorize-write");
+        let mut answered = context.clone();
+        answered["request"] = answer;
+        let selected = start(answered).unwrap();
+        let mut execution = context.clone();
+        execution["invocation"] = selected["decision_packet"]["primary_action"].clone();
+        let mut committed = invoke_operating(execution);
+        assert_eq!(committed["effect_outcome"]["status"], "committed");
+        committed["next_decision"] = Value::Null;
+        let source = root.join(".agentic-workspace/config.toml");
+        let bytes = std::fs::read(&source).unwrap();
+        for next in [
+            Err(CoreError::new("source unavailable after commit")),
+            Ok(json!({"status":"blocked","recovery":"restore compatible runtime"})),
+        ] {
+            let result = attach_continuation(committed.clone(), next, &context);
+            for field in ["status", "effects", "value", "custody", "effect_outcome"] {
+                assert_eq!(result[field], committed[field]);
+            }
+            assert_eq!(result["continuation"]["status"], "unavailable");
+            assert_eq!(result["continuation"]["reentry"]["context"], context);
+            assert_eq!(result["continuation"]["retry_effect"], false);
+            assert!(result["next_decision"].is_null());
+            assert_eq!(std::fs::read(&source).unwrap(), bytes);
+        }
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn failure_stage_never_conflates_rejection_uncertainty_and_commit() {
+        let input = json!({"target":"exact-target","task":"same-work","changed":[],
+            "invocation":{"operation_id":"owner.write","arguments":{"postimage":"exact"}}});
+        let mut progress = InvocationProgress::default();
+        let rejected = invocation_failure(&input, "admission failed", &progress);
+        assert_eq!(
+            rejected["effect_outcome"]["status"],
+            "rejected-before-effect"
+        );
+        progress.entered_effect_owner = true;
+        let uncertain = invocation_failure(&input, "owner interrupted", &progress);
+        assert_eq!(uncertain["effect_outcome"]["status"], "uncertain");
+        assert_eq!(
+            uncertain["recovery"]["submitted_invocation"],
+            input["invocation"]
+        );
+        assert_eq!(uncertain["continuation"]["retry_effect"], false);
+        progress.confirmed = Some(json!({"status":"applied","effects":["owned-write"],
+            "effect_outcome":{"status":"committed"},"value":{"receipt":"exact"}}));
+        let committed = invocation_failure(&input, "post-effect metadata unavailable", &progress);
+        assert_eq!(committed["effect_outcome"]["status"], "committed");
+        assert_eq!(committed["value"]["receipt"], "exact");
+        assert_eq!(committed["continuation"]["status"], "unavailable");
+    }
 }

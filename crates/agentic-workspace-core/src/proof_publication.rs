@@ -556,7 +556,7 @@ mod tests {
         let mut input = context;
         input["invocation"] = action;
         assert!(
-            crate::native_public::invoke(input)
+            crate::native_public::invoke_checked(input)
                 .unwrap_err()
                 .to_string()
                 .contains("index-capacity-reached")
@@ -713,7 +713,7 @@ mod tests {
         let path = std::path::PathBuf::from(&target);
         let invocation: Value =
             serde_json::from_slice(&fs::read(path.join("test-invocation.json")).unwrap()).unwrap();
-        let result=crate::native_public::invoke(json!({"target":target,"task":"Check source","changed":["a.txt"],"invocation":invocation})).unwrap();
+        let result=crate::native_public::invoke_checked(json!({"target":target,"task":"Check source","changed":["a.txt"],"invocation":invocation})).unwrap();
         assert_eq!(result["value"]["publication"]["status"], "published");
         assert_eq!(
             result["value"]["producer_admission"],

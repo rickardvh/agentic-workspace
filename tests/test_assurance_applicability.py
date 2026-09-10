@@ -96,13 +96,16 @@ def test_real_source_requirement_keeps_claim_boundary_when_scope_is_unknown(
     from agentic_workspace.config import load_workspace_config
 
     root = Path(__file__).resolve().parents[1]
-    text = (root / ".agentic-workspace/config.toml").read_text(encoding="utf-8")
+    text = (root / ".agentic-workspace/verification/manifest.toml").read_text(encoding="utf-8")
     section = text.split("[assurance.requirements.test_evidence_change_decision]", 1)[1].split(
         "[assurance.requirements.closeout_intent_satisfaction]", 1
     )[0]
-    path = tmp_path / ".agentic-workspace/config.toml"
-    path.parent.mkdir()
-    path.write_text("schema_version=1\n[assurance.requirements.test_evidence_change_decision]" + section, encoding="utf-8")
+    path = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.requirements.test_evidence_change_decision]' + section,
+        encoding="utf-8",
+    )
     report = runtime._assurance_requirements_report_payload(
         config=load_workspace_config(target_root=tmp_path),
         target_root=tmp_path,
@@ -114,11 +117,13 @@ def test_real_source_requirement_keeps_claim_boundary_when_scope_is_unknown(
     assert status["state"] == "unknown"
     assert status["blocking_claims"] == ["claim-work-complete", "close-parent-lane"]
     query = status["next_action"]["public_query"]
-    current = decision.start(query["input"])
+    current = decision.start({**query["input"], "projection": "full"})
     request = current["verification"]["assurance_request"]
     request["arguments"]["decisions"] = {"test_evidence_change_decision": "not-applicable"}
     assert (
-        decision.start({**query["input"], "request": request})["verification"]["assurance_applicability"]["requirements"][0]["status"]
+        decision.start({**query["input"], "request": request, "projection": "full"})["verification"]["assurance_applicability"][
+            "requirements"
+        ][0]["status"]
         == "not-applicable"
     )
     actual = consume(
@@ -167,6 +172,7 @@ def test_planning_frontier_preserves_verification_request_lifetime(tmp_path, sha
     request = call()["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
     created = call({"invocation": call({"request": request})["decision_packet"]["primary_action"]})
+    context = created["value"]["selection_context"]
     call({"invocation": call({"request": created["value"]["selection_request"]})["decision_packet"]["primary_action"]})
     before = call()
     claim = before["verification"]["requests"][0]
