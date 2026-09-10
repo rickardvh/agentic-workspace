@@ -239,7 +239,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     security_artifacts = security["subject"]["release_subject"]["artifacts"]
     for entry in package_entries:
         for key in ("wheel", "sdist", "tarball"):
-            if key in entry and security_artifacts.get(entry[key]["asset"]) != entry[key]["sha256"]:
+            if key in entry and security_artifacts.get(entry[key]["asset"]) != f"sha256:{entry[key]['sha256']}":
                 raise SystemExit("Preview security receipt does not bind exact package bytes")
     sbom_payload = _require_json(dist / sbom)
     if not str(sbom_payload.get("spdxVersion", "")).startswith("SPDX-") or not sbom_payload.get("packages"):
