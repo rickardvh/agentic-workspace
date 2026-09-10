@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
+import sys
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -48,9 +50,7 @@ def _write_preview_readiness_receipts(
 ) -> tuple[str, str]:
     distribution = ownership["distribution_identity"]
     root_name = distribution["canonical_root_distribution"]
-    root_package = next(
-        package for package in package_entries if package["ecosystem"] == "python" and package["name"] == root_name
-    )
+    root_package = next(package for package in package_entries if package["ecosystem"] == "python" and package["name"] == root_name)
     root_wheel = root_package["wheel"]
     base_url = _preview_base_url(ownership, version)
     identity_digest = _sha256(OWNERSHIP_PATH)
@@ -103,9 +103,7 @@ def _write_preview_readiness_receipts(
         "artifacts": redistributable_artifacts,
     }
     (dist / distribution_receipt).write_text(json.dumps(install, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    (dist / redistributable_receipt).write_text(
-        json.dumps(redistributable, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    (dist / redistributable_receipt).write_text(json.dumps(redistributable, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return distribution_receipt, redistributable_receipt
 
 
@@ -120,6 +118,23 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
 
     package_entries: list[dict[str, Any]] = []
     expected_assets: set[str] = set()
+
+    # Shared package checks remain authoritative; preview additionally binds
+    # every coordinated root dependency to this release and these exact bytes.
+    subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/check/check_package_identity.py"),
+            "--root",
+            str(ROOT),
+            "--artifact-dir",
+            str(dist),
+            "--require-exact-urls",
+        ],
+        check=True,
+        stdout=sys.stderr,
+    )
+    verify_preview_dependencies(ownership=ownership, dist=dist, version=version)
 
     for package in ownership["packages"]:
         pyproject = ROOT / package["pyproject"]
@@ -184,6 +199,20 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     for runtime_major in ownership["semantic_conformance"]["runtime_majors"]:
         receipt_path = dist / f"generated-command-conformance-node{runtime_major}.json"
         receipt = _require_json(receipt_path)
+        subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts/check/run_generated_command_package_proof.py"),
+                "--verify-receipt",
+                str(receipt_path),
+                "--artifact-dir",
+                str(dist),
+                "--expected-node-major",
+                str(runtime_major),
+            ],
+            check=True,
+            stdout=sys.stderr,
+        )
         if receipt.get("kind") != ownership["semantic_conformance"]["receipt_kind"] or receipt.get("status") != "passed":
             raise SystemExit(f"Failed or unsupported semantic-conformance receipt: {receipt_path.name}")
         expected_assets.add(receipt_path.name)
@@ -204,6 +233,17 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
         if not path.is_file():
             raise SystemExit(f"Missing required preview readiness artifact {asset}")
         expected_assets.add(asset)
+    security = _require_json(dist / security_receipt)
+    if security.get("status") != "ready" or security.get("subject", {}).get("source_identity") != artifact_commit:
+        raise SystemExit("Preview security receipt is failed or belongs to another artifact commit")
+    security_artifacts = security["subject"]["release_subject"]["artifacts"]
+    for entry in package_entries:
+        for key in ("wheel", "sdist", "tarball"):
+            if key in entry and security_artifacts.get(entry[key]["asset"]) != entry[key]["sha256"]:
+                raise SystemExit("Preview security receipt does not bind exact package bytes")
+    sbom_payload = _require_json(dist / sbom)
+    if not str(sbom_payload.get("spdxVersion", "")).startswith("SPDX-") or not sbom_payload.get("packages"):
+        raise SystemExit("Preview SBOM must contain an SPDX package inventory")
 
     manifest = {
         "kind": "agentic-workspace/coordinated-preview-release-manifest/v1",
@@ -256,6 +296,27 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
         checksum_lines.append(f"{_sha256(path)}  {asset}")
     (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
     return manifest
+
+
+def verify_preview_dependencies(*, ownership: dict[str, Any], dist: Path, version: str) -> list[str]:
+    from email.parser import Parser
+    from zipfile import ZipFile
+
+    root = _unique_artifact(dist, f"agentic_workspace-{version}-*.whl")
+    with ZipFile(root) as wheel:
+        metadata = next(name for name in wheel.namelist() if name.endswith(".dist-info/METADATA"))
+        requirements = Parser().parsestr(wheel.read(metadata).decode()).get_all("Requires-Dist", [])
+    expected = []
+    for package in ownership["packages"]:
+        if package["name"] == "agentic-workspace":
+            continue
+        wheel = _unique_artifact(dist, f"{package['wheel_prefix']}-{version}-*.whl")
+        requirement = f"{package['name']} @ {_preview_base_url(ownership, version)}/{wheel.name}#sha256={_sha256(wheel)}"
+        actual = [item for item in requirements if item.split(" ", 1)[0] == package["name"]]
+        if actual != [requirement]:
+            raise SystemExit(f"Preview root dependency URL/digest mismatch for {package['name']}")
+        expected.append(requirement)
+    return expected
 
 
 def main(argv: list[str] | None = None) -> int:

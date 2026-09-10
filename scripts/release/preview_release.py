@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import subprocess
@@ -45,14 +46,6 @@ def _load_ownership(root: Path) -> dict[str, Any]:
     return json.loads((root / ".github/release-ownership.json").read_text(encoding="utf-8"))
 
 
-def _path_allowed(path: str, allowed: list[str]) -> bool:
-    for candidate in allowed:
-        normalized = candidate.rstrip("/")
-        if path == normalized or (candidate.endswith("/") and path.startswith(candidate)):
-            return True
-    return False
-
-
 def _changed_paths(worktree: Path) -> list[str]:
     result = _git("status", "--porcelain=v1", "--untracked-files=all", cwd=worktree)
     paths: list[str] = []
@@ -71,7 +64,7 @@ def _verify_release_only_paths(worktree: Path, ownership: dict[str, Any]) -> lis
     if not allowed:
         raise SystemExit("release ownership must declare preview_release_commit_allowed_paths")
     changed = _changed_paths(worktree)
-    unexpected = [path for path in changed if not _path_allowed(path, allowed)]
+    unexpected = [path for path in changed if not coordinated_release.preview_path_allowed(path, allowed)]
     if unexpected:
         raise SystemExit(f"Preview normalization changed non-release-only paths: {unexpected}")
     if not changed:
@@ -116,21 +109,145 @@ def _verify_existing_preview(tag: str, source_commit: str) -> dict[str, Any]:
     worktree = temporary_root / "subject"
     try:
         _git("worktree", "add", "--detach", str(worktree), artifact_commit)
-        command = [
-            sys.executable,
-            "scripts/release/coordinated_release.py",
-            "verify-preview",
-            "--tag",
-            tag,
-            "--source-commit",
-            source_commit,
-        ]
-        result = _run(command, cwd=worktree)
-        return json.loads(result.stdout)
+        # Use the invoking verifier, never execute code from an unverified tag.
+        previous_root = coordinated_release.ROOT
+        try:
+            coordinated_release.ROOT = worktree
+            return coordinated_release.verify_preview_release(_load_ownership(worktree), tag=tag, source_commit=source_commit)
+        finally:
+            coordinated_release.ROOT = previous_root
     finally:
         if worktree.exists():
             _git("worktree", "remove", "--force", str(worktree), check=False)
         shutil.rmtree(temporary_root, ignore_errors=True)
+
+
+def _recover_publisher(*, remote: str, verified: dict[str, Any]) -> dict[str, Any]:
+    """Rerun only the existing tag-push run for the verified immutable commit."""
+    tag, artifact = verified["tag"], verified["artifact_commit"]
+    remote_url = _git("remote", "get-url", remote).stdout.strip()
+    repo = _run(["gh", "repo", "view", remote_url, "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).stdout.strip()
+    complete = verify_published_preview(repo=repo, verified=verified)
+    if complete:
+        return {"publication_status": "publisher-complete", "publisher_head_sha": artifact}
+    workflow = ".github/workflows/preview-release.yml"
+    runs = json.loads(
+        _run(
+            [
+                "gh",
+                "api",
+                "--method",
+                "GET",
+                f"repos/{repo}/actions/workflows/preview-release.yml/runs",
+                "-f",
+                f"head_sha={artifact}",
+                "-f",
+                "event=push",
+                "-f",
+                "per_page=100",
+            ]
+        ).stdout
+    )["workflow_runs"]
+    exact = [
+        run
+        for run in runs
+        if run.get("head_sha") == artifact
+        and run.get("head_branch") == tag
+        and run.get("event") == "push"
+        and run.get("path") == workflow
+        and run.get("repository", {}).get("full_name") == repo
+    ]
+    if not exact:
+        raise SystemExit(f"No exact tag-push publisher run found for {tag} at {artifact}; tag retained, no substitute run created")
+    run = max(exact, key=lambda item: item["id"])
+    status = "publisher-active"
+    if run["status"] == "completed":
+        if run["conclusion"] == "success":
+            raise SystemExit("Publisher succeeded but exact complete release assets are missing; tag retained")
+        elif run["conclusion"] in {"failure", "cancelled"}:
+            # Re-read the remote ref immediately before the effect. Never force,
+            # delete, or recreate a tag to manufacture a new push event.
+            refs = _git("ls-remote", remote, f"refs/tags/{tag}", f"refs/tags/{tag}^{{}}").stdout.splitlines()
+            targets = {line.split()[1]: line.split()[0] for line in refs}
+            if targets.get(f"refs/tags/{tag}^{{}}", targets.get(f"refs/tags/{tag}")) != artifact:
+                raise SystemExit("Remote preview tag no longer matches the verified artifact commit")
+            _run(["gh", "api", "--method", "POST", f"repos/{repo}/actions/runs/{run['id']}/rerun"])
+            status = "publisher-rerun-requested"
+        else:
+            raise SystemExit(f"Publisher conclusion {run['conclusion']!r} is not recoverable automatically; tag retained")
+    return {"publication_status": status, "publisher_run_id": run["id"], "publisher_head_sha": artifact}
+
+
+def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_dir: Path | None = None) -> bool:
+    """Check existing bytes before any publication effect; never overwrite assets."""
+    tag = verified["tag"]
+    result = _run(["gh", "api", f"repos/{repo}/releases/tags/{tag}"], check=False)
+    if result.returncode:
+        if "HTTP 404" in result.stderr:
+            return False
+        raise SystemExit(f"Cannot inspect existing preview release: {result.stderr}")
+    release = json.loads(result.stdout)
+    if release.get("tag_name") != tag or release.get("prerelease") is not True:
+        raise SystemExit("Existing release is not the exact preview prerelease")
+    with tempfile.TemporaryDirectory(prefix="aw-preview-assets-") as directory:
+        downloaded = Path(directory)
+        if release.get("assets"):
+            _run(["gh", "release", "download", tag, "--repo", repo, "--dir", directory])
+        manifest_path = downloaded / "agentic-workspace-preview-release-manifest.json"
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            expected = {key: verified[key] for key in ("tag", "version", "artifact_commit", "reconstruction_source_commit")}
+            expected.update(release_class="preview", support_bearing=False)
+            if any(manifest.get(key) != value for key, value in expected.items()):
+                raise SystemExit("Published preview manifest does not match exact source/artifact identity")
+            ownership = _load_ownership(ROOT)
+            expected_packages = {item["name"] for item in ownership["packages"] + ownership["typescript_packages"]}
+            packages = manifest.get("packages", [])
+            if len(packages) != len(expected_packages) or {item["name"] for item in packages} != expected_packages:
+                raise SystemExit("Published preview manifest omits or adds coordinated packages")
+            if any(item.get("version") != verified["version"] for item in packages):
+                raise SystemExit("Published preview package version mismatch")
+            expected_receipts = {
+                f"generated-command-conformance-node{major}.json" for major in ownership["semantic_conformance"]["runtime_majors"]
+            }
+            if {item["asset"] for item in manifest["semantic_conformance"]["receipts"]} != expected_receipts:
+                raise SystemExit("Published preview manifest omits required runtime proof")
+        for path in downloaded.iterdir():
+            if artifact_dir is not None:
+                local = artifact_dir / path.name
+                if not local.is_file() or local.read_bytes() != path.read_bytes():
+                    raise SystemExit(f"Existing immutable preview asset differs: {path.name}; refusing overwrite")
+        checksums = downloaded / "SHA256SUMS"
+        if not manifest_path.exists() or not checksums.exists():
+            return False
+        entries = {}
+        for line in checksums.read_text(encoding="utf-8").splitlines():
+            digest, name = line.split("  ", 1)
+            if Path(name).name != name or name in entries or len(digest) != 64:
+                raise SystemExit("Malformed preview checksum inventory")
+            entries[name] = digest
+        for name, digest in entries.items():
+            path = downloaded / name
+            if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                raise SystemExit(f"Published preview checksum mismatch: {name}")
+        required = {
+            manifest_path.name,
+            "distribution-install-readiness.json",
+            "redistributable-package-readiness.json",
+            "security-supply-chain-readiness.json",
+            "agentic-workspace.spdx.json",
+        }
+        for package in manifest["packages"]:
+            for key in ("wheel", "sdist", "tarball"):
+                if key in package:
+                    item = package[key]
+                    required.add(item["asset"])
+                    if entries.get(item["asset"]) != item["sha256"]:
+                        raise SystemExit("Preview package manifest/checksum mismatch")
+        required.update(item["asset"] for item in manifest["semantic_conformance"]["receipts"])
+        if set(entries) != required:
+            raise SystemExit("Preview checksum inventory does not cover the exact manifest assets")
+        return not release.get("draft") and all((downloaded / name).is_file() for name in required)
 
 
 def create_preview_subject(
@@ -151,13 +268,18 @@ def create_preview_subject(
     existing = _tag_commit(tag)
     if existing is not None:
         verified = _verify_existing_preview(tag, source_commit)
+        recovery = {}
         if push:
+            already_remote = bool(_git("ls-remote", "--refs", remote, f"refs/tags/{tag}").stdout.strip())
             _git("push", remote, f"refs/tags/{tag}")
+            if already_remote:
+                recovery = _recover_publisher(remote=remote, verified=verified)
         return {
             "kind": "agentic-workspace/preview-publication-subject/v1",
             "status": "existing-current",
             **verified,
             "pushed": push,
+            **recovery,
         }
 
     temporary_root = Path(tempfile.mkdtemp(prefix="aw-preview-create-"))
@@ -235,7 +357,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Create an immutable release-only preview subject without modifying the reconstruction branch."
     )
-    parser.add_argument("--version", required=True, help="Unused coordinated numeric package version, for example 0.52.0")
+    parser.add_argument("--version", help="Unused coordinated numeric package version, for example 0.52.0")
+    parser.add_argument("--check-published", metavar="TAG")
+    parser.add_argument("--repo")
+    parser.add_argument("--artifact-dir", type=Path)
     parser.add_argument(
         "--source-commit",
         help="Exact reconstruction commit/ref to preview (default: freshly fetched reconstruction branch head)",
@@ -248,6 +373,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Push only the immutable preview tag. Tag push triggers the preview publisher; no branch is pushed.",
     )
     args = parser.parse_args(argv)
+
+    if args.check_published:
+        if not args.repo:
+            parser.error("--check-published requires --repo")
+        verified = coordinated_release.verify_preview_release(_load_ownership(ROOT), tag=args.check_published)
+        complete = verify_published_preview(repo=args.repo, verified=verified, artifact_dir=args.artifact_dir)
+        print(f"complete={'true' if complete else 'false'}")
+        return 0
+    if not args.version:
+        parser.error("--version is required")
 
     result = create_preview_subject(
         version=args.version,

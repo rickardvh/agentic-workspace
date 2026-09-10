@@ -294,6 +294,21 @@ sdist, npm tarball, checksum, release manifest entry, install proof, or support-
 bearing evidence is inconsistent, the stable workflow must fail before publishing
 the release.
 
+For an existing preview, repeat the helper with the same numeric version and
+explicit `--source-commit C --push`. It verifies the immutable tag using the
+current verifier, including the source-owned release-only delta and package
+metadata. A complete prerelease with matching source/artifact manifest and asset
+checksums is a no-op. Otherwise it selects only the exact preview workflow's
+tag-push run for P and that tag. Failed or cancelled runs are rerun in place;
+active runs are left running. A missing, mismatched, or otherwise nonrecoverable
+run fails closed. The tag is never moved, deleted, or recreated for recovery.
+
+Publisher retries inspect existing release bytes before building and again
+before upload. Existing assets must be byte-identical; replacement is disabled,
+and previews cannot update the latest-release pointer. If a partial publication
+cannot reproduce its existing bytes, recovery stops with that precise gap rather
+than changing the public identity.
+
 A preview may retain its already-created immutable tag if later artifact
 publication fails; that is a recovery identity, not a successful release claim.
 The preview publisher must still fail rather than publish a complete prerelease

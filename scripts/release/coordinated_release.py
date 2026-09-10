@@ -450,6 +450,31 @@ def verify_preview_release(ownership: dict[str, Any], *, tag: str, source_commit
     tag_target = _run(["git", "rev-list", "-n", "1", tag], check=False)
     if tag_target.returncode != 0 or tag_target.stdout.strip() != artifact_commit:
         raise SystemExit(f"Preview tag {tag} must resolve to exact artifact commit {artifact_commit}")
+    # Read the allowlist from the source, so the artifact cannot grant itself
+    # permission to change publisher code or release authority.
+    source_ownership = _run(["git", "show", f"{expected_source}:.github/release-ownership.json"])
+    allowed = json.loads(source_ownership.stdout)["preview_release_commit_allowed_paths"]
+    changed = _run(["git", "diff", "--name-only", "--no-renames", expected_source, artifact_commit]).stdout.splitlines()
+    unexpected = [path for path in changed if not preview_path_allowed(path, allowed)]
+    if not allowed or not changed or unexpected:
+        raise SystemExit(f"Preview artifact changed non-release-only paths or has no normalization delta: {unexpected}")
+    for path in package_pyprojects(ownership):
+        before = tomllib.loads(_run(["git", "show", f"{expected_source}:{_repo_path(path)}"]).stdout)
+        after = tomllib.loads(path.read_text(encoding="utf-8"))
+        before["project"]["version"] = str(version)
+        if before != after:
+            raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
+    for path in typescript_package_jsons(ownership):
+        before = json.loads(_run(["git", "show", f"{expected_source}:{_repo_path(path)}"]).stdout)
+        before["version"] = str(version)
+        if before != json.loads(path.read_text(encoding="utf-8")):
+            raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
+    provenance_ref = next(package["payload_provenance"] for package in ownership["packages"] if package["name"] == "agentic-workspace")
+    before = json.loads(_run(["git", "show", f"{expected_source}:{provenance_ref}"]).stdout)
+    before["installed_by"]["version"] = str(version)
+    before["release_identity"].update(version=str(version), tag=tag)
+    if before != json.loads((ROOT / provenance_ref).read_text(encoding="utf-8")):
+        raise SystemExit("Preview changed non-release payload provenance")
     note_path = preview_release_note_path(ownership, tag)
     if not note_path.is_file() or expected_source not in note_path.read_text(encoding="utf-8"):
         raise SystemExit(f"Preview release note {_repo_path(note_path)} must identify reconstruction source {expected_source}")
@@ -465,7 +490,12 @@ def verify_preview_release(ownership: dict[str, Any], *, tag: str, source_commit
         "package_count": len(current_package_versions(ownership)),
         "release_note": _repo_path(note_path),
         "preview_metadata": _repo_path(metadata_path),
+        "release_only_paths": changed,
     }
+
+
+def preview_path_allowed(path: str, allowed: list[str]) -> bool:
+    return any(path == entry.rstrip("/") or (entry.endswith("/") and path.startswith(entry)) for entry in allowed)
 
 
 def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = None) -> dict[str, Any]:

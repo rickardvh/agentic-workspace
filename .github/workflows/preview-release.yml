@@ -5,6 +5,10 @@ on:
     tags:
       - "preview-v[0-9]+.[0-9]+.[0-9]+"
 
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -106,48 +110,20 @@ jobs:
           fi
           test ! -e support-bearing-promotion.json
 
-      - name: Verify release-only preview delta
-        run: |
-          python - <<'PY'
-          import json
-          import subprocess
-          from pathlib import Path
+      - name: Inspect existing immutable preview release
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >> "$GITHUB_OUTPUT"
 
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          allowed = [str(path) for path in ownership["preview_release_commit_allowed_paths"]]
-          source = subprocess.run(
-              ["git", "rev-parse", "HEAD^"], check=True, capture_output=True, text=True
-          ).stdout.strip()
-          artifact = subprocess.run(
-              ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-          ).stdout.strip()
-          changed = subprocess.run(
-              ["git", "diff", "--name-only", "--no-renames", source, artifact],
-              check=True,
-              capture_output=True,
-              text=True,
-          ).stdout.splitlines()
-
-          def allowed_path(path: str) -> bool:
-              for candidate in allowed:
-                  normalized = candidate.rstrip("/")
-                  if path == normalized or (candidate.endswith("/") and path.startswith(candidate)):
-                      return True
-              return False
-
-          unexpected = sorted(path for path in changed if not allowed_path(path))
-          if not changed:
-              raise SystemExit("Preview artifact commit contains no release-only normalization delta")
-          if unexpected:
-              raise SystemExit(f"Preview artifact changed non-release-only paths: {unexpected}")
-          PY
-
-      - name: Sync exact preview dependency graph
+      - if: steps.existing.outputs.complete != 'true'
+        name: Sync exact preview dependency graph
         run: |
           uv lock --check
           uv sync --locked --all-groups
 
-      - name: Build coordinated preview package artifacts
+      - if: steps.existing.outputs.complete != 'true'
+        name: Build coordinated preview package artifacts
         run: |
           rm -rf dist
           mkdir -p dist
@@ -171,47 +147,59 @@ jobs:
             --artifact-dir dist \
             --require-exact-urls
 
-      - name: Run built preview package smoke tests
-        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
+      - if: steps.existing.outputs.complete != 'true'
+        name: Run built preview package smoke tests
+        env:
+          AW_PREVIEW_ARTIFACT_DIR: dist
+        run: uv run pytest tests/test_preview_release.py::test_built_preview_root_urls_digests_and_external_install tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
-      - name: Generate preview SBOM
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610
+      - if: steps.existing.outputs.complete != 'true'
+        name: Generate preview SBOM
+        uses: anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638 # v0.24.1
         with:
           path: dist
           format: spdx-json
           output-file: dist/agentic-workspace.spdx.json
           upload-artifact: false
 
-      - name: Prove exact preview npm artifacts on Node 24
+      - if: steps.existing.outputs.complete != 'true'
+        name: Prove exact preview npm artifacts on Node 24
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node24.json PACKED_ARTIFACT_CONTEXT=hosted-ci
 
-      - name: Set up minimum Node.js
+      - if: steps.existing.outputs.complete != 'true'
+        name: Set up minimum Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
 
-      - name: Prove exact preview npm artifacts on Node 20
+      - if: steps.existing.outputs.complete != 'true'
+        name: Prove exact preview npm artifacts on Node 20
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node20.json PACKED_ARTIFACT_CONTEXT=hosted-ci
 
-      - name: Set up current Node.js
+      - if: steps.existing.outputs.complete != 'true'
+        name: Set up current Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "25"
 
-      - name: Prove exact preview npm artifacts on Node 25
+      - if: steps.existing.outputs.complete != 'true'
+        name: Prove exact preview npm artifacts on Node 25
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-node25.json PACKED_ARTIFACT_CONTEXT=hosted-ci
 
-      - name: Verify semantic-conformance receipts
+      - if: steps.existing.outputs.complete != 'true'
+        name: Verify semantic-conformance receipts
         run: |
           for runtime_major in 20 24 25; do
             receipt="dist/generated-command-conformance-node${runtime_major}.json"
             uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
           done
 
-      - name: Generate preview security readiness
+      - if: steps.existing.outputs.complete != 'true'
+        name: Generate preview security readiness
         run: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
 
-      - name: Compose non-support-bearing preview manifest and checksums
+      - if: steps.existing.outputs.complete != 'true'
+        name: Compose non-support-bearing preview manifest and checksums
         run: |
           python scripts/release/preview_manifest.py --tag "${RELEASE_TAG}" --artifact-dir dist > preview-manifest-result.json
           test -f dist/agentic-workspace-preview-release-manifest.json
@@ -228,17 +216,27 @@ jobs:
           assert manifest["artifact_commit"] != manifest["reconstruction_source_commit"]
           PY
 
-      - name: Attest exact preview subjects
+      - if: steps.existing.outputs.complete != 'true'
+        name: Reject replacement of existing preview bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/release/preview_release.py --check-published "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --artifact-dir dist
+
+      - if: steps.existing.outputs.complete != 'true'
+        name: Attest exact preview subjects
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
 
-      - name: Publish GitHub prerelease assets
+      - if: steps.existing.outputs.complete != 'true'
+        name: Publish GitHub prerelease assets
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           name: Preview ${{ env.RELEASE_TAG }}
           prerelease: true
+          overwrite_files: false
+          make_latest: false
           body_path: .release/releases/${{ env.RELEASE_TAG }}.md
           files: |
             dist/*.whl

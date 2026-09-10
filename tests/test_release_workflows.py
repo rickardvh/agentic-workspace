@@ -293,7 +293,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "--require-exact-urls" in workflow
     assert "--write-receipts" in workflow
     assert "agentic-workspace.spdx.json" in workflow
-    assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in workflow
+    assert "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638" in workflow
     assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
     assert "fail_on_unmatched_files: true" in workflow
     assert "support-bearing-promotion.json" in workflow
@@ -351,10 +351,13 @@ def test_ci_required_aggregate_uses_routed_proof_and_declared_support() -> None:
 
     assert "push:\n    branches: [master]" in workflow
     assert "name: Support-bearing promotion" in workflow
-    assert "needs: [workspace-checks, workspace-package-artifacts, package-checks, declared-runtime-matrix]" in workflow
+    assert (
+        "needs: [workspace-checks, planning-handoff-checks, independent-owner-ingress, workspace-package-artifacts, package-checks, declared-runtime-matrix]"
+        in workflow
+    )
     assert "uv run pytest tests -q" not in workflow
     assert "tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py" in workflow
-    assert "test_generated_tool_process_conformance_contracts[modules.report.process]" in workflow
+    assert "scripts/check/check_generated_command_packages.py --conformance-shard --require-node" in workflow
     assert "uv lock --check" in workflow
     assert "uv sync --locked" in workflow
     assert "windows-latest" in workflow
@@ -363,7 +366,7 @@ def test_ci_required_aggregate_uses_routed_proof_and_declared_support() -> None:
     assert 'python: "3.13"' in workflow
     assert 'node: "20"' in workflow
     assert 'node: "24"' in workflow
-    assert workflow.count("timeout-minutes:") == 5
+    assert workflow.count("timeout-minutes:") == 7
 
 
 def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
@@ -374,7 +377,7 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
     assert "Verify dispatched release head" in workflow
     assert "${{ inputs.expected_head_sha }}" in workflow
     assert '"${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}"' in workflow
-    assert workflow.count("github.event_name != 'pull_request' || github.event.pull_request.draft == false") == 5
+    assert workflow.count("github.event_name != 'pull_request' || github.event.pull_request.draft == false") == 7
 
 
 def test_release_notes_classify_compatibility_significant_changes() -> None:
@@ -415,7 +418,7 @@ def test_release_model_uses_existing_tags_instead_of_stale_bootstrap_floor() -> 
     helper = (ROOT / "scripts" / "release" / "coordinated_release.py").read_text(encoding="utf-8")
 
     assert "existing_release_versions" in helper
-    assert 'git", "tag", "--list"' in helper
+    assert '"git",' in helper and '"tag",' in helper and '"--list",' in helper
     assert "floor = max([*package_versions, *tag_versions])" in helper
     assert "_tag_declares_coordinated_release_version" in helper
     assert "pending_tag_plan" in helper

@@ -10,7 +10,6 @@ import tempfile
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-
 DEPENDENCY_PACKAGES = {
     "agentic-workspace-memory": "agentic_workspace_memory",
     "agentic-workspace-planning": "agentic_workspace_planning",
@@ -52,7 +51,7 @@ def _patch_metadata(metadata: str, *, requirements: list[str]) -> str:
     lines = [
         line
         for line in metadata.splitlines()
-        if not any(line == f"Requires-Dist: {package_name}" for package_name in DEPENDENCY_PACKAGES)
+        if not any(line == f"Requires-Dist: {name}" or line.startswith(f"Requires-Dist: {name} @ ") for name in DEPENDENCY_PACKAGES)
     ]
     insert_at = 0
     for index, line in enumerate(lines):

@@ -26,8 +26,7 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
         "release_class": "preview",
         "support_bearing": False,
         "tag_rule": (
-            "preview-vMAJOR.MINOR.PATCH must point at a release-only commit whose single parent is the exact "
-            "reconstruction source commit"
+            "preview-vMAJOR.MINOR.PATCH must point at a release-only commit whose single parent is the exact reconstruction source commit"
         ),
     }
     assert distribution["preview_release_base_url_template"].endswith("/preview-v{version}")
@@ -54,11 +53,9 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
     assert "agentic-workspace-preview-release-manifest.json" in preview
     assert "agentic-workspace-release-manifest.json" not in preview
     assert "support_bearing_promotion.py" not in preview
-    assert "dist/support-bearing-promotion.json" not in preview
     assert "test ! -e dist/support-bearing-promotion.json" in preview
-    assert "preview_release_commit_allowed_paths" in preview
-    assert "Preview artifact changed non-release-only paths" in preview
-    assert '"git", "diff", "--name-only", "--no-renames", source, artifact' in preview
+    assert "overwrite_files: false" in preview
+    assert "--check-published" in preview
     assert "support_bearing_promotion.py github-checks" in stable
     assert "support_bearing_promotion.py compose" in stable
 
@@ -69,7 +66,7 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
         "make packed-artifact-conformance",
         "scripts/check/check_package_identity.py",
         "scripts/check/check_security_supply_chain.py",
-        "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610",
+        "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638",
         "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
         "softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228",
     )
@@ -87,7 +84,7 @@ def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:
 
     assert 'DEFAULT_RECONSTRUCTION_REF = "reconstruct/first-stable"' in helper
     assert 'f"{head_ref}:{tracking_ref}"' in helper
-    assert 'source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)' in helper
+    assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper
     assert 'default="HEAD"' not in helper
     assert "--source-commit" in helper
     assert "freshly fetched reconstruction branch head" in helper
@@ -107,7 +104,7 @@ def test_preview_manifest_is_explicitly_non_support_bearing_and_ownership_driven
     assert '"receipt": None' in manifest
     assert '"artifact_commit": artifact_commit' in manifest
     assert '"reconstruction_source_commit": reconstruction_source_commit' in manifest
-    assert 'preview_release_base_url_template' in manifest
+    assert "preview_release_base_url_template" in manifest
     assert "releases/download/{tag}" not in manifest
     assert '"registry_resolution_used": False' in manifest
 

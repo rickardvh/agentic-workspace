@@ -233,15 +233,15 @@ def test_preview_release_workflow_remains_separate_from_stable_support_bearing_p
     assert "test ! -e dist/support-bearing-promotion.json" in preview
     assert "support_bearing_promotion.py github-checks" in stable
     assert "support_bearing_promotion.py compose" in stable
-    assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in preview
-    assert "anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610" in stable
+    assert "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638" in preview
+    assert "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638" in stable
 
 
 def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref() -> None:
     helper = (ROOT / "scripts/release/preview_release.py").read_text(encoding="utf-8")
 
     assert 'f"{head_ref}:{tracking_ref}"' in helper
-    assert 'source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)' in helper
+    assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper
     assert 'default="HEAD"' not in helper
     assert "freshly fetched reconstruction branch head" in helper
     assert '"merge-base", "--is-ancestor", source_commit, remote_ref' in helper
