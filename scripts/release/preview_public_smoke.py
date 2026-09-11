@@ -118,6 +118,8 @@ def smoke_published_preview(*, repo: str, tag: str) -> dict[str, Any]:
                 "Verify the published reconstruction preview",
                 "--format",
                 "json",
+                "--projection",
+                "full",
             ],
             cwd=host,
             env=clean_env,
