@@ -5,11 +5,12 @@ Public maturity is **alpha** across the coordinated Python distributions. Eviden
 ## Deterministic evidence
 
 - JSON schemas, parser/command parity, operation conformance, package tests, installed-footprint/reference closure, removal/restart fixtures, and generated-reference drift checks run in CI/source validation.
-- Versioned support-bearing releases publish promotion, install-readiness, redistribution, security/supply-chain, SBOM, artifact digest, and generated-target conformance receipts.
-- The generated [support-bearing install projection](reference/support-bearing-install.md) identifies the latest release receipt and exact hash-bound root wheel.
+- Published reconstruction previews use immutable `preview-vMAJOR.MINOR.PATCH` subjects and may carry install-readiness, redistribution, security/supply-chain, SBOM, artifact-digest, provenance, and generated-target conformance evidence while remaining explicitly non-support-bearing.
+- Stable versioned support-bearing releases publish promotion evidence in addition to their install-readiness, redistribution, security/supply-chain, SBOM, artifact digest, and generated-target conformance receipts.
+- The generated [support-bearing install projection](reference/support-bearing-install.md) identifies the latest stable release receipt and exact hash-bound root wheel; preview installs instead use the receipt attached to the exact published preview prerelease.
 - Weak-case fixtures retain failures such as ignored routed skills, stale/duplicate sources, skipped proof boundaries, and partial slices presented as parent completion.
 
-Deterministic proof supports the declared contract on its exact subject. It does not prove that every model will discover or use that contract cheaply.
+Deterministic proof supports the declared contract on its exact subject. Preview evidence proves only the preview claims it names; it does not manufacture Stable/1.0, support-bearing, or untested platform status. Deterministic proof also does not prove that every model will discover or use the contract cheaply.
 
 ## Live-agent evidence
 
@@ -23,7 +24,8 @@ This is evidence for a bounded model/adapter/head, not a universal provider clai
 
 ## Support boundary
 
-- Supported installation is the exact versioned receipt path; debug/source/registry routes do not inherit that status.
+- A published preview install is an exact immutable external-testing identity, but it is not support-bearing.
+- Support-bearing installation is the exact stable versioned receipt path; debug/source/registry routes and preview receipts do not inherit that status.
 - Supported runtime behavior is bounded by the selected release, package metadata, configured repository, and admitted command authorities.
 - AW is not a sandbox, credential host, CI provider, compliance certification, or guarantee of model obedience.
 - Unknown OS/provider/runner behavior remains unknown until source-bound evidence promotes it.

@@ -58,11 +58,11 @@ Internally, AW composes that into one current operating contract rather than lea
 
 Repository instructions can also be dynamic rather than purely static: repo-owned configuration, scoped guidance, skills, verification rules, and capability state can change what AW surfaces or requires for a particular task. The deeper architecture for programmable instruction composition is described in [`docs/architecture.md`](docs/architecture.md).
 
-## Interfaces and implementations
+## Interfaces and implementation authority
 
-Agentic Workspace is defined around shared repository contracts and operations rather than one agent runtime or implementation language.
+The ordinary deterministic product authority is the **native Rust CLI/core**. Public operations resolve and execute through that shared native authority rather than through independent language-specific implementations.
 
-Current CLI implementations target **Python** and **TypeScript** and share the same operation semantics. The same contract boundary can support additional agent and tool integrations without changing the repository model.
+The coordinated Python distribution carries the native executable together with package and payload support. Generated TypeScript CLI packages and JSON `start`/`invoke` envelopes are thin first-class projections/adapters over the same Rust-owned operation semantics. They are not peer semantic runtimes, and adapter-specific code should not become a second source of ordinary domain behavior.
 
 See [`docs/package/contracts.md`](docs/package/contracts.md) for the current contract and generated-interface model.
 
@@ -72,7 +72,9 @@ Use the installation guide for current installation and adoption guidance:
 
 [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md)
 
-The support-bearing install path is a versioned GitHub Release. Each coordinated release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches and ordinary registry resolution are not support-bearing identities unless release policy says otherwise.
+During reconstruction, an explicitly published `preview-vMAJOR.MINOR.PATCH` GitHub prerelease may be used for external testing. Its `agentic-workspace-preview-release-manifest.json` and `distribution-install-readiness.json` identify the exact immutable preview subject and hash-bound root-wheel install command. A preview is unstable and **non-support-bearing**: it does not establish Stable/1.0 status or a general platform-support claim. If no such prerelease has been published, there is no public preview install identity to infer from the reconstruction branch.
+
+The later support-bearing install path is a stable `vMAJOR.MINOR.PATCH` GitHub Release. Each coordinated stable release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches and ordinary registry resolution are not support-bearing identities unless release policy says otherwise.
 
 After adoption, the repository's thin agent instructions normally route the agent through Workspace. When interacting manually, `start` is the ordinary first question; deeper commands such as `implement`, `proof`, `summary`, `skills`, `ownership`, and `report` are used when the current task or returned guidance calls for them.
 

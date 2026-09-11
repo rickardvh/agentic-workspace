@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Document the native Rust authority and the exact non-support-bearing preview install boundary for reconstruction testers."
+issues = [2616, 3201]
