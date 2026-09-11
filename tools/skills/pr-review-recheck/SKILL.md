@@ -28,30 +28,36 @@ Before using this procedure, establish that the current agent did not implement,
    - distinguish a useful slice from satisfaction of the underlying intent;
    - check whether the PR adds machinery only to satisfy an over-specified mechanism when a smaller owner-aligned result serves the invariant;
    - refine the issue before forcing harmful acceptance when the human-owned why is unchanged; ask the human or domain owner when changing the issue would change that why.
-3. Inspect the current changed-file set before opening broad files.
-4. For first review, compare the diff against the linked issue's final intended outcome, non-solutions, and evidence requirements after the assumption audit.
-5. For recheck, start from the previous blocker or requested change, then inspect only the follow-up delta unless new evidence points wider.
-6. Check proof separately from intent satisfaction:
+3. Identify the linked issue's closure shape independently of its bug/direction/review kind:
+   - **parent outcome / direction** — a PR may satisfy one child or disposition, but parent closure is administrative and requires all current bounded children/dispositions plus immediate aggregate proof to establish the parent outcome. Do not demand one giant parent-closing PR.
+   - **bounded implementation leaf** — a PR claiming closure must make the whole bounded leaf true and provide its immediate deterministic/integration proof. A knowingly partial PR cannot manufacture honest closure by creating follow-ups after the fact.
+   - **later evidence / review** — no product-code PR is required merely to close the evidence issue. Review the stated evidence/currentness/independence criteria; route concrete implementation findings to the smallest bounded owner instead of growing the evidence issue into a backlog.
+4. Inspect the current changed-file set before opening broad files.
+5. For first review, compare the diff against the linked issue's final intended outcome, non-solutions, and evidence requirements after the assumption and closure-shape audits.
+6. For recheck, start from the previous blocker or requested change, then inspect only the follow-up delta unless new evidence points wider.
+7. Check proof separately from intent satisfaction:
    - CI and reported validation;
    - focused tests for changed behavior;
    - generated/payload sync when shipped or mirrored surfaces changed;
    - semver label when package behavior or shipped payload changes.
-7. Check closure honesty:
+8. Check closure honesty:
    - what landed;
    - what intent it serves;
    - what remains unresolved;
-   - whether the PR may honestly close each linked issue.
-8. For PRs that use longitudinal evaluation as part of issue closure, check the split explicitly:
+   - whether the PR may honestly close each linked issue under that issue's closure shape;
+   - whether later evidence explicitly owned elsewhere is being incorrectly used to keep an otherwise-complete bounded implementation leaf open.
+9. For PRs that use longitudinal evaluation as part of issue closure, check the split explicitly:
    - deterministic implementation behavior still needs present-tense proof and cannot be deferred into an evaluation;
    - the evaluation must have owner, criteria, evidence sources, report sinks, collection policy, conclusion policy, and a fresh/current admitted result unless the PR only claims definition setup;
    - known defects, failed or stale proof, vague future-evidence text, superseded results, or missing current authority block closure;
-   - direct deterministic work should remain directly closable when proof and intent are satisfied; do not add evaluation ceremony where no future-evidence uncertainty exists.
-9. Decide the action:
+   - direct deterministic work should remain directly closable when proof and intent are satisfied; do not add evaluation ceremony where no future-evidence uncertainty exists;
+   - when longitudinal evidence is explicitly owned by a separate later-evidence issue, absence of that future observation is not a blocker for a bounded implementation leaf whose present behavior and proof are complete.
+10. Decide the action:
    - approve / ready when intent, proof, CI, labels, and closure all line up;
    - comment with a blocker when the ordinary path would be wrong after merge;
    - comment with non-blocking suggestions only when they should not delay merge;
    - merge only when the user explicitly asks or the current instruction permits it.
-10. Treat the review approval check as the merge boundary:
+11. Treat the review approval check as the merge boundary:
    - `merge-ready` for the current head admits the review side of merge;
    - a prior `merge-ready` decision also admits a later head only when every intervening commit is a trusted-base merge and the stable PR patch is unchanged;
    - the newest trusted decision wins, so a later blocker remains blocking;
@@ -64,7 +70,12 @@ When rechecking after a fix, do not repeat the whole original review by default.
 - the specific blocker was removed;
 - no stale checked-in state or residue remains;
 - tests/evidence were updated if the blocker concerned behavior;
-- the PR body, labels, and closure claims still match the new state.
+- the PR body, labels, and closure claims still match the new state and closure shape.
+
+## Closure-Shape Examples
+
+- A delegation parent may remain open after a correct worker-entry leaf merges; review that leaf against its whole bounded worker-entry outcome rather than demanding provider replacement or later real-provider economics in the same PR.
+- A bounded adaptation leaf with current authority/application/currentness fixtures may close while a separate later-evidence issue continues to observe repository-lifetime payoff. Do not convert the leaf into a months-long evidence queue.
 
 ## Assumption Audit Example
 
@@ -74,7 +85,10 @@ If an issue requires every selector to be cheaper than every default projection,
 
 Treat these as blockers unless the human explicitly accepts the risk:
 
-- linked issue would close without final satisfaction being true;
+- a bounded implementation leaf would close without its whole stated outcome and immediate proof being true;
+- a knowingly partial implementation uses after-the-fact follow-ups to evade the original bounded leaf outcome rather than a genuine transparent reshaping;
+- a parent is claimed complete from one useful child/slice while current containing intent remains unresolved;
+- a later-evidence issue is being used as an implementation backlog instead of routing a concrete defect to a bounded owner;
 - longitudinal evaluation is used to substitute for unfinished implementation, missing present proof, known defects, vague future evidence, stale/superseded results, or absent current evaluation authority;
 - proof is missing, stale, too narrow, or contradicted by the diff;
 - checked-in Planning, Memory, payload, or generated state is stale after the claimed closeout;
@@ -87,6 +101,7 @@ Treat these as blockers unless the human explicitly accepts the risk:
 Report in this shape:
 
 - `decision`: approve / ready / comment / block / merge-ready / not-ready
+- `closure_shape`: parent outcome / bounded implementation leaf / later evidence / other
 - `what_landed`: concise summary of the actual change
 - `intent_served`: which issue or product intent is served
 - `proof`: CI, validation, focused checks, or missing proof
@@ -98,5 +113,7 @@ Report in this shape:
 
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
+- Do not require a giant PR to close a broad parent; review bounded children on their own full outcomes and let the parent close administratively when its current graph is satisfied.
+- Do not hold a complete bounded implementation leaf open for future evidence explicitly owned elsewhere.
 - Keep comments focused on actionable blockers or durable suggestions.
 - When GitHub cannot submit a formal review because the independent reviewer shares the PR author's account, the configured reviewer automation may use a top-level terminal marker. This repository admits that marker by its exact PR, head, policy, and decision contract; transport provenance, `user.login`, and `author_association` are not reliable authority signals. This does not authorize implementation-agent self-review: implementation sessions must not use the reviewer automation or emit `aw-chatgpt-review` markers for their own patch.
