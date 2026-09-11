@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Verify published reconstruction preview bytes by exact receipt install and a fresh-repository native startup smoke."
+issues = [3198, 3201]
