@@ -425,6 +425,7 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
     assert "${{ inputs.expected_head_sha }}" in workflow
     assert '"${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}"' in workflow
     assert dispatch.count("required: true") == 2
+    assert "if: github.event_name == 'workflow_dispatch'" in admission
     assert "${{ inputs.reason }}" in admission
     assert "requires a non-empty reason" in admission
     assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 6
