@@ -22,6 +22,10 @@ pub(crate) const MATERIAL: &[&str] = &[
 ];
 pub(crate) const ASSURANCE: &[&str] =
     &["adaptive_assurance", "risk_registry_refs", "invariant_refs"];
+pub(crate) const OPTIONAL: &[&str] = &[
+    crate::planning_lifetime::FIELD,
+    crate::planning_lifetime::PROPOSAL,
+];
 fn error(message: impl ToString) -> CoreError {
     CoreError::new(message.to_string())
 }
@@ -30,13 +34,16 @@ pub(crate) fn canonical_schema() -> Value {
 }
 pub(crate) fn declaration() -> Value {
     let canonical = canonical_schema();
+    let mut required = MATERIAL.to_vec();
+    required.push(crate::planning_lifetime::FIELD);
     let properties: serde_json::Map<String, Value> = MATERIAL
         .iter()
         .chain(ASSURANCE)
+        .chain(OPTIONAL)
         .map(|key| ((*key).to_owned(), canonical["properties"][key].clone()))
         .collect();
     json!({"kind":KIND,"result_kind":"agentic-planning/creation-result/v1","input_schema":{
-        "$schema":canonical["$schema"],"$defs":canonical["$defs"],"type":"object","properties":{"material":{"type":"object","properties":properties,"required":MATERIAL,"additionalProperties":false}},"required":["material"],"additionalProperties":false}})
+        "$schema":canonical["$schema"],"$defs":canonical["$defs"],"type":"object","properties":{"material":{"type":"object","properties":properties,"required":required,"additionalProperties":false}},"required":["material"],"additionalProperties":false}})
 }
 pub(crate) fn operation() -> Value {
     json!({"id":"planning.create","semantic_revision":"planning-create-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"document":{"type":"object"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/creation-result/v1","effects":["planning-state"],"reads":["planning"]})
@@ -54,7 +61,7 @@ fn read(target: &Path, path: &str) -> Result<Option<Vec<u8>>, CoreError> {
     crate::native_planning::read(&root, path)
 }
 fn document(material: &Value, work: &Value) -> Result<Value, CoreError> {
-    let mut document = material.clone();
+    let mut document = crate::planning_lifetime::durable(material);
     let object = document
         .as_object_mut()
         .ok_or_else(|| error("Planning material must be an object"))?;
@@ -67,7 +74,7 @@ fn document(material: &Value, work: &Value) -> Result<Value, CoreError> {
         .validate(&document)
         .map_err(error)?;
     // New work cannot import an existing execution or proof disposition.
-    if material["relationships"]
+    if document["relationships"]
         .as_object()
         .is_some_and(|o| o.keys().any(|k| k != "dependencies"))
     {

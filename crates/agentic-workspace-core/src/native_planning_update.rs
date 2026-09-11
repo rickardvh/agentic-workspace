@@ -27,6 +27,8 @@ fn fields() -> Vec<&'static str> {
     fields
 }
 const OPTIONAL_MATERIAL: &[&str] = &[
+    crate::planning_lifetime::FIELD,
+    crate::planning_lifetime::PROPOSAL,
     "canonical_core",
     "goal",
     "non_goals",
@@ -57,10 +59,11 @@ pub(crate) fn operation() -> Value {
     operation["input_schema"]["properties"]["consumed_return"]["properties"]["integration"] =
         crate::native_patch::result_schema();
     operation["input_schema"]["properties"]["retained_handoff"] = json!({"type":"object"});
+    operation["input_schema"]["properties"]["integration_observation"] = json!({"type":"object"});
     operation
 }
 pub(crate) fn adoption_declaration() -> Value {
-    json!({"kind":ADOPT,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"owner_ref":{"type":"string"},"destination":{"const":"continuation.frontier"}},"required":["owner_ref","destination"],"additionalProperties":false}})
+    json!({"kind":ADOPT,"result_kind":"agentic-planning/update-result/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"owner_ref":{"type":"string"},"destination":{"enum":["continuation.frontier","continuation.accepted_progress"]}},"required":["owner_ref","destination"],"additionalProperties":false}})
 }
 
 pub(crate) fn handoff_declaration() -> Value {
@@ -301,8 +304,9 @@ pub(crate) fn retain_handoff(
     }
     let mut update = template.clone();
     update["arguments"]["material"] = update_material(&body);
-    let mut action =
-        view(target, work, contract, planning, Some(&update), None, None)?["action"].clone();
+    let mut action = view_for_custody(target, work, contract, planning, Some(&update), None, None)?
+        ["action"]
+        .clone();
     if !action.is_object() {
         return Err(error("Planning did not admit handoff retention"));
     }
@@ -393,7 +397,15 @@ pub(crate) fn adopt_return(
     adoption["source_revision"] = json!(digest(
         &json!({"owner":template["source_revision"],"admission":admission["source_revision"],"judgment":admission["judgment"],"integration":admission["integration"]})
     )?);
-    adoption["arguments"] = json!({"owner_ref":reference,"destination":"continuation.frontier"});
+    let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
+    let destination =
+        if body[crate::planning_lifetime::FIELD]["continuation_frontier"] == "observation" {
+            "accepted_progress"
+        } else {
+            "frontier"
+        };
+    adoption["arguments"] =
+        json!({"owner_ref":reference,"destination":format!("continuation.{destination}")});
     let mut prerequisites = submitted
         .iter()
         .filter(|r| r["request_kind"] != ADOPT)
@@ -416,16 +428,16 @@ pub(crate) fn adopt_return(
             "Planning return adoption is stale or conflicts with another material request",
         ));
     }
-    let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
     let mut material = update_material(&body);
     if !material["continuation"].is_object() {
         return Err(error("Planning continuation is not an object"));
     }
-    material["continuation"]["frontier"] = admission["returned"]["summary"].clone();
+    material["continuation"][destination] = admission["returned"]["summary"].clone();
     let mut update = template.clone();
     update["arguments"]["material"] = material;
-    let mut action =
-        view(target, work, contract, planning, Some(&update), None, None)?["action"].clone();
+    let mut action = view_for_custody(target, work, contract, planning, Some(&update), None, None)?
+        ["action"]
+        .clone();
     if !action.is_object() {
         return Err(error("Planning did not admit the bounded return update"));
     }
@@ -620,6 +632,52 @@ pub(crate) fn view(
     invocation: Option<&Value>,
     continuation: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    view_material(
+        target,
+        work,
+        contract,
+        planning,
+        request,
+        invocation,
+        continuation,
+        false,
+    )
+}
+
+// Only the already-admitted handoff/result owners may request a new custody
+// postimage without a semantic edit. There is no caller-controlled bypass.
+fn view_for_custody(
+    target: &Path,
+    work: &Value,
+    contract: &Value,
+    planning: &Value,
+    request: Option<&Value>,
+    invocation: Option<&Value>,
+    continuation: Option<&Value>,
+) -> Result<Value, CoreError> {
+    view_material(
+        target,
+        work,
+        contract,
+        planning,
+        request,
+        invocation,
+        continuation,
+        true,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn view_material(
+    target: &Path,
+    work: &Value,
+    contract: &Value,
+    planning: &Value,
+    request: Option<&Value>,
+    invocation: Option<&Value>,
+    continuation: Option<&Value>,
+    custody_update: bool,
+) -> Result<Value, CoreError> {
     let selected = &planning["selected_owner"];
     let mut result = json!({"requests":[],"action":null,"retained":null});
     let owner = contract["owners"]
@@ -675,6 +733,10 @@ pub(crate) fn view(
         return Ok(result);
     }
     let current_revision = revision(&bytes);
+    result["lifetime"] = json!({"status":if body[crate::planning_lifetime::FIELD].is_object() {"classified"} else {"unclassified-legacy"},
+        "classification":body[crate::planning_lifetime::FIELD],"external_authority":"none",
+        "rule":"Legacy mixed meaning is preserved until current owner classification. External review, CI, issue and provider state must be reobserved at use; retained text is not current external authority."});
+    result["integration"] = crate::planning_lifetime::integration(target, reference, &body);
     if planning["status"] == "current"
         && let Some(held) = held_handoff(&body)
     {
@@ -786,7 +848,39 @@ pub(crate) fn view(
         }
         // Current execution and returned authority may only be changed by those
         // owners. Material updates preserve their existing relationship records.
-        let old_relationships = body["relationships"]
+        document = crate::planning_lifetime::durable(&document);
+        let target_transition = (body[crate::planning_lifetime::PROPOSAL].is_object()
+            || document[crate::planning_lifetime::PROPOSAL].is_object())
+            && (document["lifecycle"] != body["lifecycle"] || document["phase"] != body["phase"])
+            && (matches!(document["lifecycle"].as_str(), Some("closed" | "archived"))
+                || document["phase"] == "complete");
+        if target_transition {
+            let proposal = &body[crate::planning_lifetime::PROPOSAL];
+            let mut prior_semantics = update_material(&crate::planning_lifetime::durable(&body));
+            let mut next_semantics = update_material(&document);
+            for semantics in [&mut prior_semantics, &mut next_semantics] {
+                semantics.as_object_mut().unwrap().remove("lifecycle");
+                semantics.as_object_mut().unwrap().remove("phase");
+            }
+            let matches_transition = match proposal["requested_transition"].as_str() {
+                Some("close-owner") => {
+                    document["lifecycle"] == "closed" && document["phase"] == "complete"
+                }
+                Some("archive-owner") => document["lifecycle"] == "archived",
+                _ => false,
+            };
+            if proposal != &document[crate::planning_lifetime::PROPOSAL]
+                || result["integration"]["status"] != "integration-observed"
+                || !matches_transition
+                || prior_semantics != next_semantics
+            {
+                return Err(error(
+                    "Planning lifecycle proposal requires exact current target reconciliation",
+                ));
+            }
+        }
+        let durable_body = crate::planning_lifetime::durable(&body);
+        let old_relationships = durable_body["relationships"]
             .as_object()
             .ok_or_else(|| error("Planning relationships missing"))?;
         let new_relationships = document["relationships"]
@@ -795,13 +889,24 @@ pub(crate) fn view(
         for key in old_relationships
             .keys()
             .chain(new_relationships.keys())
-            .filter(|k| k.as_str() != "dependencies")
+            .filter(|k| {
+                k.as_str() != "dependencies"
+                    && !(k.as_str() == "external_posture"
+                        && document[crate::planning_lifetime::FIELD]["external_posture"]
+                            == "observation")
+            })
         {
             if old_relationships.get(key) != new_relationships.get(key) {
                 return Err(error(
                     "Planning update cannot manufacture execution or return authority",
                 ));
             }
+        }
+        // Material equality is checked before issuing a write or incrementing
+        // revision. A fresh external observation alone has no tracked postimage.
+        if !custody_update && update_material(&document) == update_material(&durable_body) {
+            result["material_status"] = json!("unchanged");
+            return Ok(result);
         }
         document["revision"] = json!(
             body["revision"]
@@ -819,6 +924,10 @@ pub(crate) fn view(
             ));
         }
         result["action"] = json!({"operation_id":"planning.update","dependency_revision":digest(&json!({"source":current_revision,"document":document}))?,"arguments":{"target":target,"request":request,"owner_path":reference,"prior_revision":current_revision,"document":document,"provenance_format":"repo-relative-v2","planning_request":null},"effects":["planning-state"]});
+        if target_transition {
+            result["action"]["arguments"]["integration_observation"] =
+                result["integration"].clone();
+        }
     }
     Ok(result)
 }
@@ -955,6 +1064,14 @@ fn execute_checked(
                 "Planning update preimage changed; temporary preserved",
             ));
         }
+        if let Some(expected) = invocation["arguments"].get("integration_observation") {
+            let current: Value = serde_json::from_slice(&read(target, relative)?).map_err(error)?;
+            if crate::planning_lifetime::integration(target, relative, &current) != *expected {
+                return Err(error(
+                    "Planning integration target changed before publication; temporary preserved",
+                ));
+            }
+        }
         root.rename(&temporary, &root, relative).map_err(error)?;
     }
     observe("publication")?;
@@ -997,6 +1114,7 @@ mod tests {
             value[*field] = source[*field].clone();
         }
         value["relationships"] = json!({"dependencies":{"refs":[]}});
+        value[crate::planning_lifetime::FIELD] = json!({"next_action":"durable","external_posture":"observation","continuation_frontier":"durable"});
         value
     }
     fn setup(target: &Path) -> String {

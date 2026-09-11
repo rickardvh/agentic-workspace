@@ -59,6 +59,14 @@ fn bounded_git_output(
     command: &mut std::process::Command,
     budget: std::time::Duration,
 ) -> Result<(std::process::ExitStatus, Vec<u8>), String> {
+    bounded_git_output_with_limit(command, budget, 4096)
+}
+
+pub(crate) fn bounded_git_output_with_limit(
+    command: &mut std::process::Command,
+    budget: std::time::Duration,
+    limit: usize,
+) -> Result<(std::process::ExitStatus, Vec<u8>), String> {
     use std::process::Stdio;
     let deadline = std::time::Instant::now() + budget;
     let mut child = command
@@ -71,7 +79,10 @@ fn bounded_git_output(
     let (sender, receiver) = std::sync::mpsc::sync_channel(1);
     std::thread::spawn(move || {
         let mut bytes = Vec::new();
-        let result = stdout.take(4097).read_to_end(&mut bytes).map(|_| bytes);
+        let result = stdout
+            .take(limit.saturating_add(1) as u64)
+            .read_to_end(&mut bytes)
+            .map(|_| bytes);
         let _ = sender.send(result);
     });
     let result = loop {
@@ -83,7 +94,7 @@ fn bounded_git_output(
                 break match receiver
                     .recv_timeout(deadline.saturating_duration_since(std::time::Instant::now()))
                 {
-                    Ok(Ok(bytes)) if bytes.len() <= 4096 => Ok((status, bytes)),
+                    Ok(Ok(bytes)) if bytes.len() <= limit => Ok((status, bytes)),
                     Ok(Ok(_)) => Err("git-observation-output-exceeds-bound".into()),
                     Ok(Err(_)) => Err("git-observation-read-failed".into()),
                     Err(_) => Err("git-observation-timeout".into()),
