@@ -1,0 +1,8 @@
+{
+  "kind": "agentic-workspace/coordinated-preview-subject/v1",
+  "reconstruction_source_commit": "4d731a5dffa01d8d7b4ab734ff9f264852bb2327",
+  "release_class": "preview",
+  "support_bearing": false,
+  "tag": "preview-v0.52.0",
+  "version": "0.52.0"
+}
