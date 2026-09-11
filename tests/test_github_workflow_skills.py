@@ -54,4 +54,4 @@ def test_parent_closes_administratively_without_giant_pr() -> None:
     assert "closes administratively" in shaping
     assert "giant parent-closing PR" in shaping
     assert "administrative closure" in creation
-    assert "Do not require a giant parent-closing PR" in review
+    assert "Do not demand one giant parent-closing PR" in review
