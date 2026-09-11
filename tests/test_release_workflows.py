@@ -369,7 +369,12 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
 
     for release_only in (
         "cargo +stable test --workspace",
-        "uv build --wheel --sdist --out-dir dist",
+        "uv build --wheel --sdist",
+        "make check-memory-nosync",
+        "make check-planning-nosync",
+        "make check-verification-nosync",
+        "Runtime ${{ matrix.os }}",
+        "support-bearing-promotion",
         "packed-artifact-conformance",
         "windows-latest",
         "Support-bearing promotion",
@@ -408,6 +413,8 @@ def test_master_ruleset_and_release_policy_require_merge_sufficiency_before_supp
 
 def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
     workflow = (WORKFLOW_ROOT / "ci.yml").read_text(encoding="utf-8")
+    dispatch = workflow.partition("workflow_dispatch:\n")[2].partition("permissions:\n")[0]
+    admission = workflow.partition("  exhaustive-admission:\n")[2].partition("  workspace-checks:\n")[0]
 
     assert "workflow_dispatch:" in workflow
     assert "expected_head_sha:" in workflow
@@ -417,6 +424,10 @@ def test_ci_supports_exact_head_dispatch_for_generated_release_prs() -> None:
     assert "Verify dispatched release head" in workflow
     assert "${{ inputs.expected_head_sha }}" in workflow
     assert '"${GITHUB_SHA}" != "${EXPECTED_HEAD_SHA}"' in workflow
+    assert dispatch.count("required: true") == 2
+    assert "if: github.event_name == 'workflow_dispatch'" in admission
+    assert "${{ inputs.reason }}" in admission
+    assert "requires a non-empty reason" in admission
     assert workflow.count("if: ${{ github.event_name == 'workflow_dispatch' }}") == 6
     assert "if: ${{ always() && github.event_name == 'workflow_dispatch' }}" in workflow
 
