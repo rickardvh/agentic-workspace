@@ -1,4 +1,9 @@
 {
+  "material_lifetimes": {
+    "next_action": "durable",
+    "external_posture": "observation",
+    "continuation_frontier": "durable"
+  },
   "title": "Installed consumer continuity proof",
   "owner_level": "slice",
   "intent": {

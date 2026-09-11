@@ -651,6 +651,9 @@ fn resolve_with_baseline(
         planning_request,
     )?;
     planning["update_requests"] = update["requests"].clone();
+    planning["update_material_status"] = update["material_status"].clone();
+    planning["integration"] = update["integration"].clone();
+    planning["lifetime"] = update["lifetime"].clone();
     planning["update_retained"] = update["retained"].clone();
     planning["consumed_result"] = update["consumed_result"].clone();
     planning["handoff_continuation"] = update["handoff_continuation"].clone();

@@ -35,6 +35,7 @@ mod native_startup;
 mod native_verification;
 pub mod operating;
 pub mod planning;
+mod planning_lifetime;
 mod process_execution;
 pub mod proof_receipt;
 pub mod proof_subject;

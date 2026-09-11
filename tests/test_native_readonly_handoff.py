@@ -90,6 +90,14 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
 
         creation = call()["planning"]["creation_requests"][0]
         creation["arguments"] = {"material": material()}
+        destination = "frontier"
+        if surface == "typescript":
+            # A new admitted return must still acquire consumption custody when
+            # its semantic summary already exists. Volatile frontier text is
+            # separate from the accepted progress carried to a fresh consumer.
+            destination = "accepted_progress"
+            creation["arguments"]["material"]["material_lifetimes"]["continuation_frontier"] = "observation"
+            creation["arguments"]["material"]["continuation"][destination] = dependency.read_bytes().decode()
         created = call(invocation=call(creation)["decision_packet"]["primary_action"])
         plan_path = tmp_path / created["value"]["owner_path"]
         selection = call()["planning"]["created_owner"]["selection_request"]
@@ -110,7 +118,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         plan_ref = plan_path.relative_to(tmp_path).as_posix()
         (tmp_path / "verify_frontier.py").write_text(
             "import json\nfrom pathlib import Path\np=json.loads(Path(" + repr(plan_ref) + ").read_bytes())\n"
-            "assert p['continuation']['frontier'] == Path('dependency.md').read_bytes().decode()\nprint('Exact source frontier retained')\n"
+            f"assert p['continuation'][{destination!r}] == Path('dependency.md').read_bytes().decode()\nprint('Exact source frontier retained')\n"
         )
         executable = "& '" + sys.executable.replace("'", "''") + "'" if os.name == "nt" else shlex.quote(sys.executable)
         manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
@@ -319,7 +327,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     adoption = admitted["planning"]["adoption_requests"][0]
     adopt_action = call(adoption)["decision_packet"]["primary_action"]
     assert adopt_action["operation_id"] == "planning.update"
-    assert adopt_action["arguments"]["document"]["continuation"]["frontier"] == result["value"]["returned"]["summary"]
+    assert adopt_action["arguments"]["document"]["continuation"][destination] == result["value"]["returned"]["summary"]
     tampered = copy.deepcopy(adopt_action)
     tampered["arguments"]["document"]["continuation"]["frontier"] = "A caller-substituted result"
     before_adoption = plan_path.read_bytes()
@@ -329,7 +337,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     applied = call(invocation=adopt_action)
     assert applied["status"] == "applied"
     adopted_plan = json.loads(plan_path.read_bytes())
-    assert adopted_plan["continuation"]["frontier"] == result["value"]["returned"]["summary"]
+    assert adopted_plan["continuation"][destination] == result["value"]["returned"]["summary"]
     for field in ["id", "scope", "relationships", "proof", "intent", "next_action"]:
         assert adopted_plan[field] == original_plan[field]
     fresh = call()
