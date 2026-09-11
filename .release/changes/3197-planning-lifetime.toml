@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Require explicit lifetime classification for new Planning material, omit volatile observations from tracked updates, and reconcile proposed owner lifecycle changes against exact integrated target bytes."
+issues = [3197]

@@ -116,6 +116,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         .as_str()
         .filter(|id| !id.is_empty())
         .ok_or_else(|| error("former Planning subject identity missing"))?;
+    let body = crate::planning_lifetime::durable(&body);
     // These are this representation's fields, not a general migration mapping.
     // No judgmental text classification or completion inference is performed.
     let mut material = json!({
@@ -135,6 +136,7 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     let canonical = crate::native_planning_create::canonical_schema();
     let properties: serde_json::Map<String, Value> = crate::native_planning_create::ASSURANCE
         .iter()
+        .chain(crate::native_planning_create::OPTIONAL)
         .map(|key| ((*key).to_owned(), canonical["properties"][key].clone()))
         .collect();
     crate::schema_validator(&json!({"$schema":canonical["$schema"],"$defs":canonical["$defs"],"type":"object","properties":properties}), "Planning assurance source")?
@@ -143,6 +145,12 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         if let Some(value) = body.get(*key) {
             material["proof"][*key] = value.clone();
         }
+    }
+    if let Some(lifetimes) = body.get(crate::planning_lifetime::FIELD) {
+        material["constraints"][crate::planning_lifetime::FIELD] = lifetimes.clone();
+    }
+    if let Some(proposal) = body.get(crate::planning_lifetime::PROPOSAL) {
+        material["residual"][crate::planning_lifetime::PROPOSAL] = proposal.clone();
     }
     let known = [
         "kind",
@@ -170,6 +178,8 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
         "specialist_contracts",
         "continuation",
         "intent_continuity",
+        "material_lifetimes",
+        "integration_proposal",
     ];
     let mut ambiguity = Vec::new();
     let mut omitted = Vec::new();
