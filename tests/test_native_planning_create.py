@@ -55,6 +55,11 @@ def material() -> dict:
     ]
     value = {key: original[key] for key in fields}
     value["relationships"] = {"dependencies": {"refs": []}}
+    value["material_lifetimes"] = {
+        "next_action": "durable",
+        "external_posture": "observation",
+        "continuation_frontier": "durable",
+    }
     return value
 
 
@@ -140,6 +145,9 @@ def test_real_former_owner_can_evolve_after_native_custody(
     subject = before["planning"]["current_owner"]["reconciliation"]["subject"]
     update = before["planning"]["update_requests"][0]
     value = {key: original[key] for key in [*material(), "lifecycle", "phase"] if key in original}
+    # The current owner explicitly preserves the legacy work/frontier meaning
+    # while classifying external posture as a nonauthoritative observation.
+    value["material_lifetimes"] = material()["material_lifetimes"]
     value["next_action"] = "Finish the current P0/P1 owner audit before #2909 and exact #2990 admission"
     value["goal"] = ["Complete the current P0/P1 reconstruction owners before release admission"]
     value["intent_continuity"] = {
@@ -204,8 +212,11 @@ def test_real_former_owner_can_evolve_after_native_custody(
     assert value["next_action"] in str(admitted_clone)
     assert admitted_clone["decision_packet"]["status"] != "terminal"
     assert clone_path.read_bytes() == path.read_bytes()
+    expected_relationships = dict(original["relationships"])
+    expected_relationships.pop("external_posture", None)
+    assert updated["relationships"] == expected_relationships
     for key in original:
-        if key not in {"revision", "next_action", "goal", "intent_continuity", "update_provenance"}:
+        if key not in {"revision", "next_action", "goal", "intent_continuity", "update_provenance", "relationships"}:
             assert updated[key] == original[key], key
     assert call({**context, "invocation": action})["value"] == applied["value"]
     with pytest.raises(AssertionError):
@@ -233,14 +244,14 @@ def test_real_former_owner_can_evolve_after_native_custody(
     assert value["next_action"] in str(reconciled)
     assert current["decision_packet"]["status"] != "terminal"
     assert unrelated.read_text() == "Preserve this concurrent work"
-    # A same-material owner update changes source custody but not work identity.
+    # A same-material owner update no longer rewrites tracked source custody.
+    unchanged_bytes = path.read_bytes()
     same = current["planning"]["update_requests"][0]
     same["arguments"]["material"] = value
-    action = call({**context, "request": same})["decision_packet"]["primary_action"]
-    call({**context, "invocation": action})
-    following = call(context)
-    action = call({**context, "request": following["planning"]["requests"][0]})["decision_packet"]["primary_action"]
-    call({**context, "invocation": action})
+    unchanged = call({**context, "request": same})
+    assert unchanged["decision_packet"]["primary_action"] is None
+    assert unchanged["planning"]["update_material_status"] == "unchanged"
+    assert path.read_bytes() == unchanged_bytes
     assert call(context)["planning"]["current_owner"]["reconciliation"]["subject"] == reconciled["subject"]
     # Fresh unrelated task can stay direct without reactivating historical work.
     other = {**context, "task": "Explain this unrelated function"}

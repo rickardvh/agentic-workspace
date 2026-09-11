@@ -11,6 +11,71 @@
   ],
   "additionalProperties": false,
   "properties": {
+    "integration_proposal": {
+      "type": "object",
+      "description": "Bounded semantic proposal for lazy target reconciliation. Git observations and completion authority are not part of the proposal.",
+      "properties": {
+        "target_ref": {
+          "type": "string",
+          "pattern": "^refs/heads/[A-Za-z0-9][A-Za-z0-9/_.-]*$",
+          "maxLength": 256
+        },
+        "requested_transition": {
+          "enum": [
+            "mark-integrated",
+            "close-owner",
+            "archive-owner",
+            "keep-open"
+          ]
+        },
+        "proof_refs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "remaining_obligations": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "target_ref",
+        "requested_transition",
+        "proof_refs",
+        "remaining_obligations"
+      ],
+      "additionalProperties": false
+    },
+    "material_lifetimes": {
+      "type": "object",
+      "description": "Current owner classification of legacy mixed-lifetime slots. Durable values carry work meaning; observations carry no current external authority and are not retained by a material mutation. Omission preserves unclassified legacy meaning.",
+      "properties": {
+        "next_action": {
+          "enum": [
+            "durable",
+            "observation"
+          ]
+        },
+        "external_posture": {
+          "const": "observation"
+        },
+        "continuation_frontier": {
+          "enum": [
+            "durable",
+            "observation"
+          ]
+        }
+      },
+      "required": [
+        "next_action",
+        "external_posture",
+        "continuation_frontier"
+      ],
+      "additionalProperties": false
+    },
     "update_provenance": {
       "type":"object", "description":"Native update observation only; Planning validates current material and local producer receipts. Schema validity does not confer mutation custody.",
       "properties":{"kind":{"enum":["agentic-planning/update-provenance/v1","agentic-planning/update-provenance/v2"],"description":"Native material update provenance."},"invocation_revision":{"type":"string","description":"Exact retained update invocation digest."},"custody":{"type":"object","description":"Common immutable attempt and prepared commit references."},"outcome":{"type":"object","description":"Exact planned bounded outcome validated against the retained invocation."}},
