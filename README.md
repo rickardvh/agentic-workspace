@@ -1,5 +1,8 @@
 # Agentic Workspace
 
+> [!IMPORTANT]
+> **Reconstruction in progress.** Active development is taking place on [`reconstruct/first-stable`](https://github.com/rickardvh/agentic-workspace/tree/reconstruct/first-stable) while Agentic Workspace is upgraded and migrated to a Rust core. `master` is frozen during this work and should not be treated as the current development line. New reconstruction builds are published as [preview prereleases](https://github.com/rickardvh/agentic-workspace/releases) for evaluation rather than as stable releases. The documentation below describes the frozen `master` line and may differ from the current preview.
+
 Agentic Workspace helps AI coding agents work consistently in a repository across sessions, tools, and models.
 
 It gives the repository a small agent-facing continuity and execution layer for instructions, relevant context, reusable procedures, durable planning and memory, verification expectations, and delegation. Instead of loading one large static guide for every task or reconstructing important state from chat history, an agent can ask what matters now and get a compact route to the context and actions that apply.
