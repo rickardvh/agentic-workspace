@@ -5,14 +5,67 @@ import hashlib
 import json
 import os
 import re
+import tarfile
 import time
 import tomllib
 import urllib.request
+import zipfile
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / ".github/support-bearing-promotion.json"
+
+
+def published_platform_failures(policy: dict[str, Any], artifact_dir: Path) -> list[str]:
+    """A runtime receipt cannot substitute for an installable published platform set."""
+    failures = []
+    platforms = policy.get("published_platforms", {})
+    for runner in sorted({row["os"] for row in policy["runtime_matrix"]}):
+        admitted = platforms.get(runner)
+        if not admitted:
+            failures.append(f"runtime {runner} has no admitted published artifact platform")
+            continue
+        try:
+            suffix = ".exe" if admitted["node_platform"] == "win32" else ""
+
+            def check_pair(read, prefix, identity):
+                for name, key in (("agentic-workspace-core", "sha256"), ("agentic-workspace", "cli_sha256")):
+                    if hashlib.sha256(read(prefix + name + suffix)).hexdigest() != identity[key]:
+                        raise ValueError("packaged binary digest mismatch")
+
+            wheels = list(artifact_dir.glob(f"*-{admitted['wheel_platform']}.whl"))
+            if len(wheels) != 1:
+                raise ValueError("missing unique installable wheel")
+            with zipfile.ZipFile(wheels[0]) as wheel:
+                manifest = json.loads(wheel.read("agentic_workspace/_native/artifact.json"))
+                pair = {key: manifest[key] for key in ("sha256", "cli_sha256")}
+                check_pair(wheel.read, "agentic_workspace/_native/", pair)
+            if manifest["rust_host"] != admitted["rust_host"]:
+                raise ValueError("wheel Rust host mismatch")
+            npm_matches = []
+            for path in artifact_dir.glob("*.tgz"):
+                with tarfile.open(path) as npm:
+                    package = json.load(npm.extractfile("package/package.json"))
+                    native = json.load(npm.extractfile("package/src/native/bin/artifact.json"))
+                    if package.get("os") == [admitted["node_platform"]] and package.get("cpu") == [admitted["node_arch"]]:
+                        if native["rust_host"] != admitted["rust_host"] or any(native[key] != pair[key] for key in pair):
+                            raise ValueError("npm native identity mismatch")
+                        check_pair(lambda name: npm.extractfile(name).read(), "package/src/native/bin/", pair)
+                        npm_matches.append(path)
+            if len(npm_matches) != 1:
+                raise ValueError("missing unique installable npm artifact")
+            archives = list(artifact_dir.glob(f"agentic-workspace-native-*-{admitted['rust_host']}.zip"))
+            if len(archives) != 1:
+                raise ValueError("missing unique standalone native archive")
+            with zipfile.ZipFile(archives[0]) as archive:
+                native = json.loads(archive.read("artifact.json"))
+                if native["rust_host"] != admitted["rust_host"] or any(native[key] != pair[key] for key in pair):
+                    raise ValueError("standalone native identity mismatch")
+                check_pair(archive.read, "", pair)
+        except (KeyError, ValueError, OSError, zipfile.BadZipFile, tarfile.TarError) as error:
+            failures.append(f"runtime {runner} published artifacts: {error}")
+    return failures
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -147,6 +200,7 @@ def _compose(args: argparse.Namespace) -> int:
     failures: list[str] = []
     inputs: list[Path] = []
     failures.extend(python_support_policy_failures(policy))
+    failures.extend(published_platform_failures(policy, artifact_dir))
 
     def require(path: Path, kind: str, status: str) -> dict[str, Any]:
         if not path.is_file():

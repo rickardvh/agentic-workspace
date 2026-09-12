@@ -41,8 +41,8 @@ kind. Historical generated-command proofs remain source-only checks.
 Host-labelled artifacts establish support only for the host exercised. Linux
 wheels retain `linux_*` tags; they do not claim manylinux compatibility. The
 release matrix runs the same isolated native proof per host/runtime, and final
-release/preview checks prove the bytes actually published. Local Windows results
-are not Linux/macOS proof. Preview assets remain non-support-bearing; stable
+release/preview checks prove the bytes actually published. The admitted published class is Linux x64 only. Windows and macOS are not
+supported release classes; local Windows validation is development evidence. Preview assets remain non-support-bearing; stable
 promotion still requires the separate exact-subject server, runtime, install,
 redistribution and security receipts. Implementation completion does not grant
 independent review acceptance, merge readiness or parent-issue closure.

@@ -72,7 +72,7 @@ jobs:
           - os: ubuntu-latest
             python: "3.13"
             node: "24"
-          - os: windows-latest
+          - os: ubuntu-latest
             python: "3.14"
             node: "24"
     steps:
