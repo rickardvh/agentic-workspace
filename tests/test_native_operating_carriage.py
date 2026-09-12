@@ -34,6 +34,46 @@ def rehash(carrier, entry):
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_skill_consumer_uses_compact_reference_and_new_answer_only(tmp_path, shared_core_binary, native_cli, surface):
+    context = proposal(surface, shared_core_binary, native_cli, tmp_path)
+    compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
+    selected = compact["detail_refs"]["/decision_packet/decision_request"]
+    # The skill/host retains the explicit work and substantive proposal. It
+    # supplies only a reference and judgment, not immutable owner identity.
+    answered = consume(
+        surface, shared_core_binary, native_cli, {**context, "reference": selected, "answer": "authorize-write", "projection": "carried"}
+    )
+    action = answered["view"]["decision_packet"]["primary_action"]
+    result = consume(surface, shared_core_binary, native_cli, {"invocation": answered["carriage"], "reference": action["reference"]})
+    assert result["effect_outcome"]["status"] == "committed"
+    assert result["continuation"]["retry_effect"] is False
+    # A lost disposable carrier recovers through fresh current owners.
+    fresh = consume(surface, shared_core_binary, native_cli, result["continuation"]["reentry"]["context"])
+    assert fresh["configuration"]["cli_invoke"] == "aw-local"
+    before = (tmp_path / ".agentic-workspace/config.toml").read_bytes()
+    replay = consume(
+        surface, shared_core_binary, native_cli, {"invocation": answered["carriage"], "reference": action["reference"]}, allow_failure=True
+    )
+    assert replay["effect_outcome"]["status"] == "rejected-before-effect"
+    assert replay["continuation"]["retry_effect"] is False
+    assert (tmp_path / ".agentic-workspace/config.toml").read_bytes() == before
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_compact_detail_reference_rejects_forgery_and_changed_work(tmp_path, shared_core_binary, native_cli, surface):
+    context = {"target": str(tmp_path), "task": "Inspect work"}
+    compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
+    ref = compact["detail_refs"]["/current_work"]
+    detail = consume(surface, shared_core_binary, native_cli, {**context, "reference": ref})
+    full = consume(surface, shared_core_binary, native_cli, context)
+    assert detail["value"] == full["current_work"]
+    assert detail["authority"] == "detail-only"
+    for altered in [{"task": "Different work"}, {"changed": ["different.rs"]}, {"reference": "sha256:" + "0" * 64}]:
+        with pytest.raises(AssertionError, match="stale operating reference"):
+            consume(surface, shared_core_binary, native_cli, {**context, "reference": ref, **altered})
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_exact_answer_and_action_carriage_preserve_full_effects(tmp_path, shared_core_binary, native_cli, surface):
     context = proposal(surface, shared_core_binary, native_cli, tmp_path)
     full = consume(surface, shared_core_binary, native_cli, context)
