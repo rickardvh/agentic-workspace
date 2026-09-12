@@ -40,6 +40,25 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert ledger["workspace"]["main_skill_path"] == MAIN
 
 
+def test_canonical_procedure_preserves_correction_retention_boundary():
+    # This is a prose contract regression, not proof of a persistence owner.
+    # The existing drift guard also requires these instructions in shipped bytes.
+    skill = (ROOT / MAIN).read_text()
+    section = skill.split("## Corrections and retention\n", 1)[1].split("\n## ", 1)[0]
+    for obligation in (
+        "explicit user or reviewer correction intended to change future behavior",
+        "as reconciliation input",
+        "current correction/instruction owner",
+        "current scope and retention semantics",
+        "Keep one-off requests non-retained",
+        "verify its outcome before claiming the correction was retained",
+        "surface the exact owner/path gap",
+        "retention is not established",
+        "Do not substitute an apology, chat promise, Memory note, invented persistence",
+    ):
+        assert obligation in section
+
+
 def test_source_lifecycle_retires_only_exact_package_bytes(tmp_path):
     # Source maintenance lifecycle is tested here; it is not an installed Python host.
     from agentic_workspace import workspace_runtime_core as owner

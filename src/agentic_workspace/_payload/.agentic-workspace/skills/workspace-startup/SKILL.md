@@ -33,6 +33,12 @@ Do not copy mutable policy or current owner state into this skill. Do not treat 
 
 The compiled operating decision is a deterministic information/action substrate for this procedure and other clients. It is not a universal model-facing workflow that every agent must execute step by step.
 
+## Corrections and retention
+
+Treat an explicit user or reviewer correction intended to change future behavior (for example, "work like this from now on") as reconciliation input. Apply it to the current work and route it through the current correction/instruction owner when available, using that owner's current scope and retention semantics. Do not broaden a task-local correction into repository or global policy. Keep one-off requests non-retained; if future intent or scope is unclear, clarify only what is needed before retaining it.
+
+Use the owner's exact returned request/action and verify its outcome before claiming the correction was retained. If the native owner or supported persistence path is unavailable, surface the exact owner/path gap and state that retention is not established. Do not substitute an apology, chat promise, Memory note, invented persistence, or a direct managed-state edit for correction reconciliation. Repository visibility alone does not establish retention, including when executable AW is unavailable.
+
 ## Specialized skills and semantic routes
 
 Specialized package or repository skills are progressive-disclosure units for genuinely reusable procedure, not one skill per owner, module, command, or phase.

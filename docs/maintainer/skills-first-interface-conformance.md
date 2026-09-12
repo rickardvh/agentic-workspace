@@ -10,6 +10,13 @@ implemented behavior from parent completion and platform evidence.
 instructions/config own policy, domain records own state/evidence, and Rust owns
 exact semantics and effects. `WORKFLOW.md` is a compatibility pointer.
 
+The canonical skill also treats explicit future-behavior corrections as owner
+reconciliation input, keeps one-off requests non-retained, respects current scope,
+and requires a verified owner outcome before claiming retention. An unavailable
+owner/path is reported explicitly; apologies, chat promises and Memory notes do
+not substitute for retention. A focused prose-contract regression guards this
+procedure without claiming new native correction persistence support.
+
 `scripts/generate/generate_agent_interface.py` derives shipped payload bytes from
 the exact source paths declared in `workspace_surfaces.json`. Its `--check` mode
 and the ordinary CI guard reject drift. The Rust build embeds those payloads.
@@ -65,13 +72,13 @@ its managed fence. Compare `git show <baseline>:<path>` with the current source.
 | Generic surface | Before | After |
 | --- | ---: | ---: |
 | Managed root bootstrap | 3,046 | 558 |
-| Canonical startup skill | 9,329 | 8,706 |
+| Canonical startup skill | 9,329 | 9,751 |
 | Duplicate operating-loop skill | 5,418 | 0 |
 | Workflow compatibility surface | 2,429 | 661 |
-| Total declared generic text | 20,222 | 9,925 |
+| Total declared generic text | 20,222 | 10,970 |
 
-The bootstrap shrinks 81.7%; the generic text inventory shrinks 50.9%. The ordinary
-bootstrap plus main skill is 9,264 bytes; the compatibility pointer need not be
+The bootstrap shrinks 81.7%; the generic text inventory shrinks 45.8%. The ordinary
+bootstrap plus main skill is 10,309 bytes; the compatibility pointer need not be
 loaded. These are source inventory counts, not measured model tokens or proof that
 every historical journey read every surface. Once a current known leaf is selected,
 the new full/compact/carried result exposes its procedure refs in that response;
