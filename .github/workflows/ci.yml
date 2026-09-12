@@ -75,6 +75,10 @@ jobs:
         run: |
           cargo +stable test --locked -p agentic-workspace-core native_routes::
           uv run pytest tests/test_native_former_routes.py -q
+      - name: Verify skills-first interface convergence
+        run: |
+          uv run python scripts/generate/generate_agent_interface.py --check
+          uv run pytest tests/test_skills_first_interface.py -q
       - name: Preserve representative Planning custody
         run: >-
           uv run pytest tests/test_native_planning_create.py

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Converge bootstrap and shipped procedure surfaces on one canonical AW skill, retire exact duplicate package procedure bytes, and expose current selected-leaf procedure references through full, compact and carried Rust-backed views."
+issues = [3224, 2930, 3217, 3223]

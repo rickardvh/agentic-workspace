@@ -237,14 +237,18 @@ fn resolve_with_baseline(
     }
     if let Some(view) = routes.as_mut()
         && view["status"] == "current"
-        && let Some(parent) = view["discovery"]["parent"].as_str()
+        && let Some(parent) = view["decision"]["semantic_task_routes"]["routes"]
+            .as_array()
+            .filter(|routes| routes.len() == 1)
+            .and_then(|routes| routes[0].as_str())
+            .or_else(|| view["discovery"]["parent"].as_str())
         && route_catalogue["routes"]
             .as_array()
             .is_some_and(|leaves| leaves.iter().any(|leaf| leaf == parent))
     {
-        // The existing branch request also drills into a declared leaf. Only
-        // this explicit query loads procedure references; applicability and
-        // external mutation authority remain with their existing owners.
+        // A known selected leaf already establishes relevance: include its
+        // exact procedure references without a redundant discovery request.
+        // Procedure bodies stay lazy; references grant no effect authority.
         let detail = native_routes::discovery(json!({"target":target,"exact":parent}))?;
         if detail["source_revision"] != route_catalogue["revision"]
             || native_routes::former_selection(target, &native_routes::source(target)?)?.0

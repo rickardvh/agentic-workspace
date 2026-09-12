@@ -8488,6 +8488,7 @@ def _host_ownership_ledger_text() -> str:
 
 [workspace]
 workflow_path = ".agentic-workspace/WORKFLOW.md"
+main_skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
 managed_root = ".agentic-workspace/"
 
@@ -8523,7 +8524,14 @@ uninstall_policy = "remove-managed-files-only"
 [[managed_surfaces]]
 module = "workspace"
 path = ".agentic-workspace/WORKFLOW.md"
-kind = "workflow-contract"
+kind = "compatibility-procedure-pointer"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+kind = "canonical-agent-procedure"
 ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
@@ -8589,12 +8597,12 @@ authority = "primary"
 summary = "Owner-scoped execution continuity owned by the planning package; repository-wide views are derived."
 
 [[authority_surfaces]]
-concern = "shared-workflow-contract"
-surface = ".agentic-workspace/WORKFLOW.md"
+concern = "canonical-agent-procedure"
+surface = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 owner = "workspace"
 ownership = "module_managed"
 authority = "primary"
-summary = "Shared workflow rules installed by the workspace layer."
+summary = "Canonical reusable agent procedure; source-owned policy/state and Rust effect authority remain separate."
 
 [[authority_surfaces]]
 concern = "ownership-ledger"
@@ -9440,7 +9448,7 @@ def _workspace_agents_template(
         "Authority marker:",
         "",
         "- authority: adapter",
-        f"- canonical_source: `.agentic-workspace/config.toml` and `{cli_invoke} start --target . --format json`",
+        "- canonical_source: `.agentic-workspace/config.toml` and `.agentic-workspace/skills/workspace-startup/SKILL.md`",
         "- safe_to_edit: true",
         "- refresh_command: null",
         "",
@@ -9494,7 +9502,6 @@ def _workspace_managed_agent_instructions_path(config: WorkspaceConfig) -> Path:
 
 
 def _workspace_managed_agent_instructions_text(*, config: WorkspaceConfig) -> str:
-    cli = config.cli_invoke
     return "\n".join(
         [
             "# Agent Instructions for .agentic-workspace",
@@ -9502,28 +9509,13 @@ def _workspace_managed_agent_instructions_text(*, config: WorkspaceConfig) -> st
             "Authority marker:",
             "",
             "- authority: workspace-managed-local-adapter",
-            f"- canonical_source: `.agentic-workspace/config.toml` and `{cli} start --target . --format json`",
+            "- canonical_source: `.agentic-workspace/config.toml` and `.agentic-workspace/skills/workspace-startup/SKILL.md`",
             "- safe_to_edit: false",
-            f"- refresh_command: `{cli} init --target . --format json` or `{cli} upgrade --target . --format json`",
+            "- refresh_command: null",
             "",
-            "This directory contains Agentic Workspace managed workflow, planning, memory, ownership, and state surfaces.",
-            "",
-            "Before editing inside `.agentic-workspace/`:",
-            "",
-            f'- Use `{cli} start --target . --task "<task>" --format json` for routing.',
-            (
-                f"- Use `{cli} summary --target . --format json`, "
-                f'`{cli} implement --changed <paths> --task "<task>" --format json`, and '
-                f"`{cli} proof --changed <paths> --format json` before opening broad raw state."
-            ),
-            f"- Use `{cli} planning ...` and `{cli} memory ...` commands for structured Planning and Memory mutations when a command exists.",
-            "- Do not hand-edit structured state such as Planning execplans, Planning state, Memory indexes, ownership ledgers, or config when a package CLI command exists.",
-            (
-                "- Raw structured edits are only fallback or repair work; after any fallback edit, run "
-                f"`{cli} summary --target . --format json` and "
-                f"`{cli} doctor --target . --modules planning,memory --format json` as applicable."
-            ),
-            "- If a needed managed-state mutation has no command, route or file an improvement issue for a command-owned path instead of making manual edits routine.",
+            "Use `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical AW procedure.",
+            "Repository/local instructions and config retain policy; managed domain state retains its existing owner.",
+            "Use current owner-returned operations for managed-state changes. Visibility alone grants no mutation or proof authority.",
             "",
         ]
     )
@@ -10271,6 +10263,7 @@ def _workspace_init_or_upgrade_report(
     module_reports: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
+    actions.extend(_retired_workspace_surface_actions(target_root=target_root, dry_run=dry_run))
     warnings: list[dict[str, str]] = []
     conservative = inspection_mode != "install" and command_name == "init"
     resolved_footprint_profile = _resolve_bootstrap_footprint_profile(target_root=target_root, requested_profile=footprint_profile)
@@ -10617,6 +10610,36 @@ def _sync_tree_surface_actions(
     return actions
 
 
+def _retired_workspace_surface_actions(*, target_root: Path, dry_run: bool) -> list[dict[str, str]]:
+    """Remove only exact retired package bytes; local edits and links stay owned."""
+    actions = []
+    for retired in _WORKSPACE_SURFACES_MANIFEST.get("retired_surface_files", []):
+        relative = Path(retired["path"])
+        path = target_root / relative
+        if not path.exists() and not path.is_symlink():
+            continue
+        chain = [target_root.joinpath(*relative.parts[:index]) for index in range(1, len(relative.parts) + 1)]
+        confined = path.resolve().is_relative_to(target_root.resolve()) and not any(
+            part.is_symlink() or getattr(part, "is_junction", lambda: False)() for part in chain
+        )
+        try:
+            current = (
+                confined and path.is_file() and hashlib.sha256(path.read_text(encoding="utf-8").encode()).hexdigest() == retired["sha256"]
+            )
+        except (OSError, UnicodeError):
+            current = False
+        if current:
+            if not dry_run:
+                path.unlink()
+            kind = "would remove" if dry_run else "removed"
+        else:
+            kind = "manual review"
+        actions.append(
+            {"kind": kind, "path": relative.as_posix(), "detail": f"retired generic procedure; replacement: {retired['replacement']}"}
+        )
+    return actions
+
+
 def _workspace_required_payload_actions(*, target_root: Path, dry_run: bool) -> list[dict[str, str]]:
     actions: list[dict[str, str]] = []
     for relative in sorted(
@@ -10637,7 +10660,7 @@ def _workspace_required_payload_actions(*, target_root: Path, dry_run: bool) -> 
             _sync_bytes_surface_action(
                 target_root=target_root,
                 relative=relative,
-                source_bytes=source.read_bytes(),
+                source_bytes=_workspace_payload_bytes_for_target(relative, target_root=target_root),
                 dry_run=dry_run,
                 detail="sync required workspace reference surface for routed agent workflows",
             )
@@ -10686,6 +10709,7 @@ def _workspace_uninstall_report(
     local_only_repo_root: Path | None = None,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
+    actions.extend(_retired_workspace_surface_actions(target_root=target_root, dry_run=dry_run))
     warnings: list[dict[str, str]] = []
     removable_candidates: list[Path] = []
     ambiguous_payloads: list[Path] = []
@@ -10740,6 +10764,23 @@ def _workspace_uninstall_report(
                     "detail": "matches managed workspace payload content",
                 }
             )
+        # Retire only the exact current managed bootstrap. Repository prose and
+        # edited/linked instruction files retain their own custody.
+        startup = target_root / config.agent_instructions_file
+        if local_only_repo_root is None and startup.is_file() and not startup.is_symlink():
+            text = startup.read_text(encoding="utf-8")
+            pointer = workspace_pointer_block(cli_invoke=config.cli_invoke)
+            if text.count(pointer) == 1:
+                updated = text.replace(pointer, "", 1)
+                if not dry_run:
+                    startup.write_text(updated, encoding="utf-8")
+                actions.append(
+                    {
+                        "kind": "would remove" if dry_run else "removed",
+                        "path": config.agent_instructions_file,
+                        "detail": "remove exact managed skill bootstrap; preserve repository instructions",
+                    }
+                )
     if not dry_run:
         for relative in removable:
             destination = target_root / relative

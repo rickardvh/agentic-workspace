@@ -1,137 +1,100 @@
 ---
 name: workspace-startup
-description: Use the canonical Agentic Workspace operating loop. Resolve one compact current contract, act through its routed operation or skill, reconcile the result, and load deeper capability detail only when routed.
+description: Use Agentic Workspace as a skills-first repository competence layer. Read current policy from its owners, use precise Rust-backed tools for current facts and bounded effects, load specialized skills only when useful, and degrade honestly when no runtime is available.
 ---
 
-# Workspace Startup / Operating Loop
+# Agentic Workspace
 
-Use this skill for ordinary first contact, resume, changed-path work, routed proof, continuation, or fallback in an installed Agentic Workspace repository.
+This is the canonical ordinary agent procedure for an Agentic Workspace repository.
 
-The ordinary mental model is **resolve -> act -> reconcile**. Do not learn module topology or reconstruct a command sequence before work can begin.
+Agentic Workspace is **skills-first**: this skill teaches how to use the product. It does not own repository policy, current domain state, proof, or effect authority.
 
-## Configured Invocation
+## Responsibility split
 
-Use the configured AW invocation exposed by the repo adapter, config, or compact output. In an installed repo this may be `agentic-workspace ...`; in a source checkout or dev-dependency install it may be a repo-local command.
+Keep these owners distinct:
 
-Do not replace a configured invocation with a guessed bare command.
+- **skills** provide reusable procedure;
+- **repository/local instructions and config** provide human- or repository-owned policy, constraints, preferences, and applicability;
+- **domain owners** provide current Planning, Memory, Verification, Assignment, decision, and other state/evidence under their own lifetime;
+- **Rust-backed CLI/native/Python/TypeScript/JSON operations** provide exact current information, validation/currentness, bounded mutations/effects, and recovery;
+- **the agent or human** supplies semantic judgment and performs the actual work.
 
-## Resolve
+Do not copy mutable policy or current owner state into this skill. Do not treat a skill reference, route, or operating decision as mutation, proof, completion, or claim authority.
 
-1. Run the configured invocation with `start --target . --task "<task>" --format json` for ordinary first contact.
-2. If changed paths are known, use `start --target . --changed <path> --task "<task>" --format json`; repeat `--changed` for each path.
-3. Consume the compact current decision before raw `.agentic-workspace/` files. Preserve the fields that materially constrain the decision, including when present:
-   - decision/action identity and input revision;
-   - `status`, `primary_action`, `decision_request` and blockers;
-   - allowed and forbidden actions/effects;
-   - proof or claim boundaries;
-   - routed owner, skill, operation, selector, or preferred invocation;
-   - compatibility projections such as `planning_route_decision` or `planning_safety_gate` when the current runtime emits them.
-4. Treat module- or phase-specific fields as projections of the current operating decision, not as a fixed architecture to generalize from. Follow the route they name. **Do not reclassify the task** from prose, legacy task-switch fields, or another capability after a current authoritative route decision exists.
-5. If the compact result is insufficient, use only the smallest selector, skill, operation, or safe probe it routes to before broadening context.
+## Ordinary use
 
-`start` defaults to compact output with the exact selected request/action included.
-Use `--projection full` for owner detail. Thin hosts may use `--projection carried`,
-keep the returned `carriage` locally and show only `view` to the model. Use the
-returned exact reference with `--input <carriage.json> --reference <ref>`; a bounded
-decision also accepts `--answer <JSON-choice>`. Unchanged context is carried;
-explicit context changes require fresh resolution. Carriage grants no authority
-and its loss recovers through fresh `start`. No extra detail fetch is required to
-execute the selected action. Optional detail references are revalidated by Rust.
-Configured required startup guidance up to 8 KiB arrives in the decision directly.
-Read its exact text before acting; delivery is not understanding or satisfaction.
-Larger guidance keeps an exact read request. Both paths bind the source to effect
-admission and revalidate it; a changed or unavailable source never inherits delivery.
+1. Read the repository/local instructions that apply to the work. Treat them as policy and constraints, not as a second procedural manual.
+2. Use this skill to decide what information or procedure is useful. Keep direct/no-signal work direct; do not create AW artifacts merely to demonstrate AW use.
+3. When exact current state, admission, action, effect, or recovery matters, use the repository's configured AW invocation. Prefer `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present, then `.agentic-workspace/config.toml` `[workspace].cli_invoke`, then the package default `agentic-workspace`. Source checkouts may provide a repo-local invocation through their bootstrap instructions.
+4. Ask the Rust-backed surface for the smallest current answer needed. `start` may compose current owners and return exact requests/actions/references; dedicated public operations may be used when the request maps directly to them. Consume returned exact identity/currentness instead of reconstructing hidden packet fields.
+5. If reusable specialized procedure would materially help, discover or select the relevant semantic skill route. A knowledgeable agent may select a known current leaf directly; an unfamiliar agent may inspect a bounded route branch. Do not load a fixed skill/module tree.
+6. Perform the user's work with ordinary judgment. Use exact owner-returned requests/actions for bounded mutations and effects; do not manufacture effect-bearing actions or edit managed state as a substitute for an owner operation.
+7. Reconcile only what this work changed or may now claim. A local action succeeding, an owner becoming quiescent, and the user's intended outcome being complete are different facts.
 
-## Act
+The compiled operating decision is a deterministic information/action substrate for this procedure and other clients. It is not a universal model-facing workflow that every agent must execute step by step.
 
-1. Follow the supported next action before inventing a different command path.
-   For a native decision request, use the exact owner-returned request, supplying
-   only its bounded answer or material. Pass it to `start --input <request.json>`
-   with the same target, task and changed paths. Combine required source-read
-   requests and the owner request in a JSON array. Preserve their currentness
-   fields; drift requires a fresh request rather than an edited revision.
-   Execute the returned `primary_action` with `invoke --input <action.json>` and
-   the same context plus `--format json`. Do not construct actions yourself.
-2. Prefer a typed/routed operation, generated command, specialized skill, exact owner/selector, or explicit human decision over hand-editing managed state.
-3. Load a specialized capability procedure only when the current decision routes there.
-   Use `workspace-setup-jumpstart` for explicit configuration help or a current
-   configuration concern. It uses the same native requests and start/invoke path;
-   it does not add setup commands or a second readiness authority.
-4. Keep direct work direct when the contract permits it. Do not create Planning, Memory, review, proof, handoff, or other artifacts merely to demonstrate AW use.
-5. Do not infer permission from advisory prose when a current hard gate or forbidden action says otherwise.
+## Corrections and retention
 
-## Reconcile
+Treat an explicit user or reviewer correction intended to change future behavior (for example, "work like this from now on") as reconciliation input. Apply it to the current work and route it through the current correction/instruction owner when available, using that owner's current scope and retention semantics. Do not broaden a task-local correction into repository or global policy. Keep one-off requests non-retained; if future intent or scope is unclear, clarify only what is needed before retaining it.
 
-After the bounded action:
+Use the owner's exact returned request/action and verify its outcome before claiming the correction was retained. If the native owner or supported persistence path is unavailable, surface the exact owner/path gap and state that retention is not established. Do not substitute an apology, chat promise, Memory note, invented persistence, or a direct managed-state edit for correction reconciliation. Repository visibility alone does not establish retention, including when executable AW is unavailable.
 
-1. Admit or refresh the result through the owner/operation named by the current route when required.
-2. Reconcile only concerns relevant to this work: changed state, proof/evidence, claim permission, future-relevant residue, continuation, or an explicit human decision.
-3. Preserve the difference between successful local action and permission to make a broader completion claim.
-4. If the user, review, orchestrator, or host explicitly corrects the acting agent's behavior, treat that correction as reconciliation input and submit it through the current correction owner request when available. An unavailable native correction operation remains an explicit owner gap. Do not substitute an apology, chat promise, or Memory note for correction admission.
-5. Inspect `effect_outcome` separately from `continuation`. Use a `current`
-   continuation directly, with the same compact/full/carried projection as `start`.
-   Its decision is current at observation; execution still revalidates. If continuation
-   is unavailable, use its exact `reentry`. A committed effect remains committed;
-   never retry it merely because continuation failed. An uncertain effect requires
-   current owner recovery and permits no committed or absent-effect claim.
-   Return control at an unresolved judgment, currentness, capability, authority,
-   proof/review or uncertainty boundary; do not loop over primary actions.
-6. Stop when no further action is required and the intended claim is permitted. Terminal reconciliation is closeout; no separate closeout framework is assumed.
+## Specialized skills and semantic routes
 
-## Progressive Disclosure
+Specialized package or repository skills are progressive-disclosure units for genuinely reusable procedure, not one skill per owner, module, command, or phase.
 
-First contact should stay small.
+Use semantic route discovery when task meaning or current facts indicate that another procedure may help. Route selection is agent judgment admitted as current structured context. Lexical hints may help discovery but cannot impose hard semantic applicability.
 
-- Do not open a module map, module state, broad generated references, or raw Planning/Memory/Verification files merely because they exist.
-- Do not load specialized skills merely because they are installed.
-- Use exact selectors and routed procedures before broad reads.
-- An irrelevant installed capability should remain irrelevant.
+Rules:
 
-## Specialized Routes
+- exact structured path/operation/source/owner facts take precedence when they already determine relevance;
+- irrelevant skills stay absent from ordinary context;
+- known current leaves should be directly selectable without walking an ancestry tree;
+- once a relevant leaf is known, use its returned skill/procedure reference rather than rediscovering module topology;
+- changing the task/current-work identity or route source may invalidate a carried route;
+- loss of local route carriage falls back to fresh discovery rather than inventing repository authority;
+- route/skill identity never widens effect, proof, publication, review, or claim authority.
 
-Use specialized skills only when routed or when the request directly maps to their narrow job:
+Repository-owned skills and package-owned specialized skills participate through the same route mechanism. A new capability does not require a new core-owned skill slot.
 
-- `workspace-intent-discovery` — ambiguous human intent or work-shape decision.
-- `workspace-proof-selection` — proof selection/interpretation when the current claim needs it.
-- `workspace-setup-jumpstart` — bounded source-owned configuration help.
-- `workspace-operating-loop` — interpret compact decision/state-delta behavior when a visible update or reconciliation needs deeper guidance.
-- `workspace-transition-gates` — interpret explicit allowed/forbidden actions, preferred invocation, or degraded fallback when the compact route is not self-explanatory.
+## Exact tools without protocol copying
 
-A module or future capability may route its own specialized skill or operation through the same mechanism without becoming part of this fixed list.
+Use the public Rust-backed contract as a tool, not as prose to memorize.
 
-## No-CLI / Degraded Fallback
+For generic current resolution, a configured invocation may use `start --target . --task "<task>" --format json`. Known changed paths can be supplied with repeated `--changed` arguments. Compact output may include exact requests/actions/references and same-work carriage; optional detail remains lazy.
 
-If the configured native invocation is unavailable, preserve current state and
-repair that invocation through its repository/package owner. A retained no-CLI
-or Python maintainer helper may explain recovery, but cannot authorize product
-effects or replace missing native semantics. Do not compensate by reading the
-entire workspace tree or silently running the former host.
+When a bounded owner request is returned, supply only the requested human/agent judgment or material and return the exact request through the supported public input. When an effect-bearing action is returned, execute that exact action through `invoke`; do not reconstruct it from schema-valid parts.
 
-## Compatibility Note
+After an invocation, distinguish the effect outcome from continuation. Never retry a possibly committed effect merely because continuation failed. Use a current continuation when available; otherwise use exact re-entry/recovery or freshly resolve current state. Currentness is revalidated by the owner, not guaranteed by remembered model context.
 
-Current runtime packets may still expose first-party or historical projection names such as `planning_safety_gate`, `planning_route_decision`, or closeout-specific fields.
+Detailed schemas and packet fields belong to generated contracts/reference surfaces. Load them only when a client or debugging task actually needs them.
 
-Use them when present because they carry current authority, but interpret them through the generic rule: **which owner/capability is relevant now, what action is allowed, and what claim/reconciliation effect follows?** Do not teach those projection names as permanent core concepts.
+## When executable AW is unavailable
 
-## Red Flags
+Use the **same skills-first model**, but stop at repository-readable facts.
 
-Red flag:
-  I can inspect raw Planning, Memory, Verification, or module files first because the task seems related to that capability.
+1. Read this skill and the applicable repo instructions; do not switch to a competing no-runtime operating manual.
+2. Use `.agentic-workspace/OWNERSHIP.toml` as the compact static orientation map for package-managed and repo-owned authority surfaces. Follow only the owner/source refs relevant to the current planning, shaping, review, or context question.
+3. Read canonical repository sources directly where the ledger or relevant skill points: for example `SYSTEM_INTENT.md`, scoped instructions/config, Planning-owned records, relevant Memory material, or Verification/proof declarations. Prefer exact refs over broad `.agentic-workspace/**` scanning.
+4. Treat only facts established by the repository bytes you actually read as known. Runtime capability, machine-local state not present in those bytes, live external state, current effect admission, and owner conclusions requiring executable resolution remain **unknown**.
+5. Do not mutate managed owner state, claim an AW effect, manufacture proof/completion authority, or emulate `start` from static files. Record the exact source paths/revisions used so later reasoning can be reconsidered if those sources change.
+6. If executable AW later becomes available, return to the ordinary path above; no new mental model or migration is required.
 
-Use instead:
-  Resolve the compact current contract, then follow the routed owner/skill/operation if that capability is actually relevant.
+A missing, malformed, stale, or insufficient static surface is a reason to narrow the conclusion or request executable/current owner resolution—not to infer an operating decision.
 
-Red flag:
-  Validation succeeded, so I can call the whole task complete.
+## Directness and residue
 
-Use instead:
-  Reconcile the actual result with the current claim boundary and containing intent before making a broader claim.
+- Do not read broad module state just because a capability exists.
+- Do not create Planning, Memory, proof, handoff, or local scratch artifacts unless they have a real owner and future decision value.
+- Do not turn `.agentic-workspace/local/` or other package-owned roots into general scratch space.
+- Prefer the smallest sufficient query, skill, source read, or bounded operation.
+- Stronger future agents may use less procedure when they already know what is relevant; durable policy/currentness/authority boundaries still apply.
 
 ## Guardrails
 
-- Repository sources keep their own authority; a generated operating contract is a projection, not a new source of truth.
-- Do not replace structured decision/action fields with prompt-keyword inference.
-- Do not bypass forbidden actions because a different capability appears permissive.
-- Do not make installed modules or specialized procedures visible when irrelevant.
-- Do not persist residue unless it has future decision value and a clear owner.
-- Prefer the smallest safe next action and the smallest sufficient context.
+- Human/repository intent remains source-owned; this skill is procedure, not policy authority.
+- The Rust core remains the sole deterministic ordinary semantic/effect authority; Python, TypeScript, JSON, and native surfaces are projections/bindings over it.
+- Natural-language or keyword matching may aid discovery but cannot decide genuine semantic applicability or effects.
+- Do not bypass current owner restrictions because another skill or advisory source appears permissive.
+- Do not infer whole-task completion from one owner's local result.
+- Do not preserve historical protocol or guidance merely because it existed; prefer the current owner and current procedure.
