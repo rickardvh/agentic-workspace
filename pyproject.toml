@@ -27,12 +27,7 @@ authors = [
 maintainers = [
   { name = "Rickard von Haugwitz" },
 ]
-dependencies = [
-  "agentic-workspace-memory",
-  "agentic-workspace-planning",
-  "agentic-workspace-verification",
-  "jsonschema>=4.23",
-]
+dependencies = []
 
 [project.urls]
 Homepage = "https://github.com/rickardvh/agentic-workspace"
@@ -46,6 +41,9 @@ agentic-workspace = "agentic_workspace.cli:main"
 
 [dependency-groups]
 dev = [
+  "agentic-workspace-memory",
+  "agentic-workspace-planning",
+  "agentic-workspace-verification",
   "command-generation @ git+https://github.com/rickardvh/command-generation.git@ac1b9c00bf41352010929de196e7d45e20014615",
   "jsonschema",
   "pre-commit",
@@ -73,51 +71,35 @@ members = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agentic_workspace"]
+only-include = [
+  "src/agentic_workspace/decision.py",
+  "src/agentic_workspace/native_core.py",
+  "src/agentic_workspace/cli.py",
+]
+sources = ["src"]
+dev-mode-dirs = ["src"]
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
 
-[tool.hatch.build.targets.wheel.force-include]
-"generated/workspace/python/__init__.py" = "src/agentic_workspace/_generated_cli_package_impl/__init__.py"
-"generated/workspace/python/cli.py" = "src/agentic_workspace/_generated_cli_package_impl/cli.py"
-"generated/workspace/python/command_package.json" = "src/agentic_workspace/_generated_cli_package_impl/command_package.json"
-"generated/workspace/python/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
-"generated/workspace/python/external_consumer_profile.json" = "src/agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json"
-"generated/workspace/python/external_contract_bundle.json" = "src/agentic_workspace/_generated_cli_package_impl/external_contract_bundle.json"
-"generated/workspace/python/external_operation_conformance_receipts.json" = "src/agentic_workspace/_generated_cli_package_impl/external_operation_conformance_receipts.json"
-"generated/workspace/python/client.py" = "src/agentic_workspace/_generated_cli_package_impl/client.py"
-"generated/workspace/python/operations" = "src/agentic_workspace/_generated_cli_package_impl/operations"
-"generated/workspace/python/commands" = "src/agentic_workspace/_generated_cli_package_impl/commands"
-"generated/workspace/python/primitives" = "src/agentic_workspace/_generated_cli_package_impl/primitives"
-"generated/workspace/python/_contracts" = "src/agentic_workspace/_generated_cli_package_impl/_contracts"
-
 [tool.hatch.build.targets.sdist]
 include = [
   "/hatch_build.py",
-  "/bindings/node/semantic-decision.mjs",
-  "/bindings/node/operating.mjs",
-  "/bindings/node/operating.d.mts",
-  "/generated/workspace/typescript",
+  "/bindings/python",
+  "/bindings/node",
+  "/generated/workspace/typescript/package.json",
+  "/generated/workspace/typescript/src/native",
   "/scripts/release/stage_native_npm.py",
   "/Cargo.toml",
   "/Cargo.lock",
   "/crates",
-  "/generated/workspace/python",
   "/README.md",
-  "/generated/memory/python/generated_command_adapters.json",
-  "/generated/planning/python/generated_command_adapters.json",
-  "/generated/workspace/python/generated_command_adapters.json",
-  "/generated/workspace/python/__init__.py",
-  "/generated/workspace/python/cli.py",
-  "/generated/workspace/python/command_package.json",
-  "/generated/workspace/python/adapter_commands.json",
-  "/generated/workspace/python/operations",
-  "/generated/workspace/python/commands",
-  "/generated/workspace/python/primitives",
-  "/generated/workspace/python/_contracts",
-  "/src/agentic_workspace",
-  "/tests",
+  "/LICENSE",
+  "/src/agentic_workspace/decision.py",
+  "/src/agentic_workspace/native_core.py",
+  "/src/agentic_workspace/cli.py",
+  "/src/agentic_workspace/contracts",
+  "/src/agentic_workspace/_payload",
 ]
 
 [tool.pytest.ini_options]

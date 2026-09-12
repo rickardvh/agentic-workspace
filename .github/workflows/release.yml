@@ -91,8 +91,10 @@ jobs:
         run: |
           uv lock --check
           uv sync --locked --all-groups
-          uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
-          uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
+          uv build --wheel --sdist --out-dir runtime-dist
+          uv run python scripts/release/stage_native_npm.py --output runtime-npm --native-archive-dir runtime-dist
+          npm pack ./runtime-npm --pack-destination runtime-dist
+          uv run python scripts/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
       - name: Write runtime support receipt
         shell: bash
         run: |
@@ -102,7 +104,7 @@ jobs:
             --os "${{ matrix.os }}" \
             --python "${{ matrix.python }}" \
             --node "${{ matrix.node }}" \
-            --proof "runtime-specific path, subprocess, install, and generated semantic behavior" \
+            --proof "isolated native wheel, npm, paired archive and owner mutation on this runtime" \
             --output "runtime-receipts/${{ matrix.os }}-py${{ matrix.python }}-node${{ matrix.node }}.json"
       - name: Upload runtime support receipt
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -192,28 +194,17 @@ jobs:
           rm -rf dist
           mkdir -p dist
           uv build --wheel --sdist --out-dir dist
-          uv build --wheel --sdist --out-dir dist packages/memory
-          uv build --wheel --sdist --out-dir dist packages/planning
-          uv build --wheel --sdist --out-dir dist packages/verification
-          python scripts/release/patch_workspace_release_wheel.py \
-            --dist-dir dist \
-            --version "${RELEASE_TAG#v}" \
-            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
-          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm"
-          for package in generated/*/typescript; do
-            if [ "$package" = "generated/workspace/typescript" ]; then
-              (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
-            else
-              (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
-            fi
-          done
+          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
+          (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
           uv run python scripts/check/check_package_identity.py \
             --artifact-dir dist \
             --require-exact-urls \
             --write-receipts
 
       - name: Run built package smoke tests
-        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
+        env:
+          AW_NATIVE_ARTIFACT_DIR: dist
+        run: uv run pytest tests/test_native_release_topology.py -q
 
       - name: Generate release SBOM
         uses: anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638 # v0.24.1
@@ -246,7 +237,7 @@ jobs:
         run: |
           for runtime_major in 20 24 25; do
             receipt="dist/generated-command-conformance-node${runtime_major}.json"
-            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
+            uv run python scripts/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
           done
 
       - name: Generate checksums and release manifest
@@ -343,6 +334,11 @@ jobs:
                   }
               )
 
+          native_paths = list(dist.glob(f"agentic-workspace-native-{version}-*.zip"))
+          if len(native_paths) != 1:
+              raise SystemExit("Expected exactly one paired native archive")
+          native_archive = {"asset": native_paths[0].name, "sha256": sha256(native_paths[0])}
+          checksum_lines.append(f"{sha256(native_paths[0])}  {native_paths[0].name}")
           conformance_receipts = []
           expected_runtime_majors = ownership["semantic_conformance"]["runtime_majors"]
           for runtime_major in expected_runtime_majors:
@@ -388,6 +384,7 @@ jobs:
               "project_identity": ownership["project_identity"],
               "distribution_identity": ownership["distribution_identity"],
               "packages": package_entries,
+              "native_archive": native_archive,
               "command_generation": {
                   "dependency": command_generation_dependency,
                   "version": command_generation_version,
@@ -492,6 +489,10 @@ jobs:
           if semantic.get("required") is not True or len(semantic.get("receipts", [])) != len(ownership["semantic_conformance"]["runtime_majors"]):
               raise SystemExit("Release manifest is missing required semantic-conformance receipts")
           required_assets.update(receipt["asset"] for receipt in semantic["receipts"])
+          native = manifest["native_archive"]
+          required_assets.add(native["asset"])
+          if checksums.get(native["asset"]) != native["sha256"]:
+              raise SystemExit("Native archive manifest/checksum mismatch")
           for package in manifest["packages"]:
               if package.get("ecosystem") == "npm":
                   required_assets.add(package["tarball"]["asset"])
@@ -521,6 +522,7 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
             dist/*.tgz
+            dist/agentic-workspace-native-*.zip
             dist/generated-command-conformance-node*.json
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json

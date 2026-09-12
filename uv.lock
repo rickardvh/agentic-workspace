@@ -14,15 +14,12 @@ members = [
 name = "agentic-workspace"
 version = "0.51.0"
 source = { editable = "." }
-dependencies = [
-    { name = "agentic-workspace-memory" },
-    { name = "agentic-workspace-planning" },
-    { name = "agentic-workspace-verification" },
-    { name = "jsonschema" },
-]
 
 [package.dev-dependencies]
 dev = [
+    { name = "agentic-workspace-memory" },
+    { name = "agentic-workspace-planning" },
+    { name = "agentic-workspace-verification" },
     { name = "command-generation" },
     { name = "jsonschema" },
     { name = "pre-commit" },
@@ -35,15 +32,12 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "agentic-workspace-memory", editable = "packages/memory" },
-    { name = "agentic-workspace-planning", editable = "packages/planning" },
-    { name = "agentic-workspace-verification", editable = "packages/verification" },
-    { name = "jsonschema", specifier = ">=4.23" },
-]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "agentic-workspace-memory", editable = "packages/memory" },
+    { name = "agentic-workspace-planning", editable = "packages/planning" },
+    { name = "agentic-workspace-verification", editable = "packages/verification" },
     { name = "command-generation", git = "https://github.com/rickardvh/command-generation.git?rev=ac1b9c00bf41352010929de196e7d45e20014615" },
     { name = "jsonschema" },
     { name = "pre-commit" },

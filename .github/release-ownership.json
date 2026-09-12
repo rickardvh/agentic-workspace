@@ -24,7 +24,7 @@
     "digest_algorithm": "sha256",
     "mutable_branch_install_supported": false,
     "registry_resolution_supported": false,
-    "rule": "Support-bearing installs use the exact root wheel URL and digest recorded in the release receipt; coordinated module dependencies use same-release wheel URLs and digests. Preview installs use the same exact-asset model but are explicitly non-support-bearing."
+    "rule": "Support-bearing installs use one exact root wheel URL and digest; one npm artifact and paired native CLI/core carry the same Rust authority. Preview artifacts remain non-support-bearing."
   },
   "changeset_dir": ".release/changes",
   "release_notes_dir": ".release/releases",
@@ -44,9 +44,13 @@
   },
   "semantic_conformance": {
     "required_for_support_bearing_typescript_release": true,
-    "receipt_kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
-    "runtime_majors": [20, 24, 25],
-    "runner": "scripts/check/run_generated_command_package_proof.py --packed-conformance",
+    "receipt_kind": "agentic-workspace/native-release-conformance/v1",
+    "runtime_majors": [
+      20,
+      24,
+      25
+    ],
+    "runner": "scripts/check/check_native_release_topology.py",
     "failure_policy": "missing, stale, mismatched, failed, or unsupported receipts block publication"
   },
   "support_bearing_promotion": {
@@ -135,37 +139,10 @@
       "sdist_prefix": "agentic_workspace",
       "payload_schema": "agentic-workspace/payload/v1",
       "payload_provenance": ".agentic-workspace/payload-provenance.json",
-      "proof_commands": ["make test-workspace", "make lint-workspace"],
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-    },
-    {
-      "name": "agentic-workspace-memory",
-      "pyproject": "packages/memory/pyproject.toml",
-      "wheel_prefix": "agentic_workspace_memory",
-      "sdist_prefix": "agentic_workspace_memory",
-      "payload_schema": "agentic-memory/payload/v1",
-      "payload_provenance": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
-      "proof_commands": ["make test-memory", "make lint-memory"],
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-    },
-    {
-      "name": "agentic-workspace-planning",
-      "pyproject": "packages/planning/pyproject.toml",
-      "wheel_prefix": "agentic_workspace_planning",
-      "sdist_prefix": "agentic_workspace_planning",
-      "payload_schema": "agentic-planning/payload/v1",
-      "payload_provenance": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
-      "proof_commands": ["make test-planning", "make lint-planning", "make typecheck-planning"],
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-    },
-    {
-      "name": "agentic-workspace-verification",
-      "pyproject": "packages/verification/pyproject.toml",
-      "wheel_prefix": "agentic_workspace_verification",
-      "sdist_prefix": "agentic_workspace_verification",
-      "payload_schema": "agentic-workspace/verification-manifest/v1",
-      "payload_provenance": ".agentic-workspace/verification/manifest.toml",
-      "proof_commands": ["make test-verification", "make lint-verification"],
+      "proof_commands": [
+        "make test-workspace",
+        "make lint-workspace"
+      ],
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],
@@ -184,52 +161,99 @@
       "release_policy": "release-asset-only",
       "registry_status": "unpublished",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-    },
-    {
-      "name": "@agentic-workspace/memory-cli",
-      "package_json": "generated/memory/typescript/package.json",
-      "package_root": "generated/memory/typescript",
-      "tarball_prefix": "agentic-workspace-memory-cli",
-      "entrypoints": [
-        "agentic-memory"
-      ],
-      "python_package": "agentic-workspace-memory",
-      "runtime": "node",
-      "runtime_requirement": "node>=20",
-      "release_policy": "release-asset-only",
-      "registry_status": "unpublished",
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-    },
-    {
-      "name": "@agentic-workspace/planning-cli",
-      "package_json": "generated/planning/typescript/package.json",
-      "package_root": "generated/planning/typescript",
-      "tarball_prefix": "agentic-workspace-planning-cli",
-      "entrypoints": [
-        "agentic-planning"
-      ],
-      "python_package": "agentic-workspace-planning",
-      "runtime": "node",
-      "runtime_requirement": "node>=20",
-      "release_policy": "release-asset-only",
-      "registry_status": "unpublished",
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
-    },
-    {
-      "name": "@agentic-workspace/verification-cli",
-      "package_json": "generated/verification/typescript/package.json",
-      "package_root": "generated/verification/typescript",
-      "tarball_prefix": "agentic-workspace-verification-cli",
-      "entrypoints": [
-        "agentic-verification"
-      ],
-      "python_package": "agentic-workspace-verification",
-      "runtime": "node",
-      "runtime_requirement": "node>=20",
-      "release_policy": "release-asset-only",
-      "registry_status": "unpublished",
-      "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],
-  "version_floor_rule": "The next coordinated version must be greater than every shipped package version, every AW coordinated-release vMAJOR.MINOR.PATCH tag, and every preview-vMAJOR.MINOR.PATCH package identity; tags from other package domains do not set the AW release floor."
+  "version_floor_rule": "The next coordinated version must be greater than every shipped package version, every AW coordinated-release vMAJOR.MINOR.PATCH tag, and every preview-vMAJOR.MINOR.PATCH package identity; tags from other package domains do not set the AW release floor.",
+  "source_only_distributions": {
+    "typescript": [
+      {
+        "name": "@agentic-workspace/memory-cli",
+        "package_json": "generated/memory/typescript/package.json",
+        "package_root": "generated/memory/typescript",
+        "tarball_prefix": "agentic-workspace-memory-cli",
+        "entrypoints": [
+          "agentic-memory"
+        ],
+        "python_package": "agentic-workspace-memory",
+        "runtime": "node",
+        "runtime_requirement": "node>=20",
+        "release_policy": "release-asset-only",
+        "registry_status": "unpublished",
+        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      },
+      {
+        "name": "@agentic-workspace/planning-cli",
+        "package_json": "generated/planning/typescript/package.json",
+        "package_root": "generated/planning/typescript",
+        "tarball_prefix": "agentic-workspace-planning-cli",
+        "entrypoints": [
+          "agentic-planning"
+        ],
+        "python_package": "agentic-workspace-planning",
+        "runtime": "node",
+        "runtime_requirement": "node>=20",
+        "release_policy": "release-asset-only",
+        "registry_status": "unpublished",
+        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      },
+      {
+        "name": "@agentic-workspace/verification-cli",
+        "package_json": "generated/verification/typescript/package.json",
+        "package_root": "generated/verification/typescript",
+        "tarball_prefix": "agentic-workspace-verification-cli",
+        "entrypoints": [
+          "agentic-verification"
+        ],
+        "python_package": "agentic-workspace-verification",
+        "runtime": "node",
+        "runtime_requirement": "node>=20",
+        "release_policy": "release-asset-only",
+        "registry_status": "unpublished",
+        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      }
+    ],
+    "disposition": "Retained development and migration fixtures; not shipped or installed dependencies.",
+    "python": [
+      {
+        "name": "agentic-workspace-memory",
+        "pyproject": "packages/memory/pyproject.toml",
+        "wheel_prefix": "agentic_workspace_memory",
+        "sdist_prefix": "agentic_workspace_memory",
+        "payload_schema": "agentic-memory/payload/v1",
+        "payload_provenance": ".agentic-workspace/memory/UPGRADE-SOURCE.toml",
+        "proof_commands": [
+          "make test-memory",
+          "make lint-memory"
+        ],
+        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      },
+      {
+        "name": "agentic-workspace-planning",
+        "pyproject": "packages/planning/pyproject.toml",
+        "wheel_prefix": "agentic_workspace_planning",
+        "sdist_prefix": "agentic_workspace_planning",
+        "payload_schema": "agentic-planning/payload/v1",
+        "payload_provenance": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+        "proof_commands": [
+          "make test-planning",
+          "make lint-planning",
+          "make typecheck-planning"
+        ],
+        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      },
+      {
+        "name": "agentic-workspace-verification",
+        "pyproject": "packages/verification/pyproject.toml",
+        "wheel_prefix": "agentic_workspace_verification",
+        "sdist_prefix": "agentic_workspace_verification",
+        "payload_schema": "agentic-workspace/verification-manifest/v1",
+        "payload_provenance": ".agentic-workspace/verification/manifest.toml",
+        "proof_commands": [
+          "make test-verification",
+          "make lint-verification"
+        ],
+        "generated_command_contract": "agentic-workspace/command-package-ir/v1"
+      }
+    ]
+  }
 }

@@ -119,7 +119,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             _write(
                 dist / f"generated-command-conformance-node{major}.json",
                 {
-                    "kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
+                    "kind": "agentic-workspace/native-release-conformance/v1",
                     "status": "passed",
                     "subject": {"node_version": f"v{major}.0.0"},
                 },

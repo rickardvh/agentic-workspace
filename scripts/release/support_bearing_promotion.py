@@ -177,7 +177,7 @@ def _compose(args: argparse.Namespace) -> int:
 
     observed_node_majors = set()
     for path in args.semantic_receipt:
-        payload = require(path, "agentic-workspace/generated-command-semantic-conformance-receipt/v1", "passed")
+        payload = require(path, "agentic-workspace/native-release-conformance/v1", "passed")
         node_version = str(payload.get("subject", {}).get("node_version") or "")
         node_major = _node_major(node_version)
         if node_major is None:
@@ -203,7 +203,7 @@ def _compose(args: argparse.Namespace) -> int:
     declared_artifact_map = {
         str(item.get("name")): str(item.get("sha256")) for item in declared_artifacts if isinstance(item, dict) and item.get("name")
     }
-    distributable_suffixes = (".whl", ".tar.gz", ".tgz")
+    distributable_suffixes = (".whl", ".tar.gz", ".tgz", ".zip")
     actual_artifact_map = {
         path.name: hashlib.sha256(path.read_bytes()).hexdigest()
         for path in artifact_dir.iterdir()

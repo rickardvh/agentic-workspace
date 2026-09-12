@@ -85,6 +85,8 @@ def _write_preview_readiness_receipts(
             redistributable_artifacts.extend([package["wheel"], package["sdist"]])
         else:
             redistributable_artifacts.append(package["tarball"])
+    for archive in dist.glob("agentic-workspace-native-*.zip"):
+        redistributable_artifacts.append({"asset": archive.name, "sha256": _sha256(archive)})
     redistributable_artifacts = sorted(
         [{"name": item["asset"], "sha256": item["sha256"]} for item in redistributable_artifacts],
         key=lambda item: item["name"],
@@ -195,6 +197,12 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     )
     expected_assets.update({distribution_receipt, redistributable_receipt})
 
+    native_paths = list(dist.glob(f"agentic-workspace-native-{version}-*.zip"))
+    if len(native_paths) != 1:
+        raise SystemExit("Expected exactly one paired native archive")
+    native_archive = {"asset": native_paths[0].name, "sha256": _sha256(native_paths[0])}
+    expected_assets.add(native_paths[0].name)
+
     semantic_receipts: list[dict[str, Any]] = []
     for runtime_major in ownership["semantic_conformance"]["runtime_majors"]:
         receipt_path = dist / f"generated-command-conformance-node{runtime_major}.json"
@@ -202,7 +210,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
         subprocess.run(
             [
                 sys.executable,
-                str(ROOT / "scripts/check/run_generated_command_package_proof.py"),
+                str(ROOT / "scripts/check/check_native_release_topology.py"),
                 "--verify-receipt",
                 str(receipt_path),
                 "--artifact-dir",
@@ -261,6 +269,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
             "release_base_url": _preview_base_url(ownership, version),
         },
         "packages": package_entries,
+        "native_archive": native_archive,
         "preview_subject": {
             "metadata": verified["preview_metadata"],
             "release_note": verified["release_note"],

@@ -239,6 +239,10 @@ def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_di
                     required.add(item["asset"])
                     if entries.get(item["asset"]) != item["sha256"]:
                         raise SystemExit("Preview package manifest/checksum mismatch")
+        native = manifest["native_archive"]
+        required.add(native["asset"])
+        if entries.get(native["asset"]) != native["sha256"]:
+            raise SystemExit("Preview native archive manifest/checksum mismatch")
         required.update(item["asset"] for item in manifest["semantic_conformance"]["receipts"])
         if set(entries) != required:
             raise SystemExit("Preview checksum inventory does not cover the exact manifest assets")

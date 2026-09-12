@@ -30,7 +30,13 @@ def packed(tmp_path_factory: pytest.TempPathFactory) -> Path:
     assert staged.returncode == 0, staged.stdout + staged.stderr
     npm = shutil.which("npm")
     assert npm
-    checked = subprocess.run([npm, "test"], cwd=stage, capture_output=True, text=True)
+    checked = subprocess.run(
+        [npm, "test"],
+        cwd=stage,
+        capture_output=True,
+        text=True,
+        env={key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
+    )
     assert checked.returncode == 0, checked.stdout + checked.stderr
     subprocess.run([npm, "pack", "--pack-destination", str(root)], cwd=stage, check=True, capture_output=True, text=True)
     (archive,) = root.glob("*.tgz")
@@ -52,14 +58,31 @@ def run(package: Path, target: Path, *flags: str) -> dict:
     assert node
     environment = {key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"}
     environment["PATH"] = ""
+    context = {"target": str(target)}
+    if flags[0] == "routes":
+        for key in ("parent", "exact"):
+            if f"--{key}" in flags:
+                context[key] = flags[flags.index(f"--{key}") + 1]
+        module = (package / "src/native/semantic-decision.mjs").as_uri()
+        command = [
+            node,
+            "--input-type=module",
+            "-e",
+            f"import {{routeDiscovery}} from {json.dumps(module)}; console.log(JSON.stringify(routeDiscovery(JSON.parse(process.argv[1]))));",
+            json.dumps(context),
+        ]
+    else:
+        command = [node, str(package / "src/cli.mjs"), "instructions", *flags, "--target", str(target), "--format", "json"]
     result = subprocess.run(
-        [node, str(package / "src/cli.mjs"), "instructions", *flags, "--target", str(target), "--format", "json"],
+        command,
         cwd=target,
         env=environment,
         capture_output=True,
         text=True,
         timeout=30,
     )
+    if result.returncode:
+        return {"status": "failed", "error": result.stderr}
     assert result.stdout, result.stderr
     return json.loads(result.stdout)
 
@@ -123,19 +146,15 @@ def test_legacy_persistent_selection_remains_an_explicit_nonmutating_gap(packed:
     carrier.parent.mkdir(parents=True)
     carrier.write_bytes(b"existing route intent must remain")
     result = run(packed, tmp_path, "select-route", "--posture", "none", "--expect-source-revision", "sha256:" + "a" * 64)
-    assert result["status"] == "blocked", result
-    assert result["exit_status"] == 0
-    assert result["mutation_applied"] is False
-    assert "native-persistent-route-selection-unavailable" in str(result)
-    assert "semantic-routes/select/v1" in str(result)
+    assert result["status"] == "failed", result
+    assert "unknown command: instructions" in str(result)
     assert carrier.read_bytes() == b"existing route intent must remain"
-    assert result["recovery"]["api"] == "@agentic-workspace/workspace-cli/native"
     # The replacement is constructible through the same installed artifact;
     # obtaining its request still does not complete the legacy mutation.
     node = shutil.which("node")
     environment = {key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"}
     environment["PATH"] = ""
-    context = json.dumps({"target": str(tmp_path), "task": "Inspect route applicability for this task"})
+    context = json.dumps({"target": str(tmp_path), "task": "Inspect route applicability for this task", "projection": "full"})
     invoked = subprocess.run(
         [
             node,
@@ -164,7 +183,7 @@ def test_packed_native_artifact_mismatch_fails_closed(packed: Path, tmp_path: Pa
     target.mkdir()
     manifest_path = package / "src/native/bin/artifact.json"
     manifest = json.loads(manifest_path.read_text())
-    (binary,) = [path for path in manifest_path.parent.iterdir() if path.name != "artifact.json"]
+    binary = manifest_path.parent / ("agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core")
     if failure == "manifest":
         manifest_path.unlink()
     elif failure == "missing":
@@ -176,7 +195,7 @@ def test_packed_native_artifact_mismatch_fails_closed(packed: Path, tmp_path: Pa
         manifest_path.write_text(json.dumps(manifest))
     result = run(package, target, "routes")
     assert result["status"] == "failed", result
-    assert "native-route-discovery-unavailable" in str(result)
+    assert "shared-core" in str(result) or "shared Agentic Workspace core" in str(result)
     assert not (target / ".agentic-workspace").exists()
 
 

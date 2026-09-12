@@ -443,6 +443,9 @@ def test_existing_release_assets_are_idempotent_and_mismatches_fail_closed(tmp_p
             assets[name] = name.encode()
             entry[key] = {"asset": name, "sha256": hashlib.sha256(assets[name]).hexdigest()}
         manifest["packages"].append(entry)
+    native_name = "agentic-workspace-native-0.52.0-test.zip"
+    assets[native_name] = b"paired native archive"
+    manifest["native_archive"] = {"asset": native_name, "sha256": hashlib.sha256(assets[native_name]).hexdigest()}
     for major in ownership["semantic_conformance"]["runtime_majors"]:
         name = f"generated-command-conformance-node{major}.json"
         assets[name] = b"receipt"
