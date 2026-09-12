@@ -2,6 +2,7 @@ schema_version = 1
 
 [workspace]
 workflow_path = ".agentic-workspace/WORKFLOW.md"
+main_skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
 managed_root = ".agentic-workspace/"
 
@@ -35,7 +36,14 @@ uninstall_policy = "remove-managed-files-only"
 [[managed_surfaces]]
 module = "workspace"
 path = ".agentic-workspace/WORKFLOW.md"
-kind = "workflow-contract"
+kind = "compatibility-procedure-pointer"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+kind = "canonical-agent-procedure"
 ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
@@ -82,7 +90,7 @@ surface = "AGENTS.md"
 owner = "repo"
 ownership = "repo_owned"
 authority = "primary"
-summary = "Repo-level startup instructions and local operating constraints."
+summary = "Repo-level startup instructions and local operating constraints. The managed AW fence is only a bootstrap pointer to the canonical skill."
 
 [[authority_surfaces]]
 concern = "workspace-policy"
@@ -91,6 +99,14 @@ owner = "repo"
 ownership = "repo_owned"
 authority = "primary"
 summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
+
+[[authority_surfaces]]
+concern = "canonical-agent-procedure"
+surface = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Canonical reusable procedure for agents using Agentic Workspace; it does not own repo policy, domain state/evidence, or effect authority."
 
 [[authority_surfaces]]
 concern = "bounded-planning-continuity"
@@ -109,20 +125,12 @@ authority = "primary"
 summary = "Design tests for product-shape, ownership, and lifecycle changes."
 
 [[authority_surfaces]]
-concern = "shared-workflow-contract"
-surface = ".agentic-workspace/WORKFLOW.md"
-owner = "workspace"
-ownership = "module_managed"
-authority = "primary"
-summary = "Shared workflow rules installed by the workspace layer."
-
-[[authority_surfaces]]
 concern = "ownership-ledger"
 surface = ".agentic-workspace/OWNERSHIP.toml"
 owner = "workspace"
 ownership = "module_managed"
 authority = "primary"
-summary = "Ownership ledger for managed paths, fences, and authority surfaces."
+summary = "Ownership ledger and static read-only orientation map for managed paths, fences, and authority surfaces."
 
 [[authority_surfaces]]
 concern = "system-intent-mirror"
@@ -170,7 +178,7 @@ surface = "AGENTS.md#agentic-workspace:workflow"
 owner = "workspace"
 ownership = "managed_fence"
 authority = "fenced"
-summary = "Managed pointer block inside the repo-owned AGENTS file."
+summary = "Managed mixed-agent bootstrap pointer to the canonical AW skill; not a competing operating procedure."
 
 [[subsystems]]
 id = "planning-records"
@@ -221,4 +229,4 @@ proof = ["uv run pytest tests/test_external_agent_evaluation_lane.py -q"]
 escalate_when = ["scenario changes become formal benchmark policy", "provider instability is misclassified as product behavior"]
 
 [notes]
-purpose = "This file defines the workspace ownership ledger and authority map. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."
+purpose = "This file defines the workspace ownership ledger, static repository-readable orientation map, and authority boundaries. Installers should converge on this ledger instead of maintaining duplicated managed-path heuristics."
