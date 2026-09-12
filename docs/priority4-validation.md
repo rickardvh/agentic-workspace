@@ -111,6 +111,12 @@ stage the actual shipped roster, while a separate negative preserves rejection
 of historical provenance that omits new payload files. The repository's historical
 installation receipt is not rewritten or presented as a new installation.
 
+Review follow-through separates the satisfied check consequence from write
+protections on the same instruction. The regression uses current native command
+evidence across all four public interfaces, verifies a protected instruction write
+still fails, and verifies source drift restores the completion restriction. The
+full Priority 4 control suite passes after the fix (40 tests).
+
 The PR stays draft. Exact-candidate aggregate conformance and independent external
 acceptance remain separately owned under #3207/#2909; broader #2726 and #2334
 completion rules are not replaced by an implementation report.

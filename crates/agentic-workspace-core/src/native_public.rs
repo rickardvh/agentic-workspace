@@ -797,18 +797,24 @@ fn resolve_with_baseline(
                 .flatten()
                 .filter(|c| c["source"] == source["source"])
                 .collect();
-            if !checks.is_empty()
-                && checks.iter().all(|c| c["status"] == "current")
-                && source["metadata"]["protect"].as_array().unwrap().is_empty()
-            {
+            if !checks.is_empty() && checks.iter().all(|c| c["status"] == "current") {
                 let code = format!(
                     "instruction:{}:current-binding",
                     source["source"]["reference"].as_str().unwrap()
                 );
-                instructions["contribution"]["blockers"]
+                let blockers = instructions["contribution"]["blockers"]
                     .as_array_mut()
-                    .unwrap()
-                    .retain(|b| b["code"] != code);
+                    .unwrap();
+                for blocker in blockers.iter_mut().filter(|b| b["code"] == code) {
+                    // Current checks discharge only their claim consequence. Any
+                    // write protection in the same instruction remains binding.
+                    blocker["affects"]
+                        .as_array_mut()
+                        .unwrap()
+                        .retain(|scope| scope != "claim:complete");
+                }
+                blockers
+                    .retain(|b| b["code"] != code || !b["affects"].as_array().unwrap().is_empty());
             }
         }
         let reconciliation = crate::native_source_reconciliation::view(
