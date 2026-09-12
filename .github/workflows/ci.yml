@@ -71,6 +71,10 @@ jobs:
           uv run pytest tests/test_native_independent_owner.py \
             -k "independent_native_owner_discovery_request_action_result and json" \
             -q
+      - name: Verify bounded route registries and Unix confinement
+        run: |
+          cargo +stable test --locked -p agentic-workspace-core native_routes::
+          uv run pytest tests/test_native_former_routes.py -q
       - name: Preserve representative Planning custody
         run: >-
           uv run pytest tests/test_native_planning_create.py

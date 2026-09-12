@@ -31,89 +31,34 @@ fn linked(metadata: &cap_std::fs::Metadata) -> bool {
     }
 }
 
-fn discover(
+fn admit_registry(
     root: &Dir,
-    directory: &str,
+    components: &[&str],
     paths: &mut BTreeSet<String>,
-    depth: usize,
-    remaining: &mut usize,
 ) -> Result<(), CoreError> {
-    if depth > 64 {
-        return Err(error(
-            "route registry discovery exceeds 64 directory levels",
-        ));
-    }
-    let metadata = match root.symlink_metadata(directory) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == ErrorKind::NotFound => return Ok(()),
-        Err(failure) => {
-            return Err(error(format!(
-                "route registry directory {directory}: {failure}"
-            )));
-        }
-    };
-    if linked(&metadata) {
-        return Err(error(format!(
-            "route registry discovery refuses symlink directory {directory}"
-        )));
-    }
-    if !metadata.is_dir() {
-        return Err(error(format!(
-            "route registry directory is not a directory: {directory}"
-        )));
-    }
-    for entry in root.read_dir(directory).map_err(error)? {
-        *remaining = remaining
-            .checked_sub(1)
-            .ok_or_else(|| error("route registry discovery exceeds its bounded entry budget"))?;
-        let entry = entry.map_err(error)?;
-        let name = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| error("route registry path must be UTF-8"))?;
-        let path = format!("{directory}/{name}");
-        let metadata = root.symlink_metadata(&path).map_err(error)?;
-        if linked(&metadata) {
-            return Err(error(format!(
-                "route registry discovery refuses symlink {path}"
-            )));
-        }
-        if metadata.is_dir() {
-            discover(root, &path, paths, depth + 1, remaining)?;
-        } else if name == "REGISTRY.json" && directory.ends_with("/skills") {
-            if !metadata.is_file() {
-                return Err(error(format!(
-                    "route registry is not a regular file: {path}"
-                )));
-            }
-            paths.insert(path);
-        }
-    }
-    Ok(())
-}
-
-/// Match semantic_route_catalogue's current tools and workspace registry owners.
-/// Invalid declarations never degrade into an apparently empty current source.
-fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreError> {
-    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
-    let mut paths = BTreeSet::new();
-    // Check each parent without following links before admitting the direct source.
-    let direct = "tools/skills/REGISTRY.json";
-    for component in ["tools", "tools/skills", direct] {
+    let direct = *components.last().expect("registry source has a path");
+    for component in components {
         match root.symlink_metadata(component) {
             Ok(metadata) if linked(&metadata) => {
                 return Err(error(format!(
                     "route registry source refuses symlink {component}"
                 )));
             }
-            Ok(metadata) if component == direct => {
+            Ok(metadata) if *component == direct => {
                 if !metadata.is_file() {
-                    return Err(error("route registry is not a regular file"));
+                    return Err(error(format!(
+                        "route registry is not a regular file: {direct}"
+                    )));
                 }
                 paths.insert(direct.to_owned());
             }
+            Ok(metadata) if !metadata.is_dir() => {
+                return Err(error(format!(
+                    "route registry source parent is not a directory: {component}"
+                )));
+            }
             Ok(_) => {}
-            Err(error) if error.kind() == ErrorKind::NotFound => break,
+            Err(failure) if failure.kind() == ErrorKind::NotFound => return Ok(()),
             Err(failure) => {
                 return Err(error(format!(
                     "route registry source {component}: {failure}"
@@ -121,10 +66,55 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
             }
         }
     }
-    discover(&root, ".agentic-workspace", &mut paths, 0, &mut 16_384)?;
+    Ok(())
+}
+
+fn admit_required_registry(root: &Dir, path: &str) -> Result<(), CoreError> {
+    crate::decision_source::relative(path)?;
+    let parts: Vec<_> = path.split('/').collect();
+    if parts.len() > 64 {
+        return Err(error("route registry source exceeds 64 path levels"));
+    }
+    let parents: Vec<_> = (1..=parts.len()).map(|n| parts[..n].join("/")).collect();
+    let components: Vec<_> = parents.iter().map(String::as_str).collect();
+    let mut admitted = BTreeSet::new();
+    admit_registry(root, &components, &mut admitted)?;
+    if !admitted.contains(path) {
+        return Err(error(format!(
+            "required route registry unavailable: {path}"
+        )));
+    }
+    Ok(())
+}
+
+/// Match semantic_route_catalogue's current explicitly owned registry sources.
+/// Invalid declarations never degrade into an apparently empty current source.
+fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+    let mut paths = BTreeSet::new();
+    // These are source-owned registry roots. Unrelated files elsewhere in the
+    // workspace never become routing sources merely by being named REGISTRY.json.
+    admit_registry(
+        &root,
+        &["tools", "tools/skills", "tools/skills/REGISTRY.json"],
+        &mut paths,
+    )?;
+    admit_registry(
+        &root,
+        &[
+            ".agentic-workspace",
+            ".agentic-workspace/skills",
+            ".agentic-workspace/skills/REGISTRY.json",
+        ],
+        &mut paths,
+    )?;
     let mut declarations = BTreeMap::<String, Value>::new();
-    let mut material = Vec::new();
-    for path in paths {
+    let mut material = BTreeMap::new();
+    let mut pending = paths.clone();
+    while let Some(path) = pending.pop_first() {
+        if material.contains_key(&path) {
+            continue;
+        }
         let bytes = read(&root, &path)
             .map_err(|failure| error(format!("route registry {path}: {failure}")))?;
         let text = std::str::from_utf8(&bytes)
@@ -136,6 +126,30 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
         let object = payload
             .as_object()
             .ok_or_else(|| error(format!("invalid route registry object: {path}")))?;
+        if let Some(version) = object.get("schema_version")
+            && version != "skill-registry.v1"
+        {
+            return Err(error(format!("incompatible route registry: {path}")));
+        }
+        // Extension membership is declared by an already admitted source, never
+        // inferred from a module name or physical directory containment.
+        if let Some(sources) = object.get("registry_sources") {
+            let sources = sources
+                .as_array()
+                .ok_or_else(|| error(format!("invalid registry_sources in {path}")))?;
+            for source in sources {
+                let source = source
+                    .as_str()
+                    .ok_or_else(|| error(format!("invalid registry source in {path}")))?;
+                admit_required_registry(&root, source)?;
+                if paths.insert(source.to_owned()) {
+                    if paths.len() > 256 {
+                        return Err(error("route registry source set exceeds 256 sources"));
+                    }
+                    pending.insert(source.to_owned());
+                }
+            }
+        }
         let skills = match object.get("skills") {
             None => &[][..],
             Some(value) => value
@@ -143,7 +157,7 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
                 .ok_or_else(|| error(format!("invalid skills list in route registry {path}")))?
                 .as_slice(),
         };
-        material.push(format!("{path}\0{}", hash(text.as_bytes())));
+        material.insert(path.clone(), format!("{path}\0{}", hash(text.as_bytes())));
         for skill in skills {
             let skill = skill
                 .as_object()
@@ -221,7 +235,10 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
                 let mut source = json!({"source_ref":path,"skill_id":skill_id});
                 if let Some(procedure) = skill.get("path").and_then(Value::as_str) {
                     crate::decision_source::relative(procedure)?;
-                    let reference = format!("{}/{procedure}", path.rsplit_once('/').unwrap().0);
+                    let reference = match path.rsplit_once('/') {
+                        Some((parent, _)) => format!("{parent}/{procedure}"),
+                        None => procedure.to_owned(),
+                    };
                     source["procedure"] = match crate::native_planning::read(&root, &reference) {
                         Ok(Some(bytes)) => {
                             json!({"reference":reference,"revision":hash(&bytes),"status":"available"})
@@ -264,7 +281,7 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
         );
     }
     Ok(
-        json!({"revision":hash(material.join("\n").as_bytes()), "routes":declarations.into_values().collect::<Vec<_>>()}),
+        json!({"revision":hash(material.values().cloned().collect::<Vec<_>>().join("\n").as_bytes()), "sources":paths, "routes":declarations.into_values().collect::<Vec<_>>()}),
     )
 }
 
@@ -335,7 +352,7 @@ pub fn discovery(value: Value) -> Result<Value, CoreError> {
     };
     Ok(
         json!({"kind":"agentic-workspace/semantic-task-route-discovery/v1","operation_id":"instructions.routes","status":"current","level":level,"parent":parent,"exact":exact,
-        "source_revision":catalogue["revision"],"route_count":rows.len(),"routes":rows,"full_catalogue_emitted":!exact.is_empty(),"diagnostics":[],"authority_effect":"applicability-only"}),
+        "source_revision":catalogue["revision"],"sources":catalogue["sources"],"route_count":rows.len(),"routes":rows,"full_catalogue_emitted":!exact.is_empty(),"diagnostics":[],"authority_effect":"applicability-only"}),
     )
 }
 
@@ -502,24 +519,22 @@ mod tests {
     }
 
     #[test]
-    fn no_signal_and_lost_source_have_distinct_current_revisions() {
+    fn only_declared_registry_roots_affect_current_revision() {
         let target = Target::new();
         let empty = source(&target.0).unwrap();
         assert_eq!(empty["routes"], json!([]));
         target.write(
             ".agentic-workspace/module/skills/REGISTRY.json",
+            r#"{"skills":[{"id":"ignored","semantic_routes":["design/ignored"]}]}"#,
+        );
+        assert_eq!(source(&target.0).unwrap(), empty);
+        target.write(
+            ".agentic-workspace/skills/REGISTRY.json",
             r#"{"skills":[{"id":"example","semantic_routes":["design/public"]}]}"#,
         );
         let present = source(&target.0).unwrap();
         assert_eq!(present["routes"], json!(["design/public"]));
         assert_ne!(empty["revision"], present["revision"]);
-        fs::remove_file(
-            target
-                .0
-                .join(".agentic-workspace/module/skills/REGISTRY.json"),
-        )
-        .unwrap();
-        assert_eq!(source(&target.0).unwrap(), empty);
     }
 
     #[test]
@@ -537,51 +552,126 @@ mod tests {
         }
     }
 
+    #[test]
+    fn declared_custom_sources_are_current_required_and_explainable() {
+        let target = Target::new();
+        let registry = "custom/owner/routes.json";
+        target.write(
+            "tools/skills/REGISTRY.json",
+            &json!({"registry_sources":[registry]}).to_string(),
+        );
+        assert!(
+            source(&target.0)
+                .unwrap_err()
+                .to_string()
+                .contains("required route registry unavailable")
+        );
+        target.write(
+            registry,
+            r#"{"skills":[{"semantic_routes":["custom/first"]}]}"#,
+        );
+        let first = source(&target.0).unwrap();
+        assert_eq!(first["routes"], json!(["custom/first"]));
+        let detail = discovery(json!({"target":target.0,"exact":"custom/first"})).unwrap();
+        assert_eq!(
+            detail["sources"],
+            json!([registry, "tools/skills/REGISTRY.json"])
+        );
+        target.write(
+            registry,
+            r#"{"skills":[{"semantic_routes":["custom/second"]}]}"#,
+        );
+        assert_ne!(first["revision"], source(&target.0).unwrap()["revision"]);
+        fs::remove_file(target.0.join(registry)).unwrap();
+        assert!(source(&target.0).is_err());
+        target.write("tools/skills/REGISTRY.json", "{}");
+        assert_eq!(source(&target.0).unwrap()["routes"], json!([]));
+        for declaration in [
+            json!(["../escape.json"]),
+            json!(["/absolute.json"]),
+            json!([false]),
+            json!(false),
+        ] {
+            target.write(
+                "tools/skills/REGISTRY.json",
+                &json!({"registry_sources":declaration}).to_string(),
+            );
+            assert!(source(&target.0).is_err());
+        }
+    }
+
+    #[test]
+    fn declared_cycles_terminate_and_incompatible_sources_fail_closed() {
+        let target = Target::new();
+        target.write(
+            "tools/skills/REGISTRY.json",
+            r#"{"registry_sources":["custom.json"]}"#,
+        );
+        target.write(
+            "custom.json",
+            r#"{"registry_sources":["tools/skills/REGISTRY.json"],"skills":[]}"#,
+        );
+        assert_eq!(source(&target.0).unwrap()["routes"], json!([]));
+        target.write("custom.json", r#"{"schema_version":"future-version"}"#);
+        assert!(
+            source(&target.0)
+                .unwrap_err()
+                .to_string()
+                .contains("incompatible")
+        );
+    }
+
+    #[test]
+    fn unrelated_workspace_volume_and_links_do_not_participate_in_discovery() {
+        let target = Target::new();
+        target.write(
+            ".agentic-workspace/skills/REGISTRY.json",
+            r#"{"skills":[{"id":"example","semantic_routes":["design/public"]}]}"#,
+        );
+        for index in 0..16_500 {
+            target.write(
+                &format!(".agentic-workspace/local/scratch/{index}.json"),
+                "{}",
+            );
+        }
+        target.write(
+            ".agentic-workspace/local/scratch/nested/REGISTRY.json",
+            r#"{"skills":[{"semantic_routes":["design/foreign"]}]}"#,
+        );
+        target.write(
+            ".agentic-workspace/local/instructions/nested/skills/REGISTRY.json",
+            "invalid unrelated registry",
+        );
+        let result = source(&target.0).unwrap();
+        assert_eq!(result["routes"], json!(["design/public"]));
+    }
+
     #[cfg(unix)]
     #[test]
-    fn registry_discovery_does_not_follow_symlinks() {
+    fn unrelated_symlink_is_not_a_registry_source() {
         let target = Target::new();
         let outside = Target::new();
         outside.write(
             "skills/REGISTRY.json",
             r#"{"skills":[{"semantic_routes":["design/external"]}]}"#,
         );
-        fs::create_dir(target.0.join(".agentic-workspace")).unwrap();
-        std::os::unix::fs::symlink(&outside.0, target.0.join(".agentic-workspace/linked")).unwrap();
-        assert!(source(&target.0).is_err());
-    }
-    #[test]
-    fn registry_discovery_budgets_fail_instead_of_returning_partial_vocabulary() {
-        let target = Target::new();
-        target.write(
-            ".agentic-workspace/skills/REGISTRY.json",
-            r#"{"skills":[]}"#,
-        );
-        let root = Dir::open_ambient_dir(&target.0, ambient_authority()).unwrap();
-        assert!(discover(&root, ".agentic-workspace", &mut BTreeSet::new(), 0, &mut 0).is_err());
-        assert!(
-            discover(
-                &root,
-                ".agentic-workspace",
-                &mut BTreeSet::new(),
-                65,
-                &mut 16_384
-            )
-            .is_err()
-        );
+        fs::create_dir_all(target.0.join(".agentic-workspace/local")).unwrap();
+        std::os::unix::fs::symlink(&outside.0, target.0.join(".agentic-workspace/local/linked"))
+            .unwrap();
+        assert_eq!(source(&target.0).unwrap()["routes"], json!([]));
     }
 
     #[cfg(windows)]
     #[test]
-    fn registry_discovery_refuses_windows_junctions() {
+    fn unrelated_windows_junction_is_not_a_registry_source() {
         let target = Target::new();
         let outside = Target::new();
         outside.write(
             "skills/REGISTRY.json",
             r#"{"skills":[{"semantic_routes":["design/external"]}]}"#,
         );
-        fs::create_dir(target.0.join(".agentic-workspace")).unwrap();
-        let link = target.0.join(".agentic-workspace/linked");
+        fs::create_dir_all(target.0.join(".agentic-workspace/local")).unwrap();
+        let link = target.0.join(".agentic-workspace/local/linked");
         let result = std::process::Command::new("cmd")
             .args(["/c", "mklink", "/J"])
             .arg(link.to_string_lossy().replace('/', "\\"))
@@ -593,8 +683,7 @@ mod tests {
             "{}",
             String::from_utf8_lossy(&result.stderr)
         );
-        let rejected = source(&target.0);
+        assert_eq!(source(&target.0).unwrap()["routes"], json!([]));
         fs::remove_dir(link).unwrap();
-        assert!(rejected.is_err());
     }
 }

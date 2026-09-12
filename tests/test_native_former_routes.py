@@ -15,6 +15,34 @@ REFERENCE = Path(".agentic-workspace/local/current-task-routes.json")
 REGISTRY = Path("tools/skills/REGISTRY.json")
 
 
+@pytest.mark.parametrize("surface", ["native", "python", "typescript", "json"])
+def test_declared_custom_registry_is_shared_and_unrelated_state_is_ignored(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
+) -> None:
+    registry = tmp_path / REGISTRY
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"registry_sources": ["custom/routes.json"]}))
+    custom = tmp_path / "custom/routes.json"
+    custom.parent.mkdir()
+    custom.write_text(json.dumps({"skills": [{"semantic_routes": ["custom/first"]}]}))
+    context = {"target": str(tmp_path), "task": "Inspect custom routes"}
+    first = consume(surface, shared_core_binary, native_cli, context)
+    unrelated = tmp_path / ".agentic-workspace/local/scratch/nested/skills/REGISTRY.json"
+    unrelated.parent.mkdir(parents=True)
+    unrelated.write_text("not a registry source")
+    unchanged = consume(surface, shared_core_binary, native_cli, context)
+    assert unchanged["semantic_routes"] == first["semantic_routes"]
+    custom.write_text(json.dumps({"skills": [{"semantic_routes": ["custom/second"]}]}))
+    changed = consume(surface, shared_core_binary, native_cli, context)
+    assert (
+        changed["decision_packet"]["semantic_task_routes"]["source_revision"]
+        != first["decision_packet"]["semantic_task_routes"]["source_revision"]
+    )
+    custom.unlink()
+    with pytest.raises(AssertionError, match="required route registry unavailable"):
+        consume(surface, shared_core_binary, native_cli, context)
+
+
 def fixture(root: Path) -> tuple[dict, bytes]:
     text = (ROOT / REGISTRY).read_text(encoding="utf-8")
     registry = root / REGISTRY
