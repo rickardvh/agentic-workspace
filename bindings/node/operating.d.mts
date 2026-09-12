@@ -34,6 +34,7 @@ export interface ResourceInput {
     policy_revision?: string;
     policy_answer?: "permits-isolation";
     expected_revision?: string;
+    disposable_outputs?: ("target" | ".pytest_cache" | ".venv")[];
   };
 }
 export function resources(context: ResourceInput): JsonObject;

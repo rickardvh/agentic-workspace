@@ -15,6 +15,12 @@ Use this procedure for implementation, review, delegation or maintenance when te
 4. For isolation, read the proposal's current instruction sources and consequences. Supply the concrete `need` and `reason`, its exact `policy_revision`, and `policy_answer: permits-isolation` only if those sources permit the need. Do not invent consent or require the user to repeat an already available policy. A changed policy requires fresh judgment. If isolation is not necessary or permitted, continue in the existing checkout.
 5. Execute only the returned exact `action` through `resources`. It is bound to current source/policy/resource identity and confined to the declared operation/path. Missing binaries or a rejected current proposal are explicit gaps, not permission for an alternate cleanup script. An effect result is separate from continuation or whole-task completion.
 
+## Reproducible build output
+
+Before creating an isolated checkout used for build/test work, request `disposable_outputs` containing only the needed empty tool roots (`target`, `.pytest_cache`, `.venv`). The native owner rejects a root already present in the source tree, creates it empty and records its disposable lifetime in the existing Git registration. Use the returned `build_environment` for commands: Cargo and Python bytecode use the leased target root, and uv uses the leased virtual environment. Pytest's default root cache is covered when `.pytest_cache` is leased. Do not put required/user artifacts in leased tool roots; preserve them under their actual owner. An existing root cannot be retrospectively adopted during teardown. Without a creation lease, even a familiar ignored directory is unknown material and is preserved.
+
+Terminal cleanup removes only these creation-leased reproducible roots before removing the clean worktree. Unknown ignored paths, tracked files added under output roots, and current owner references still block removal. A failed cleanup reobserves the same registration and remaining roots; it does not recreate the checkout or erase unowned output.
+
 ## Work and terminal reconciliation
 
 Record the returned exact resource path in the current task context. Keep needed evidence under its responsible durable owner before disposing of temporary copies. Use `scratch-retain` with an explicit reason while interrupted material is needed, and `scratch-release` only after its disposition is settled. Owner references and retained material block scratch cleanup; reconcile through that owner instead of removing references to make cleanup pass.

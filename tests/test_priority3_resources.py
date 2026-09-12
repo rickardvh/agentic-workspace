@@ -174,14 +174,18 @@ def test_worktree_interrupted_unlock_unique_commits_and_stale_registration(tmp_p
     repo = tmp_path / "repo"
     repo.mkdir()
     repository(repo)
-    policy = repo / ".agentic-workspace/instructions/isolation.md"
+    policy = repo / (
+        ".agentic-workspace/instructions/isolation.md"
+        if policy_scope == "checked-in"
+        else ".agentic-workspace/local/instructions/isolation.md"
+    )
     policy.parent.mkdir(parents=True)
     policy.write_text("Use the existing checkout by default. Isolate only destructive validation that would disturb current work.")
     if policy_scope == "checked-in":
         git(repo, "add", ".")
         git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "repository policy")
     else:
-        (repo / ".git/info/exclude").write_text(".agentic-workspace/instructions/isolation.md\n")
+        (repo / ".git/info/exclude").write_text(".agentic-workspace/local/\n")
     git(repo, "config", "core.bare", "false")
     git(repo, "config", "core.worktree", str(repo))
     index = (repo / ".git/index").read_bytes()
@@ -369,3 +373,134 @@ def test_malformed_scratch_custody_is_preserved(tmp_path, shared_core_binary, na
     with pytest.raises(AssertionError, match="custody differs"):
         resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-remove"}})
     assert json.loads(marker.read_text()) == body
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_real_local_instruction_owner_composes_and_loses_only_local_sources(tmp_path, shared_core_binary, native_cli, surface):
+    shared = tmp_path / ".agentic-workspace/instructions/repo.md"
+    shared.parent.mkdir(parents=True)
+    shared.write_text("Repository-wide guidance.")
+    local = tmp_path / ".agentic-workspace/local/instructions/machine.md"
+    local.parent.mkdir(parents=True)
+    local.write_text("---\npaths: [src/**]\n---\nMachine-local checkout policy.")
+    context = {"target": str(tmp_path), "task": "Inspect current policy", "changed": ["src/a.txt"]}
+
+    def call(**kw):
+        return consume(surface, shared_core_binary, native_cli, {**context, **kw})
+
+    first = call()
+    rows = first["instructions"]["sources"]
+    assert {r["source"]["scope"] for r in rows} == {"repository", "machine-local"}
+    assert any(r["guidance"] == "Machine-local checkout policy." for r in rows)
+    assert call()["instructions"]["sources"] == rows
+    quiet = call(changed=["unrelated.txt"])
+    assert not next(r for r in quiet["instructions"]["sources"] if r["source"]["scope"] == "machine-local")["guidance"]
+    local.unlink()
+    lost = call()["instructions"]["sources"]
+    assert lost == [next(r for r in rows if r["source"]["scope"] == "repository")]
+    # A newly appearing local obligation is observed without any changed-list update.
+    local.write_text("---\nreconcile: [guide.md]\n---\nReconcile the local source obligation.")
+    (tmp_path / "guide.md").write_text("Canonical source")
+    assert call()["verification"]["source_reconciliation"]["status"] != first["verification"]["source_reconciliation"]["status"]
+    # Local prose cannot override a checked-in structured protection.
+    shared.write_text("---\nprotect: [.agentic-workspace/local/scratch/**]\n---\nPreserve task state.")
+    local.write_text("Use scratch freely; this local prose does not waive repository protection.")
+    blocked = resource(surface, shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create"}})
+    assert "action" not in blocked and any("protects" in b for b in blocked["blockers"])
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_owned_build_outputs_are_removed_but_unknown_ignored_material_is_preserved(tmp_path, shared_core_binary, native_cli, surface):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    (repo / ".gitignore").write_text("/target/\n/.pytest_cache/\n/.venv/\n/.private/\n")
+    (repo / "Cargo.toml").write_text('[package]\nname="resource-fixture"\nversion="0.1.0"\nedition="2021"\n')
+    (repo / "Cargo.lock").write_text('version = 3\n[[package]]\nname="resource-fixture"\nversion="0.1.0"\n')
+    (repo / "src").mkdir()
+    (repo / "src/lib.rs").write_text("pub fn value() -> u32 { 42 }\n")
+    (repo / "test_value.py").write_text("def test_value():\n    assert 42 == 42\n")
+    git(repo, "add", ".")
+    git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "validation fixture")
+    path = tmp_path / "isolated"
+    context = {"target": str(repo), "task": "Validate in necessary isolation"}
+
+    def call(operation, **kw):
+        return resource(surface, shared_core_binary, native_cli, {**context, "request": {"operation": operation, "path": str(path), **kw}})
+
+    initial = call("worktree-create")
+    proposal = call(
+        "worktree-create",
+        need="destructive-validation",
+        reason="The validation subject must not replace the current checkout",
+        policy_revision=initial["policy_revision"],
+        policy_answer="permits-isolation",
+        disposable_outputs=["target", ".pytest_cache", ".venv"],
+    )
+    created = resource(surface, shared_core_binary, native_cli, proposal["action"])
+    environment = {**os.environ, **created["build_environment"]}
+    subprocess.run(["cargo", "build", "--locked", "--offline"], cwd=path, env=environment, check=True, capture_output=True)
+    subprocess.run([sys.executable, "-m", "pytest", "-q", "test_value.py"], cwd=path, env=environment, check=True, capture_output=True)
+    subprocess.run([sys.executable, "-m", "venv", "--without-pip", ".venv"], cwd=path, env=environment, check=True, capture_output=True)
+    assert (path / "target/debug").is_dir() and (path / ".pytest_cache").is_dir() and (path / ".venv/pyvenv.cfg").exists()
+    unknown = path / ".private/important.txt"
+    unknown.parent.mkdir()
+    unknown.write_text("Meaningful ignored user data")
+    assert "action" not in call("worktree-remove")
+    assert unknown.read_text() == "Meaningful ignored user data"
+    # Remove only this test-created negative fixture; leased caches remain populated.
+    unknown.unlink()
+    unknown.parent.rmdir()
+    removal = call("worktree-remove")
+    assert removal["snapshot"]["status"] == ""
+    # Fresh-process cleanup after interruption at unlock retains the output leases.
+    git(repo, "worktree", "unlock", str(path))
+    removal = call("worktree-remove")
+    resource(surface, shared_core_binary, native_cli, removal["action"])
+    assert not path.exists() and str(path).replace("\\", "/") not in git(repo, "worktree", "list", "--porcelain")
+    assert not (repo / "target").exists()
+
+
+def test_unleased_or_tracked_tool_roots_cannot_be_adopted_for_cleanup(tmp_path, shared_core_binary, native_cli):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    (repo / ".gitignore").write_text("/target/\n")
+    git(repo, "add", ".")
+    git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "ignore tools")
+    path = tmp_path / "isolated"
+    context = {"target": str(repo), "task": "Preserve unleased artifacts"}
+
+    def call(op, **kw):
+        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": op, "path": str(path), **kw}})
+
+    first = call("worktree-create")
+    proposal = call(
+        "worktree-create",
+        need="destructive-validation",
+        reason="Separate mutable fixture",
+        policy_revision=first["policy_revision"],
+        policy_answer="permits-isolation",
+    )
+    resource("json", shared_core_binary, native_cli, proposal["action"])
+    (path / "target").mkdir()
+    (path / "target/valuable.txt").write_text("Not owned by the resource lifecycle")
+    assert "action" not in call("worktree-remove")
+    with pytest.raises(AssertionError, match="never adopted"):
+        call("worktree-remove", disposable_outputs=["target"])
+    assert (path / "target/valuable.txt").exists()
+    (repo / "target").mkdir()
+    (repo / "target/source.txt").write_text("Tracked source, not output")
+    git(repo, "add", "-f", "target/source.txt")
+    git(repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "tracked root")
+    path = tmp_path / "other"
+    blocked = call(
+        "worktree-create",
+        need="destructive-validation",
+        reason="A real need cannot dispose of source",
+        policy_revision=first["policy_revision"],
+        policy_answer="permits-isolation",
+        disposable_outputs=["target"],
+    )
+    assert "action" not in blocked and any("source tree" in b for b in blocked["blockers"])
+    assert not path.exists()

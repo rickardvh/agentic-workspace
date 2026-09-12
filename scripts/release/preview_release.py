@@ -22,12 +22,13 @@ def _run(
     *,
     cwd: Path = ROOT,
     check: bool = True,
+    environment: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(args, cwd=cwd, check=check, capture_output=True, text=True)
+    return subprocess.run(args, cwd=cwd, check=check, capture_output=True, text=True, env=environment)
 
 
-def _git(*args: str, cwd: Path = ROOT, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return _run(["git", *args], cwd=cwd, check=check)
+def _git(*args: str, cwd: Path = ROOT, check: bool = True, environment: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    return _run(["git", *args], cwd=cwd, check=check, environment=environment)
 
 
 def _resolve_commit(ref: str, *, cwd: Path = ROOT) -> str:
@@ -253,6 +254,7 @@ def _preview_isolation(tag: str, source_commit: str, policy_revision: str | None
         "task": f"Prepare immutable preview {tag}",
         "request": {
             "operation": "worktree-create",
+            "disposable_outputs": ["target", ".pytest_cache", ".venv"],
             "base": source_commit,
             "need": "destructive-validation",
             "reason": "Release normalization rewrites tracked versions while the reconstruction checkout must remain intact",
@@ -269,12 +271,12 @@ def _preview_isolation(tag: str, source_commit: str, policy_revision: str | None
     result = _resource(proposal["action"])
     if result.get("effect_outcome") != "committed":
         raise SystemExit("Preview isolation was not created: " + json.dumps(result))
-    return proposal["action"]
+    return {**proposal["action"], "build_environment": result["build_environment"]}
 
 
 def _finish_preview_isolation(context: dict[str, Any]) -> None:
     request = {"operation": "worktree-remove", "path": context["request"]["path"]}
-    proposal = _resource({**context, "request": request})
+    proposal = _resource({"target": context["target"], "task": context["task"], "changed": context["changed"], "request": request})
     if "action" not in proposal:
         raise SystemExit("Preview work preserved; reconcile the exact resource before teardown: " + json.dumps(proposal))
     result = _resource(proposal["action"])
@@ -320,6 +322,7 @@ def create_preview_subject(
     _assert_source_is_reconstruction_candidate(source_commit, remote=remote, reconstruction_ref=reconstruction_ref)
     isolation = _preview_isolation(tag, source_commit, isolation_policy_revision)
     worktree = Path(isolation["request"]["path"])
+    environment = {**os.environ, **isolation["build_environment"]}
     tag_created = False
     try:
         ownership = _load_ownership(worktree)
@@ -334,14 +337,15 @@ def create_preview_subject(
                 source_commit,
             ],
             cwd=worktree,
+            environment=environment,
         )
-        _run(["uv", "lock"], cwd=worktree)
-        _run([sys.executable, "scripts/generate/generate_external_consumer_profile.py"], cwd=worktree)
-        _run([sys.executable, "scripts/generate/generate_command_packages.py"], cwd=worktree)
+        _run(["uv", "lock"], cwd=worktree, environment=environment)
+        _run([sys.executable, "scripts/generate/generate_external_consumer_profile.py"], cwd=worktree, environment=environment)
+        _run([sys.executable, "scripts/generate/generate_command_packages.py"], cwd=worktree, environment=environment)
         changed = _verify_release_only_paths(worktree, ownership)
-        _git("diff", "--check", cwd=worktree)
-        _git("add", "--", *changed, cwd=worktree)
-        staged = _git("diff", "--cached", "--name-only", cwd=worktree).stdout.splitlines()
+        _git("diff", "--check", cwd=worktree, environment=environment)
+        _git("add", "--", *changed, cwd=worktree, environment=environment)
+        staged = _git("diff", "--cached", "--name-only", cwd=worktree, environment=environment).stdout.splitlines()
         if sorted(staged) != changed:
             raise SystemExit(f"Preview staged path mismatch: staged={sorted(staged)} expected={changed}")
         _git(
@@ -353,9 +357,10 @@ def create_preview_subject(
             "-m",
             f"Preview {tag} from {source_commit}",
             cwd=worktree,
+            environment=environment,
         )
         artifact_commit = _resolve_commit("HEAD", cwd=worktree)
-        _git("tag", "-a", tag, artifact_commit, "-m", f"Preview {tag}", cwd=worktree)
+        _git("tag", "-a", tag, artifact_commit, "-m", f"Preview {tag}", cwd=worktree, environment=environment)
         tag_created = True
         verified = json.loads(
             _run(
@@ -369,6 +374,7 @@ def create_preview_subject(
                     source_commit,
                 ],
                 cwd=worktree,
+                environment=environment,
             ).stdout
         )
         recovery = {}

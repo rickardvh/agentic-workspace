@@ -43,6 +43,8 @@ struct Request {
     policy_revision: Option<String>,
     policy_answer: Option<String>,
     expected_revision: Option<String>,
+    #[serde(default)]
+    disposable_outputs: Vec<String>,
 }
 fn linked(meta: &fs::Metadata) -> bool {
     if meta.file_type().is_symlink() {
@@ -350,12 +352,92 @@ fn worktrees(target: &Path, selected: &Path) -> Result<Vec<Value>, CoreError> {
     }
     Ok(rows)
 }
+// These are leases of empty tool-output roots, never a classification of arbitrary ignored files.
+fn output_roots(value: &Value) -> Result<Vec<String>, CoreError> {
+    let roots: Vec<String> = if value.is_null() {
+        vec![]
+    } else {
+        serde_json::from_value(value.clone()).map_err(err)?
+    };
+    let mut seen = std::collections::BTreeSet::new();
+    for root in &roots {
+        if !matches!(root.as_str(), "target" | ".pytest_cache" | ".venv") || !seen.insert(root) {
+            return Err(err(
+                "disposable output must be a distinct supported tool root: target, .pytest_cache or .venv",
+            ));
+        }
+    }
+    Ok(roots)
+}
+fn worktree_status(path: &Path, outputs: &[String]) -> Result<String, CoreError> {
+    let mut args = vec![
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=all",
+        "--ignored=matching",
+        "--",
+        ".",
+    ];
+    let exclusions: Vec<_> = outputs
+        .iter()
+        .map(|root| format!(":(exclude){root}"))
+        .collect();
+    for root in outputs {
+        unlinked(&path.join(root))?;
+        // A subsequent commit cannot silently turn a leased output root into deletable source.
+        if !git(path, &["ls-files", "--", root])?.trim().is_empty() {
+            return Err(err(
+                "tracked material occupies a disposable output root; preserve resource",
+            ));
+        }
+    }
+    args.extend(exclusions.iter().map(String::as_str));
+    let raw = git(path, &args)?;
+    // Git still reports explicitly ignored directories with --ignored=matching
+    // even when pathspecs exclude them. Filter only untracked/ignored entries
+    // inside the exact creation leases; NUL records avoid quoted-path ambiguity.
+    Ok(raw
+        .split('\0')
+        .filter(|record| !record.is_empty())
+        .filter(|record| {
+            let candidate = record
+                .strip_prefix("!! ")
+                .or_else(|| record.strip_prefix("?? "));
+            !candidate.is_some_and(|name| {
+                outputs
+                    .iter()
+                    .any(|root| name == root || name.starts_with(&format!("{root}/")))
+            })
+        })
+        .map(|record| format!("{record}\0"))
+        .collect())
+}
+fn build_environment(path: &Path, outputs: &[String]) -> Value {
+    let mut env = json!({});
+    if outputs.iter().any(|s| s == "target") {
+        env["CARGO_TARGET_DIR"] = json!(path.join("target"));
+        env["PYTHONPYCACHEPREFIX"] = json!(path.join("target/python-cache"));
+    } else {
+        env["PYTHONDONTWRITEBYTECODE"] = json!("1");
+    }
+    if outputs.iter().any(|s| s == ".venv") {
+        env["UV_PROJECT_ENVIRONMENT"] = json!(path.join(".venv"));
+    }
+    env
+}
 /// Read-only proposal first; effects require the exact freshly rederived revision.
 /// No generic cache, session or resource registry is created.
 pub fn view(value: Value) -> Result<Value, CoreError> {
     let input: Input = serde_json::from_value(value).map_err(err)?;
     let target = fs::canonicalize(&input.target).map_err(err)?;
     let request = &input.request;
+    let requested_outputs = output_roots(&json!(request.disposable_outputs))?;
+    if !requested_outputs.is_empty() && request.operation != "worktree-create" {
+        return Err(err(
+            "disposable outputs must be reserved at worktree creation, never adopted during cleanup",
+        ));
+    }
     if request.operation.ends_with("-create") && input.task.trim().is_empty() {
         return Err(err("resource creation requires explicit current work"));
     }
@@ -380,6 +462,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     let path: PathBuf;
     let mut registration = Value::Null;
     let mut seed = String::new();
+    let mut outputs = vec![];
     match request.operation.as_str() {
         "scratch-create" | "scratch-remove" | "scratch-retain" | "scratch-release" => {
             crate::decision_source::relative(relative)?;
@@ -474,6 +557,15 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             snapshot =
                 json!({"registration":registration,"exists":path.exists(),"origin_head":seed});
             if request.operation == "worktree-create" {
+                outputs = requested_outputs;
+                for output in &outputs {
+                    if !git(&target, &["ls-tree", "--name-only", &seed, "--", output])?
+                        .trim()
+                        .is_empty()
+                    {
+                        blockers.push("source tree already owns a requested disposable output root; preserve it");
+                    }
+                }
                 if !registration.is_null() || path.exists() {
                     blockers.push("destination already exists; inspect/recover it without creating another worktree");
                 }
@@ -497,6 +589,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     blockers.push("current instruction consequence requires explicit scoped isolation judgment");
                 }
             } else if !registration.is_null() {
+                outputs = output_roots(&registration["resource_custody"]["disposable_outputs"])?;
                 let lock = registration["locked"].as_str().unwrap_or("");
                 let prefix = format!("aw-resource:{}:", digest(&json!(target))?);
                 if !lock.starts_with(&prefix)
@@ -507,15 +600,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                         .push("registration is not owned by this supported lifecycle; preserve it");
                 }
                 if path.exists() {
-                    let status = git(
-                        &path,
-                        &[
-                            "status",
-                            "--porcelain=v1",
-                            "--untracked-files=all",
-                            "--ignored=matching",
-                        ],
-                    )?;
+                    let status = worktree_status(&path, &outputs)?;
                     snapshot["status"] = json!(status);
                     if !status.trim().is_empty() {
                         blockers.push("dirty/untracked/ignored material must be preserved or explicitly reconciled before teardown");
@@ -613,7 +698,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     static PRODUCER: std::sync::LazyLock<String> =
         std::sync::LazyLock::new(|| digest(&json!(include_str!("native_resources.rs"))).unwrap());
     let revision = digest(
-        &json!({"semantics":&*PRODUCER,"target":target,"task":input.task,"operation":request.operation,"path":path,"snapshot":snapshot,"policy":policy,"need":request.need,"reason":request.reason}),
+        &json!({"semantics":&*PRODUCER,"target":target,"task":input.task,"operation":request.operation,"path":path,"snapshot":snapshot,"policy":policy,"need":request.need,"reason":request.reason,"disposable_outputs":outputs}),
     )?;
     let mut next = request.clone();
     next.path = Some(if request.operation.starts_with("scratch") {
@@ -623,6 +708,10 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     });
     next.expected_revision = Some(revision.clone());
     let mut result = json!({"kind":"agentic-workspace/resource-proposal/v1","operation":request.operation,"path":path,"revision":revision,"policy":policy,"policy_revision":policy_revision,"blockers":blockers,"snapshot":snapshot,"effect_outcome":"not-invoked","recovery":"Reobserve this exact path from a fresh process; never create a replacement merely to clean up."});
+    if request.operation.starts_with("worktree") {
+        result["disposable_outputs"] = json!(outputs);
+        result["build_environment"] = build_environment(&path, &outputs);
+    }
     if !blockers.is_empty() {
         return Ok(result);
     }
@@ -741,27 +830,38 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             )?;
             let admin = PathBuf::from(git(&path, &["rev-parse", "--absolute-git-dir"])?.trim());
             unlinked(&admin)?;
+            let worktree = Dir::open_ambient_dir(&path, ambient_authority()).map_err(err)?;
+            for output in &outputs {
+                worktree.create_dir(output).map_err(err)?;
+            }
             fs::write(admin.join("aw-resource.json"), serde_json::to_vec(&json!({
                 "kind":"agentic-workspace/worktree-resource/v1", "origin":normalized_path(&target),
-                "path":normalized_path(&path),"baseline":seed,"task":input.task,"need":request.need,"reason":request.reason
+                "path":normalized_path(&path),"baseline":seed,"task":input.task,"need":request.need,"reason":request.reason,"disposable_outputs":outputs
             })).map_err(err)?).map_err(err)?;
         }
         "worktree-remove" if !registration.is_null() => {
             let p = path.to_str().ok_or_else(|| err("non-UTF8 path"))?;
             if path.exists() {
-                let status = git(
-                    &path,
-                    &[
-                        "status",
-                        "--porcelain=v1",
-                        "--untracked-files=all",
-                        "--ignored=matching",
-                    ],
-                )?;
+                let status = worktree_status(&path, &outputs)?;
                 let head = git(&path, &["rev-parse", "HEAD"])?;
                 if snapshot["status"] != status || snapshot["head"] != head {
                     return Err(err(
                         "worktree changed at teardown barrier; preserve exact resource and reobserve",
+                    ));
+                }
+            }
+            if path.exists() {
+                let worktree = Dir::open_ambient_dir(&path, ambient_authority()).map_err(err)?;
+                for output in &outputs {
+                    unlinked(&path.join(output))?;
+                    // Confined removal of only creation-leased reproducible output, regardless of byte volume.
+                    if path.join(output).exists() {
+                        worktree.remove_dir_all(output).map_err(err)?;
+                    }
+                }
+                if !worktree_status(&path, &[])?.trim().is_empty() {
+                    return Err(err(
+                        "new material appeared during output cleanup; preserve checkout and reobserve",
                     ));
                 }
             }
