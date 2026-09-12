@@ -165,16 +165,14 @@ fn action_selector(selector: &str) -> bool {
 }
 
 fn normalize_context(mut value: Value) -> Result<Value, CoreError> {
-    let object = value
-        .as_object_mut()
-        .ok_or_else(|| error("expected operating input object"))?;
+    if !value.is_object() {
+        return Err(error("expected operating input object"));
+    }
+    let target = value["target"]
+        .as_str()
+        .ok_or_else(|| error("target missing"))?;
     value["target"] = json!(
-        std::fs::canonicalize(
-            value["target"]
-                .as_str()
-                .ok_or_else(|| error("target missing"))?
-        )
-        .map_err(|e| error(&e.to_string()))?
+        std::fs::canonicalize(target).map_err(|e| error(&e.to_string()))?
     );
     if value.get("task").is_none() {
         value["task"] = json!("");
@@ -182,9 +180,9 @@ fn normalize_context(mut value: Value) -> Result<Value, CoreError> {
     if value.get("changed").is_none() {
         value["changed"] = json!([]);
     }
-    object.remove("invocation");
+    value.as_object_mut().unwrap().remove("invocation");
     if value["request"].is_null() {
-        object.remove("request");
+        value.as_object_mut().unwrap().remove("request");
     }
     Ok(value)
 }
@@ -472,6 +470,7 @@ fn project_start(full: Value, value: Value, projection: &Value) -> Result<Value,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
 
     fn temp_root(label: &str) -> PathBuf {
         let root = std::env::temp_dir().join(format!(
@@ -485,8 +484,6 @@ mod tests {
         std::fs::create_dir(&root).unwrap();
         root
     }
-
-    use std::path::PathBuf;
 
     #[test]
     fn compact_reference_reobserves_detail_without_carriage() {
