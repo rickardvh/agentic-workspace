@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": "./semantic-decision.mjs",
+  "exports": {".": "./semantic-decision.mjs", "./operating": "./operating.mjs"},
   "engines": {"node": ">=20"},
   "scripts": {"test": "node --test test/semantic-decision.test.mjs"}
 }

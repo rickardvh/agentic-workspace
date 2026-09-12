@@ -37,6 +37,30 @@ obtaining that text needs no preparatory detail fetch.
 
 ## Thin host carriage
 
+A compact `detail_refs` entry can also be used without a carrier: supply the
+same explicit target/task/changed/request context and `reference`. Rust freshly
+resolves the exact owner envelope. For a decision reference, add only `answer`
+(a returned choice or the bounded object admitted by the owner). Optional detail
+returns `authority: detail-only`; changing work or source identity rejects the
+old reference. No session or persistent reference registry is required.
+
+For a skill consuming these tools, keep the work context in host code, show the
+decision-bearing material, and supply the reference plus new judgment. Request
+`projection: carried` on the answer to retain the ensuing exact action for
+invocation. This avoids reconstructing immutable request fields. It does not
+authorize an automatic sequence of actions. Carried invocation goes directly
+to native effect admission, including structured stale rejection and recovery;
+it must not require the committed action to reappear in a fresh pre-effect view.
+
+Python exposes `agentic_workspace.decision.select_reference(context, reference,
+answer=...)`. Node/TypeScript exposes `selectReference(context, reference,
+answer)` from the package's `./operating` export, together with `start`, `invoke`,
+`answerCarried`, and `invokeCarried`. The adjacent `.d.mts` file describes JSON
+transport inputs; owner-specific result material remains open JSON. Helpers copy
+the supplied context, retain no session, and forward validation to Rust. Omit
+the answer for detail; an explicitly supplied JSON null remains an answer and
+is validated by the owner rather than silently treated as absent.
+
 Post-effect continuation combines the incoming changed set with exact semantic
 source paths reported by the execution owner (`post_effect_changed_paths` on
 the internal native execution result). Configuration, Memory, source receipts,
