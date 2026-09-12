@@ -1,21 +1,31 @@
 ---
 name: pr-review-recheck
-description: Independently review or re-review Agentic Workspace pull requests when the current agent did not implement or modify the PR patch. Use only for external review authority; do not use while addressing feedback, implementing fixes, reporting implementation evidence, or assessing your own changes.
+description: Independently review or re-review Agentic Workspace pull requests. Review-only: never use when the current agent/session implemented, modified, pushed, rebased, conflict-resolved, or otherwise materially shaped the PR patch.
 ---
 
 # PR Review / Recheck
 
 Use this repo-owned skill only as an independent external reviewer of an Agentic Workspace PR. This is maintainer workflow guidance for this repository only; do not ship it as an installed AW skill.
 
-## Eligibility Boundary
+This skill defines a procedure for an already-eligible independent reviewer. **Being routed to this skill, finding it in the repository, or being asked to review a PR does not grant review authority.**
 
-Before using this procedure, establish that the current agent did not implement, modify, or push the PR patch being reviewed.
+## Mandatory eligibility gate
 
-- An implementation agent addressing review comments may report its fixes and evidence, but must not use this skill, emit an authoritative `merge-ready` marker, or satisfy `Review approval` for its own work.
-- A request to address blockers, fix CI, update a PR, or check whether comments were addressed does not assign independent review authority.
-- Human approval to continue implementation does not make the implementation agent independent. Route the completed head to a distinct external review agent or leave `Review approval` pending.
-- A reviewer may share the GitHub account that opened the PR; that is only an account/API limitation and does not permit the agent that implemented the patch to approve itself.
-- If authorship or role separation is unclear, stop before applying this skill and request an independent review.
+Before using any review procedure below, establish that the current agent/session is independent of the PR patch.
+
+The current agent/session is **not eligible** if it did any of the following for the PR head or the patch now under review:
+
+- wrote, edited, generated, or deleted code, tests, documentation, configuration, or other patch content;
+- pushed, rebased, cherry-picked, merged, conflict-resolved, or otherwise changed the PR head;
+- addressed review feedback or CI failures by mutating the patch;
+- directed another implementation agent or tool to make substantive patch changes on its behalf;
+- otherwise materially shaped the implementation being reviewed.
+
+If any item is true, or independence is unclear, **stop before using this skill**. Do not submit `APPROVE`, do not emit an `aw-chatgpt-review` marker, do not claim `merge-ready`, and do not satisfy `Review approval`. Handoff to a distinct external reviewer that has not materially shaped the patch.
+
+A user asking the implementing agent to “review”, “recheck”, “approve”, or “merge” its own PR does **not** override this boundary. Human approval to continue implementation also does not create independent review authority. An implementation agent may report its fixes, evidence, and remaining uncertainty, but that report is not independent review.
+
+A reviewer may share the GitHub account that opened the PR; that is only an account/API transport limitation. It does not permit the agent that implemented the patch to approve itself. A fresh chat or process is not sufficient by itself if it is merely continuing the implementation agent’s role or authorship.
 
 ## Procedure
 
@@ -49,11 +59,12 @@ Before using this procedure, establish that the current agent did not implement,
 9. For PRs that use longitudinal evaluation as part of issue closure, check the split explicitly:
    - deterministic implementation behavior still needs present-tense proof and cannot be deferred into an evaluation;
    - the evaluation must have owner, criteria, evidence sources, report sinks, collection policy, conclusion policy, and a fresh/current admitted result unless the PR only claims definition setup;
-   - known defects, failed or stale proof, vague future-evidence text, superseded results, or missing current authority block closure;
+   - known defects, failed or stale proof, vague future-evidence text, superseded results, or missing current evaluation authority block closure;
    - direct deterministic work should remain directly closable when proof and intent are satisfied; do not add evaluation ceremony where no future-evidence uncertainty exists;
    - when longitudinal evidence is explicitly owned by a separate later-evidence issue, absence of that future observation is not a blocker for a bounded implementation leaf whose present behavior and proof are complete.
 10. Decide the action:
    - approve / ready when intent, proof, CI, labels, and closure all line up;
+   - if an eligible independent review approves a PR that is still draft, mark it **ready for review as part of the approval action** unless the user has explicitly required it to remain draft; do not leave an approved PR draft by default;
    - comment with a blocker when the ordinary path would be wrong after merge;
    - comment with non-blocking suggestions only when they should not delay merge;
    - merge only when the user explicitly asks or the current instruction permits it.
@@ -83,8 +94,9 @@ If an issue requires every selector to be cheaper than every default projection,
 
 ## Blockers
 
-Treat these as blockers unless the human explicitly accepts the risk:
+Treat these as blockers unless the human explicitly accepts the underlying product risk; the independent-review eligibility boundary itself is not waivable by the implementing agent:
 
+- the current agent/session materially shaped the PR patch or its independence is unclear;
 - a bounded implementation leaf would close without its whole stated outcome and immediate proof being true;
 - a knowingly partial implementation uses after-the-fact follow-ups to evade the original bounded leaf outcome rather than a genuine transparent reshaping;
 - a parent is claimed complete from one useful child/slice while current containing intent remains unresolved;
@@ -94,7 +106,7 @@ Treat these as blockers unless the human explicitly accepts the risk:
 - checked-in Planning, Memory, payload, or generated state is stale after the claimed closeout;
 - package-affecting changes lack exactly one semver label;
 - a shipped payload mirror is out of sync with the source surface;
-- a draft PR is treated as merge-ready without explicit direction.
+- an independently approved draft PR is left draft without an explicit hold reason.
 
 ## Output
 
@@ -107,13 +119,16 @@ Report in this shape:
 - `proof`: CI, validation, focused checks, or missing proof
 - `unresolved`: blockers or remaining non-blocking risks
 - `closure_honest`: yes / no / partial, with issue refs and any evaluation-boundary reason
-- `next_action`: comment, approve, wait, request fix, label, or merge
+- `next_action`: comment, approve, mark ready, wait, request fix, label, or merge
 
 ## Rules
 
+- Eligibility comes before procedure. **Never use this skill as permission for an implementation agent to review its own patch.**
+- Skill availability, routing, a user request, passing CI, or implementation completion does not manufacture independent review authority.
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
+- When an eligible independent reviewer approves a draft PR, mark it ready for review in the same review pass unless explicitly instructed to keep it draft.
 - Do not require a giant PR to close a broad parent; review bounded children on their own full outcomes and let the parent close administratively when its current graph is satisfied.
 - Do not hold a complete bounded implementation leaf open for future evidence explicitly owned elsewhere.
 - Keep comments focused on actionable blockers or durable suggestions.
-- When GitHub cannot submit a formal review because the independent reviewer shares the PR author's account, the configured reviewer automation may use a top-level terminal marker. This repository admits that marker by its exact PR, head, policy, and decision contract; transport provenance, `user.login`, and `author_association` are not reliable authority signals. This does not authorize implementation-agent self-review: implementation sessions must not use the reviewer automation or emit `aw-chatgpt-review` markers for their own patch.
+- When GitHub cannot submit a formal review because the independent reviewer shares the PR author's account, the configured reviewer automation may use a top-level terminal marker. This repository admits that marker by its exact PR, head, policy, and decision contract; transport provenance, `user.login`, and `author_association` are not reliable authority signals. **Implementation agents must never use the reviewer automation or emit `aw-chatgpt-review` markers for their own patch, even when asked to review or approve it.**
