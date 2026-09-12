@@ -16,6 +16,11 @@ def route_discovery(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"native_route_discovery": context})
 
 
+def resources(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Bounded Rust-owned resource proposals and effects; no host policy reducer."""
+    return _request({"resources": context})
+
+
 def start(context: Mapping[str, Any]) -> dict[str, Any]:
     """Consume repository sources through the native public owner boundary."""
     return _request({"start": context})

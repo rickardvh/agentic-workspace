@@ -346,10 +346,7 @@ pub(crate) fn public_view(
 ) -> Result<Value, CoreError> {
     let mut view = resolve(target, changed, route)?;
     let revision = crate::digest(&view)?;
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let mut arguments = schema["$defs"]["memory_note_read_request"].clone();
     arguments["$schema"] = schema["$schema"].clone();
     let declaration = json!({"kind":"memory/read-current-note/v1", "result_kind":"agentic-memory/note-read-result/v1", "input_schema":arguments});

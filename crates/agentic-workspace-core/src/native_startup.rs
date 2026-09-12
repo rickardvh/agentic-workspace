@@ -107,10 +107,7 @@ pub(crate) fn view(
         .map_err(|e| CoreError::new(e.to_string()))?;
     let reference = configuration["agent_instructions_file"].as_str();
     let (source, revision) = observe(&root, configuration)?;
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let mut arguments = schema["$defs"]["system_intent_read_arguments"].clone();
     arguments["$schema"] = schema["$schema"].clone();
     let shape = json!({"kind":"startup-adapter/read-current-source/v1","result_kind":"agentic-workspace/startup-adapter-source-read/v1","input_schema":arguments});

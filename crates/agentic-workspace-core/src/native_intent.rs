@@ -126,10 +126,7 @@ pub(crate) fn view(
     let revision = digest(
         &json!({"declaration":declaration,"sources":sources,"interpretation":interpretation}),
     )?;
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let mut arguments = schema["$defs"]["system_intent_read_arguments"].clone();
     arguments["$schema"] = schema["$schema"].clone();
     let shape = json!({"kind":"system-intent/read-current-source/v1","result_kind":"agentic-workspace/system-intent-source-read/v1","input_schema":arguments});

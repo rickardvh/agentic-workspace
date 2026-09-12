@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import shutil
+import os
 import subprocess
 import sys
 import tempfile
@@ -22,12 +22,13 @@ def _run(
     *,
     cwd: Path = ROOT,
     check: bool = True,
+    environment: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(args, cwd=cwd, check=check, capture_output=True, text=True)
+    return subprocess.run(args, cwd=cwd, check=check, capture_output=True, text=True, env=environment)
 
 
-def _git(*args: str, cwd: Path = ROOT, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return _run(["git", *args], cwd=cwd, check=check)
+def _git(*args: str, cwd: Path = ROOT, check: bool = True, environment: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    return _run(["git", *args], cwd=cwd, check=check, environment=environment)
 
 
 def _resolve_commit(ref: str, *, cwd: Path = ROOT) -> str:
@@ -105,21 +106,9 @@ def _verify_existing_preview(tag: str, source_commit: str | None = None) -> dict
     artifact_commit = _tag_commit(tag)
     if artifact_commit is None:
         raise SystemExit(f"Preview tag {tag} does not exist")
-    temporary_root = Path(tempfile.mkdtemp(prefix="aw-preview-verify-"))
-    worktree = temporary_root / "subject"
-    try:
-        _git("worktree", "add", "--detach", str(worktree), artifact_commit)
-        # Use the invoking verifier, never execute code from an unverified tag.
-        previous_root = coordinated_release.ROOT
-        try:
-            coordinated_release.ROOT = worktree
-            return coordinated_release.verify_preview_release(_load_ownership(worktree), tag=tag, source_commit=source_commit)
-        finally:
-            coordinated_release.ROOT = previous_root
-    finally:
-        if worktree.exists():
-            _git("worktree", "remove", "--force", str(worktree), check=False)
-        shutil.rmtree(temporary_root, ignore_errors=True)
+    # Exact Git objects need no checkout, index mutation or temporary repository.
+    ownership = json.loads(_git("show", f"{artifact_commit}:.github/release-ownership.json").stdout)
+    return coordinated_release.verify_preview_release(ownership, tag=tag, source_commit=source_commit, artifact_commit=artifact_commit)
 
 
 def admit_preview_subject(*, tag: str, artifact_commit: str) -> dict[str, Any]:
@@ -249,6 +238,52 @@ def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_di
         return not release.get("draft") and all((downloaded / name).is_file() for name in required)
 
 
+def _resource(context: dict[str, Any]) -> dict[str, Any]:
+    """Thin transport to the same native resource owner used by agent skills."""
+    suffix = ".exe" if os.name == "nt" else ""
+    native = os.environ.get("AGENTIC_WORKSPACE_CORE_BINARY") or str(ROOT / f"target/debug/agentic-workspace-core{suffix}")
+    result = subprocess.run([native], input=json.dumps({"resources": context}), cwd=ROOT, text=True, capture_output=True)
+    if result.returncode:
+        raise SystemExit(f"Native resource owner unavailable or rejected the operation: {result.stderr or result.stdout}")
+    return json.loads(result.stdout)
+
+
+def _preview_isolation(tag: str, source_commit: str, policy_revision: str | None) -> dict[str, Any]:
+    context = {
+        "target": str(ROOT),
+        "task": f"Prepare immutable preview {tag}",
+        "request": {
+            "operation": "worktree-create",
+            "disposable_outputs": ["target", ".pytest_cache", ".venv"],
+            "base": source_commit,
+            "need": "destructive-validation",
+            "reason": "Release normalization rewrites tracked versions while the reconstruction checkout must remain intact",
+            "policy_revision": policy_revision,
+            "policy_answer": "permits-isolation" if policy_revision else None,
+        },
+    }
+    proposal = _resource(context)
+    if "action" not in proposal:
+        raise SystemExit(
+            "Preview isolation requires current policy judgment; read the returned sources and pass their exact "
+            "policy_revision with --isolation-policy-revision if they permit this concrete need:\n" + json.dumps(proposal)
+        )
+    result = _resource(proposal["action"])
+    if result.get("effect_outcome") != "committed":
+        raise SystemExit("Preview isolation was not created: " + json.dumps(result))
+    return {**proposal["action"], "build_environment": result["build_environment"]}
+
+
+def _finish_preview_isolation(context: dict[str, Any]) -> None:
+    request = {"operation": "worktree-remove", "path": context["request"]["path"]}
+    proposal = _resource({"target": context["target"], "task": context["task"], "changed": context["changed"], "request": request})
+    if "action" not in proposal:
+        raise SystemExit("Preview work preserved; reconcile the exact resource before teardown: " + json.dumps(proposal))
+    result = _resource(proposal["action"])
+    if result.get("effect_outcome") != "committed":
+        raise SystemExit("Preview cleanup requires exact recovery: " + json.dumps(result))
+
+
 def create_preview_subject(
     *,
     version: str,
@@ -256,6 +291,7 @@ def create_preview_subject(
     remote: str,
     reconstruction_ref: str,
     push: bool,
+    isolation_policy_revision: str | None = None,
 ) -> dict[str, Any]:
     version_obj = coordinated_release.Version.parse(version)
     tag = f"{coordinated_release.PREVIEW_TAG_PREFIX}{version_obj}"
@@ -284,11 +320,11 @@ def create_preview_subject(
 
     source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)
     _assert_source_is_reconstruction_candidate(source_commit, remote=remote, reconstruction_ref=reconstruction_ref)
-    temporary_root = Path(tempfile.mkdtemp(prefix="aw-preview-create-"))
-    worktree = temporary_root / "subject"
+    isolation = _preview_isolation(tag, source_commit, isolation_policy_revision)
+    worktree = Path(isolation["request"]["path"])
+    environment = {**os.environ, **isolation["build_environment"]}
     tag_created = False
     try:
-        _git("worktree", "add", "--detach", str(worktree), source_commit)
         ownership = _load_ownership(worktree)
         _run(
             [
@@ -301,14 +337,15 @@ def create_preview_subject(
                 source_commit,
             ],
             cwd=worktree,
+            environment=environment,
         )
-        _run(["uv", "lock"], cwd=worktree)
-        _run([sys.executable, "scripts/generate/generate_external_consumer_profile.py"], cwd=worktree)
-        _run([sys.executable, "scripts/generate/generate_command_packages.py"], cwd=worktree)
+        _run(["uv", "lock"], cwd=worktree, environment=environment)
+        _run([sys.executable, "scripts/generate/generate_external_consumer_profile.py"], cwd=worktree, environment=environment)
+        _run([sys.executable, "scripts/generate/generate_command_packages.py"], cwd=worktree, environment=environment)
         changed = _verify_release_only_paths(worktree, ownership)
-        _git("diff", "--check", cwd=worktree)
-        _git("add", "--", *changed, cwd=worktree)
-        staged = _git("diff", "--cached", "--name-only", cwd=worktree).stdout.splitlines()
+        _git("diff", "--check", cwd=worktree, environment=environment)
+        _git("add", "--", *changed, cwd=worktree, environment=environment)
+        staged = _git("diff", "--cached", "--name-only", cwd=worktree, environment=environment).stdout.splitlines()
         if sorted(staged) != changed:
             raise SystemExit(f"Preview staged path mismatch: staged={sorted(staged)} expected={changed}")
         _git(
@@ -320,9 +357,10 @@ def create_preview_subject(
             "-m",
             f"Preview {tag} from {source_commit}",
             cwd=worktree,
+            environment=environment,
         )
         artifact_commit = _resolve_commit("HEAD", cwd=worktree)
-        _git("tag", "-a", tag, artifact_commit, "-m", f"Preview {tag}", cwd=worktree)
+        _git("tag", "-a", tag, artifact_commit, "-m", f"Preview {tag}", cwd=worktree, environment=environment)
         tag_created = True
         verified = json.loads(
             _run(
@@ -336,6 +374,7 @@ def create_preview_subject(
                     source_commit,
                 ],
                 cwd=worktree,
+                environment=environment,
             ).stdout
         )
         recovery = {}
@@ -355,14 +394,15 @@ def create_preview_subject(
             _git("tag", "-d", tag, check=False)
         raise
     finally:
-        if worktree.exists():
-            _git("worktree", "remove", "--force", str(worktree), check=False)
-        shutil.rmtree(temporary_root, ignore_errors=True)
+        _finish_preview_isolation(isolation)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Create an immutable release-only preview subject without modifying the reconstruction branch."
+    )
+    parser.add_argument(
+        "--isolation-policy-revision", help="Exact current native resource policy read and judged to permit preview normalization isolation"
     )
     parser.add_argument("--version", help="Unused coordinated numeric package version, for example 0.52.0")
     parser.add_argument("--check-published", metavar="TAG")
@@ -406,6 +446,7 @@ def main(argv: list[str] | None = None) -> int:
         remote=args.remote,
         reconstruction_ref=args.reconstruction_ref,
         push=args.push,
+        isolation_policy_revision=args.isolation_policy_revision,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0

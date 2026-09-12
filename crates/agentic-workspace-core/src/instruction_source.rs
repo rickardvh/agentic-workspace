@@ -153,6 +153,29 @@ fn confined(root: &Dir, path: &str) -> Result<bool, CoreError> {
     Ok(true)
 }
 
+const DIRECTORIES: [&str; 2] = [
+    ".agentic-workspace/instructions",
+    ".agentic-workspace/local/instructions",
+];
+
+fn source_scope(reference: &str) -> Option<&'static str> {
+    DIRECTORIES
+        .iter()
+        .enumerate()
+        .find_map(|(index, directory)| {
+            reference
+                .strip_prefix(&format!("{directory}/"))
+                .filter(|name| !name.contains('/') && name.ends_with(".md") && *name != ".md")
+                .map(|_| {
+                    if index == 0 {
+                        "repository"
+                    } else {
+                        "machine-local"
+                    }
+                })
+        })
+}
+
 /// Current source syntax is advisory input. Only `view` admits snapshot-owned
 /// hard bindings; discovery never invents source authority or follows a link.
 pub(crate) fn current_document(
@@ -160,15 +183,9 @@ pub(crate) fn current_document(
     reference: &str,
     include_body: bool,
 ) -> Result<Value, CoreError> {
-    let name = reference
-        .strip_prefix(".agentic-workspace/instructions/")
-        .filter(|s| !s.contains('/') && s.ends_with(".md"))
-        .ok_or_else(|| {
-            CoreError::new("current instruction must name a direct scoped Markdown source")
-        })?;
-    if name == ".md" {
-        return Err(CoreError::new("instruction identity is empty"));
-    }
+    let scope = source_scope(reference).ok_or_else(|| {
+        CoreError::new("current instruction must name a direct scoped Markdown source")
+    })?;
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     if !confined(&root, reference)? {
@@ -178,37 +195,39 @@ pub(crate) fn current_document(
     }
     let bytes = read(&root, reference)?;
     let mut result = parsed(&bytes, include_body);
-    result["source"] = json!({"reference":reference,"revision":hash(&bytes)});
+    result["source"] = json!({"reference":reference,"revision":hash(&bytes),"scope":scope});
     Ok(result)
 }
 
 pub(crate) fn current_sources(target: &Path) -> Result<Vec<Value>, CoreError> {
-    const DIRECTORY: &str = ".agentic-workspace/instructions";
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
-    if !confined(&root, DIRECTORY)? {
-        return Ok(vec![]);
-    }
     let mut paths = Vec::new();
-    for (index, entry) in root
-        .read_dir(DIRECTORY)
-        .map_err(|e| CoreError::new(e.to_string()))?
-        .enumerate()
-    {
-        if index >= 256 {
-            return Err(CoreError::new(
-                "instruction directory exceeds bounded discovery (256 entries)",
-            ));
+    let mut entries = 0;
+    for directory in DIRECTORIES {
+        if !confined(&root, directory)? {
+            continue;
         }
-        let entry = entry.map_err(|e| CoreError::new(e.to_string()))?;
-        let name = entry
-            .file_name()
-            .into_string()
-            .map_err(|_| CoreError::new("instruction filename must be UTF-8"))?;
-        if name.ends_with(".md") {
-            paths.push(format!("{DIRECTORY}/{name}"));
-            if paths.len() > 64 {
-                return Err(CoreError::new("select at most 64 instruction sources"));
+        for entry in root
+            .read_dir(directory)
+            .map_err(|e| CoreError::new(e.to_string()))?
+        {
+            entries += 1;
+            if entries > 256 {
+                return Err(CoreError::new(
+                    "instruction directories exceed bounded discovery (256 entries)",
+                ));
+            }
+            let entry = entry.map_err(|e| CoreError::new(e.to_string()))?;
+            let name = entry
+                .file_name()
+                .into_string()
+                .map_err(|_| CoreError::new("instruction filename must be UTF-8"))?;
+            if name.ends_with(".md") {
+                paths.push(format!("{directory}/{name}"));
+                if paths.len() > 64 {
+                    return Err(CoreError::new("select at most 64 instruction sources"));
+                }
             }
         }
     }
@@ -253,10 +272,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             ));
         }
         relative(&source)?;
-        if !source.starts_with(".agentic-workspace/instructions/")
-            || !source.ends_with(".md")
-            || !seen.insert(source.clone())
-        {
+        if source_scope(&source).is_none() || !seen.insert(source.clone()) {
             return Err(CoreError::new(
                 "instruction source must be a unique exact scoped Markdown path",
             ));
@@ -265,7 +281,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         if !revision.is_empty() && !snapshot_available {
             row["status"] = json!("unavailable");
         }
-        if snapshot_available {
+        if snapshot_available && source_scope(&source) == Some("repository") {
             let snapshot = Command::new("git")
                 .arg("-C")
                 .arg(&input.target)

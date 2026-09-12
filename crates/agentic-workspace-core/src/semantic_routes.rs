@@ -31,10 +31,7 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
         .as_object_mut()
         .unwrap()
         .remove("semantic_task_routes");
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let mut requests = Vec::new();
     for (kind, definition) in [
         ("semantic-routes/discover/v1", "semantic_route_discovery"),

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Share immutable source derivation, suppress already delivered current prose, and manage bounded task scratch and necessary worktrees through one native lifecycle."
+issues = [3207, 2981, 2661, 2606, 3220, 3221]

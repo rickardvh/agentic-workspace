@@ -41,6 +41,7 @@
     "admission": "Digest is identity, not authority. Rust reobserves questions/detail and executes exact actions through current native admission.",
     "bounded_answer": "Fill only the absent answer slot of the exact current selected decision; preserve every supplied owner argument.",
     "context": "Carry unchanged target/task/changed/request; explicit differences require fresh start.",
+    "source_delivery": "Optional delivered refs suppress only exact unchanged source prose after fresh owner resolution. delivery_refs bind work, source material and producing implementation. They never acknowledge understanding, reconciliation, proof or effects.",
     "recovery": "Unknown, changed or lost carriage requires fresh source-owner resolution; no durable registry."
   },
   "capability_ownership": {
@@ -54,6 +55,12 @@
     "executable": "agentic-workspace",
     "help_flag": "--help",
     "commands": [
+      {
+        "name": "resources",
+        "description": "Inspect local hygiene or propose/execute one current scratch/worktree resource operation.",
+        "input_field": "request",
+        "input_required": true
+      },
       {
         "name": "start",
         "description": "Resolve the current operating decision.",
@@ -111,6 +118,12 @@
         "flag": "--answer",
         "field": "answer",
         "description": "JSON bounded answer for an exact carried decision reference; all owner material remains unchanged."
+      },
+      {
+        "flag": "--delivered",
+        "field": "delivered",
+        "multiple": true,
+        "description": "Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations."
       },
       {
         "flag": "--input",

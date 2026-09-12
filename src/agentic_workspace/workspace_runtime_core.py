@@ -8563,6 +8563,112 @@ kind = "module-root"
 ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/instructions/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/effects/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "planning"
+path = ".agentic-workspace/local/planning/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "memory"
+path = ".agentic-workspace/local/memory/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "verification"
+path = ".agentic-workspace/local/proof/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "verification"
+path = ".agentic-workspace/local/proof-receipts/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/decision-point-intent/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/current-task-routes.json"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/delegation-runs/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/patch-integrations/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "planning"
+path = ".agentic-workspace/local/work-threads/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "verification"
+path = ".agentic-workspace/local/independent-review-host-results/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/logs/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/session-logging/"
+kind = "structured-local-owner"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/local/scratch/"
+kind = "task-scratch"
+ownership = "module_managed"
+uninstall_policy = "preserve-current-owner-state"
+
 [[fences]]
 name = "workspace-workflow-pointer"
 module = "workspace"

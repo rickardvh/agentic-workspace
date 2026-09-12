@@ -46,10 +46,7 @@ fn fingerprint(value: &Value) -> bool {
 }
 
 pub fn view(input: Value) -> Result<Value, CoreError> {
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let mut shape = schema["$defs"]["task_judgment_input"].clone();
     shape["$schema"] = schema["$schema"].clone();
     crate::schema_validator(&shape, "task judgment")?
