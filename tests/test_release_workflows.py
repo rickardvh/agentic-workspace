@@ -84,12 +84,7 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     assert "other package domains do not set the AW release floor" in ownership["version_floor_rule"]
 
     package_names = [package["name"] for package in ownership["packages"]]
-    assert package_names == [
-        "agentic-workspace",
-        "agentic-workspace-memory",
-        "agentic-workspace-planning",
-        "agentic-workspace-verification",
-    ]
+    assert package_names == ["agentic-workspace"]
     for package in ownership["packages"]:
         assert package["pyproject"]
         assert package["wheel_prefix"]
@@ -99,12 +94,7 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
         assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
 
     typescript_package_names = [package["name"] for package in ownership["typescript_packages"]]
-    assert typescript_package_names == [
-        "@agentic-workspace/workspace-cli",
-        "@agentic-workspace/memory-cli",
-        "@agentic-workspace/planning-cli",
-        "@agentic-workspace/verification-cli",
-    ]
+    assert typescript_package_names == ["@agentic-workspace/workspace-cli"]
     for package in ownership["typescript_packages"]:
         package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
         assert package_json["name"] == package["name"]
@@ -272,11 +262,11 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "must point at a commit reachable from origin/master" in workflow
     assert 'coordinated_release.py verify --tag "${RELEASE_TAG}"' in workflow
     assert "uv build --wheel --sdist --out-dir dist" in workflow
-    assert "uv build --wheel --sdist --out-dir dist packages/memory" in workflow
-    assert "uv build --wheel --sdist --out-dir dist packages/planning" in workflow
-    assert "uv build --wheel --sdist --out-dir dist packages/verification" in workflow
-    assert "scripts/release/patch_workspace_release_wheel.py" in workflow
-    assert "release-asset-base-url" in workflow
+    assert "uv build --wheel --sdist --out-dir dist packages/memory" not in workflow
+    assert "uv build --wheel --sdist --out-dir dist packages/planning" not in workflow
+    assert "uv build --wheel --sdist --out-dir dist packages/verification" not in workflow
+    assert "scripts/release/patch_workspace_release_wheel.py" not in workflow
+    assert "release-asset-base-url" not in workflow
     assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in workflow
     assert 'node-version: "24"' in workflow
     assert "npm test && npm pack --pack-destination" in workflow
@@ -305,7 +295,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert 'python: "3.14"' in workflow
     assert 'python: "3.11"' in workflow
     assert 'python: "3.13"' in workflow
-    assert "windows-latest" in workflow
+    assert "windows-latest" not in workflow
     assert workflow.index("promotion-admission:") < workflow.index("contents: write")
 
 
@@ -391,7 +381,7 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     )
     assert "uv build --wheel --sdist --out-dir dist" in exhaustive
     assert "packed-artifact-conformance" in exhaustive
-    assert "windows-latest" in exhaustive
+    assert "windows-latest" not in exhaustive
     assert "cargo +stable test --workspace" in exhaustive
 
 
@@ -483,8 +473,8 @@ def test_release_runtime_matrix_fetches_history_for_retained_evidence_ancestry()
 
     assert "fetch-depth: 0" in runtime
     assert "uv run pytest tests -q" not in runtime
-    assert "tests/test_external_integration_boundary.py" in runtime
-    assert "test_install_survives_into_fresh_second_process" in runtime
+    assert "scripts/check/check_native_release_topology.py" in runtime
+    assert "--native-archive-dir runtime-dist" in runtime
 
 
 def test_release_model_ignores_tags_from_other_package_domains(monkeypatch) -> None:
