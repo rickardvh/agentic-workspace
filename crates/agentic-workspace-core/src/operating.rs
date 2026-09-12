@@ -150,7 +150,7 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     }
     Ok(json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":{"target":context["target"],"task":context["task"],"changed":context["changed"]},
-        "detail_rule":"Exact optional detail: use carried reference, or fresh start with projection full. Carriage grants no authority."}))
+        "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."}))
 }
 
 fn action_selector(selector: &str) -> bool {
@@ -164,8 +164,129 @@ fn action_selector(selector: &str) -> bool {
             })
 }
 
-/// Shared by JSON and all thin consumers. The optional carrier is disposable;
-/// native owners reconstruct and revalidate every selected envelope.
+fn normalize_context(mut value: Value) -> Result<Value, CoreError> {
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| error("expected operating input object"))?;
+    value["target"] = json!(
+        std::fs::canonicalize(
+            value["target"]
+                .as_str()
+                .ok_or_else(|| error("target missing"))?
+        )
+        .map_err(|e| error(&e.to_string()))?
+    );
+    if value.get("task").is_none() {
+        value["task"] = json!("");
+    }
+    if value.get("changed").is_none() {
+        value["changed"] = json!([]);
+    }
+    object.remove("invocation");
+    if value["request"].is_null() {
+        object.remove("request");
+    }
+    Ok(value)
+}
+
+fn select_entry(full: &Value, context: &Value, selected: &Value) -> Result<Value, CoreError> {
+    let mut matches: Vec<_> = entries(full, context)?
+        .into_iter()
+        .filter(|entry| entry["reference"] == *selected)
+        .collect();
+    if matches.len() != 1 {
+        return Err(error("unknown, ambiguous, or stale operating reference"));
+    }
+    let selected_entry = matches.remove(0);
+    let selector = selected_entry["selector"]
+        .as_str()
+        .ok_or_else(|| error("invalid selector"))?;
+    if json!(reference(
+        context,
+        selector,
+        &selected_entry["envelope"]
+    )?) != *selected
+    {
+        return Err(error("altered operating reference"));
+    }
+    Ok(selected_entry)
+}
+
+fn use_selected(
+    context: Value,
+    current: Value,
+    selected: Value,
+    selected_entry: Value,
+    answer: Option<Value>,
+    invoking: bool,
+    projection: &Value,
+) -> Result<Value, CoreError> {
+    let selector = selected_entry["selector"]
+        .as_str()
+        .ok_or_else(|| error("invalid selector"))?;
+    if current.pointer(selector) != Some(&selected_entry["envelope"]) {
+        return Err(error("operating reference stale or not owner-issued"));
+    }
+    if invoking {
+        if !action_selector(selector) || answer.is_some() {
+            return Err(error(
+                "invoke requires an exact owner-issued action reference without answer",
+            ));
+        }
+        let mut execution = context;
+        execution.as_object_mut().unwrap().remove("request");
+        execution["invocation"] = selected_entry["envelope"].clone();
+        // Native admission reobserves the execution snapshot; the reference is
+        // only immutable transport and never a grant.
+        return Ok(project_invocation(
+            native_public::invoke_operating(execution),
+            projection,
+        ));
+    }
+    if selector == "/decision_packet/decision_request" {
+        let answer = answer.ok_or_else(|| error("bounded answer required"))?;
+        if selected_entry["envelope"]["response_request"]["arguments"]
+            .get("answer")
+            .is_some()
+        {
+            return Err(error(
+                "owner already supplied answer; immutable material cannot be replaced",
+            ));
+        }
+        let answered = crate::answer_decision_value(json!({
+            "decision":current["decision_packet"],
+            "question":selected_entry["envelope"]["consequence_id"],
+            "answer":answer,
+            "capability_contract":current["capability_contract"]
+        }))?["request"]
+            .clone();
+        let mut next = context;
+        let mut requests = match next.get("request").filter(|v| !v.is_null()) {
+            Some(Value::Array(items)) => items.clone(),
+            Some(item) => vec![item.clone()],
+            None => vec![],
+        };
+        requests.retain(|request| {
+            !(request["owner"] == answered["owner"]
+                && request["request_kind"] == answered["request_kind"])
+        });
+        requests.push(answered);
+        next["request"] = json!(requests);
+        next["projection"] = projection.clone();
+        return operate(next, false);
+    }
+    if answer.is_some() || action_selector(selector) {
+        return Err(error(
+            "detail selection does not accept answers or invoke actions",
+        ));
+    }
+    Ok(
+        json!({"reference":selected,"selector":selector,"value":selected_entry["envelope"],"currentness":"reobserved","authority":"detail-only"}),
+    )
+}
+
+/// Shared by JSON and all thin consumers. References and the optional carrier
+/// are disposable; native owners reconstruct and revalidate every selection.
 pub fn start(value: Value) -> Result<Value, CoreError> {
     operate(value, false)
 }
@@ -194,134 +315,115 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
 }
 
 fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
-    let object = value
-        .as_object_mut()
-        .ok_or_else(|| error("expected operating input object"))?;
-    let projection = object.remove("projection").unwrap_or(json!("compact"));
+    let (projection, selected, answer) = {
+        let object = value
+            .as_object_mut()
+            .ok_or_else(|| error("expected operating input object"))?;
+        (
+            object.remove("projection").unwrap_or(json!("compact")),
+            object.remove("reference"),
+            object.remove("answer"),
+        )
+    };
     if ![json!("compact"), json!("full"), json!("carried")].contains(&projection) {
         return Err(error("unknown operating projection"));
     }
-    let selected = object.remove("reference");
-    let answer = object.remove("answer");
     let field = if invoking { "invocation" } else { "request" };
     if let Some(selected) = selected {
-        let carrier: Carriage = serde_json::from_value(
-            object
-                .remove(field)
-                .ok_or_else(|| error("carriage missing"))?,
-        )
-        .map_err(|_| error("invalid carriage"))?;
-        if carrier.kind != CARRIAGE {
-            return Err(error("unknown carriage kind"));
-        }
-        let context = carrier
-            .context
-            .as_object()
-            .ok_or_else(|| error("invalid carried context"))?;
-        if context
-            .keys()
-            .any(|key| !["target", "task", "changed", "request"].contains(&key.as_str()))
-        {
-            return Err(error("unknown carried context field"));
-        }
-        // Explicit context is either identical or rejected, never silently
-        // treated as a task switch. A new work context requires fresh start.
-        for (key, supplied) in object.iter() {
-            let normalized_target = if key == "target" {
-                Some(json!(
-                    std::fs::canonicalize(
-                        supplied.as_str().ok_or_else(|| error("invalid target"))?
-                    )
-                    .map_err(|e| error(&e.to_string()))?
-                ))
-            } else {
-                None
-            };
-            if context.get(key) != Some(normalized_target.as_ref().unwrap_or(supplied)) {
-                return Err(error("carriage work context changed"));
+        if value[field]["kind"] == CARRIAGE {
+            let carrier: Carriage = serde_json::from_value(
+                value
+                    .as_object_mut()
+                    .unwrap()
+                    .remove(field)
+                    .ok_or_else(|| error("carriage missing"))?,
+            )
+            .map_err(|_| error("invalid carriage"))?;
+            if carrier.kind != CARRIAGE {
+                return Err(error("unknown carriage kind"));
             }
-        }
-        let matches: Vec<_> = carrier
-            .envelopes
-            .iter()
-            .filter(|entry| entry["reference"] == selected)
-            .collect();
-        if matches.len() != 1 {
-            return Err(error("unknown or ambiguous carried reference"));
-        }
-        let selected_entry = matches[0];
-        let selector = selected_entry["selector"]
-            .as_str()
-            .ok_or_else(|| error("invalid selector"))?;
-        if json!(reference(
-            &carrier.context,
-            selector,
-            &selected_entry["envelope"]
-        )?) != selected
-        {
-            return Err(error("altered carried envelope"));
-        }
-        if invoking {
-            if !action_selector(selector) || answer.is_some() {
-                return Err(error(
-                    "invoke requires an exact carried action without answer",
-                ));
-            }
-            let mut execution = carrier.context.clone();
-            execution.as_object_mut().unwrap().remove("request");
-            execution["invocation"] = selected_entry["envelope"].clone();
-            // Existing native admission reobserves the execution snapshot and
-            // preserves replay/recovery; a carriage digest is not a grant.
-            return Ok(project_invocation(
-                native_public::invoke_operating(execution),
-                &projection,
-            ));
-        }
-        let current = native_public::start(carrier.context.clone())?;
-        if current.pointer(selector) != Some(&selected_entry["envelope"]) {
-            return Err(error("carried reference stale or not owner-issued"));
-        }
-        if selector == "/decision_packet/decision_request" {
-            let answer = answer.ok_or_else(|| error("bounded answer required"))?;
-            if selected_entry["envelope"]["response_request"]["arguments"]
-                .get("answer")
-                .is_some()
+            let carried_context = carrier
+                .context
+                .as_object()
+                .ok_or_else(|| error("invalid carried context"))?;
+            if carried_context
+                .keys()
+                .any(|key| !["target", "task", "changed", "request"].contains(&key.as_str()))
             {
-                return Err(error(
-                    "owner already supplied answer; immutable material cannot be replaced",
-                ));
+                return Err(error("unknown carried context field"));
             }
-            let answered =
-                crate::answer_decision_value(json!({"decision":current["decision_packet"],
-                "question":selected_entry["envelope"]["consequence_id"],"answer":answer,
-                "capability_contract":current["capability_contract"]}))?["request"]
-                    .clone();
-            let mut next = carrier.context.clone();
-            let mut requests = match next.get("request").filter(|v| !v.is_null()) {
-                Some(Value::Array(items)) => items.clone(),
-                Some(item) => vec![item.clone()],
-                None => vec![],
-            };
-            requests.retain(|request| {
-                !(request["owner"] == answered["owner"]
-                    && request["request_kind"] == answered["request_kind"])
-            });
-            requests.push(answered);
-            next["request"] = json!(requests);
-            next["projection"] = projection;
-            return operate(next, false);
+            // Explicit context is either identical or rejected, never silently
+            // treated as a task switch. A new work context requires fresh start.
+            for (key, supplied) in value.as_object().unwrap() {
+                let normalized_target = if key == "target" {
+                    Some(json!(
+                        std::fs::canonicalize(
+                            supplied.as_str().ok_or_else(|| error("invalid target"))?
+                        )
+                        .map_err(|e| error(&e.to_string()))?
+                    ))
+                } else {
+                    None
+                };
+                if carried_context.get(key) != Some(normalized_target.as_ref().unwrap_or(supplied)) {
+                    return Err(error("carriage work context changed"));
+                }
+            }
+            let matches: Vec<_> = carrier
+                .envelopes
+                .iter()
+                .filter(|entry| entry["reference"] == selected)
+                .collect();
+            if matches.len() != 1 {
+                return Err(error("unknown or ambiguous carried reference"));
+            }
+            let selected_entry = matches[0].clone();
+            let selector = selected_entry["selector"]
+                .as_str()
+                .ok_or_else(|| error("invalid selector"))?;
+            if json!(reference(
+                &carrier.context,
+                selector,
+                &selected_entry["envelope"]
+            )?) != selected
+            {
+                return Err(error("altered carried envelope"));
+            }
+            let current = native_public::start(carrier.context.clone())?;
+            return use_selected(
+                carrier.context,
+                current,
+                selected,
+                selected_entry,
+                answer,
+                invoking,
+                &projection,
+            );
         }
-        if answer.is_some() || action_selector(selector) {
+
+        // A compact reference is enough when the client can supply the same
+        // explicit work context. Re-resolve it now; no hidden carrier/session
+        // state and no caller-reconstructed immutable envelope are trusted.
+        if invoking && value.get("invocation").is_some_and(|v| !v.is_null()) {
             return Err(error(
-                "detail selection does not accept answers or invoke actions",
+                "reference invocation accepts work context, not a caller-built invocation",
             ));
         }
-        return Ok(
-            json!({"reference":selected,"selector":selector,"value":selected_entry["envelope"],"currentness":"reobserved","authority":"detail-only"}),
+        let context = normalize_context(value)?;
+        let current = native_public::start(context.clone())?;
+        let selected_entry = select_entry(&current, &context, &selected)?;
+        return use_selected(
+            context,
+            current,
+            selected,
+            selected_entry,
+            answer,
+            invoking,
+            &projection,
         );
     }
     if answer.is_some() {
-        return Err(error("answer requires exact carried reference"));
+        return Err(error("answer requires exact operating reference"));
     }
     if invoking {
         return Ok(project_invocation(
@@ -353,30 +455,11 @@ fn project_invocation(mut result: Value, projection: &Value) -> Value {
     result
 }
 
-fn project_start(full: Value, mut value: Value, projection: &Value) -> Result<Value, CoreError> {
+fn project_start(full: Value, value: Value, projection: &Value) -> Result<Value, CoreError> {
     if projection == "full" {
         return Ok(full);
     }
-    // Canonicalize target and defaults once so unchanged context is portable
-    // between processes without relying on the next process working directory.
-    value["target"] = json!(
-        std::fs::canonicalize(
-            value["target"]
-                .as_str()
-                .ok_or_else(|| error("target missing"))?
-        )
-        .map_err(|e| error(&e.to_string()))?
-    );
-    if value.get("task").is_none() {
-        value["task"] = json!("");
-    }
-    if value.get("changed").is_none() {
-        value["changed"] = json!([]);
-    }
-    value.as_object_mut().unwrap().remove("invocation");
-    if value["request"].is_null() {
-        value.as_object_mut().unwrap().remove("request");
-    }
+    let value = normalize_context(value)?;
     let view = compact(&full, &value, projection == "carried")?;
     if projection == "carried" {
         return Ok(
@@ -389,6 +472,50 @@ fn project_start(full: Value, mut value: Value, projection: &Value) -> Result<Va
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn temp_root(label: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "aw-operating-{label}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        root
+    }
+
+    use std::path::PathBuf;
+
+    #[test]
+    fn compact_reference_reobserves_detail_without_carriage() {
+        let root = temp_root("reference-detail");
+        let context = json!({"target":root,"task":"inspect current work","changed":[]});
+        let view = start(context.clone()).unwrap();
+        let selected = view["detail_refs"]["/current_work"].clone();
+        assert!(selected.is_string());
+
+        let detail = start(json!({
+            "target":context["target"],
+            "task":context["task"],
+            "changed":context["changed"],
+            "reference":selected
+        }))
+        .unwrap();
+        assert_eq!(detail["selector"], "/current_work");
+        assert_eq!(detail["currentness"], "reobserved");
+        assert_eq!(detail["authority"], "detail-only");
+
+        let stale = start(json!({
+            "target":context["target"],
+            "task":"different work",
+            "changed":context["changed"],
+            "reference":selected
+        }));
+        assert!(stale.is_err());
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn multiple_ready_actions_remain_exactly_constructible_without_detail() {
