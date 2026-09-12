@@ -171,9 +171,7 @@ fn normalize_context(mut value: Value) -> Result<Value, CoreError> {
     let target = value["target"]
         .as_str()
         .ok_or_else(|| error("target missing"))?;
-    value["target"] = json!(
-        std::fs::canonicalize(target).map_err(|e| error(&e.to_string()))?
-    );
+    value["target"] = json!(std::fs::canonicalize(target).map_err(|e| error(&e.to_string()))?);
     if value.get("task").is_none() {
         value["task"] = json!("");
     }
@@ -199,12 +197,7 @@ fn select_entry(full: &Value, context: &Value, selected: &Value) -> Result<Value
     let selector = selected_entry["selector"]
         .as_str()
         .ok_or_else(|| error("invalid selector"))?;
-    if json!(reference(
-        context,
-        selector,
-        &selected_entry["envelope"]
-    )?) != *selected
-    {
+    if json!(reference(context, selector, &selected_entry["envelope"])?) != *selected {
         return Err(error("altered operating reference"));
     }
     Ok(selected_entry)
@@ -363,7 +356,8 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
                 } else {
                     None
                 };
-                if carried_context.get(key) != Some(normalized_target.as_ref().unwrap_or(supplied)) {
+                if carried_context.get(key) != Some(normalized_target.as_ref().unwrap_or(supplied))
+                {
                     return Err(error("carriage work context changed"));
                 }
             }
@@ -386,6 +380,24 @@ fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
             )?) != selected
             {
                 return Err(error("altered carried envelope"));
+            }
+            // Exact carried invocations belong to native effect admission, which
+            // also owns committed replay and uncertain-effect recovery. A fresh
+            // pre-effect start may no longer return the original action after
+            // it committed; do not replace that disposition with a lookup error.
+            if invoking {
+                if !action_selector(selector) || answer.is_some() {
+                    return Err(error(
+                        "invoke requires an exact carried action without answer",
+                    ));
+                }
+                let mut execution = carrier.context;
+                execution.as_object_mut().unwrap().remove("request");
+                execution["invocation"] = selected_entry["envelope"].clone();
+                return Ok(project_invocation(
+                    native_public::invoke_operating(execution),
+                    &projection,
+                ));
             }
             let current = native_public::start(carrier.context.clone())?;
             return use_selected(
