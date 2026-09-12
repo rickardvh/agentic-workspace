@@ -96,6 +96,11 @@ export function invokeCarried(carriage, reference) {
   return request({invoke: {invocation: carriage, reference, projection: "carried"}});
 }
 
+export function selectReference(context, reference, ...answer) {
+  if (answer.length > 1) throw new TypeError("selectReference accepts one bounded answer");
+  return start({...context, reference, ...(answer.length ? {answer: answer[0]} : {})});
+}
+
 function request(payload) {
   const result = spawnSync(coreBinary(), [], {
     input: JSON.stringify(payload),

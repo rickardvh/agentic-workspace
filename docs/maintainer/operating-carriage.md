@@ -52,6 +52,15 @@ authorize an automatic sequence of actions. Carried invocation goes directly
 to native effect admission, including structured stale rejection and recovery;
 it must not require the committed action to reappear in a fresh pre-effect view.
 
+Python exposes `agentic_workspace.decision.select_reference(context, reference,
+answer=...)`. Node/TypeScript exposes `selectReference(context, reference,
+answer)` from the package's `./operating` export, together with `start`, `invoke`,
+`answerCarried`, and `invokeCarried`. The adjacent `.d.mts` file describes JSON
+transport inputs; owner-specific result material remains open JSON. Helpers copy
+the supplied context, retain no session, and forward validation to Rust. Omit
+the answer for detail; an explicitly supplied JSON null remains an answer and
+is validated by the owner rather than silently treated as absent.
+
 Post-effect continuation combines the incoming changed set with exact semantic
 source paths reported by the execution owner (`post_effect_changed_paths` on
 the internal native execution result). Configuration, Memory, source receipts,

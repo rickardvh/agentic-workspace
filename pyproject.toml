@@ -96,6 +96,8 @@ path = "hatch_build.py"
 include = [
   "/hatch_build.py",
   "/bindings/node/semantic-decision.mjs",
+  "/bindings/node/operating.mjs",
+  "/bindings/node/operating.d.mts",
   "/generated/workspace/typescript",
   "/scripts/release/stage_native_npm.py",
   "/Cargo.toml",

@@ -41,7 +41,11 @@ def test_skill_consumer_uses_compact_reference_and_new_answer_only(tmp_path, sha
     # The skill/host retains the explicit work and substantive proposal. It
     # supplies only a reference and judgment, not immutable owner identity.
     answered = consume(
-        surface, shared_core_binary, native_cli, {**context, "reference": selected, "answer": "authorize-write", "projection": "carried"}
+        surface,
+        shared_core_binary,
+        native_cli,
+        {**context, "reference": selected, "answer": "authorize-write", "projection": "carried"},
+        reference_helper=surface in {"python", "typescript"},
     )
     action = answered["view"]["decision_packet"]["primary_action"]
     result = consume(surface, shared_core_binary, native_cli, {"invocation": answered["carriage"], "reference": action["reference"]})

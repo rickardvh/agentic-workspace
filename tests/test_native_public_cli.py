@@ -117,7 +117,16 @@ def native_cli(shared_core_binary: Path) -> Path:
     return shared_core_binary.with_name("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
 
 
-def consume(surface: str, binary: Path, native: Path, context: dict, *, host_path: str = "", allow_failure: bool = False) -> dict:
+def consume(
+    surface: str,
+    binary: Path,
+    native: Path,
+    context: dict,
+    *,
+    host_path: str = "",
+    allow_failure: bool = False,
+    reference_helper: bool = False,
+) -> dict:
     context = {"projection": "full", **context}
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
@@ -143,6 +152,13 @@ def consume(surface: str, binary: Path, native: Path, context: dict, *, host_pat
             f"import json,sys; from agentic_workspace.decision import {verb}; print(json.dumps({verb}(json.load(sys.stdin))))",
         ]
         stdin = encoded
+        if reference_helper:
+            command[-1] = (
+                "import json,sys; from agentic_workspace.decision import select_reference; "
+                "c=json.load(sys.stdin); r=c.pop('reference'); "
+                "a={'answer':c.pop('answer')} if 'answer' in c else {}; "
+                "print(json.dumps(select_reference(c,r,**a)))"
+            )
     else:
         module = (ROOT / "bindings/node/semantic-decision.mjs").as_uri()
         command = [
@@ -153,6 +169,14 @@ def consume(surface: str, binary: Path, native: Path, context: dict, *, host_pat
             f"console.log(JSON.stringify({verb}(JSON.parse(readFileSync(0, 'utf8')))));",
         ]
         stdin = encoded
+        if reference_helper:
+            module = (ROOT / "bindings/node/operating.mjs").as_uri()
+            command[-1] = (
+                f"import {{selectReference}} from {json.dumps(module)}; import {{readFileSync}} from 'node:fs'; "
+                "const c=JSON.parse(readFileSync(0,'utf8')); const r=c.reference; delete c.reference; "
+                "const a=Object.hasOwn(c,'answer')?[c.answer]:[]; delete c.answer; "
+                "console.log(JSON.stringify(selectReference(c,r,...a)));"
+            )
     environment = {**os.environ, "PATH": host_path} if surface == "native" else None
     result = subprocess.run(command, input=stdin, text=True, encoding="utf-8", capture_output=True, cwd=ROOT, check=False, env=environment)
     assert result.returncode == 0, result.stderr
