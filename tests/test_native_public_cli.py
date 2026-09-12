@@ -138,6 +138,8 @@ def consume(
         if "answer" in context:
             command += ["--answer", json.dumps(context["answer"])]
         command += ["--projection", context["projection"]]
+        for reference in context.get("delivered", []):
+            command += ["--delivered", reference]
         for path in context.get("changed", []):
             command += ["--changed", path]
         if context.get("request") or context.get("invocation"):

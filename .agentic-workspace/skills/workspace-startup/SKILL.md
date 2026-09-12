@@ -86,7 +86,7 @@ A missing, malformed, stale, or insufficient static surface is a reason to narro
 
 - Do not read broad module state just because a capability exists.
 - Do not create Planning, Memory, proof, handoff, or local scratch artifacts unless they have a real owner and future decision value.
-- Do not turn `.agentic-workspace/local/` or other package-owned roots into general scratch space.
+- Keep arbitrary temporary task material in bounded `.agentic-workspace/local/scratch/` containers; keep structured owner roots clean. Use the shared [task resource procedure](../workspace-resources/SKILL.md) for scratch or necessary isolation, including terminal cleanup and interrupted recovery.
 - Prefer the smallest sufficient query, skill, source read, or bounded operation.
 - Stronger future agents may use less procedure when they already know what is relevant; durable policy/currentness/authority boundaries still apply.
 

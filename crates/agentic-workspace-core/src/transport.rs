@@ -12,6 +12,11 @@ pub fn run_stdio() {
     let started = std::time::Instant::now();
     let result = if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("resources"))
+    {
+        crate::native_resources::view(request["resources"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("session_logging_policy"))
     {
         crate::maintainer_logging::policy(request["session_logging_policy"].clone())

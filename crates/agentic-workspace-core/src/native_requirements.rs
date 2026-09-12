@@ -4,10 +4,7 @@ use crate::{CoreError, digest, direct_task, task_requirements};
 use serde_json::{Value, json};
 
 pub(crate) fn contract() -> Result<Value, CoreError> {
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let arguments = json!({"$schema":schema["$schema"],"$defs":{
         "task_requirements_identity":schema["$defs"]["task_requirements_identity"],
         "task_requirements_judgment":schema["$defs"]["task_requirements_judgment"]},

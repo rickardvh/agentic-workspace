@@ -16,7 +16,8 @@
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-    ".agentic-workspace/system-intent/WORKFLOW.md"
+    ".agentic-workspace/system-intent/WORKFLOW.md",
+    ".agentic-workspace/skills/workspace-resources/SKILL.md"
   ],
   "necessary_surface_files": [
     ".agentic-workspace/WORKFLOW.md",
@@ -33,7 +34,8 @@
     ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
-    ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md"
+    ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+    ".agentic-workspace/skills/workspace-resources/SKILL.md"
   ],
   "necessary_surface_roots": [
     ".agentic-workspace/docs",
@@ -334,6 +336,16 @@
       "profiles": ["necessary-surfaces", "full-mirror"],
       "modules": ["verification"],
       "degraded_behavior": "Do not seed repo proof policy until the repo supplies a Verification strategy."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "target": ".agentic-workspace/skills/workspace-resources/SKILL.md",
+      "kind": "installed-local",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": []
     }
   ],
   "reference_discovery": {

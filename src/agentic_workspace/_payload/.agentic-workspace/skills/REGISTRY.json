@@ -164,6 +164,42 @@
           "mature repo discovery needs bounded pre-seed routing"
         ]
       }
+    },
+    {
+      "id": "workspace-resources",
+      "path": "workspace-resources/SKILL.md",
+      "scope": "specialized-subskill",
+      "stability": "package-managed",
+      "visibility": "routed-on-demand",
+      "summary": "Choose the smallest task resource and apply current instruction policy, bounded scratch or necessary isolation, safe terminal teardown and exact interrupted recovery.",
+      "semantic_routes": [
+        {
+          "id": "workspace/resources/lifecycle",
+          "match": "exact",
+          "priority": 10,
+          "description": "Manage temporary task material or necessary checkout isolation and safely reconcile its lifetime."
+        }
+      ],
+      "activation_hints": {
+        "verbs": [
+          "isolate",
+          "clean",
+          "recover"
+        ],
+        "nouns": [
+          "task scratch",
+          "worktree",
+          "temporary resources"
+        ],
+        "phrases": [
+          "necessary checkout isolation",
+          "task resource cleanup"
+        ],
+        "when": [
+          "temporary task material or isolated checkout has a real need",
+          "terminal or interrupted work owns disposable resources"
+        ]
+      }
     }
   ]
 }

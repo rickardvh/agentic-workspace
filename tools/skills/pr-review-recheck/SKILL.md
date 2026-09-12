@@ -41,6 +41,8 @@ A reviewer may share the GitHub account that opened the PR; that is only an acco
 
 ## Procedure
 
+For any checkout isolation or temporary review material, use the shared `.agentic-workspace/skills/workspace-resources/SKILL.md` lifecycle: check current necessity and instruction policy, prefer exact Git object reads, and reconcile clean resources or preserve dirty/unique work at termination. This does not change reviewer eligibility.
+
 1. Identify the PR's claimed intent:
    - PR title and body;
    - linked issue(s) and closure claims;

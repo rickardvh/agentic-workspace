@@ -21,10 +21,7 @@ pub fn subject(task: &str, paths: &[String]) -> Result<Value, CoreError> {
 }
 
 pub fn view(value: Value) -> Result<Value, CoreError> {
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let mut shape = schema["$defs"]["direct_task_subject_input"].clone();
     shape["$schema"] = schema["$schema"].clone();
     crate::schema_validator(&shape, "direct task subject")?

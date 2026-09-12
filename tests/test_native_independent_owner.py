@@ -308,3 +308,23 @@ def test_independent_result_enters_planning_only_through_responsible_owner(tmp_p
     admitted = call(invocation=owner_action)
     assert (tmp_path / admitted["value"]["owner_path"]).exists()
     assert admitted["custody"]["attempt"]["owner"] == "planning"
+
+
+def test_many_irrelevant_admissions_do_not_load_owner_detail(tmp_path, independent_binary, independent_cli):
+    context = setup(tmp_path, independent_binary, "fixture-lens")
+    context.update(changed=["unrelated.txt"], projection="compact")
+    quiet = consume("json", independent_binary, independent_cli, context)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    extra = "".join(
+        f'\n[modules.independent.unused-{i}]\nrevision="absent"\ncontract_revision="sha256:{"0" * 64}"\nsettings={{}}\nscope=["irrelevant-{i}"]\nreads=["missing-{i}.txt"]\neffects=[]\nclaims=[]\nrestrictions=[]\n'
+        for i in range(80)
+    )
+    config.write_text(config.read_text() + extra)
+    many = consume("json", independent_binary, independent_cli, context)
+    assert "unused-" not in json.dumps(many)
+    assert "fixture-lens" not in json.dumps(many)
+    assert len(json.dumps(many)) <= len(json.dumps(quiet)) + 256
+    assert many["decision_packet"]["claim_boundary"] == quiet["decision_packet"]["claim_boundary"]
+    # A previously irrelevant, uninstalled owner must become an explicit gap when selected.
+    with pytest.raises(AssertionError, match="unavailable"):
+        consume("json", independent_binary, independent_cli, {**context, "changed": ["irrelevant-31"]})

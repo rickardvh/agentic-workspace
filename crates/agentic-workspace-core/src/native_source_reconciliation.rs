@@ -303,6 +303,14 @@ pub(crate) fn view(
     }
     let binding = json!({"semantics":SEMANTICS,"work":work,"subject":subject,"declarations":declarations,
         "sources":sources,"dependencies":dependencies,"work_postimages":postimages,"policy_revision":configuration["revision"],"capability_revision":contract["revision"]});
+    // Retained semantic judgment is valid only under its actual producer as
+    // well as current sources. No old receipt can survive an implementation
+    // change merely because its repository dependencies stayed unchanged.
+    let mut binding = binding;
+    static PRODUCER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        digest(&json!(include_str!("native_source_reconciliation.rs"))).unwrap()
+    });
+    binding["producer_revision"] = json!(&*PRODUCER);
     let revision = digest(&binding)?;
     view["source_revision"] = json!(revision);
     let path = format!(

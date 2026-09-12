@@ -125,6 +125,10 @@ export function start(context) {
   return request({start: context});
 }
 
+export function resources(context) {
+  return request({resources: context});
+}
+
 export function invoke(context) {
   return request({invoke: context});
 }

@@ -29,6 +29,7 @@ mod native_planning_update;
 mod native_proof;
 pub mod native_public;
 mod native_requirements;
+mod native_resources;
 pub mod native_routes;
 mod native_source_reconciliation;
 mod native_startup;
@@ -1426,6 +1427,18 @@ fn current_work(intent: &Value) -> Result<Option<CurrentWorkIdentity>, CoreError
     Ok(Some(current))
 }
 
+/// One immutable compiled-in contract parse per process. Owners still clone
+/// their argument schema before specializing it and reobserve mutable sources.
+fn source_schema() -> &'static Value {
+    static SCHEMA: std::sync::LazyLock<Value> = std::sync::LazyLock::new(|| {
+        serde_json::from_str(include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
+        ))
+        .expect("checked schema")
+    });
+    &SCHEMA
+}
+
 thread_local! {
     // Only pure schema compilation is reused. Source observations, requests,
     // grants, decisions and validation results are never cached here. Exact
@@ -1481,6 +1494,31 @@ fn schema_validator(
 #[cfg(test)]
 mod schema_reuse_tests {
     use super::*;
+
+    #[test]
+    fn immutable_source_contract_parse_is_shared_and_measured() {
+        use std::{hint::black_box, time::Instant};
+        let bytes = include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
+        );
+        let start = Instant::now();
+        for _ in 0..20 {
+            black_box(serde_json::from_str::<Value>(bytes).unwrap());
+        }
+        let recompute = start.elapsed();
+        let start = Instant::now();
+        let first = source_schema();
+        for _ in 0..20 {
+            assert!(std::ptr::eq(first, black_box(source_schema())));
+        }
+        let validation = start.elapsed();
+        eprintln!(
+            "immutable-contract: baseline_parses=20 shared_parses=1 recompute_us={} shared_us={}",
+            recompute.as_micros(),
+            validation.as_micros()
+        );
+        assert_eq!(first, &serde_json::from_str::<Value>(bytes).unwrap());
+    }
 
     #[test]
     fn exact_schema_reuse_does_not_reuse_a_validation_or_changed_contract() {

@@ -920,10 +920,7 @@ pub(crate) fn view_with_applicability(
     let subject = planning_subject.unwrap_or(&direct_subject);
     let work_ref = subject["id"].clone();
     let work_revision = subject["revision"].clone();
-    let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
-    ))
-    .expect("checked schema");
+    let schema = crate::source_schema();
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",

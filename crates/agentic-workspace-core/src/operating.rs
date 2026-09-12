@@ -316,6 +316,84 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
 }
 
 fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
+    let delivered = value.as_object_mut().and_then(|v| v.remove("delivered"));
+    let delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
+        .map_err(|_| error("delivered must be an array of exact source delivery refs"))?;
+    if delivered.len() > 256 {
+        return Err(error("source delivery refs exceed bounded carriage"));
+    }
+    let mut result = operate_current(value, invoking)?;
+    apply_delivery(&mut result, &delivered)?;
+    if let Some(continuation) = result
+        .get_mut("continuation")
+        .and_then(|c| c.get_mut("result"))
+    {
+        apply_delivery(continuation, &delivered)?;
+    }
+    Ok(result)
+}
+
+fn apply_delivery(result: &mut Value, delivered: &[String]) -> Result<(), CoreError> {
+    // Delivery is caller-local presentation state only. All owner resolution,
+    // restriction, action admission and reference checks have already occurred.
+    let view = if result.get("view").is_some() {
+        &mut result["view"]
+    } else {
+        result
+    };
+    let work = view["decision_packet"]["semantic_task_routes"]["task_identity"].clone();
+    let mut refs = Vec::new();
+    if let Some(material) = view
+        .get_mut("decision_packet")
+        .and_then(|p| p.get_mut("material"))
+        .and_then(Value::as_object_mut)
+    {
+        for (owner, value) in material {
+            let rows: Vec<&mut Value> = if owner == "scoped-instructions" {
+                value
+                    .as_array_mut()
+                    .map(|v| v.iter_mut().collect())
+                    .unwrap_or_default()
+            } else if owner == "startup-adapter" {
+                vec![value]
+            } else {
+                continue;
+            };
+            for row in rows {
+                let field = if owner == "scoped-instructions" {
+                    "guidance"
+                } else {
+                    "text"
+                };
+                // A delivery token is not worth retaining for tiny prose.
+                if !row[field].as_str().is_some_and(|s| s.len() > 256) {
+                    continue;
+                }
+                let reference = digest(
+                    &json!({"producer":delivery_producer(),"work":work,"owner":owner,"source":row}),
+                )?;
+                refs.push(reference.clone());
+                if delivered.contains(&reference) {
+                    row.as_object_mut().unwrap().remove(field);
+                    row["delivery"] = json!({"reference":reference,"status":"already-delivered","authority":"presentation-only; no semantic satisfaction"});
+                }
+            }
+        }
+    }
+    if !refs.is_empty() {
+        view["delivery_refs"] = json!(refs);
+    }
+    Ok(())
+}
+
+fn delivery_producer() -> &'static str {
+    static REVISION: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        digest(&json!({"contract":"source-delivery/v1", "implementation":include_str!("operating.rs")})).unwrap()
+    });
+    &REVISION
+}
+
+fn operate_current(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
     let (projection, selected, answer) = {
         let object = value
             .as_object_mut()
