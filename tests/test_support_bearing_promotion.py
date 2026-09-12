@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 import json
 import shutil
 import sys
+import tarfile
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,8 +89,31 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
     runtime = tmp_path / "runtime"
     dist.mkdir()
     runtime.mkdir()
-    wheel = dist / "agentic_workspace-1.0.0-py3-none-any.whl"
-    wheel.write_bytes(b"wheel")
+    wheel = dist / "agentic_workspace-1.0.0-py3-none-linux_x86_64.whl"
+    binary = b"fixture native executable"
+    digest = hashlib.sha256(binary).hexdigest()
+    manifest = {"rust_host": "x86_64-unknown-linux-gnu", "sha256": digest, "cli_sha256": digest}
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr("agentic_workspace/_native/artifact.json", json.dumps(manifest))
+        for name in ("agentic-workspace", "agentic-workspace-core"):
+            archive.writestr(f"agentic_workspace/_native/{name}", binary)
+    with zipfile.ZipFile(dist / "agentic-workspace-native-1.0.0-x86_64-unknown-linux-gnu.zip", "w") as archive:
+        archive.writestr("artifact.json", json.dumps(manifest))
+        for name in ("agentic-workspace", "agentic-workspace-core"):
+            archive.writestr(name, binary)
+    with tarfile.open(dist / "root.tgz", "w:gz") as archive:
+        for name, data in {
+            "package/package.json": {"os": ["linux"], "cpu": ["x64"]},
+            "package/src/native/bin/artifact.json": manifest,
+        }.items():
+            raw = json.dumps(data).encode()
+            entry = tarfile.TarInfo(name)
+            entry.size = len(raw)
+            archive.addfile(entry, io.BytesIO(raw))
+        for name in ("agentic-workspace", "agentic-workspace-core"):
+            entry = tarfile.TarInfo("package/src/native/bin/" + name)
+            entry.size = len(binary)
+            archive.addfile(entry, io.BytesIO(binary))
     wheel_digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
     server = _write(
         tmp_path / "server.json",
@@ -100,7 +126,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
     for os_name, python, node in (
         ("ubuntu-latest", "3.11", "20"),
         ("ubuntu-latest", "3.13", "24"),
-        ("windows-latest", "3.14", "24"),
+        ("ubuntu-latest", "3.14", "24"),
     ):
         _write(
             runtime / f"{os_name}-py{python}-node{node}.json",
@@ -119,7 +145,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             _write(
                 dist / f"generated-command-conformance-node{major}.json",
                 {
-                    "kind": "agentic-workspace/generated-command-semantic-conformance-receipt/v1",
+                    "kind": "agentic-workspace/native-release-conformance/v1",
                     "status": "passed",
                     "subject": {"node_version": f"v{major}.0.0"},
                 },
@@ -139,8 +165,12 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             "kind": "agentic-workspace/redistributable-package-readiness/v1",
             "status": "passed",
             "license_spdx": "MIT",
-            "artifact_count": 1,
-            "artifacts": [{"name": wheel.name, "sha256": wheel_digest}],
+            "artifact_count": 3,
+            "artifacts": [
+                {"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+                for path in dist.iterdir()
+                if path.suffix in {".whl", ".tgz", ".zip"}
+            ],
         },
     )
     _write(
@@ -179,7 +209,7 @@ def test_composed_promotion_passes_only_with_every_exact_receipt(tmp_path: Path)
 
 def test_composed_promotion_fails_closed_on_stale_or_missing_evidence(tmp_path: Path) -> None:
     args = _compose_fixture(tmp_path)
-    (tmp_path / "runtime/windows-latest-py3.14-node24.json").unlink()
+    (tmp_path / "runtime/ubuntu-latest-py3.14-node24.json").unlink()
     security = tmp_path / "dist/security-supply-chain-readiness.json"
     payload = json.loads(security.read_text(encoding="utf-8"))
     payload["subject"]["source_identity"] = "stale"
@@ -236,7 +266,29 @@ def test_composed_promotion_fails_closed_on_invalid_semantic_runtime(tmp_path: P
 
 def test_composed_promotion_rejects_redistribution_artifact_drift(tmp_path: Path) -> None:
     args = _compose_fixture(tmp_path)
-    (tmp_path / "dist/agentic_workspace-1.0.0-py3-none-any.whl").write_bytes(b"tampered-wheel")
+    (tmp_path / "dist/agentic_workspace-1.0.0-py3-none-linux_x86_64.whl").write_bytes(b"tampered-wheel")
     assert PROMOTION.main(args) == 1
     result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text(encoding="utf-8"))
     assert "redistribution receipt does not bind the exact distributable artifact names and sha256 digests" in result["failures"]
+
+
+def test_supported_windows_receipt_cannot_replace_missing_published_artifacts(tmp_path):
+    _compose_fixture(tmp_path)
+    policy = json.loads((ROOT / ".github/support-bearing-promotion.json").read_text())
+    policy["runtime_matrix"].append({"os": "windows-latest", "python": "3.14", "node": "24"})
+    policy["published_platforms"]["windows-latest"] = {
+        "rust_host": "x86_64-pc-windows-msvc",
+        "wheel_platform": "win_amd64",
+        "node_platform": "win32",
+        "node_arch": "x64",
+    }
+    failures = PROMOTION.published_platform_failures(policy, tmp_path / "dist")
+    assert any("windows-latest" in failure and "installable wheel" in failure for failure in failures)
+
+
+def test_published_linux_set_requires_npm_and_standalone_pair(tmp_path):
+    _compose_fixture(tmp_path)
+    policy = json.loads((ROOT / ".github/support-bearing-promotion.json").read_text())
+    assert PROMOTION.published_platform_failures(policy, tmp_path / "dist") == []
+    (tmp_path / "dist/root.tgz").unlink()
+    assert any("installable npm" in failure for failure in PROMOTION.published_platform_failures(policy, tmp_path / "dist"))

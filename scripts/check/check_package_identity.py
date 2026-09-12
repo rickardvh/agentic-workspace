@@ -323,6 +323,7 @@ def write_readiness_receipts(root: Path, dist: Path) -> list[Path]:
         )
     for package in ownership["typescript_packages"]:
         release_artifacts.append(_find_one(dist, f"{package['tarball_prefix']}-{version}.tgz"))
+    release_artifacts.extend(dist.glob(f"agentic-workspace-native-{version}-*.zip"))
     artifacts = [
         {"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()}
         for artifact in sorted(release_artifacts, key=lambda item: item.name)
@@ -360,6 +361,8 @@ def redistributable_receipt_errors(root: Path, dist: Path) -> list[str]:
                 expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
         for package in ownership["typescript_packages"]:
             artifact = _find_one(dist, f"{package['tarball_prefix']}-{version}.tgz")
+            expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
+        for artifact in dist.glob(f"agentic-workspace-native-{version}-*.zip"):
             expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
     except ValueError as exc:
         return [str(exc)]

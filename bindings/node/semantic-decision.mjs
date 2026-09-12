@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packagedBinary = () => join(
@@ -12,14 +12,6 @@ const packagedBinary = () => join(
 
 const coreBinary = () => {
   let candidate = process.env.AGENTIC_WORKSPACE_CORE_BINARY || packagedBinary();
-  const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-  if (!process.env.AGENTIC_WORKSPACE_CORE_BINARY && !existsSync(candidate) && existsSync(join(sourceRoot, "crates/agentic-workspace-core/Cargo.toml"))) {
-    const built = spawnSync("cargo", ["build", "--quiet", "--locked", "--manifest-path", join(sourceRoot, "Cargo.toml"), "--message-format=json", "-p", "agentic-workspace-core"], { cwd: sourceRoot, encoding: "utf8", windowsHide: true });
-    if (built.status !== 0) throw new Error(`source checkout core build failed: ${built.error?.message || built.stderr.trim()}`);
-    const artifact = built.stdout.split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line)).find(row => row.reason === "compiler-artifact" && row.target?.name === "agentic-workspace-core" && row.executable);
-    if (!artifact) throw new Error("Cargo did not return a current shared-core executable");
-    candidate = artifact.executable;
-  }
   const manifestPath = join(dirname(fileURLToPath(import.meta.url)), "bin", "artifact.json");
   const packagePath = join(dirname(fileURLToPath(import.meta.url)), "../..", "package.json");
   const packageMetadata = existsSync(packagePath) ? JSON.parse(readFileSync(packagePath, 'utf8')) : null;
@@ -35,6 +27,20 @@ const coreBinary = () => {
   }
   return candidate;
 };
+
+export function runNativeCli(args) {
+  const core = coreBinary();
+  const binary = join(dirname(core), process.platform === "win32" ? "agentic-workspace.exe" : "agentic-workspace");
+  const manifestPath = join(dirname(fileURLToPath(import.meta.url)), "bin", "artifact.json");
+  if (!existsSync(binary)) throw new Error("paired native CLI missing");
+  if (existsSync(manifestPath)) {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    if (createHash("sha256").update(readFileSync(binary)).digest("hex") !== manifest.cli_sha256) throw new Error("paired native CLI digest mismatch");
+  }
+  const result = spawnSync(binary, args, {stdio: "inherit", windowsHide: true});
+  if (result.error) throw result.error;
+  return result.status ?? 1;
+}
 
 export function compileSourceDecision(contributions, intent = {}, capabilityContract = null, decisionContext = null) {
   const payload = { contributions: [...contributions], intent: { ...(intent || {}) } };

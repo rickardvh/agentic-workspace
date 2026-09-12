@@ -490,7 +490,7 @@ generated-command-packages-docker:
 	@uv run python scripts/check/run_generated_command_package_proof.py
 
 packed-artifact-conformance:
-	@uv run python scripts/check/run_generated_command_package_proof.py --packed-conformance --artifact-dir "$(PACKED_ARTIFACT_DIR)" --receipt-out "$(PACKED_ARTIFACT_RECEIPT)" --execution-context "$(PACKED_ARTIFACT_CONTEXT)"
+	@uv run python scripts/check/check_native_release_topology.py --artifact-dir "$(PACKED_ARTIFACT_DIR)" --receipt-out "$(PACKED_ARTIFACT_RECEIPT)" --execution-context "$(PACKED_ARTIFACT_CONTEXT)"
 
 check-memory-nosync: test-memory lint-memory typecheck-memory verify-memory memory-freshness-strict recurring-friction-ledger
 

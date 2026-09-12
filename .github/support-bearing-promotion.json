@@ -5,7 +5,12 @@
   "live_ruleset_id": 20615912,
   "live_ruleset_recheck": "gh api repos/rickardvh/agentic-workspace/rulesets/20615912",
   "python_support": {
-    "declared": ["3.11", "3.12", "3.13", "3.14"],
+    "declared": [
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14"
+    ],
     "minimum": "3.11",
     "primary": "3.13",
     "newest": "3.14",
@@ -14,15 +19,43 @@
     }
   },
   "runtime_matrix": [
-    {"role": "minimum", "os": "ubuntu-latest", "python": "3.11", "node": "20"},
-    {"role": "primary", "os": "ubuntu-latest", "python": "3.13", "node": "24"},
-    {"role": "newest", "os": "windows-latest", "python": "3.14", "node": "24"}
+    {
+      "role": "minimum",
+      "os": "ubuntu-latest",
+      "python": "3.11",
+      "node": "20"
+    },
+    {
+      "role": "primary",
+      "os": "ubuntu-latest",
+      "python": "3.13",
+      "node": "24"
+    },
+    {
+      "role": "newest",
+      "os": "ubuntu-latest",
+      "python": "3.14",
+      "node": "24"
+    }
   ],
-  "semantic_node_majors": [20, 24, 25],
+  "semantic_node_majors": [
+    20,
+    24,
+    25
+  ],
   "receipts": {
     "install": "distribution-install-readiness.json",
     "redistribution": "redistributable-package-readiness.json",
     "security": "security-supply-chain-readiness.json",
     "promotion": "support-bearing-promotion.json"
-  }
+  },
+  "published_platforms": {
+    "ubuntu-latest": {
+      "rust_host": "x86_64-unknown-linux-gnu",
+      "wheel_platform": "linux_x86_64",
+      "node_platform": "linux",
+      "node_arch": "x64"
+    }
+  },
+  "platform_disposition": "Published native artifacts support Linux x64 only. Windows and macOS are not admitted release platform classes; transient developer or CI builds do not establish published-artifact support."
 }

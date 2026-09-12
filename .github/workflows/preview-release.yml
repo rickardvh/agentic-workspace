@@ -72,7 +72,7 @@ jobs:
           - os: ubuntu-latest
             python: "3.13"
             node: "24"
-          - os: windows-latest
+          - os: ubuntu-latest
             python: "3.14"
             node: "24"
     steps:
@@ -96,8 +96,10 @@ jobs:
         run: |
           uv lock --check
           uv sync --locked --all-groups
-          uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
-          uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
+          uv build --wheel --sdist --out-dir runtime-dist
+          uv run python scripts/release/stage_native_npm.py --output runtime-npm --native-archive-dir runtime-dist
+          npm pack ./runtime-npm --pack-destination runtime-dist
+          uv run python scripts/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
 
   preview-package:
     needs: [preview-admission, preview-runtime-matrix]
@@ -170,21 +172,8 @@ jobs:
           rm -rf dist
           mkdir -p dist
           uv build --wheel --sdist --out-dir dist
-          uv build --wheel --sdist --out-dir dist packages/memory
-          uv build --wheel --sdist --out-dir dist packages/planning
-          uv build --wheel --sdist --out-dir dist packages/verification
-          python scripts/release/patch_workspace_release_wheel.py \
-            --dist-dir dist \
-            --version "${RELEASE_TAG#preview-v}" \
-            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
-          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm"
-          for package in generated/*/typescript; do
-            if [ "$package" = "generated/workspace/typescript" ]; then
-              (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
-            else
-              (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
-            fi
-          done
+          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
+          (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
           uv run python scripts/check/check_package_identity.py \
             --artifact-dir dist \
             --require-exact-urls
@@ -192,8 +181,8 @@ jobs:
       - if: steps.existing.outputs.complete != 'true'
         name: Run built preview package smoke tests
         env:
-          AW_PREVIEW_ARTIFACT_DIR: dist
-        run: uv run pytest tests/test_preview_release.py::test_built_preview_root_urls_digests_and_external_install tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
+          AW_NATIVE_ARTIFACT_DIR: dist
+        run: uv run pytest tests/test_native_release_topology.py -q
 
       - if: steps.existing.outputs.complete != 'true'
         name: Generate preview SBOM
@@ -233,7 +222,7 @@ jobs:
         run: |
           for runtime_major in 20 24 25; do
             receipt="dist/generated-command-conformance-node${runtime_major}.json"
-            uv run python scripts/check/run_generated_command_package_proof.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
+            uv run python scripts/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
           done
 
       - if: steps.existing.outputs.complete != 'true'
@@ -284,6 +273,7 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
             dist/*.tgz
+            dist/agentic-workspace-native-*.zip
             dist/generated-command-conformance-node*.json
             dist/SHA256SUMS
             dist/agentic-workspace-preview-release-manifest.json
