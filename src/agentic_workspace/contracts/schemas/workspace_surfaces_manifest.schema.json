@@ -24,6 +24,33 @@
     "mixed_agent_local_override_fields"
   ],
   "properties": {
+    "retired_surface_files": {
+      "type": "array",
+      "description": "Retired package procedures removable only when their normalized UTF-8 bytes match the recorded SHA-256; modified sources retain repository custody.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "sha256",
+          "replacement"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^\\.agentic-workspace/(?!.*\\.\\.)[^\\\\]+$"
+          },
+          "replacement": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
     "schema_version": {
       "const": "workspace-surfaces-manifest/v1",
       "description": "Contract version for this document."

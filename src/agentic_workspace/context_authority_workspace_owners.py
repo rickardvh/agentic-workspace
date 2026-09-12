@@ -165,7 +165,9 @@ def _skill_semantics(root: Path) -> tuple[str, str, dict[str, Any], dict[str, An
 
 def _scoped_instruction_semantics(path: Path, root: Path) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
     if not path.is_dir():
-        status, reason, schema = _text_semantics(path, [], ["Authority marker:", "agentic-workspace:workflow:start", "Ordinary route:"])
+        status, reason, schema = _text_semantics(
+            path, [], ["Authority marker:", "agentic-workspace:workflow:start", "workspace-startup/SKILL.md"]
+        )
         return status, reason, schema, {"compatibility_source": "thin-agent-adapter"}
     from agentic_workspace.scoped_instructions import instruction_documents
 

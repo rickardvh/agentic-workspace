@@ -22,7 +22,117 @@
       },
       "additionalProperties": false
     },
+    "resolved_task_fact": {
+      "description": "Shared Rust-normalized currentness result consumed by native, JSON, Python and TypeScript owners. This is a projection, never persisted authority.",
+      "type": "object",
+      "required": [
+        "posture",
+        "routes",
+        "task_identity",
+        "source_revision",
+        "provenance",
+        "authority_effect",
+        "status",
+        "stale_reasons"
+      ],
+      "properties": {
+        "posture": {
+          "enum": [
+            "selected",
+            "none",
+            "unresolved"
+          ]
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/route_id"
+          },
+          "uniqueItems": true
+        },
+        "task_identity": {
+          "type": "object",
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "const": "current-work"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "source_revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "provenance": {
+          "const": "agent-selected"
+        },
+        "authority_effect": {
+          "const": "applicability-only"
+        },
+        "status": {
+          "enum": [
+            "missing",
+            "current",
+            "stale"
+          ]
+        },
+        "stale_reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "posture": {
+                "const": "selected"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "routes": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "posture": {
+                "enum": [
+                  "none",
+                  "unresolved"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "routes": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": false
+    },
     "current_task_fact": {
+      "description": "Former persisted selection input; executable owners revalidate it before use.",
       "type": "object",
       "required": ["kind", "posture", "routes", "task_identity", "current_work_id", "source_revision", "provenance", "authority_effect"],
       "properties": {
@@ -49,6 +159,7 @@
   },
   "oneOf": [
     {"$ref": "#/$defs/current_task_fact"},
+    {"$ref": "#/$defs/resolved_task_fact"},
     {
       "type": "object",
       "required": ["kind", "status", "source_revision", "routes", "authority_effect"],

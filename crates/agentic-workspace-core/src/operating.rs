@@ -148,9 +148,19 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
             values.retain(|value| value != selected);
         }
     }
-    Ok(json!({"decision_packet":packet,"detail_refs":refs,
+    let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":{"target":context["target"],"task":context["task"],"changed":context["changed"]},
-        "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."}))
+        "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    // A selected leaf already establishes which procedure is useful. Keep its
+    // exact refs visible so compact consumers need no discovery/detail hop.
+    // Bodies stay lazy and these source observations grant no effect authority.
+    if full["decision_packet"]["semantic_task_routes"]["status"] == "current"
+        && full["decision_packet"]["semantic_task_routes"]["posture"] == "selected"
+        && let Some(sources) = full["semantic_routes"]["discovery"]["detail"]["sources"].as_array()
+    {
+        result["procedure_refs"] = json!(sources);
+    }
+    Ok(result)
 }
 
 fn action_selector(selector: &str) -> bool {

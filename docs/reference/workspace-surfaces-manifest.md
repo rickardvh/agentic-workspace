@@ -11,6 +11,7 @@ Manifest of workspace-owned surfaces, generated artifacts, and ownership roles.
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Manifest of workspace-owned surfaces, generated artifacts, and ownership roles. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| `retired_surface_files` | array of object | no |  | Retired package procedures removable only when their normalized UTF-8 bytes match the recorded SHA-256; modified sources retain repository custody. |  |  |
 | `schema_version` | const `"workspace-surfaces-manifest/v1"` | yes |  | Contract version for this document. |  |  |
 | `payload_files` | array of string | yes |  | Ordered payload files entries used by this contract. |  |  |
 | `necessary_surface_files` | array of string | yes |  | Package-owned files that remain installed in the necessary-surface profile. |  |  |

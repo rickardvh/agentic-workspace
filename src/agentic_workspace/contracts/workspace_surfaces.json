@@ -15,7 +15,6 @@
     ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
-    ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
     ".agentic-workspace/system-intent/WORKFLOW.md"
   ],
@@ -34,7 +33,6 @@
     ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
-    ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md"
   ],
   "necessary_surface_roots": [
@@ -211,13 +209,6 @@
       "modules": []
     },
     {
-      "source": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
-      "target": ".agentic-workspace/docs/module-map.md",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": []
-    },
-    {
       "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
       "target": ".agentic-workspace/docs/setup-findings-contract.md",
       "kind": "installed-local",
@@ -290,13 +281,6 @@
       "profiles": ["necessary-surfaces", "full-mirror"],
       "modules": ["verification"],
       "degraded_behavior": "Preserve shared assurance policy; absence of operational Verification declarations supplies no proof or completion authority."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
-      "target": ".agentic-workspace/WORKFLOW.md",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": []
     },
     {
       "source": ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
@@ -452,5 +436,12 @@
     "delegation_targets.<target>.forbidden_task_classes",
     "delegation_targets.<target>.confidence_source",
     "delegation_targets.<target>.last_evaluation"
+  ],
+  "retired_surface_files": [
+    {
+      "path": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+      "sha256": "130bafef8d7d713e15f1d4b45f461abb2427f8c28b40bf67d401cb3f19a75891",
+      "replacement": ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    }
   ]
 }
