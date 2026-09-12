@@ -1146,10 +1146,13 @@ def render_workspace_command_package_outputs(
         )
         for output in outputs
     ]
-    binding = (repo_root / "bindings/node/semantic-decision.mjs").read_text(encoding="utf-8")
     native_bindings = [
-        GeneratedOutput(repo_root / Path(package).parent / "src/native/semantic-decision.mjs", binding)
+        GeneratedOutput(
+            repo_root / Path(package).parent / "src/native" / name,
+            (repo_root / "bindings/node" / name).read_text(encoding="utf-8"),
+        )
         for package in sorted(release_metadata)
+        for name in ("semantic-decision.mjs", "operating.mjs", "operating.d.mts")
     ]
     return [*normalized_outputs, *native_bindings, *_typescript_license_outputs(release_metadata=release_metadata, repo_root=repo_root)]
 
@@ -1211,6 +1214,7 @@ from ..cli import build_generated_parser
     payload["exports"] = {
         ".": "./src/client.mjs",
         "./native": "./src/native/semantic-decision.mjs",
+        "./operating": "./src/native/operating.mjs",
         "./contracts": "./external_contract_bundle.json",
         "./profile": "./external_consumer_profile.json",
         "./conformance-receipts": "./external_operation_conformance_receipts.json",

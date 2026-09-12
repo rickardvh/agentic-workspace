@@ -57,6 +57,7 @@
     "./conformance-receipts": "./external_operation_conformance_receipts.json",
     "./contracts": "./external_contract_bundle.json",
     "./native": "./src/native/semantic-decision.mjs",
+    "./operating": "./src/native/operating.mjs",
     "./profile": "./external_consumer_profile.json"
   },
   "files": [

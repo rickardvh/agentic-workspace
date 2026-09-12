@@ -26,6 +26,17 @@ def invoke(context: Mapping[str, Any]) -> dict[str, Any]:
     return _request({"invoke": context})
 
 
+def select_reference(context: Mapping[str, Any], reference: str, **material: Any) -> dict[str, Any]:
+    """Forward an exact reference and optional bounded answer to Rust.
+
+    Context is copied, never retained as hidden session state. Rust alone
+    validates the answer and current owner identity.
+    """
+    if set(material) - {"answer"}:
+        raise TypeError("select_reference accepts only answer material")
+    return start({**context, "reference": reference, **material})
+
+
 def answer_carried(carriage: Mapping[str, Any], reference: str, answer: Any) -> dict[str, Any]:
     """Carry exact owner material; Rust binds only the returned bounded answer."""
     return _request({"start": {"request": carriage, "reference": reference, "answer": answer, "projection": "carried"}})
@@ -204,6 +215,7 @@ def reconcile_planning(context: Mapping[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
+    "select_reference",
     "answer_carried",
     "invoke_carried",
     "start",
