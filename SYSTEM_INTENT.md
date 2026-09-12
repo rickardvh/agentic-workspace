@@ -6,7 +6,9 @@ This file states Agentic Workspace's durable product intent. It is a shaping and
 
 Agentic Workspace is the next developmental stage of repository agent instructions: a quiet, repo-native system for **operating context** and **dynamic control**.
 
-A repository may preserve a small amount of context because its availability materially changes how an agent should operate: intent, authority, ownership, current state, procedures, constraints, proof expectations, learned lessons, or other capability-owned facts. AW selects the relevant part of that context for the current task, agent, environment, and decision, then compiles it into the smallest trustworthy operating contract.
+A repository may preserve a small amount of context because its availability materially changes how an agent should operate: intent, authority, ownership, current state, procedures, constraints, proof expectations, learned lessons, or other capability-owned facts. AW makes the relevant part of that context and control cheaply reachable for the current task without turning those projections into new authority.
+
+For agents, the ordinary interface is **skills-first**. One canonical AW skill teaches how to use the product; specialized package or repository skills add reusable procedure only when materially useful. Repository/local instructions and config retain policy and constraints, domain owners retain current state/evidence, and the shared Rust-backed runtime provides exact current information, admission/currentness, bounded mutations/effects, and recovery. The agent or human supplies semantic judgment and performs the work.
 
 AW should not try to model everything the repository knows. Ordinary source, documentation, tests, history, and other canonical repository contents remain where they belong. A knowledge graph, RAG/indexing system, semantic repository model, or richer knowledge service may be a useful module, but it is not the core product.
 
@@ -14,13 +16,19 @@ The product should make the correct operating path cheaper than broad repository
 
 ## Core operating model
 
-The ordinary conceptual loop is:
+The ordinary agent path is:
+
+1. **Use the canonical AW skill** — consume applicable repository/local policy and decide what current information or reusable procedure is actually needed.
+2. **Reach current sources and tools selectively** — query source-owned context through exact selectors/owners and use Rust-backed information or bounded operations when currentness, admission, mutation, proof, or recovery matters; load a specialized skill only when its procedure adds value.
+3. **Work and reconcile** — perform the user's work with ordinary judgment, admit owner-native results where required, and reconcile only the state/evidence/claim consequences that changed.
+
+The deterministic substrate beneath that agent procedure can be viewed as **resolve -> act -> reconcile**:
 
 1. **Resolve** — derive the smallest relevant operating contract from current task facts, source-owned repository context, runtime/environment facts, admitted capability contributions, and applicable repo-owned instruction policy.
-2. **Act** — let the agent perform the bounded action through the supported operation, skill, owner, or explicit human decision, loading deeper detail only when the contract routes there.
+2. **Act** — perform a bounded action through the supported operation, skill, owner, or explicit human decision, loading deeper detail only when relevant.
 3. **Reconcile** — admit the result back to the correct owners, determine what changed, what may now be claimed, what must survive, and whether another resolve step is required.
 
-The existing compiled operating-decision and typed-action boundary is the implementation center of this loop. `resolve -> act -> reconcile` is a conceptual projection of that authority, not a second compiler or another user-facing workflow.
+The existing compiled operating-decision and typed-action boundary is the implementation center of that deterministic substrate. It is a tool/projection for skills, agents, hosts, and adapters; it is not a universal model-facing procedure controller that every agent must execute step by step. The skills-first procedure and the resolve/act/reconcile substrate are complementary views over one authority, not competing workflows.
 
 Closeout is the terminal case of reconciliation: no further action remains, required evidence and authority are sufficient for the intended claim, and any future-relevant residue has an explicit owner or is deliberately absent. An individual source owner being settled or having nothing to require is only owner-local quiescence; it does not establish that the user's outcome is terminal or that a broader claim is supportable.
 
@@ -30,7 +38,7 @@ The human or domain expert owns **why**. The system-shaping layer reasons about 
 
 AW must preserve that ladder across decomposition, interruption, delegation, review, and reconciliation. It must not silently narrow the intended outcome because a smaller local interpretation is easier to implement or prove.
 
-Repository context remains source-owned. Canonical docs, config, ownership declarations, module state, Planning state, proof evidence, Memory findings, and other authorities keep their own semantics and lifecycle. AW composes their current effect; its generated instruction or operating contract does not become a new source of truth merely because it is convenient to consume.
+Repository context remains source-owned. Canonical docs, config, ownership declarations, module state, Planning state, proof evidence, Memory findings, and other authorities keep their own semantics and lifecycle. Skills package reusable procedure; they do not absorb mutable policy, current owner state, evidence, or effect authority. AW composes current source effects when needed; its generated instruction or operating contract does not become a new source of truth merely because it is convenient to consume.
 
 Still-current recognized authority survives a change of representation. Obsolete representations may be removed only after their current meaning has been transferred, explicitly dispositioned by its owner, or made to block only the behavior that depends on it. This is a bounded transition rule, not a promise of indefinite compatibility.
 
@@ -54,9 +62,9 @@ A durable plan or prior work binding does not implicitly become the current task
 
 ### 2. Surface only what matters now
 
-First contact should contain only information that can change the current decision. Deeper context, procedures, evidence, diagnostics, and module detail should remain behind exact selectors, skills, operations, or owners until relevant.
+First contact should contain only information that can change the current decision. The canonical main skill is the stable procedure entry point; deeper context, specialized procedures, evidence, diagnostics, and module detail should remain behind exact selectors, semantic skill routes, operations, or owners until relevant.
 
-The right information at the wrong time is still a product failure. Installing another capability should not proportionally enlarge ordinary startup or the agent's mental model.
+The right information at the wrong time is still a product failure. Installing another capability should not proportionally enlarge ordinary startup or the agent's mental model. Specialized skills should be justified by reusable procedure, not by the existence of an internal owner/module/command.
 
 ### 3. Make control programmable and actionable
 
@@ -68,11 +76,11 @@ Programmability should go further than choosing among hard-coded modes. A host r
 
 The architectural normal form is intentionally small:
 
+- **skills** provide the primary agent-facing reusable procedure and are progressively disclosed when useful;
 - **facts** remain source-owned typed context from repo, runtime, module, or admitted external owners;
-- **instruction clauses** state bounded applicability and a supported control effect;
-- **skills** provide lazily discovered multi-step procedure;
-- **typed operations** provide effectful action under explicit authority;
-- the existing **operating-decision compiler** resolves applicable clauses and capabilities into one current contract.
+- **instruction clauses/config** state bounded policy, applicability, constraints, and supported control effects;
+- **typed operations** provide exact information or effectful action under explicit authority;
+- the existing **operating-decision compiler** deterministically composes applicable clauses, capabilities, currentness, and action/recovery into one current tool contract.
 
 A clause should express only control effects the kernel already knows how to compose safely, such as surfacing a context/skill reference, nominating or requiring a typed operation, requiring evidence or an explicit human decision, restricting an effect, or limiting a claim. The clause itself must not mutate repository state; mutation remains behind an admitted typed operation and its owner.
 
@@ -84,7 +92,7 @@ An exact typed operation means the complete current action selected by its owner
 
 A bounded human or domain judgment must be constructible from the public request. The owner supplies currentness, authority, and every effect-bearing field; the human supplies only the bounded answer.
 
-Do not create a second instruction compiler or a general-purpose policy/rule language. Existing specialized mechanisms—workflow obligations, assurance/proof declarations, scoped instructions, skill routing, target/correction guidance, and module relevance—should converge on or compile through a shared internal control normal form where their semantics overlap. They may retain domain-specific authoring surfaces when those surfaces carry genuine domain meaning.
+Do not create a second instruction compiler, skills runtime, or general-purpose policy/rule language. Existing specialized mechanisms—workflow obligations, assurance/proof declarations, scoped instructions, semantic skill routing, target/correction guidance, and module relevance—should converge on or compile through a shared internal control normal form where their semantics overlap. They may retain domain-specific authoring surfaces when those surfaces carry genuine domain meaning.
 
 Natural-language or keyword matching may help discovery, but it cannot decide genuine semantic applicability. That classification remains acting-agent judgment admitted as current structured context; deterministic path, operation, source, and authority facts remain owner-derived rather than matters of prose interpretation.
 
@@ -124,7 +132,7 @@ Keep three mechanisms distinct:
 - **repo customization** supplies host-owned control inputs and bounded instruction policy through config, obligations, skills, canonical guidance, ownership, and repository operations;
 - **external adapters** project or transport stable AW operations into other hosts while remaining outside AW's semantic authority.
 
-A new capability should normally enrich the existing resolve/act/reconcile loop instead of adding a mandatory new phase, first-contact command, or mental model.
+A new capability should normally enrich the existing resolve/act/reconcile substrate instead of adding a mandatory new phase, first-contact command, or mental model.
 
 ### 6. Keep configuration proportional to control value
 
@@ -146,7 +154,9 @@ AW should remain plausibly removable. Removing executable integration does not a
 
 AW cannot depend on perfect obedience, hidden reasoning, one vendor, or a universal integration standard.
 
-Correct use should be progressively discoverable and cheaper than bypass. When an agent ignores a routed contract, trust should degrade visibly rather than causing silent authority expansion. Strong agents should spend reasoning on judgment; weaker agents should receive enough structure to avoid common ownership, proof, and continuation failures.
+Correct use should be progressively discoverable and cheaper than bypass. Host-native skill discovery is useful when available; a tiny repository bootstrap must still lead a mixed/generic agent to the same canonical skill. When executable AW is unavailable, that skill may guide bounded selective reads of repository-owned sources while explicitly leaving runtime, machine-local, live external, mutation, proof, and effect facts unknown. This degraded path must not become a second static `start` implementation or competing operating manual.
+
+When an agent ignores a routed contract, trust should degrade visibly rather than causing silent authority expansion. Strong agents should spend reasoning on judgment; weaker agents should receive enough structure to avoid common ownership, proof, and continuation failures.
 
 ### 9. Stay portable
 
@@ -158,19 +168,21 @@ Portable deterministic first-party semantics have one shared executable authorit
 
 ### 10. Convert repeated friction into better context or control
 
-Repeated human steering, stale context, wrong-owner work, proof confusion, failed handoff, repeated rediscovery, late reconciliation repair, and recurring workarounds should create pressure to improve the deterministic owner, the routed operating context, or the control contract.
+Repeated human steering, stale context, wrong-owner work, proof confusion, failed handoff, repeated rediscovery, late reconciliation repair, and recurring workarounds should create pressure to improve the deterministic owner, the routed operating context, or the reusable procedure.
 
-Do not preserve permanent compensating guidance when the underlying owner can be fixed.
+When the durable consequence is a better way to perform a class of work, improve the relevant package/repository skill rather than defaulting to another warning, Memory note, config knob, or runtime branch. Binding policy, factual knowledge, decisions, evidence, and operational state remain with their distinct owners.
+
+Do not preserve permanent compensating guidance when the underlying owner or procedure can be fixed.
 
 ## Product-shape rules
 
-Workspace owns only the cross-cutting mechanics needed to resolve and reconcile one trustworthy operating contract: compatibility admission, relevance/routing, source provenance, instruction-effect composition, conflict visibility, effect/mutation boundaries, typed actions, claim boundaries, lifecycle coordination, and safe degraded recovery.
+Workspace owns only the cross-cutting deterministic mechanics needed to compose trustworthy current context and bounded action: compatibility admission, relevance/routing, source provenance, instruction-effect composition, conflict visibility, effect/mutation boundaries, typed actions, claim boundaries, lifecycle coordination, and safe degraded recovery. The canonical main skill owns ordinary agent procedure over those mechanics; it does not become semantic authority.
 
 Modules own domain semantics. Repo customization owns host policy and bounded instruction programming. External adapters own transport/vendor integration. Canonical repository contents remain repository-owned. None should silently absorb another owner's meaning.
 
 Conflicts that change accepted workflow or authority must be surfaced rather than resolved through hidden precedence.
 
-Irrelevance and absence are first-class states. Direct work should stay direct. An irrelevant installed module, Memory note, plan, proof protocol, config fragment, instruction clause, or diagnostic should remain absent from the current contract.
+Irrelevance and absence are first-class states. Direct work should stay direct. An irrelevant installed module, specialized skill, Memory note, plan, proof protocol, config fragment, instruction clause, or diagnostic should remain absent from the current context.
 
 ## Anti-intents
 
@@ -181,12 +193,13 @@ AW should resist becoming:
 - a visible workflow engine the user must consciously operate;
 - a repo-side script that micromanages ordinary implementation judgment;
 - a general-purpose or Turing-complete policy/rule language, scheduler, event bus, or arbitrary callback runtime;
+- a skills runtime/state machine or one-skill-per-owner taxonomy;
 - a framework where Planning, Memory, Verification, assurance, delegation, closeout, posture, or another current capability becomes a mandatory core concept;
 - a surface-growing contract maze where every useful mechanism becomes a new command, phase, file, policy dimension, identity, or lifecycle concept;
 - an arbitrary plugin/callback runtime, adapter marketplace, or credential host;
 - a module API that makes extension authors describe AW's phase/slot choreography back to AW;
 - a historical archive preserved mainly because it already exists;
-- a blurry ownership model where generated instructions compete with their source authorities;
+- a blurry ownership model where generated instructions or skills compete with their source authorities;
 - a local optimization machine that reduces one metric while increasing total completion cost.
 
 ## Validation implications
@@ -195,26 +208,27 @@ A change is not validated merely because its requested slice landed. Ask whether
 
 - preserved the intended why;
 - improved the repository's ability to preserve useful operating context or apply it to current agent behavior;
+- kept one canonical skills-first ordinary agent procedure while progressively disclosing specialized procedure only when useful;
 - allowed a new bounded repo control relationship to be expressed without an unnecessary new runtime branch or framework concept;
 - surfaced less but better context at the right decision point;
 - produced an exact supported next action rather than another instruction to infer;
 - respected source ownership and provenance;
 - preserved recognized current authority before retiring its representation or custody;
 - reduced or bounded total successful-completion cost;
-- kept direct work cheap and irrelevant capabilities/instruction clauses quiet;
+- kept direct work cheap and irrelevant capabilities/instruction clauses/skills quiet;
 - made modules easier to author as well as more peer-like, with module-specific meaning remaining module-owned;
-- avoided requiring a new independent module to modify semantic core code or register itself in fixed AW choreography;
+- avoided requiring a new independent module to modify semantic core code, the canonical main skill, or fixed AW choreography merely to register itself;
 - reconciled results and claims without another parallel authority;
 - kept stability, version, and platform support claims behind current final-admission evidence and explicit platform proof;
 - removed, derived, backgrounded, or replaced older machinery where a new abstraction was introduced.
 
-Question new work when it does not materially improve operating context, dynamic control, programmable instruction composition, or a module's bounded contribution to that loop.
+Question new work when it does not materially improve operating context, dynamic control, reusable procedure, programmable instruction composition, or a module's bounded contribution to that loop.
 
 ## Compact operating rule
 
-Preserve the context that governs work.
-Program only bounded control that pays back.
+Use the canonical procedure.
+Keep source-owned context and authority distinct.
 Surface only what matters now.
-Act through the supported route.
+Act through precise supported tools.
 Reconcile what changed.
 Stay quiet.
