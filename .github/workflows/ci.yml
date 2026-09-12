@@ -82,7 +82,7 @@ jobs:
       - name: Verify Priority 3 currentness and task resource lifecycle
         run: |
           cargo +stable test --locked -p agentic-workspace-core schema_reuse_tests
-          uv run pytest tests/test_priority3_resources.py -q
+          uv run pytest tests/test_priority3_resources.py tests/test_priority4_control.py -q
           uv run pytest tests/test_preview_release.py -k "not built_preview_root_urls" -q
       - name: Preserve representative Planning custody
         run: >-

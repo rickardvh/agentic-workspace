@@ -59,6 +59,7 @@ pub fn resolve(
         "effect:proof-execution",
         "effect:memory-state",
         "effect:decision-source",
+        "effect:configuration-source",
     ]
     .map(str::to_owned)
     .into();
@@ -131,10 +132,18 @@ pub fn resolve(
         } else {
             json!("")
         };
+        let procedures = if applicable {
+            strings(&metadata["use"])
+                .iter()
+                .map(|name| crate::native_routes::procedure(target, name))
+                .collect::<Result<Vec<_>, _>>()?
+        } else {
+            vec![]
+        };
         rows.push(json!({"source":document["source"],"metadata":metadata,"valid":valid,"applicable":applicable,
             "guidance":guidance,"read":if applicable {metadata["read"].clone()} else {json!([])},
             "reconcile":if applicable {metadata["reconcile"].clone()} else {json!([])},
-            "preferred_procedures":if applicable {metadata["use"].clone()} else {json!([])},
+            "procedure_resolution":procedures,"preferred_procedures":if applicable {metadata["use"].clone()} else {json!([])},
             "requirement_references":if applicable {json!(strings(&metadata["checks"]).into_iter().filter(|value| value.starts_with("requirement:")).collect::<Vec<_>>())} else {json!([])},
             "binding_admission":binding}));
     }
@@ -143,6 +152,7 @@ pub fn resolve(
         "owners":[{"owner":"scoped-instructions","revision":"native-scoped-instructions/v1"}],
         "restriction_authorities":[{"owner":"scoped-instructions","affects":scopes}]});
     contract["revision"] = json!(digest(&contract)?);
+    crate::native_instruction_write::extend_contract(&mut contract)?;
     let material: Vec<_> = rows
         .iter()
         .filter(|row| row["applicable"] == true)
@@ -273,6 +283,33 @@ pub fn restrict_pending(
             }
         }
     }
+    for action in pending.iter().filter(|a| {
+        a["source_owner"] == "scoped-instructions" || a["source_owner"] == "configuration"
+    }) {
+        let writes = if action["source_owner"] == "configuration" {
+            crate::native_config_write::write_scope(action)?
+        } else {
+            crate::native_instruction_write::write_scope(action)?
+        };
+        for source in view["sources"].as_array().into_iter().flatten() {
+            if source["valid"] == true
+                && (source["applicable"] == true
+                    || strings(&source["metadata"]["paths"]).is_empty()
+                    || strings(&source["metadata"]["paths"]).iter().any(|p| {
+                        writes
+                            .iter()
+                            .any(|w| instruction_applicability::patterns_overlap(p, w))
+                    }))
+                && strings(&source["metadata"]["protect"]).iter().any(|p| {
+                    writes
+                        .iter()
+                        .any(|w| instruction_applicability::patterns_overlap(p, w))
+                })
+            {
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-instruction-write", "Current protection forbids this instruction publication; source authority cannot waive another restriction.", vec![format!("effect:{}",if action["source_owner"]=="configuration"{"configuration-source"}else{"instruction-source"})]));
+            }
+        }
+    }
     if pending.iter().any(|action| {
         action["source_owner"] == "verification" && action["operation_id"] == "proof.report"
     }) {
@@ -280,8 +317,7 @@ pub fn restrict_pending(
             let metadata = &source["metadata"];
             if source["valid"] == true
                 && applicability(metadata, &[], route)?["route_applies"] == true
-                && (!strings(&metadata["protect"]).is_empty()
-                    || !strings(&metadata["checks"]).is_empty())
+                && (!strings(&metadata["protect"]).is_empty())
             {
                 additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"proof-execution-scope-unresolved",
                     "The declared shell command has no bounded write scope proving these current protections and checks are preserved.",vec!["effect:proof-execution".into()]));
