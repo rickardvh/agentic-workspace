@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose shared Rust operating projections through Python and typed npm reference and carried-answer helpers."
+issues = [2987]
