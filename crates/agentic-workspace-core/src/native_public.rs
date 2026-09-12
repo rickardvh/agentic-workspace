@@ -1814,7 +1814,10 @@ mod continuation_tests {
         std::fs::create_dir(&root).unwrap();
         let context = json!({"target":root,"task":"Set configured invocation","changed":[]});
         let initial = start(context.clone()).unwrap();
-        let mut request = initial["configuration_write"]["creation_requests"]
+        let mut discovery = context.clone();
+        discovery["request"] = initial["configuration_write"]["creation_discovery_request"].clone();
+        let delivered = start(discovery).unwrap();
+        let mut request = delivered["configuration_write"]["creation_requests"]
             .as_array()
             .unwrap()
             .iter()

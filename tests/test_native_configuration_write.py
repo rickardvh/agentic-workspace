@@ -90,8 +90,14 @@ def test_optional_configuration_creation_is_bound_to_absence(
     assert initial["decision_packet"]["status"] == "direct"
     assert initial["configuration_write"]["requests"] == []
     assert not (tmp_path / ".agentic-workspace").exists()
+    assert initial["configuration_write"]["creation_requests"] == []
+    discovery = initial["configuration_write"]["creation_discovery_request"]
+    delivered = call(request=discovery)
+    assert delivered["configuration_write"]["status"] == "creation-choices-delivered"
+    assert delivered["decision_packet"]["primary_action"] is None
+    assert not (tmp_path / ".agentic-workspace").exists()
     request = next(
-        r for r in initial["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "safety.safe_to_auto_run_commands"
+        r for r in delivered["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "safety.safe_to_auto_run_commands"
     )
     request["arguments"]["value"] = False
     proposed = call(request=request)
@@ -102,6 +108,8 @@ def test_optional_configuration_creation_is_bound_to_absence(
     source.parent.mkdir()
     raced = b"schema_version=1\n# Another author arrived first\n"
     source.write_bytes(raced)
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(request=discovery)
     with pytest.raises(AssertionError):
         call(invocation=action)
     assert source.read_bytes() == raced
@@ -118,7 +126,11 @@ def test_configuration_postimage_cannot_exceed_its_reader(tmp_path: Path, shared
     def call(**extra: object) -> dict:
         return consume(surface, shared_core_binary, native_cli, {**context, **extra})
 
-    oversized = next(r for r in call()["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "system_intent.sources")
+    oversized = next(
+        r
+        for r in call(request=call()["configuration_write"]["creation_discovery_request"])["configuration_write"]["creation_requests"]
+        if r["arguments"]["key"] == "system_intent.sources"
+    )
     oversized["arguments"]["value"] = ["x" * 4097]
     with pytest.raises(AssertionError):
         call(request=oversized)

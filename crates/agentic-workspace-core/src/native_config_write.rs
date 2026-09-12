@@ -13,6 +13,7 @@ const EDIT: &str = "configuration/edit-source/v1";
 const RECOVER: &str = "configuration/recover-write/v1";
 const DEFER: &str = "configuration.defer-choice";
 const READ: &str = "configuration/read-choice/v1";
+const READ_CREATION: &str = "configuration/read-creation-choices/v1";
 const EFFECT: &str = "configuration-source";
 // Durable choices consumed by current owners, including explicit native module
 // admission. Task answers, learned evidence and operational registries stay out.
@@ -212,6 +213,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v3","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
     let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write"), operation(DEFER)]});
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"const":SHARED},"key":{"enum":PROGRESSIVE_CHOICES}}}}));
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
@@ -315,9 +317,16 @@ pub(crate) fn view(
             .map(|key| template(READ, json!({"source":SHARED,"key":key})))
             .collect::<Vec<_>>()
     );
+    if [SHARED, LOCAL]
+        .iter()
+        .any(|source| current[source].is_null())
+    {
+        result["creation_discovery_request"] = template(READ_CREATION, json!({}));
+    }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for source in [SHARED, LOCAL] {
-        if current[source].is_null() {
+        if current[source].is_null() && request.is_some_and(|r| r["request_kind"] == READ_CREATION)
+        {
             for (_, key) in CHOICES.iter().filter(|(s, _)| *s == source) {
                 if PROGRESSIVE_CHOICES.contains(key) {
                     continue;
@@ -425,6 +434,10 @@ pub(crate) fn view(
         return Err(err(
             "configuration source, policy or capability changed; resolve a fresh request",
         ));
+    }
+    if request["request_kind"] == READ_CREATION {
+        result["status"] = json!("creation-choices-delivered");
+        return Ok(result);
     }
     let args = &request["arguments"];
     if request["request_kind"] == READ {
@@ -775,16 +788,19 @@ mod tests {
         ));
         std::fs::create_dir(&target).unwrap();
         let target = target.canonicalize().unwrap();
-        let mut request = resolve(&target, None)["configuration_write"]["creation_requests"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|r| {
-                r["arguments"]["source"] == SHARED
-                    && r["arguments"]["key"] == "workspace.cli_invoke"
-            })
-            .unwrap()
-            .clone();
+        let discovery =
+            resolve(&target, None)["configuration_write"]["creation_discovery_request"].clone();
+        let mut request =
+            resolve(&target, Some(discovery))["configuration_write"]["creation_requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| {
+                    r["arguments"]["source"] == SHARED
+                        && r["arguments"]["key"] == "workspace.cli_invoke"
+                })
+                .unwrap()
+                .clone();
         request["arguments"]["value"] = json!("fixture-native");
         let mut answer = resolve(&target,Some(request))["decision_packet"]["decision_request"]["response_request"].clone();
         answer["arguments"]["answer"] = json!("authorize-write");

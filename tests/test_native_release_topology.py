@@ -60,6 +60,7 @@ from pathlib import Path
 from agentic_workspace import start, select_reference, invoke_carried
 context={'target':str(Path.cwd()), 'task':'Configure this consumer', 'projection':'full'}
 first=start(context)
+first=start({**context,'request':first['configuration_write']['creation_discovery_request']})
 request=next(r for r in first['configuration_write']['creation_requests'] if r['arguments']['key']=='workspace.cli_invoke')
 request['arguments']['value']='aw-native'
 context['request']=request
@@ -132,7 +133,8 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     script = """
 import {start, selectReference, invokeCarried} from '@agentic-workspace/workspace-cli/operating';
 const context={target:process.cwd(),task:'Configure this consumer',projection:'full'};
-const first=start(context);
+const initial=start(context);
+const first=start({...context,request:initial.configuration_write.creation_discovery_request});
 const request=first.configuration_write.creation_requests.find(r=>r.arguments.key==='workspace.cli_invoke');
 request.arguments.value='aw-native';
 context.request=request; context.projection='compact';

@@ -117,6 +117,14 @@ evidence across all four public interfaces, verifies a protected instruction wri
 still fails, and verifies source drift restores the completion restriction. The
 full Priority 4 control suite passes after the fix (40 tests).
 
+The ordinary full-response cost guard retains its 100,000-byte ceiling. Optional
+configuration creation proposals are now returned only after the current read-only
+`creation_discovery_request`; the route fixture response is approximately 99,200
+bytes, down from 103,840. Discovery binds the current task, policy, sources and
+capability contract, creates no files, and grants no write authority. The route,
+configuration, Priority 4, carriage and skills suites pass (128 tests across the
+main run and the corrected stale-error assertion rerun). Rust workspace tests pass.
+
 The PR stays draft. Exact-candidate aggregate conformance and independent external
 acceptance remain separately owned under #3207/#2909; broader #2726 and #2334
 completion rules are not replaced by an implementation report.

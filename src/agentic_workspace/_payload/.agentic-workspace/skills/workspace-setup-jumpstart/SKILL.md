@@ -17,9 +17,11 @@ the responsible owner supplies current questions, operations and authority.
    requested outcome is already represented, leave configuration alone.
 3. Use an exact owner-returned request. For a configuration edit, select the
    matching `configuration_write.requests` entry and supply the intended value.
-   If the canonical source is absent, use the matching optional
-   `configuration_write.creation_requests` entry. Discovery creates no source
-   and does not recommend enabling a capability.
+   If the canonical source is absent, first submit the returned
+   `configuration_write.creation_discovery_request` through `start` with the same
+   context. Select the matching `configuration_write.creation_requests` entry
+   from that response. This read-only discovery creates no source and does not
+   recommend enabling a capability; source or policy drift requires a fresh request.
    Run `start --input <request.json>` with the same context and `--format json`.
    The current writer supports canonical shared/local invocation, shared module
    selection, instruction and intent source choices, and local command/review

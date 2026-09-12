@@ -15,6 +15,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 def proposal(surface, binary, native, root):
     context = {"target": str(root), "task": "Set the configured invocation"}
     initial = consume(surface, binary, native, context)
+    initial = consume(surface, binary, native, {**context, "request": initial["configuration_write"]["creation_discovery_request"]})
     request = next(r for r in initial["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "workspace.cli_invoke")
     request["arguments"] = {"source": ".agentic-workspace/config.toml", "key": "workspace.cli_invoke", "value": "aw-local"}
     context["request"] = request
