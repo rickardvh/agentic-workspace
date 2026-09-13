@@ -41,6 +41,25 @@ Its completion wakes the publisher, which re-reads the current PR head and
 reviews through GitHub APIs. Relay success, output and event head are not review
 authority. Candidate evaluation remains separate from publication credentials.
 
+The publisher no longer publishes with `GITHUB_TOKEN`: a candidate Actions job
+can mint the same check name, even without `checks: write`. Publication requires
+a dedicated GitHub App token from the `review-publisher` environment. The token
+is scoped to this repository with Checks write and Contents/Issues/Pull requests
+read permissions; missing credentials fail without a generic-token fallback.
+The required `Review approval` context must bind to that App's numeric
+`integration_id`, not the generic GitHub Actions App (15368). GitHub documents
+[required-check source selection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
+
+The checked-in ruleset is now an **unrendered template**, with an intentionally
+non-numeric `REVIEW_PUBLISHER_APP_ID` slot. Do not send it directly to GitHub or
+drop that field. After independently selecting the dedicated App, run
+`uv run --frozen --active --no-sync python scripts/github/render_review_ruleset.py --app-slug APP-SLUG`
+and retain its JSON in task scratch for review. This read-only command looks up
+the actual App ID, rejects GitHub Actions or an App without Checks write, and
+emits a ruleset with a numeric source binding. It neither provisions an App nor
+certifies independence, installs credentials, or applies/enables the ruleset.
+The same-name candidate Actions check must not satisfy the resulting rule.
+
 The publisher checks out the immutable independently accepted C53 source above,
 including its imported review parser, without persisted credentials. Advancing
 the pin requires another independently admitted source. An absent, stale, or
@@ -51,20 +70,41 @@ The revised publisher no longer has that trigger. See GitHub's
 and [privileged workflow guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
 
 **Admission and hosted proof are still pending (#3227).** The frozen `master`
-does not contain the publisher. Neither the candidate copy nor a local test
+does not contain the publisher. Live ruleset 20615912 remains disabled and
+name-only; no dedicated App identity or protected environment is provisioned by
+this patch. Neither the candidate copy nor a local test
 bootstraps trusted workflow authority. An independent maintainer/reviewer must
 admit the repaired publisher to the default branch through the repository's
 trusted change process; the implementing agent cannot independently approve
-that promotion. Then submit/edit/dismiss an independently initiated review on
+that promotion. Provision/install the independently controlled App only for this
+repository, and restrict the `review-publisher` environment to the exact trusted
+default branch (`master`), with no wildcard, tag, or PR deployment rule. Store
+`REVIEW_PUBLISHER_APP_ID` and `REVIEW_PUBLISHER_PRIVATE_KEY` as environment-scoped
+configuration and secret; never expose the private key as repository or
+organization secrets available to candidate workflows. Reviewers/protection
+must prevent untrusted workflow code from accessing it. Render the ruleset and
+verify its App ID matches that environment before independently admitting its
+activation. Preserve other live rules and their intended enforcement; this
+patch does not silently enable a disabled ruleset.
+
+Then submit/edit/dismiss an independently initiated review on
 the current PR head and retain the relay run, default-branch publisher run and
 exact-head check URLs. Confirm the publisher's workflow source is the admitted
 default-branch revision and its checkout is C53, and that missing/blocked review
-fails while an eligible current approval succeeds. Do not create a synthetic
+fails while an eligible current approval succeeds. Inspect the published check's
+`app.id` and the live rule's `integration_id` for equality. Use a controlled
+negative candidate check with the same name from GitHub Actions to prove it
+cannot meet the App-bound requirement; also verify candidate PR jobs cannot
+access the protected environment. Do not create a synthetic
 approval to complete this proof. A merge to the reconstruction branch alone does
 not activate default-branch events. Local gate tests are not hosted proof.
 
-The feedback repair passed 27 gate tests, extending the existing workflow
-boundary and event journey cases. The new notification job is a single no-op
+The first feedback repair passed 27 gate tests; the source-identity repair passed
+46 gate, ruleset and release-workflow tests. The single new source-binding test
+covers rejection of absent, generic, malformed and name-only identities, a
+distinct required-check authority boundary. Other workflow assertions extend
+the existing case. Local tests do not prove server-side matching or environment
+protection. The new notification job is a single no-op
 per formal review event, required to cross from a PR-controlled event to a
 trusted default-branch publisher; it adds no candidate evaluation or test suite.
 

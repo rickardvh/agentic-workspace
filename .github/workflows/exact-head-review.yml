@@ -24,10 +24,10 @@ jobs:
       ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0]) ||
           (github.event_name == 'issue_comment' && github.event.issue.pull_request) }}
     permissions:
-      checks: write
       contents: read
-      issues: read
-      pull-requests: read
+    # Environment must allow only the trusted default branch, with no tag/PR
+    # deployment rules. Keep the private key here, never in repository secrets.
+    environment: review-publisher
     runs-on: ubuntu-latest
     steps:
       - name: Check out trusted merge-gate implementation
@@ -35,13 +35,25 @@ jobs:
         with:
           # Independently accepted C53 source (#3207). The frozen default
           # branch lacks this publisher; never execute candidate PR code with
-          # checks:write. Advance only to another independently admitted source.
+          # publisher authority. Advance only to independently admitted source.
           ref: 472e94b85d9ec1a8d5e0da0e63d13ee1621eb558
           fetch-depth: 0
           persist-credentials: false
+      - name: Create dedicated publisher token
+        id: publisher-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.REVIEW_PUBLISHER_APP_ID }}
+          private-key: ${{ secrets.REVIEW_PUBLISHER_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-checks: write
+          permission-contents: read
+          permission-issues: read
+          permission-pull-requests: read
       - name: Publish review authority
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
         run: >-
           python scripts/github/review_merge_gate.py
           --event "${GITHUB_EVENT_PATH}"

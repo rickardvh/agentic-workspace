@@ -333,7 +333,22 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     publisher = yaml.load(workflow, Loader=yaml.BaseLoader)
     assert set(publisher["on"]) == {"workflow_run", "issue_comment"}
     assert publisher["on"]["workflow_run"]["workflows"] == ["CI", "Review event"]
-    assert publisher["jobs"]["review-authority"]["permissions"]["checks"] == "write"
+    job = publisher["jobs"]["review-authority"]
+    assert job["permissions"] == {"contents": "read"}
+    assert job["environment"] == "review-publisher"
+    token = next(step for step in job["steps"] if step.get("id") == "publisher-token")
+    assert token["uses"] == "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349"
+    assert token["with"] == {
+        "app-id": "${{ vars.REVIEW_PUBLISHER_APP_ID }}",
+        "private-key": "${{ secrets.REVIEW_PUBLISHER_PRIVATE_KEY }}",
+        "owner": "${{ github.repository_owner }}",
+        "repositories": "${{ github.event.repository.name }}",
+        "permission-checks": "write",
+        "permission-contents": "read",
+        "permission-issues": "read",
+        "permission-pull-requests": "read",
+    }
+    assert job["steps"][-1]["env"]["GH_TOKEN"] == "${{ steps.publisher-token.outputs.token }}"
     relay = yaml.load((WORKFLOW.parent / "review-event.yml").read_text(), Loader=yaml.BaseLoader)
     assert relay["name"] == "Review event"
     assert relay["on"] == {"pull_request_review": {"types": ["submitted", "edited", "dismissed"]}}
@@ -343,6 +358,39 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     assert relay["jobs"]["notify"]["steps"] == [
         {"name": "Notify trusted publisher", "run": "echo 'Review state changed; the trusted publisher must reobserve it.'"}
     ]
+
+
+def test_required_review_source_cannot_default_to_candidate_actions():
+    spec = importlib.util.spec_from_file_location("render_review_ruleset", ROOT / "scripts/github/render_review_ruleset.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    template = json.loads(RULESET.read_text())
+    app = {"id": 123456, "slug": "dedicated-review-fixture", "permissions": {"checks": "write"}}
+    rendered = module.render_ruleset(template, app)
+    checks = next(rule for rule in rendered["rules"] if rule["type"] == "required_status_checks")["parameters"]["required_status_checks"]
+    assert next(check for check in checks if check["context"] == "Review approval") == {
+        "context": "Review approval",
+        "integration_id": 123456,
+    }
+    assert "REVIEW_PUBLISHER_APP_ID" in json.dumps(template)
+    for invalid in (
+        {},
+        {**app, "id": None},
+        {**app, "id": "123456"},
+        {**app, "id": 0},
+        {**app, "id": 15368},
+        {**app, "slug": "github-actions"},
+        {**app, "permissions": {"checks": "read"}},
+    ):
+        with pytest.raises(ValueError):
+            module.render_ruleset(template, invalid)
+    # An accidentally restored name-only rule must not be deployable by this path.
+    for rule in template["rules"]:
+        if rule["type"] == "required_status_checks":
+            for check in rule["parameters"]["required_status_checks"]:
+                check.pop("integration_id", None)
+    with pytest.raises(ValueError):
+        module.render_ruleset(template, app)
 
 
 @pytest.mark.parametrize("decision,expected", [("merge-ready", "success"), ("blocked", "failure"), (None, "failure")])
