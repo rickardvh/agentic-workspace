@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
+from copy import deepcopy
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Sequence
+from urllib.parse import urlencode
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_ROOT = REPO_ROOT / "tools"
@@ -37,9 +41,60 @@ class CarryForwardVerdict:
 
 
 def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
-    timestamp = str(comment.get("updated_at") or comment.get("submitted_at") or comment.get("created_at") or "")
+    timestamp = str(comment.get("created_at") or comment.get("submitted_at") or "")
     identifier = int(comment.get("id") or comment.get("databaseId") or 0)
     return timestamp, identifier
+
+
+def _reviewer_markers(comments: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        comment
+        for comment in comments
+        if "aw-chatgpt-review" in str(comment.get("body", ""))
+        and isinstance(comment.get("performed_via_github_app"), dict)
+        and comment["performed_via_github_app"].get("slug") == REVIEWER_APP_SLUG
+    ]
+
+
+def _integrity_failure(detail: str) -> GateDecision:
+    return GateDecision(
+        "review-integrity-blocked",
+        "failure",
+        "Review decision integrity is not established",
+        detail + " Publish a newer unedited marker through the configured reviewer App.",
+    )
+
+
+def advance_watermark(state: dict[str, Any], comments: Sequence[dict[str, Any]], event: dict[str, Any]) -> dict[str, Any]:
+    """Retain the highest observed decision, including deletion/edit tombstones."""
+    result = deepcopy(state)
+    candidates = _reviewer_markers(comments)
+    if event.get("action") in ("deleted", "edited"):
+        candidates += _reviewer_markers([event.get("comment", {})])
+    latest = max(candidates, key=_comment_order) if candidates else None
+    previous = result["latest"]
+    if latest and (previous is None or list(_comment_order(latest)) > previous["order"]):
+        result["latest"] = {
+            "order": list(_comment_order(latest)),
+            "node_id": latest.get("node_id"),
+            "digest": hashlib.sha256(str(latest["body"]).encode()).hexdigest(),
+            "tainted": False,
+        }
+    retained = result["latest"]
+    if retained is None:
+        return result
+    current = next((row for row in _reviewer_markers(comments) if row.get("node_id") == retained["node_id"]), None)
+    altered_event = event.get("action") in ("deleted", "edited") and event.get("comment", {}).get("node_id") == retained["node_id"]
+    if (
+        not current
+        or current.get("_source_unedited") is not True
+        or altered_event
+        or list(_comment_order(current)) != retained["order"]
+        or retained["order"][0] <= result["after"]
+        or hashlib.sha256(str(current.get("body", "")).encode()).hexdigest() != retained["digest"]
+    ):
+        retained["tainted"] = True
+    return result
 
 
 def review_gate_decision(
@@ -51,13 +106,7 @@ def review_gate_decision(
 ) -> GateDecision:
     # GitHub API provenance is the repository's configured producer boundary.
     # Login, association and copied marker text cannot substitute for it.
-    associated = [
-        comment
-        for comment in comments
-        if "aw-chatgpt-review" in str(comment.get("body", ""))
-        and isinstance(comment.get("performed_via_github_app"), dict)
-        and comment["performed_via_github_app"].get("slug") == REVIEWER_APP_SLUG
-    ]
+    associated = _reviewer_markers(comments)
     if not associated:
         return GateDecision(
             status="review-missing",
@@ -70,6 +119,8 @@ def review_gate_decision(
         )
 
     latest = max(associated, key=_comment_order)
+    if latest.get("_source_unedited") is not True:
+        return _integrity_failure("The latest terminal marker is edited or its mutation metadata is unavailable.")
     matches, rejected = parse_reviews([latest], expected_pr=pr_number, expected_head=head_sha)
     if not matches:
         reason = str((rejected or [{}])[0].get("reason") or "invalid-review-marker")
@@ -163,7 +214,109 @@ def _review_records(*, repository: str, pr_number: int) -> list[dict[str, Any]]:
     review_pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{repository}/pulls/{pr_number}/reviews?per_page=100"])
     comments = [comment for page in comment_pages for comment in page]
     reviews = [review for page in review_pages for review in page if str(review.get("state") or "").upper() != "DISMISSED"]
-    return [*comments, *reviews]
+    records = [*comments, *reviews]
+    candidates = _reviewer_markers(records)
+    # REST attribution does not prove that a terminal body was never edited.
+    # GraphQL lastEditedAt also detects edits within the creation timestamp's second.
+    for offset in range(0, len(candidates), 100):
+        batch = candidates[offset : offset + 100]
+        if any(not row.get("node_id") for row in batch):
+            raise ValueError("Reviewer source node identity is unavailable")
+        response = _gh_payload(
+            "POST",
+            "graphql",
+            {
+                "query": "query($ids:[ID!]!){nodes(ids:$ids){id ... on IssueComment{body lastEditedAt} ... on PullRequestReview{body lastEditedAt}}}",
+                "variables": {"ids": [row["node_id"] for row in batch]},
+            },
+        )
+        if response.get("errors"):
+            raise ValueError("Reviewer mutation metadata is unavailable")
+        nodes = {node["id"]: node for node in response["data"]["nodes"] if node}
+        for row in batch:
+            node = nodes.get(row["node_id"], {})
+            row["_source_unedited"] = "lastEditedAt" in node and node["lastEditedAt"] is None and node.get("body") == row["body"]
+    return records
+
+
+def _gh_payload(method: str, endpoint: str, payload: dict[str, Any]) -> Any:
+    result = subprocess.run(
+        ["gh", "api", "--method", method, endpoint, "--input", "-"],
+        cwd=REPO_ROOT,
+        input=json.dumps(payload),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return json.loads(result.stdout)
+
+
+def _watermark_check(repository: str, pr_number: int, app_id: int) -> tuple[dict[str, Any], dict[str, Any]]:
+    # A stable trusted-history anchor keeps the same PR state across head changes
+    # and publisher upgrades. This is one App-owned check, not a repository ledger.
+    roots = _git(["rev-list", "--max-parents=0", "HEAD"]).stdout.split()
+    if len(roots) != 1:
+        raise ValueError("Review state requires one stable trusted repository root")
+    anchor = roots[0]
+    name = f"Review decision watermark / PR {pr_number}"
+    query = urlencode({"check_name": name, "app_id": app_id, "filter": "all", "per_page": 100})
+    pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{repository}/commits/{anchor}/check-runs?{query}"])
+    checks = [
+        check for page in pages for check in page["check_runs"] if check.get("app", {}).get("id") == app_id and check.get("name") == name
+    ]
+    identity = {"kind": "review-decision-watermark/v1", "repository": repository, "pr_number": pr_number, "anchor": anchor}
+    if not checks:
+        state = {**identity, "after": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), "latest": None}
+        check = _gh_payload(
+            "POST",
+            f"repos/{repository}/check-runs",
+            {
+                "name": name,
+                "head_sha": anchor,
+                "status": "completed",
+                "conclusion": "neutral",
+                "output": _watermark_output(state),
+            },
+        )
+    elif len(checks) == 1:
+        check = checks[0]
+        state = json.loads(check["output"]["text"])
+    else:
+        raise ValueError("Ambiguous publisher watermark checks")
+    if check.get("app", {}).get("id") != app_id or check.get("head_sha") != anchor:
+        raise ValueError("Watermark publisher/anchor identity mismatch")
+    if any(state.get(key) != value for key, value in identity.items()) or not isinstance(state.get("after"), str) or not state["after"]:
+        raise ValueError("Invalid publisher watermark identity")
+    latest = state["latest"]
+    if latest is not None and (
+        not isinstance(latest, dict)
+        or set(latest) != {"order", "node_id", "digest", "tainted"}
+        or not isinstance(latest["order"], list)
+        or len(latest["order"]) != 2
+        or not isinstance(latest["order"][0], str)
+        or type(latest["order"][1]) is not int
+        or not isinstance(latest["node_id"], str)
+        or not isinstance(latest["digest"], str)
+        or type(latest["tainted"]) is not bool
+    ):
+        raise ValueError("Malformed retained reviewer decision")
+    return check, state
+
+
+def _watermark_output(state: dict[str, Any]) -> dict[str, str]:
+    return {
+        "title": "Retained reviewer decision identity",
+        "summary": "Publisher-owned integrity state; not merge approval.",
+        "text": json.dumps(state, sort_keys=True),
+    }
+
+
+def _save_watermark(repository: str, check: dict[str, Any], state: dict[str, Any]) -> None:
+    endpoint = f"repos/{repository}/check-runs/{check['id']}"
+    _gh_payload("PATCH", endpoint, {"output": _watermark_output(state)})
+    observed = _gh_json(["api", endpoint])
+    if observed.get("app", {}).get("id") != check["app"]["id"] or json.loads(observed["output"]["text"]) != state:
+        raise ValueError("Publisher watermark readback mismatch")
 
 
 def _git(args: Sequence[str], *, input_text: str | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -239,7 +392,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event", type=Path, required=True)
     parser.add_argument("--repository", required=True)
+    parser.add_argument("--publisher-app-id", type=int, required=True)
     args = parser.parse_args(argv)
+    if args.publisher_app_id <= 0 or args.publisher_app_id == 15368:
+        parser.error("A dedicated publisher App ID is required")
 
     event = json.loads(args.event.read_text(encoding="utf-8"))
     pr_number = _pr_number(event)
@@ -248,7 +404,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     pull_request = _gh_json(["api", f"repos/{args.repository}/pulls/{pr_number}"])
     head_sha = str(pull_request["head"]["sha"])
+    # Invalidate any earlier success before observing mutable source or state.
+    # Exceptions/interruption after this point leave the exact head blocked.
+    _post_check(repository=args.repository, head_sha=head_sha, decision=_integrity_failure("Publisher re-evaluation is in progress."))
+    watermark_check, state = _watermark_check(args.repository, pr_number, args.publisher_app_id)
     comments = _review_records(repository=args.repository, pr_number=pr_number)
+    state = advance_watermark(state, comments, event)
+    _save_watermark(args.repository, watermark_check, state)
+    # Reobserve after durable state publication; preserve any newly seen change
+    # before an approval can be published.
+    comments = _review_records(repository=args.repository, pr_number=pr_number)
+    state = advance_watermark(state, comments, event)
+    _save_watermark(args.repository, watermark_check, state)
     decision = review_gate_decision(
         pr_number=pr_number,
         head_sha=head_sha,
@@ -260,6 +427,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             base_head=str(pull_request["base"]["sha"]),
         ),
     )
+    if state["latest"] is None or state["latest"]["tainted"]:
+        decision = _integrity_failure("The retained reviewer decision is absent, changed, or predates state initialization.")
     _post_check(repository=args.repository, head_sha=head_sha, decision=decision)
     print(json.dumps({"pr_number": pr_number, "head_sha": head_sha, **decision.__dict__}, sort_keys=True))
     return 0

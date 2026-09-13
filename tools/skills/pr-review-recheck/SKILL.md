@@ -106,6 +106,7 @@ For any checkout isolation or temporary review material, use the shared `.agenti
    - a prior `merge-ready` decision also admits a later head only when every intervening commit is a trusted-base merge and the stable PR patch is unchanged;
    - the newest trusted decision wins, so a later blocker remains blocking;
    - ordinary follow-up commits, unrelated merges, patch-changing conflict resolutions, absent/malformed/untrusted history, or unverifiable topology keep `Review approval` failing.
+   - Terminal markers are append-only: publish a newer marker for a correction or re-review; do not edit an existing terminal body. The publisher checks GitHub mutation metadata and retains the newest observed decision identity in its App-owned check state. Deleting, dismissing, or changing that decision cannot revive an older approval. Recovery requires a newer unedited configured-reviewer-App marker. Missing/reset state requires a marker created after state initialization, not replay of historical approval.
 
 ## Recheck Focus
 

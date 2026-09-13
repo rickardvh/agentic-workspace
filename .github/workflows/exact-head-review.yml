@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: review-approval-${{ github.event.workflow_run.pull_requests[0].number || github.event.issue.number || github.run_id }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   review-authority:
@@ -62,7 +62,9 @@ jobs:
       - name: Publish review authority
         env:
           GH_TOKEN: ${{ steps.publisher-token.outputs.token }}
+          REVIEW_PUBLISHER_APP_ID: ${{ vars.REVIEW_PUBLISHER_APP_ID }}
         run: >-
           python scripts/github/review_merge_gate.py
           --event "${GITHUB_EVENT_PATH}"
           --repository "${GITHUB_REPOSITORY}"
+          --publisher-app-id "${REVIEW_PUBLISHER_APP_ID}"

@@ -90,6 +90,44 @@ remain irrelevant. Exact-head/policy parsing and trusted-base carry-forward
 continue after this filter. The configured reviewer App does not waive the
 independent-lineage requirement; the publisher App is not the reviewer App.
 
+Reviewer decisions must also survive repository-writer deletion/edit authority.
+The publisher keeps one `Review decision watermark / PR N` check, owned by its
+dedicated App, on the unique root commit of its trusted checkout. That stable
+anchor carries the same PR's decision identity across candidate head changes and
+publisher upgrades. It retains only the initialization boundary and latest
+source order, node identity, body digest and tamper flag; no review bodies or
+second repository ledger are stored. Missing state initializes a new boundary
+and requires a reviewer marker created afterward. Malformed, ambiguous or
+wrong-source state cannot authorize publication. Retirement/loss of check state
+therefore requires a fresh review, not replay of historical success.
+
+Before re-evaluating, the publisher emits a failing exact-head check, so failed
+source reads or state writes cannot leave the previous success current. It
+persists and reads back the watermark before publishing a verdict, reobserving
+sources after the write. Per-PR publisher runs are serialized without cancelling
+an active run. Credential custody must keep this the sole publisher; parallel
+out-of-band use of its App token is not an admitted state writer.
+
+A retained decision that disappears, is dismissed, changes body/identity, or has
+unknown mutation metadata is tainted and cannot be replaced by an older surviving
+approval. A deleted/edited event can retain a tombstone even when its source is
+already absent. Only a newer unedited configured-reviewer-App decision can
+recover. GitHub GraphQL `lastEditedAt` must be null, with the same body as the
+REST provenance observation; this rejects edits even within the creation second
+and before initial admission. Reviewers must append new terminal markers instead
+of editing old ones. The watermark covers decisions observed by the publisher;
+it is not a historical archive of events GitHub never delivered or retained.
+Hosted proof must confirm App custody, serialization and check-state retention,
+including deleted blocker/approval, edited marker, fresh recovery and interrupted
+publication. There is no atomic transaction spanning GitHub comment mutation and
+check publication; event delivery and fresh observation remain part of that proof.
+The integrity follow-up passed 64 gate/security/release-workflow tests, with all
+39 gate cases rerun after adding state-write/readback interruption and changed-head
+recovery coverage. The new retained cases cover the distinct persistent-decision
+and source-mutation boundaries through the existing gate owner; no recurring
+CI suite was added. State persistence tests use a simulated GitHub transport and
+fresh publisher modules; they are not hosted custody proof.
+
 **Admission and hosted proof are still pending (#3227).** The frozen `master`
 does not contain the publisher. Live ruleset 20615912 remains disabled and
 name-only; no dedicated App identity or protected environment is provisioned by
