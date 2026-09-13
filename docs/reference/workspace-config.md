@@ -18,6 +18,11 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.toml. |  | x-agentic-workspace-doc-role: "public-reference"<br>x-agentic-workspace-see-also: [".agentic-workspace/docs/workspace-config-contract.md", "docs/reference", "docs/generated"]<br>x-agentic-workspace-unknown-properties: "warn" |
 | `schema_version` | const `1` | yes | `1` | Config contract version. Workspace config files must set this to 1. |  |  |
+| `execution_posture` | object | no |  | Provider-neutral execution posture keyed by current repository semantic route. Requirements narrow eligibility; preferences inform comparison only. |  |  |
+| `execution_posture.<name>` | object | no |  | Posture for one exact current semantic route, without a built-in task taxonomy. |  |  |
+| `execution_posture.<name>.independent_context` | boolean | no |  | Require a current work-relative independent context; a static target tag cannot establish independence. |  |  |
+| `execution_posture.<name>.required_execution_guarantees` | array of string | no |  | Hard provider-neutral execution requirements applied before comparison. |  |  |
+| `execution_posture.<name>.preferred_execution_guarantees` | array of string | no |  | Soft comparison preferences among already eligible alternatives. |  |  |
 | `modules` | object | no |  | Authoritative module enablement for this repository. |  |  |
 | `modules.independent` | object | no |  | Durable admission of independently linked native owners. Installation alone grants no effects, claims, reads or restrictions. Operational state remains with the owner. |  |  |
 | `modules.independent.<name>` | object | no |  | Exact repository grant for one separately linked native owner. |  |  |

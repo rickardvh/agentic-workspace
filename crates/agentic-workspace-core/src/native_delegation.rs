@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use std::{io::Write, path::Path, process::Command, time::Duration};
 
 const KIND: &str = "delegation/dispatch/v1";
+pub(crate) const PRIOR: &str = "delegation/reconcile-prior-result/v1";
 pub(crate) const READ: &str = "delegation/read-result/v1";
 const OP: &str = "delegation.dispatch";
 /// Custody recovers only the original mutation baseline. Current work, policy,
@@ -36,14 +37,19 @@ fn error(value: impl ToString) -> CoreError {
 }
 pub(crate) fn supports_process(transport: &Value) -> bool {
     transport["method"] == "cli"
-        && transport["kind"] == "process"
+        && matches!(transport["kind"].as_str(), Some("process" | "native"))
         && transport["output_mode"] == "stdout"
 }
 pub(crate) fn contract() -> Result<Value, CoreError> {
     let declaration = json!({"kind":KIND,"result_kind":"agentic-workspace/delegation-execution/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"handoff_revision":{"type":"string"}},"required":["handoff_revision"],"additionalProperties":false}});
     let read = json!({"kind":READ,"result_kind":"agentic-workspace/delegation-result-observation/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"custody":{"type":"object"}},"required":["custody"],"additionalProperties":false}});
+    let mut prior = read.clone();
+    prior["kind"] = json!(PRIOR);
+    prior["input_schema"]["properties"]["disposition"] =
+        json!({"enum":["replace","reuse-readonly"]});
+    prior["input_schema"]["required"] = json!(["custody", "disposition"]);
     let operation = json!({"id":OP,"semantic_revision":"native-delegation-v2","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"packet":{"type":"object"},"execution":{"type":"object"}},"required":["target","packet","execution"],"additionalProperties":false},"effects":["delegation-execution"],"reads":["delegation"],"result_kind":"agentic-workspace/delegation-execution/v1"});
-    let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"delegation","revision":digest(&json!([declaration,read,operation]))?,"requests":[declaration,read],"operations":[operation],"domains":["delegation"],"effects":[{"id":"delegation-execution","domain":"delegation"}]}]});
+    let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"delegation","revision":digest(&json!([declaration,read,prior,operation]))?,"requests":[declaration,read,prior],"operations":[operation],"domains":["delegation"],"effects":[{"id":"delegation-execution","domain":"delegation"}]}]});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
 }
@@ -69,6 +75,7 @@ pub(crate) fn view(
     )?;
     let submitted_request = submitted.iter().find(|r| r["request_kind"] == KIND);
     let result_read = submitted.iter().find(|r| r["request_kind"] == READ);
+    let prior_request = submitted.iter().find(|r| r["request_kind"] == PRIOR);
     let ready = (handoff["status"] == "exported-read-only"
         || handoff["status"] == "exported-patch")
         && selected["transport"] == "cli"
@@ -77,6 +84,68 @@ pub(crate) fn view(
     let mut actions = Vec::new();
     let mut observation = Value::Null;
     let mut observed_invocation = Value::Null;
+    let mut prior_result = Value::Null;
+    if let Some(request) = prior_request {
+        crate::prepare_request_value(
+            json!({"request":request,"current_work":work,"capability_contract":contract}),
+        )?;
+        if request["source_revision"] != source || result_read.is_some() || !ready {
+            return Err(error(
+                "prior result requires the exact current replacement Assignment",
+            ));
+        }
+        // Unknown/in-flight execution cannot be converted into a fresh launch.
+        // The original committed record remains untouched, including failures.
+        let held = crate::attempt_store::inspect_committed(
+            &target.to_string_lossy(),
+            request["arguments"]["custody"].clone(),
+        )?;
+        let old = &held["invocation"]["arguments"]["packet"];
+        if held["invocation"]["source_owner"] != "delegation"
+            || held["invocation"]["operation_id"] != OP
+            || old["assignment_identity"]["human_intent"]
+                != packet["assignment_identity"]["human_intent"]
+            || old["assignment_identity"]["task_requirements"]["current_work"]
+                != packet["assignment_identity"]["task_requirements"]["current_work"]
+            || old["assignment_identity"]["task_requirements"]["requirements"]
+                != packet["assignment_identity"]["task_requirements"]["requirements"]
+            || old["assignment_identity"]["role"] != packet["assignment_identity"]["role"]
+            || old["assignment_identity"]["proof_obligation_id"]
+                != packet["assignment_identity"]["proof_obligation_id"]
+            || old["assignment_identity"]["proof_obligation_revision"]
+                != packet["assignment_identity"]["proof_obligation_revision"]
+            || old["assignment_identity"]["scope_class"]
+                != packet["assignment_identity"]["scope_class"]
+            || old["assignment_identity"]["input_capsule"]
+                != packet["assignment_identity"]["input_capsule"]
+            || old["assignment_identity"]["allowed_paths"]
+                != packet["assignment_identity"]["allowed_paths"]
+        {
+            return Err(error(
+                "prior result work/scope/baseline changed; preserve old effect truth and resolve current work",
+            ));
+        }
+        prior_result = json!({"status":"prior-execution-retained","custody":request["arguments"]["custody"],"assignment_identity":old["assignment_identity"],"outcome":held["outcome"]["value"],"replacement_assignment":requirements["assignment"]["result"]["assignment_identity"],"authority_boundary":"Prior transport completion is not result admission or target quality. Current Assignment governs replacement; original effects and custody are immutable."});
+        if request["arguments"]["disposition"] == "reuse-readonly" {
+            let value = &held["outcome"]["value"];
+            if old["assignment_identity"]["scope_class"] != "read-only"
+                || value["status"] != "returned-unproven"
+                || value["source_current"] != true
+            {
+                return Err(error(
+                    "only a completed source-current read-only result may be re-admitted; uncertain or patch effects need their original owner",
+                ));
+            }
+            let mut returned = value["returned"].clone();
+            for (key, value) in packet["return_contract"]["required_identity"]
+                .as_object()
+                .ok_or_else(|| error("current return identity missing"))?
+            {
+                returned[key] = value.clone();
+            }
+            observation = json!({"kind":"agentic-workspace/delegation-result-observation/v1","status":"current-executed-observation","assignment_identity":requirements["assignment"]["result"]["assignment_identity"],"returned":returned,"process":value["process"],"context_cost":value["context_cost"],"custody":request["arguments"]["custody"],"origin_assignment":old["assignment_identity"]["current_assignment"],"context":{"task":packet["assignment_identity"]["human_intent"],"role":packet["assignment_identity"]["role"],"scope_class":"read-only","executed_configuration":old["assignment_identity"]["current_assignment"]["selected"]["configuration"]},"claim_boundary":value["claim_boundary"]});
+        }
+    }
     if let Some(request) = result_read {
         crate::prepare_request_value(
             json!({"request":request,"current_work":work,"capability_contract":contract}),
@@ -113,7 +182,7 @@ pub(crate) fn view(
         if packet["assignment_identity"]["scope_class"] == "unapplied-patch" {
             observation["delta"] = crate::native_patch::delta(packet, &value["returned"])?;
         }
-    } else if ready {
+    } else if ready && observation.is_null() {
         let template = json!({"kind":"agentic-workspace/public-request/v1","id":KIND,"owner":"delegation","owner_revision":owner["revision"],"source_revision":source,"capability_revision":contract["revision"],"task_identity":work,"request_kind":KIND,"arguments":{"handoff_revision":digest(packet)?}});
         if let Some(request) = submitted_request {
             crate::prepare_request_value(
@@ -135,8 +204,13 @@ pub(crate) fn view(
             "current sealed process handoff required before delegation execution",
         ));
     }
+    if ready && prior_request.is_none() {
+        let mut packet = submitted.to_vec();
+        packet.push(json!({"kind":"agentic-workspace/public-request/v1","id":PRIOR,"owner":"delegation","owner_revision":owner["revision"],"source_revision":source,"capability_revision":contract["revision"],"task_identity":work,"request_kind":PRIOR,"arguments":{"custody":{},"disposition":"replace"}}));
+        requests.push(json!(packet));
+    }
     Ok(
-        json!({"status":if !observation.is_null(){"result-observed"} else if ready {"dispatch-ready"} else {"not-ready"},"requests":requests,"observation":observation,"observed_invocation":observed_invocation,"contribution":{"owner":"delegation","revision":source,"settled":actions.is_empty(),"actions":actions},"claim_boundary":"Execution transports the sealed assignment only; no return admission, Verification proof, Planning progress or completion authority."}),
+        json!({"status":if !observation.is_null(){"result-observed"} else if ready {"dispatch-ready"} else {"not-ready"},"requests":requests,"prior_result":prior_result,"observation":observation,"observed_invocation":observed_invocation,"contribution":{"owner":"delegation","revision":source,"settled":actions.is_empty(),"actions":actions},"claim_boundary":"Execution transports the sealed assignment only; no return admission, Verification proof, Planning progress or completion authority."}),
     )
 }
 

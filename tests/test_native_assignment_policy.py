@@ -2,11 +2,97 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 BASE = 'schema_version=1\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n'
+
+
+@pytest.mark.parametrize("external", ["expert", "alternate"])
+def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_binary, native_cli, external):
+    from agentic_workspace.config import load_workspace_config
+
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"skills": [{"id": "work", "semantic_routes": ["custom/design", "custom/edit"]}]}))
+    root = tmp_path / ".agentic-workspace"
+    root.mkdir()
+    shared = root / "config.toml"
+    shared.write_text(
+        'schema_version=1\n[execution_posture."custom/design"]\nrequired_execution_guarantees=["reasoning.general"]\npreferred_execution_guarantees=["cost.bounded"]\n[execution_posture."custom/edit"]\npreferred_execution_guarantees=["cost.bounded"]\n'
+    )
+    (root / "config.local.toml").write_text(
+        'schema_version=1\n[delegation]\ncurrent_target="local"\nassignment_policy="required-best-fit"\n[delegation_targets.local]\nexecution_guarantees=["cost.bounded"]\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nexecution_guarantees=["reasoning.general"]\ntransports=[{kind="manual"}]\n'.replace(
+            "delegation_targets.expert", f"delegation_targets.{external}"
+        )
+    )
+
+    def resolve(request=None):
+        return call("native", shared_core_binary, native_cli, tmp_path, request)
+
+    initial = resolve()
+    profiles = load_workspace_config(target_root=tmp_path).local_override.delegation_targets
+    assert all(profile.strength == "unknown" for profile in profiles)
+    assert next(profile for profile in profiles if profile.name == "local").execution_guarantees == ("cost.bounded",)
+    route = next(r for r in initial["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    route["arguments"].update(posture="selected", routes=["custom/design"])
+    selected = resolve(route)
+    task = selected["task_requirements"]["requests"][0]
+    task["arguments"]["required_result_classes"] = ["read-only"]
+    result = resolve([route, task])["task_requirements"]
+    assert result["result"]["requirements"]["required_execution_guarantees"] == ["reasoning.general"]
+    local = next(r for r in result["execution_configurations"]["configurations"]["candidates"] if r["configuration"]["target"] == "local")
+    assert not local["eligible"]
+    assert "required-execution-guarantee-unavailable" in local["reasons"]
+    assert "execution_posture" not in initial["task_requirements"]["result"]
+    inputs = result["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(input_refs=[], complete=False, reason="The current task itself is the complete bounded input.")
+    inputs = resolve([route, *inputs])["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"]["complete"] = True
+    offered = resolve([route, *inputs])["task_requirements"]
+    choice = next(r for r in offered["execution_configurations"]["requests"] if r[-1]["arguments"]["candidate"] == external + ":manual")
+    assessment = resolve([route, *choice])["task_requirements"]["assignment"]["requests"][0]
+    assessment[-1]["arguments"].update(alternative=external + ":manual", reason="The stronger manual target satisfies the hard posture.")
+    assigned = resolve(assessment)["task_requirements"]["assignment"]["result"]
+    assert assigned["selected"]["target"] == external
+    assert assigned["status"] == "assigned-nonlocal-handoff-required"
+
+    shared.write_text(
+        shared.read_text().replace(
+            '[execution_posture."custom/edit"]\npreferred_execution_guarantees=["cost.bounded"]',
+            '[execution_posture."custom/edit"]\npreferred_execution_guarantees=["other"]',
+        )
+    )
+    assert resolve([route, task])["task_requirements"]["result"] == result["result"]
+    shared.write_text(
+        shared.read_text().replace(
+            'required_execution_guarantees=["reasoning.general"]', 'required_execution_guarantees=["reasoning.specialist"]'
+        )
+    )
+    with pytest.raises(AssertionError, match="changed|stale"):
+        resolve([route, task])
+
+    route["arguments"]["routes"] = ["custom/edit"]
+    task = resolve(route)["task_requirements"]["requests"][0]
+    task["arguments"]["required_result_classes"] = ["read-only"]
+    candidates = resolve([route, task])["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+    assert next(row for row in candidates if row["configuration"]["target"] == "local")["eligible"]
+    shared.write_text(
+        shared.read_text().replace('[execution_posture."custom/edit"]', '[execution_posture."custom/edit"]\nindependent_context=true')
+    )
+    task = resolve(route)["task_requirements"]["requests"][0]
+    task["arguments"]["required_result_classes"] = ["read-only"]
+    candidates = resolve([route, task])["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+    assert not any(row["eligible"] for row in candidates)
+    local_source = root / "config.local.toml"
+    local_source.write_text(local_source.read_text().replace('execution_guarantees=["cost.bounded"]', 'strength="weak"'))
+    task = resolve(route)["task_requirements"]["requests"][0]
+    task["arguments"]["required_result_classes"] = ["read-only"]
+    execution = resolve([route, task])["task_requirements"]["execution_configurations"]
+    assert "repo-posture-requires-canonical-capability-profile" in str(execution)
 
 
 def call(surface, core, cli, root, request=None):

@@ -886,6 +886,7 @@ fn resolve_with_baseline(
         subject,
         &configuration,
         &verification,
+        &route_fact,
         requests.iter().find(|r| {
             r["owner"] == "assignment"
                 && r["request_kind"] == "assignment/judge-task-requirements/v1"
@@ -1243,7 +1244,10 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
         let owner = request["owner"].as_str().unwrap();
-        let key = if matches!(owner, "verification" | "planning" | "assignment") {
+        let key = if matches!(
+            owner,
+            "verification" | "planning" | "assignment" | "delegation"
+        ) {
             format!("{owner}:{}", request["request_kind"].as_str().unwrap())
         } else {
             owner.to_owned()

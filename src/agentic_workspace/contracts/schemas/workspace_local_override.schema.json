@@ -434,9 +434,6 @@
       "patternProperties": {
         "^.+$": {
           "type": "object",
-          "required": [
-            "strength"
-          ],
           "anyOf": [
             {
               "required": ["transports"]
@@ -445,6 +442,7 @@
               "required": ["execution_methods"]
             }
           ],
+          "allOf": [{"if":{"required":["execution_guarantees"]},"then":{"not":{"anyOf":[{"required":["strength"]},{"required":["reasoning_profile"]},{"required":["capability_classes"]},{"required":["safe_task_classes"]},{"required":["forbidden_task_classes"]},{"required":["escalation_target"]},{"required":["human_control_modes"]}]}}}],
           "properties": {
             "target_id": {
               "type": "string",
@@ -487,6 +485,7 @@
               "default": "revalidate",
               "description": "How existing target guidance behaves when the model/runtime revision changes."
             },
+            "execution_guarantees": {"description":"Current provider-neutral local execution capability facts; replaces overlapping target task/strength routing fields.","type":"array","maxItems":32,"uniqueItems":true,"items":{"type":"string","minLength":1,"maxLength":128}},
             "strength": {
               "type": "string",
               "enum": [
@@ -584,7 +583,7 @@
                 "allOf": [
                   {
                     "if": {"properties": {"kind": {"const": "native"}}},
-                    "then": {"required": ["adapter", "parameters"], "not": {"anyOf": [{"required": ["command"]}, {"required": ["output_mode"]}]}},
+                    "then": {"required": ["adapter", "parameters"], "not": {"required": ["output_mode"]}},
                     "else": {"not": {"anyOf": [{"required": ["adapter"]}, {"required": ["parameters"]}]}}
                   },
                   {

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Compose repository execution posture with local capabilities, sealed host dispatch, serial replacement and current repair evidence."
+issues = [3208, 2916, 3231, 2210, 3193, 3194, 2209, 2947, 2817]
