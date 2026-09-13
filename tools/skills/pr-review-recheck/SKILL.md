@@ -18,8 +18,10 @@ The current agent/session is **not eligible** if it did any of the following for
 - wrote, edited, generated, or deleted code, tests, documentation, configuration, or other patch content;
 - pushed, rebased, cherry-picked, merged, conflict-resolved, or otherwise changed the PR head;
 - addressed review feedback or CI failures by mutating the patch;
-- directed another implementation agent or tool to make substantive patch changes on its behalf;
-- otherwise materially shaped the implementation being reviewed.
+- directed or delegated substantive patch mutation from within implementation custody, on the implementer's behalf;
+- otherwise materially shaped the PR patch from within implementation custody.
+
+Issue shaping and ordinary review feedback do not constitute implementation custody. An externally initiated reviewer does not become ineligible merely by defining or refining intent/acceptance criteria before implementation, identifying blockers, requesting fixes, or re-reviewing later revisions, even when the implementation follows that feedback. Independence is lost when the reviewer writes or edits patch content, changes the PR head, acts within the implementation lineage, or directs/delegates substantive patch mutation on the implementer's behalf. Review feedback is not such delegation; taking responsibility for executing the patch change is.
 
 **Delegation does not create independence.** A reviewer is also **not eligible** when it is a child, subagent, delegated task, subprocess, nested session, or other reviewer instance spawned, selected, prompted, supervised, or controlled by an ineligible implementation agent for the purpose of approving that implementation agent's patch. This remains true even when the delegated reviewer:
 
