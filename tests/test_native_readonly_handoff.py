@@ -81,9 +81,11 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]",
     )
     if host:
-        config = config.replace(
+        process_transport = '{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}"
+        native_transport = process_transport.replace(
             'kind="process",command=', 'kind="native",adapter="codex-app-server/v1",parameters={model="fixture"},command='
         )
+        config = config.replace(process_transport, process_transport + "," + native_transport)
         worker.write_text(
             "import json,sys\nfrom pathlib import Path\n"
             "from agentic_workspace import sealed_codex_transport as host\n"
@@ -166,9 +168,16 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     )
     inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
     inputs[-1]["arguments"]["complete"] = True
-    assessment = call(inputs)["task_requirements"]["assignment"]["requests"][0]
+    offered = call(inputs)["task_requirements"]
+    if host:
+        candidates = offered["execution_configurations"]["configurations"]["candidates"]
+        variants = {row["configuration"]["id"]: row["configuration"] for row in candidates if row["eligible"]}
+        assert variants["expert:cli"]["execution"]["adapter"]["kind"] == "process"
+        assert variants["expert:native:codex-app-server/v1"]["execution"]["adapter"]["adapter"] == "codex-app-server/v1"
+    assessment = offered["assignment"]["requests"][0]
     assessment[-1]["arguments"].update(
-        alternative="expert:cli", reason="Use the configured independent process for the bounded observation."
+        alternative="expert:native:codex-app-server/v1" if host else "expert:cli",
+        reason="Use the configured independent process for the bounded observation.",
     )
     local_assessment = copy.deepcopy(assessment)
     local_assessment[-1]["arguments"].update(
@@ -266,11 +275,11 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         replacement_choice = next(
             r
             for r in call(replacement_inputs)["task_requirements"]["execution_configurations"]["requests"]
-            if r[-1]["arguments"]["candidate"] == "replacement:cli"
+            if r[-1]["arguments"]["candidate"] == "replacement:native:codex-app-server/v1"
         )
         replacement_assessment = call(replacement_choice)["task_requirements"]["assignment"]["requests"][0]
         replacement_assessment[-1]["arguments"].update(
-            alternative="replacement:cli", reason="Current replacement for the same bounded work."
+            alternative="replacement:native:codex-app-server/v1", reason="Current replacement for the same bounded work."
         )
         replacement_export = call(replacement_assessment)["task_requirements"]["handoff"]["requests"][0]
         offered = call(replacement_export)["task_requirements"]["delegation"]["requests"]
@@ -452,12 +461,15 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     requirements["arguments"]["required_result_classes"] = ["read-only"]
     comparison = proof_view([*evidence_requests, requirements])["task_requirements"]["assignment"]
     alternatives = comparison["result"]["alternatives"]
-    assert next(a for a in alternatives if a["target"] == "expert")["contextual_evidence"] == evidence
+    executed_variant = "expert:native:codex-app-server/v1" if host else "expert:cli"
+    assert next(a for a in alternatives if a["id"] == executed_variant)["contextual_evidence"] == evidence
+    if host:
+        assert next(a for a in alternatives if a["id"] == "expert:cli")["contextual_evidence"] == []
     assert next(a for a in alternatives if a["target"] == "local")["contextual_evidence"] == []
     assert comparison["result"]["selected"] is None
     comparison_request = comparison["requests"][0]
     comparison_request[-1]["arguments"].update(
-        alternative="expert:cli",
+        alternative=executed_variant,
         reason="This exact eligible configuration has one current retained-and-checked outcome; broader suitability remains uncertain.",
     )
     assert proof_view(comparison_request)["task_requirements"]["assignment"]["result"]["selected"]["target"] == "expert"
