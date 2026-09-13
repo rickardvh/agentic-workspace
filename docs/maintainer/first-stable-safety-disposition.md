@@ -111,7 +111,10 @@ out-of-band use of its App token is not an admitted state writer.
 A retained decision that disappears, is dismissed, changes body/identity, or has
 unknown mutation metadata is tainted and cannot be replaced by an older surviving
 approval. A deleted/edited event can retain a tombstone even when its source is
-already absent. Only a newer unedited configured-reviewer-App decision can
+already absent. Dismissed formal reviews returned by GitHub are retained as
+tombstones too, including reviews dismissed before the publisher's first
+observation of them. They advance the remembered decision but can never supply
+an active approval. Only a newer unedited configured-reviewer-App decision can
 recover. GitHub GraphQL `lastEditedAt` must be null, with the same body as the
 REST provenance observation; this rejects edits even within the creation second
 and before initial admission. Reviewers must append new terminal markers instead

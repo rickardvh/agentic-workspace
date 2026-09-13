@@ -450,7 +450,7 @@ def test_workflow_run_resolves_its_pull_request(tmp_path, monkeypatch, decision,
     assert len(calls) == 5
 
 
-def test_review_records_include_conversation_comments_and_active_formal_reviews(monkeypatch) -> None:
+def test_review_records_preserve_dismissed_formal_review_tombstones(monkeypatch) -> None:
     module = _module()
     calls: list[list[str]] = []
     conversation = _comment(decision="blocked", identifier=1)
@@ -466,13 +466,16 @@ def test_review_records_include_conversation_comments_and_active_formal_reviews(
         module,
         "_gh_payload",
         lambda *args: {
-            "data": {"nodes": [{"id": row["node_id"], "body": row["body"], "lastEditedAt": None} for row in (conversation, formal)]}
+            "data": {
+                "nodes": [{"id": row["node_id"], "body": row["body"], "lastEditedAt": None} for row in (conversation, formal, dismissed)]
+            }
         },
     )
 
     records = module._review_records(repository="owner/repo", pr_number=2501)
 
-    assert [record["id"] for record in records] == [1, 2]
+    assert [record["id"] for record in records] == [1, 2, 3]
+    assert module.review_gate_decision(pr_number=2501, head_sha=HEAD_A, comments=records).conclusion == "failure"
     assert "/issues/2501/comments" in calls[0][-1]
     assert "/pulls/2501/reviews" in calls[1][-1]
 
@@ -492,7 +495,7 @@ def test_edited_terminal_body_cannot_be_admitted_even_before_first_observation(m
 
 
 @pytest.mark.parametrize("admitted", ["blocked", "merge-ready"])
-@pytest.mark.parametrize("mutation", ["delete", "edit"])
+@pytest.mark.parametrize("mutation", ["delete", "edit", "dismiss-before-observation"])
 def test_publisher_watermark_survives_fresh_process_source_tampering(tmp_path, monkeypatch, admitted, mutation):
     # In-memory GitHub transport; each invocation loads a fresh publisher module.
     # Exercise real serialization, App/anchor validation, PATCH/readback and
@@ -516,7 +519,7 @@ def test_publisher_watermark_survives_fresh_process_source_tampering(tmp_path, m
     }
     older = _comment(decision="merge-ready", identifier=1)
     newest = _comment(decision=admitted, identifier=2)
-    records = [older, newest]
+    records = [older] if mutation == "dismiss-before-observation" else [older, newest]
     edits = set()
     posted = []
     event_path = tmp_path / "event.json"
@@ -535,9 +538,9 @@ def test_publisher_watermark_survives_fresh_process_source_tampering(tmp_path, m
                 return {**deepcopy(check), "output": {"text": "{}"}}
             return deepcopy(check)
         if "/issues/" in endpoint:
-            return [deepcopy(records)]
+            return [deepcopy([row for row in records if "state" not in row])]
         if endpoint.endswith("/reviews?per_page=100"):
-            return [[]]
+            return [deepcopy([row for row in records if "state" in row])]
         return {"head": {"sha": current_head}, "base": {"sha": HEAD_C}}
 
     def payload(method, endpoint, value):
@@ -566,9 +569,14 @@ def test_publisher_watermark_survives_fresh_process_source_tampering(tmp_path, m
         assert module.main(["--event", str(event_path), "--repository", "owner/repo", "--publisher-app-id", str(app_id)]) == 0
         return posted[-1]
 
-    assert run() == ("success" if admitted == "merge-ready" else "failure")
+    assert run() == ("success" if mutation == "dismiss-before-observation" or admitted == "merge-ready" else "failure")
     if mutation == "delete":
         records.pop()
+    elif mutation == "dismiss-before-observation":
+        # B is created and dismissed between evaluations. Only GitHub's retained
+        # DISMISSED record is available; the relay carries no review snapshot.
+        assert writes[-1]["latest"]["order"][1] == 1
+        records.append({**newest, "state": "DISMISSED"})
     else:
         records[-1] = _comment(decision="merge-ready", identifier=2)
         edits.add(2)

@@ -88,6 +88,7 @@ def advance_watermark(state: dict[str, Any], comments: Sequence[dict[str, Any]],
     if (
         not current
         or current.get("_source_unedited") is not True
+        or str(current.get("state") or "").upper() == "DISMISSED"
         or altered_event
         or list(_comment_order(current)) != retained["order"]
         or retained["order"][0] <= result["after"]
@@ -119,8 +120,8 @@ def review_gate_decision(
         )
 
     latest = max(associated, key=_comment_order)
-    if latest.get("_source_unedited") is not True:
-        return _integrity_failure("The latest terminal marker is edited or its mutation metadata is unavailable.")
+    if latest.get("_source_unedited") is not True or str(latest.get("state") or "").upper() == "DISMISSED":
+        return _integrity_failure("The latest terminal marker is dismissed, edited, or its mutation metadata is unavailable.")
     matches, rejected = parse_reviews([latest], expected_pr=pr_number, expected_head=head_sha)
     if not matches:
         reason = str((rejected or [{}])[0].get("reason") or "invalid-review-marker")
@@ -213,7 +214,9 @@ def _review_records(*, repository: str, pr_number: int) -> list[dict[str, Any]]:
     comment_pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{repository}/issues/{pr_number}/comments?per_page=100"])
     review_pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{repository}/pulls/{pr_number}/reviews?per_page=100"])
     comments = [comment for page in comment_pages for comment in page]
-    reviews = [review for page in review_pages for review in page if str(review.get("state") or "").upper() != "DISMISSED"]
+    # Dismissed reviews remain GitHub-owned tombstones, including reviews that
+    # were dismissed before this publisher ever observed their active verdict.
+    reviews = [review for page in review_pages for review in page]
     records = [*comments, *reviews]
     candidates = _reviewer_markers(records)
     # REST attribution does not prove that a terminal body was never edited.
