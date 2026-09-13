@@ -103,6 +103,16 @@ rules and their intended enforcement; this patch does not silently enable a
 disabled ruleset. The renderer verifies declared permissions only, not these
 installation, recent-check or live-association prerequisites.
 
+Before activation, fetch the current ruleset 20615912 from GitHub and compare
+it with the rendered template. The renderer emits a full template, not a merge
+against live state: **do not PUT that output wholesale**. Prepare the update
+from the current live rule, changing only the reviewed `Review approval` source
+binding and explicitly admitted enforcement setting. Preserve other rules,
+conditions, bypass actors and current parameter fields, including fields absent
+from the template. Re-fetch before applying to detect intervening changes, then
+read back the resulting rule and verify both the intended changes and retained
+fields. A conflicting live change requires reconciliation before activation.
+
 Then submit/edit/dismiss an independently initiated review on
 the current PR head and retain the relay run, default-branch publisher run and
 exact-head check URLs. Confirm the publisher's workflow source is the admitted
