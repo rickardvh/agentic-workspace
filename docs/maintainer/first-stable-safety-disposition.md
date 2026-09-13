@@ -4,8 +4,7 @@ This is the Priority 0 implementation and disposition under #3208, based on
 accepted C53 `472e94b85d9ec1a8d5e0da0e63d13ee1621eb558`. It covers the currently
 retained native surface, not the later delegation, adaptation, or publication
 tranches. It is implementation evidence for independent review; it does not
-approve its own PR, close #3208, or admit a release candidate. Priority 0 remains
-incomplete until the trusted publisher admission and hosted proof below succeed.
+approve its own PR, close #3208, or admit a release candidate.
 
 ## Constructible consequence recovery (#3226)
 
@@ -33,173 +32,34 @@ module-specific choreography in the canonical skill.
 
 ## Candidate preparation and review (#3227, #3236)
 
-The privileged Review approval workflow has only `workflow_run` and
-`issue_comment` triggers, whose definitions come from the default branch.
-Formal review events run a separate `Review event` notification workflow with
-empty token permissions, no checkout, no artifacts, and no approval verdict.
-Its completion wakes the publisher, which re-reads the current PR head and
-reviews through GitHub APIs. Relay success, output and event head are not review
-authority. Candidate evaluation remains separate from publication credentials.
+The user clarified the scope on 2026-09-13: prevent implementation agents from
+approving their own PRs. An implementing agent and reviewers it spawns or controls
+cannot supply independent approval. An externally initiated reviewer may shape
+issue acceptance, request fixes and re-review without joining implementation
+custody. Passing CI and implementation reports are not approval.
 
-The publisher no longer publishes with `GITHUB_TOKEN`: a candidate Actions job
-can mint the same check name, even without `checks: write`. Publication requires
-a dedicated GitHub App token from the `review-publisher` environment. The token
-is scoped to this repository with Checks write and Contents/Issues/Pull requests
-read permissions; missing credentials fail without a generic-token fallback.
-The required `Review approval` context must bind to that App's numeric
-`integration_id`, not the generic GitHub Actions App (15368). GitHub documents
-[required-check source selection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
+The existing gate filters terminal markers to GitHub API provenance
+`performed_via_github_app.slug = chatgpt-codex-connector`, then validates the PR,
+policy and current head (or the existing unchanged-patch trusted-base exception).
+Missing/wrong-App markers cannot supersede a configured reviewer decision.
+This provenance filter does not establish agent independence; the repository's
+review procedure supplies that operational separation.
 
-The App registration and repository installation also require `statuses: write`
-for GitHub's expected-source selection. This provisioning prerequisite does not
-widen the short-lived publishing token: it still requests Checks write and the
-three read permissions only. The renderer rejects Apps missing either declared
-Checks write or Statuses write. Declared App permissions alone do not prove the
-installation has accepted them or that GitHub will offer that source.
+The workflow checks out the working gate at
+`b21a62a5c185a1cebb5f161a64dd627811e19124`, which contains the provenance repair,
+and publishes using the ordinary GitHub Actions token. This fixes the absent
+script on frozen master without new credentials or a publisher App. PR/review
+and CI/comment events reobserve current review sources. Default-branch-only
+events require the workflow to be present there; until then an existing PR job
+can be rerun after a terminal review comment. No live ruleset activation is
+performed by this patch, and no synthetic approval is used as proof.
 
-The checked-in ruleset is now an **unrendered template**, with an intentionally
-non-numeric `REVIEW_PUBLISHER_APP_ID` slot. Do not send it directly to GitHub or
-drop that field. After independently selecting the dedicated App, run
-`uv run --frozen --active --no-sync python scripts/github/render_review_ruleset.py --app-slug APP-SLUG`
-and retain its JSON in task scratch for review. This read-only command looks up
-the actual App ID, rejects GitHub Actions or an App without Checks/Statuses write, and
-emits a ruleset with a numeric source binding. It neither provisions an App nor
-certifies independence, installs credentials, or applies/enables the ruleset.
-The same-name candidate Actions check must not satisfy the resulting rule.
-
-The publisher must check out a fixed implementation and its imported parser
-from the full immutable `REVIEW_GATE_COMMIT` SHA configured in the protected
-`review-publisher` environment, without persisted credentials. Missing or
-non-SHA configuration fails before checkout/token creation, with no candidate,
-default-branch or C53 fallback. Independent admission must verify that exact
-revision contains the reviewer-App provenance repair; SHA syntax alone is not
-admission. C53 remains the historical P0 baseline, but its review gate lost that
-contract and is **not an admissible publisher implementation**. An absent, stale, or
-blocked independent review still fails approval. Pinning this checkout alone
-was insufficient: `pull_request_review` uses the PR merge-ref workflow definition.
-The revised publisher no longer has that trigger. See GitHub's
-[event source definitions](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_review)
-and [privileged workflow guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
-
-Input authority is distinct from the dedicated publisher's output identity.
-Following #2798/#2799, marker candidates must have GitHub API provenance
-`performed_via_github_app.slug = chatgpt-codex-connector`. Missing/wrong-App
-markers are ignored before latest-decision selection, so a copied marker cannot
-authorize or supersede an admitted blocker or approval. Login and association
-remain irrelevant. Exact-head/policy parsing and trusted-base carry-forward
-continue after this filter. The configured reviewer App does not waive the
-independent-lineage requirement; the publisher App is not the reviewer App.
-
-Reviewer decisions must also survive repository-writer deletion/edit authority.
-The publisher keeps one `Review decision watermark / PR N` check, owned by its
-dedicated App, on the unique root commit of its trusted checkout. That stable
-anchor carries the same PR's decision identity across candidate head changes and
-publisher upgrades. It retains only the initialization boundary and latest
-source order, node identity, body digest and tamper flag; no review bodies or
-second repository ledger are stored. Missing state initializes a new boundary
-and requires a reviewer marker created afterward. Malformed, ambiguous or
-wrong-source state cannot authorize publication. Retirement/loss of check state
-therefore requires a fresh review, not replay of historical success.
-
-Before re-evaluating, the publisher emits a failing exact-head check, so failed
-source reads or state writes cannot leave the previous success current. It
-persists and reads back the watermark before publishing a verdict, reobserving
-sources after the write. Per-PR publisher runs are serialized without cancelling
-an active run. Credential custody must keep this the sole publisher; parallel
-out-of-band use of its App token is not an admitted state writer.
-
-A retained decision that disappears, is dismissed, changes body/identity, or has
-unknown mutation metadata is tainted and cannot be replaced by an older surviving
-approval. A deleted/edited event can retain a tombstone even when its source is
-already absent. Dismissed formal reviews returned by GitHub are retained as
-tombstones too, including reviews dismissed before the publisher's first
-observation of them. They advance the remembered decision but can never supply
-an active approval. Only a newer unedited configured-reviewer-App decision can
-recover. GitHub GraphQL `lastEditedAt` must be null, with the same body as the
-REST provenance observation; this rejects edits even within the creation second
-and before initial admission. Reviewers must append new terminal markers instead
-of editing old ones. The watermark covers decisions observed by the publisher;
-it is not a historical archive of events GitHub never delivered or retained.
-Hosted proof must confirm App custody, serialization and check-state retention,
-including deleted blocker/approval, edited marker, fresh recovery and interrupted
-publication. There is no atomic transaction spanning GitHub comment mutation and
-check publication; event delivery and fresh observation remain part of that proof.
-The integrity follow-up passed 64 gate/security/release-workflow tests, with all
-39 gate cases rerun after adding state-write/readback interruption and changed-head
-recovery coverage. The new retained cases cover the distinct persistent-decision
-and source-mutation boundaries through the existing gate owner; no recurring
-CI suite was added. State persistence tests use a simulated GitHub transport and
-fresh publisher modules; they are not hosted custody proof.
-
-**Admission and hosted proof are still pending (#3227).** The frozen `master`
-does not contain the publisher. Live ruleset 20615912 remains disabled and
-name-only; no dedicated App identity or protected environment is provisioned by
-this patch. Neither the candidate copy nor a local test
-bootstraps trusted workflow authority. An independent maintainer/reviewer must
-admit the repaired publisher to the default branch through the repository's
-trusted change process; the implementing agent cannot independently approve
-that promotion. Provision/install the independently controlled App only for this
-repository, and restrict the `review-publisher` environment to the exact trusted
-default branch (`master`), with no wildcard, tag, or PR deployment rule. Store
-`REVIEW_PUBLISHER_APP_ID` and `REVIEW_PUBLISHER_PRIVATE_KEY` as environment-scoped
-configuration and secret; never expose the private key as repository or
-organization secrets available to candidate workflows. Set `REVIEW_GATE_COMMIT`
-there only after independent admission of the fixed code and imported parser.
-Reviewers/protection
-must prevent untrusted workflow code from accessing it. Verify the installation
-has accepted both Checks write and Statuses write. After trusted publisher
-admission, trigger it to publish at least one recent dedicated-App `Review
-approval` check before binding/enabling the source-restricted rule. A truthful
-missing-review failure is sufficient to establish this check source; do not
-fabricate approval. GitHub requires the App to be associated with a pre-existing
-required status check: this repository already has the context in its disabled
-rule. Confirm that association and recent check are visible, then render the
-ruleset, verify its numeric App ID matches the check's `app.id` and the protected
-environment, and independently admit binding/activation. Preserve other live
-rules and their intended enforcement; this patch does not silently enable a
-disabled ruleset. The renderer verifies declared permissions only, not these
-installation, recent-check or live-association prerequisites.
-
-Before activation, fetch the current ruleset 20615912 from GitHub and compare
-it with the rendered template. The renderer emits a full template, not a merge
-against live state: **do not PUT that output wholesale**. Prepare the update
-from the current live rule, changing only the reviewed `Review approval` source
-binding and explicitly admitted enforcement setting. Preserve other rules,
-conditions, bypass actors and current parameter fields, including fields absent
-from the template. Re-fetch before applying to detect intervening changes, then
-read back the resulting rule and verify both the intended changes and retained
-fields. A conflicting live change requires reconciliation before activation.
-
-Then submit/edit/dismiss an independently initiated review on
-the current PR head and retain the relay run, default-branch publisher run and
-exact-head check URLs. Confirm the publisher's workflow source is the admitted
-default-branch revision and its checkout is the exact independently admitted
-fixed `REVIEW_GATE_COMMIT`, and that missing/blocked review
-fails while an eligible current approval succeeds. Inspect the published check's
-`app.id` and the live rule's `integration_id` for equality. Use a controlled
-negative candidate check with the same name from GitHub Actions to prove it
-cannot meet the App-bound requirement; also verify candidate PR jobs cannot
-access the protected environment. Verify that an ordinary copied marker without
-the configured reviewer-App metadata cannot make the trusted publisher emit
-success or supersede its current admitted verdict. Do not create a synthetic
-approval to complete this proof. A merge to the reconstruction branch alone does
-not activate default-branch events. Local gate tests are not hosted proof.
-
-The first feedback repair passed 27 gate tests; the source-identity repair passed
-46 gate, ruleset and release-workflow tests. The single new source-binding test
-covers rejection of absent, generic, malformed and name-only identities, a
-distinct required-check authority boundary. Other workflow assertions extend
-the existing case. Local tests do not prove server-side matching or environment
-protection. The security checker now parses only top-level/job token permissions;
-action inputs such as `permission-checks: write` are not token grants. The stale
-publisher Checks-write allowance is removed. Existing security tests cover the
-actual source tree, action-input separation, real top-level/job grants, inline
-mappings, write-all and invalid declarations. This follow-up passed 53 security,
-review-gate and release-workflow tests; the standalone security checker reports
-ready. PyYAML is now an explicit maintainer dependency, using its existing locked
-version. The new notification job is a single no-op
-per formal review event, required to cross from a PR-controlled event to a
-trusted default-branch publisher; it adds no candidate evaluation or test suite.
+Deliberate workflow/check/credential/evidence tampering using repository-owner
+access is outside this requirement. Dedicated publisher Apps, protected secrets,
+source-bound ruleset rendering and persistent decision watermarks have been
+removed. Deletion or editing of historical decisions is not defended against by
+a separate ledger. Maintainer-controlled merging and independent review remain
+required. Local tests establish gate behavior, not an independent review verdict.
 
 The hook removes Git's `rev-parse --local-env-vars` environment variables from
 dependency/validation subprocesses before both fresh and transported validation
@@ -324,5 +184,4 @@ Two pre-existing historical guards remain failing, as already described in
 absent `memory freshness`, `memory freshness strict` and `workspace native command
 admission` labels; `check_runtime_implementation_ownership.py` exceeds old Python
 file/function ratchets in unchanged files. This tranche does not rewrite old
-measurement receipts or claim those guards passed. Live privileged workflow
-publication and independent approval remain unestablished.
+measurement receipts or claim those guards passed. Independent approval remains outstanding.

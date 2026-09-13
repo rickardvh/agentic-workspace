@@ -108,26 +108,6 @@ def test_semantic_permission_scanner_and_locked_sync_fail_closed(tmp_path: Path)
         assert receipt["status"] == "blocked"
         assert any(failure["control"] == control for failure in receipt["failures"])
     security.write_text(original, encoding="utf-8")
-    publisher = tmp_path / ".github/workflows/exact-head-review.yml"
-    original = publisher.read_text(encoding="utf-8")
-    assert "permission-checks: write" in original
-    assert evaluate_security_supply_chain(tmp_path)["status"] == "ready"
-    # Action inputs are not GITHUB_TOKEN grants. Both actual scopes, inline
-    # mappings and write-all must still fail against the publisher's empty policy.
-    for old, new in (
-        ("permissions:\n  contents: read", "permissions: {checks: write}"),
-        ("permissions:\n      contents: read", "permissions: {checks: write}"),
-        ("permissions:\n  contents: read", "permissions: write-all"),
-        ("permissions:\n  contents: read", "permissions: [invalid]"),
-        ("permissions:\n  contents: read", "permissions: {checks: unexpected}"),
-    ):
-        assert old in original
-        publisher.write_text(original.replace(old, new, 1), encoding="utf-8")
-        receipt = evaluate_security_supply_chain(tmp_path)
-        assert receipt["status"] == "blocked"
-        control = next(row for row in receipt["controls"] if row["id"] == "immutable-least-privilege-actions")
-        assert control["overbroad_permissions"] or control["invalid_permissions"]
-    publisher.write_text(original, encoding="utf-8")
 
 
 def test_repo_local_workflow_write_admission_is_required_and_fingerprinted(tmp_path: Path) -> None:

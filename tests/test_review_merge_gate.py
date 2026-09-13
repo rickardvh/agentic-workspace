@@ -4,11 +4,9 @@ import importlib.util
 import json
 import subprocess
 import sys
-from copy import deepcopy
 from pathlib import Path
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "github" / "review_merge_gate.py"
@@ -41,10 +39,6 @@ def _comment(
 ) -> dict[str, object]:
     comment: dict[str, object] = {
         "id": identifier,
-        "node_id": f"node-{identifier}",
-        "created_at": "2026-01-01T00:00:00Z",
-        "updated_at": "2026-01-01T00:00:00Z",
-        "_source_unedited": True,
         "author_association": association,
         "user": {"login": login},
         "body": (
@@ -326,85 +320,16 @@ def test_carry_forward_rejects_conflict_resolution_that_changes_reviewed_patch(t
 
 def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
-    ruleset = RULESET.read_text(encoding="utf-8")
-
-    assert "workflow_run:" in workflow
-    assert "pull_request_target:" not in workflow
-    assert "issue_comment:" in workflow
-    assert "pull_request_review:" not in workflow
+    ruleset = json.loads(RULESET.read_text(encoding="utf-8"))
+    for event in ("pull_request:", "pull_request_review:", "workflow_run:", "issue_comment:"):
+        assert event in workflow
     assert "scripts/github/review_merge_gate.py" in workflow
-    assert "ref: ${{ vars.REVIEW_GATE_COMMIT }}" in workflow
-    assert "472e94b85d9ec1a8d5e0da0e63d13ee1621eb558" not in workflow
+    assert "ref: b21a62a5c185a1cebb5f161a64dd627811e19124" in workflow
     assert "persist-credentials: false" in workflow
-    assert "ref: ${{ github.event.repository.default_branch }}" not in workflow
-    assert "ref: ${{ github.event.pull_request.head" not in workflow
-    assert '"context": "Review approval"' in ruleset
-    publisher = yaml.load(workflow, Loader=yaml.BaseLoader)
-    assert publisher["concurrency"]["cancel-in-progress"] == "false"
-    assert set(publisher["on"]) == {"workflow_run", "issue_comment"}
-    assert publisher["on"]["workflow_run"]["workflows"] == ["CI", "Review event"]
-    job = publisher["jobs"]["review-authority"]
-    assert job["permissions"] == {"contents": "read"}
-    assert job["environment"] == "review-publisher"
-    assert job["steps"][0]["env"] == {"REVIEW_GATE_COMMIT": "${{ vars.REVIEW_GATE_COMMIT }}"}
-    assert "^[0-9a-f]{40}$" in job["steps"][0]["run"]
-    token = next(step for step in job["steps"] if step.get("id") == "publisher-token")
-    assert token["uses"] == "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349"
-    assert token["with"] == {
-        "app-id": "${{ vars.REVIEW_PUBLISHER_APP_ID }}",
-        "private-key": "${{ secrets.REVIEW_PUBLISHER_PRIVATE_KEY }}",
-        "owner": "${{ github.repository_owner }}",
-        "repositories": "${{ github.event.repository.name }}",
-        "permission-checks": "write",
-        "permission-contents": "read",
-        "permission-issues": "read",
-        "permission-pull-requests": "read",
-    }
-    assert job["steps"][-1]["env"]["GH_TOKEN"] == "${{ steps.publisher-token.outputs.token }}"
-    relay = yaml.load((WORKFLOW.parent / "review-event.yml").read_text(), Loader=yaml.BaseLoader)
-    assert relay["name"] == "Review event"
-    assert relay["on"] == {"pull_request_review": {"types": ["submitted", "edited", "dismissed"]}}
-    assert relay["permissions"] == {}
-    assert set(relay["jobs"]) == {"notify"}
-    assert set(relay["jobs"]["notify"]) == {"runs-on", "steps"}
-    assert relay["jobs"]["notify"]["steps"] == [
-        {"name": "Notify trusted publisher", "run": "echo 'Review state changed; the trusted publisher must reobserve it.'"}
-    ]
-
-
-def test_required_review_source_cannot_default_to_candidate_actions():
-    spec = importlib.util.spec_from_file_location("render_review_ruleset", ROOT / "scripts/github/render_review_ruleset.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    template = json.loads(RULESET.read_text())
-    app = {"id": 123456, "slug": "dedicated-review-fixture", "permissions": {"checks": "write", "statuses": "write"}}
-    rendered = module.render_ruleset(template, app)
-    checks = next(rule for rule in rendered["rules"] if rule["type"] == "required_status_checks")["parameters"]["required_status_checks"]
-    assert next(check for check in checks if check["context"] == "Review approval") == {
-        "context": "Review approval",
-        "integration_id": 123456,
-    }
-    assert "REVIEW_PUBLISHER_APP_ID" in json.dumps(template)
-    for invalid in (
-        {},
-        {**app, "id": None},
-        {**app, "id": "123456"},
-        {**app, "id": 0},
-        {**app, "id": 15368},
-        {**app, "slug": "github-actions"},
-        {**app, "permissions": {"checks": "read"}},
-        {**app, "permissions": {"checks": "write"}},
-        {**app, "permissions": {"checks": "write", "statuses": "read"}},
-    ):
-        with pytest.raises(ValueError):
-            module.render_ruleset(template, invalid)
-    # An accidentally restored name-only rule must not be deployable by this path.
-    for rule in template["rules"]:
-        if rule["type"] == "required_status_checks":
-            for check in rule["parameters"]["required_status_checks"]:
-                check.pop("integration_id", None)
-    with pytest.raises(ValueError):
-        module.render_ruleset(template, app)
+    assert "GH_TOKEN: ${{ github.token }}" in workflow
+    assert "checks: write" in workflow
+    checks = next(rule for rule in ruleset["rules"] if rule["type"] == "required_status_checks")["parameters"]["required_status_checks"]
+    assert {"context": "Review approval"} in checks
 
 
 @pytest.mark.parametrize("decision,expected", [("merge-ready", "success"), ("blocked", "failure"), (None, "failure")])
@@ -436,21 +361,13 @@ def test_workflow_run_resolves_its_pull_request(tmp_path, monkeypatch, decision,
 
     monkeypatch.setattr(module, "_gh_json", github)
     monkeypatch.setattr(module, "_post_check", lambda **kwargs: posted.append(kwargs))
-    monkeypatch.setattr(module, "_watermark_check", lambda *args: ({}, {"after": "2025-01-01T00:00:00Z", "latest": None}))
-    monkeypatch.setattr(module, "_save_watermark", lambda *args: None)
-    monkeypatch.setattr(
-        module,
-        "_gh_payload",
-        lambda *args: {"data": {"nodes": [{"id": "node-1", "body": _comment(decision=decision)["body"], "lastEditedAt": None}]}},
-    )
-    assert module.main(["--event", str(event_path), "--repository", "owner/repo", "--publisher-app-id", "123456"]) == 0
-    assert posted[0]["decision"].conclusion == "failure"
-    assert posted[-1]["head_sha"] == HEAD_A
-    assert posted[-1]["decision"].conclusion == expected
-    assert len(calls) == 5
+    assert module.main(["--event", str(event_path), "--repository", "owner/repo"]) == 0
+    assert posted[0]["head_sha"] == HEAD_A
+    assert posted[0]["decision"].conclusion == expected
+    assert len(calls) == 3
 
 
-def test_review_records_preserve_dismissed_formal_review_tombstones(monkeypatch) -> None:
+def test_review_records_include_conversation_comments_and_active_formal_reviews(monkeypatch) -> None:
     module = _module()
     calls: list[list[str]] = []
     conversation = _comment(decision="blocked", identifier=1)
@@ -462,157 +379,12 @@ def test_review_records_preserve_dismissed_formal_review_tombstones(monkeypatch)
         return [[conversation]] if "/issues/" in args[-1] else [[formal, dismissed]]
 
     monkeypatch.setattr(module, "_gh_json", fake_gh_json)
-    monkeypatch.setattr(
-        module,
-        "_gh_payload",
-        lambda *args: {
-            "data": {
-                "nodes": [{"id": row["node_id"], "body": row["body"], "lastEditedAt": None} for row in (conversation, formal, dismissed)]
-            }
-        },
-    )
 
     records = module._review_records(repository="owner/repo", pr_number=2501)
 
-    assert [record["id"] for record in records] == [1, 2, 3]
-    assert module.review_gate_decision(pr_number=2501, head_sha=HEAD_A, comments=records).conclusion == "failure"
+    assert [record["id"] for record in records] == [1, 2]
     assert "/issues/2501/comments" in calls[0][-1]
     assert "/pulls/2501/reviews" in calls[1][-1]
-
-
-@pytest.mark.parametrize("last_edit", ["2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"])
-def test_edited_terminal_body_cannot_be_admitted_even_before_first_observation(monkeypatch, last_edit):
-    module = _module()
-    comment = _comment(decision="merge-ready")
-    monkeypatch.setattr(module, "_gh_json", lambda args: [[comment]] if "/issues/" in args[-1] else [[]])
-    monkeypatch.setattr(
-        module,
-        "_gh_payload",
-        lambda *args: {"data": {"nodes": [{"id": comment["node_id"], "body": comment["body"], "lastEditedAt": last_edit}]}},
-    )
-    records = module._review_records(repository="owner/repo", pr_number=2501)
-    assert module.review_gate_decision(pr_number=2501, head_sha=HEAD_A, comments=records).conclusion == "failure"
-
-
-@pytest.mark.parametrize("admitted", ["blocked", "merge-ready"])
-@pytest.mark.parametrize("mutation", ["delete", "edit", "dismiss-before-observation"])
-def test_publisher_watermark_survives_fresh_process_source_tampering(tmp_path, monkeypatch, admitted, mutation):
-    # In-memory GitHub transport; each invocation loads a fresh publisher module.
-    # Exercise real serialization, App/anchor validation, PATCH/readback and
-    # exact-head publication ordering across independent evaluations.
-    app_id = 123456
-    anchor = "d" * 40
-    state = {
-        "kind": "review-decision-watermark/v1",
-        "repository": "owner/repo",
-        "pr_number": 2501,
-        "anchor": anchor,
-        "after": "2025-01-01T00:00:00Z",
-        "latest": None,
-    }
-    check = {
-        "id": 99,
-        "name": "Review decision watermark / PR 2501",
-        "head_sha": anchor,
-        "app": {"id": app_id},
-        "output": {"text": json.dumps(state)},
-    }
-    older = _comment(decision="merge-ready", identifier=1)
-    newest = _comment(decision=admitted, identifier=2)
-    records = [older] if mutation == "dismiss-before-observation" else [older, newest]
-    edits = set()
-    posted = []
-    event_path = tmp_path / "event.json"
-    event_path.write_text(json.dumps({"issue": {"number": 2501, "pull_request": {"url": "pr"}}}))
-    writes = []
-    fail_write = False
-    corrupt_readback = False
-    current_head = HEAD_A
-
-    def github(args):
-        endpoint = args[-1]
-        if "/commits/" in endpoint:
-            return [{"check_runs": [deepcopy(check), {**deepcopy(check), "app": {"id": 15368}}]}]
-        if endpoint.endswith("check-runs/99"):
-            if corrupt_readback:
-                return {**deepcopy(check), "output": {"text": "{}"}}
-            return deepcopy(check)
-        if "/issues/" in endpoint:
-            return [deepcopy([row for row in records if "state" not in row])]
-        if endpoint.endswith("/reviews?per_page=100"):
-            return [deepcopy([row for row in records if "state" in row])]
-        return {"head": {"sha": current_head}, "base": {"sha": HEAD_C}}
-
-    def payload(method, endpoint, value):
-        if endpoint == "graphql":
-            return {
-                "data": {
-                    "nodes": [
-                        {"id": row["node_id"], "body": row["body"], "lastEditedAt": "2026-01-02T00:00:00Z" if row["id"] in edits else None}
-                        for row in records
-                    ]
-                }
-            }
-        assert method == "PATCH" and endpoint.endswith("check-runs/99")
-        if fail_write:
-            raise RuntimeError("publisher state publication interrupted")
-        check["output"] = deepcopy(value["output"])
-        writes.append(json.loads(check["output"]["text"]))
-        return deepcopy(check)
-
-    def run():
-        module = _module()
-        monkeypatch.setattr(module, "_git", lambda *args, **kwargs: subprocess.CompletedProcess([], 0, stdout=anchor))
-        monkeypatch.setattr(module, "_gh_json", github)
-        monkeypatch.setattr(module, "_gh_payload", payload)
-        monkeypatch.setattr(module, "_post_check", lambda **kwargs: posted.append(kwargs["decision"].conclusion))
-        assert module.main(["--event", str(event_path), "--repository", "owner/repo", "--publisher-app-id", str(app_id)]) == 0
-        return posted[-1]
-
-    assert run() == ("success" if mutation == "dismiss-before-observation" or admitted == "merge-ready" else "failure")
-    if mutation == "delete":
-        records.pop()
-    elif mutation == "dismiss-before-observation":
-        # B is created and dismissed between evaluations. Only GitHub's retained
-        # DISMISSED record is available; the relay carries no review snapshot.
-        assert writes[-1]["latest"]["order"][1] == 1
-        records.append({**newest, "state": "DISMISSED"})
-    else:
-        records[-1] = _comment(decision="merge-ready", identifier=2)
-        edits.add(2)
-    assert run() == "failure"
-    assert writes[-1]["latest"]["order"][1] == 2
-    assert writes[-1]["latest"]["tainted"] is True
-    assert run() == "failure"  # a later unrelated wake-up cannot revive older approval
-    current_head = HEAD_B
-    records.append(_comment(decision="merge-ready", identifier=3, head=HEAD_B))
-    assert run() == "success"
-    assert writes[-1]["latest"]["order"][1] == 3
-    assert writes[-1]["latest"]["tainted"] is False
-    assert posted[::2] == ["failure"] * 4
-    fail_write = True
-    with pytest.raises(RuntimeError, match="publication interrupted"):
-        run()
-    assert posted[-1] == "failure"  # interruption cannot leave the prior success current
-    fail_write = False
-    corrupt_readback = True
-    with pytest.raises(ValueError, match="readback mismatch"):
-        run()
-    assert posted[-1] == "failure"
-
-
-def test_missing_or_lost_watermark_requires_a_fresh_reviewer_decision():
-    module = _module()
-    state = {"after": "2026-01-01T00:00:00Z", "latest": None}
-    old = _comment(decision="merge-ready")
-    state = module.advance_watermark(state, [old], {})
-    assert state["latest"]["tainted"]
-    newer = {**_comment(decision="merge-ready", identifier=2), "created_at": "2026-01-02T00:00:00Z"}
-    state = module.advance_watermark(state, [old, newer], {})
-    assert not state["latest"]["tainted"]
-    deleted = {**_comment(decision="blocked", identifier=3), "created_at": "2026-01-03T00:00:00Z"}
-    state = module.advance_watermark(state, [old, newer], {"action": "deleted", "comment": deleted})
-    assert state["latest"]["order"][1] == 3 and state["latest"]["tainted"]
 
 
 def test_check_run_posts_the_review_link_at_the_supported_top_level(monkeypatch) -> None:
