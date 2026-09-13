@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import os
 import subprocess
 from pathlib import Path
@@ -28,6 +29,102 @@ def instruction(call, source, content):
     answer["arguments"]["answer"] = "authorize-write"
     action = call(request=answer)["decision_packet"]["primary_action"]
     return proposal, answer, action
+
+
+@pytest.mark.parametrize("owner", ["instructions", "configuration"])
+def test_current_nomination_uses_destination_authority_and_quiets_after_change(tmp_path, shared_core_binary, native_cli, owner):
+    repo(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('schema_version=1\n[workspace]\nimprovement_latitude="reporting"\ncli_invoke="aw-old"\n')
+    evidence = tmp_path / "observation.md"
+    evidence.write_text("Fixture: the same owner method is repeatedly reconstructed.")
+    nomination = {
+        "origin": "repo-opportunity",
+        "concern": "repository",
+        "disposition": "change",
+        "scope": "proactive",
+        "reason": "A bounded current method improvement.",
+        "expected_effect": "Stop repeating the fixture setup.",
+        "validation": "Fresh owner projection must expose the changed method.",
+        "supersession": "Fresh source supersedes this request; restore with a new owner proposal if needed.",
+        "evidence": [{"reference": "observation.md", "revision": "sha256:" + hashlib.sha256(evidence.read_bytes()).hexdigest()}],
+    }
+    source = ".agentic-workspace/instructions/method.md"
+    context = {"target": str(tmp_path), "task": "Improve one bounded current method", "changed": ["src/a.txt"]}
+    section = "authoring" if owner == "instructions" else None
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def view(result):
+        return result["instructions"][section] if section else result["configuration_write"]
+
+    def request():
+        requests = view(call())["requests"]
+        candidate = copy.deepcopy(requests[0] if section else next(r for r in requests if r["arguments"]["key"] == "workspace.cli_invoke"))
+        if section:
+            candidate["arguments"].update(source=source, content="---\npaths: [src/**]\n---\nUse the current owner method.\n")
+        else:
+            candidate["arguments"]["value"] = "aw-current"
+        candidate["arguments"]["nomination"] = copy.deepcopy(nomination)
+        return candidate
+
+    assert view(call(request=request()))["status"] == "report"
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    config.write_text(config.read_text().replace('"reporting"', '"proactive"'))
+    candidate = request()
+    candidate["arguments"]["nomination"]["concern"] = "package"
+    assert view(call(request=candidate))["status"] == "report-to-package-owner"
+    candidate = request()
+    proposed = call(request=candidate)
+    assert view(proposed)["status"] == "human-decision-required"  # Latitude is not mutation authority.
+    answer = next(
+        d
+        for d in proposed["decision_packet"]["pending_consequences"]["decisions"]
+        if d["id"] == ("instruction-write-authorization" if section else "configuration-write-authorization")
+    )["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    action = call(request=answer)["decision_packet"]["primary_action"]
+    assert action["operation_id"] == ("instructions.write" if section else "configuration.write")
+    before = evidence.read_bytes()
+    evidence.write_text("Changed evidence")
+    with pytest.raises(AssertionError, match="evidence changed"):
+        call(invocation=action)
+    evidence.write_bytes(before)
+    call(invocation=action)
+    assert view(call(request=request()))["status"] == "already-owned"
+    candidate = request()
+    candidate["arguments"]["nomination"].update(origin="owner-friction", disposition="already-owned")
+    if section:
+        candidate["arguments"]["content"] += "Not yet owned.\n"
+    else:
+        candidate["arguments"]["value"] = "not-yet-owned"
+    with pytest.raises(AssertionError, match="already-owned"):
+        call(request=candidate)
+    no_action = copy.deepcopy(candidate)
+    no_action["arguments"]["nomination"]["disposition"] = "no-action"
+    assert view(call(request=no_action))["status"] == "no-action"
+    authority_owner = "scoped-instructions" if section else "configuration"
+    authority_path = source if section else ".agentic-workspace/config.toml"
+    config.write_text(
+        config.read_text() + f'\n[assurance]\ndecision_delegations=[{{owner="{authority_owner}",scope=["path:{authority_path}"]}}]\n'
+    )
+    delegated = request()
+    delegated["arguments"].update(candidate["arguments"])
+    delegated["arguments"]["nomination"].update(disposition="change")
+    admitted = call(request=delegated)
+    assert view(admitted)["status"] == "write-ready"
+    call(invocation=admitted["decision_packet"]["primary_action"])
+    if section:
+        assert "Not yet owned" in call()["instructions"]["sources"][0]["guidance"]
+        unsafe = request()
+        unsafe["arguments"]["content"] = "Broader unscoped method.\n"
+        unsafe["arguments"]["nomination"]["origin"] = "owner-friction"
+        with pytest.raises(AssertionError, match="binding floors"):
+            call(request=unsafe)
+    else:
+        assert call()["configuration"]["cli_invoke"] == "not-yet-owned"
 
 
 @pytest.mark.parametrize("scope", ["instructions", "local/instructions"])

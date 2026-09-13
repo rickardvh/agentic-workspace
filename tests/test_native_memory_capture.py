@@ -4,12 +4,63 @@ from __future__ import annotations
 
 import copy
 import os
+import subprocess
 from pathlib import Path
 
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 from tests.test_shared_core import _commit_native, _native_archive
+
+
+def test_advisory_capture_keeps_decision_authority_separate(tmp_path, shared_core_binary, native_cli):
+    dependency = tmp_path / "policy.md"
+    dependency.write_text("Current fixture fact")
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    archive = tmp_path / "docs/decisions"
+    archive.mkdir(parents=True)
+    (archive / "README.md").write_text("Repository owns material decisions.")
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    revision = _commit_native(tmp_path)
+    config.write_text(f'schema_version=1\n[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n')
+    context = {"target": str(tmp_path), "task": "Retain a useful advisory observation", "changed": ["src/core.rs"]}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    request = call()["memory"]["advisory_capture"]["requests"][0]
+    request["arguments"]["material"] = {
+        "id": "fixture:advice",
+        "lesson": "Inspect the fixture constraint before choosing an approach.",
+        "rationale": "Avoid reconstructing the same bounded fact.",
+        "dependency_paths": ["policy.md"],
+    }
+    decline = copy.deepcopy(request)
+    decline["arguments"]["disposition"] = "no-retention"
+    assert call(request=decline)["memory"]["advisory_capture"]["status"] == "not-retained"
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+    assert not (tmp_path / ".agentic-workspace/memory").exists()
+    proposed = call(request=request)
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "confirm-retention"
+    ready = call(request=answer)
+    action = ready["decision_packet"]["primary_action"]
+    assert action, ready["decision_packet"]["blockers"]
+    assert action["operation_id"] == "memory.capture-advisory"
+    published = call(invocation=action)
+    assert published["value"]["authority_effect"] == "publication-only"
+    fresh = call(task="Fresh affected consumer")
+    assert len(fresh["memory"]["selected_notes"]) == 1
+    assert not fresh["decision_packet"].get("decision_context", {}).get("consequences")
+    read = fresh["memory"]["requests"][0]
+    detail = call(task="Fresh affected consumer", request=read)
+    assert "Inspect the fixture constraint" in str(detail["memory"]["response"])
+    assert not call(changed=["unrelated.rs"])["memory"]["selected_notes"]
+    dependency.write_text("Changed fact")
+    stale = call()
+    assert not stale["memory"]["selected_notes"]
+    assert "advisory dependency changed" in str(stale["memory"]["diagnostics"])
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
