@@ -50,6 +50,13 @@ Evidence references are confined exact source paths and must match current bytes
 The nomination is bound to the proposal and invocation, so stale evidence cannot
 authorize a write.
 
+The ordinary configuration contract lists supported source/key pairs; full value
+schemas are delivered through `configuration/read-choice/v1` for the selected
+pair. Every edit still validates its value against that source-owned schema
+before disposition or publication. Advisory and nomination discovery therefore
+fit within the existing ordinary projection bound without copying every choice
+schema into unrelated work.
+
 Current `workspace.improvement_latitude` controls opportunity proposals. `none`
 and `reporting` produce reports; `conservative`/`balanced` allow proposals within
 current work; `proactive` also permits proactive proposals. None grants mutation.

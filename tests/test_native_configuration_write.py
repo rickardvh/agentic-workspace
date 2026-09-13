@@ -36,6 +36,16 @@ def test_durable_choices_are_exact_and_do_not_admit_operational_state(
 
     current = call()
     request = next(r for r in current["configuration_write"]["requests"] if r["arguments"]["key"] == key)
+    detail = copy.deepcopy(current["configuration_write"]["choice_requests"][0])
+    detail["arguments"] = {"source": request["arguments"]["source"], "key": key}
+    selected = call(request=detail)["configuration_write"]["selected_choice"]
+    assert selected["schema"]["type"] == {"modules.enabled": "array", "workspace.agent_instructions_file": "string"}.get(key, "boolean")
+    assert selected["edit_request"] == request
+    malformed = copy.deepcopy(request)
+    malformed["arguments"]["value"] = {"not": "a valid choice"}
+    with pytest.raises(AssertionError, match="is not of type"):
+        call(request=malformed)
+    assert source.read_bytes() == before
     request["arguments"]["value"] = value
     for forbidden in [
         "delegation.human_override_policy",
