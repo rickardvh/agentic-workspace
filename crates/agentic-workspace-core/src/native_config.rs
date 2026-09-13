@@ -269,6 +269,14 @@ pub(crate) fn assignment_consumption(
                         .as_array_mut()
                         .unwrap()
                         .retain(|effect| effect != "effect:implementation");
+                    // Local Assignment has discharged only implementation.
+                    // Do not send remaining lifecycle/claim restrictions back
+                    // through an already satisfied executor comparison.
+                    blocker["recovery"] = json!(if residual["owner"] == "assignment-delegation" {
+                        "public-owner:delegation"
+                    } else {
+                        "public-owner:workspace-config"
+                    });
                 }
             }
         }
@@ -482,6 +490,10 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         }
         blockers.push(json!({"code":format!("native-config-owner:{}:{}", item["source"].as_str().unwrap(),item["field"].as_str().unwrap()),
             "message":format!("{} [{}] remains owned by {}; consume that current owner before the affected behavior.",item["source"],item["field"],item["owner"]),
+            "recovery": if item["owner"] == "assignment-delegation"
+                || (item["source"] == LOCAL && matches!(item["field"].as_str(), Some("runtime.strong_planner_available" | "runtime.supports_internal_delegation")))
+                { "public-owner:assignment".to_owned() }
+                else { format!("public-owner:{}", item["owner"].as_str().unwrap()) },
             "affects":item["affects"]}));
     }
     let enabled = local["workspace"]["enabled"]

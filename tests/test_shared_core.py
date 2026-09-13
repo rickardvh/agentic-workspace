@@ -1834,7 +1834,7 @@ def test_native_decision_blob_boundaries_remain_bounded(shared_core_binary: Path
         repository_decision_view(**context)
 
 
-def test_source_node_transport_builds_current_core_without_binary_override(shared_core_binary: Path) -> None:
+def test_source_node_transport_requires_explicit_development_binary(shared_core_binary: Path) -> None:
     result = subprocess.run(
         [
             "node",
@@ -1844,6 +1844,17 @@ def test_source_node_transport_builds_current_core_without_binary_override(share
         ],
         cwd=ROOT,
         env={key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "shared Agentic Workspace core is unavailable" in result.stderr
+    assert "set AGENTIC_WORKSPACE_CORE_BINARY" in result.stderr
+    result = subprocess.run(
+        result.args,
+        cwd=ROOT,
+        env={**os.environ, "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)},
         text=True,
         capture_output=True,
         check=True,

@@ -145,7 +145,9 @@ def test_unconfigured_native_payload_has_no_read_or_artifact_tax(
 def test_historical_installation_roster_cannot_claim_new_payload(tmp_path, shared_core_binary, native_cli):
     former_repository(tmp_path)
     provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
-    provenance.write_bytes((ROOT / ".agentic-workspace/payload-provenance.json").read_bytes())
+    historical = json.loads(provenance.read_text())
+    historical["payload_files"].remove(".agentic-workspace/skills/workspace-instruction-correction/SKILL.md")
+    provenance.write_text(json.dumps(historical))
     current = consume("json", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect historical payload"})
     assert current["configuration"]["payload"]["status"] == "unresolved"
     assert any(gap["path"].endswith("workspace-instruction-correction/SKILL.md") for gap in current["configuration"]["payload"]["gaps"])

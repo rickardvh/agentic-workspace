@@ -324,6 +324,10 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     assert "issue_comment:" in workflow
     assert "pull_request_review:" in workflow
     assert "scripts/github/review_merge_gate.py" in workflow
+    assert "ref: 472e94b85d9ec1a8d5e0da0e63d13ee1621eb558" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "ref: ${{ github.event.repository.default_branch }}" not in workflow
+    assert "ref: ${{ github.event.pull_request.head" not in workflow
     assert '"context": "Review approval"' in ruleset
 
 

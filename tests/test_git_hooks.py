@@ -53,6 +53,49 @@ def test_installed_hook_enters_the_invoking_worktree() -> None:
     assert 'cd "$repo_root"' in hook
 
 
+@pytest.mark.parametrize("linked", [False, True])
+@pytest.mark.parametrize("fail", [False, True])
+def test_dependency_git_preserves_caller_repository(tmp_path, monkeypatch, linked, fail):
+    main = tmp_path / "main"
+    main.mkdir()
+    for command in (["git", "init"], ["git", "config", "user.email", "test@example.com"], ["git", "config", "user.name", "Test User"]):
+        _run(command, cwd=main)
+    (main / "file").write_text("initial\n")
+    _run(["git", "add", "file"], cwd=main)
+    _run(["git", "commit", "-m", "initial"], cwd=main)
+    caller = main
+    if linked:
+        caller = tmp_path / "linked"
+        _run(["git", "worktree", "add", str(caller), "-b", "linked"], cwd=main)
+    git_dir = Path(subprocess.check_output(["git", "rev-parse", "--absolute-git-dir"], cwd=caller, text=True).strip())
+    # Model the hook's exported context, including Git's temporary commit index.
+    alternate_index = git_dir / "alternate-index"
+    alternate_index.write_bytes((git_dir / "index").read_bytes())
+    monkeypatch.setenv("GIT_DIR", str(git_dir))
+    monkeypatch.setenv("GIT_WORK_TREE", str(caller))
+    monkeypatch.setenv("GIT_INDEX_FILE", str(alternate_index))
+    monkeypatch.setenv("VALIDATION_RUN_ID", "isolated-hook")
+    monkeypatch.setenv("VALIDATION_JOIN_TOKEN", "join:isolated-hook")
+    pre_commit = _load_pre_commit_module()
+    monkeypatch.setattr(pre_commit, "REPO_ROOT", caller)
+    protected = [main / ".git/config", git_dir / "HEAD", git_dir / "index", alternate_index]
+    before = {path: path.read_bytes() for path in protected}
+    environment = pre_commit._validation_environment()
+    cache = tmp_path / ("cold-cache-" + "long-segment-" * 6)
+    cache.mkdir()
+    command = [
+        pre_commit.sys.executable,
+        "-c",
+        "import subprocess,sys; subprocess.run(['git','init','--bare'],cwd=sys.argv[1],check=True); raise SystemExit(int(sys.argv[2]))",
+        str(cache),
+        str(7 if fail else 0),
+    ]
+    assert pre_commit._run(command, environment=environment) == (7 if fail else 0)
+    assert {path: path.read_bytes() for path in protected} == before
+    assert "bare = true" in (cache / "config").read_text()
+    assert os.environ["GIT_INDEX_FILE"] == str(alternate_index)
+
+
 def test_pre_commit_uses_one_run_for_setup_lint_and_typecheck(monkeypatch: pytest.MonkeyPatch) -> None:
     pre_commit = _load_pre_commit_module()
     environment = {"VALIDATION_RUN_ID": "explicit-run"}

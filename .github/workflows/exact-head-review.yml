@@ -32,8 +32,12 @@ jobs:
       - name: Check out trusted merge-gate implementation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          # Independently accepted C53 source (#3207). The frozen default
+          # branch lacks this publisher; never execute candidate PR code with
+          # checks:write. Advance only to another independently admitted source.
+          ref: 472e94b85d9ec1a8d5e0da0e63d13ee1621eb558
           fetch-depth: 0
+          persist-credentials: false
       - name: Publish review authority
         env:
           GH_TOKEN: ${{ github.token }}
