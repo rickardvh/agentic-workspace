@@ -39,3 +39,12 @@ These boundaries inherit the caller's filesystem and credential authority. They 
 `uv run python scripts/check/check_security_supply_chain.py --format json` emits `agentic-workspace/security-supply-chain-readiness/v1`. A support-bearing release runs this check with locked dependencies, includes the receipt and SBOM in its manifest/checksums, and attests every `dist/` subject. Any failed required control produces `status=blocked` and exits non-zero.
 
 Repository ruleset and required-check admission remain owned by #2454. This baseline supplies exact check names and readiness evidence; it does not mutate repository settings from package code.
+
+## Reconstruction preview boundary
+
+The ordinary native command set is generated in the [CLI catalogue](../reference/cli-catalogue.md).
+Historical lifecycle/removal and security-report commands are not native public
+commands. Source-maintenance and publisher scripts run only in their own trusted
+maintenance/release context. Preview status never permits guessing an uncertain
+effect, acquiring an unowned file by shape, or deleting a familiar legacy path.
+Skills and external text supply no mutation or reviewer authentication authority.

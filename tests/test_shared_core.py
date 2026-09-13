@@ -406,11 +406,20 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
                 body = function.body
                 if isinstance(body[0], ast.Expr) and isinstance(body[0].value, ast.Constant):
                     body = body[1:]
+                if function.name == "select_reference":
+                    # Only reject unknown transport keywords; no domain reducer,
+                    # state mutation or fallback is admitted by this exception.
+                    assert len(body) == 2 and isinstance(body[0], ast.If)
+                    assert ast.unparse(body[0].test) == "set(material) - {'answer'}"
+                    assert not body[0].orelse and len(body[0].body) == 1
+                    assert isinstance(body[0].body[0], ast.Raise)
+                    body = body[1:]
                 assert len(body) == 1 and isinstance(body[0], ast.Return), function.name
                 call = body[0].value
-                assert isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == "_request", function.name
+                expected = "start" if function.name == "select_reference" else "_request"
+                assert isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == expected, function.name
                 assert all(
-                    isinstance(node.func, ast.Name) and node.func.id in {"_request", "dict", "list"}
+                    isinstance(node.func, ast.Name) and node.func.id in {expected, "dict", "list"}
                     for node in ast.walk(call)
                     if isinstance(node, ast.Call)
                 ), function.name
@@ -420,6 +429,32 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
             for name, body in exports:
                 if name == "compileSourceDecision":
                     assert len(body.splitlines()) <= 8
+                    continue
+                if name == "runNativeCli":
+                    # Artifact validation and argv forwarding are transport.
+                    assert len(body.splitlines()) <= 16
+                    assert 'spawnSync(binary, args, {stdio: "inherit", windowsHide: true})' in body
+                    assert set(re.findall(r"\b(\w+)\(", body)) <= {
+                        "coreBinary",
+                        "join",
+                        "dirname",
+                        "fileURLToPath",
+                        "existsSync",
+                        "Error",
+                        "if",
+                        "parse",
+                        "readFileSync",
+                        "createHash",
+                        "update",
+                        "digest",
+                        "spawnSync",
+                    }
+                    continue
+                if name == "selectReference":
+                    assert len(body.splitlines()) <= 3
+                    assert "if (answer.length > 1) throw new TypeError(" in body
+                    assert re.findall(r"\b(\w+)\(", body) == ["TypeError", "start"]
+                    assert "return start({...context, reference, ...(answer.length ? {answer: answer[0]} : {})});" in body
                     continue
                 assert re.fullmatch(r"\s*return request\([\s\S]*\);\s*", body), name
                 assert re.findall(r"\b(\w+)\(", body) == ["request"], name

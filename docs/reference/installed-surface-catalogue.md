@@ -3,11 +3,11 @@
 
 Exact footprint, ownership, and availability values generated from `workspace_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:0fdd974f54c2b472363a844028469ffb55edbb84a21989c602373e00847c5d99`
+- Contract digest: `sha256:e0f45d190beae66c62ef85b639ef40b34f45cd45fb212b964384192fac5895f7`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
-Package-managed base and module files are installed by lifecycle operations. Repo-owned optional references are never invented merely because a module is selected. Generated/derived output and ignored local state are outside the necessary checked-in surface unless a source contract explicitly lists them.
+This is the source-maintenance lifecycle/profile inventory, not proof of a native init/upgrade command or installation into an arbitrary target. Package-managed base and module files are assigned to those maintenance operations. Repo-owned optional references are never invented merely because a module is selected. Generated/derived output and ignored local state are outside the necessary checked-in surface unless a source contract explicitly lists them.
 
 ## Profile and module cells
 
@@ -15,7 +15,7 @@ Each cell below lists the exact package-managed checked-in files: profile base p
 
 ### `necessary-surfaces` + `none`
 
-File count: 15
+File count: 17
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -26,8 +26,10 @@ File count: 15
 - `.agentic-workspace/fallback/no-cli-policy.json`
 - `.agentic-workspace/fallback/no_cli_startup.py`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -35,7 +37,7 @@ File count: 15
 
 ### `necessary-surfaces` + `planning`
 
-File count: 18
+File count: 20
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -49,8 +51,10 @@ File count: 18
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -58,7 +62,7 @@ File count: 18
 
 ### `necessary-surfaces` + `memory`
 
-File count: 18
+File count: 20
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -72,8 +76,10 @@ File count: 18
 - `.agentic-workspace/memory/WORKFLOW.md`
 - `.agentic-workspace/memory/repo/index.md`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -81,7 +87,7 @@ File count: 18
 
 ### `necessary-surfaces` + `verification`
 
-File count: 15
+File count: 17
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -92,8 +98,10 @@ File count: 15
 - `.agentic-workspace/fallback/no-cli-policy.json`
 - `.agentic-workspace/fallback/no_cli_startup.py`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -101,7 +109,7 @@ File count: 15
 
 ### `necessary-surfaces` + `planning,memory`
 
-File count: 21
+File count: 23
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -118,8 +126,10 @@ File count: 21
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -127,7 +137,7 @@ File count: 21
 
 ### `necessary-surfaces` + `planning,verification`
 
-File count: 18
+File count: 20
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -141,8 +151,10 @@ File count: 18
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -150,7 +162,7 @@ File count: 18
 
 ### `necessary-surfaces` + `memory,verification`
 
-File count: 18
+File count: 20
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -164,8 +176,10 @@ File count: 18
 - `.agentic-workspace/memory/WORKFLOW.md`
 - `.agentic-workspace/memory/repo/index.md`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -173,7 +187,7 @@ File count: 18
 
 ### `necessary-surfaces` + `planning,memory,verification`
 
-File count: 21
+File count: 23
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -190,8 +204,10 @@ File count: 21
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -199,7 +215,7 @@ File count: 21
 
 ### `full-mirror` + `none`
 
-File count: 16
+File count: 18
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -210,8 +226,10 @@ File count: 16
 - `.agentic-workspace/fallback/no-cli-policy.json`
 - `.agentic-workspace/fallback/no_cli_startup.py`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -220,7 +238,7 @@ File count: 16
 
 ### `full-mirror` + `planning`
 
-File count: 19
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -234,8 +252,10 @@ File count: 19
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -244,7 +264,7 @@ File count: 19
 
 ### `full-mirror` + `memory`
 
-File count: 19
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -258,8 +278,10 @@ File count: 19
 - `.agentic-workspace/memory/WORKFLOW.md`
 - `.agentic-workspace/memory/repo/index.md`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -268,7 +290,7 @@ File count: 19
 
 ### `full-mirror` + `verification`
 
-File count: 16
+File count: 18
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -279,8 +301,10 @@ File count: 16
 - `.agentic-workspace/fallback/no-cli-policy.json`
 - `.agentic-workspace/fallback/no_cli_startup.py`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -289,7 +313,7 @@ File count: 16
 
 ### `full-mirror` + `planning,memory`
 
-File count: 22
+File count: 24
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -306,8 +330,10 @@ File count: 22
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -316,7 +342,7 @@ File count: 22
 
 ### `full-mirror` + `planning,verification`
 
-File count: 19
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -330,8 +356,10 @@ File count: 19
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -340,7 +368,7 @@ File count: 19
 
 ### `full-mirror` + `memory,verification`
 
-File count: 19
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -354,8 +382,10 @@ File count: 19
 - `.agentic-workspace/memory/WORKFLOW.md`
 - `.agentic-workspace/memory/repo/index.md`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -364,7 +394,7 @@ File count: 19
 
 ### `full-mirror` + `planning,memory,verification`
 
-File count: 22
+File count: 24
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/WORKFLOW.md`
@@ -381,8 +411,10 @@ File count: 22
 - `.agentic-workspace/planning/execplans/README.md`
 - `.agentic-workspace/planning/execplans/TEMPLATE.plan.json`
 - `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-startup/SKILL.md`
 - `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
@@ -417,6 +449,7 @@ File count: 22
 | `.agentic-workspace/verification/proof-strategy.toml` | `optional` | necessary-surfaces, full-mirror | verification | selected-but-unconfigured: Use generic proof selection until the repo declares a Verification proof strategy. |
 | `.agentic-workspace/config.local.toml` | `optional` | necessary-surfaces, full-mirror | — | Use repo-owned config.toml when no machine-local override exists. |
 | `.agentic-workspace/system-intent/subsystems.toml` | `optional` | necessary-surfaces, full-mirror | — | Leave scoped subsystem intent absent until declared subsystem ownership exists. |
+| `.agentic-workspace/skills/workspace-resources/SKILL.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 
 ## Ownership classes
 

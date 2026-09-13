@@ -48,7 +48,7 @@ A useful effect vocabulary should remain closed and small: surface relevant cont
 
 Composition should be deterministic and authority-preserving. Lower-authority input cannot widen higher-authority permission; restrictions and requirements compose conservatively; incompatible control effects surface a conflict instead of relying on hidden order; provenance and input revisions remain inspectable.
 
-The product retains specialized domain inputs—stage-bound compatibility obligations, assurance/proof declarations, skill routing, target/correction guidance, configuration projections, and module contributions—but ordinary repo guidance has one small public surface: scoped Markdown under `.agentic-workspace/instructions/`. Its five optional fields compile through the shared instruction IR and operating decision rather than exposing a larger rule language.
+The product retains specialized domain inputs—stage-bound compatibility obligations, assurance/proof declarations, skill routing, target/correction guidance, configuration projections, and module contributions—but ordinary repo guidance has one small public surface: scoped Markdown under `.agentic-workspace/instructions/`. Its six optional fields (`paths`, `read`, `reconcile`, `use`, `checks`, `protect`) compile through the shared instruction IR and operating decision rather than exposing a larger rule language.
 
 ## Ordinary loop
 
@@ -117,20 +117,18 @@ External adapters project or transport stable AW operations into agents, IDEs, C
 
 The dependency remains inverted: the adapter knows about AW. AW does not need a marketplace, adapter registry, credentials, or vendor lifecycle in core.
 
-## Command surface
+## Agent procedure and tool surface
 
-Commands are affordances for the current question, not the product mental model.
+The canonical `workspace-startup` skill is the ordinary agent procedure. It
+selects useful context and deeper skills, while current repository policy and
+domain owners determine authority. The conceptual resolve/act/reconcile model
+above describes owner responsibilities, not mandatory phases for every task.
 
-Common routes include:
-
-- `start` to resolve first-contact context and the next action;
-- `implement` when changed paths are already known;
-- `summary`, proof operations, module operations, or specialized skills when the current contract routes there;
-- diagnostics such as `report`, `doctor`, `ownership`, and generated references only when deeper inspection is needed.
-
-The acting agent should not have to infer a command sequence from documentation.
-
-Cross-cutting instruction semantics normalize internally to source-owned facts and bounded clauses. Clauses can only surface or prefer existing capabilities, require a source-owned satisfier, or restrict an action, effect, operation, or claim. They cannot grant authority, execute code, or become a general rule or obligation store. `start` and `implement` expose the explanation on demand through `--select instruction_clause_projection`.
+The native tools are `start`, `invoke`, `resources` and `worker`. Domain requests,
+exact actions and optional detail come from the current owner. See the generated
+[native catalogue](../reference/cli-catalogue.md) and [everyday use](../everyday-use.md).
+Historical `implement`, module commands and selector flags are not native public
+affordances. No tool reference or skill grants effects or claims by itself.
 
 ## Ownership model
 

@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CLI_PATH = Path("src/agentic_workspace/contracts/cli_commands.json")
-OPTION_GROUPS_PATH = Path("src/agentic_workspace/contracts/cli_option_groups.json")
+CLI_PATH = Path("src/agentic_workspace/contracts/source_decision_contract.json")
 SURFACES_PATH = Path("src/agentic_workspace/contracts/workspace_surfaces.json")
 MODULES_PATH = Path("src/agentic_workspace/contracts/module_registry.json")
 SUPPORT_INSTALL_PATH = Path("src/agentic_workspace/contracts/support_bearing_install.json")
@@ -41,98 +40,30 @@ def _escape(value: Any) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ") or "—"
 
 
-def _command_rows(commands: list[dict[str, Any]], prefix: tuple[str, ...] = ()) -> list[tuple[tuple[str, ...], dict[str, Any]]]:
-    rows: list[tuple[tuple[str, ...], dict[str, Any]]] = []
-    for command in commands:
-        path = (*prefix, str(command["name"]))
-        rows.append((path, command))
-        rows.extend(_command_rows(command.get("subcommands", []), path))
-    return rows
-
-
-def _group_options(group_id: str, groups: dict[str, Any], seen: set[str] | None = None) -> list[dict[str, Any]]:
-    visited = set(seen or set())
-    if group_id in visited:
-        return []
-    visited.add(group_id)
-    group = groups.get(group_id, {})
-    options: list[dict[str, Any]] = []
-    for parent in group.get("uses", []):
-        options.extend(_group_options(str(parent), groups, visited))
-    options.extend(item for item in group.get("options", []) if isinstance(item, dict))
-    return options
-
-
-def _options(command: dict[str, Any], groups: dict[str, Any]) -> list[dict[str, Any]]:
-    values: list[dict[str, Any]] = []
-    for group_id in command.get("uses_option_groups", []):
-        values.extend(_group_options(str(group_id), groups))
-    values.extend(item for item in command.get("options", []) if isinstance(item, dict))
-    deduped: dict[str, dict[str, Any]] = {}
-    for item in values:
-        deduped[str(item.get("name") or _escape(item.get("flags")))] = item
-    return list(deduped.values())
-
-
 def render_cli_catalogue() -> str:
-    manifest = _load(CLI_PATH)
-    groups = _load(OPTION_GROUPS_PATH).get("option_groups", {})
-    rows = _command_rows(manifest["commands"])
-    source_digest = _digest([CLI_PATH, OPTION_GROUPS_PATH])
+    manifest = _load(CLI_PATH)["native_cli"]
     lines = [
-        "<!-- GENERATED FILE: edit the source contracts and rerun `make render-schema-reference`. -->",
-        "# Current CLI Catalogue",
-        "",
-        "Exact current command values generated from `cli_commands.json` and `cli_option_groups.json`. The schema-shape references remain at `cli-commands.md` and `cli-option-groups.md`.",
-        "",
-        f"- Contract digest: `sha256:{source_digest}`",
-        f"- Program: `{manifest['program']}`",
-        f"- Command/subcommand count: {len(rows)}",
-        "",
-        "Shared-state mutability and ignored local diagnostics are separate. A `no` below means the command contract does not mutate shared workspace state. When local session logging is enabled, any command may still write ignored machine-local diagnostics:",
-        "",
-        f"- Condition: {_escape(manifest['local_execution_effects']['condition'])}",
-        f"- Possible effects: {_escape(manifest['local_execution_effects']['effects'])}",
-        f"- Authority: `{manifest['local_execution_effects']['authority']}` — {_escape(manifest['local_execution_effects']['rule'])}",
-        "",
-        "## Command index",
-        "",
-        "| Command | Role | Audience | Shared mutation | Options | Description |",
-        "| --- | --- | --- | --- | ---: | --- |",
+        "<!-- GENERATED FILE: edit source_decision_contract.json and rerun `make render-schema-reference`. -->",
+        "# Current CLI Catalogue", "",
+        "Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.", "",
+        f"- Contract digest: `sha256:{_digest([CLI_PATH])}`",
+        f"- Program: `{manifest['executable']}`",
+        f"- Command count: {len(manifest['commands'])}", "",
+        "## Commands", "",
+        "| Command | Requires JSON input | Purpose |", "| --- | --- | --- |",
     ]
-    for path, command in rows:
-        command_text = " ".join((manifest["program"], *path))
-        lines.append(
-            f"| `{command_text}` | `{_escape(command.get('role'))}` | `{_escape(command.get('audience'))}` | "
-            f"{_escape(command.get('mutates_state', False))} | {len(_options(command, groups))} | {_escape(command.get('help'))} |"
-        )
-    for path, command in rows:
-        command_text = " ".join((manifest["program"], *path))
-        options = _options(command, groups)
-        lines.extend(
-            [
-                "",
-                f"## `{command_text}`",
-                "",
-                f"{_escape(command.get('classification_note') or command.get('help'))}",
-                "",
-                "| Flags | Required | Default | Choices | Action / nargs | Description |",
-                "| --- | --- | --- | --- | --- | --- |",
-            ]
-        )
-        if not options:
-            lines.append("| — | — | — | — | — | No declared options. |")
-        for option in options:
-            default = option.get("default_ref") or option.get("default") if "default" in option or option.get("default_ref") else None
-            action = option.get("action") or "value"
-            if option.get("nargs") is not None:
-                action = f"{action}; nargs={option['nargs']}"
-            choices = option.get("choices_ref") or option.get("choices")
-            lines.append(
-                f"| `{_escape(option.get('flags'))}` | {_escape(option.get('required', False))} | `{_escape(default)}` | "
-                f"{_escape(choices)} | `{_escape(action)}` | {_escape(option.get('help') or option.get('help_template'))} |"
-            )
-    return "\n".join(lines) + "\n"
+    for command in manifest["commands"]:
+        lines.append(f"| `{manifest['executable']} {command['name']}` | {_escape(command['input_required'])} | {_escape(command['description'])} |")
+    lines.extend(["", "## Options", "", "| Flag | Default | Choices | Purpose |", "| --- | --- | --- | --- |"])
+    for option in manifest["options"]:
+        lines.append(f"| `{option['flag']}` | {_escape(option.get('default'))} | {_escape(option.get('choices'))} | {_escape(option['description'])} |")
+    lines.extend([
+        "", "Use `--help` for the installed artifact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.", "",
+        "`start` is current resolution; `invoke` consumes one exact returned action. `resources` and `worker` are bounded dedicated tools. A request, route, packet seal or successful process does not grant mutation, ownership, proof or completion authority. Optional machine-local diagnostics remain distinct from repository mutation.", "",
+        "The older `cli_commands.json` / `cli_option_groups.json` schemas describe retained source-maintenance and historical adapters. Their `init`, `defaults`, `implement`, `proof` and module command families are not native public commands. Do not switch to a former host to bypass native rejection.", "",
+        "See [installation](../agentic-workspace-install.md), [everyday use](../everyday-use.md) and the [shared authority graph](../architecture/shared-rust-core.md).", "",
+    ])
+    return "\n".join(lines)
 
 
 def _module_sets(names: list[str]) -> list[tuple[str, ...]]:
@@ -159,7 +90,7 @@ def render_surface_catalogue() -> str:
         f"- Supported profiles: {', '.join(f'`{name}`' for name in profiles)}",
         f"- Declared modules: {', '.join(f'`{name}`' for name in modules)}",
         "",
-        "Package-managed base and module files are installed by lifecycle operations. Repo-owned optional references are never invented merely because a module is selected. Generated/derived output and ignored local state are outside the necessary checked-in surface unless a source contract explicitly lists them.",
+        "This is the source-maintenance lifecycle/profile inventory, not proof of a native init/upgrade command or installation into an arbitrary target. Package-managed base and module files are assigned to those maintenance operations. Repo-owned optional references are never invented merely because a module is selected. Generated/derived output and ignored local state are outside the necessary checked-in surface unless a source contract explicitly lists them.",
         "",
         "## Profile and module cells",
         "",
