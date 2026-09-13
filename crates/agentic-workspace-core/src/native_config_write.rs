@@ -19,6 +19,7 @@ const EFFECT: &str = "configuration-source";
 // admission. Task answers, learned evidence and operational registries stay out.
 const CHOICES: &[(&str, &str)] = &[
     (SHARED, "workspace.cli_invoke"),
+    (SHARED, "workspace.improvement_latitude"),
     (LOCAL, "workspace.cli_invoke"),
     (SHARED, "modules.enabled"),
     (SHARED, "modules.independent"),
@@ -208,13 +209,18 @@ fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec
     Ok(rendered.into_bytes())
 }
 pub(crate) fn contract() -> Result<Value, CoreError> {
-    let alternatives = CHOICES.iter().map(|(source,key)| Ok(json!({"properties":{"source":{"const":source},"key":{"const":key},"value":choice_schema(source,key)?}}))).collect::<Result<Vec<_>, CoreError>>()?;
-    let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
+    // Choice schemas are delivered by READ, not copied into every ordinary
+    // capability projection. proposed() still validates the exact value against
+    // the source-owned schema before any disposition or publication.
+    let alternatives = [SHARED, LOCAL].map(|source| json!({"properties":{
+        "source":{"const":source},"key":{"enum":CHOICES.iter().filter(|(s,_)| *s == source).map(|(_,key)| *key).collect::<Vec<_>>()}}}));
+    let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
+    args["properties"]["nomination"] = crate::native_owner_change::schema();
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v3","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
     let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write"), operation(DEFER)]});
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
-    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"const":SHARED},"key":{"enum":PROGRESSIVE_CHOICES}}}}));
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"}},"oneOf":alternatives}}));
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
@@ -443,21 +449,28 @@ pub(crate) fn view(
     if request["request_kind"] == READ {
         let key = args["key"].as_str().unwrap();
         let (section, field) = key.split_once('.').unwrap();
-        let schema = choice_schema(SHARED, key)?;
+        let source = args["source"].as_str().unwrap();
+        let schema = choice_schema(source, key)?;
         let current =
-            crate::native_config::load(&root, SHARED, source_schema(SHARED)?).map_err(err)?;
+            crate::native_config::load(&root, source, source_schema(source)?).map_err(err)?;
         let value = current
             .map(|(source, _)| source[section][field].clone())
             .filter(|value| !value.is_null())
             .unwrap_or_else(|| {
-                if schema["type"] == "array" {
+                if !schema["default"].is_null() {
+                    schema["default"].clone()
+                } else if schema["type"] == "boolean" {
+                    json!(false)
+                } else if schema["type"] == "array" {
                     json!([])
+                } else if key == "workspace.cli_invoke" {
+                    json!("agentic-workspace")
                 } else {
-                    json!({})
+                    json!("<explicit-source-choice>")
                 }
             });
         result["status"] = json!("choice-delivered");
-        result["selected_choice"] = json!({"source":SHARED,"key":key,"value":value,"schema":schema,"edit_request":template(EDIT,json!({"source":SHARED,"key":key,"value":value}))});
+        result["selected_choice"] = json!({"source":source,"key":key,"value":value,"schema":schema,"edit_request":template(EDIT,json!({"source":source,"key":key,"value":value}))});
         return Ok(result);
     }
     let source = args["source"]
@@ -487,6 +500,15 @@ pub(crate) fn view(
         let (section, field) = key
             .split_once('.')
             .ok_or_else(|| err("configuration key malformed"))?;
+        if args["nomination"].is_object()
+            && args["nomination"]["origin"] != "trusted-correction"
+            && key != "workspace.cli_invoke"
+            && args["nomination"]["disposition"] == "change"
+        {
+            return Err(err(
+                "nominated configuration method change cannot rewrite policy or safety; use explicit owner correction",
+            ));
+        }
         let bytes = proposed(target, source, key, value)?;
         post = crate::native_intent::hash(&bytes);
         let before = crate::native_planning::read(&root, source)?
@@ -500,12 +522,19 @@ pub(crate) fn view(
             .transpose()
             .map_err(err)?
             .unwrap_or(Value::Null);
+        if let Some(disposition) =
+            crate::native_owner_change::disposition(target, config, args, before_value == *value)?
+        {
+            result["status"] = disposition["status"].clone();
+            result["nomination"] = disposition;
+            return Ok(result);
+        }
         if before_value == *value {
             result["status"] = json!("unchanged");
             return Ok(result);
         }
         let proposal = digest(
-            &json!({"binding":binding,"source":source,"key":args["key"],"value":value,"post_revision":post}),
+            &json!({"binding":binding,"source":source,"key":args["key"],"value":value,"post_revision":post,"nomination":args["nomination"]}),
         )?;
         if args["answer"].is_null() {
             if !matches!(

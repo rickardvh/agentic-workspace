@@ -24,6 +24,7 @@ mod native_intent;
 mod native_memory;
 mod native_memory_capture;
 mod native_memory_write;
+mod native_owner_change;
 pub(crate) mod native_patch;
 mod native_payload;
 mod native_planning;

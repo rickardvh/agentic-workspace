@@ -408,7 +408,8 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                         || (source == SHARED
                             && matches!(
                                 field.as_str(),
-                                "workspace.workflow_artifact_profile"
+                                "workspace.improvement_latitude"
+                                    | "workspace.workflow_artifact_profile"
                                     | "workspace.agent_instructions_file"
                                     | "execution_posture"
                                     | "system_intent.sources"
@@ -567,7 +568,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
-        "execution_posture":shared["execution_posture"],"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
+        "improvement_latitude":shared["workspace"]["improvement_latitude"],"execution_posture":shared["execution_posture"],"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
             "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
             "decision_record_target":shared["assurance"]["decision_record_target"],

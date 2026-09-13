@@ -243,6 +243,20 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
                     "more than 12 relevant notes; narrow the current work scope",
                 ));
             }
+            if let Some(dependencies) = metadata.get("dependencies") {
+                for (path, revision) in dependencies
+                    .as_object()
+                    .ok_or_else(|| error("advisory dependencies must be exact source revisions"))?
+                {
+                    if !confined(&root, path)?
+                        || decision_source::hash(&decision_source::read(&root, path)?) != *revision
+                    {
+                        return Err(error(
+                            "advisory dependency changed; reconcile the note before reuse",
+                        ));
+                    }
+                }
+            }
             let stale_when = path_patterns(metadata.get("stale_when"), "stale_when")?;
             let superseded_by = strings(metadata.get("superseded_by"), "superseded_by")?;
             let contradicted_by = strings(metadata.get("contradicted_by"), "contradicted_by")?;

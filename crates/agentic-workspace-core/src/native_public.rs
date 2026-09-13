@@ -89,6 +89,8 @@ fn resolve_with_baseline(
                 && i["operation_id"] != "memory.recover-disposition"
                 && i["operation_id"] != "memory.capture-decision"
                 && i["operation_id"] != "memory.recover-decision"
+                && i["operation_id"] != "memory.capture-advisory"
+                && i["operation_id"] != "memory.recover-advisory"
                 && i["operation_id"] != "decision-continuity.capture-decision"
                 && i["operation_id"] != "decision-continuity.recover-decision"
                 && i["operation_id"] != crate::native_source_reconciliation::OP
@@ -273,10 +275,7 @@ fn resolve_with_baseline(
         &route_fact,
         admissions["instruction_revision"].as_str().unwrap_or(""),
     )?;
-    let capture_available = !decision_scope.is_empty()
-        && configuration["admissions"]["decision_record_target"]
-            .as_str()
-            .is_none_or(str::is_empty);
+    let capture_available = !decision_scope.is_empty();
     let mut memory = if available("memory") {
         native_memory::public_view(
             target,
@@ -489,43 +488,72 @@ fn resolve_with_baseline(
         crate::native_memory_write::apply_view(&mut memory, disposition);
     }
     if available("memory") {
-        let capture = crate::native_memory_capture::view(
-            target,
-            &work,
-            &decision_scope,
-            &configuration,
-            &contract,
-            &owner_input["decision_context"],
-            request_for("memory").filter(|r| {
+        for (field, destination) in [
+            ("capture", crate::native_memory_capture::Destination::Memory),
+            (
+                "advisory_capture",
+                crate::native_memory_capture::Destination::Advisory,
+            ),
+        ] {
+            let capture = crate::native_memory_capture::view_for(
+                target,
+                &work,
+                &decision_scope,
+                &configuration,
+                &contract,
+                (destination, &owner_input["decision_context"]),
+                request_for("memory").filter(|r| {
+                    let advisory = r["request_kind"]
+                        == crate::native_memory_capture::ADVISORY_CAPTURE
+                        || r["request_kind"] == crate::native_memory_capture::ADVISORY_RECOVER;
+                    if advisory
+                        != (destination == crate::native_memory_capture::Destination::Advisory)
+                    {
+                        return false;
+                    }
+                    matches!(
+                        r["request_kind"].as_str(),
+                        Some(
+                            crate::native_memory_capture::CAPTURE
+                                | crate::native_memory_capture::RECOVER
+                                | crate::native_memory_capture::ADVISORY_CAPTURE
+                                | crate::native_memory_capture::ADVISORY_RECOVER
+                        )
+                    )
+                }),
+            )?;
+            if request_for("memory").is_some_and(|r| {
+                let advisory = r["request_kind"] == crate::native_memory_capture::ADVISORY_CAPTURE
+                    || r["request_kind"] == crate::native_memory_capture::ADVISORY_RECOVER;
+                if advisory != (destination == crate::native_memory_capture::Destination::Advisory)
+                {
+                    return false;
+                }
                 matches!(
                     r["request_kind"].as_str(),
                     Some(
                         crate::native_memory_capture::CAPTURE
                             | crate::native_memory_capture::RECOVER
+                            | crate::native_memory_capture::ADVISORY_CAPTURE
+                            | crate::native_memory_capture::ADVISORY_RECOVER
                     )
                 )
-            }),
-        )?;
-        if request_for("memory").is_some_and(|r| {
-            matches!(
-                r["request_kind"].as_str(),
-                Some(crate::native_memory_capture::CAPTURE | crate::native_memory_capture::RECOVER)
-            )
-        }) {
-            memory["contribution"]["relevant"] = json!(true);
-            memory["contribution"]["settled"] = json!(false);
-            for field in ["revision", "actions", "decisions"] {
-                if let Some(v) = capture["contribution"].get(field) {
-                    memory["contribution"][field] = v.clone();
+            }) {
+                memory["contribution"]["relevant"] = json!(true);
+                memory["contribution"]["settled"] = json!(false);
+                for field in ["revision", "actions", "decisions"] {
+                    if let Some(v) = capture["contribution"].get(field) {
+                        memory["contribution"][field] = v.clone();
+                    }
                 }
             }
+            if let Some(blockers) = capture["contribution"].get("blockers") {
+                memory["contribution"]["relevant"] = json!(true);
+                memory["contribution"]["settled"] = json!(false);
+                memory["contribution"]["blockers"] = blockers.clone();
+            }
+            memory[field] = capture;
         }
-        if let Some(blockers) = capture["contribution"].get("blockers") {
-            memory["contribution"]["relevant"] = json!(true);
-            memory["contribution"]["settled"] = json!(false);
-            memory["contribution"]["blockers"] = blockers.clone();
-        }
-        memory["capture"] = capture;
     }
     let mut planning = if executing
         && input
@@ -1085,6 +1113,8 @@ fn resolve_with_baseline(
                             | "memory.recover-disposition"
                             | "memory.capture-decision"
                             | "memory.recover-decision"
+                            | "memory.capture-advisory"
+                            | "memory.recover-advisory"
                             | "decision-continuity.capture-decision"
                             | "decision-continuity.recover-decision"
                             | "verification.record-source-reconciliation"
@@ -1465,6 +1495,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "memory.recover-disposition"
         && invocation["operation_id"] != "memory.capture-decision"
         && invocation["operation_id"] != "memory.recover-decision"
+        && invocation["operation_id"] != "memory.capture-advisory"
+        && invocation["operation_id"] != "memory.recover-advisory"
         && invocation["operation_id"] != "decision-continuity.capture-decision"
         && invocation["operation_id"] != "decision-continuity.recover-decision"
         && invocation["operation_id"] != crate::native_source_reconciliation::OP
@@ -1535,6 +1567,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 | "memory.recover-disposition"
                 | "memory.capture-decision"
                 | "memory.recover-decision"
+                | "memory.capture-advisory"
+                | "memory.recover-advisory"
                 | "decision-continuity.capture-decision"
                 | "decision-continuity.recover-decision"
         )
@@ -1555,6 +1589,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             Some(
                 "memory.capture-decision"
                     | "memory.recover-decision"
+                    | "memory.capture-advisory"
+                    | "memory.recover-advisory"
                     | "decision-continuity.capture-decision"
                     | "decision-continuity.recover-decision"
             )

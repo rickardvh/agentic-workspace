@@ -76,6 +76,8 @@ pub(crate) fn extend_contract(contract: &mut Value) -> Result<(), CoreError> {
         {"kind":EDIT,"result_kind":"agentic-workspace/instruction-write-proposal/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","content"],"properties":{"source":{"type":"string","maxLength":256},"content":{"type":"string","maxLength":65536},"proposal_revision":{"type":"string"},"answer":{"enum":["authorize-write","defer"]}}}},
         {"kind":RECOVER,"result_kind":"agentic-workspace/instruction-write-result/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","post_revision"],"properties":{"source":{"type":"string"},"post_revision":{"type":"string"}}}}
     ]);
+    owner["requests"][0]["input_schema"]["properties"]["nomination"] =
+        crate::native_owner_change::schema();
     owner["operations"] = json!([WRITE,RECOVERY].iter().map(|op| json!({"id":op,"semantic_revision":"instruction-publication/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["target","request","binding","post_revision"],"properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}}},"result_kind":"agentic-workspace/instruction-write-result/v1","effects":[EFFECT],"reads":["scoped-instructions"]})).collect::<Vec<_>>());
     owner["revision"] = json!(digest(&json!([owner["requests"], owner["operations"]]))?);
     contract["restriction_authorities"][0]["affects"]
@@ -200,8 +202,35 @@ pub(crate) fn view(
             (RECOVERY, post.to_owned())
         } else {
             let bytes = postimage(args)?;
+            if args["nomination"].is_object()
+                && args["nomination"]["origin"] != "trusted-correction"
+                && let Some(before) = &before
+            {
+                let old = crate::instruction_source::parsed(before, false);
+                let new = crate::instruction_source::parsed(&bytes, false);
+                if ["paths", "protect", "checks", "reconcile"]
+                    .iter()
+                    .any(|key| old["metadata"][key] != new["metadata"][key])
+                {
+                    return Err(err(
+                        "nominated method change cannot alter instruction scope or binding floors; use explicit owner correction",
+                    ));
+                }
+            }
+            if let Some(disposition) = crate::native_owner_change::disposition(
+                target,
+                config,
+                args,
+                before.as_ref() == Some(&bytes)
+                    && admitted(target, path, &crate::decision_source::hash(&bytes))?,
+            )? {
+                write["status"] = disposition["status"].clone();
+                write["nomination"] = disposition;
+                instructions["authoring"] = write;
+                return Ok(());
+            }
             let post = crate::decision_source::hash(&bytes);
-            let proposal = json!({"binding":bound,"source":path,"scope":crate::instruction_source::source_scope(path),"before":before.as_ref().map(|b|String::from_utf8_lossy(b).into_owned()),"postimage":args["content"],"post_revision":post,"authority":"exact-bounded-human-answer"});
+            let proposal = json!({"binding":bound,"source":path,"scope":crate::instruction_source::source_scope(path),"before":before.as_ref().map(|b|String::from_utf8_lossy(b).into_owned()),"postimage":args["content"],"post_revision":post,"authority":"exact-bounded-human-answer","nomination":args["nomination"]});
             let pr = digest(&proposal)?;
             write["proposal"] = proposal;
             if before.as_ref() == Some(&bytes) && admitted(target, path, &post)? {

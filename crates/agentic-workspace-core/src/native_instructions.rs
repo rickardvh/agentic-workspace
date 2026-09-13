@@ -228,6 +228,8 @@ pub fn restrict_pending(
             Some(
                 "memory.capture-decision"
                     | "memory.recover-decision"
+                    | "memory.capture-advisory"
+                    | "memory.recover-advisory"
                     | "decision-continuity.capture-decision"
                     | "decision-continuity.recover-decision"
             )

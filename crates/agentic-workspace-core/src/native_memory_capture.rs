@@ -9,6 +9,8 @@ use cap_std::{
 use serde_json::{Value, json};
 use std::{io::Write, path::Path};
 
+pub(crate) const ADVISORY_CAPTURE: &str = "memory/capture-advisory/v1";
+pub(crate) const ADVISORY_RECOVER: &str = "memory/recover-advisory/v1";
 pub(crate) const CAPTURE: &str = "memory/capture-decision/v1";
 pub(crate) const RECOVER: &str = "memory/recover-decision/v1";
 pub(crate) const REPOSITORY_CAPTURE: &str = "decision-continuity/capture-decision/v1";
@@ -22,40 +24,56 @@ const MANIFEST: &str = ".agentic-workspace/memory/repo/manifest.toml";
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Destination {
     Memory,
+    Advisory,
     Repository,
 }
 impl Destination {
     fn owner(self) -> &'static str {
         match self {
-            Self::Memory => "memory",
+            Self::Memory | Self::Advisory => "memory",
             Self::Repository => "decision-continuity",
         }
     }
     fn record_owner(self) -> &'static str {
         match self {
-            Self::Memory => "memory",
+            Self::Memory | Self::Advisory => "memory",
             Self::Repository => "repository",
         }
     }
     fn effect(self) -> &'static str {
         match self {
-            Self::Memory => EFFECT,
+            Self::Memory | Self::Advisory => EFFECT,
             Self::Repository => "decision-source",
         }
     }
     fn capture(self) -> &'static str {
         match self {
             Self::Memory => CAPTURE,
+            Self::Advisory => ADVISORY_CAPTURE,
             Self::Repository => REPOSITORY_CAPTURE,
         }
     }
     fn recover(self) -> &'static str {
         match self {
             Self::Memory => RECOVER,
+            Self::Advisory => ADVISORY_RECOVER,
             Self::Repository => REPOSITORY_RECOVER,
         }
     }
+    fn answer(self) -> &'static str {
+        if self == Self::Advisory {
+            "confirm-retention"
+        } else {
+            "confirm-decision"
+        }
+    }
     fn operation(self, recover: bool) -> String {
+        if self == Self::Advisory {
+            return format!(
+                "memory.{}-advisory",
+                if recover { "recover" } else { "capture" }
+            );
+        }
         format!(
             "{}.{}-decision",
             self.owner(),
@@ -65,12 +83,14 @@ impl Destination {
     fn semantics(self) -> &'static str {
         match self {
             Self::Memory => SEMANTICS,
+            Self::Advisory => "memory-bounded-advisory-v1",
             Self::Repository => "repository-bounded-human-decision-v1",
         }
     }
     fn result_kind(self) -> &'static str {
         match self {
             Self::Memory => "agentic-memory/decision-publication/v1",
+            Self::Advisory => "agentic-memory/advisory-publication/v1",
             Self::Repository => "agentic-workspace/repository-decision-publication/v1",
         }
     }
@@ -78,6 +98,7 @@ impl Destination {
         match binding["durable_owner"].as_str() {
             None | Some("memory") => Ok(Self::Memory),
             Some("repository") => Ok(Self::Repository),
+            Some("advisory") => Ok(Self::Advisory),
             _ => Err(err("unknown durable decision owner")),
         }
     }
@@ -89,6 +110,9 @@ fn read(root: &Dir, path: &str) -> Result<Option<Vec<u8>>, CoreError> {
     crate::native_planning::read(root, path)
 }
 fn archive(config: &Value, destination: Destination) -> Result<String, CoreError> {
+    if destination == Destination::Advisory {
+        return Ok(".agentic-workspace/memory/repo/domains".into());
+    }
     if destination == Destination::Repository {
         let path = config["admissions"]["decision_record_target"]
             .as_str()
@@ -169,7 +193,8 @@ fn require_new_identity(
     Ok(())
 }
 pub(crate) fn extend_owner(owner: &mut Value) -> Result<(), CoreError> {
-    extend_destination(owner, Destination::Memory)
+    extend_destination(owner, Destination::Memory)?;
+    extend_destination(owner, Destination::Advisory)
 }
 pub(crate) fn extend_destination(
     owner: &mut Value,
@@ -177,14 +202,17 @@ pub(crate) fn extend_destination(
 ) -> Result<(), CoreError> {
     let text = json!({"type":"string","minLength":1,"maxLength":8192});
     let strings = json!({"type":"array","maxItems":32,"uniqueItems":true,"items":text});
-    let material = json!({"type":"object","additionalProperties":false,"properties":{
+    let mut material = json!({"type":"object","additionalProperties":false,"properties":{
         "id":{"type":"string","minLength":1,"maxLength":256},"decision":text,"consequence":text,
         "rationale":text,"alternatives":strings,"dependency_paths":strings,
         "supersedes":{"type":"array","maxItems":16,"items":{"type":"object","additionalProperties":false,
             "properties":{"id":text,"material_revision":text,"scope":strings},"required":["id","material_revision","scope"]}}},
         "required":["id","decision","consequence","rationale","alternatives","dependency_paths","supersedes"]});
+    if destination == Destination::Advisory {
+        material = json!({"type":"object","additionalProperties":false,"properties":{"id":{"type":"string","minLength":1,"maxLength":256},"lesson":text,"rationale":text,"dependency_paths":strings},"required":["id","lesson","rationale","dependency_paths"]});
+    }
     let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
-        "properties":{"material":material,"disposition":{"enum":["retain","no-retention"]},"answer":{"enum":["confirm-decision","defer"]},"proposal_revision":text},"required":["material"]});
+        "properties":{"material":material,"disposition":{"enum":["retain","no-retention"]},"answer":{"enum":[destination.answer(),"defer"]},"proposal_revision":text},"required":["material"]});
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"source":text,"record_revision":text},"required":["source","record_revision"]});
     owner["domains"] = json!([destination.owner()]);
@@ -223,6 +251,7 @@ fn manifest_postimage(
     root: &Dir,
     source: &str,
     scope: &[String],
+    advisory_dependencies: Option<&Value>,
 ) -> Result<(Value, String), CoreError> {
     let before = read(root, MANIFEST)?;
     let text = std::str::from_utf8(before.as_deref().unwrap_or(b"version=1\n")).map_err(err)?;
@@ -254,8 +283,11 @@ fn manifest_postimage(
     if notes.contains_key(source) {
         return Err(err("Decision manifest destination already exists"));
     }
-    let entry = json!({"native_decision":true,"decision_scope":scope,
+    let mut entry = json!({"native_decision":true,"decision_scope":scope,
         "routes_from":scope.iter().filter_map(|s|s.strip_prefix("path:")).collect::<Vec<_>>()});
+    if let Some(dependencies) = advisory_dependencies {
+        entry = json!({"note_type":"domain","routes_from":scope.iter().filter_map(|s|s.strip_prefix("path:")).collect::<Vec<_>>(),"dependencies":dependencies});
+    }
     let entry = toml_edit::ser::to_document(&entry).map_err(err)?;
     notes.insert(source, toml_edit::Item::Table(entry.as_table().clone()));
     let rendered = document.to_string();
@@ -429,6 +461,20 @@ fn delegated_basis(subject: &Value, binding: &Value, grant: &Value) -> Value {
 }
 fn material_bytes(material: &Value, binding: &Value) -> Result<Vec<u8>, CoreError> {
     let destination = Destination::from_binding(binding)?;
+    if destination == Destination::Advisory {
+        let lesson = material["lesson"]
+            .as_str()
+            .ok_or_else(|| err("advisory lesson missing"))?;
+        if lesson.contains("```aw-decision")
+            || material["rationale"]
+                .as_str()
+                .unwrap()
+                .contains("```aw-decision")
+        {
+            return Err(err("advisory capture cannot introduce a decision record"));
+        }
+        return Ok(format!("# Advisory knowledge\n\n{}\n\n## Future value\n\n{}\n\nMaterial authorship is unattributed. Retention was admitted through the current owner request; this note grants no decision, policy, proof or completion authority.\n", lesson, material["rationale"].as_str().unwrap()).into_bytes());
+    }
     let basis = digest(&json!([destination.semantics(), material, binding]))?;
     let agent = binding.get("decision_authority").is_some();
     let reference = json!({"owner":if agent {"policy-delegated-decision"} else {"bounded-human-answer"},"reference":basis,"revision":basis});
@@ -479,7 +525,9 @@ fn proposal(material: &Value, binding: &Value, post: &str) -> Result<String, Cor
     )
 }
 fn outcome(invocation: &Value) -> Value {
-    let kind = if invocation["source_owner"] == "decision-continuity" {
+    let kind = if invocation["arguments"]["binding"]["durable_owner"] == "advisory" {
+        Destination::Advisory.result_kind()
+    } else if invocation["source_owner"] == "decision-continuity" {
         Destination::Repository.result_kind()
     } else {
         Destination::Memory.result_kind()
@@ -515,7 +563,7 @@ fn retained(target: &Path, source: &str) -> Result<Option<Value>, CoreError> {
         || request["task_identity"] != binding["work"]
         || request["capability_revision"] != binding["capability_revision"]
         || (binding.get("decision_authority").is_none()
-            && request["arguments"]["answer"] != "confirm-decision")
+            && request["arguments"]["answer"] != destination.answer())
         || record["outcome"] != outcome(i)
     {
         return Err(err("Decision publication lacks its exact deciding basis"));
@@ -581,25 +629,6 @@ fn committed(root: &Dir, target: &Path, record: &Value) -> Result<bool, CoreErro
     Ok(result["outcome"] == record["outcome"])
 }
 
-pub(crate) fn view(
-    target: &Path,
-    work: &Value,
-    scope: &[String],
-    config: &Value,
-    contract: &Value,
-    context: &Value,
-    request: Option<&Value>,
-) -> Result<Value, CoreError> {
-    view_for(
-        target,
-        work,
-        scope,
-        config,
-        contract,
-        (Destination::Memory, context),
-        request,
-    )
-}
 pub(crate) fn view_for(
     target: &Path,
     work: &Value,
@@ -657,6 +686,9 @@ pub(crate) fn view_for(
         json!({"material":{"id":"<deliberate-decision-id>","decision":"<deliberate decision>","consequence":"<bounded future consequence>",
         "rationale":"<rationale>","alternatives":[],"dependency_paths":[],"supersedes":[]}})
     )]);
+    if destination == Destination::Advisory {
+        view["requests"][0]["arguments"]["material"] = json!({"id":"<deliberate-note-id>","lesson":"<bounded advisory knowledge>","rationale":"<future decision value>","dependency_paths":[]});
+    }
     let Some(request) = request else {
         let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
         let archive = archive(config, destination)?;
@@ -737,6 +769,10 @@ pub(crate) fn view_for(
     }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let args = &request["arguments"];
+    if destination == Destination::Advisory && args["disposition"] == "no-retention" {
+        view["status"] = json!("not-retained");
+        return Ok(view);
+    }
     let mut recovery_paths = Vec::new();
     let (binding, post, operation) = if request["request_kind"] == destination.recover() {
         let source = args["source"].as_str().unwrap();
@@ -814,7 +850,7 @@ pub(crate) fn view_for(
                 destination,
             )?;
         }
-        for old in material["supersedes"].as_array().unwrap() {
+        for old in material["supersedes"].as_array().into_iter().flatten() {
             if !context["admissions"]
                 .as_array()
                 .into_iter()
@@ -827,8 +863,14 @@ pub(crate) fn view_for(
             }
         }
         let (manifest_before, manifest_postimage) =
-            if destination == Destination::Memory && args["disposition"] != "no-retention" {
-                manifest_postimage(&root, &source, scope)?
+            if destination != Destination::Repository && args["disposition"] != "no-retention" {
+                manifest_postimage(
+                    &root,
+                    &source,
+                    scope,
+                    (destination == Destination::Advisory)
+                        .then_some(&dependencies(&root, &material["dependency_paths"])?),
+                )?
             } else {
                 (Value::Null, String::new())
             };
@@ -836,7 +878,10 @@ pub(crate) fn view_for(
             "manifest_before":manifest_before,"manifest_postimage":manifest_postimage,
             "policy_revision":config["revision"],"capability_revision":contract["revision"],"decision_context_revision":digest(context)?,
             "dependencies":dependencies(&root,&material["dependency_paths"])?,
-            "superseded_sources":material["supersedes"].as_array().unwrap().iter().map(|old| context["admissions"].as_array().unwrap().iter().find(|a| a["id"] == old["id"] && a["material_revision"] == old["material_revision"]).unwrap().clone()).collect::<Vec<_>>()});
+            "superseded_sources":material["supersedes"].as_array().into_iter().flatten().map(|old| context["admissions"].as_array().unwrap().iter().find(|a| a["id"] == old["id"] && a["material_revision"] == old["material_revision"]).unwrap().clone()).collect::<Vec<_>>()});
+        if destination == Destination::Advisory {
+            binding["durable_owner"] = json!("advisory");
+        }
         if destination == Destination::Repository {
             let convention = format!("{}/README.md", archive(config, destination)?);
             binding["durable_owner"] = json!("repository");
@@ -865,10 +910,10 @@ pub(crate) fn view_for(
         let mut answer = args.clone();
         answer.as_object_mut().unwrap().remove("answer");
         answer["proposal_revision"] = json!(proposal);
-        let decisions = json!([{"id":"material-decision-disposition","question":"Confirm this exact decision and disposition? Publication alone grants no deciding authority.",
+        let decisions = json!([{"id":"material-decision-disposition","question":if destination == Destination::Advisory {"Retain this exact bounded advisory knowledge? It grants no governing authority."} else {"Confirm this exact decision and disposition? Publication alone grants no deciding authority."},
             "material":{"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,
                 "disposition":args["disposition"].as_str().unwrap_or("retain"),"publishes_source":args["disposition"] != "no-retention"},
-            "response_request":{"request_kind":destination.capture(),"arguments":answer},"choices":[{"id":"confirm-decision","label":"Confirm this exact bounded decision"},{"id":"defer","label":"Defer without publication"}],"affects":["task",format!("effect:{}",destination.effect())]}]);
+            "response_request":{"request_kind":destination.capture(),"arguments":answer},"choices":[{"id":destination.answer(),"label":if destination == Destination::Advisory {"Retain this exact advisory knowledge"} else {"Confirm this exact bounded decision"}},{"id":"defer","label":"Defer without publication"}],"affects":["task",format!("effect:{}",destination.effect())]}]);
         if args["answer"].is_null() && !agent {
             if request["id"] != destination.capture() {
                 return Err(err(
@@ -966,7 +1011,7 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
             destination.owner()
         ),
     ]);
-    if destination == Destination::Memory {
+    if destination != Destination::Repository {
         paths.extend([MANIFEST.to_owned(), format!("{MANIFEST}.*.tmp")]);
     }
     Ok(paths)
@@ -1383,9 +1428,13 @@ mod tests {
 
     #[test]
     fn bounded_answer_publication_recovers_each_interruption() {
-        for (stage, agent) in ["prepared", "source-published", "manifest-published"]
+        for (stage, agent, advisory) in ["prepared", "source-published", "manifest-published"]
             .into_iter()
-            .flat_map(|stage| [false, true].map(|agent| (stage, agent)))
+            .flat_map(|stage| {
+                [false, true]
+                    .into_iter()
+                    .flat_map(move |agent| [false, true].map(|advisory| (stage, agent, advisory)))
+            })
         {
             let target = std::env::temp_dir().join(format!(
                 "aw-decision-{}-{}",
@@ -1403,21 +1452,33 @@ mod tests {
                 v["request"] = request.unwrap_or(Value::Null);
                 crate::native_public::start(v).unwrap()
             };
-            let mut request = start(None)["memory"]["capture"]["requests"][0].clone();
+            let section = if advisory {
+                "advisory_capture"
+            } else {
+                "capture"
+            };
+            let mut request = start(None)["memory"][section]["requests"][0].clone();
             request["arguments"]["material"] = json!({"id":"fixture:recovery","decision":"A deliberate fixture decision","consequence":"Preserve the fixture boundary","rationale":"Test interruption only; no actual repository decision.","alternatives":[],"dependency_paths":[],"supersedes":[]});
+            if advisory {
+                request["arguments"]["material"] = json!({"id":"fixture:advisory-recovery","lesson":"Retain a bounded fixture observation","rationale":"Recovery fixture, no governing authority","dependency_paths":[]});
+            }
             let proposed = start(Some(request.clone()));
             let policy = target.join(".agentic-workspace/config.toml");
             let policy_bytes = "schema_version=1\n[assurance]\ndecision_delegations=[{owner=\"memory\",scope=[\"path:src/a.rs\"]}]\n";
             let answer = if agent {
                 std::fs::create_dir_all(policy.parent().unwrap()).unwrap();
                 std::fs::write(&policy, policy_bytes).unwrap();
-                let mut current = start(None)["memory"]["capture"]["requests"][0].clone();
+                let mut current = start(None)["memory"][section]["requests"][0].clone();
                 current["arguments"] = request["arguments"].clone();
                 current
             } else {
                 let mut current =
                     proposed["decision_packet"]["decision_request"]["response_request"].clone();
-                current["arguments"]["answer"] = json!("confirm-decision");
+                current["arguments"]["answer"] = json!(if advisory {
+                    "confirm-retention"
+                } else {
+                    "confirm-decision"
+                });
                 current
             };
             let ready = start(Some(answer.clone()));
@@ -1457,11 +1518,13 @@ mod tests {
             let next = if stage == "prepared" {
                 action.clone()
             } else {
-                let recovery = fresh["memory"]["capture"]["requests"]
+                let recovery = fresh["memory"][section]["requests"]
                     .as_array()
                     .unwrap()
                     .iter()
-                    .find(|r| r["request_kind"] == RECOVER)
+                    .find(|r| {
+                        r["request_kind"] == if advisory { ADVISORY_RECOVER } else { RECOVER }
+                    })
                     .unwrap()
                     .clone();
                 start(Some(recovery))["decision_packet"]["primary_action"].clone()
@@ -1476,10 +1539,14 @@ mod tests {
             }
             crate::native_public::invoke_checked(invoke).unwrap();
             assert_eq!(
-                start(None)["decision_packet"]["decision_context"]["states"]
-                    .as_array()
-                    .unwrap()
-                    .len(),
+                if advisory {
+                    start(None)["memory"]["selected_notes"].clone()
+                } else {
+                    start(None)["decision_packet"]["decision_context"]["states"].clone()
+                }
+                .as_array()
+                .unwrap()
+                .len(),
                 1
             );
             // Only this test-created directory is removed.

@@ -214,7 +214,9 @@ def test_memory_receiver_needs_current_admitted_whole_lesson(
     quiet = call({**context, "changed": ["unrelated.txt"]})
     assert "receiving_admissions" not in quiet["memory"]
     assert "disposition" not in quiet["memory"]
-    assert all(not owner.get("operations") for owner in quiet["capability_contract"]["owners"] if owner["owner"] == "memory")
+    # New advisory material may still be nominated beside a stronger decision
+    # archive. Advertised operations grant no action over unrelated old notes.
+    assert not quiet["decision_packet"]["primary_action"]
     # Admission of an excerpt cannot hide another lesson in the source.
     note.write_text(lesson + "\nPreserve independent review as well.", encoding="utf-8")
     assert call()["memory"]["receiving_admissions"] == []
