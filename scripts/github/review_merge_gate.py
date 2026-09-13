@@ -18,6 +18,7 @@ if str(TOOLS_ROOT) not in sys.path:
 from chatgpt_review_loop import REVIEW_POLICY, parse_reviews  # noqa: E402
 
 CHECK_NAME = "Review approval"
+REVIEWER_APP_SLUG = "chatgpt-codex-connector"
 
 
 @dataclass(frozen=True)
@@ -36,9 +37,7 @@ class CarryForwardVerdict:
 
 
 def _comment_order(comment: dict[str, Any]) -> tuple[str, int]:
-    timestamp = str(
-        comment.get("updated_at") or comment.get("submitted_at") or comment.get("created_at") or ""
-    )
+    timestamp = str(comment.get("updated_at") or comment.get("submitted_at") or comment.get("created_at") or "")
     identifier = int(comment.get("id") or comment.get("databaseId") or 0)
     return timestamp, identifier
 
@@ -50,7 +49,15 @@ def review_gate_decision(
     comments: Sequence[dict[str, Any]],
     carry_forward: Callable[[str, str], CarryForwardVerdict] | None = None,
 ) -> GateDecision:
-    associated = [comment for comment in comments if "aw-chatgpt-review" in str(comment.get("body", ""))]
+    # GitHub API provenance is the repository's configured producer boundary.
+    # Login, association and copied marker text cannot substitute for it.
+    associated = [
+        comment
+        for comment in comments
+        if "aw-chatgpt-review" in str(comment.get("body", ""))
+        and isinstance(comment.get("performed_via_github_app"), dict)
+        and comment["performed_via_github_app"].get("slug") == REVIEWER_APP_SLUG
+    ]
     if not associated:
         return GateDecision(
             status="review-missing",
@@ -58,7 +65,7 @@ def review_gate_decision(
             title="Pull request has no authoritative review",
             summary=(
                 f"Run {REVIEW_POLICY} for head {head_sha}; green CI is not merge authority. "
-                "An exact-head terminal review marker is required."
+                f"An exact-head terminal marker from the configured {REVIEWER_APP_SLUG} reviewer App is required."
             ),
         )
 
@@ -68,9 +75,7 @@ def review_gate_decision(
         reason = str((rejected or [{}])[0].get("reason") or "invalid-review-marker")
         reviewed_head = str((rejected or [{}])[0].get("reviewed_head") or "")
         if reason == "stale-head" and reviewed_head:
-            reviewed, reviewed_rejections = parse_reviews(
-                [latest], expected_pr=pr_number, expected_head=reviewed_head
-            )
+            reviewed, reviewed_rejections = parse_reviews([latest], expected_pr=pr_number, expected_head=reviewed_head)
             if not reviewed:
                 reason = str((reviewed_rejections or [{}])[0].get("reason") or "invalid-review-marker")
             else:
@@ -154,26 +159,15 @@ def _gh_json(args: Sequence[str]) -> Any:
 
 
 def _review_records(*, repository: str, pr_number: int) -> list[dict[str, Any]]:
-    comment_pages = _gh_json(
-        ["api", "--paginate", "--slurp", f"repos/{repository}/issues/{pr_number}/comments?per_page=100"]
-    )
-    review_pages = _gh_json(
-        ["api", "--paginate", "--slurp", f"repos/{repository}/pulls/{pr_number}/reviews?per_page=100"]
-    )
+    comment_pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{repository}/issues/{pr_number}/comments?per_page=100"])
+    review_pages = _gh_json(["api", "--paginate", "--slurp", f"repos/{repository}/pulls/{pr_number}/reviews?per_page=100"])
     comments = [comment for page in comment_pages for comment in page]
-    reviews = [
-        review
-        for page in review_pages
-        for review in page
-        if str(review.get("state") or "").upper() != "DISMISSED"
-    ]
+    reviews = [review for page in review_pages for review in page if str(review.get("state") or "").upper() != "DISMISSED"]
     return [*comments, *reviews]
 
 
 def _git(args: Sequence[str], *, input_text: str | None = None, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args], cwd=REPO_ROOT, check=check, capture_output=True, text=True, input=input_text
-    )
+    return subprocess.run(["git", *args], cwd=REPO_ROOT, check=check, capture_output=True, text=True, input=input_text)
 
 
 def _patch_id(base: str, head: str) -> str:
@@ -184,9 +178,7 @@ def _patch_id(base: str, head: str) -> str:
     return result.split()[0] if result else "empty"
 
 
-def _trusted_base_carry_forward(
-    *, pr_number: int, reviewed_head: str, current_head: str, base_head: str
-) -> CarryForwardVerdict:
+def _trusted_base_carry_forward(*, pr_number: int, reviewed_head: str, current_head: str, base_head: str) -> CarryForwardVerdict:
     _git(["fetch", "--no-tags", "origin", f"pull/{pr_number}/head"])
     cursor = current_head
     visited: set[str] = set()
@@ -198,9 +190,7 @@ def _trusted_base_carry_forward(
         if len(fields) != 3:
             return CarryForwardVerdict(False, "ordinary-or-octopus-commit-after-review")
         _, first_parent, integrated_parent = fields
-        base_ancestor = _git(
-            ["merge-base", "--is-ancestor", integrated_parent, base_head], check=False
-        )
+        base_ancestor = _git(["merge-base", "--is-ancestor", integrated_parent, base_head], check=False)
         if base_ancestor.returncode != 0:
             return CarryForwardVerdict(False, "merge-parent-is-not-trusted-base-history")
         merge_base = _git(["merge-base", first_parent, integrated_parent]).stdout.strip()

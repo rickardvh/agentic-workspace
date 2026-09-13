@@ -144,12 +144,13 @@ def test_latest_current_head_merge_ready_decision_admits_merge() -> None:
     ("association", "app_slug"),
     [
         ("OWNER", REVIEWER_APP),
+        ("NONE", REVIEWER_APP),
         ("MEMBER", None),
         ("COLLABORATOR", "some-other-app"),
         ("NONE", None),
     ],
 )
-def test_exact_marker_authority_does_not_depend_on_transport_provenance(association: str, app_slug: str | None) -> None:
+def test_marker_requires_configured_app_independent_of_login_and_association(association: str, app_slug: str | None) -> None:
     decision = _module().review_gate_decision(
         pr_number=2501,
         head_sha=HEAD_A,
@@ -163,23 +164,25 @@ def test_exact_marker_authority_does_not_depend_on_transport_provenance(associat
         ],
     )
 
-    assert decision.status == "merge-ready"
-    assert decision.conclusion == "success"
+    assert decision.status == ("merge-ready" if app_slug == REVIEWER_APP else "review-missing")
+    assert decision.conclusion == ("success" if app_slug == REVIEWER_APP else "failure")
 
 
-def test_latest_well_formed_marker_wins_regardless_of_transport_provenance() -> None:
+@pytest.mark.parametrize("app_slug", [None, "some-other-app"])
+@pytest.mark.parametrize("admitted", ["blocked", "merge-ready"])
+def test_copied_marker_cannot_supersede_admitted_reviewer_decision(app_slug, admitted) -> None:
     decision = _module().review_gate_decision(
         pr_number=2501,
         head_sha=HEAD_A,
         comments=[
-            _comment(decision="merge-ready", identifier=1, login="rickardvh", app_slug=REVIEWER_APP),
-            _comment(decision="blocked", identifier=2, login="rickardvh", app_slug="some-other-app"),
+            _comment(decision=admitted, identifier=1, login="rickardvh", app_slug=REVIEWER_APP),
+            _comment(decision="merge-ready" if admitted == "blocked" else "blocked", identifier=2, login="rickardvh", app_slug=app_slug),
         ],
     )
 
-    assert decision.status == "review-blocked"
-    assert decision.conclusion == "failure"
-    assert decision.review_url == "https://example.test/review/2"
+    assert decision.status == ("review-blocked" if admitted == "blocked" else "merge-ready")
+    assert decision.conclusion == ("failure" if admitted == "blocked" else "success")
+    assert decision.review_url == "https://example.test/review/1"
 
 
 def test_prior_merge_ready_decision_admits_patch_preserving_base_merge() -> None:
@@ -325,7 +328,8 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     assert "issue_comment:" in workflow
     assert "pull_request_review:" not in workflow
     assert "scripts/github/review_merge_gate.py" in workflow
-    assert "ref: 472e94b85d9ec1a8d5e0da0e63d13ee1621eb558" in workflow
+    assert "ref: ${{ vars.REVIEW_GATE_COMMIT }}" in workflow
+    assert "472e94b85d9ec1a8d5e0da0e63d13ee1621eb558" not in workflow
     assert "persist-credentials: false" in workflow
     assert "ref: ${{ github.event.repository.default_branch }}" not in workflow
     assert "ref: ${{ github.event.pull_request.head" not in workflow
@@ -336,6 +340,8 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     job = publisher["jobs"]["review-authority"]
     assert job["permissions"] == {"contents": "read"}
     assert job["environment"] == "review-publisher"
+    assert job["steps"][0]["env"] == {"REVIEW_GATE_COMMIT": "${{ vars.REVIEW_GATE_COMMIT }}"}
+    assert "^[0-9a-f]{40}$" in job["steps"][0]["run"]
     token = next(step for step in job["steps"] if step.get("id") == "publisher-token")
     assert token["uses"] == "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349"
     assert token["with"] == {

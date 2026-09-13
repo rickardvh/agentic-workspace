@@ -67,14 +67,28 @@ emits a ruleset with a numeric source binding. It neither provisions an App nor
 certifies independence, installs credentials, or applies/enables the ruleset.
 The same-name candidate Actions check must not satisfy the resulting rule.
 
-The publisher checks out the immutable independently accepted C53 source above,
-including its imported review parser, without persisted credentials. Advancing
-the pin requires another independently admitted source. An absent, stale, or
+The publisher must check out a fixed implementation and its imported parser
+from the full immutable `REVIEW_GATE_COMMIT` SHA configured in the protected
+`review-publisher` environment, without persisted credentials. Missing or
+non-SHA configuration fails before checkout/token creation, with no candidate,
+default-branch or C53 fallback. Independent admission must verify that exact
+revision contains the reviewer-App provenance repair; SHA syntax alone is not
+admission. C53 remains the historical P0 baseline, but its review gate lost that
+contract and is **not an admissible publisher implementation**. An absent, stale, or
 blocked independent review still fails approval. Pinning this checkout alone
 was insufficient: `pull_request_review` uses the PR merge-ref workflow definition.
 The revised publisher no longer has that trigger. See GitHub's
 [event source definitions](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_review)
 and [privileged workflow guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
+
+Input authority is distinct from the dedicated publisher's output identity.
+Following #2798/#2799, marker candidates must have GitHub API provenance
+`performed_via_github_app.slug = chatgpt-codex-connector`. Missing/wrong-App
+markers are ignored before latest-decision selection, so a copied marker cannot
+authorize or supersede an admitted blocker or approval. Login and association
+remain irrelevant. Exact-head/policy parsing and trusted-base carry-forward
+continue after this filter. The configured reviewer App does not waive the
+independent-lineage requirement; the publisher App is not the reviewer App.
 
 **Admission and hosted proof are still pending (#3227).** The frozen `master`
 does not contain the publisher. Live ruleset 20615912 remains disabled and
@@ -88,7 +102,9 @@ repository, and restrict the `review-publisher` environment to the exact trusted
 default branch (`master`), with no wildcard, tag, or PR deployment rule. Store
 `REVIEW_PUBLISHER_APP_ID` and `REVIEW_PUBLISHER_PRIVATE_KEY` as environment-scoped
 configuration and secret; never expose the private key as repository or
-organization secrets available to candidate workflows. Reviewers/protection
+organization secrets available to candidate workflows. Set `REVIEW_GATE_COMMIT`
+there only after independent admission of the fixed code and imported parser.
+Reviewers/protection
 must prevent untrusted workflow code from accessing it. Verify the installation
 has accepted both Checks write and Statuses write. After trusted publisher
 admission, trigger it to publish at least one recent dedicated-App `Review
@@ -116,12 +132,15 @@ fields. A conflicting live change requires reconciliation before activation.
 Then submit/edit/dismiss an independently initiated review on
 the current PR head and retain the relay run, default-branch publisher run and
 exact-head check URLs. Confirm the publisher's workflow source is the admitted
-default-branch revision and its checkout is C53, and that missing/blocked review
+default-branch revision and its checkout is the exact independently admitted
+fixed `REVIEW_GATE_COMMIT`, and that missing/blocked review
 fails while an eligible current approval succeeds. Inspect the published check's
 `app.id` and the live rule's `integration_id` for equality. Use a controlled
 negative candidate check with the same name from GitHub Actions to prove it
 cannot meet the App-bound requirement; also verify candidate PR jobs cannot
-access the protected environment. Do not create a synthetic
+access the protected environment. Verify that an ordinary copied marker without
+the configured reviewer-App metadata cannot make the trusted publisher emit
+success or supersede its current admitted verdict. Do not create a synthetic
 approval to complete this proof. A merge to the reconstruction branch alone does
 not activate default-branch events. Local gate tests are not hosted proof.
 

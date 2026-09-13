@@ -30,13 +30,21 @@ jobs:
     environment: review-publisher
     runs-on: ubuntu-latest
     steps:
+      - name: Require independently admitted implementation revision
+        env:
+          REVIEW_GATE_COMMIT: ${{ vars.REVIEW_GATE_COMMIT }}
+        run: |
+          if [[ ! "$REVIEW_GATE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'Configure an independently admitted full commit SHA in the protected publisher environment.' >&2
+            exit 1
+          fi
       - name: Check out trusted merge-gate implementation
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Independently accepted C53 source (#3207). The frozen default
-          # branch lacks this publisher; never execute candidate PR code with
-          # publisher authority. Advance only to independently admitted source.
-          ref: 472e94b85d9ec1a8d5e0da0e63d13ee1621eb558
+          # Protected environment selects an independently admitted fixed source.
+          # C53 lost reviewer-App input provenance and is not suitable here.
+          # Never derive this revision from the candidate or event payload.
+          ref: ${{ vars.REVIEW_GATE_COMMIT }}
           fetch-depth: 0
           persist-credentials: false
       - name: Create dedicated publisher token
