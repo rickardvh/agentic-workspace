@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Refresh generated configuration schemas before preview normalization and preserve primary preparation failures when cleanup retains evidence."
+issues = [3207]

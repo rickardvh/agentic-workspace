@@ -377,7 +377,7 @@
           "items": {
             "type": "object", "additionalProperties": false, "required": ["owner", "scope"],
             "properties": {
-              "owner": {"description": "Existing durable decision owner receiving the delegated decision.", "enum": ["memory", "repository"]},
+              "owner": {"description": "Existing durable decision owner receiving the delegated decision.", "enum": ["memory", "repository", "verification", "configuration", "scoped-instructions"]},
               "scope": {"description": "Exact set of path:repository-relative-file scopes. No wildcard, subset, task-class or prose matching.", "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^path:[^*?\\[\\]]+$", "maxLength": 8192}}
             }
           }

@@ -394,7 +394,16 @@ def create_preview_subject(
             _git("tag", "-d", tag, check=False)
         raise
     finally:
-        _finish_preview_isolation(isolation)
+        # A failed normalization leaves dirty evidence that the resource owner
+        # must preserve. Report that recovery outcome without replacing the
+        # original failure (including release-admission SystemExit failures).
+        original_error = sys.exception()
+        try:
+            _finish_preview_isolation(isolation)
+        except (Exception, SystemExit) as cleanup_error:
+            if original_error is None:
+                raise
+            print(f"Preview cleanup: {cleanup_error}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:

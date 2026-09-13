@@ -643,3 +643,44 @@ def test_preview_creation_consumer_reuses_native_terminal_lifecycle(tmp_path, sh
     helper._finish_preview_isolation(action)
     assert not path.exists()
     assert "aw-resource" not in git(tmp_path, "worktree", "list", "--porcelain")
+
+
+def test_preview_creation_preserves_primary_failure_and_reports_cleanup(tmp_path, monkeypatch, capsys):
+    import pytest
+
+    helper = _load_helper()
+    monkeypatch.setattr(helper, "_fetch_reconstruction_ref", lambda **kw: "fetched")
+    monkeypatch.setattr(helper, "_tag_commit", lambda tag: None)
+    monkeypatch.setattr(helper, "_resolve_commit", lambda *a, **kw: "a" * 40)
+    monkeypatch.setattr(helper, "_assert_source_is_reconstruction_candidate", lambda *a, **kw: None)
+    monkeypatch.setattr(helper, "_preview_isolation", lambda *a: {"request": {"path": str(tmp_path)}, "build_environment": {}})
+    monkeypatch.setattr(helper, "_load_ownership", lambda *a: {})
+    monkeypatch.setattr(helper, "_verify_release_only_paths", lambda *a: ["pyproject.toml"])
+    monkeypatch.setattr(helper, "_git", lambda *a, **kw: subprocess.CompletedProcess(a, 0, "pyproject.toml\n", ""))
+    cleanup_calls = []
+
+    def cleanup(context):
+        cleanup_calls.append(context)
+        raise SystemExit("work preserved: exact resource path")
+
+    monkeypatch.setattr(helper, "_finish_preview_isolation", cleanup)
+    # Admission exits and subprocess failures must both survive a blocked
+    # cleanup. Cleanup alone must still fail an otherwise successful creation.
+    for primary in (SystemExit("non-release-only paths"), subprocess.CalledProcessError(1, ["generator"]), None):
+
+        def run(*a, **kw):
+            if primary is not None:
+                raise primary
+            return subprocess.CompletedProcess(a, 0, "{}", "")
+
+        monkeypatch.setattr(helper, "_run", run)
+        with pytest.raises(type(primary) if primary is not None else SystemExit) as raised:
+            helper.create_preview_subject(
+                version="0.53.0", source_ref="a" * 40, remote="origin", reconstruction_ref="reconstruct/first-stable", push=False
+            )
+        if primary is not None:
+            assert raised.value is primary
+            assert "work preserved: exact resource path" in capsys.readouterr().err
+        else:
+            assert "work preserved: exact resource path" in str(raised.value)
+    assert len(cleanup_calls) == 3
