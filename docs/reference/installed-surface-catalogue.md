@@ -3,7 +3,7 @@
 
 Exact footprint, ownership, and availability values generated from `workspace_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:e0f45d190beae66c62ef85b639ef40b34f45cd45fb212b964384192fac5895f7`
+- Contract digest: `sha256:a19f0873aa54dbd68a9f4470d6bbc59c89de1de6a112c484a09aca03ace310a2`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
@@ -15,9 +15,10 @@ Each cell below lists the exact package-managed checked-in files: profile base p
 
 ### `necessary-surfaces` + `none`
 
-File count: 17
+File count: 18
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -37,9 +38,10 @@ File count: 17
 
 ### `necessary-surfaces` + `planning`
 
-File count: 20
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -62,9 +64,10 @@ File count: 20
 
 ### `necessary-surfaces` + `memory`
 
-File count: 20
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -87,9 +90,10 @@ File count: 20
 
 ### `necessary-surfaces` + `verification`
 
-File count: 17
+File count: 18
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -109,9 +113,10 @@ File count: 17
 
 ### `necessary-surfaces` + `planning,memory`
 
-File count: 23
+File count: 24
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -137,9 +142,10 @@ File count: 23
 
 ### `necessary-surfaces` + `planning,verification`
 
-File count: 20
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -162,9 +168,10 @@ File count: 20
 
 ### `necessary-surfaces` + `memory,verification`
 
-File count: 20
+File count: 21
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -187,9 +194,10 @@ File count: 20
 
 ### `necessary-surfaces` + `planning,memory,verification`
 
-File count: 23
+File count: 24
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -215,9 +223,10 @@ File count: 23
 
 ### `full-mirror` + `none`
 
-File count: 18
+File count: 19
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -238,9 +247,10 @@ File count: 18
 
 ### `full-mirror` + `planning`
 
-File count: 21
+File count: 22
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -264,9 +274,10 @@ File count: 21
 
 ### `full-mirror` + `memory`
 
-File count: 21
+File count: 22
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -290,9 +301,10 @@ File count: 21
 
 ### `full-mirror` + `verification`
 
-File count: 18
+File count: 19
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -313,9 +325,10 @@ File count: 18
 
 ### `full-mirror` + `planning,memory`
 
-File count: 24
+File count: 25
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -342,9 +355,10 @@ File count: 24
 
 ### `full-mirror` + `planning,verification`
 
-File count: 21
+File count: 22
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -368,9 +382,10 @@ File count: 21
 
 ### `full-mirror` + `memory,verification`
 
-File count: 21
+File count: 22
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`
@@ -394,9 +409,10 @@ File count: 21
 
 ### `full-mirror` + `planning,memory,verification`
 
-File count: 24
+File count: 25
 
 - `.agentic-workspace/OWNERSHIP.toml`
+- `.agentic-workspace/READING.json`
 - `.agentic-workspace/WORKFLOW.md`
 - `.agentic-workspace/docs/jumpstart-contract.md`
 - `.agentic-workspace/docs/module-map.md`

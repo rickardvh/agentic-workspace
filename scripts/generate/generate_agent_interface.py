@@ -12,7 +12,15 @@ ROOT = Path(__file__).resolve().parents[2]
 def synchronize(*, check: bool = False) -> list[str]:
     manifest = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
     payload = ROOT / "src/agentic_workspace/_payload"
+    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+
     drift = []
+    profile = ROOT / PROFILE
+    expected_profile = render((ROOT / LEDGER).read_text(encoding="utf-8"))
+    if not profile.is_file() or profile.read_text(encoding="utf-8") != expected_profile:
+        drift.append(PROFILE)
+        if not check:
+            profile.write_text(expected_profile, encoding="utf-8", newline="\n")
     for reference in manifest["payload_files"]:
         # Only the declared source set participates; no workspace traversal.
         source, destination = ROOT / reference, payload / reference

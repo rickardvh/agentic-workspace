@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose selective repository-only owner reading through a generated, revision-bound profile under the canonical skill."
+issues = [3208, 3217, 3020]

@@ -8484,11 +8484,12 @@ def _workspace_payload_bytes(relative: Path) -> bytes:
 
 
 def _host_ownership_ledger_text() -> str:
-    return """schema_version = 1
+    base = """schema_version = 1
 
 [workspace]
 workflow_path = ".agentic-workspace/WORKFLOW.md"
 main_skill_path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+read_profile_path = ".agentic-workspace/READING.json"
 ownership_manifest_path = ".agentic-workspace/OWNERSHIP.toml"
 managed_root = ".agentic-workspace/"
 
@@ -8532,6 +8533,13 @@ uninstall_policy = "remove-if-owned"
 module = "workspace"
 path = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 kind = "canonical-agent-procedure"
+ownership = "module_managed"
+uninstall_policy = "remove-if-owned"
+
+[[managed_surfaces]]
+module = "workspace"
+path = ".agentic-workspace/READING.json"
+kind = "generated-read-profile"
 ownership = "module_managed"
 uninstall_policy = "remove-if-owned"
 
@@ -8754,6 +8762,25 @@ summary = "Managed pointer block inside the repo-owned agent instructions file."
 purpose = "This file defines Agentic Workspace managed surfaces and optional host-repo ownership boundaries. Add host-specific [[subsystems]] entries here when useful."
 """
 
+    # Project the same source-owned read descriptors into the generic install
+    # ledger. No repository state or current operating answer is materialized.
+    canonical = tomllib.loads(_workspace_payload_bytes(Path(".agentic-workspace/OWNERSHIP.toml")).decode("utf-8"))
+    rows = {row["concern"]: row for row in canonical["authority_surfaces"] if "read" in row}
+    for concern, row in rows.items():
+        marker = f'concern = "{concern}"\n'
+        read = "{ " + ", ".join(f"{key} = {_render_toml_value(value)}" for key, value in row["read"].items()) + " }"
+        if marker in base:
+            base = base.replace(marker, marker + "read = " + read + "\n", 1)
+        else:
+            base += (
+                "\n[[authority_surfaces]]\n"
+                + "\n".join(f"{key} = {_render_toml_value(value)}" for key, value in row.items() if key != "read")
+                + "\nread = "
+                + read
+                + "\n"
+            )
+    return base
+
 
 def _toml_quote(value: str) -> str:
     return json.dumps(value)
@@ -8806,6 +8833,11 @@ def _host_ownership_ledger_text_for_target(*, target_root: Path) -> str:
 
 
 def _workspace_payload_bytes_for_target(relative: Path, *, target_root: Path) -> bytes:
+    if relative == Path(".agentic-workspace/READING.json"):
+        from .static_read_profile import render
+
+        ledger = _workspace_payload_bytes_for_target(Path(".agentic-workspace/OWNERSHIP.toml"), target_root=target_root)
+        return render(ledger.decode("utf-8")).encode("utf-8")
     if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root):
         return _host_ownership_ledger_text_for_target(target_root=target_root).encode("utf-8")
     return _workspace_payload_bytes(relative)
