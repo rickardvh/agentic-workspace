@@ -32,34 +32,21 @@ module-specific choreography in the canonical skill.
 
 ## Candidate preparation and review (#3227, #3236)
 
-The user clarified the scope on 2026-09-13: prevent implementation agents from
-approving their own PRs. An implementing agent and reviewers it spawns or controls
-cannot supply independent approval. An externally initiated reviewer may shape
-issue acceptance, request fixes and re-review without joining implementation
-custody. Passing CI and implementation reports are not approval.
+The clarified requirement is behavioral: an agent that implemented or materially
+changed a PR must not review/approve it or spawn/direct a reviewer to do so.
+`AGENTS.md`, delivered on ordinary Codex entry, carries the rule to report
+`ready for independent review` and stop after implementation or review fixes.
+The external-review skill preserves eligibility while allowing ordinary issue
+shaping, review feedback and re-review by an externally initiated reviewer.
 
-The existing gate filters terminal markers to GitHub API provenance
-`performed_via_github_app.slug = chatgpt-codex-connector`, then validates the PR,
-policy and current head (or the existing unchanged-patch trusted-base exception).
-Missing/wrong-App markers cannot supersede a configured reviewer decision.
-This provenance filter does not establish agent independence; the repository's
-review procedure supplies that operational separation.
-
-The workflow checks out the working gate at
-`b21a62a5c185a1cebb5f161a64dd627811e19124`, which contains the provenance repair,
-and publishes using the ordinary GitHub Actions token. This fixes the absent
-script on frozen master without new credentials or a publisher App. PR/review
-and CI/comment events reobserve current review sources. Default-branch-only
-events require the workflow to be present there; until then an existing PR job
-can be rerun after a terminal review comment. No live ruleset activation is
-performed by this patch, and no synthetic approval is used as proof.
-
-Deliberate workflow/check/credential/evidence tampering using repository-owner
-access is outside this requirement. Dedicated publisher Apps, protected secrets,
-source-bound ruleset rendering and persistent decision watermarks have been
-removed. Deletion or editing of historical decisions is not defended against by
-a separate ledger. Maintainer-controlled merging and independent review remain
-required. Local tests establish gate behavior, not an independent review verdict.
+The custom Review approval workflow, publisher, dedicated tests, token allowance
+and required-status entry are retired. No marker/provenance/check-run contract,
+App, relay, watermark or replacement enforcement layer is required. Existing
+historical-comment intake remains able to read old reviews; it does not grant
+this implementing agent approval authority. No new permanent regression suite
+is added for the instruction. Ordinary implementation/re-review replay supplies
+the behavioral evidence: encounter missing independent review, report readiness,
+and stop without approving or manufacturing a reviewer.
 
 The hook removes Git's `rev-parse --local-env-vars` environment variables from
 dependency/validation subprocesses before both fresh and transported validation
@@ -146,8 +133,8 @@ release-artifact and platform revalidation remains #2990.
 ## Proof and retention
 
 Reuse the existing native owner, Rust interruption, and shared-core contracts.
-Extend the existing Planning/current-Assignment and review workflow tests for
-the new discovery and trusted-source boundaries. Retain one hook test family
+Extend the existing Planning/current-Assignment for
+the new discovery boundary. Retain one hook test family
 for cross-repository Git-context contamination, a distinct failure class missing
 from the prior hook checks. No new aggregate suite, recurring CI job, issue-named
 test taxonomy, or duplicate per-operation ledger is introduced.

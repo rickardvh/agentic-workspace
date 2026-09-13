@@ -89,7 +89,7 @@ class MergeRunner(stack.CommandRunner):
                 "mergeable": "MERGEABLE",
                 "statusCheckRollup": [
                     {
-                        "name": "Review approval",
+                        "name": "build",
                         "status": "COMPLETED",
                         "conclusion": "SUCCESS" if self.review_success else "FAILURE",
                     },

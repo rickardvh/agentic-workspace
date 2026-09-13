@@ -176,9 +176,6 @@ def _require_merge_ready(state: dict[str, Any], *, pr: int, reviewed_head: str) 
     if state.get("mergeable") == "CONFLICTING":
         raise StackError("pr-not-mergeable", f"PR #{pr} has merge conflicts")
     checks = [item for item in state.get("statusCheckRollup", []) if isinstance(item, dict)]
-    review_checks = [item for item in checks if item.get("name") == "Review approval"]
-    if not review_checks or any(item.get("conclusion") != "SUCCESS" for item in review_checks):
-        raise StackError("review-not-current", f"PR #{pr} lacks the successful Review approval check for {reviewed_head}")
     unsuccessful = [
         str(item.get("name") or item.get("context") or "unnamed-check")
         for item in checks
