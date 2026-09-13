@@ -2,6 +2,94 @@
 
 Use this guide before adding or pruning tests in this repository. The goal is to preserve behavior contracts with fewer one-off regressions and less implementation-shape lock-in.
 
+## Evidence design, current validation, and permanent retention
+
+Treat these as separate decisions, not three new durable artifacts:
+
+1. **Evidence design:** name the bounded claim, the material failure/authority
+   classes that could falsify it, and the observation that would expose each.
+   Inspect relevant existing stable owner/contract evidence first and factor
+   shared evidence across criteria. Lowest sufficient means a stable behavioral
+   contract, not merely the nearest private implementation function.
+2. **Current patch validation:** obtain or reuse current evidence for those risks,
+   stating what each observation does and does not establish. Temporary
+   characterization or an incident reproduction may validate this patch without
+   becoming a permanent test. Testing proof-governance machinery is necessary
+   when it changes, but does not establish that an unrelated patch applied the
+   strategy correctly.
+3. **Permanent retention:** retain new executable evidence only for a distinct
+   durable failure class not already sufficiently represented. Prefer reuse,
+   extension, consolidation or conversion of existing owner/scenario/conformance
+   cases; no permanent addition is a valid outcome. An incident reproduction,
+   including a test that fails before the fix, is not itself retention
+   justification. Shape a newly discovered missing class around its stable
+   behavior rather than preserving incident-specific history. Selecting a command
+   for this patch does not make it a permanent test; retaining a test does not
+   make it an ordinary-CI constituent.
+
+The default is not `fix -> add permanent regression`. Preserve binding source-owned
+coverage, safety, authority and review floors. Commands and fixtures are replaceable
+methods unless the governing source explicitly requires that method itself.
+
+Closeout must give a bounded **stop/escalate** rationale: identify the claim, the
+risks addressed, evidence contribution and limits, and any named material residual
+risk. Stop when the current evidence satisfies the bounded claim and mandatory
+floors with no material unresolved risk; absence of an unspecified broader suite
+is not unfinished work. Escalate through the existing proof owner only when a
+named remaining risk requires additional evidence, explaining the observation
+sought and the boundary at which to stop. Missing required proof cannot be waived
+by a stop rationale. These are compact reasoning prompts, not a scoring model,
+mandatory schema, new ledger or replacement for Verification/proof selection.
+
+## Test and CI delta disposition
+
+When changing behavior, executable tests or ordinary CI, apply the lifecycle above
+and the contract ladder below
+before writing permanent tests. Include a compact disposition in the PR description
+or implementation closeout: durable behavior/claim; lowest sufficient owner and
+contract level; reason for any higher-level or repeated public-surface case;
+duplicate/subsumed evidence merged or removed; and recurring CI cost and failure
+localization relative to the merge claim, with the stop/escalate rationale above.
+A short paragraph or small table suffices;
+do not add a per-test ledger or a second proof-selection mechanism.
+
+Repeated adapters are justified by distinct transport/serialization/packaging risk,
+not by the number of supported entrypoints. Prefer the existing native contract
+and conformance evidence for shared semantics. Permanent test and CI names describe
+durable owners or behavior, never a temporary issue or priority batch. Name and
+bound expensive CI constituents so a timeout identifies the affected claim.
+
+A material violation blocks independent approval unless a distinct durable claim
+justifies the additional proof level, repetition or cost. Passing tests alone do
+not justify retaining them. Broad validation remains available through the current
+Verification/proof-selection path for a stated cross-cutting or high-risk claim;
+a passing narrow check does not automatically require all broader suites.
+
+### Controlled review examples
+
+- **Block:** a PR adds the same stale-source assertion to four public adapters,
+  while core currentness and existing adapter conformance already prove it, and
+  wires the new issue-named suite into every PR. The disposition names no distinct
+  transport risk. Require consolidation at the currentness owner and removal of
+  the recurring duplicate. Shape the issue around stale-authority rejection,
+  sharing one owner-level observation across the acceptance examples. Reproduce
+  the incident temporarily, then reuse or extend the existing behavior-class
+  case instead of retaining another regression. Stop after current rejection and
+  required parity evidence; escalate only if a named adapter boundary remains
+  unproven. Review blocks permanent duplication even if every new test passes.
+- **Accept this test delta:** a PR fixes CLI forwarding of repeated `--changed`
+  values and Python/Node encoding of a Unicode request. Keep small adapter cases
+  for those distinct boundaries, referencing existing core source-currentness
+  proof. A single bounded native mutation/recovery journey may remain for the
+  cross-owner composition that primitives cannot prove. Acceptance of this
+  disposition grants neither independent review authority nor whole-PR approval.
+  If existing evidence does not cover lossy Unicode argument transport, shape
+  that as a new durable failure class, validate it on the current patch and retain
+  the minimal adapter case. Factor core source-currentness evidence out of the
+  surface examples. Review accepts the additional case for its distinct risk;
+  stop once argument fidelity and binding floors are proven, or escalate to an
+  affected platform only if its encoding behavior remains materially unresolved.
+
 ## Current Inventory
 
 The June 15, 2026 inventory for #1521 was refreshed after the first reduction slices with:

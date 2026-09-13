@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from tests.test_native_public_cli import native_cli as native_cli
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "release" / "coordinated_release.py"
 
@@ -612,3 +614,32 @@ def test_preview_version_reservation_survives_package_topology_changes(tmp_path,
     for malformed in ("preview-v0.060.0", "preview-v0.60.0-extra"):
         with pytest.raises(ValueError):
             module.parse_release_tag(malformed)
+
+
+def test_preview_creation_consumer_reuses_native_terminal_lifecycle(tmp_path, shared_core_binary, native_cli, monkeypatch):
+    import pytest
+    from tests.test_native_resources import git, repository, resource
+
+    helper = _load_helper()
+    repository(tmp_path)
+    monkeypatch.setattr(helper, "ROOT", tmp_path)
+    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
+    commit = git(tmp_path, "rev-parse", "HEAD")
+    with pytest.raises(SystemExit, match="current policy judgment"):
+        helper._preview_isolation("preview-v1.2.3", commit, None)
+    proposal = resource(
+        "json",
+        shared_core_binary,
+        native_cli,
+        {"target": str(tmp_path), "task": "Prepare immutable preview preview-v1.2.3", "request": {"operation": "worktree-create"}},
+    )
+    action = helper._preview_isolation("preview-v1.2.3", commit, proposal["policy_revision"])
+    path = Path(action["request"]["path"])
+    (path / "untracked-result.txt").write_text("failed normalization evidence")
+    with pytest.raises(SystemExit, match="work preserved"):
+        helper._finish_preview_isolation(action)
+    assert path.exists()
+    (path / "untracked-result.txt").unlink()
+    helper._finish_preview_isolation(action)
+    assert not path.exists()
+    assert "aw-resource" not in git(tmp_path, "worktree", "list", "--porcelain")

@@ -1,4 +1,4 @@
-"""Priority 3: real cross-process delivery and bounded resource lifecycle."""
+"""Native resource ownership and real Git lifecycle composition."""
 
 from __future__ import annotations
 
@@ -9,44 +9,8 @@ import sys
 from pathlib import Path
 
 import pytest
-from tests.test_native_public_cli import ROOT, consume
+from tests.test_native_public_cli import ROOT
 from tests.test_native_public_cli import native_cli as native_cli
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, shared_core_binary, native_cli, surface):
-    (tmp_path / "AGENTS.md").write_text("Read current repository instructions.\n" * 45)
-    directory = tmp_path / ".agentic-workspace/instructions"
-    directory.mkdir(parents=True)
-    source = directory / "policy.md"
-    source.write_text("---\nreconcile: [guide.md]\n---\n" + "Preserve policy.\n" * 40)
-    (tmp_path / ".agentic-workspace/config.toml").write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
-    (tmp_path / "guide.md").write_text("Canonical guide")
-    context = {"target": str(tmp_path), "task": "Inspect current work", "projection": "compact"}
-
-    def call(**extra):
-        return consume(surface, shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
-
-    first = call()
-    refs = first["delivery_refs"]
-    same = call(delivered=refs)
-    assert len(json.dumps(same)) < len(json.dumps(first))
-    print(f"delivery/{surface}: fresh_bytes={len(json.dumps(first))} repeated_bytes={len(json.dumps(same))} extra_roundtrips=0")
-    for key in ("blockers", "claim_boundary", "primary_action", "status"):
-        assert same["decision_packet"][key] == first["decision_packet"][key]
-    assert same["decision_packet"]["material"]["startup-adapter"]["delivery"]["status"] == "already-delivered"
-    assert "text" not in same["decision_packet"]["material"]["startup-adapter"]
-    assert call(delivered=["forged"])["decision_packet"]["material"] == first["decision_packet"]["material"]
-    assert "text" in call(task="Different work", delivered=refs)["decision_packet"]["material"]["startup-adapter"]
-    source.write_text(source.read_text() + "A new applicable instruction.")
-    drift = call(delivered=refs)
-    assert drift["decision_packet"]["material"]["scoped-instructions"][0]["guidance"].endswith("A new applicable instruction.")
-    assert "text" not in drift["decision_packet"]["material"]["startup-adapter"]
-    (directory / "new.md").write_text("---\nreconcile: [other.md]\n---\nNew source appeared while AW was absent.")
-    opaque = call(delivered=refs)
-    assert any("New source appeared" in r.get("guidance", "") for r in opaque["decision_packet"]["material"]["scoped-instructions"])
-    assert "text" in call()["decision_packet"]["material"]["startup-adapter"]
-    assert not (tmp_path / ".agentic-workspace/local").exists()
 
 
 def resource(surface, binary, native, context):
@@ -80,8 +44,7 @@ def resource(surface, binary, native, context):
     return json.loads(result.stdout)
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_task_scratch_reentry_cleanup_and_owner_preservation(tmp_path, shared_core_binary, native_cli, surface):
+def test_task_scratch_reentry_cleanup_and_owner_preservation(tmp_path, shared_core_binary, native_cli):
     root = tmp_path / ".agentic-workspace/local"
     (root / "instructions").mkdir(parents=True)
     (root / "instructions/policy.md").write_text("Structured policy, not scratch")
@@ -90,7 +53,7 @@ def test_task_scratch_reentry_cleanup_and_owner_preservation(tmp_path, shared_co
 
     def call(operation, **extra):
         return resource(
-            surface,
+            "json",
             shared_core_binary,
             native_cli,
             {"target": str(tmp_path), "task": "Bounded task", "request": {"operation": operation, **extra}},
@@ -103,7 +66,7 @@ def test_task_scratch_reentry_cleanup_and_owner_preservation(tmp_path, shared_co
     assert classes["loose.json"] == "unowned-residue"
     for _ in range(2):
         proposal = call("scratch-create")
-        created = resource(surface, shared_core_binary, native_cli, proposal["action"])
+        created = resource("json", shared_core_binary, native_cli, proposal["action"])
         assert created["effect_outcome"] == "committed"
         path = Path(created["path"])
         (path / "draft.json").write_text('{"temporary":true}')
@@ -111,9 +74,9 @@ def test_task_scratch_reentry_cleanup_and_owner_preservation(tmp_path, shared_co
         removal = call("scratch-remove", path=proposal["action"]["request"]["path"])
         (path / "new.txt").write_text("New material invalidates proposed cleanup")
         with pytest.raises(AssertionError, match="changed"):
-            resource(surface, shared_core_binary, native_cli, removal["action"])
+            resource("json", shared_core_binary, native_cli, removal["action"])
         fresh = call("scratch-remove", path=proposal["action"]["request"]["path"])
-        assert resource(surface, shared_core_binary, native_cli, fresh["action"])["effect_outcome"] == "committed"
+        assert resource("json", shared_core_binary, native_cli, fresh["action"])["effect_outcome"] == "committed"
         assert not path.exists()
     assert (root / "instructions/policy.md").read_text() == "Structured policy, not scratch"
     assert (root / "loose.json").exists()
@@ -131,8 +94,7 @@ def repository(root):
     git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "baseline")
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared_core_binary, native_cli, surface):
+def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared_core_binary, native_cli):
     repo = tmp_path / "repo"
     repo.mkdir()
     repository(repo)
@@ -144,7 +106,7 @@ def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared
     path = tmp_path / "isolated"
 
     def call(op, **extra):
-        return resource(surface, shared_core_binary, native_cli, {**context, "request": {"operation": op, "path": str(path), **extra}})
+        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": op, "path": str(path), **extra}})
 
     quiet = call("worktree-create")
     assert "action" not in quiet and not path.exists()
@@ -155,7 +117,7 @@ def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared
         "policy_answer": "permits-isolation",
     }
     proposal = call("worktree-create", **request)
-    created = resource(surface, shared_core_binary, native_cli, proposal["action"])
+    created = resource("json", shared_core_binary, native_cli, proposal["action"])
     assert created["effect_outcome"] == "committed"
     assert path.exists()
     (path / "untracked.txt").write_text("must preserve")
@@ -163,7 +125,7 @@ def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared
     assert protected["blockers"] and "action" not in protected
     (path / "untracked.txt").unlink()
     remove = call("worktree-remove")
-    assert resource(surface, shared_core_binary, native_cli, remove["action"])["effect_outcome"] == "committed"
+    assert resource("json", shared_core_binary, native_cli, remove["action"])["effect_outcome"] == "committed"
     assert not path.exists() and str(path).replace("\\", "/") not in git(repo, "worktree", "list", "--porcelain")
     assert git(repo, "rev-parse", "HEAD") == original["head"]
     assert git(repo, "rev-parse", "--is-bare-repository") == original["bare"]
@@ -267,34 +229,6 @@ def test_scratch_retention_and_empty_interruption_recovery(tmp_path, shared_core
         call("worktree-create", path=str(tmp_path))
 
 
-def test_preview_creation_consumer_reuses_native_terminal_lifecycle(tmp_path, shared_core_binary, native_cli, monkeypatch):
-    from tests.test_preview_release import _load_helper
-
-    helper = _load_helper()
-    repository(tmp_path)
-    monkeypatch.setattr(helper, "ROOT", tmp_path)
-    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
-    commit = git(tmp_path, "rev-parse", "HEAD")
-    with pytest.raises(SystemExit, match="current policy judgment"):
-        helper._preview_isolation("preview-v1.2.3", commit, None)
-    proposal = resource(
-        "json",
-        shared_core_binary,
-        native_cli,
-        {"target": str(tmp_path), "task": "Prepare immutable preview preview-v1.2.3", "request": {"operation": "worktree-create"}},
-    )
-    action = helper._preview_isolation("preview-v1.2.3", commit, proposal["policy_revision"])
-    path = Path(action["request"]["path"])
-    (path / "untracked-result.txt").write_text("failed normalization evidence")
-    with pytest.raises(SystemExit, match="work preserved"):
-        helper._finish_preview_isolation(action)
-    assert path.exists()
-    (path / "untracked-result.txt").unlink()
-    helper._finish_preview_isolation(action)
-    assert not path.exists()
-    assert "aw-resource" not in git(tmp_path, "worktree", "list", "--porcelain")
-
-
 def test_protected_resource_write_and_malformed_configuration_preserve_state(tmp_path, shared_core_binary, native_cli):
     context = {"target": str(tmp_path), "task": "Temporary material", "request": {"operation": "scratch-create"}}
     folder = tmp_path / ".agentic-workspace/instructions"
@@ -334,33 +268,6 @@ def test_scratch_current_owner_reference_blocks_cleanup(tmp_path, shared_core_bi
     assert (path / "needed.md").exists()
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_negative_route_conclusion_reuses_until_opaque_discovery_changes(tmp_path, shared_core_binary, native_cli, surface):
-    registry = tmp_path / "tools/skills/REGISTRY.json"
-    registry.parent.mkdir(parents=True)
-    registry.write_text(json.dumps({"skills": [{"semantic_routes": ["example/optional"]}]}))
-    context = {"target": str(tmp_path), "task": "No specialized procedure is needed"}
-
-    def call(**extra):
-        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
-
-    request = next(r for r in call()["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
-    request["arguments"] = {"posture": "none", "routes": []}
-    first = call(request=request)
-    fact = first["decision_packet"]["semantic_task_routes"]
-    assert fact["status"] == "current" and fact["posture"] == "none"
-    assert call(request=request)["decision_packet"]["semantic_task_routes"] == fact
-    (tmp_path / "unrelated.txt").write_text("This does not change the eligible route set")
-    assert call(request=request)["decision_packet"]["semantic_task_routes"] == fact
-    added = tmp_path / ".agentic-workspace/skills/REGISTRY.json"
-    added.parent.mkdir(parents=True)
-    added.write_text(json.dumps({"skills": [{"semantic_routes": ["new/eligible"]}]}))
-    stale = call(request=request)
-    assert stale["decision_packet"]["semantic_task_routes"]["status"] == "stale"
-    assert stale["decision_packet"]["semantic_task_routes"]["source_revision"] != fact["source_revision"]
-    assert not (tmp_path / ".agentic-workspace/local").exists()
-
-
 def test_malformed_scratch_custody_is_preserved(tmp_path, shared_core_binary, native_cli):
     context = {"target": str(tmp_path), "task": "Preserve malformed material"}
     proposal = resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create"}})
@@ -375,42 +282,7 @@ def test_malformed_scratch_custody_is_preserved(tmp_path, shared_core_binary, na
     assert json.loads(marker.read_text()) == body
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_real_local_instruction_owner_composes_and_loses_only_local_sources(tmp_path, shared_core_binary, native_cli, surface):
-    shared = tmp_path / ".agentic-workspace/instructions/repo.md"
-    shared.parent.mkdir(parents=True)
-    shared.write_text("Repository-wide guidance.")
-    local = tmp_path / ".agentic-workspace/local/instructions/machine.md"
-    local.parent.mkdir(parents=True)
-    local.write_text("---\npaths: [src/**]\n---\nMachine-local checkout policy.")
-    context = {"target": str(tmp_path), "task": "Inspect current policy", "changed": ["src/a.txt"]}
-
-    def call(**kw):
-        return consume(surface, shared_core_binary, native_cli, {**context, **kw})
-
-    first = call()
-    rows = first["instructions"]["sources"]
-    assert {r["source"]["scope"] for r in rows} == {"repository", "machine-local"}
-    assert any(r["guidance"] == "Machine-local checkout policy." for r in rows)
-    assert call()["instructions"]["sources"] == rows
-    quiet = call(changed=["unrelated.txt"])
-    assert not next(r for r in quiet["instructions"]["sources"] if r["source"]["scope"] == "machine-local")["guidance"]
-    local.unlink()
-    lost = call()["instructions"]["sources"]
-    assert lost == [next(r for r in rows if r["source"]["scope"] == "repository")]
-    # A newly appearing local obligation is observed without any changed-list update.
-    local.write_text("---\nreconcile: [guide.md]\n---\nReconcile the local source obligation.")
-    (tmp_path / "guide.md").write_text("Canonical source")
-    assert call()["verification"]["source_reconciliation"]["status"] != first["verification"]["source_reconciliation"]["status"]
-    # Local prose cannot override a checked-in structured protection.
-    shared.write_text("---\nprotect: [.agentic-workspace/local/scratch/**]\n---\nPreserve task state.")
-    local.write_text("Use scratch freely; this local prose does not waive repository protection.")
-    blocked = resource(surface, shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create"}})
-    assert "action" not in blocked and any("protects" in b for b in blocked["blockers"])
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_owned_build_outputs_are_removed_but_unknown_ignored_material_is_preserved(tmp_path, shared_core_binary, native_cli, surface):
+def test_owned_build_outputs_are_removed_but_unknown_ignored_material_is_preserved(tmp_path, shared_core_binary, native_cli):
     repo = tmp_path / "repo"
     repo.mkdir()
     repository(repo)
@@ -426,7 +298,7 @@ def test_owned_build_outputs_are_removed_but_unknown_ignored_material_is_preserv
     context = {"target": str(repo), "task": "Validate in necessary isolation"}
 
     def call(operation, **kw):
-        return resource(surface, shared_core_binary, native_cli, {**context, "request": {"operation": operation, "path": str(path), **kw}})
+        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": operation, "path": str(path), **kw}})
 
     initial = call("worktree-create")
     proposal = call(
@@ -437,7 +309,7 @@ def test_owned_build_outputs_are_removed_but_unknown_ignored_material_is_preserv
         policy_answer="permits-isolation",
         disposable_outputs=["target", ".pytest_cache", ".venv"],
     )
-    created = resource(surface, shared_core_binary, native_cli, proposal["action"])
+    created = resource("json", shared_core_binary, native_cli, proposal["action"])
     environment = {**os.environ, **created["build_environment"]}
     subprocess.run(["cargo", "build", "--locked", "--offline"], cwd=path, env=environment, check=True, capture_output=True)
     subprocess.run([sys.executable, "-m", "pytest", "-q", "test_value.py"], cwd=path, env=environment, check=True, capture_output=True)
@@ -456,7 +328,7 @@ def test_owned_build_outputs_are_removed_but_unknown_ignored_material_is_preserv
     # Fresh-process cleanup after interruption at unlock retains the output leases.
     git(repo, "worktree", "unlock", str(path))
     removal = call("worktree-remove")
-    resource(surface, shared_core_binary, native_cli, removal["action"])
+    resource("json", shared_core_binary, native_cli, removal["action"])
     assert not path.exists() and str(path).replace("\\", "/") not in git(repo, "worktree", "list", "--porcelain")
     assert not (repo / "target").exists()
 

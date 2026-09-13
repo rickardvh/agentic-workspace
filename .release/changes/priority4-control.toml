@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Complete scoped instruction publication, current Verification checks and judgments, and source-owned configuration decisions and resume for skills-first daily use."
+issues = [3207, 2334, 2638, 2613, 2767, 2726]

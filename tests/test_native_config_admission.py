@@ -18,6 +18,13 @@ def former_repository(target: Path) -> tuple[Path, Path]:
         path = target / ref
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes((ROOT / ref).read_bytes())
+    # Stage a current installation fixture from the actual shipped manifest.
+    # The repository's historical v0.51 installation roster is not a current
+    # source-checkout installation receipt; preserve that negative separately.
+    provenance_path = target / ".agentic-workspace/payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text())
+    provenance["payload_files"] = manifest["payload_files"]
+    provenance_path.write_text(json.dumps(provenance))
     selector = target / ".agentic-workspace/local/planning/owner-selection.json"
     selector.parent.mkdir(parents=True)
     selector.write_text(
@@ -133,3 +140,12 @@ def test_unconfigured_native_payload_has_no_read_or_artifact_tax(
     assert result["configuration"]["payload"] == {"status": "not-configured", "blockers": []}
     assert result["decision_packet"]["status"] == "direct"
     assert list(tmp_path.iterdir()) == before
+
+
+def test_historical_installation_roster_cannot_claim_new_payload(tmp_path, shared_core_binary, native_cli):
+    former_repository(tmp_path)
+    provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
+    provenance.write_bytes((ROOT / ".agentic-workspace/payload-provenance.json").read_bytes())
+    current = consume("json", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect historical payload"})
+    assert current["configuration"]["payload"]["status"] == "unresolved"
+    assert any(gap["path"].endswith("workspace-instruction-correction/SKILL.md") for gap in current["configuration"]["payload"]["gaps"])

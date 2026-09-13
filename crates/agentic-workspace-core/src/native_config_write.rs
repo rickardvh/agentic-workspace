@@ -11,7 +11,9 @@ const SHARED: &str = ".agentic-workspace/config.toml";
 const LOCAL: &str = ".agentic-workspace/config.local.toml";
 const EDIT: &str = "configuration/edit-source/v1";
 const RECOVER: &str = "configuration/recover-write/v1";
+const DEFER: &str = "configuration.defer-choice";
 const READ: &str = "configuration/read-choice/v1";
+const READ_CREATION: &str = "configuration/read-creation-choices/v1";
 const EFFECT: &str = "configuration-source";
 // Durable choices consumed by current owners, including explicit native module
 // admission. Task answers, learned evidence and operational registries stay out.
@@ -210,7 +212,8 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v3","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
-    let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write")]});
+    let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write"), operation(DEFER)]});
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"const":SHARED},"key":{"enum":PROGRESSIVE_CHOICES}}}}));
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
@@ -248,6 +251,40 @@ fn retained(target: &Path, source: &str, post: &str) -> Result<Option<Value>, Co
     }
     Ok(Some(record))
 }
+fn deferred_path(source: &str, key: &str) -> Result<String, CoreError> {
+    Ok(format!(
+        ".agentic-workspace/local/configuration/{}.json",
+        &digest(&json!([source, key]))?[7..]
+    ))
+}
+fn deferred(target: &Path, source: &str, key: &str) -> Result<Option<Value>, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let Some(bytes) = crate::native_planning::read(&root, &deferred_path(source, key)?)? else {
+        return Ok(None);
+    };
+    let record: Value = serde_json::from_slice(&bytes).map_err(err)?;
+    let prepared = crate::attempt_store::prepare_commit(
+        target.to_str().unwrap(),
+        record["custody"].clone(),
+        record["outcome"].clone(),
+    )?;
+    let i = &record["invocation"];
+    if prepared["record"]["invocation"] != *i
+        || i["operation_id"] != DEFER
+        || i["source_owner"] != "configuration"
+        || i["arguments"]["request"]["arguments"]["source"] != source
+        || i["arguments"]["request"]["arguments"]["key"] != key
+        || record["outcome"] != deferred_outcome(i)
+    {
+        return Err(err(
+            "configuration continuation lacks exact owner custody; preserve it",
+        ));
+    }
+    Ok(Some(record))
+}
+fn deferred_outcome(i: &Value) -> Value {
+    json!({"status":"applied","effects":[EFFECT],"value":{"kind":"agentic-workspace/configuration-write-result/v1","source":i["arguments"]["request"]["arguments"]["source"],"key":i["arguments"]["request"]["arguments"]["key"],"disposition":"deferred","material_written":false,"continuing_custody":false,"completion_authority":false}})
+}
 pub(crate) fn view(
     target: &Path,
     work: &Value,
@@ -280,9 +317,16 @@ pub(crate) fn view(
             .map(|key| template(READ, json!({"source":SHARED,"key":key})))
             .collect::<Vec<_>>()
     );
+    if [SHARED, LOCAL]
+        .iter()
+        .any(|source| current[source].is_null())
+    {
+        result["creation_discovery_request"] = template(READ_CREATION, json!({}));
+    }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     for source in [SHARED, LOCAL] {
-        if current[source].is_null() {
+        if current[source].is_null() && request.is_some_and(|r| r["request_kind"] == READ_CREATION)
+        {
             for (_, key) in CHOICES.iter().filter(|(s, _)| *s == source) {
                 if PROGRESSIVE_CHOICES.contains(key) {
                     continue;
@@ -368,6 +412,18 @@ pub(crate) fn view(
         .as_array_mut()
         .unwrap()
         .sort_by_key(|r| r["arguments"]["key"] != "workspace.cli_invoke");
+    result["deferred_choices"] = json!([]);
+    for (source, key) in CHOICES {
+        if let Some(record) = deferred(target, source, key)? {
+            let args = &record["invocation"]["arguments"]["request"]["arguments"];
+            let state = if record["invocation"]["arguments"]["binding"] == binding {
+                "current"
+            } else {
+                "changed-context"
+            };
+            result["deferred_choices"].as_array_mut().unwrap().push(json!({"source":source,"key":key,"proposed_value":args["value"],"status":state,"authority":"unresolved-choice-only","resume_request":template(EDIT,json!({"source":source,"key":key,"value":args["value"]}))}));
+        }
+    }
     let Some(request) = request else {
         return Ok(result);
     };
@@ -378,6 +434,10 @@ pub(crate) fn view(
         return Err(err(
             "configuration source, policy or capability changed; resolve a fresh request",
         ));
+    }
+    if request["request_kind"] == READ_CREATION {
+        result["status"] = json!("creation-choices-delivered");
+        return Ok(result);
     }
     let args = &request["arguments"];
     if request["request_kind"] == READ {
@@ -448,6 +508,21 @@ pub(crate) fn view(
             &json!({"binding":binding,"source":source,"key":args["key"],"value":value,"post_revision":post}),
         )?;
         if args["answer"].is_null() {
+            if !matches!(
+                key,
+                "assurance.decision_delegations" | "modules.independent" | "modules.enabled"
+            ) && let Some(authority) = crate::native_decision_authority::delegated(
+                config,
+                "configuration",
+                &[source.to_owned()],
+            ) {
+                let mut authorized = request.clone();
+                authorized["arguments"]["answer"] = json!("authorize-write");
+                authorized["arguments"]["proposal_revision"] = json!(proposal);
+                let mut delegated = self::view(target, work, config, contract, Some(&authorized))?;
+                delegated["authority_basis"] = authority;
+                return Ok(delegated);
+            }
             let mut answer = request.clone();
             answer["arguments"]["proposal_revision"] = json!(proposal);
             result["status"] = json!("human-decision-required");
@@ -463,6 +538,7 @@ pub(crate) fn view(
         }
         if args["answer"] == "defer" {
             result["status"] = json!("deferred");
+            result["contribution"]["actions"] = json!([{"operation_id":DEFER,"dependency_revision":digest(&json!([binding,request,post]))?,"arguments":{"target":target,"request":request,"binding":binding,"post_revision":post},"effects":[EFFECT],"source_requests":[request]}]);
             return Ok(result);
         }
         "configuration.write"
@@ -473,6 +549,30 @@ pub(crate) fn view(
     result["contribution"]["actions"] = json!([{"operation_id":operation,"dependency_revision":digest(&json!([binding,request,post]))?,"arguments":{"target":target,"request":request,"binding":binding,"post_revision":post},"effects":[EFFECT],"source_requests":[request]}]);
     Ok(result)
 }
+pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
+    let args = &action["arguments"]["request"]["arguments"];
+    let source = args["source"]
+        .as_str()
+        .ok_or_else(|| err("configuration source missing"))?;
+    let mut paths =
+        crate::attempt_store::write_paths(&json!({"idempotency_key":action["logical_effect_id"]}))?;
+    paths.push(".agentic-workspace/local/effects/configuration.lock".into());
+    if let Some(key) = args["key"].as_str() {
+        let path = deferred_path(source, key)?;
+        paths.extend([path.clone(), format!("{path}.*.tmp")]);
+    }
+    if action["operation_id"] != DEFER {
+        paths.extend([
+            source.to_owned(),
+            format!("{source}.*.tmp"),
+            marker(
+                source,
+                action["arguments"]["post_revision"].as_str().unwrap(),
+            )?,
+        ]);
+    }
+    Ok(paths)
+}
 pub(crate) fn execute(
     target: &Path,
     decision: &Value,
@@ -482,7 +582,9 @@ pub(crate) fn execute(
     let mut result = execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
         Ok(())
     })?;
-    result["post_effect_changed_paths"] = json!([result["outcome"]["value"]["source"]]);
+    if invocation["operation_id"] != DEFER {
+        result["post_effect_changed_paths"] = json!([result["outcome"]["value"]["source"]]);
+    }
     Ok(result)
 }
 fn execute_checked(
@@ -492,6 +594,11 @@ fn execute_checked(
     revalidate: &mut dyn FnMut() -> Result<(), CoreError>,
     observe: &mut dyn FnMut(&str) -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
+    if serde_json::to_vec(invocation).map_err(err)?.len() > 100_000 {
+        return Err(err(
+            "configuration publication exceeds bounded recovery size; preserve source",
+        ));
+    }
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     sources(target)?;
     root.create_dir_all(".agentic-workspace/local/effects")
@@ -513,6 +620,49 @@ fn execute_checked(
     let args = &invocation["arguments"];
     let source = args["request"]["arguments"]["source"].as_str().unwrap();
     let post = args["post_revision"].as_str().unwrap();
+    if invocation["operation_id"] == DEFER {
+        let key = args["request"]["arguments"]["key"].as_str().unwrap();
+        let previous = deferred(target, source, key)?;
+        let path = deferred_path(source, key)?;
+        let admission = crate::attempt_store::admit(
+            json!({"target":target,"decision":decision,"invocation":invocation,"custody":previous.as_ref().filter(|r|r["invocation"]==*invocation).map(|r|&r["custody"])}),
+        )?;
+        let out = deferred_outcome(invocation);
+        root.create_dir_all(".agentic-workspace/local/configuration")
+            .map_err(err)?;
+        let record = json!({"invocation":invocation,"custody":admission["custody"],"outcome":out});
+        let temporary = format!("{path}.{}.tmp", &digest(invocation)?[7..]);
+        if previous.as_ref() != Some(&record) {
+            let bytes = serde_json::to_vec(&record).map_err(err)?;
+            if let Some(existing) = crate::native_planning::read(&root, &temporary)? {
+                if existing != bytes {
+                    return Err(err(
+                        "unknown configuration continuation temporary preserved",
+                    ));
+                }
+            } else {
+                let mut f = root
+                    .open_with(&temporary, OpenOptions::new().write(true).create_new(true))
+                    .map_err(err)?;
+                f.write_all(&bytes).map_err(err)?;
+                f.sync_all().map_err(err)?;
+            }
+            revalidate()?;
+            if deferred(target, source, key)? != previous {
+                return Err(err("configuration continuation changed"));
+            }
+            if previous.is_none() {
+                root.hard_link(&temporary, &root, &path).map_err(err)?;
+                root.remove_file(&temporary).map_err(err)?;
+            } else {
+                root.rename(&temporary, &root, &path).map_err(err)?;
+            }
+        }
+        let committed = crate::attempt_store::commit(
+            json!({"target":target,"custody":admission["custody"],"outcome":out}),
+        )?;
+        return Ok(json!({"outcome":out,"custody":committed["custody"]}));
+    }
     if invocation["operation_id"] == "configuration.recover-write" {
         let record =
             retained(target, source, post)?.ok_or_else(|| err("recovery evidence missing"))?;
@@ -612,6 +762,10 @@ fn execute_checked(
     } else {
         root.rename(&temporary, &root, source).map_err(err)?;
     }
+    let key = args["request"]["arguments"]["key"].as_str().unwrap();
+    if deferred(target, source, key)?.is_some() {
+        root.remove_file(deferred_path(source, key)?).map_err(err)?;
+    }
     observe("published")?;
     let committed = crate::attempt_store::commit(
         json!({"target":target,"custody":admission["custody"],"outcome":out}),
@@ -634,16 +788,19 @@ mod tests {
         ));
         std::fs::create_dir(&target).unwrap();
         let target = target.canonicalize().unwrap();
-        let mut request = resolve(&target, None)["configuration_write"]["creation_requests"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .find(|r| {
-                r["arguments"]["source"] == SHARED
-                    && r["arguments"]["key"] == "workspace.cli_invoke"
-            })
-            .unwrap()
-            .clone();
+        let discovery =
+            resolve(&target, None)["configuration_write"]["creation_discovery_request"].clone();
+        let mut request =
+            resolve(&target, Some(discovery))["configuration_write"]["creation_requests"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|r| {
+                    r["arguments"]["source"] == SHARED
+                        && r["arguments"]["key"] == "workspace.cli_invoke"
+                })
+                .unwrap()
+                .clone();
         request["arguments"]["value"] = json!("fixture-native");
         let mut answer = resolve(&target,Some(request))["decision_packet"]["decision_request"]["response_request"].clone();
         answer["arguments"]["answer"] = json!("authorize-write");

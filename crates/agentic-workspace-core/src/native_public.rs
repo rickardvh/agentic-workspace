@@ -80,6 +80,9 @@ fn resolve_with_baseline(
                 .is_some_and(crate::native_independent::linked)
                 && i["operation_id"] != "delegation.dispatch"
                 && i["operation_id"] != crate::native_patch::OP
+                && i["operation_id"] != crate::native_instruction_write::WRITE
+                && i["operation_id"] != crate::native_instruction_write::RECOVERY
+                && i["operation_id"] != "configuration.defer-choice"
                 && i["operation_id"] != "configuration.write"
                 && i["operation_id"] != "configuration.recover-write"
                 && i["operation_id"] != "memory.dispose"
@@ -547,6 +550,14 @@ fn resolve_with_baseline(
     if let Some(request) = planning["selector_transfer"].get_mut("request") {
         request["capability_revision"] = contract["revision"].clone();
     }
+    crate::native_instruction_write::view(
+        target,
+        &work,
+        &configuration,
+        &mut instructions,
+        &contract,
+        request_for("scoped-instructions"),
+    )?;
     let mut config_write = crate::native_config_write::view(
         target,
         &work,
@@ -759,6 +770,7 @@ fn resolve_with_baseline(
                                     | "verification/execute-selected/v1"
                                     | "verification/record-receipt/v1"
                                     | "verification/strategy/v1"
+                                    | "verification/review-claim/v1"
                             )
                         ))
                     .cloned()
@@ -778,6 +790,33 @@ fn resolve_with_baseline(
         verification_probe
     };
     if available("verification") {
+        for source in instructions["sources"].as_array().unwrap().clone() {
+            let checks: Vec<_> = verification["instruction_checks"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|c| c["source"] == source["source"])
+                .collect();
+            if !checks.is_empty() && checks.iter().all(|c| c["status"] == "current") {
+                let code = format!(
+                    "instruction:{}:current-binding",
+                    source["source"]["reference"].as_str().unwrap()
+                );
+                let blockers = instructions["contribution"]["blockers"]
+                    .as_array_mut()
+                    .unwrap();
+                for blocker in blockers.iter_mut().filter(|b| b["code"] == code) {
+                    // Current checks discharge only their claim consequence. Any
+                    // write protection in the same instruction remains binding.
+                    blocker["affects"]
+                        .as_array_mut()
+                        .unwrap()
+                        .retain(|scope| scope != "claim:complete");
+                }
+                blockers
+                    .retain(|b| b["code"] != code || !b["affects"].as_array().unwrap().is_empty());
+            }
+        }
         let reconciliation = crate::native_source_reconciliation::view(
             target,
             &work,
@@ -810,14 +849,26 @@ fn resolve_with_baseline(
                 .unwrap()
                 .push(reconciliation["action"].clone());
         }
-        if !reconciliation["source_revision"].is_null() {
+        if !reconciliation["source_revision"].is_null()
+            && (verification_request(crate::native_source_reconciliation::REQUEST).is_some()
+                || reconciliation["action"].is_object()
+                || reconciliation["decisions"]
+                    .as_array()
+                    .is_some_and(|d| !d.is_empty()))
+        {
             verification["contribution"]["revision"] = reconciliation["source_revision"].clone();
         }
         if reconciliation["decisions"]
             .as_array()
             .is_some_and(|a| !a.is_empty())
         {
-            verification["contribution"]["decisions"] = reconciliation["decisions"].clone();
+            if verification["contribution"]["decisions"].is_null() {
+                verification["contribution"]["decisions"] = json!([]);
+            }
+            verification["contribution"]["decisions"]
+                .as_array_mut()
+                .unwrap()
+                .extend(reconciliation["decisions"].as_array().unwrap().clone());
         }
         verification["source_reconciliation"] = reconciliation.clone();
         // Reobserve these owner obligations on every selected-Plan entry. Direct
@@ -1026,6 +1077,9 @@ fn resolve_with_baseline(
                         "proof.report"
                             | "configuration.write"
                             | "configuration.recover-write"
+                            | "configuration.defer-choice"
+                            | "instructions.write"
+                            | "instructions.recover-write"
                             | "memory.dispose"
                             | "memory.recover-disposition"
                             | "memory.capture-decision"
@@ -1391,6 +1445,9 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "planning.update-recover"
         && invocation["operation_id"] != "delegation.dispatch"
         && invocation["operation_id"] != crate::native_patch::OP
+        && invocation["operation_id"] != crate::native_instruction_write::WRITE
+        && invocation["operation_id"] != crate::native_instruction_write::RECOVERY
+        && invocation["operation_id"] != "configuration.defer-choice"
         && invocation["operation_id"] != "configuration.write"
         && invocation["operation_id"] != "configuration.recover-write"
         && invocation["operation_id"] != "memory.dispose"
@@ -1460,6 +1517,9 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         Some(
             "configuration.write"
                 | "configuration.recover-write"
+                | "configuration.defer-choice"
+                | "instructions.write"
+                | "instructions.recover-write"
                 | "memory.dispose"
                 | "memory.recover-disposition"
                 | "memory.capture-decision"
@@ -1489,6 +1549,13 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             )
         ) {
             crate::native_memory_capture::execute(
+                &target,
+                &current["decision_packet"],
+                invocation,
+                revalidate,
+            )?
+        } else if invocation["source_owner"] == "scoped-instructions" {
+            crate::native_instruction_write::execute(
                 &target,
                 &current["decision_packet"],
                 invocation,
@@ -1747,7 +1814,10 @@ mod continuation_tests {
         std::fs::create_dir(&root).unwrap();
         let context = json!({"target":root,"task":"Set configured invocation","changed":[]});
         let initial = start(context.clone()).unwrap();
-        let mut request = initial["configuration_write"]["creation_requests"]
+        let mut discovery = context.clone();
+        discovery["request"] = initial["configuration_write"]["creation_discovery_request"].clone();
+        let delivered = start(discovery).unwrap();
+        let mut request = delivered["configuration_write"]["creation_requests"]
             .as_array()
             .unwrap()
             .iter()

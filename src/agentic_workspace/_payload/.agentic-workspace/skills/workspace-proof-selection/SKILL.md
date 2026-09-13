@@ -54,6 +54,25 @@ Use it after the main AW operating skill or compact router points at proof selec
    - update the active plan with the gap
    - open or link follow-up work when the gap belongs outside the slice
 
+## Current native judgments
+
+For instruction checks, select the current `verification.execution_requests`
+command and consume its native receipt. Named and inline checks share the existing
+Verification producer; a check pass does not satisfy source reconciliation.
+
+For resulting-work consistency, use the exact
+`verification.source_reconciliation.requests` material request and supply
+`updated` or `reviewed-current` with a reason for each named source. Verification
+requests an exact human confirmation unless a current explicit policy grant
+already authorizes the acting agent for the exact source/work path set.
+
+For semantic claim sufficiency, use `verification.claim_review.request` with the
+current evidence refs and the bounded judgment/reason. Return its exact authorized
+answer; inspect remaining claim blockers. Preserve the answer in ordinary caller
+carriage only while current; a fresh consumer revalidates postimages, strategy,
+evidence and policy. This is not independent-review admission or authority to
+close unfinished Planning work. Missing required reviewer custody remains a gap.
+
 ## Guardrails
 
 - Red flag: Tests passed, so completion is claimable.

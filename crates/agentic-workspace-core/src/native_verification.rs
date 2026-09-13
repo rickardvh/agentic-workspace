@@ -827,6 +827,14 @@ pub(crate) fn view_with_applicability(
     {
         gaps.push("verification-manifest-owner-sections-invalid".into());
     }
+    let instruction_view = crate::native_instructions::resolve(
+        target,
+        changed,
+        &json!({}),
+        config["assurance"]["instruction_revision"]
+            .as_str()
+            .unwrap_or(""),
+    )?;
     let mut config = strategy_sources(&config, &manifest)?;
     let subsystem_source = if manifest["assurance"].get("subsystem_profiles").is_some() {
         MANIFEST
@@ -861,7 +869,7 @@ pub(crate) fn view_with_applicability(
     let (domain, domain_descriptors) = domain_routes(&config, changed, domain_source)?;
     let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
     let source_revision = digest(
-        &json!({"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
+        &json!({"instruction_sources":instruction_view["sources"].as_array().unwrap().iter().filter(|r|r["applicable"]==true && !r["metadata"]["checks"].as_array().unwrap().is_empty()).collect::<Vec<_>>(),"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
         "planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
     )?;
     let mut protocols = serde_json::Map::new();
@@ -896,6 +904,51 @@ pub(crate) fn view_with_applicability(
             }
         }
     }
+    let mut instruction_checks = Vec::new();
+    for row in instruction_view["sources"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|r| r["applicable"] == true)
+    {
+        let reference = row["source"]["reference"].as_str().unwrap();
+        for check in row["metadata"]["checks"].as_array().unwrap() {
+            if check
+                .as_str()
+                .is_some_and(|c| c.starts_with("requirement:"))
+            {
+                continue;
+            }
+            let id = format!("instruction:{}", &digest(&json!([reference, check]))?[7..]);
+            let mut required = json!({"id":id,"source":row["source"],"check":check,"status":"source-admission-required"});
+            if row["binding_admission"]["status"] == "current" {
+                if let Some(command) = check["run"].as_str() {
+                    routes.insert(id.clone(),json!({"commands":[command],"protocol_refs":[],"source_kind":"instruction-check","source_ref":reference,"source_revision":row["source"]["revision"],"authority_refs":[reference]}));
+                    required["route_id"] = json!(id);
+                    required["status"] = json!("evidence-required");
+                } else if let Some(name) = check.as_str() {
+                    if let Some(route) = manifest["proof_routes"].get(name) {
+                        routes.insert(name.to_owned(), route.clone());
+                        for id in route["protocol_refs"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .filter_map(Value::as_str)
+                        {
+                            if let Some(protocol) = manifest["protocols"].get(id) {
+                                protocols.insert(id.to_owned(), protocol.clone());
+                            }
+                        }
+                        required["route_id"] = json!(name);
+                        required["status"] = json!("evidence-required");
+                    } else {
+                        required["status"] = json!("named-check-unavailable");
+                    }
+                }
+            }
+            instruction_checks.push(required);
+        }
+    }
     let mut scenarios = serde_json::Map::new();
     for item in protocols.values().chain(routes.values()) {
         if let Some(refs) = item["scenario_refs"].as_array() {
@@ -924,7 +977,7 @@ pub(crate) fn view_with_applicability(
     let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
     arguments_schema["$schema"] = schema["$schema"].clone();
     let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::native_claim_review::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
     let owner_revision = digest(&requests)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
         "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
@@ -972,6 +1025,7 @@ pub(crate) fn view_with_applicability(
     let mut authentication = Value::Null;
     let mut evidence = Vec::new();
     let mut requested = false;
+    let mut claim_review_request = None;
     for request in request
         .into_iter()
         .flat_map(|value| value.as_array().cloned().unwrap_or_else(|| vec![value]))
@@ -1014,6 +1068,15 @@ pub(crate) fn view_with_applicability(
                 target,
                 request["arguments"]["host_result_ref"].as_str().unwrap(),
             );
+        } else if request["request_kind"] == crate::native_claim_review::REQUEST {
+            evidence_refs = request["arguments"]["evidence_refs"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect();
+            claim_review_request = Some(request.clone());
         } else if let Some(refs) = request["arguments"]["evidence_refs"].as_array() {
             evidence_refs.extend(refs.iter().filter_map(Value::as_str).map(str::to_owned));
         }
@@ -1055,6 +1118,25 @@ pub(crate) fn view_with_applicability(
             &json!({"id":work_ref,"revision":work_revision}),
         )
     }));
+    for check in &mut instruction_checks {
+        if check["status"] == "evidence-required" {
+            let commands =
+                &strategy["proof_routes"][check["route_id"].as_str().unwrap()]["commands"];
+            if commands.as_array().is_some_and(|commands| {
+                !commands.is_empty()
+                    && commands.iter().all(|command| {
+                        evidence.iter().any(|e| {
+                            e["checked_scope"]["claim"] == "selected-command-passed"
+                                && e["runtime_admission"]["command_coverage"]["route_id"]
+                                    == check["route_id"]
+                                && e["runtime_admission"]["command_coverage"]["command"] == *command
+                        })
+                    })
+            }) {
+                check["status"] = json!("current");
+            }
+        }
+    }
     let mut strategy_request = template.clone();
     strategy_request["id"] = json!("verification/strategy/v1");
     strategy_request["request_kind"] = json!("verification/strategy/v1");
@@ -1225,13 +1307,44 @@ pub(crate) fn view_with_applicability(
     } else {
         assurance_request["arguments"]["decisions"] = json!(decisions);
     }
+    let current_config = crate::native_config::view(target)?;
+    let claim_review = crate::native_claim_review::view(
+        crate::native_claim_review::Context {
+            target,
+            work: current_work,
+            subject,
+            changed,
+            config: &current_config,
+            instructions: &instruction_view,
+            strategy: &strategy,
+            evidence: &evidence,
+            source_revision: &source_revision,
+            contract: admission_contract,
+        },
+        claim_review_request.as_ref(),
+    )?;
+    if claim_review["status"] == "current"
+        && gaps.iter().all(|gap| {
+            matches!(
+                gap.as_str(),
+                "current-task-claim-judgment-not-admitted"
+                    | "current-task-strategy-requires-owner-judgment"
+                    | "domain-lane-strategy-sufficiency-unresolved"
+            )
+        })
+    {
+        blockers
+            .as_array_mut()
+            .unwrap()
+            .retain(|b| b["code"] != "verification-evidence-unresolved");
+    }
     let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row|json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":row["source_requirement"],"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})).collect();
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
-        "strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"execution":execution,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
-        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"blockers":blockers,"actions":execution_actions},
+        "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),
     )
 }
