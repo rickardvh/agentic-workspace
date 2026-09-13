@@ -208,7 +208,9 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
                         "conflicting exact/subtree route declaration: {id}"
                     )));
                 }
-                if exact_detail != Some(id) {
+                if exact_detail != Some(id)
+                    && !exact_detail.is_some_and(|selected| skill["id"] == selected)
+                {
                     continue;
                 }
                 if entry.get("capability_bindings").is_none() {
@@ -292,6 +294,29 @@ pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
     )
 }
 
+/// Resolve a short skill identity or qualified semantic route through the same
+/// bounded registry discovery; identity does not grant execution authority.
+pub(crate) fn procedure(target: &Path, name: &str) -> Result<Value, CoreError> {
+    let name = name.strip_prefix("skill:").unwrap_or(name);
+    let catalogue = catalogue(target, Some(name))?;
+    let mut candidates = BTreeMap::new();
+    for row in catalogue["routes"].as_array().unwrap() {
+        for source in row["sources"].as_array().into_iter().flatten() {
+            if row["id"] == name || source["skill_id"] == name {
+                candidates.insert(
+                    source["procedure"]["reference"]
+                        .as_str()
+                        .unwrap_or("")
+                        .to_owned(),
+                    source["procedure"].clone(),
+                );
+            }
+        }
+    }
+    Ok(
+        json!({"identity":name,"status":if candidates.is_empty(){"unavailable"}else if candidates.len()>1{"ambiguous"}else if candidates.values().next().unwrap()["status"]=="available"{"current"}else{"unavailable"},"procedures":candidates.into_values().collect::<Vec<_>>(),"authority_effect":"procedure-reference-only"}),
+    )
+}
 /// Public source-owning discovery. No caller-supplied source facts or custody.
 pub fn discovery(value: Value) -> Result<Value, CoreError> {
     #[derive(serde::Deserialize)]

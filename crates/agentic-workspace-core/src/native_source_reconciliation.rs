@@ -56,7 +56,7 @@ fn observe(root: &Dir, path: &str) -> Result<Value, CoreError> {
 
 // Reobserve the applicable declared path set, including newly created files.
 // No prior AW event stream or comprehensive caller change list is freshness.
-fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<String>, CoreError> {
+pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<String>, CoreError> {
     let mut paths = BTreeSet::new();
     let mut visited = BTreeSet::new();
     let mut pending = Vec::new();
@@ -160,8 +160,7 @@ fn result(binding: &Value, request: &Value) -> Result<Value, CoreError> {
     }
     Ok(
         json!({"kind":"agentic-workspace/source-reconciliation/v1","binding_revision":digest(binding)?,
-        "judgments":judgments,"authority_basis":{"kind":"exact-bounded-human-answer","request_revision":digest(request)?,
-            "proposal_revision":request["arguments"]["proposal_revision"],"identity_authentication":"not-claimed"},
+        "judgments":judgments,"authority_basis":binding.get("decision_authority").cloned().unwrap_or_else(||json!({"kind":"exact-bounded-human-answer","request_revision":digest(request).unwrap(),"proposal_revision":request["arguments"]["proposal_revision"],"identity_authentication":"not-claimed"})),
         "completion_authority":false,"semantic_truth":"judgment-not-mechanically-proven"}),
     )
 }
@@ -311,6 +310,15 @@ pub(crate) fn view(
         digest(&json!(include_str!("native_source_reconciliation.rs"))).unwrap()
     });
     binding["producer_revision"] = json!(&*PRODUCER);
+    let mut judgment_paths: Vec<String> = sources.keys().cloned().collect();
+    judgment_paths.extend(postimages.keys().cloned());
+    judgment_paths.sort();
+    judgment_paths.dedup();
+    if let Some(authority) =
+        crate::native_decision_authority::delegated(configuration, "verification", &judgment_paths)
+    {
+        binding["decision_authority"] = authority;
+    }
     let revision = digest(&binding)?;
     view["source_revision"] = json!(revision);
     let path = format!(
@@ -381,6 +389,23 @@ pub(crate) fn view(
                 return Err(err(
                     "judgment material must use the issued material request",
                 ));
+            }
+            if binding.get("decision_authority").is_some() {
+                let compiled = crate::compile_value(
+                    json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":revision,"decisions":decisions}]}),
+                )?;
+                let mut authorized =
+                    compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
+                authorized["arguments"]["answer"] = json!("confirm");
+                return self::view(
+                    target,
+                    work,
+                    instructions,
+                    configuration,
+                    contract,
+                    Some(&authorized),
+                    Context { subject, executing },
+                );
             }
             view["status"] = json!("bounded-human-answer-required");
             view["decisions"] = decisions;

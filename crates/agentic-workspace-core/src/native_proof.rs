@@ -179,7 +179,7 @@ pub(crate) fn select_mode(
     };
     if matches!(
         route["source_kind"].as_str(),
-        Some("config-domain-lane" | "config-proof-profile")
+        Some("config-domain-lane" | "config-proof-profile" | "instruction-check")
     ) && serde_json::to_vec(route).map_or(true, |bytes| bytes.len() > 32768)
     {
         return Ok(
@@ -208,7 +208,7 @@ pub(crate) fn select_mode(
     for authority in protocols.values().chain(
         (matches!(
             route["source_kind"].as_str(),
-            Some("config-domain-lane" | "config-proof-profile")
+            Some("config-domain-lane" | "config-proof-profile" | "instruction-check")
         ))
         .then_some(route),
     ) {

@@ -200,6 +200,39 @@
           "terminal or interrupted work owns disposable resources"
         ]
       }
+    },
+    {
+      "id": "workspace-instruction-correction",
+      "path": "workspace-instruction-correction/SKILL.md",
+      "scope": "specialized-subskill",
+      "stability": "contract-backed-projection",
+      "visibility": "routed-on-demand",
+      "summary": "Retain trusted future behavior in the correct local or checked-in instruction source through current owner publication.",
+      "semantic_routes": [
+        {
+          "id": "workspace/instructions/correction",
+          "match": "exact",
+          "priority": 10,
+          "description": "Reconcile trusted future-behavior corrections and author scoped repository instructions."
+        }
+      ],
+      "activation_hints": {
+        "verbs": [
+          "correct",
+          "retain",
+          "instruct"
+        ],
+        "nouns": [
+          "future behavior",
+          "repository instructions"
+        ],
+        "phrases": [
+          "work like this from now on"
+        ],
+        "when": [
+          "a trusted correction should change later repository behavior"
+        ]
+      }
     }
   ]
 }

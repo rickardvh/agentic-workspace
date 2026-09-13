@@ -2,6 +2,42 @@
 
 Use this guide before adding or pruning tests in this repository. The goal is to preserve behavior contracts with fewer one-off regressions and less implementation-shape lock-in.
 
+## Test and CI delta disposition
+
+When changing executable tests or ordinary CI, apply the contract ladder below
+before writing permanent tests. Include a compact disposition in the PR description
+or implementation closeout: durable behavior/claim; lowest sufficient owner and
+contract level; reason for any higher-level or repeated public-surface case;
+duplicate/subsumed evidence merged or removed; and recurring CI cost and failure
+localization relative to the merge claim. A short paragraph or small table suffices;
+do not add a per-test ledger or a second proof-selection mechanism.
+
+Repeated adapters are justified by distinct transport/serialization/packaging risk,
+not by the number of supported entrypoints. Prefer the existing native contract
+and conformance evidence for shared semantics. Permanent test and CI names describe
+durable owners or behavior, never a temporary issue or priority batch. Name and
+bound expensive CI constituents so a timeout identifies the affected claim.
+
+A material violation blocks independent approval unless a distinct durable claim
+justifies the additional proof level, repetition or cost. Passing tests alone do
+not justify retaining them. Broad validation remains available through the current
+Verification/proof-selection path for a stated cross-cutting or high-risk claim;
+a passing narrow check does not automatically require all broader suites.
+
+### Controlled review examples
+
+- **Block:** a PR adds the same stale-source assertion to four public adapters,
+  while core currentness and existing adapter conformance already prove it, and
+  wires the new issue-named suite into every PR. The disposition names no distinct
+  transport risk. Require consolidation at the currentness owner and removal of
+  the recurring duplicate; do not run every broad suite to diagnose this violation.
+- **Accept this test delta:** a PR fixes CLI forwarding of repeated `--changed`
+  values and Python/Node encoding of a Unicode request. Keep small adapter cases
+  for those distinct boundaries, referencing existing core source-currentness
+  proof. A single bounded native mutation/recovery journey may remain for the
+  cross-owner composition that primitives cannot prove. Acceptance of this
+  disposition grants neither independent review authority nor whole-PR approval.
+
 ## Current Inventory
 
 The June 15, 2026 inventory for #1521 was refreshed after the first reduction slices with:

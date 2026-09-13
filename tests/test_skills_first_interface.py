@@ -95,6 +95,9 @@ def test_fresh_skill_consumer_queries_then_performs_bounded_write(tmp_path, shar
     first = consume(surface, shared_core_binary, native_cli, context)
     assert first["decision_packet"]["status"] == "direct"
     assert not (tmp_path / ".agentic-workspace/local").exists()
+    first = consume(
+        surface, shared_core_binary, native_cli, {**context, "request": first["configuration_write"]["creation_discovery_request"]}
+    )
     request = next(r for r in first["configuration_write"]["creation_requests"] if r["arguments"]["key"] == "workspace.cli_invoke")
     request["arguments"]["value"] = "aw-native"
     context["request"] = request

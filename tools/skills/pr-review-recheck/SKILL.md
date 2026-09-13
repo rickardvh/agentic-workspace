@@ -64,6 +64,16 @@ For any checkout isolation or temporary review material, use the shared `.agenti
    - focused tests for changed behavior;
    - generated/payload sync when shipped or mirrored surfaces changed;
    - semver label when package behavior or shipped payload changes.
+   For changed tests (including embedded Rust/package cases) or CI, read
+   `docs/maintainer/testing-strategy.md` and audit the test/CI delta disposition:
+   durable claim and lowest sufficient owner/contract; duplicate semantic proof;
+   justification for each repeated public surface; durable taxonomy; recurring
+   merge-CI burden; and named/bounded failure localization. Inspect the claimed
+   lower-level replacement before accepting deletion of high-risk evidence. Use
+   the strategy's controlled block/accept examples to distinguish duplication
+   from a distinct transport or high-risk composition claim. Do not run broad
+   suites merely to audit their necessity. Any broad validation must have a
+   visible current-claim escalation reason through the existing proof owner.
 8. Check closure honesty:
    - what landed;
    - what intent it serves;
@@ -117,6 +127,7 @@ Treat these as blockers unless the human explicitly accepts the underlying produ
 - a later-evidence issue is being used as an implementation backlog instead of routing a concrete defect to a bounded owner;
 - longitudinal evaluation is used to substitute for unfinished implementation, missing present proof, known defects, vague future evidence, stale/superseded results, or absent current evaluation authority;
 - proof is missing, stale, too narrow, or contradicted by the diff;
+- a material test/CI delta lacks its testing-strategy disposition or retains duplicate semantic proof, implementation-shaped residue, unjustified public-surface repetition, temporary batch taxonomy, opaque unbounded constituents, or recurring cost unsupported by a distinct durable merge claim;
 - checked-in Planning, Memory, payload, or generated state is stale after the claimed closeout;
 - package-affecting changes lack exactly one semver label;
 - a shipped payload mirror is out of sync with the source surface;
@@ -130,7 +141,7 @@ Report in this shape:
 - `closure_shape`: parent outcome / bounded implementation leaf / later evidence / other
 - `what_landed`: concise summary of the actual change
 - `intent_served`: which issue or product intent is served
-- `proof`: CI, validation, focused checks, or missing proof
+- `proof`: CI, validation, focused checks, or missing proof; for test/CI changes, include the testing-strategy disposition and any violation or justified exception
 - `unresolved`: blockers or remaining non-blocking risks
 - `closure_honest`: yes / no / partial, with issue refs and any evaluation-boundary reason
 - `next_action`: comment, approve, mark ready, wait, request fix, label, or merge

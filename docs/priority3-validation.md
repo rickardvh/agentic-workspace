@@ -32,13 +32,16 @@ Preview verification now reads exact tagged Git objects and requires no isolated
 
 ## Evidence
 
-- `tests/test_priority3_resources.py`: real native/JSON/Python/TypeScript delivery, negative route reuse and opaque discovery; scratch reentry/retention/owner protection; composed checked-in and real machine-local policy discovery/currentness, necessary isolation, Windows default path, clean teardown, dirty and unique-commit preservation, interrupted unlock, stale registration, main Git integrity, and the preview creation consumer. Real Cargo builds, pytest and virtual-environment creation verify leased output teardown; unknown ignored and unleased tool output remain protected, and tracked output roots cannot be leased.
+- `tests/test_native_resources.py` and the delivery/route/instruction owner tests: real native/JSON/Python/TypeScript delivery, negative route reuse and opaque discovery; scratch reentry/retention/owner protection; composed checked-in and real machine-local policy discovery/currentness, necessary isolation, Windows default path, clean teardown, dirty and unique-commit preservation, interrupted unlock, stale registration, main Git integrity, and the preview creation consumer. Real Cargo builds, pytest and virtual-environment creation verify leased output teardown; unknown ignored and unleased tool output remain protected, and tracked output roots cannot be leased.
 - `tests/test_native_source_reconciliation.py`: retained positive judgments, source-set negatives, scope coverage, forged/changed sources, independent owner custody and fresh-process repair.
 - `tests/test_native_independent_owner.py`: independently linked read-only/effectful modules without core owner-name branches, multiple ready actions, incompatible/revoked/removed modules, configuration repair, foreign authority/state negatives, owner-attributed publication and 80 irrelevant admissions with bounded compact output.
 - `tests/test_native_operating_carriage.py`, `tests/test_native_proof_producer.py`, `tests/test_native_former_routes.py`: fresh current continuation, exact effect carriage, proof reuse and producer/source drift, explicit retained route adoption and bounded registry discovery.
 - `tests/test_skills_first_interface.py`: shipped procedure derivation and lifecycle, fresh semantic route selection and unaffected constituent preservation.
-- Rust workspace tests, Clippy, Python lint and type checks cover implementation and transport contracts. The merge guard includes bounded Priority 3 journeys; platform/release evidence retains its existing gates.
+- Rust workspace tests, Clippy, Python lint and type checks cover implementation and transport contracts. The merge guard selects named resource, delivery and instruction composition cases; platform/release evidence retains its existing gates.
 
-Blocking-review follow-up validation: 68 tests passed across the Priority 3 resource, source reconciliation and preview suites (one release-artifact-only fixture excluded). Full lint/type checks and generated-file checks passed. Shared local discovery does not claim completion of the wider instruction authoring/retention work in #2638.
+Historical blocking-review validation before consolidation: 68 tests passed across the Priority 3 resource, source reconciliation and preview suites (one release-artifact-only fixture excluded). Full lint/type checks and generated-file checks passed. Shared local discovery does not claim completion of the wider instruction authoring/retention work in #2638.
 
 Independent review must enter externally. The implementation PR remains a draft and does not itself establish reviewer acceptance or close the larger #3207 outcome.
+
+Current test ownership, reduced merge selection and comparable measurements are
+recorded in [the reconstruction test audit](maintainer/test-strategy-reconstruction-audit.md).

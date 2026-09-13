@@ -1176,3 +1176,13 @@ def test_public_decision_read_supersession_keeps_rationale_without_old_consequen
     assert historical["decision_sources"]["response"]["decision_state"]["status"] == "superseded"
     assert "Rationale stays in the repository" in historical["decision_sources"]["response"]["body"]
     assert [r["id"] for r in historical["decision_packet"]["decision_context"]["consequences"]] == [successor["id"]]
+
+
+@pytest.mark.parametrize("surface", ["native", "python", "typescript"])
+def test_resource_transport_matches_native_contract(tmp_path, shared_core_binary, native_cli, surface):
+    from tests.test_native_resources import resource
+
+    context = {"target": str(tmp_path), "task": "Transport resource proposal", "request": {"operation": "scratch-create"}}
+    expected = resource("json", shared_core_binary, native_cli, context)
+    assert resource(surface, shared_core_binary, native_cli, context) == expected
+    assert not (tmp_path / ".agentic-workspace").exists()

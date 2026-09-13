@@ -17,7 +17,8 @@
     ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
     ".agentic-workspace/system-intent/WORKFLOW.md",
-    ".agentic-workspace/skills/workspace-resources/SKILL.md"
+    ".agentic-workspace/skills/workspace-resources/SKILL.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
   ],
   "necessary_surface_files": [
     ".agentic-workspace/WORKFLOW.md",
@@ -35,7 +36,8 @@
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
     ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-    ".agentic-workspace/skills/workspace-resources/SKILL.md"
+    ".agentic-workspace/skills/workspace-resources/SKILL.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
   ],
   "necessary_surface_roots": [
     ".agentic-workspace/docs",

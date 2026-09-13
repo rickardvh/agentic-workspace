@@ -356,6 +356,11 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     assert "tests/test_native_invoke_continuation.py" in merge
     assert "tests/test_native_independent_owner.py" in merge
     assert "public_creation_then_separate_selection" in merge
+    assert "Priority " not in merge
+    assert "tests/test_preview_release.py" not in merge
+    assert "test_current_check_releases_claim_but_preserves_same_instruction_protection" in merge
+    assert "test_resource_transport_matches_native_contract" in merge
+    assert "timeout-minutes: 3" in merge
 
     for release_only in (
         "cargo +stable test --workspace",

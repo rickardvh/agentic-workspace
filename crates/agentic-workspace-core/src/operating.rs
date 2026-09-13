@@ -730,4 +730,54 @@ mod tests {
         );
         assert!(view.get("capability_contract").is_none());
     }
+    #[test]
+    fn delivery_tokens_bind_work_and_source_without_discharging_restrictions() {
+        let original = json!({"decision_packet":{
+            "semantic_task_routes":{"task_identity":{"id":"work-a"}},
+            "status":"blocked","primary_action":null,
+            "blockers":[{"code":"reconcile","affects":["claim:complete"]}],
+            "claim_boundary":{"blocked":["complete"]},
+            "material":{"startup-adapter":{"text":"policy".repeat(60)},
+                "scoped-instructions":[{"guidance":"instruction".repeat(40)}]}}});
+        let mut first = original.clone();
+        apply_delivery(&mut first, &[]).unwrap();
+        let refs: Vec<String> = first["delivery_refs"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r.as_str().unwrap().to_owned())
+            .collect();
+        let mut repeated = original.clone();
+        apply_delivery(&mut repeated, &refs).unwrap();
+        for key in ["status", "primary_action", "blockers", "claim_boundary"] {
+            assert_eq!(
+                repeated["decision_packet"][key],
+                original["decision_packet"][key]
+            );
+        }
+        assert!(
+            repeated["decision_packet"]["material"]["startup-adapter"]
+                .get("text")
+                .is_none()
+        );
+        let mut forged = original.clone();
+        apply_delivery(&mut forged, &["forged".into()]).unwrap();
+        assert_eq!(
+            forged["decision_packet"]["material"],
+            original["decision_packet"]["material"]
+        );
+        for pointer in [
+            "/decision_packet/semantic_task_routes/task_identity/id",
+            "/decision_packet/material/startup-adapter/text",
+        ] {
+            let mut changed = original.clone();
+            *changed.pointer_mut(pointer).unwrap() = json!("new work or source".repeat(40));
+            apply_delivery(&mut changed, &refs).unwrap();
+            assert!(
+                changed["decision_packet"]["material"]["startup-adapter"]
+                    .get("text")
+                    .is_some()
+            );
+        }
+    }
 }

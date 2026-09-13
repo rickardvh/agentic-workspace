@@ -119,7 +119,7 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
     None
 }
 
-fn parsed(bytes: &[u8], include_body: bool) -> Value {
+pub(crate) fn parsed(bytes: &[u8], include_body: bool) -> Value {
     let mut fields =
         json!({"paths":[],"routes":[],"read":[],"reconcile":[],"use":[],"checks":[],"protect":[]});
     let body = metadata(bytes, &mut fields);
@@ -158,7 +158,7 @@ const DIRECTORIES: [&str; 2] = [
     ".agentic-workspace/local/instructions",
 ];
 
-fn source_scope(reference: &str) -> Option<&'static str> {
+pub(crate) fn source_scope(reference: &str) -> Option<&'static str> {
     DIRECTORIES
         .iter()
         .enumerate()
@@ -340,6 +340,23 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     } else {
                         row["status"] = json!("invalid");
                     }
+                }
+            }
+        }
+        if row["status"] != "current"
+            && crate::native_instruction_write::admitted(
+                Path::new(&input.target),
+                &source,
+                &observed.revision,
+            )?
+        {
+            let document = current_document(Path::new(&input.target), &source, false)?;
+            if document["valid"] == true && document["source"]["revision"] == observed.revision {
+                row["status"] = json!("current");
+                row["source"] = document["source"].clone();
+                row["admission_basis"] = json!("exact-owner-published-instruction");
+                for field in ["checks", "reconcile", "protect"] {
+                    row[field] = document["metadata"][field].clone();
                 }
             }
         }
