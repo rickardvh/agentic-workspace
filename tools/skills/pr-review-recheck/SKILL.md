@@ -64,7 +64,7 @@ For any checkout isolation or temporary review material, use the shared `.agenti
    - focused tests for changed behavior;
    - generated/payload sync when shipped or mirrored surfaces changed;
    - semver label when package behavior or shipped payload changes.
-   For changed tests (including embedded Rust/package cases) or CI, read
+   For behavior, test (including embedded Rust/package cases) or CI changes, read
    `docs/maintainer/testing-strategy.md` and audit the test/CI delta disposition:
    durable claim and lowest sufficient owner/contract; duplicate semantic proof;
    justification for each repeated public surface; durable taxonomy; recurring
@@ -74,6 +74,15 @@ For any checkout isolation or temporary review material, use the shared `.agenti
    from a distinct transport or high-risk composition claim. Do not run broad
    suites merely to audit their necessity. Any broad validation must have a
    visible current-claim escalation reason through the existing proof owner.
+   Distinguish evidence design, current patch validation and permanent retention:
+   ask whether a new permanent case should exist at all, what distinct durable
+   failure it catches, and whether existing stable owner evidence already covers
+   it. An incident reproduction or a passing new regression is not retention
+   justification. Audit the bounded stop/escalate argument: evidence contribution
+   and limits, mandatory floors, and the named residual risk (if any). Do not
+   demand unspecified broader suites once the bounded claim is sufficiently
+   proven; do not accept a stopping argument that skips binding proof. Proof of
+   governance machinery is not proof that an unrelated patch applied the strategy.
 8. Check closure honesty:
    - what landed;
    - what intent it serves;
@@ -128,6 +137,7 @@ Treat these as blockers unless the human explicitly accepts the underlying produ
 - longitudinal evaluation is used to substitute for unfinished implementation, missing present proof, known defects, vague future evidence, stale/superseded results, or absent current evaluation authority;
 - proof is missing, stale, too narrow, or contradicted by the diff;
 - a material test/CI delta lacks its testing-strategy disposition or retains duplicate semantic proof, implementation-shaped residue, unjustified public-surface repetition, temporary batch taxonomy, opaque unbounded constituents, or recurring cost unsupported by a distinct durable merge claim;
+- incident-driven permanent regression growth lacks a missing durable failure class, or the proof argument lacks a defensible bounded stop/escalate rationale;
 - checked-in Planning, Memory, payload, or generated state is stale after the claimed closeout;
 - package-affecting changes lack exactly one semver label;
 - a shipped payload mirror is out of sync with the source surface;

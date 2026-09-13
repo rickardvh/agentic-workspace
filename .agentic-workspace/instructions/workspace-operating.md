@@ -28,11 +28,15 @@ revise this restriction only when that source-authority gate is actually resolve
 and the repository owner admits the revised instruction. This rule supplies no
 mutation, custody, or proof-success authority.
 
-For changes to executable tests or ordinary CI, apply the testing strategy before
+For changes to behavior, executable tests or ordinary CI, apply the testing strategy before
 adding permanent evidence or choosing validation. Use its contract ladder,
 add/merge/convert/prune rules, and test/CI delta disposition at closeout. This
 includes tests embedded in Rust and package code. A material duplicate, temporary
 batch taxonomy, or unjustified recurring cost must be resolved before presenting
 the work for approval. Existing workspace-proof-selection and Verification remain
 the proof owners; this instruction is repository review discipline, not a new
-selector. Run broader proof only for a stated current claim requiring escalation.
+selector. Distinguish evidence design, current patch validation and permanent retention as
+that strategy defines them. A fix or incident reproduction does not by itself
+justify another permanent regression; inspect existing stable owner evidence
+first. Closeout states why proof can stop or which named material risk requires
+bounded escalation. Run broader proof only for that stated current claim.

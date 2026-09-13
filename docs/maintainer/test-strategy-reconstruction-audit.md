@@ -111,3 +111,33 @@ they isolate transport boundaries that a core currentness test cannot prove.
 Neither outcome purports to grant independent approval to this implementation.
 No executable prose classifier, scheduler, policy language, compliance database,
 per-test archive or second selection framework was introduced.
+
+## Strengthened closure boundary follow-through
+
+Issue shaping now names durable failure/authority classes, factors observations
+shared across acceptance criteria, and reserves surface matrices for distinct
+transport/parity claims. It references the same testing strategy as implementation
+and review. The ordinary instruction applies to behavior changes even when no
+test has yet been proposed, so a fix does not default to permanent test growth.
+
+The strategy explicitly separates evidence design, current patch validation and
+permanent retention; incident reproduction alone does not justify retention.
+Existing coverage is inspected before adding a case, and source-owned floors
+remain binding while replaceable commands/fixtures may be consolidated. Review
+now audits both that retention decision and the bounded stop/escalate argument.
+The controlled examples in the strategy trace shaping, validation, retention and
+review: stale-source reproduction reuses an existing behavior class, while a
+previously unprotected lossy-Unicode transport class justifies a minimal permanent
+adapter case. They also state what named residual risk would trigger escalation.
+
+For this narrow follow-up, the claim is that all three repo-native procedures
+express those strengthened boundaries consistently. Current validation is direct
+inspection of their diff against #3232 and the controlled examples, plus normal
+repository commit checks. No runtime, test or CI code changes, and no new permanent
+test, are needed to prove wording in agent-owned procedures; a keyword test would
+not prove their semantic application. The existing reduction measurements and
+owner evidence above remain the implementation evidence, not proof supplied by
+this governance amendment. Stop after the procedural consistency checks; broaden
+only if inspection exposes a concrete routing or executable-governance defect.
+Fresh external review still owns approval. General Verification/proof-strategy
+implementation and broader #2334 closure remain outside this bounded change.

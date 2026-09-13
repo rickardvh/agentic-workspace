@@ -42,7 +42,19 @@ Use this repo-owned skill when refining an existing issue, turning a finding int
    - intended final outcome;
    - observable acceptance criteria;
    - non-solutions;
-   - evidence required for final completion;
+   - evidence required for final completion, shaped using
+     `docs/maintainer/testing-strategy.md`: name durable failure/authority classes,
+     not one permanent regression per acceptance example or incident;
+   - factor shared evidence explicitly when one stable owner/contract observation
+     can prove several criteria; request public-surface matrices only for distinct
+     adapter, transport or parity claims, not semantic completeness by repetition;
+   - distinguish evidence design, current patch validation and permanent retention:
+     a reproduction may be temporary, and a permanent fixture requires a distinct
+     durable class not already sufficiently covered. Preserve binding floors while
+     leaving commands/fixtures replaceable unless the source mandates the method;
+   - make the bounded proof stop/escalate rationale reviewable: which observations
+     satisfy the claim and what named residual risk would require broader proof;
+     do not manufacture unfinished work from an unspecified broader suite;
    - completion rule for whether a PR may close the issue;
    - for a parent, which accepted child/disposition evidence permits administrative closure;
    - for a later-evidence issue, an explicit statement that no product-code PR is required and where concrete findings route.
@@ -84,7 +96,7 @@ Report the shaped issue in this form:
 - `scope`: in scope and out of scope
 - `acceptance`: observable final-state criteria
 - `non_solutions`: what does not close the issue
-- `evidence_required`: proof or review evidence for final completion
+- `evidence_required`: durable failure/authority classes, shared evidence and distinct transport claims; distinguish current validation from justified permanent retention and state the bounded stop/escalate rationale
 - `completion_rule`: when a PR may close it, or how a parent/evidence issue closes administratively
 - `evaluation_boundary`: not-needed / definition-only / fresh-current-result-required, plus owner/criteria/source/sink/policy refs when applicable
 - `remaining_gap_owner`: where any residual intent lives
