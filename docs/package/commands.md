@@ -1,24 +1,37 @@
-# Command Map
+# Native Tool Map
 
-Commands are affordances for the current `resolve -> act -> reconcile` question, not a workflow agents must memorize.
+The canonical `workspace-startup` skill teaches ordinary agent procedure. Use
+[everyday use](../everyday-use.md) for examples and the generated
+[native CLI catalogue](../reference/cli-catalogue.md) for exact commands and flags.
+The catalogue comes from `source_decision_contract.json`'s `native_cli` declaration,
+the same declaration used by the executable. Check the selected artifact's
+`agentic-workspace --help` for its actual boundary.
 
-For every current root command, nested subcommand, flag, default, choice, audience, role, and shared-state effect, use the generated [current CLI catalogue](../reference/cli-catalogue.md). The separate [CLI commands schema](../reference/cli-commands.md) and [option-group schema](../reference/cli-option-groups.md) explain data shape; they are not current-value catalogues.
+## Current tools
 
-## Ordinary routes
-
-| Need | Route |
+| Need | Native tool |
 | --- | --- |
-| Resolve first contact | `agentic-workspace start --target . --task "<task>" --format json` |
-| Resolve known changed paths | `agentic-workspace implement --target . --changed <paths> --format json` |
-| Inspect selected continuity | `agentic-workspace summary --target . --format json` |
-| Select proof for changed paths | `agentic-workspace proof --target . --changed <paths> --format json` |
-| Inspect a routed subsystem or contract | use the exact selector/operation named by the current decision |
-| Diagnose installed state | `agentic-workspace doctor --target . --format json` |
+| Resolve current state, including known changed paths | `start --target . --task "<task>" --format json`; add repeated `--changed <path>` when known |
+| Execute one exact owner-returned action | `invoke --input <action.json>` with the same target/task/changed context |
+| Inspect local hygiene or use a current resource operation | `resources --input <request.json>` using its bounded resource contract |
+| Project worker entry, expand captured input or assemble a return | `worker --input <request.json>` using the original machine-carried Assignment packet |
 
-Lifecycle mutation, Planning operations, module commands, and source-checkout diagnostics remain progressively disclosed in the generated catalogue. Package-level module CLIs are for explicit domain maintenance/debugging; the root Workspace CLI is the ordinary host-repo front door.
+Domain requests and optional detail come from current owners through these tools,
+not nested or module CLI commands. Supply only the requested new judgment/material.
+Use returned references and supported `--projection` values for detail/carriage;
+there is no native `--select` or `--verbose` drill-down.
 
-## Effect boundary
+## Authority and availability
 
-The command contract distinguishes shared workspace mutation from possible ignored local diagnostics. A command classified as shared-nonmutating may still append a machine-local session/log/cache record when the local runtime enables that feature. Those local effects do not become Planning, proof, configuration, or claim authority merely because they exist.
+A returned request, route or packet seal does not grant mutation, ownership, proof
+or completion authority. `invoke` revalidates the exact action. Consume current
+continuation after an effect; uncertainty requires owner recovery rather than a
+repeat execution. Optional machine-local diagnostics are separate from repository
+mutation and do not become domain authority merely because they exist.
 
-For exact output shapes, follow the generated catalogue into the relevant runtime/schema reference. Prefer compact default output and exact `--select` drill-down; use `--verbose` only when broad diagnostics are material.
+Historical `implement`, `summary`, `proof`, `doctor`, `report`, initialization and
+module command families are not ordinary native routes. Retained generated CLI
+schemas and lifecycle tooling are source-maintenance or historical references,
+not hidden native capabilities or an alternative host to bypass rejection.
+See [installation and adoption limits](../agentic-workspace-install.md) and the
+[reference index](../reference/index.md) for that distinction.
