@@ -1,5 +1,9 @@
 # Shared Rust core boundary
 
+Current retained-effect and former-authority dispositions are recorded in the
+[first-stable safety disposition](../maintainer/first-stable-safety-disposition.md).
+The staged implementation notes below retain their original evidence limits.
+
 This reconstruction slice uses one executable authority for deterministic operating-decision semantics:
 
 | Concern | Authority | Boundary |

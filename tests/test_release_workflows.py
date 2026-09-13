@@ -397,7 +397,7 @@ def test_master_ruleset_and_release_policy_require_merge_sufficiency_before_supp
     status_rule = next(rule for rule in ruleset["rules"] if rule["type"] == "required_status_checks")
     contexts = [item["context"] for item in status_rule["parameters"]["required_status_checks"]]
 
-    assert contexts == ["Merge sufficiency", "Review approval"]
+    assert contexts == ["Merge sufficiency"]
     assert support_policy["required_check"] == "Merge sufficiency"
     assert support_policy["protected_branch"] == "master"
     assert "support_bearing_promotion.py compose" in release

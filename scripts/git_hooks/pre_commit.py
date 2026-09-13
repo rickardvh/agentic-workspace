@@ -55,6 +55,19 @@ def _partial_stage_conflicts(format_candidates: list[Path]) -> list[Path]:
 
 def _validation_environment() -> dict[str, str]:
     environment = os.environ.copy()
+    # Git exports repository-local context to hooks. Dependency managers run
+    # Git in other repositories; carrying GIT_DIR there can turn this caller
+    # into the dependency's bare cache. Keep caller Git operations on their
+    # original environment (including an alternate commit index).
+    local_names = subprocess.run(
+        ["git", "rev-parse", "--local-env-vars"],
+        cwd=REPO_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    for name in local_names:
+        environment.pop(name, None)
     run_id = environment.get("VALIDATION_RUN_ID", "")
     if run_id and environment.get("VALIDATION_JOIN_TOKEN") == f"join:{run_id}":
         environment["VALIDATION_RUN_PROVENANCE"] = "transported-child"
@@ -65,6 +78,7 @@ def _validation_environment() -> dict[str, str]:
         check=True,
         capture_output=True,
         text=True,
+        env=environment,
     )
     environment["VALIDATION_RUN_ID"] = result.stdout.strip()
     environment["VALIDATION_JOIN_TOKEN"] = f"join:{environment['VALIDATION_RUN_ID']}"
@@ -117,9 +131,7 @@ def main() -> int:
         ]
         if _run(format_command, environment=environment) != 0:
             return 1
-        if _run(
-            ["git", "add", "--", *[path.as_posix() for path in format_candidates]], environment=environment
-        ) != 0:
+        if _run(["git", "add", "--", *[path.as_posix() for path in format_candidates]], environment=os.environ.copy()) != 0:
             return 1
 
     for command in POST_FORMAT_COMMANDS:

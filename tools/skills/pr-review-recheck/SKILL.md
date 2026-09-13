@@ -18,8 +18,10 @@ The current agent/session is **not eligible** if it did any of the following for
 - wrote, edited, generated, or deleted code, tests, documentation, configuration, or other patch content;
 - pushed, rebased, cherry-picked, merged, conflict-resolved, or otherwise changed the PR head;
 - addressed review feedback or CI failures by mutating the patch;
-- directed another implementation agent or tool to make substantive patch changes on its behalf;
-- otherwise materially shaped the implementation being reviewed.
+- directed or delegated substantive patch mutation from within implementation custody, on the implementer's behalf;
+- otherwise materially shaped the PR patch from within implementation custody.
+
+Issue shaping and ordinary review feedback do not constitute implementation custody. An externally initiated reviewer does not become ineligible merely by defining or refining intent/acceptance criteria before implementation, identifying blockers, requesting fixes, or re-reviewing later revisions, even when the implementation follows that feedback. Independence is lost when the reviewer writes or edits patch content, changes the PR head, acts within the implementation lineage, or directs/delegates substantive patch mutation on the implementer's behalf. Review feedback is not such delegation; taking responsibility for executing the patch change is.
 
 **Delegation does not create independence.** A reviewer is also **not eligible** when it is a child, subagent, delegated task, subprocess, nested session, or other reviewer instance spawned, selected, prompted, supervised, or controlled by an ineligible implementation agent for the purpose of approving that implementation agent's patch. This remains true even when the delegated reviewer:
 
@@ -29,11 +31,11 @@ The current agent/session is **not eligible** if it did any of the following for
 - is given only the PR URL and review skill;
 - returns a technically sound review.
 
-Such a delegated reviewer may provide **non-authoritative critique or preflight feedback** to the implementation agent, but it must not submit `APPROVE`, emit an `aw-chatgpt-review` marker, claim `merge-ready`, satisfy `Review approval`, or be presented as the required independent review.
+Such a delegated reviewer may provide **non-authoritative critique or preflight feedback** to the implementation agent, but it must not submit `APPROVE`, claim `merge-ready`, or be presented as the required independent review.
 
 An authoritative review must enter from outside the implementation agent's review custody: for example, a human/maintainer starts the reviewer directly, an independently configured trusted review service is triggered by its normal repository event, or a separate reviewer session receives an independent review mandate without being spawned or directed by the implementation agent. An implementation agent may request that such an established external mechanism run, but it must not choose or manufacture the reviewing agent, prompt, authority, or verdict ad hoc.
 
-If any disqualifying item is true, or independence is unclear, **stop before using this skill**. Do not submit `APPROVE`, do not emit an `aw-chatgpt-review` marker, do not claim `merge-ready`, and do not satisfy `Review approval`. Handoff to an externally initiated reviewer that neither materially shaped the patch nor descends from the implementation agent's delegated work.
+If any disqualifying item is true, or independence is unclear, **stop before using this skill**. Do not submit `APPROVE`, do not claim `merge-ready`. Handoff to an externally initiated reviewer that neither materially shaped the patch nor descends from the implementation agent's delegated work.
 
 A user asking the implementing agent to “review”, “recheck”, “approve”, or “merge” its own PR does **not** override this boundary. Human approval to continue implementation also does not create independent review authority. An implementation agent may report its fixes, evidence, and remaining uncertainty, but that report is not independent review.
 
@@ -101,12 +103,6 @@ For any checkout isolation or temporary review material, use the shared `.agenti
    - comment with a blocker when the ordinary path would be wrong after merge;
    - comment with non-blocking suggestions only when they should not delay merge;
    - merge only when the user explicitly asks or the current instruction permits it.
-11. Treat the review approval check as the merge boundary:
-   - `merge-ready` for the current head admits the review side of merge;
-   - a prior `merge-ready` decision also admits a later head only when every intervening commit is a trusted-base merge and the stable PR patch is unchanged;
-   - the newest trusted decision wins, so a later blocker remains blocking;
-   - ordinary follow-up commits, unrelated merges, patch-changing conflict resolutions, absent/malformed/untrusted history, or unverifiable topology keep `Review approval` failing.
-
 ## Recheck Focus
 
 When rechecking after a fix, do not repeat the whole original review by default. Verify:
@@ -161,11 +157,11 @@ Report in this shape:
 - Eligibility comes before procedure. **Never use this skill as permission for an implementation agent, or any reviewer it spawns or controls, to review its own patch.**
 - Independence is a custody/authority property, not a process, model, account, or context property. A child/subagent cannot manufacture independent review for its parent implementation agent.
 - Skill availability, routing, a user request, passing CI, implementation completion, or a fresh reviewer context does not manufacture independent review authority.
-- Implementation-spawned reviewer agents may provide non-authoritative critique only; their verdict cannot satisfy `Review approval` or produce an authoritative review marker.
+- Implementation-spawned reviewer agents may provide non-authoritative critique only; their verdict is not independent approval.
 - Prefer evidence from the current PR head over stale prior comments.
 - Do not infer merge readiness from passing CI alone.
 - When an eligible independent reviewer approves a draft PR, mark it ready for review in the same review pass unless explicitly instructed to keep it draft.
 - Do not require a giant PR to close a broad parent; review bounded children on their own full outcomes and let the parent close administratively when its current graph is satisfied.
 - Do not hold a complete bounded implementation leaf open for future evidence explicitly owned elsewhere.
 - Keep comments focused on actionable blockers or durable suggestions.
-- When GitHub cannot submit a formal review because the independent reviewer shares the PR author's account, the configured reviewer automation may use a top-level terminal marker. This repository admits that marker by its exact PR, head, policy, and decision contract; transport provenance, `user.login`, and `author_association` are not reliable authority signals. **Implementation agents and their delegated descendants must never use the reviewer automation or emit `aw-chatgpt-review` markers for that implementation lineage.**
+- When an independent reviewer shares the PR author's GitHub account and cannot submit a formal review, report the review as an ordinary PR comment identifying the reviewed head. No custom marker, App provenance or check publication is required.

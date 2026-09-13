@@ -96,7 +96,15 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
     continuation = initial["decision_packet"]["decision_request"]["response_request"]
     continuation["arguments"]["answer"] = "continue-selected"
     continued = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation})
-    request = continued["task_requirements"]["requests"][0]
+    compact = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation, "projection": "compact"})
+    assert compact["decision_packet"]["blockers"] == continued["decision_packet"]["blockers"]
+    assert compact["consequence_recovery"] == continued["consequence_recovery"]
+    recovery = next(row for row in compact["consequence_recovery"] if row["owner"] == "assignment")
+    assert recovery["status"] == "current-owner-route"
+    route = next(row for row in recovery["routes"] if row["selector"] == "/task_requirements")
+    detail = consume(surface, shared_core_binary, native_cli, {**context, "request": continuation, "reference": route["reference"]})
+    assert detail["currentness"] == "reobserved"
+    request = detail["value"]["requests"][0]
     request["arguments"]["required_result_classes"] = ["read-only"]
     assert request["arguments"]["current_work"] != request["arguments"]["task_identity"]
     resolved = consume(surface, shared_core_binary, native_cli, {**context, "request": [continuation, request]})
@@ -104,6 +112,8 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
     record = json.loads(plan.read_text())
     record["intent"]["goal"] = "A materially different required outcome"
     plan.write_text(json.dumps(record))
+    with pytest.raises(AssertionError, match="stale|source changed"):
+        consume(surface, shared_core_binary, native_cli, {**context, "request": continuation, "reference": route["reference"]})
     with pytest.raises(AssertionError, match="source changed"):
         consume(surface, shared_core_binary, native_cli, {**context, "request": [continuation, request]})
     assert not (tmp_path / ".agentic-workspace/local").exists()

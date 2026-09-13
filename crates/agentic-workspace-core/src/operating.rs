@@ -72,6 +72,70 @@ fn entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
     Ok(result)
 }
 
+// Route restrictions to existing public owner material. This is discovery,
+// never an assertion that a request satisfies the restriction. In particular,
+// an absent owner route cannot be replaced by a policy override or guessed key.
+fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
+    fn has_request(value: &Value, owner: &str) -> bool {
+        if value["kind"] == "agentic-workspace/public-request/v1" {
+            return value["owner"] == owner;
+        }
+        match value {
+            Value::Array(values) => values.iter().any(|v| has_request(v, owner)),
+            Value::Object(values) => values.values().any(|v| has_request(v, owner)),
+            _ => false,
+        }
+    }
+    let mut owners = std::collections::BTreeMap::<String, Vec<Value>>::new();
+    for blocker in full["decision_packet"]["blockers"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        let owner = blocker["recovery"]
+            .as_str()
+            .and_then(|r| r.strip_prefix("public-owner:"))
+            .or_else(|| blocker["owner"].as_str());
+        if let Some(owner) = owner {
+            owners.entry(owner.to_owned()).or_default().push(json!({
+                "consequence_id":blocker["consequence_id"], "affects":blocker["affects"]
+            }));
+        }
+    }
+    owners.into_iter().map(|(owner, consequences)| {
+        let mut routes = Vec::new();
+        for (key, value) in full.as_object().into_iter().flatten() {
+            if matches!(key.as_str(), "decision_packet" | "capability_contract" | "decision_sources") {
+                continue;
+            }
+            if has_request(value, &owner) {
+                let selector = format!("/{}", key.replace('~', "~0").replace('/', "~1"));
+                routes.push(json!({"selector":selector,"reference":reference(context, &selector, value)?}));
+            }
+        }
+        if routes.is_empty() {
+            let mut selectors = vec!["/decision_packet/primary_action".to_owned(),
+                "/decision_packet/decision_request".to_owned()];
+            if full["decision_packet"]["primary_action"].is_null() {
+                selectors.extend((0..full["decision_packet"]["ready_actions"].as_array().map_or(0, Vec::len))
+                    .map(|index| format!("/decision_packet/ready_actions/{index}")));
+            }
+            for selector in selectors {
+                let Some(envelope) = full.pointer(&selector).filter(|v| v.is_object()) else { continue };
+                if (action_selector(&selector) && envelope["source_owner"] == owner)
+                    || (selector == "/decision_packet/decision_request" && envelope["owner"] == owner)
+                {
+                    routes.push(json!({"selector":selector,"reference":reference(context, &selector, envelope)?}));
+                }
+            }
+        }
+        Ok(json!({"owner":owner,"consequences":consequences,
+            "status":if routes.is_empty(){"public-owner-route-unavailable"}else{"current-owner-route"},
+            "routes":routes,
+            "authority":"Discovery only; restrictions remain until the current owner admits their resolution."}))
+    }).collect()
+}
+
 fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreError> {
     if !full["decision_packet"].is_object() {
         return Ok(full.clone()); // Compatibility/recovery is already bounded.
@@ -151,6 +215,10 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":{"target":context["target"],"task":context["task"],"changed":context["changed"]},
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    let recovery = consequence_recovery(full, context)?;
+    if !recovery.is_empty() {
+        result["consequence_recovery"] = json!(recovery);
+    }
     // A selected leaf already establishes which procedure is useful. Keep its
     // exact refs visible so compact consumers need no discovery/detail hop.
     // Bodies stay lazy and these source observations grant no effect authority.
@@ -553,8 +621,13 @@ fn project_invocation(mut result: Value, projection: &Value) -> Value {
     result
 }
 
-fn project_start(full: Value, value: Value, projection: &Value) -> Result<Value, CoreError> {
+fn project_start(mut full: Value, value: Value, projection: &Value) -> Result<Value, CoreError> {
     if projection == "full" {
+        let context = normalize_context(value)?;
+        let recovery = consequence_recovery(&full, &context)?;
+        if !recovery.is_empty() {
+            full["consequence_recovery"] = json!(recovery);
+        }
         return Ok(full);
     }
     let value = normalize_context(value)?;
@@ -590,6 +663,7 @@ mod tests {
         let root = temp_root("reference-detail");
         let context = json!({"target":root,"task":"inspect current work","changed":[]});
         let view = start(context.clone()).unwrap();
+        assert!(view.get("consequence_recovery").is_none());
         let selected = view["detail_refs"]["/current_work"].clone();
         assert!(selected.is_string());
 
@@ -703,14 +777,16 @@ mod tests {
 
     #[test]
     fn compact_preserves_peer_restrictions_claims_and_unknown_material() {
-        let selected = json!({"operation_id":"independent.write","effects":["owned-write"],
+        let selected = json!({"operation_id":"independent.write","source_owner":"action-owner","effects":["owned-write"],
             "arguments":{"destination":"exact","baseline":"current","new_owner_material":{"stop":"preserve-foreign"}},
             "authority":{"scope":"exact"},"source_requests":[],"expected_dependency_revision":"revision"});
         let peer = json!({"operation_id":"peer.recover","effects":["peer-effect"],"recovery":"exact-path"});
         let question = json!({"id":"peer-judgment","question":"Which current source?","material":{"sources":["a","b"]}});
-        let blockers = json!([{"code":"review-required","affects":["claim:complete"],"recovery":"independent-review"},
-            {"code":"foreign-write-forbidden","affects":["effect:foreign-write"]}]);
+        let blockers = json!([{"code":"review-required","owner":"missing-reviewer","affects":["claim:complete"],"recovery":"independent-review"},
+            {"code":"foreign-write-forbidden","owner":"independent-source","affects":["effect:foreign-write"]},
+            {"code":"publication-required","owner":"action-owner","affects":["claim:published"]}]);
         let full = json!({"capability_contract":{"large_optional_schema":"detail"},
+            "arbitrary_owner_view":{"requests":[{"kind":"agentic-workspace/public-request/v1","owner":"independent-source","arguments":{"source":"current"}}]},
             "decision_packet":{"status":"actionable","primary_action":selected,"decision_request":null,
                 "blockers":blockers,"claim_boundary":{"allowed":[],"blocked":["complete"]},
                 "pending_consequences":{"actions":[selected,peer],"decisions":[question],"blockers":blockers}}});
@@ -729,6 +805,32 @@ mod tests {
             json!([question])
         );
         assert!(view.get("capability_contract").is_none());
+        let recovery = view["consequence_recovery"].as_array().unwrap();
+        let current = recovery
+            .iter()
+            .find(|r| r["owner"] == "independent-source")
+            .unwrap();
+        assert_eq!(current["status"], "current-owner-route");
+        assert_eq!(current["routes"][0]["selector"], "/arbitrary_owner_view");
+        assert_eq!(
+            current["routes"][0]["reference"],
+            view["detail_refs"]["/arbitrary_owner_view"]
+        );
+        assert_eq!(
+            recovery
+                .iter()
+                .find(|r| r["owner"] == "missing-reviewer")
+                .unwrap()["status"],
+            "public-owner-route-unavailable"
+        );
+        let action_route = recovery
+            .iter()
+            .find(|r| r["owner"] == "action-owner")
+            .unwrap();
+        assert_eq!(
+            action_route["routes"][0]["selector"],
+            "/decision_packet/primary_action"
+        );
     }
     #[test]
     fn delivery_tokens_bind_work_and_source_without_discharging_restrictions() {

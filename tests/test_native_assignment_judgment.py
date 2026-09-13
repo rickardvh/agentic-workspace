@@ -83,7 +83,7 @@ def test_former_exact_answer_cannot_block_unrelated_admitted_local_work(tmp_path
 def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_core_binary, native_cli, surface):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    source.write_text(BASE)
+    source.write_text(BASE + "[runtime]\nstrong_planner_available=true\nsupports_internal_delegation=true\n")
     context = {"target": str(tmp_path), "task": "Inspect current source", "changed": []}
 
     def call(request=None, **updates):
@@ -93,7 +93,12 @@ def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_cor
 
     first = call()
     assert any(b["code"] == "current-binding-assignment-required" for b in first["decision_packet"]["blockers"])
-    task = first["task_requirements"]["requests"][0]
+    compact = call(projection="compact")
+    recovery = next(row for row in compact["consequence_recovery"] if row["owner"] == "assignment")
+    restricted = {row["consequence_id"] for row in compact["decision_packet"]["blockers"] if "effect:implementation" in row["affects"]}
+    assert restricted <= {row["consequence_id"] for row in recovery["consequences"]}
+    route = next(row for row in recovery["routes"] if row["selector"] == "/task_requirements")
+    task = call(reference=route["reference"])["value"]["requests"][0]
     task["arguments"]["required_result_classes"] = ["read-only"]
     offered = call(task)["task_requirements"]["assignment"]
     request = offered["requests"][0]
@@ -102,6 +107,11 @@ def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_cor
     current = call(request)
     assert current["task_requirements"]["assignment"]["result"]["status"] == "assigned-current-target"
     assert not any(b["code"] == "current-binding-assignment-required" for b in current["decision_packet"]["blockers"])
+    assert not any("effect:implementation" in b["affects"] for b in current["decision_packet"]["blockers"])
+    assert not any(row["owner"] == "assignment" for row in current["consequence_recovery"])
+    assert any(
+        row["owner"] == "workspace-config" and row["status"] == "public-owner-route-unavailable" for row in current["consequence_recovery"]
+    )
     assert current["decision_packet"].get("primary_action") is None
     assert not (tmp_path / ".agentic-workspace/local").exists()
     with pytest.raises(AssertionError, match="stale|changed"):
