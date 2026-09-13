@@ -20,7 +20,8 @@ Dependencies and conflicts belong alongside compatibility/ownership where needed
 
 Contribution dimensions are optional. A read-only retrieval module may expose only relevance plus resources or a skill. A mechanical action module may expose an operation/result without inventing startup posture, a workflow phase, or a closeout hook. Modules should not implement empty `on_resolve`, `on_act`, or `on_reconcile` callbacks just to fit the framework.
 
-Workspace consumes those declarations through its own loop:
+Workspace uses those declarations for its internal responsibilities as needed;
+the table does not prescribe an agent workflow or module callbacks:
 
 | Workspace step | What Workspace does with module declarations |
 | --- | --- |

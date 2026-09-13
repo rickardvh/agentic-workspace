@@ -72,8 +72,9 @@ files or invoking a former host.
 
 A published artifact's install receipt establishes installation of its declared
 bytes; it does not establish arbitrary target initialization or support on an
-untested platform. Preview 0.53 publication and public-byte installation are a
-separate release step. A reconstruction branch or this guide is not a 0.53 release.
+untested platform. Published previews retain their own exact source/artifact
+identities; a newer reconstruction branch or this guide does not upgrade those
+bytes or establish publication of the next candidate.
 
 For an already bootstrapped repository, read the canonical skill, then use exact
 current tools as needed. See [everyday use](everyday-use.md) and the generated

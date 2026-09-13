@@ -42,3 +42,11 @@ residue. Its worker savings yield only 0.55% less full-fixture context and add
 machine transport. Hidden host context and actual model/provider economics remain
 unknown. Source tests are not public-byte install proof, independent review or
 Stable/1.0 admission.
+
+The later reconstruction additions cover consequential bounded delegation,
+advisory Memory capture, owner-authorized correction/adaptation, and selective
+repository-only reading. Their source-level evidence and remaining candidate
+gates are tracked in the [candidate conformance input](maintainer/c54-conformance-input.md).
+These additions do not retroactively change C53's published bytes or evidence.
+Independent acceptance, exact artifact proof and public-byte installation remain
+required before attributing them to a new published candidate.

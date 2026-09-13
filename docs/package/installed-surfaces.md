@@ -8,12 +8,13 @@ For the exact package-managed file set in every supported footprint/module cell,
 
 | Surface | Owner | Purpose |
 | --- | --- | --- |
-| `AGENTS.md` | repo-owned adapter with managed fences | first file an agent can read; routes to compact workspace commands |
+| `AGENTS.md` | repo-owned adapter with managed fences | first file an agent can read; points to the canonical workspace skill |
 | `.agentic-workspace/` | product-managed enclave | shared workspace configuration, contracts, module roots, and local boundaries |
 | `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, specialized stage-bound compatibility obligations, and repo-specific settings |
 | `.agentic-workspace/instructions/*.md` | repo-owned scoped guidance | Markdown guidance plus optional `paths`, `read`, `use`, `checks`, and `protect` |
-| `.agentic-workspace/OWNERSHIP.toml` | repo-owned ledger | managed paths, fences, and authority metadata |
-| `.agentic-workspace/WORKFLOW.md` | product-managed workflow adapter | CLI-first bootstrap router and Markdown fallback for installed workspaces |
+| `.agentic-workspace/OWNERSHIP.toml` | package-managed base with repo-owned subsystem declarations | managed paths, fences, and authority metadata |
+| `.agentic-workspace/READING.json` | generated from ownership metadata | compact repository-only read refs and explicit unknowns, bound to the source ledger's Git blob |
+| `.agentic-workspace/WORKFLOW.md` | product-managed compatibility pointer | points to the same canonical skill |
 | `.agentic-workspace/docs/module-map.md` | product-managed module router | compact abstraction ladder for Workspace, Planning, Memory, Verification, and generated references |
 | `.agentic-workspace/skills/` | product-managed workspace skills | first-contact workflow skills for startup, routing, proof, closeout, and module boundaries |
 | `.agentic-workspace/local/` | local-only ignored area | machine-local overrides, caches, and non-shared runtime aids |
@@ -38,12 +39,9 @@ Module selection and repository-owned domain configuration are separate. In part
 
 ## Ordinary discovery
 
-Start from the repository adapter and compact Workspace decision. Open module roots, raw manifests, generated references, or maintainer machinery only when a selector, skill, operation, or owner routes there.
-
-For live target ownership, run:
-
-```bash
-agentic-workspace ownership --target . --format json
-```
+Start from the repository adapter and canonical skill. Use the current native
+`start` tool when executable owner resolution matters; use the generated read
+profile when only repository reads are available. Open only the relevant source
+refs. The historical `ownership` subcommand is not an installed native operation.
 
 For the trust boundary around installed code and repo-configured commands, see [Threat model](../security/threat-model.md). For support-bearing installation, see [Installing Agentic Workspace](../agentic-workspace-install.md).

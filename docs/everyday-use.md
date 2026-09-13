@@ -57,6 +57,56 @@ and every required lazy input, then supplies only new result material. The host
 submits the exact assembled re-entry; Assignment validates current sources and
 scope. A worker result never authenticates independent review or grants completion.
 
+For delegation, ask for a bounded result and name its constraints. Repository
+policy can attach provider-neutral requirements to a semantic route; local
+configuration supplies available targets and transports. Assignment applies
+eligibility before preferences or cost. A configured process can return read-only
+material or an unapplied patch; the Codex app-server bridge supports read-only
+material. The responsible owner
+must still admit the return, integrate any patch, and establish the required proof.
+Manual export remains a valid outcome when automatic execution is unavailable.
+See the [transport boundaries](maintainer/consequential-delegation.md) before
+configuring a host; credentials and current provider availability stay local.
+
+## Preserve a useful lesson or decision
+
+Ask to retain an observation only when it will help future work. Memory can store
+one advisory lesson with its rationale and dependencies. A relevant later task
+can read it; changed dependencies require reconsideration. A note is neither a
+governing decision nor proof that its advice is still correct. Choosing no
+retention creates no archive record.
+
+A settled material decision belongs in the repository's admitted decision
+convention when one exists, with Memory supplying fallback custody otherwise.
+The deciding authority is separate from who wrote or published the text.
+Corrections should update the strongest appropriate owner: instructions for
+future behavior, a decision for settled policy, a fact's source for a factual
+error, or code/procedure for a defect. A related file alone does not establish
+that a correction is already covered.
+
+## Improve a method within current authority
+
+Material friction can justify one bounded change through the receiving owner.
+Repository opportunity proposals also respect `workspace.improvement_latitude`:
+`none`/`reporting` allow reporting, `conservative`/`balanced` permit proposals
+within current work, and `proactive` permits proactive proposals. These settings
+never grant mutation authority. The owner still applies its current write
+authorization, protection, validation and recovery rules. Reporting or declining
+creates no improvement backlog or mandatory reflection step.
+
+## Read with repository access only
+
+An agent without an executable runtime starts from the same canonical skill and
+its `.agentic-workspace/READING.json` profile. It selects the relevant existing
+owner refs, reads those sources, and binds observations to repository/blob
+identities. This can recover intended work, constraints, recorded progress and
+relevant advice without searching all historical state.
+
+The profile cannot establish machine-local selection, provider readiness, fresh
+proof or permission to act. An absent or stale profile permits only directly
+observed repository facts until the named source is reconciled. It is not a
+read-only runtime or a substitute for independent review.
+
 ## Precise tools
 
 ```bash
@@ -73,7 +123,9 @@ These are tool affordances for the main skill, not mandatory phases for all work
 
 See the [generated native tool reference](reference/cli-catalogue.md),
 [installation limits](agentic-workspace-install.md), and
-[evidence and trust](evidence-and-support.md). Automatic host-native delegation,
-provider replacement, general adaptive correction and full Memory/decision
-continuity are outside this daily-use preview boundary. No source-checkout result
-establishes a published preview or stable/support-bearing release.
+[evidence and trust](evidence-and-support.md). This page describes the reconstruction
+source capability set. An earlier published preview may not contain these later
+additions; use the documentation and receipts for the exact version installed.
+No source-checkout result establishes a published preview or stable/support-bearing
+release. API/JSON-file transports, autonomous improvement queues and runtime
+authority from static reads are not claimed capabilities.
