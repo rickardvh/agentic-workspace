@@ -423,8 +423,15 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
     dependency.write_text("Domain rule: blå means blue.\n", encoding="utf-8", newline="\n")
     context = {"target": str(tmp_path), "task": "Explain the supplied domain rule in English; return findings only.", "changed": []}
 
+    transcript = []
+    parent_inputs = []
+
     def call(request=None, **updates):
-        return consume(surface, shared_core_binary, native_cli, {**context, **updates, **({"request": request} if request else {})})
+        payload = {**context, **updates, **({"request": request} if request else {})}
+        parent_inputs.append(payload)
+        value = consume(surface, shared_core_binary, native_cli, payload)
+        transcript.append(value)
+        return value
 
     task = call()["task_requirements"]["requests"][0]
     task["arguments"]["required_result_classes"] = ["read-only"]
@@ -475,8 +482,95 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
         "stop_conditions_hit": [],
     }
     reentry["request"][-1]["arguments"]["returned"] = returned
+    if surface == "native":
+        # Native argv -> shared Rust projection; existing compact packet parity
+        # covers retained adapters without repeating this semantic journey.
+        import subprocess
+        from time import perf_counter
+
+        helper_io = []
+
+        def worker_call(action, **extra):
+            payload = json.dumps({"action": action, "packet": packet, **extra})
+            began = perf_counter()
+            response = subprocess.run(
+                [str(native_cli), "worker", "--input", "-", "--format", "json"],
+                input=payload,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                check=True,
+            )
+            helper_io.append(
+                {
+                    "input_bytes": len(payload.encode()),
+                    "output_bytes": len(response.stdout.encode()),
+                    "elapsed_ms": round((perf_counter() - began) * 1000, 1),
+                }
+            )
+            return json.loads(response.stdout)
+
+        entry = worker_call("entry")
+        assert "reentry" not in entry["view"]["return_contract"]
+        assert "required_identity" not in entry["view"]["return_contract"]
+        assert entry["view"]["effects"] == worker["effects"]
+        assert entry["burden"]["host_skill_context_bytes"] == {"status": "unknown"}
+        detail = entry["view"]["inputs"]["capsule"][0]["detail_ref"]
+        assert worker_call("expand", reference=detail)["input"] == worker["inputs"]["capsule"][0]
+        material = {key: returned[key] for key in ["summary", "changed_paths", "patch", "stop_conditions_hit"]}
+        assembled = worker_call("return", material=material)
+        assert assembled["reentry"] == reentry
+        from tests.test_native_public_cli import ROOT
+
+        # A declared fixture consumer reads precisely these procedures. This is
+        # reproducible source delivery, not a claim about hidden host injection.
+        skill_refs = [
+            ".agentic-workspace/skills/workspace-startup/SKILL.md",
+            "packages/planning/skills/planning-manual-delegation/SKILL.md",
+            "packages/planning/skills/planning-returned-result/SKILL.md",
+        ]
+        skills = sum(len((ROOT / ref).read_bytes()) for ref in skill_refs)
+
+        def byte_size(value):
+            return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode())
+
+        measurement = {
+            **entry["burden"],
+            "fixture_skill_refs": skill_refs,
+            "fixture_skill_bytes": skills,
+            "parent_owner_calls_before_worker": len(transcript),
+            "parent_owner_response_bytes": sum(byte_size(value) for value in transcript),
+            "parent_owner_request_bytes": sum(byte_size(value) for value in parent_inputs),
+            "worker_helper_io_single_sample": helper_io,
+            "worker_entry_expand_return_calls": 3,
+            "return_owner_calls": 1,
+            "required_detail_fetches": 0,
+            "optional_detail_fetches_exercised": 1,
+            "worker_return_material_bytes": byte_size(material),
+            "legacy_worker_return_bytes": byte_size(returned),
+            "baseline_skills_entry_return_bytes": skills + byte_size(worker) + byte_size(returned),
+            "bounded_skills_entry_return_bytes": skills + byte_size(entry["view"]) + byte_size(material),
+            "fixture_parent_semantic_answers": 4,
+            "fixture_worker_material_submissions": 1,
+            "fixture_user_steering": 0,
+            "fixture_protocol_repairs": 0,
+            "fixture_persistent_worker_files": 0,
+            "actual_model_semantic_turns": "unknown",
+            "token_counts": "unknown",
+            "provider_economics": "unknown",
+        }
+        assert measurement["bounded_skills_entry_return_bytes"] < measurement["baseline_skills_entry_return_bytes"]
+        reentry = assembled["reentry"]
     # Fresh process consumes only this sealed packet's explicit re-entry context.
     admitted = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
+    if surface == "native":
+        measurement["return_owner_response_bytes"] = byte_size(admitted)
+        measurement["return_owner_request_bytes"] = byte_size({"target": str(tmp_path), **reentry})
+        measurement["worker_helper_additional_transport_bytes"] = sum(item["input_bytes"] + item["output_bytes"] for item in helper_io)
+        shared_cost = measurement["parent_owner_response_bytes"] + byte_size(admitted)
+        measurement["full_fixture_baseline_bytes"] = shared_cost + measurement["baseline_skills_entry_return_bytes"]
+        measurement["full_fixture_bounded_bytes"] = shared_cost + measurement["bounded_skills_entry_return_bytes"]
+        print("WORKER_BURDEN=" + json.dumps(measurement, sort_keys=True))
     observed = admitted["task_requirements"]["handoff"]["observation"]
     assert observed["status"] == "current-unproven-observation"
     assert observed["proof_current"] is False and observed["authenticated_reviewer"] is False

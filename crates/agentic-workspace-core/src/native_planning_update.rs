@@ -502,7 +502,7 @@ fn payload(invocation: &Value, custody: &Value) -> Result<Value, CoreError> {
 pub(crate) fn portable_observation(relative: &str, body: &Value) -> Result<bool, CoreError> {
     portable_envelope(relative, body, true)
 }
-fn portable_envelope(
+pub(crate) fn portable_envelope(
     relative: &str,
     body: &Value,
     current_material: bool,

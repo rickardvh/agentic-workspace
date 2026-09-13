@@ -83,7 +83,7 @@
     },
     "creation_provenance": {
       "type": "object", "description": "Exact native producer invocation and immutable custody; validated by Planning before exclusion from semantic identity.",
-      "properties": {"kind":{"const":"agentic-planning/creation-provenance/v1","description":"Versioned native creation producer record."},"invocation_revision":{"type":"string","description":"Exact invocation digest; its payload is retained once by the common immutable effect owner."},"custody":{"type":"object","description":"Prepared immutable attempt and commit references validated by the common effect owner."}},
+      "properties": {"kind":{"enum":["agentic-planning/creation-provenance/v1","agentic-planning/creation-provenance/v2"],"description":"Versioned native creation producer record."},"invocation_revision":{"type":"string","description":"Exact invocation digest; its payload is retained once by the common immutable effect owner."},"custody":{"type":"object","description":"Prepared immutable attempt and commit references validated by the common effect owner."},"material_revision":{"type":"string","description":"Original material digest for repo-relative source observation, never local execution custody."}},
       "required":["kind","invocation_revision","custody"], "additionalProperties":false
     },
     "kind": { "const": "planning-execplan/v1" },

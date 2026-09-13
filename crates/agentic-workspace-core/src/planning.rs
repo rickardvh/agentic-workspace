@@ -80,6 +80,67 @@ pub(crate) fn source_subject(target: &std::path::Path, source: &Value) -> Result
     Ok(reconciliation(&input)?["subject"].clone())
 }
 
+/// Cross-environment semantic identity is deliberately separate from the
+/// target-bound reconciliation/effect subject. This view cannot grant custody.
+pub(crate) fn portable_continuation(
+    target: &std::path::Path,
+    detail: &Value,
+    owner_id: &Value,
+) -> Result<Value, CoreError> {
+    let reconciled = &detail["reconciliation"];
+    if !reconciled.is_object() {
+        return Ok(Value::Null);
+    }
+    let state = &reconciled["subject"]["state"];
+    let source = &reconciled["former_source"];
+    let mut local_refs = std::collections::BTreeSet::new();
+    fn collect(value: &Value, refs: &mut std::collections::BTreeSet<String>) {
+        match value {
+            Value::String(path) if path.starts_with(".agentic-workspace/local/") => {
+                refs.insert(path.clone());
+            }
+            Value::Array(values) => {
+                for value in values {
+                    collect(value, refs);
+                }
+            }
+            Value::Object(values) => {
+                for value in values.values() {
+                    collect(value, refs);
+                }
+            }
+            _ => {}
+        }
+    }
+    collect(state, &mut local_refs);
+    let root =
+        cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
+    let local = local_refs
+        .into_iter()
+        .map(|path| {
+            // Inspect only explicit local references, confined to this repository.
+            // Presence is not proof freshness or portable execution authority.
+            let status = if crate::decision_source::relative(&path).is_err() {
+                "invalid-local-reference"
+            } else if root.metadata(&path).is_ok() {
+                "present-unvalidated"
+            } else {
+                "unavailable-local-reference"
+            };
+            json!({"path":path,"status":status,"authority":false})
+        })
+        .collect::<Vec<_>>();
+    Ok(json!({"kind":"agentic-planning/portable-continuation/v1",
+        "semantic_subject":{"id":format!("planning-source:{}",digest(&json!({"owner":"planning","id":owner_id,"path":source["path"]}))?),"revision":reconciled["subject"]["revision"]},
+        "source":{"path":source["path"],"revision":source["revision"]},
+        "material_pointer":"/planning/current_owner/reconciliation/subject/state",
+        "material_fields":["outcome","canonical_core","scope","dependencies","constraints","frontier","proof","handoff","residual"],
+        "local_references":local,
+        "local_custody":{"current":detail["current"],"subject":reconciled["subject"]["id"],"portable":false},
+        "reentry":"Resolve start at the receiving target and consume its current Planning requests. Use current owner reconciliation to acquire local custody; never replay a carried action or infer an uncertain effect outcome.",
+        "claim_boundary":"Repository material preserves declared progress, proof obligations and returned/integration-pending work, not proof success. The slice remains subordinate to its containing residual outcome. No parent chat, provider session or machine-local executable reference is semantic authority. Missing referenced local evidence remains a gap."}))
+}
+
 fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     let source = input
         .source
@@ -94,7 +155,8 @@ fn reconciliation(input: &Input) -> Result<Value, CoreError> {
     let target = std::fs::canonicalize(&input.target).map_err(error)?;
     let origin = crate::native_planning_create::inspect_origin(&target, &source.path, &body)?;
     let update = crate::native_planning_update::inspect(&target, &source.path, &body)?;
-    if origin.is_some() {
+    if origin.is_some() || crate::native_planning_create::portable_observation(&source.path, &body)?
+    {
         body.as_object_mut().unwrap().remove("creation_provenance");
     }
     if update.is_some() || crate::native_planning_update::portable_observation(&source.path, &body)?

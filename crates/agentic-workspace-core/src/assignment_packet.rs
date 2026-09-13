@@ -94,6 +94,7 @@ pub fn view(input: Value) -> Result<Value, CoreError> {
         Some("seal") => seal(&input["packet"]),
         Some("integrity") => Ok(json!({"integrity":integrity(&input["packet"])?})),
         Some("worker-context") => Ok(worker_context(&input["packet"])),
+        Some("entry" | "expand" | "return") => crate::worker_entry::view(&input),
         _ => Err(CoreError::new("unknown assignment packet projection")),
     }
 }

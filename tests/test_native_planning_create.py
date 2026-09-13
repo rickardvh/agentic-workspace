@@ -212,6 +212,10 @@ def test_real_former_owner_can_evolve_after_native_custody(
     assert value["next_action"] in str(admitted_clone)
     assert admitted_clone["decision_packet"]["status"] != "terminal"
     assert clone_path.read_bytes() == path.read_bytes()
+    if surface == "native" and selector_mode == "shared":
+        original_reentry = call(context)["planning"]["requests"][0]
+        original_portable = call({**context, "request": original_reentry})["planning"]["portable_continuation"]
+        assert admitted_clone["planning"]["portable_continuation"]["semantic_subject"] == original_portable["semantic_subject"]
     expected_relationships = dict(original["relationships"])
     expected_relationships.pop("external_posture", None)
     assert updated["relationships"] == expected_relationships
@@ -325,7 +329,13 @@ def test_public_creation_then_separate_selection(tmp_path: Path, shared_core_bin
     initial = call(context)
     assert not (tmp_path / ".agentic-workspace").exists()
     request = initial["planning"]["creation_requests"][0]
-    request["arguments"] = {"material": material()}
+    value = material()
+    if surface == "native":
+        value["references"] = [*value["references"], ".agentic-workspace/local/evidence/worker.json"]
+        evidence = tmp_path / ".agentic-workspace/local/evidence/worker.json"
+        evidence.parent.mkdir(parents=True)
+        evidence.write_text("A local observation, not portable proof")
+    request["arguments"] = {"material": value}
     ready = call({**context, "request": request})
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.create", ready
@@ -348,6 +358,71 @@ def test_public_creation_then_separate_selection(tmp_path: Path, shared_core_bin
     fresh = call(context)
     assert fresh["planning"]["current_owner"]["current"] is True
     assert fresh["decision_packet"]["status"] != "terminal"
+
+    if surface == "native":
+        # One cross-environment journey; adapter parameterization above proves
+        # transport only. Copy repo meaning, never local effects or selector.
+        clone = tmp_path / "fresh-consumer"
+        relative = result["value"]["owner_path"]
+        clone_path = clone / relative
+        clone_path.parent.mkdir(parents=True)
+        clone_path.write_bytes(path.read_bytes())
+        (clone / ".agentic-workspace/planning/state.toml").write_text(
+            f'[[active.execplans]]\nid="{body["id"]}"\npath="{relative}"\nstatus="active"\n'
+        )
+        new_context = {"target": str(clone), "task": "Continue the repository-owned outcome with no parent chat"}
+        discovered = call(new_context)
+        assert discovered["planning"]["update_requests"] == []
+        choice = discovered["planning"]["requests"][0]
+        selected = call({**new_context, "request": choice})
+        portable = selected["planning"]["portable_continuation"]
+        assert portable["semantic_subject"] == fresh["planning"]["portable_continuation"]["semantic_subject"]
+        assert portable["local_custody"]["current"] is False
+        assert portable["local_references"] == [
+            {"path": ".agentic-workspace/local/evidence/worker.json", "status": "unavailable-local-reference", "authority": False}
+        ]
+        assert fresh["planning"]["portable_continuation"]["local_references"][0]["status"] == "present-unvalidated"
+        assert (
+            selected["planning"]["current_owner"]["reconciliation"]["subject"]["state"]
+            == fresh["planning"]["current_owner"]["reconciliation"]["subject"]["state"]
+        )
+        assert str(tmp_path) not in path.read_text(encoding="utf-8")
+        # Partial loss is an uncertain effect, never a source-only switch.
+        local_attempt = clone / body["creation_provenance"]["custody"]["attempt"]["path"]
+        local_attempt.parent.mkdir(parents=True)
+        local_attempt.write_text("{}")
+        with pytest.raises(AssertionError, match="uncertain"):
+            call({**new_context, "request": choice})
+        local_attempt.unlink()
+        call({**new_context, "invocation": selected["decision_packet"]["primary_action"]})
+        recovered = call(new_context)
+        assert recovered["planning"]["update_requests"]
+        assert clone_path.read_bytes() == path.read_bytes()
+        assert recovered["planning"]["portable_continuation"]["semantic_subject"] == portable["semantic_subject"]
+        assert (
+            recovered["planning"]["portable_continuation"]["local_custody"]["subject"]
+            != fresh["planning"]["portable_continuation"]["local_custody"]["subject"]
+        )
+        assert recovered["decision_packet"]["status"] != "terminal"
+
+        # Abrupt loss of all local custody still exposes source meaning. Exact
+        # partial custody above stays uncertain; a remembered create cannot run.
+        retained = json.loads(selection.read_bytes())["reconciliation"]["custody"]
+        for custody in [retained, result["custody"]]:
+            for field in ["attempt", "committed"]:
+                (tmp_path / custody[field]["path"]).unlink()
+        selection.unlink()
+        orphaned = call(context)
+        assert orphaned["planning"]["created_owner"]["status"] == "source-observation-local-outcome-unknown"
+        with pytest.raises(AssertionError, match="unknown|custody|current"):
+            call({**context, "invocation": action})
+        resume = orphaned["planning"]["created_owner"]["selection_request"]
+        reacquire = call({**context, "request": resume})
+        assert reacquire["planning"]["portable_continuation"]["semantic_subject"] == portable["semantic_subject"]
+        assert reacquire["decision_packet"]["primary_action"]["operation_id"] == "planning.reconcile"
+        call({**context, "invocation": reacquire["decision_packet"]["primary_action"]})
+        assert call(context)["planning"]["current_owner"]["current"] is True
+        assert json.loads(path.read_bytes()) == body
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
