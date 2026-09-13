@@ -23,6 +23,8 @@ def render_ruleset(template: dict[str, Any], app: dict[str, Any]) -> dict[str, A
         raise ValueError("Select a dedicated GitHub App, not the generic GitHub Actions publisher")
     if app.get("permissions", {}).get("checks") != "write":
         raise ValueError("Selected App must have checks:write permission")
+    if app.get("permissions", {}).get("statuses") != "write":
+        raise ValueError("Selected App must declare statuses:write for required-check expected-source selection")
     result = deepcopy(template)
     checks = [
         check

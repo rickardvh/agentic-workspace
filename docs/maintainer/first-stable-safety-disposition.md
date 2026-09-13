@@ -50,12 +50,19 @@ The required `Review approval` context must bind to that App's numeric
 `integration_id`, not the generic GitHub Actions App (15368). GitHub documents
 [required-check source selection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
 
+The App registration and repository installation also require `statuses: write`
+for GitHub's expected-source selection. This provisioning prerequisite does not
+widen the short-lived publishing token: it still requests Checks write and the
+three read permissions only. The renderer rejects Apps missing either declared
+Checks write or Statuses write. Declared App permissions alone do not prove the
+installation has accepted them or that GitHub will offer that source.
+
 The checked-in ruleset is now an **unrendered template**, with an intentionally
 non-numeric `REVIEW_PUBLISHER_APP_ID` slot. Do not send it directly to GitHub or
 drop that field. After independently selecting the dedicated App, run
 `uv run --frozen --active --no-sync python scripts/github/render_review_ruleset.py --app-slug APP-SLUG`
 and retain its JSON in task scratch for review. This read-only command looks up
-the actual App ID, rejects GitHub Actions or an App without Checks write, and
+the actual App ID, rejects GitHub Actions or an App without Checks/Statuses write, and
 emits a ruleset with a numeric source binding. It neither provisions an App nor
 certifies independence, installs credentials, or applies/enables the ruleset.
 The same-name candidate Actions check must not satisfy the resulting rule.
@@ -82,10 +89,19 @@ default branch (`master`), with no wildcard, tag, or PR deployment rule. Store
 `REVIEW_PUBLISHER_APP_ID` and `REVIEW_PUBLISHER_PRIVATE_KEY` as environment-scoped
 configuration and secret; never expose the private key as repository or
 organization secrets available to candidate workflows. Reviewers/protection
-must prevent untrusted workflow code from accessing it. Render the ruleset and
-verify its App ID matches that environment before independently admitting its
-activation. Preserve other live rules and their intended enforcement; this
-patch does not silently enable a disabled ruleset.
+must prevent untrusted workflow code from accessing it. Verify the installation
+has accepted both Checks write and Statuses write. After trusted publisher
+admission, trigger it to publish at least one recent dedicated-App `Review
+approval` check before binding/enabling the source-restricted rule. A truthful
+missing-review failure is sufficient to establish this check source; do not
+fabricate approval. GitHub requires the App to be associated with a pre-existing
+required status check: this repository already has the context in its disabled
+rule. Confirm that association and recent check are visible, then render the
+ruleset, verify its numeric App ID matches the check's `app.id` and the protected
+environment, and independently admit binding/activation. Preserve other live
+rules and their intended enforcement; this patch does not silently enable a
+disabled ruleset. The renderer verifies declared permissions only, not these
+installation, recent-check or live-association prerequisites.
 
 Then submit/edit/dismiss an independently initiated review on
 the current PR head and retain the relay run, default-branch publisher run and
@@ -104,7 +120,14 @@ The first feedback repair passed 27 gate tests; the source-identity repair passe
 covers rejection of absent, generic, malformed and name-only identities, a
 distinct required-check authority boundary. Other workflow assertions extend
 the existing case. Local tests do not prove server-side matching or environment
-protection. The new notification job is a single no-op
+protection. The security checker now parses only top-level/job token permissions;
+action inputs such as `permission-checks: write` are not token grants. The stale
+publisher Checks-write allowance is removed. Existing security tests cover the
+actual source tree, action-input separation, real top-level/job grants, inline
+mappings, write-all and invalid declarations. This follow-up passed 53 security,
+review-gate and release-workflow tests; the standalone security checker reports
+ready. PyYAML is now an explicit maintainer dependency, using its existing locked
+version. The new notification job is a single no-op
 per formal review event, required to cross from a PR-controlled event to a
 trusted default-branch publisher; it adds no candidate evaluation or test suite.
 

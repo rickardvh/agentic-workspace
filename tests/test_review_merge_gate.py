@@ -365,7 +365,7 @@ def test_required_review_source_cannot_default_to_candidate_actions():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     template = json.loads(RULESET.read_text())
-    app = {"id": 123456, "slug": "dedicated-review-fixture", "permissions": {"checks": "write"}}
+    app = {"id": 123456, "slug": "dedicated-review-fixture", "permissions": {"checks": "write", "statuses": "write"}}
     rendered = module.render_ruleset(template, app)
     checks = next(rule for rule in rendered["rules"] if rule["type"] == "required_status_checks")["parameters"]["required_status_checks"]
     assert next(check for check in checks if check["context"] == "Review approval") == {
@@ -381,6 +381,8 @@ def test_required_review_source_cannot_default_to_candidate_actions():
         {**app, "id": 15368},
         {**app, "slug": "github-actions"},
         {**app, "permissions": {"checks": "read"}},
+        {**app, "permissions": {"checks": "write"}},
+        {**app, "permissions": {"checks": "write", "statuses": "read"}},
     ):
         with pytest.raises(ValueError):
             module.render_ruleset(template, invalid)

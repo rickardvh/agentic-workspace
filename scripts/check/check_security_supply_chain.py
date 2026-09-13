@@ -8,11 +8,40 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = Path("src/agentic_workspace/contracts/security_supply_chain_policy.json")
 REPOSITORY_PERMISSION_POLICY_PATH = Path(".github/workflow-write-permissions.json")
 ACTION_REF = re.compile(r"^\s*uses:\s*(?P<action>[^\s#]+)(?:\s+#.*)?$", re.MULTILINE)
 PINNED_ACTION = re.compile(r"^(?:\./|docker://|[^@]+@[0-9a-f]{40}$)")
+
+
+def _workflow_token_permissions(text: str) -> tuple[bool, set[str]]:
+    workflow = yaml.safe_load(text)
+    if not isinstance(workflow, dict):
+        raise ValueError("workflow must be a mapping")
+    jobs = workflow.get("jobs", {})
+    if not isinstance(jobs, dict) or any(not isinstance(job, dict) for job in jobs.values()):
+        raise ValueError("jobs must contain job mappings")
+    writes: set[str] = set()
+    for scope in [workflow, *jobs.values()]:
+        if "permissions" not in scope:
+            continue
+        permissions = scope["permissions"]
+        if permissions == "read-all":
+            continue
+        if permissions == "write-all":
+            writes.add("write-all")
+            continue
+        if not isinstance(permissions, dict):
+            raise ValueError("permissions must be a mapping, read-all or write-all")
+        for name, level in permissions.items():
+            if not isinstance(name, str) or level not in ("read", "write", "none"):
+                raise ValueError("invalid token permission")
+            if level == "write":
+                writes.add(name)
+    return "permissions" in workflow, writes
 
 
 def _sha256_json(value: Any) -> str:
@@ -64,13 +93,19 @@ def evaluate_security_supply_chain(
     all_workflows = sorted((root / ".github/workflows").glob("*.y*ml")) if (root / ".github/workflows").exists() else []
     unpinned: list[str] = []
     missing_permissions: list[str] = []
+    invalid_permissions: list[str] = []
+    workflow_writes: dict[str, set[str]] = {}
     workflow_text: dict[str, str] = {}
     for workflow in all_workflows:
         relative = workflow.relative_to(root).as_posix()
         text = workflow.read_text(encoding="utf-8")
         workflow_text[relative] = text
-        if re.search(r"(?m)^permissions:\s*$", text) is None:
-            missing_permissions.append(relative)
+        try:
+            declared, workflow_writes[relative] = _workflow_token_permissions(text)
+            if not declared:
+                missing_permissions.append(relative)
+        except (ValueError, yaml.YAMLError) as error:
+            invalid_permissions.append(f"{relative}: {error}")
         if "pull_request_target:" in text:
             failures.append({"control": "workflow-trigger", "detail": f"{relative} uses pull_request_target"})
         for match in ACTION_REF.finditer(text):
@@ -81,13 +116,12 @@ def evaluate_security_supply_chain(
     admitted_writes = dict(policy.get("allowed_write_permissions", {}))
     for relative, permissions in repository_permission_policy.get("allowed_write_permissions", {}).items():
         admitted_writes[relative] = sorted(set(admitted_writes.get(relative, [])) | set(permissions))
-    for relative, text in workflow_text.items():
-        observed_writes = set(re.findall(r"(?m)^\s*([a-z-]+):\s*write(?:\s+#.*)?$", text))
+    for relative, observed_writes in workflow_writes.items():
         allowed_writes = set(admitted_writes.get(relative, []))
         unexpected = sorted(observed_writes - allowed_writes)
         if unexpected:
             overbroad_permissions.append(f"{relative}: {','.join(unexpected)}")
-    action_ok = not missing_workflows and not unpinned and not missing_permissions and not overbroad_permissions
+    action_ok = not any((missing_workflows, unpinned, missing_permissions, invalid_permissions, overbroad_permissions))
     controls.append(
         {
             "id": "immutable-least-privilege-actions",
@@ -95,6 +129,7 @@ def evaluate_security_supply_chain(
             "missing_workflows": missing_workflows,
             "unpinned": unpinned,
             "missing_permissions": missing_permissions,
+            "invalid_permissions": invalid_permissions,
             "overbroad_permissions": sorted(set(overbroad_permissions)),
         }
     )
@@ -102,7 +137,7 @@ def evaluate_security_supply_chain(
         failures.append(
             {
                 "control": "immutable-least-privilege-actions",
-                "detail": f"missing={missing_workflows}; unpinned={unpinned}; missing_permissions={missing_permissions}; overbroad={sorted(set(overbroad_permissions))}",
+                "detail": f"missing={missing_workflows}; unpinned={unpinned}; missing_permissions={missing_permissions}; invalid_permissions={invalid_permissions}; overbroad={sorted(set(overbroad_permissions))}",
             }
         )
 
