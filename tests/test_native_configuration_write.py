@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import os
 from pathlib import Path
 
 import pytest
@@ -147,3 +148,60 @@ def test_configuration_postimage_cannot_exceed_its_reader(tmp_path: Path, shared
         call(request=request)
     assert source.read_bytes() == original
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+def test_config_explicit_policy_choice_does_not_self_grant(tmp_path, shared_core_binary, native_cli):
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        'schema_version=1\n[assurance]\ndecision_delegations=[{owner="configuration",scope=["path:.agentic-workspace/config.local.toml"]}]\n'
+    )
+    context = {"target": str(tmp_path), "task": "Apply authorized local safety choice", "changed": []}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    request = next(
+        r
+        for r in call(request=call()["configuration_write"]["creation_discovery_request"])["configuration_write"]["creation_requests"]
+        if r["arguments"]["key"] == "safety.safe_to_auto_run_commands"
+    )
+    request["arguments"]["value"] = False
+    ready = call(request=request)
+    assert ready["configuration_write"]["authority_basis"]["kind"] == "exact-policy-delegated-decision"
+    action = ready["decision_packet"]["primary_action"]
+    call(invocation=action)
+    assert call()["configuration"]["safety"]["automatic_execution_permitted"] is False
+
+
+def test_configuration_defer_resumes_outside_human_policy(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Decide local command policy", "changed": []}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    request = next(
+        r
+        for r in call(request=call()["configuration_write"]["creation_discovery_request"])["configuration_write"]["creation_requests"]
+        if r["arguments"]["key"] == "safety.safe_to_auto_run_commands"
+    )
+    request["arguments"]["value"] = False
+    proposed = call(request=request)
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "defer"
+    action = call(request=answer)["decision_packet"]["primary_action"]
+    assert action["operation_id"] == "configuration.defer-choice"
+    call(invocation=action)
+    assert not (tmp_path / ".agentic-workspace/config.local.toml").exists()
+    context["task"] = "Resume local command policy in a fresh session"
+    fresh = call()
+    assert fresh["decision_packet"]["status"] == "direct"
+    pending = fresh["configuration_write"]["deferred_choices"][0]
+    proposed = call(request=pending["resume_request"])
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    call(invocation=call(request=answer)["decision_packet"]["primary_action"])
+    assert call()["configuration_write"]["deferred_choices"] == []
+    assert (
+        tmp_path / ".agentic-workspace/config.local.toml"
+    ).read_text() == "schema_version=1\n\n[safety]\nsafe_to_auto_run_commands = false\n"

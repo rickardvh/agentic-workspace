@@ -165,3 +165,29 @@ def test_new_unreadable_former_source_stales_an_earlier_selection(
     assert result["semantic_routes"]["former_selection"]["reason"] == "former-route-source-unreadable-or-linked"
     assert result["decision_packet"]["semantic_task_routes"]["status"] == "stale"
     assert (tmp_path / REFERENCE).is_dir()
+
+
+def test_negative_route_conclusion_reuses_until_opaque_discovery_changes(tmp_path, shared_core_binary, native_cli):
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"skills": [{"semantic_routes": ["example/optional"]}]}))
+    context = {"target": str(tmp_path), "task": "No specialized procedure is needed"}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra})
+
+    request = next(r for r in call()["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    request["arguments"] = {"posture": "none", "routes": []}
+    first = call(request=request)
+    fact = first["decision_packet"]["semantic_task_routes"]
+    assert fact["status"] == "current" and fact["posture"] == "none"
+    assert call(request=request)["decision_packet"]["semantic_task_routes"] == fact
+    (tmp_path / "unrelated.txt").write_text("This does not change the eligible route set")
+    assert call(request=request)["decision_packet"]["semantic_task_routes"] == fact
+    added = tmp_path / ".agentic-workspace/skills/REGISTRY.json"
+    added.parent.mkdir(parents=True)
+    added.write_text(json.dumps({"skills": [{"semantic_routes": ["new/eligible"]}]}))
+    stale = call(request=request)
+    assert stale["decision_packet"]["semantic_task_routes"]["status"] == "stale"
+    assert stale["decision_packet"]["semantic_task_routes"]["source_revision"] != fact["source_revision"]
+    assert not (tmp_path / ".agentic-workspace/local").exists()

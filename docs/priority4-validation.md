@@ -92,7 +92,8 @@ work. Full automatic host delegation/adaptation stays with the later lane.
 
 ## Evidence
 
-`tests/test_priority4_control.py` exercises real native/JSON/Python/TypeScript
+Instruction publication, instruction/Verification composition, claim review and
+configuration owner tests exercise native
 publication, local reconciliation and command execution, current semantic claim
 review, explicit grants, fresh-session defer/resume, drift, interrupted publication,
 unknown material, ignore policy and stronger repository protection. Related
@@ -100,7 +101,7 @@ configuration/source/proof/currentness/skills-first suites retain their existing
 owner tests. Rust workspace tests, Clippy, generated/payload checks, Python lint
 and type checks cover the shared implementation and projection contracts.
 
-Final local follow-through: 73 tests passed across Priority 4 control,
+Historical validation before consolidation: 73 tests passed across Priority 4 control,
 configuration admission and source reconciliation, followed by the added escaped
 publication case (1 passed): 74 total in this focused set. Rust workspace tests,
 Clippy, full lint/type checks and generated-file checks passed. Earlier broader
@@ -128,3 +129,6 @@ main run and the corrected stale-error assertion rerun). Rust workspace tests pa
 The PR stays draft. Exact-candidate aggregate conformance and independent external
 acceptance remain separately owned under #3207/#2909; broader #2726 and #2334
 completion rules are not replaced by an implementation report.
+
+Current test ownership and the reduced recurring CI selection supersede the
+historical batch counts above; see [the reconstruction test audit](maintainer/test-strategy-reconstruction-audit.md).

@@ -79,11 +79,35 @@ jobs:
         run: |
           uv run python scripts/generate/generate_agent_interface.py --check
           uv run pytest tests/test_skills_first_interface.py -q
-      - name: Verify Priority 3 currentness and task resource lifecycle
+      - name: Verify schema validator reuse
+        timeout-minutes: 2
+        run: cargo +stable test --locked -p agentic-workspace-core schema_reuse_tests
+      - name: Verify delivery identity and opaque source discovery
+        timeout-minutes: 2
         run: |
-          cargo +stable test --locked -p agentic-workspace-core schema_reuse_tests
-          uv run pytest tests/test_priority3_resources.py tests/test_priority4_control.py -q
-          uv run pytest tests/test_preview_release.py -k "not built_preview_root_urls" -q
+          cargo +stable test --locked -p agentic-workspace-core delivery_tokens_bind_work
+          uv run pytest tests/test_native_operating_carriage.py::test_delivery_is_not_satisfaction_and_opaque_sources_redeliver -q
+      - name: Verify resource transport parity
+        timeout-minutes: 2
+        run: uv run pytest tests/test_native_public_cli.py::test_resource_transport_matches_native_contract -v
+      - name: Verify scratch cleanup custody
+        timeout-minutes: 2
+        run: uv run pytest tests/test_native_resources.py::test_task_scratch_reentry_cleanup_and_owner_preservation -v
+      - name: Verify necessary worktree teardown
+        timeout-minutes: 3
+        run: uv run pytest tests/test_native_resources.py::test_worktree_policy_necessity_clean_teardown_and_integrity -v
+      - name: Verify instruction publication recovery
+        timeout-minutes: 2
+        run: uv run pytest tests/test_native_instruction_write.py::test_instruction_recovery_preserves_drift_and_unknown_files -v
+      - name: Verify instruction checks preserve write protections
+        timeout-minutes: 2
+        run: uv run pytest tests/test_native_instruction_verification.py::test_current_check_releases_claim_but_preserves_same_instruction_protection -v
+      - name: Verify deferred configuration continuation
+        timeout-minutes: 2
+        run: uv run pytest tests/test_native_configuration_write.py::test_configuration_defer_resumes_outside_human_policy -v
+      - name: Verify semantic review authority floor
+        timeout-minutes: 2
+        run: uv run pytest tests/test_native_claim_review.py::test_claim_review_cannot_impersonate_required_reviewer -v
       - name: Preserve representative Planning custody
         run: >-
           uv run pytest tests/test_native_planning_create.py

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 from time import perf_counter
 
 import pytest
@@ -302,3 +303,36 @@ def test_carried_diagnostics_follow_explicit_work_target(tmp_path, shared_core_b
     assert len(recorded) == before + 1
     assert recorded[-1]["payload"]["entry"]["target"] == "<target>"
     assert recorded[-1]["authoritative"] is False
+
+
+def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, shared_core_binary, native_cli):
+    (tmp_path / "AGENTS.md").write_text("Read current repository instructions.\n" * 45)
+    directory = tmp_path / ".agentic-workspace/instructions"
+    directory.mkdir(parents=True)
+    source = directory / "policy.md"
+    source.write_text("---\nreconcile: [guide.md]\n---\n" + "Preserve policy.\n" * 40)
+    (tmp_path / ".agentic-workspace/config.toml").write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    (tmp_path / "guide.md").write_text("Canonical guide")
+    context = {"target": str(tmp_path), "task": "Inspect current work", "projection": "compact"}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    first = call()
+    refs = first["delivery_refs"]
+    same = call(delivered=refs)
+    assert len(json.dumps(same)) < len(json.dumps(first))
+    print(f"delivery/json: fresh_bytes={len(json.dumps(first))} repeated_bytes={len(json.dumps(same))} extra_roundtrips=0")
+    for key in ("blockers", "claim_boundary", "primary_action", "status"):
+        assert same["decision_packet"][key] == first["decision_packet"][key]
+    assert same["decision_packet"]["material"]["startup-adapter"]["delivery"]["status"] == "already-delivered"
+    assert "text" not in same["decision_packet"]["material"]["startup-adapter"]
+    source.write_text(source.read_text() + "A new applicable instruction.")
+    drift = call(delivered=refs)
+    assert drift["decision_packet"]["material"]["scoped-instructions"][0]["guidance"].endswith("A new applicable instruction.")
+    assert "text" not in drift["decision_packet"]["material"]["startup-adapter"]
+    (directory / "new.md").write_text("---\nreconcile: [other.md]\n---\nNew source appeared while AW was absent.")
+    opaque = call(delivered=refs)
+    assert any("New source appeared" in r.get("guidance", "") for r in opaque["decision_packet"]["material"]["scoped-instructions"])
+    assert "text" in call()["decision_packet"]["material"]["startup-adapter"]
+    assert not (tmp_path / ".agentic-workspace/local").exists()
