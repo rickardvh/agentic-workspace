@@ -181,7 +181,7 @@ jobs:
       - if: steps.existing.outputs.complete != 'true'
         name: Run built preview package smoke tests
         env:
-          AW_NATIVE_ARTIFACT_DIR: dist
+          AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/dist
         run: uv run pytest tests/test_native_release_topology.py -q
 
       - if: steps.existing.outputs.complete != 'true'
