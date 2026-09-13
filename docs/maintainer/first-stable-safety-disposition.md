@@ -4,7 +4,8 @@ This is the Priority 0 implementation and disposition under #3208, based on
 accepted C53 `472e94b85d9ec1a8d5e0da0e63d13ee1621eb558`. It covers the currently
 retained native surface, not the later delegation, adaptation, or publication
 tranches. It is implementation evidence for independent review; it does not
-approve its own PR, close #3208, or admit a release candidate.
+approve its own PR, close #3208, or admit a release candidate. Priority 0 remains
+incomplete until the trusted publisher admission and hosted proof below succeed.
 
 ## Constructible consequence recovery (#3226)
 
@@ -32,15 +33,40 @@ module-specific choreography in the canonical skill.
 
 ## Candidate preparation and review (#3227, #3236)
 
-The privileged Review approval job checks out the immutable independently
-accepted C53 source above, including the publisher's imported review parser.
-The frozen default branch does not contain that implementation. Candidate PR
-code is never selected as the privileged executable source, checkout credentials
-are not persisted, and the existing exact-head/independent-review policy remains
-unchanged. Advancing the pin requires another independently admitted source.
-An absent, stale, or blocked independent review still fails approval. The new
-workflow must run from its admitted repository event before live publication
-can be claimed; local gate tests are not a published approval.
+The privileged Review approval workflow has only `workflow_run` and
+`issue_comment` triggers, whose definitions come from the default branch.
+Formal review events run a separate `Review event` notification workflow with
+empty token permissions, no checkout, no artifacts, and no approval verdict.
+Its completion wakes the publisher, which re-reads the current PR head and
+reviews through GitHub APIs. Relay success, output and event head are not review
+authority. Candidate evaluation remains separate from publication credentials.
+
+The publisher checks out the immutable independently accepted C53 source above,
+including its imported review parser, without persisted credentials. Advancing
+the pin requires another independently admitted source. An absent, stale, or
+blocked independent review still fails approval. Pinning this checkout alone
+was insufficient: `pull_request_review` uses the PR merge-ref workflow definition.
+The revised publisher no longer has that trigger. See GitHub's
+[event source definitions](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request_review)
+and [privileged workflow guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
+
+**Admission and hosted proof are still pending (#3227).** The frozen `master`
+does not contain the publisher. Neither the candidate copy nor a local test
+bootstraps trusted workflow authority. An independent maintainer/reviewer must
+admit the repaired publisher to the default branch through the repository's
+trusted change process; the implementing agent cannot independently approve
+that promotion. Then submit/edit/dismiss an independently initiated review on
+the current PR head and retain the relay run, default-branch publisher run and
+exact-head check URLs. Confirm the publisher's workflow source is the admitted
+default-branch revision and its checkout is C53, and that missing/blocked review
+fails while an eligible current approval succeeds. Do not create a synthetic
+approval to complete this proof. A merge to the reconstruction branch alone does
+not activate default-branch events. Local gate tests are not hosted proof.
+
+The feedback repair passed 27 gate tests, extending the existing workflow
+boundary and event journey cases. The new notification job is a single no-op
+per formal review event, required to cross from a PR-controlled event to a
+trusted default-branch publisher; it adds no candidate evaluation or test suite.
 
 The hook removes Git's `rev-parse --local-env-vars` environment variables from
 dependency/validation subprocesses before both fresh and transported validation

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "github" / "review_merge_gate.py"
@@ -322,19 +323,61 @@ def test_server_side_workflow_and_ruleset_consume_the_same_required_check() -> N
     assert "workflow_run:" in workflow
     assert "pull_request_target:" not in workflow
     assert "issue_comment:" in workflow
-    assert "pull_request_review:" in workflow
+    assert "pull_request_review:" not in workflow
     assert "scripts/github/review_merge_gate.py" in workflow
     assert "ref: 472e94b85d9ec1a8d5e0da0e63d13ee1621eb558" in workflow
     assert "persist-credentials: false" in workflow
     assert "ref: ${{ github.event.repository.default_branch }}" not in workflow
     assert "ref: ${{ github.event.pull_request.head" not in workflow
     assert '"context": "Review approval"' in ruleset
+    publisher = yaml.load(workflow, Loader=yaml.BaseLoader)
+    assert set(publisher["on"]) == {"workflow_run", "issue_comment"}
+    assert publisher["on"]["workflow_run"]["workflows"] == ["CI", "Review event"]
+    assert publisher["jobs"]["review-authority"]["permissions"]["checks"] == "write"
+    relay = yaml.load((WORKFLOW.parent / "review-event.yml").read_text(), Loader=yaml.BaseLoader)
+    assert relay["name"] == "Review event"
+    assert relay["on"] == {"pull_request_review": {"types": ["submitted", "edited", "dismissed"]}}
+    assert relay["permissions"] == {}
+    assert set(relay["jobs"]) == {"notify"}
+    assert set(relay["jobs"]["notify"]) == {"runs-on", "steps"}
+    assert relay["jobs"]["notify"]["steps"] == [
+        {"name": "Notify trusted publisher", "run": "echo 'Review state changed; the trusted publisher must reobserve it.'"}
+    ]
 
 
-def test_workflow_run_resolves_its_pull_request() -> None:
-    event = {"workflow_run": {"pull_requests": [{"number": 2501}]}}
+@pytest.mark.parametrize("decision,expected", [("merge-ready", "success"), ("blocked", "failure"), (None, "failure")])
+def test_workflow_run_resolves_its_pull_request(tmp_path, monkeypatch, decision, expected) -> None:
+    # The relay supplies only a PR identity. Its old head, conclusion and output
+    # cannot grant approval: the publisher must re-read current GitHub sources.
+    event = {
+        "workflow_run": {
+            "pull_requests": [{"number": 2501}],
+            "head_sha": HEAD_B,
+            "conclusion": "success",
+            "outputs": {"decision": "merge-ready"},
+        }
+    }
+    module = _module()
+    assert module._pr_number(event) == 2501
+    event_path = tmp_path / "event.json"
+    event_path.write_text(json.dumps(event))
+    calls = []
+    posted = []
 
-    assert _module()._pr_number(event) == 2501
+    def github(args):
+        calls.append(args)
+        if args[-1] == "repos/owner/repo/pulls/2501":
+            return {"head": {"sha": HEAD_A}, "base": {"sha": HEAD_C}}
+        if "/issues/" in args[-1]:
+            return [[_comment(decision=decision)]] if decision else [[]]
+        return [[]]
+
+    monkeypatch.setattr(module, "_gh_json", github)
+    monkeypatch.setattr(module, "_post_check", lambda **kwargs: posted.append(kwargs))
+    assert module.main(["--event", str(event_path), "--repository", "owner/repo"]) == 0
+    assert posted[0]["head_sha"] == HEAD_A
+    assert posted[0]["decision"].conclusion == expected
+    assert len(calls) == 3
 
 
 def test_review_records_include_conversation_comments_and_active_formal_reviews(monkeypatch) -> None:
