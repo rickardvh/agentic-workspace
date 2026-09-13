@@ -791,7 +791,7 @@ pub(crate) fn view_with_applicability(
 ) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
-    let (config, config_revision) = crate::native_config::load(
+    let (config, _config_revision) = crate::native_config::load(
         &root,
         ".agentic-workspace/config.toml",
         include_str!(
@@ -800,6 +800,12 @@ pub(crate) fn view_with_applicability(
     )
     .map_err(CoreError::new)?
     .unwrap_or((json!({}), "absent".into()));
+    let mut relevant_config = config.clone();
+    if let Some(fields) = relevant_config.as_object_mut() {
+        fields.remove("execution_posture");
+    }
+    let config_revision = digest(&relevant_config)?;
+
     let mut gaps = Vec::<String>::new();
     let (manifest, manifest_revision) = match read(&root, MANIFEST) {
         Ok(Some(bytes)) => {

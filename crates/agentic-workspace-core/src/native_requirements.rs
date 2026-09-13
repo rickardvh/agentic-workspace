@@ -34,6 +34,7 @@ pub(crate) fn view(
     planning_subject: Option<&Value>,
     configuration: &Value,
     verification: &Value,
+    route_fact: &Value,
     request: Option<&Value>,
     verification_request: Option<&Value>,
     execution_request: Option<&Value>,
@@ -57,8 +58,44 @@ pub(crate) fn view(
     let current_work = planning_subject
         .map(|s| json!({"id":s["id"],"revision":s["revision"]}))
         .unwrap_or_else(|| task_identity.clone());
+    let mut required = configuration["assignment_requirements"]["required_execution_guarantees"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let mut preferred = Vec::new();
+    let mut posture = serde_json::Map::new();
+    for route in route_fact["routes"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        if route_fact["status"] == "current"
+            && let Some(value) = configuration["execution_posture"].get(route)
+        {
+            posture.insert(route.into(), value.clone());
+            required.extend(
+                value["required_execution_guarantees"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .cloned(),
+            );
+            preferred.extend(
+                value["preferred_execution_guarantees"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .cloned(),
+            );
+        }
+    }
+    required.sort_by_key(Value::to_string);
+    required.dedup();
+    preferred.sort_by_key(Value::to_string);
+    preferred.dedup();
     let source_revision = digest(&json!({"task":task_identity,"work":current_work,
-        "configuration":configuration["revision"],"verification_strategy":verification["strategy_revision"]}))?;
+        "configuration":configuration["assignment_policy"],"posture":posture,"required_execution_guarantees":required,"verification_strategy":verification["strategy_revision"]}))?;
     let declaration = self::contract()?;
     let owner_revision = &declaration["owners"][0]["revision"];
     let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/task-requirements",
@@ -110,12 +147,22 @@ pub(crate) fn view(
             judgment["verification_identity"] = json!({"id":obligation["verification"]["id"],"revision":obligation["verification"]["revision"]});
         }
     }
-    let result = task_requirements::view(
+    let mut result = task_requirements::view(
         json!({"kind":"agentic-workspace/task-requirements-input/v1",
         "task_identity":task_identity,"current_work":current_work,
         "judgment":judgment,"verification":obligation["verification"],
-        "required_execution_guarantees":configuration["assignment_requirements"]["required_execution_guarantees"]}),
+        "required_execution_guarantees":required}),
     )?;
+    if !posture.is_empty() {
+        if result["status"] == "resolved"
+            && posture.values().any(|p| p["independent_context"] == true)
+        {
+            result["requirements"]["independent_context"] = json!(true);
+        }
+        result["execution_posture"] =
+            json!({"classes":posture,"preferred_execution_guarantees":preferred});
+        result["revision"] = json!(digest(&result)?);
+    }
     let mut handoff_inputs = crate::native_handoff::inputs_view(
         target,
         transport_work,

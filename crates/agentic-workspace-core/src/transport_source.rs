@@ -33,7 +33,14 @@ pub fn decode(profile: &Value) -> Result<Vec<Value>, CoreError> {
                 .ok_or_else(|| CoreError::new("transport must be an object"))?;
             if fields.keys().any(|k| {
                 !if kind == "native" {
-                    ["kind", "adapter", "parameters", "timeout_seconds"].contains(&k.as_str())
+                    [
+                        "kind",
+                        "adapter",
+                        "parameters",
+                        "command",
+                        "timeout_seconds",
+                    ]
+                    .contains(&k.as_str())
                 } else {
                     ["kind", "command", "output_mode", "timeout_seconds"].contains(&k.as_str())
                 }

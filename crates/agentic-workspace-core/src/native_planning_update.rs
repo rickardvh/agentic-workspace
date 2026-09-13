@@ -370,8 +370,14 @@ pub(crate) fn adopt_return(
     let request = submitted.iter().find(|r| r["request_kind"] == ADOPT);
     let mut result = json!({"requests":[],"action":null});
     let template = &planning["update_requests"][0];
-    if admission["result_use_allowed"] != true
-        || (!admission["delta"].is_null() && admission["integration"]["status"] != "integrated")
+    let repair = matches!(
+        admission["status"].as_str(),
+        Some("repair-required" | "rejected")
+    );
+    if (admission["result_use_allowed"] != true && !repair)
+        || (!repair
+            && !admission["delta"].is_null()
+            && admission["integration"]["status"] != "integrated")
         || planning["status"] != "current"
         || !template.is_object()
     {
@@ -398,12 +404,13 @@ pub(crate) fn adopt_return(
         &json!({"owner":template["source_revision"],"admission":admission["source_revision"],"judgment":admission["judgment"],"integration":admission["integration"]})
     )?);
     let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
-    let destination =
-        if body[crate::planning_lifetime::FIELD]["continuation_frontier"] == "observation" {
-            "accepted_progress"
-        } else {
-            "frontier"
-        };
+    let destination = if !repair
+        && body[crate::planning_lifetime::FIELD]["continuation_frontier"] == "observation"
+    {
+        "accepted_progress"
+    } else {
+        "frontier"
+    };
     adoption["arguments"] =
         json!({"owner_ref":reference,"destination":format!("continuation.{destination}")});
     let mut prerequisites = submitted
@@ -432,7 +439,15 @@ pub(crate) fn adopt_return(
     if !material["continuation"].is_object() {
         return Err(error("Planning continuation is not an object"));
     }
-    material["continuation"][destination] = admission["returned"]["summary"].clone();
+    material["continuation"][destination] = if repair {
+        json!(format!(
+            "{}: {}",
+            admission["status"].as_str().unwrap(),
+            admission["judgment"]["reason"].as_str().unwrap_or("")
+        ))
+    } else {
+        admission["returned"]["summary"].clone()
+    };
     let mut update = template.clone();
     update["arguments"]["material"] = material;
     let mut action = view_for_custody(target, work, contract, planning, Some(&update), None, None)?
@@ -451,6 +466,8 @@ pub(crate) fn adopt_return(
     )?);
     action["arguments"]["consumed_return"] = json!({"request":adoption,"result_revision":digest(&admission["returned"])? ,"judgment_revision":admission["source_revision"],"assignment_identity":admission["assignment_identity"],"execution_custody":admission["execution_custody"]});
     action["arguments"]["consumed_return"]["context"] = admission["context"].clone();
+    action["arguments"]["consumed_return"]["context"]["result_evaluation"] =
+        json!({"status":admission["status"],"judgment":admission["judgment"]});
     if !admission["integration"].is_null() {
         action["arguments"]["consumed_return"]["integration"] = admission["integration"].clone();
     }

@@ -405,6 +405,7 @@ class DelegationTargetProfile:
     confidence_source: str | None
     last_evaluation: str | None
     human_control_modes: tuple[str, ...]
+    execution_guarantees: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -2011,6 +2012,7 @@ def load_delegation_target_profiles(
             "confidence_source",
             "last_evaluation",
             "human_control_modes",
+            "execution_guarantees",
         }
         unknown_fields = sorted(set(raw_profile) - supported_fields)
         if unknown_fields:
@@ -2041,8 +2043,8 @@ def load_delegation_target_profiles(
                 f"scheduled for removal by {DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION}; migrate to transports and canonical target facts."
             )
 
-        strength = raw_profile.get("strength")
-        if not isinstance(strength, str) or strength not in SUPPORTED_DELEGATION_TARGET_STRENGTHS:
+        strength = raw_profile.get("strength", "unknown")
+        if not isinstance(strength, str) or ("strength" in raw_profile and strength not in SUPPORTED_DELEGATION_TARGET_STRENGTHS):
             allowed_text = ", ".join(SUPPORTED_DELEGATION_TARGET_STRENGTHS)
             raise WorkspaceUsageError(f"{target_path.as_posix()} strength must be one of: {allowed_text}.")
         raw_location = str(raw_profile.get("location", "either")).strip() or "either"
@@ -2115,7 +2117,7 @@ def load_delegation_target_profiles(
             key="reasoning_profile",
             config_path=target_path,
             allowed=SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
-            default={"strong": "strong", "medium": "balanced", "weak": "weak"}[strength],
+            default={"strong": "strong", "medium": "balanced", "weak": "weak"}.get(strength, "unknown"),
         )
         profiles.append(
             DelegationTargetProfile(
@@ -2138,6 +2140,7 @@ def load_delegation_target_profiles(
                     default="revalidate",
                 ),
                 strength=strength,
+                execution_guarantees=require_optional_string_list(payload=raw_profile, key="execution_guarantees", config_path=target_path),
                 location=raw_location,
                 execution_methods=execution_methods,
                 transports=tuple(transports),

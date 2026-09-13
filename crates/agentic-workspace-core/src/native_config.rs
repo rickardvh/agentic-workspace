@@ -225,6 +225,7 @@ pub(crate) fn assignment_consumption(
                                     "target_id"
                                         | "target_revision"
                                         | "strength"
+                                        | "execution_guarantees"
                                         | "location"
                                         | "confidence"
                                         | "task_fit"
@@ -409,6 +410,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 field.as_str(),
                                 "workspace.workflow_artifact_profile"
                                     | "workspace.agent_instructions_file"
+                                    | "execution_posture"
                                     | "system_intent.sources"
                                     | "system_intent.preferred_source"
                                     | "modules.enabled"
@@ -431,6 +433,8 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                     | "session_logging.path_mode"
                                     | "session_logging.redact_local_paths"
                             ));
+                let consumed =
+                    consumed || (source == SHARED && field.starts_with("execution_posture."));
                 let consumed = consumed
                     || (source == SHARED
                         && matches!(
@@ -527,8 +531,20 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
             .flatten()
             .cloned(),
     );
+    // Work-class posture has its own selected dependency in task requirements.
+    // Keep byte revisions visible, but do not globally invalidate unrelated work.
+    let mut configuration_sources = sources.clone();
+    let mut configuration_shared = shared.clone();
+    if let Some(fields) = configuration_shared.as_object_mut() {
+        fields.remove("execution_posture");
+    }
+    for source in &mut configuration_sources {
+        if source["reference"] == SHARED && source["status"] == "current" {
+            source["revision"] = json!(digest(&configuration_shared)?);
+        }
+    }
     let revision = digest(
-        &json!({"sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
+        &json!({"sources":configuration_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
     )?;
     // Restriction targets come only from the owner mappings above, never from
     // config-authored effect names. A ceiling grants no operation, effect or claim.
@@ -551,7 +567,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
-        "assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
+        "execution_posture":shared["execution_posture"],"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
             "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
             "decision_record_target":shared["assurance"]["decision_record_target"],

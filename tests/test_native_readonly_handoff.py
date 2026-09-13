@@ -24,6 +24,8 @@ BASE = 'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\nc
         ("json", None),
         ("python", None),
         ("typescript", None),
+        ("native", "host"),
+        ("native", "repair-evaluation"),
         ("native", "identity"),
         ("native", "malformed"),
         ("native", "truncated"),
@@ -32,6 +34,10 @@ BASE = 'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\nc
     ],
 )
 def test_current_process_handoff_executes_once_without_admitting_worker_claims(tmp_path, shared_core_binary, native_cli, surface, fault):
+    host = fault == "host"
+    repair_evaluation = fault == "repair-evaluation"
+    if host or repair_evaluation:
+        fault = None
     worker = tmp_path / "worker.py"
     worker.write_text(
         "import json,sys\nfrom pathlib import Path\n"
@@ -74,10 +80,31 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         'transports=[{kind="manual"}]',
         'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]",
     )
+    if host:
+        process_transport = '{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}"
+        native_transport = process_transport.replace(
+            'kind="process",command=', 'kind="native",adapter="codex-app-server/v1",parameters={model="fixture"},command='
+        )
+        config = config.replace(process_transport, process_transport + "," + native_transport)
+        worker.write_text(
+            "import json,sys\nfrom pathlib import Path\n"
+            "from agentic_workspace import sealed_codex_transport as host\n"
+            "host.native_transport.discover=lambda *a,**k: {'revision':'fixture','expires_at':99999999999,'modes':['fresh'],'parameters':['model'],'models':[{'model':'fixture'}]}\n"
+            "def execute(root,snapshot,selection,prompt,schema,**kw):\n"
+            " assert selection['parameters']=={'model':'fixture'} and selection['mode']=='fresh'\n"
+            " assert set(schema['properties'])=={'summary','patch','changed_paths','stop_conditions_hit','result_delivery'}\n"
+            " with Path('launches.txt').open('a') as f: f.write('launched\\n')\n"
+            " return {'returned_work':{'summary':json.loads(prompt)['captured_inputs'][0]['content'],'patch':'','changed_paths':[],'stop_conditions_hit':[],'result_delivery':'unapplied-patch'}}\n"
+            "host.native_transport.execute=execute\n"
+            "host.main()\n"
+        )
     source.write_text(config)
     config_revision = hashlib.sha256(source.read_bytes()).hexdigest()
     dependency = tmp_path / "dependency.md"
     dependency.write_text("A bounded source observation.\n")
+    expected_frontier = (
+        ("repair-required: " + dependency.read_bytes().decode().strip()) if repair_evaluation else dependency.read_bytes().decode()
+    )
     unrelated = tmp_path / "unrelated.txt"
     unrelated.write_text("Preserve concurrent work.\n")
     context = {"target": str(tmp_path), "task": "Return the supplied source observation", "changed": []}
@@ -118,7 +145,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         plan_ref = plan_path.relative_to(tmp_path).as_posix()
         (tmp_path / "verify_frontier.py").write_text(
             "import json\nfrom pathlib import Path\np=json.loads(Path(" + repr(plan_ref) + ").read_bytes())\n"
-            f"assert p['continuation'][{destination!r}] == Path('dependency.md').read_bytes().decode()\nprint('Exact source frontier retained')\n"
+            f"assert p['continuation'][{destination!r}] == {expected_frontier!r}\nprint('Exact source frontier retained')\n"
         )
         executable = "& '" + sys.executable.replace("'", "''") + "'" if os.name == "nt" else shlex.quote(sys.executable)
         manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
@@ -141,9 +168,16 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     )
     inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
     inputs[-1]["arguments"]["complete"] = True
-    assessment = call(inputs)["task_requirements"]["assignment"]["requests"][0]
+    offered = call(inputs)["task_requirements"]
+    if host:
+        candidates = offered["execution_configurations"]["configurations"]["candidates"]
+        variants = {row["configuration"]["id"]: row["configuration"] for row in candidates if row["eligible"]}
+        assert variants["expert:cli"]["execution"]["adapter"]["kind"] == "process"
+        assert variants["expert:native:codex-app-server/v1"]["execution"]["adapter"]["adapter"] == "codex-app-server/v1"
+    assessment = offered["assignment"]["requests"][0]
     assessment[-1]["arguments"].update(
-        alternative="expert:cli", reason="Use the configured independent process for the bounded observation."
+        alternative="expert:native:codex-app-server/v1" if host else "expert:cli",
+        reason="Use the configured independent process for the bounded observation.",
     )
     local_assessment = copy.deepcopy(assessment)
     local_assessment[-1]["arguments"].update(
@@ -227,6 +261,52 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         terminal.write_bytes(original)
         assert call(invocation=action)["value"] == result["value"]
     assert (tmp_path / "launches.txt").read_text() == "launched\n"
+    if host:
+        original_config = source.read_bytes()
+        source.write_text(config.replace("delegation_targets.expert", "delegation_targets.replacement"))
+        replacement_task = call()["task_requirements"]["requests"][0]
+        replacement_task["arguments"]["required_result_classes"] = ["read-only"]
+        replacement_inputs = call(replacement_task)["task_requirements"]["handoff_inputs"]["requests"][0]
+        replacement_inputs[-1]["arguments"].update(
+            input_refs=["dependency.md"], complete=False, reason="Same bounded input for replacement."
+        )
+        replacement_inputs = call(replacement_inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
+        replacement_inputs[-1]["arguments"]["complete"] = True
+        replacement_choice = next(
+            r
+            for r in call(replacement_inputs)["task_requirements"]["execution_configurations"]["requests"]
+            if r[-1]["arguments"]["candidate"] == "replacement:native:codex-app-server/v1"
+        )
+        replacement_assessment = call(replacement_choice)["task_requirements"]["assignment"]["requests"][0]
+        replacement_assessment[-1]["arguments"].update(
+            alternative="replacement:native:codex-app-server/v1", reason="Current replacement for the same bounded work."
+        )
+        replacement_export = call(replacement_assessment)["task_requirements"]["handoff"]["requests"][0]
+        offered = call(replacement_export)["task_requirements"]["delegation"]["requests"]
+        prior = next(r for r in offered if r[-1]["request_kind"] == "delegation/reconcile-prior-result/v1")
+        prior[-1]["arguments"]["custody"] = result["value"]["reentry"]["request"][-1]["arguments"]["custody"]
+        prior_commit = tmp_path / prior[-1]["arguments"]["custody"]["committed"]["path"]
+        prior_bytes = prior_commit.read_bytes()
+        prior_commit.unlink()
+        with pytest.raises(AssertionError, match="invalid-source-decision"):
+            call(prior)
+        prior_commit.write_bytes(prior_bytes)
+        preserved = call(prior)["task_requirements"]["delegation"]["prior_result"]
+        assert preserved["outcome"] == result["value"] or preserved["outcome"]["returned"] == result["value"]["returned"]
+        replacement_dispatch = call(prior)["task_requirements"]["delegation"]["requests"][0]
+        replacement_action = call(replacement_dispatch)["decision_packet"]["primary_action"]
+        assert call(invocation=replacement_action)["value"]["status"] == "returned-unproven"
+        prior[-1]["arguments"]["disposition"] = "reuse-readonly"
+        late = call(prior)["task_requirements"]["delegation"]["observation"]
+        assert late["status"] == "current-executed-observation"
+        assert late["origin_assignment"]["selected"]["target"] == "expert"
+        assert late["assignment_identity"]["selected"]["target"] == "replacement"
+        assert call(prior)["task_requirements"]["delegation"]["observation"] == late
+        dependency.write_text("Changed input invalidates late return.")
+        with pytest.raises(AssertionError, match="changed|stale"):
+            call(prior)
+        dependency.write_text("A bounded source observation.\n")
+        source.write_bytes(original_config)
     reentry = result["value"]["reentry"]
     assert reentry["request"][-2]["arguments"]["returned"] == result["value"]["returned"]
     observed = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **reentry})
@@ -324,10 +404,13 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     forged["request"][-2]["arguments"]["returned"]["summary"] = "Worker text cannot manufacture a retained outcome."
     with pytest.raises(AssertionError, match="retained execution"):
         consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), **forged})
+    if repair_evaluation:
+        judgment[-1]["arguments"] = {"answer": "repair-required", "reason": dependency.read_bytes().decode()}
+        admitted = call(judgment)
     adoption = admitted["planning"]["adoption_requests"][0]
     adopt_action = call(adoption)["decision_packet"]["primary_action"]
     assert adopt_action["operation_id"] == "planning.update"
-    assert adopt_action["arguments"]["document"]["continuation"][destination] == result["value"]["returned"]["summary"]
+    assert adopt_action["arguments"]["document"]["continuation"][destination] == expected_frontier
     tampered = copy.deepcopy(adopt_action)
     tampered["arguments"]["document"]["continuation"]["frontier"] = "A caller-substituted result"
     before_adoption = plan_path.read_bytes()
@@ -337,7 +420,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     applied = call(invocation=adopt_action)
     assert applied["status"] == "applied"
     adopted_plan = json.loads(plan_path.read_bytes())
-    assert adopted_plan["continuation"][destination] == result["value"]["returned"]["summary"]
+    assert adopted_plan["continuation"][destination] == expected_frontier
     for field in ["id", "scope", "relationships", "proof", "intent", "next_action"]:
         assert adopted_plan[field] == original_plan[field]
     fresh = call()
@@ -368,7 +451,9 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     evidence_requests = [continuation, claim]
     current = proof_view(evidence_requests)
     evidence = current["task_requirements"]["bounded_outcome_evidence"]
-    assert len(evidence) == 1 and evidence[0]["claim"] == "result-retained-and-selected-command-passed"
+    assert len(evidence) == 1 and evidence[0]["claim"] == (
+        "responsible-owner-repair-evaluation-retained-and-checked" if repair_evaluation else "result-retained-and-selected-command-passed"
+    )
     assert evidence[0]["support"]["observed_outcomes"] == 1 and not any(evidence[0]["claim_boundary"].values())
     assert proof_view(evidence_requests)["task_requirements"]["bounded_outcome_evidence"] == evidence
     assert hashlib.sha256(source.read_bytes()).hexdigest() == config_revision
@@ -376,12 +461,15 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     requirements["arguments"]["required_result_classes"] = ["read-only"]
     comparison = proof_view([*evidence_requests, requirements])["task_requirements"]["assignment"]
     alternatives = comparison["result"]["alternatives"]
-    assert next(a for a in alternatives if a["target"] == "expert")["contextual_evidence"] == evidence
+    executed_variant = "expert:native:codex-app-server/v1" if host else "expert:cli"
+    assert next(a for a in alternatives if a["id"] == executed_variant)["contextual_evidence"] == evidence
+    if host:
+        assert next(a for a in alternatives if a["id"] == "expert:cli")["contextual_evidence"] == []
     assert next(a for a in alternatives if a["target"] == "local")["contextual_evidence"] == []
     assert comparison["result"]["selected"] is None
     comparison_request = comparison["requests"][0]
     comparison_request[-1]["arguments"].update(
-        alternative="expert:cli",
+        alternative=executed_variant,
         reason="This exact eligible configuration has one current retained-and-checked outcome; broader suitability remains uncertain.",
     )
     assert proof_view(comparison_request)["task_requirements"]["assignment"]["result"]["selected"]["target"] == "expert"
@@ -410,7 +498,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     recovery = call()["planning"]["requests"][0]
     call(invocation=call(recovery)["decision_packet"]["primary_action"])
     assert call()["planning"]["consumed_result"] is None
-    assert (tmp_path / "launches.txt").read_text() == "launched\n"
+    assert (tmp_path / "launches.txt").read_text() == "launched\n" * (2 if host else 1)
     assert unrelated.read_text() == "Preserve concurrent work.\n"
 
 

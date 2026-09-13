@@ -293,7 +293,7 @@ pub(crate) fn view(
     let available = assessment["status"] == "assigned-nonlocal-handoff-required"
         && (selected["transport"] == "manual"
             || selected["transport"] == "cli"
-                && selected["execution"]["adapter"]["kind"] == "process")
+                && crate::native_delegation::supports_process(&selected["execution"]["adapter"]))
         && inputs["status"] == "ready"
         && requirements["result"]["requirements"]["required_result_classes"]
             .as_array()
@@ -325,6 +325,7 @@ pub(crate) fn view(
                         | "assignment/observe-readonly-return/v1"
                         | "delegation/dispatch/v1"
                         | "delegation/read-result/v1"
+                        | "delegation/reconcile-prior-result/v1"
                         | "assignment/judge-return/v1"
                         | "planning/adopt-return/v1"
                         | "planning/retain-handoff/v1"

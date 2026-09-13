@@ -154,6 +154,26 @@ pub(crate) fn view(
     let mut manual_targets = Vec::new();
     let mut observed_paths = std::collections::BTreeMap::new();
     for (name, profile) in targets.into_iter().flatten() {
+        // Repo posture replaces target-local task classification. Preserve old
+        // sources for migration, but never run both eligibility models together.
+        if requirements["execution_posture"].is_object()
+            && [
+                "strength",
+                "reasoning_profile",
+                "capability_classes",
+                "safe_task_classes",
+                "forbidden_task_classes",
+                "escalation_target",
+                "human_control_modes",
+            ]
+            .iter()
+            .any(|field| profile.get(field).is_some())
+        {
+            unavailable.push(
+                json!({"target":name,"gap":"repo-posture-requires-canonical-capability-profile"}),
+            );
+            continue;
+        }
         let transports = match crate::transport_source::decode(profile) {
             Ok(value) => value,
             Err(error) => {
@@ -201,11 +221,23 @@ pub(crate) fn view(
                 unavailable.push(json!({"target":name,"gap":"native-transport-detail-bound","source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}")}));
                 continue;
             }
-            if transport["kind"] == "native" {
-                unavailable.push(json!({"target":name,"source":transport,"gap":"native-provider-adapter-observation-unavailable"}));
+            if transport["kind"] == "native"
+                && !transport["command"]
+                    .as_array()
+                    .is_some_and(|v| !v.is_empty())
+            {
+                unavailable.push(
+                    json!({"target":name,"gap":"native-provider-adapter-command-unavailable"}),
+                );
                 continue;
             }
             let method = transport["method"].as_str().unwrap();
+            // Match the declaration owner's variant identity, not just its wire method.
+            let variant = if transport["kind"] == "native" {
+                format!("native:{}", transport["adapter"].as_str().unwrap())
+            } else {
+                method.into()
+            };
             let retained = current && transport["kind"] == "current-host";
             let manual = method == "manual";
             let observed = transport["command"]
@@ -244,7 +276,7 @@ pub(crate) fn view(
             let capability = digest(
                 &json!({"profile":profile,"target_scope":target_scope[name],"transport":transport,"executable":observed,"process_supported":process,"result_classes":result_classes,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
             )?;
-            candidates.push(json!({"id":format!("{name}:{method}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&process,"result_classes":result_classes,"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
+            candidates.push(json!({"id":format!("{name}:{variant}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&process,"result_classes":result_classes,"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution_guarantees":profile["execution_guarantees"].as_array().cloned().unwrap_or_default(),"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
         }
     }
     let mut input = requirements["requirements"].clone();

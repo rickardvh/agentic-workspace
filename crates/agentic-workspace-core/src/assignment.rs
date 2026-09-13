@@ -521,7 +521,19 @@ pub fn comparative_assessment(input: Value) -> Result<Value, CoreError> {
     let mut alternatives = Vec::new();
     for row in &rows {
         if row["eligible"] == true {
-            alternatives.push(json!({"id":row["configuration"]["id"],"target":row["configuration"]["target"],"status":"eligible-configuration"}));
+            let preferred: Vec<_> =
+                input["requirements"]["execution_posture"]["preferred_execution_guarantees"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|v| {
+                        row["configuration"]["execution_guarantees"]
+                            .as_array()
+                            .is_some_and(|tags| tags.contains(v))
+                    })
+                    .cloned()
+                    .collect();
+            alternatives.push(json!({"id":row["configuration"]["id"],"target":row["configuration"]["target"],"status":"eligible-configuration","matched_preferences":preferred}));
         }
     }
     let mut unresolved = Vec::new();

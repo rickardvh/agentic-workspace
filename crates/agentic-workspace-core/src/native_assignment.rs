@@ -30,7 +30,13 @@ pub(crate) fn outcome_evidence(
         return Ok(json!([]));
     }
     let integration = &consumption["integration"];
+    let evaluation = &consumption["context"]["result_evaluation"];
+    let repair = matches!(
+        evaluation["status"].as_str(),
+        Some("repair-required" | "rejected")
+    );
     if scope == "unapplied-patch"
+        && !repair
         && (integration["status"] != "integrated"
             || integration["execution_custody"] != consumption["execution_custody"]
             || !integration["postimages"]
@@ -55,7 +61,8 @@ pub(crate) fn outcome_evidence(
                                         .as_str()
                                         .and_then(|r| r.strip_prefix("sha256:"))
                                         == input["sha256"].as_str()
-                            }) && (scope != "unapplied-patch"
+                            }) && (repair
+                                || scope != "unapplied-patch"
                                 || integration["postimages"].as_array().unwrap().iter().all(
                                     |post| {
                                         inputs.iter().any(|input| {
@@ -72,13 +79,20 @@ pub(crate) fn outcome_evidence(
     else {
         return Ok(json!([]));
     };
-    let configuration = &consumption["assignment_identity"]["selected"]["configuration"];
+    let configuration = if consumption["context"]["executed_configuration"].is_object() {
+        &consumption["context"]["executed_configuration"]
+    } else {
+        &consumption["assignment_identity"]["selected"]["configuration"]
+    };
     if !configuration.is_object() {
         return Ok(json!([]));
     }
     let mut observation = json!({"kind":"agentic-workspace/contextual-target-outcome/v1","status":"current-owner-derived","claim":"result-retained-and-selected-command-passed","target":configuration["target"],"configuration_key":configuration_key(configuration)?,"context":{"task":task,"role":consumption["context"]["role"],"scope_class":"read-only","owner_ref":used["owner_ref"],"source_revision":used["source_revision"]},"support":{"observed_outcomes":1,"confidence":"single-current-outcome","proof_ref":proof["reference"],"proof_subject":proof["proof_subject"],"planning_custody":used["custody"],"execution_custody":consumption["execution_custody"],"result_revision":consumption["result_revision"],"judgment_revision":consumption["judgment_revision"],"result_use_authority":"acting-orchestrator","check_authority":"native-verification"},"context_cost":consumption["context"]["context_cost"],"routing_effect":"context-for-agent-comparison-among-eligible-configurations","claim_boundary":{"task_success":false,"general_target_quality":false,"eligibility":false,"completion":false,"independent_review":false}});
     observation["context"]["scope_class"] = json!(scope);
-    if scope == "unapplied-patch" {
+    if repair {
+        observation["claim"] = json!("responsible-owner-repair-evaluation-retained-and-checked");
+        observation["evaluation"] = evaluation.clone();
+    } else if scope == "unapplied-patch" {
         observation["claim"] =
             json!("patch-integrated-result-retained-and-selected-command-passed");
         observation["support"]["integration"] = integration.clone();
