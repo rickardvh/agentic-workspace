@@ -1171,6 +1171,13 @@ fn resolve_with_baseline(
     )?;
     decision_sources["capture"] = repository_capture;
     planning.as_object_mut().unwrap().remove("planning_input");
+    if planning_detail.is_object() {
+        planning["portable_continuation"] = planning::portable_continuation(
+            target,
+            &planning_detail,
+            &planning["selected_owner"]["id"],
+        )?;
+    }
     planning["current_owner"] = planning_detail;
     let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
     public["configuration"]

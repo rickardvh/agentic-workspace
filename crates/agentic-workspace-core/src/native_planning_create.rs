@@ -46,7 +46,7 @@ pub(crate) fn declaration() -> Value {
         "$schema":canonical["$schema"],"$defs":canonical["$defs"],"type":"object","properties":{"material":{"type":"object","properties":properties,"required":required,"additionalProperties":false}},"required":["material"],"additionalProperties":false}})
 }
 pub(crate) fn operation() -> Value {
-    json!({"id":"planning.create","semantic_revision":"planning-create-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"document":{"type":"object"},"planning_request":{"type":["object","null"]}},"required":["target","request","owner_path","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/creation-result/v1","effects":["planning-state"],"reads":["planning"]})
+    json!({"id":"planning.create","semantic_revision":"planning-create-v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"owner_path":{"type":"string"},"document":{"type":"object"},"planning_request":{"type":["object","null"]},"provenance_format":{"const":"repo-relative-v2"}},"required":["target","request","owner_path","document","planning_request"],"additionalProperties":false},"result_kind":"agentic-planning/creation-result/v1","effects":["planning-state"],"reads":["planning"]})
 }
 fn path(work: &Value) -> Result<(String, String), CoreError> {
     let id = format!("work-{}", &digest(work)?[7..]);
@@ -91,8 +91,46 @@ fn outcome(invocation: &Value) -> Result<Value, CoreError> {
 }
 fn with_provenance(invocation: &Value, custody: &Value) -> Result<Value, CoreError> {
     let mut value = invocation["arguments"]["document"].clone();
-    value[PROVENANCE] = json!({"kind":"agentic-planning/creation-provenance/v1","invocation_revision":digest(invocation)?,"custody":custody});
+    let portable = invocation["arguments"]["provenance_format"] == "repo-relative-v2";
+    let mut custody = custody.clone();
+    if portable {
+        for field in ["attempt", "committed"] {
+            custody[field]["target"] = json!(".");
+        }
+    }
+    value[PROVENANCE] = json!({"kind":if portable {"agentic-planning/creation-provenance/v2"} else {"agentic-planning/creation-provenance/v1"},"invocation_revision":digest(invocation)?,"custody":custody});
+    if portable {
+        value[PROVENANCE]["material_revision"] =
+            json!(digest(&invocation["arguments"]["document"])?);
+    }
     Ok(value)
+}
+/// Portable observation is source meaning only. Reuse the exact effect-reference
+/// envelope validation; never turn an absent local producer into writer custody.
+pub(crate) fn portable_observation(relative: &str, body: &Value) -> Result<bool, CoreError> {
+    portable_envelope(relative, body, true)
+}
+fn portable_envelope(relative: &str, body: &Value, current: bool) -> Result<bool, CoreError> {
+    let provenance = &body[PROVENANCE];
+    if provenance["kind"] != "agentic-planning/creation-provenance/v2" {
+        return Ok(false);
+    }
+    if provenance.as_object().map(|v| v.len()) != Some(4) {
+        return Err(error("invalid portable Planning creation observation"));
+    }
+    let mut document = body.clone();
+    document.as_object_mut().unwrap().remove(PROVENANCE);
+    let updated = !body[crate::native_planning_update::PROVENANCE].is_null();
+    if current && updated && !crate::native_planning_update::portable_observation(relative, body)? {
+        return Err(error(
+            "portable Planning creation requires current update observation",
+        ));
+    }
+    document[crate::native_planning_update::PROVENANCE] = json!({
+        "kind":"agentic-planning/update-provenance/v2", "invocation_revision":provenance["invocation_revision"], "custody":provenance["custody"],
+        "outcome":{"status":"applied","effects":["planning-state"],"value":{"owner_path":relative,"owner_id":body["id"],"document_revision":provenance["material_revision"]}}
+    });
+    crate::native_planning_update::portable_envelope(relative, &document, current && !updated)
 }
 /// Validate before treating creation provenance as nonsemantic or usable custody.
 pub(crate) fn inspect_origin(
@@ -103,16 +141,37 @@ pub(crate) fn inspect_origin(
     let Some(provenance) = body.get(PROVENANCE) else {
         return Ok(None);
     };
+    let mut custody = provenance["custody"].clone();
+    if provenance["kind"] == "agentic-planning/creation-provenance/v2" {
+        portable_envelope(relative, body, false)?;
+        let root = cap_std::fs::Dir::open_ambient_dir(target, cap_std::ambient_authority())
+            .map_err(error)?;
+        let mut absent = 0;
+        for field in ["attempt", "committed"] {
+            if crate::native_planning::read(&root, custody[field]["path"].as_str().unwrap())?
+                .is_none()
+            {
+                absent += 1;
+            }
+            custody[field]["target"] = json!(target);
+        }
+        if absent == 2 {
+            portable_observation(relative, body)?;
+            return Ok(None);
+        }
+    }
     let record = crate::attempt_store::inspect_committed(
         target.to_str().ok_or_else(|| error("target encoding"))?,
-        provenance["custody"].clone(),
+        custody.clone(),
     )
     .map_err(|_| {
         error("Planning creation outcome remains uncertain without exact committed custody")
     })?;
     let invocation = &record["invocation"];
-    if provenance["kind"] != "agentic-planning/creation-provenance/v1"
-        || provenance["invocation_revision"] != digest(invocation)?
+    if !matches!(
+        provenance["kind"].as_str(),
+        Some("agentic-planning/creation-provenance/v1" | "agentic-planning/creation-provenance/v2")
+    ) || provenance["invocation_revision"] != digest(invocation)?
         || invocation["source_owner"] != "planning"
         || invocation["operation_id"] != "planning.create"
         || invocation["arguments"]["owner_path"] != relative
@@ -132,10 +191,10 @@ pub(crate) fn inspect_origin(
     }
     let prepared = crate::attempt_store::prepare_commit(
         target.to_str().ok_or_else(|| error("target encoding"))?,
-        provenance["custody"].clone(),
+        custody.clone(),
         outcome(invocation)?,
     )?;
-    if prepared["custody"] != provenance["custody"]
+    if prepared["custody"] != custody
         || with_provenance(invocation, &prepared["custody"])?[PROVENANCE] != *provenance
         || body["id"] != invocation["arguments"]["document"]["id"]
         || body["kind"] != "planning-execplan/v1"
@@ -187,8 +246,16 @@ pub(crate) fn view(
         && let Ok(body) = serde_json::from_slice::<Value>(bytes)
         && body.get(PROVENANCE).is_some()
     {
-        let committed = inspect_origin(target, &relative, &body)?
-            .ok_or_else(|| error("creation custody missing"))?;
+        let Some(committed) = inspect_origin(target, &relative, &body)? else {
+            if request.is_some() || invocation.is_some() {
+                return Err(error(
+                    "Planning creation local outcome unknown; reconcile source meaning instead of replaying creation",
+                ));
+            }
+            result["created_owner"] = json!({"path":relative,"id":body["id"],"source_revision":revision,"status":"source-observation-local-outcome-unknown","claim_authority":false});
+            result["requests"] = json!([]);
+            return Ok(result);
+        };
         result["created_owner"] = json!({"path":relative,"id":body["id"],"creation_material_revision":committed["outcome"]["value"]["material_revision"],"source_revision":revision});
         result["requests"] = json!([]);
         if let Some(invocation) = invocation {
@@ -223,7 +290,7 @@ pub(crate) fn view(
         }
         let body = document(&request["arguments"]["material"], work)?;
         result["contribution"]["settled"] = json!(false);
-        result["contribution"]["actions"] = json!([{"operation_id":"planning.create","dependency_revision":digest(&json!({"source":revision,"document":body}))?,"arguments":{"target":target,"request":request,"owner_path":relative,"document":body},"effects":["planning-state"]}]);
+        result["contribution"]["actions"] = json!([{"operation_id":"planning.create","dependency_revision":digest(&json!({"source":revision,"document":body}))?,"arguments":{"target":target,"request":request,"owner_path":relative,"document":body,"provenance_format":"repo-relative-v2"},"effects":["planning-state"]}]);
     }
     Ok(result)
 }
@@ -285,5 +352,6 @@ pub(crate) fn created_reference(target: &Path, work: &Value) -> Result<Option<St
         return Ok(None);
     };
     let body = serde_json::from_slice(&bytes).map_err(error)?;
-    Ok(inspect_origin(target, &relative, &body)?.map(|_| relative))
+    let local = inspect_origin(target, &relative, &body)?.is_some();
+    Ok((local || portable_observation(&relative, &body)?).then_some(relative))
 }

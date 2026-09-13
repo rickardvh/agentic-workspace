@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Recover portable Planning meaning with fresh local custody and expose bounded Assignment worker entry, exact input expansion and machine-carried return material."
+issues = [3207, 3195, 2970, 2818, 3059]

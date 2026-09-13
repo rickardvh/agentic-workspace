@@ -56,6 +56,12 @@
     "help_flag": "--help",
     "commands": [
       {
+        "name": "worker",
+        "description": "Project bounded worker entry, expand an exact captured input, or assemble unproven return re-entry from a sealed Assignment packet.",
+        "input_field": "request",
+        "input_required": true
+      },
+      {
         "name": "resources",
         "description": "Inspect local hygiene or propose/execute one current scratch/worktree resource operation.",
         "input_field": "request",

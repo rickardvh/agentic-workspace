@@ -14,3 +14,29 @@ not permission for the orchestrator to implement the worker slice locally.
    import; only an authorised structured override can change that gate.
 
 If transport is disabled, do not render or copy a handoff. Use the assignment policy recovery route instead.
+
+## Bounded native worker context
+
+For an exported native Assignment packet, the configured AW invocation exposes
+`worker --input <json> --format json`. A thin host holds the exact packet; the
+model receives only the `view` from `{action: "entry", packet}`. Small captured
+inputs are inline. Read every required lazy input using `{action: "expand",
+packet, reference: <detail_ref>}` before doing the assigned work. Expansion
+returns exact captured bytes, not fresh repository admission.
+
+Return only new `summary`, `changed_paths`, `patch`, `stop_conditions_hit` and,
+when needed, `result_delivery` material through `{action: "return", packet,
+material}`. The host submits the returned exact `reentry` to `start` at the
+current repository target. Assignment still validates source, identity, scope
+and result shape; presentation and matching seals never prove acceptance.
+
+If carriage is lost, reconstruct/export through the current Assignment and
+Planning owners. Do not repeat target selection or startup onboarding when the
+current assignment still binds, and never repeat an uncertain launch to replace
+missing transport. A re-export is not an executed result. Keep returned or
+integration-pending work with Planning until responsible owner consumption.
+
+The helper reports known serialized presentation/packet bytes and zero helper
+writes. Host-injected skills, actual semantic turns, user steering, repairs and
+elapsed time are unknown unless the consumer observes them; do not report unknown
+cost as zero. This surface does not add host-native launch or provider economics.

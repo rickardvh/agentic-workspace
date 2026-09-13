@@ -17,6 +17,11 @@ pub fn run_stdio() {
         crate::native_resources::view(request["resources"].clone())
     } else if request
         .as_object()
+        .is_some_and(|v| v.len() == 1 && v.contains_key("worker"))
+    {
+        crate::assignment_packet::view(request["worker"]["request"].clone())
+    } else if request
+        .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("session_logging_policy"))
     {
         crate::maintainer_logging::policy(request["session_logging_policy"].clone())
