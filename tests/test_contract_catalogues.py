@@ -18,9 +18,11 @@ def _module():
 def test_cli_catalogue_renders_current_values_and_local_effect_boundary() -> None:
     text = _module().render_cli_catalogue()
     assert "# Current CLI Catalogue" in text
-    assert "`agentic-workspace planning new-plan`" in text
-    assert "`--switch-active`" in text
-    assert "Shared-state mutability and ignored local diagnostics are separate" in text
+    for command in ["start", "invoke", "resources", "worker"]:
+        assert f"`agentic-workspace {command}`" in text
+    assert "`agentic-workspace planning new-plan`" not in text
+    assert "not native public commands" in text
+    assert "same `native_cli` declaration" in text
     assert "Contract digest: `sha256:" in text
 
 

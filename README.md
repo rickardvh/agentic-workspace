@@ -8,17 +8,25 @@ Use it when agents repeatedly rediscover the same repository knowledge, importan
 
 ## What changes for an agent
 
-An AW-enabled repository keeps a small `.agentic-workspace/` enclave plus thin agent entrypoints such as `AGENTS.md`. The agent normally starts from a compact Workspace query instead of scanning that enclave or rereading every instruction source.
+An AW-enabled repository has a tiny bootstrap pointing to one canonical
+[AW operating skill](.agentic-workspace/skills/workspace-startup/SKILL.md).
+That skill teaches the agent how to work with current repository instructions,
+configuration and owner state. Relevant specialized procedures are loaded only
+when useful. Direct work stays direct.
 
-For example:
+For example, when changing authentication, the agent reads the applicable repo
+policy, obtains current constraints or proof requirements when needed, makes the
+change, and checks what the responsible owners can establish. A precise tool call
+may help:
 
 ```bash
 agentic-workspace start --target . --task "Update authentication token handling" --format json
 ```
 
-For a task like that, the answer can point the agent to only the things that matter: applicable repository instructions, any current work or continuation state, a relevant procedure, constraints on what may be changed, checks that matter before the work can be considered complete, and one next safe action. Unrelated module state and deeper documentation stay out of the first response unless they become relevant.
-
-Command-line interfaces are one way to access this behavior, not a workflow the agent has to memorize.
+The tool carries exact requests, actions and currentness. The agent supplies
+intent, unresolved judgment and new material; it does not memorize a packet
+protocol. A tool succeeding is separate from the requested outcome being complete.
+See [everyday use](docs/everyday-use.md) for small practical examples.
 
 ## First-party modules
 
@@ -48,13 +56,11 @@ Agentic Workspace treats the repository as the durable home of the context that 
 
 AW does not need to copy or model the whole repository. Source code, ordinary documentation, tests, and other canonical content remain where they already belong. Workspace selects the small amount of operating context that can change the current decision and routes deeper material only when needed.
 
-The ordinary control loop is:
-
-1. **Resolve** — determine the smallest trustworthy guidance for the current task and decision.
-2. **Act** — follow the supported operation, procedure, owner, or explicit human decision it points to.
-3. **Reconcile** — record the result with the correct owner, determine what changed and what may now be considered complete, then resolve again if work remains.
-
-Internally, AW composes that into one current operating contract rather than leaving the agent to reconcile several competing answers about what to read, what to do, what is allowed, and whether the work is complete.
+The main skill supplies procedure; repository instructions and configuration
+supply policy; Planning, Memory and Verification retain their own state and
+evidence. Rust-backed tools answer exact current questions and perform admitted
+bounded operations. These roles stay separate, without a required resolve/act/
+reconcile phase machine for every task.
 
 Repository instructions can also be dynamic rather than purely static: repo-owned configuration, scoped guidance, skills, verification rules, and capability state can change what AW surfaces or requires for a particular task. The deeper architecture for programmable instruction composition is described in [`docs/architecture.md`](docs/architecture.md).
 
@@ -76,7 +82,12 @@ During reconstruction, an explicitly published `preview-vMAJOR.MINOR.PATCH` GitH
 
 The later support-bearing install path is a stable `vMAJOR.MINOR.PATCH` GitHub Release. Each coordinated stable release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches and ordinary registry resolution are not support-bearing identities unless release policy says otherwise.
 
-After adoption, the repository's thin agent instructions normally route the agent through Workspace. When interacting manually, `start` is the ordinary first question; deeper commands such as `implement`, `proof`, `summary`, `skills`, `ownership`, and `report` are used when the current task or returned guidance calls for them.
+After adoption, use the canonical skill and the installed CLI's `--help`.
+The native tools are `start`, `invoke`, `resources` and `worker`; domain requests
+come from their current owners. Historical `init`, `defaults`, `implement`,
+`proof` and module subcommands are not an installed native adoption procedure.
+The [installation guide](docs/agentic-workspace-install.md) states the current
+preview and bootstrap limitations explicitly.
 
 Agentic Workspace keeps its checked-in footprint deliberately small. Selected modules add their own owned state, while implementation packages, generated clients, caches, and local diagnostics keep separate ownership and lifecycle boundaries.
 

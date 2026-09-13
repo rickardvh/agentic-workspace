@@ -4,12 +4,14 @@
 ledger. Green PR checks do not establish that every inherited prototype test or
 public operation has a current native disposition.
 
+Current C53 recheck: [c53-conformance.md](c53-conformance.md). The September 9 findings below remain historical diagnostic evidence; the C53 report names current dispositions without rewriting those old outcomes.
+
 ## Evidence boundaries
 
 | Surface | Current evidence and limit |
 | --- | --- |
 | Native ordinary consumers | `test_native_public_cli.py`, the native owner suites and `test_shared_core.py` exercise the Rust authority through native, JSON, Python and TypeScript consumers. Each owner retains its own currentness and authority assertions. |
-| Compact operating carriage | `test_native_operating_carriage.py` compares exact actions/claims and bounded answers across four consumers, rejects unknown/altered/forged/stale/work-rebound carriage, and measures a predetermined host-composed configuration journey. Existing owner tests explicitly request full detail. `test_native_invoke_continuation.py` compares full/compact/carried post-effect entry across four surfaces; Rust tests preserve committed outcomes on continuation failure and distinguish uncertainty from rejection. Reuse and worker-entry outcomes remain open; see `operating-carriage.md`. |
+| Compact operating carriage | `test_native_operating_carriage.py` compares exact actions/claims and bounded answers across four consumers, rejects unknown/altered/forged/stale/work-rebound carriage, and measures a predetermined host-composed configuration journey. Existing owner tests explicitly request full detail. `test_native_invoke_continuation.py` compares full/compact/carried post-effect entry across four surfaces; Rust tests preserve committed outcomes on continuation failure and distinguish uncertainty from rejection. Bounded worker entry/return and portable Planning landed in #3233; total-burden and provider economics retain their explicit limits. |
 | Independently linked owner | `test_native_independent_owner.py` builds a separate Rust fixture. Its manifest is classified as a diagnostic fixture; linking supplies no repository admission. |
 | Small required startup source | `test_native_startup_adapter.py` proves eager-small/lazy-large source delivery, exact explicit/automatic action equivalence, source/source-selection drift, UTF-8 failure, confinement and retained execution-time dependency admission on four surfaces. No delivery-as-understood or parent closure claim. |
 | Generated process contracts | `test_generated_tool_conformance.py` runs the migrated startup and four explicit retirement contracts through Python's native entry point. Remaining cases exercise historical generated adapters and cannot prove current native command support. |

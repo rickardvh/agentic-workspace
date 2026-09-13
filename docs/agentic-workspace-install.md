@@ -22,7 +22,7 @@ For an explicitly published preview:
 2. Read `agentic-workspace-preview-release-manifest.json` and confirm it identifies the intended tag plus exact reconstruction-source and normalized artifact commits, with `release_class` set to `preview` and `support_bearing` set to `false`.
 3. Read `distribution-install-readiness.json` from the same release. It must identify the same preview tag/version and carry the same non-support-bearing disposition.
 4. Run the receipt's exact hash-bound root-wheel install command unchanged.
-5. In a target Git repository, try the ordinary native entrypoint:
+5. In a target Git repository, follow its bootstrap to the canonical AW skill. For an exact current tool answer, use the installed native boundary:
 
    ```bash
    agentic-workspace start --target . --task "Inspect this repository" --format json
@@ -54,41 +54,38 @@ Mutable branches and ordinary registry resolution are not support-bearing instal
 
 Operating-system and shell portability should not be inferred from this page beyond what the selected stable release and its test evidence actually cover. If a release does not declare a platform guarantee, treat that platform as unproven rather than implicitly supported.
 
-## Target repository
+## Current native adoption boundary
 
-The target repo is the repository where AW should own its small `.agentic-workspace/` enclave and thin routing adapters. Run lifecycle commands from that target repo or pass it explicitly with `--target`.
+The target is the repository where the agent will work. Follow its existing tiny
+bootstrap to the canonical `workspace-startup` skill. The skill is procedure;
+repository instructions and config remain the policy owners. If there is no
+runtime, use that same skill's selective read-only fallback; it cannot establish
+live effect admission, retention or proof.
 
-## Stable/support-bearing public path
+The native executable currently exposes `start`, `invoke`, `resources` and
+`worker`. Check `agentic-workspace --help` from the selected installed artifact.
+There is no native `defaults`, `init`, `upgrade`, `remove-legacy` or module CLI
+family. Historical source-maintenance lifecycle tooling is not an installation
+fallback. If the selected preview does not provide the required bootstrap or
+adoption surface, report that exact limitation instead of copying managed payload
+files or invoking a former host.
 
-1. Choose a stable `vMAJOR.MINOR.PATCH` GitHub Release.
-2. Obtain that release's `distribution-install-readiness.json`.
-3. Run its exact root install command unchanged.
-4. Use the installed `agentic-workspace` CLI to choose the smallest useful module footprint and initialize/adopt the target.
-5. Inspect the resulting config/health before ordinary work.
+A published artifact's install receipt establishes installation of its declared
+bytes; it does not establish arbitrary target initialization or support on an
+untested platform. Preview 0.53 publication and public-byte installation are a
+separate release step. A reconstruction branch or this guide is not a 0.53 release.
 
-The receipt is the machine authority for the immutable command. Use the generated [current support-bearing install](reference/support-bearing-install.md) for a human-copyable projection bound to the receipt URL, receipt digest, release tag commit, wheel URL, and wheel digest.
-
-Typical post-install selection and initialization:
-
-```bash
-agentic-workspace defaults --section module_selection --format json
-agentic-workspace init --target . --modules memory
-```
-
-Choose only capabilities that pay back:
-
-- `memory` — durable repo knowledge and anti-rediscovery context;
-- `planning` — active execution continuity, proof expectations, handoff, and bounded closeout state;
-- `verification` — reusable soft-verification protocols, evidence summaries, proof-route hints, and known gaps;
-- combinations — only when each selected module independently solves a recurring cost.
-
-Routing-only/no-module adoption remains valid when the repo only needs the root operating boundary.
+For an already bootstrapped repository, read the canonical skill, then use exact
+current tools as needed. See [everyday use](everyday-use.md) and the generated
+[native CLI reference](reference/cli-catalogue.md). Choose module capabilities
+only when they repay recurring context, continuity or proof costs; direct work
+need not create module state.
 
 ## Installed footprint
 
 Ordinary bootstrap should keep the checked-in footprint small: repo-owned config/startup, ownership/routing surfaces, a compact adoption identity, and selected module state anchors. Generic package docs, templates, schemas, bundled skills, and runtime implementation stay package-owned unless a profile explicitly mirrors them.
 
-Use `--mirror-payload` only when the host intentionally wants the larger package payload checked in. Necessary-surface adoption should remain the ordinary default.
+Payload-mirroring profiles describe source-maintenance packaging. They are not native CLI flags or permission to copy managed state into another repository.
 
 Exact installed files and required/optional degraded references are generated in the [current installed-surface catalogue](reference/installed-surface-catalogue.md).
 

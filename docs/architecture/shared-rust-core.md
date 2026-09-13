@@ -20,9 +20,24 @@ Request and operation `input_schema` values are self-contained JSON Schema Draft
 
 The capability contract is trusted admission input, separate from implementation descriptors and source contributions. It assigns every declared domain and effect to one owner, assigns every authority-bearing operation to that owner, and records one exclusive owner for each grantable claim. Rust rejects conflicting domains/effects/claims, undeclared response operations, cross-owner effects, self-widened action authority, and claims or outcomes granted by a non-owner. Cross-owner evidence must become a new typed request admitted by the responsible owner; this slice does not add a central choreography registry.
 
-Pure current-work facts and direct/no-signal decisions need neither a capability contract nor semantic-route classification. Progressive contract discovery and real first-party owner consumption remain later #2930/#2986/#2606 work. The existing Python module runtime and historical operation IR are transition evidence, not new authority; they are not deleted until their owners migrate through #2984/#3000/#3001.
+Pure current-work facts and direct/no-signal decisions need neither a capability
+contract nor semantic-route classification. Current native owners consume
+instructions, config, Planning, Memory, Verification and Assignment through this
+same core. Source-maintenance Python and historical operation IR remain explicitly
+non-native surfaces; their existence supplies no fallback authority.
 
-The candidate initial matrix is the repository's support-bearing hosted Linux x86-64 lanes (Python 3.11/3.13 and Node 20/24) and Windows x86-64 lane (Python 3.14 and Node 24), all on Rust stable. A cell is admitted only after its support-bearing core and binding checks pass; toolchain availability alone does not admit another platform. Native artifact bundling and final release support remain owned by #2985/#2987.
+Skills supply reusable procedure and progressive disclosure. They neither execute
+owner semantics nor impose a universal phase machine. The native CLI projects its
+command declaration; Python and Node bindings serialize requests to the same core.
+Worker and operating carriage are disposable transport, revalidated by owners.
+
+See [C53 candidate conformance](../maintainer/c53-conformance.md) for the exact
+source under recheck, owner coverage, current safety dispositions and evidence
+limits. Local evidence and a reviewed reconstruction source do not establish
+support for an installed platform or a future published artifact.
+
+The following sections retain historical design decisions; references to later
+migration work describe the state at those decisions, not missing C53 owners.
 
 ## #3018/#3019 disposition
 

@@ -12,9 +12,9 @@ Public maturity is **alpha** across the coordinated Python distributions. Eviden
 
 Deterministic proof supports the declared contract on its exact subject. Preview evidence proves only the preview claims it names; it does not manufacture Stable/1.0, support-bearing, or untested platform status. Deterministic proof also does not prove that every model will discover or use the contract cheaply.
 
-## Live-agent evidence
+## Historical live-agent evidence
 
-The maintained 2026-08-14 operating-context run used `gpt-5.3-codex-spark` on three scenarios:
+The historical 2026-08-14 operating-context run (before the current skills-first native interface) used `gpt-5.3-codex-spark` on three scenarios:
 
 - clean-host startup passed with one AW command, no raw state scan, and a bounded claim;
 - failed-proof/partial-intent behavior passed the claim boundary despite recoverable shell failures;
@@ -31,3 +31,14 @@ This is evidence for a bounded model/adapter/head, not a universal provider clai
 - Unknown OS/provider/runner behavior remains unknown until source-bound evidence promotes it.
 
 See [Maturity model](maturity-model.md), [Installation](agentic-workspace-install.md), [Threat model](security/threat-model.md), and maintainer [external-agent evaluation](../tools/model-cli-harness/external-agent-evaluation/README.md) for deeper evidence owners.
+
+## Current skills-first candidate evidence
+
+The [C53 recheck](maintainer/c53-conformance.md) identifies the exact integrated
+source and distinguishes owner tests, public journeys, architecture constraints
+and public documentation. The [continuation burden report](priority5-validation.md)
+counts selected skills, worker/parent context, tool calls, steering, repairs and
+residue. Its worker savings yield only 0.55% less full-fixture context and add
+machine transport. Hidden host context and actual model/provider economics remain
+unknown. Source tests are not public-byte install proof, independent review or
+Stable/1.0 admission.

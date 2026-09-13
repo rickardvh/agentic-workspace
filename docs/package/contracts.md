@@ -1,45 +1,41 @@
 # Contracts And References
 
-Agentic Workspace uses machine-readable contracts to keep behavior inspectable without reading the implementation first. Conceptual docs explain what the package does; contracts define precise shapes.
+The main AW skill supplies procedure. Current repository policy and domain owners
+supply authority and state; one Rust core owns deterministic semantics. Contracts
+make precise shapes inspectable but do not grant authority by their existence.
 
-## Contract Layers
+## Current public reference
 
-| Layer | Location | Role |
-| --- | --- | --- |
-| contract data | `src/agentic_workspace/contracts/*.json` | package-owned declarations for CLI commands, module registry, proof routes, report sections, and related surfaces |
-| JSON schemata | `src/agentic_workspace/contracts/schemas/*.schema.json` | validation and generated-reference source for contract shapes |
-| generated schema references | most `docs/reference/*.md` | field-level shape documentation generated from schemata |
-| generated current-value catalogues | `cli-catalogue.md`, `installed-surface-catalogue.md`, `support-bearing-install.md` | exact values generated from command, surface/module, and release-install contracts |
-| runtime outputs | `agentic-workspace ... --format json` | live answers derived from package code, installed repo state, and contracts |
-| installed contract docs | `.agentic-workspace/docs/*.md` | product-managed target-repo contracts and workflow adapters |
+| Question | Authority and reference |
+| --- | --- |
+| Which native commands and options exist? | `source_decision_contract.json`'s `native_cli` declaration, projected in the [native CLI catalogue](../reference/cli-catalogue.md) and executable `--help` |
+| What request/action/currentness does this task need? | The current Rust-owner response through `start`; see the [native tool map](commands.md) |
+| How do native, JSON, Python and Node relate? | The [shared Rust authority graph](../architecture/shared-rust-core.md); bindings carry exact envelopes rather than implementing domain logic |
+| Which repository/local configuration shapes are declared? | [Workspace config](../reference/workspace-config.md) and [local override](../reference/workspace-local-override.md); native owner admission still determines support and applicability |
+| What is the declared package footprint? | The [surface catalogue](../reference/installed-surface-catalogue.md), explicitly a source-maintenance lifecycle/profile inventory, not proof of native initialization |
+| Which installation bytes are admitted? | The selected release's immutable receipt; follow the [installation guide](../agentic-workspace-install.md). The [support-bearing projection](../reference/support-bearing-install.md) applies only to its named stable release |
 
-Generated reference docs are not the primary explanation layer. They answer exact field and schema questions after the reader understands the package concept.
+Generated reference pages answer exact questions after the product model is
+understood. Use the [reference index](../reference/index.md) for their current
+versus maintenance/historical classification. A declared field or profile does
+not establish an available operation, installed-platform support or proof success.
 
-## High-Value References
+## Maintenance and historical contracts
 
-- [Generated reference index](../reference/index.md): topic map for all generated reference pages.
-- [Workspace config](../reference/workspace-config.md): repo-owned `.agentic-workspace/config.toml` shape.
-- [Workspace local override](../reference/workspace-local-override.md): local-only `.agentic-workspace/config.local.toml` shape.
-- [Startup context](../reference/startup-context.md): `start --format json` payload.
-- [Workspace report](../reference/workspace-report.md): combined report payload.
-- [Current CLI catalogue](../reference/cli-catalogue.md): exact current root/nested commands and options.
-- [Current installed-surface catalogue](../reference/installed-surface-catalogue.md): exact supported profile/module footprint cells.
-- [Current support-bearing install](../reference/support-bearing-install.md): immutable receipt-bound install command.
-- [CLI commands schema](../reference/cli-commands.md): command-manifest shape.
-- [CLI option groups schema](../reference/cli-option-groups.md): shared option-group shape.
-- [Module registry](../reference/module-registry.md): module profiles, components, and package footprint metadata.
-- [Proof selection rules](../reference/proof-selection-rules.md): proof routing contract.
-- [Report contract manifest](../reference/report-contract-manifest.md): report contract registry.
-- [Selector contracts manifest](../reference/selector-contracts-manifest.md): selector contract registry.
-- [Operation contracts](../reference/operation-contracts.md): operation contract registry.
+The retained `cli_commands.json` and `cli_option_groups.json` describe historical
+CLI/generated adapters and source-maintenance tooling. Their root/nested command
+model is not the native CLI catalogue's source. The generated startup-context,
+implementer-context, report and selector pages likewise document their named
+retained representations, not current `start` output or native command support.
 
-## Editing Rule
+Module, lifecycle, operation-IR and generated-adapter schemas remain useful for
+explicit maintenance and historical investigation. Do not infer another executable
+runtime or native fallback from their presence. Installed payload documents also
+remain subject to their named source/owner and artifact identity.
 
-When a contract changes:
+## Editing rule
 
-1. edit the source contract or schema;
-2. regenerate the reference docs;
-3. run schema reference and contract tooling checks;
-4. update conceptual docs only if the behavior or user-facing model changed.
-
-Do not hand-edit generated schema pages or current-value catalogues under `docs/reference/`; `docs/reference/index.md` is the hand-authored navigation page.
+Edit the authoritative source contract or schema, regenerate its reference and
+run the existing contract/freshness checks. Update conceptual prose when the
+user-facing meaning changes. Do not hand-edit generated schema pages or
+catalogues. The reference index and this page are hand-authored navigation.
