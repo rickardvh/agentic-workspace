@@ -75,6 +75,8 @@ only-include = [
   "src/agentic_workspace/decision.py",
   "src/agentic_workspace/native_core.py",
   "src/agentic_workspace/cli.py",
+  "src/agentic_workspace/sealed_codex_transport.py",
+  "src/agentic_workspace/native_transport.py",
 ]
 sources = ["src"]
 dev-mode-dirs = ["src"]
@@ -98,6 +100,8 @@ include = [
   "/src/agentic_workspace/decision.py",
   "/src/agentic_workspace/native_core.py",
   "/src/agentic_workspace/cli.py",
+  "/src/agentic_workspace/sealed_codex_transport.py",
+  "/src/agentic_workspace/native_transport.py",
   "/src/agentic_workspace/contracts",
   "/src/agentic_workspace/_payload",
 ]

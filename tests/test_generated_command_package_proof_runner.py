@@ -3022,31 +3022,24 @@ def test_static_generated_package_proof_accepts_current_static_surfaces() -> Non
         assert assertion(errors), label
 
 
-def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywords() -> None:
-    errors = _checker_case_errors(
-        r"""
-        harmless_source = "src/agentic_workspace/harmless_notes.py"
-        original_read_text = checker.Path.read_text
-        original_is_file = checker.Path.is_file
-
-        def fake_read_text(self, *args, **kwargs):
-            if self.as_posix().endswith(harmless_source):
-                return 'TEXT = "argparse.ArgumentParser and def main are only prose here"\n'
-            return original_read_text(self, *args, **kwargs)
-
-        def fake_is_file(self):
-            if self.as_posix().endswith(harmless_source):
-                return True
-            return original_is_file(self)
-
-        checker._tracked_python_source_files = lambda: [harmless_source]
-        checker.Path.read_text = fake_read_text
-        checker.Path.is_file = fake_is_file
-        _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
-        """
-    )
-
-    assert errors == []
+def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywords(monkeypatch, tmp_path: Path) -> None:
+    checker = _load_checker()
+    bridge = "src/agentic_workspace/sealed_codex_transport.py"
+    wrapper = "def main() -> None:\n    packet = json.load(sys.stdin)\n    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
+    cases = [
+        ("src/agentic_workspace/harmless_notes.py", 'TEXT = "argparse.ArgumentParser and def main are only prose"\n', False),
+        (bridge, wrapper, False),
+        (bridge, wrapper.replace("dispatch(Path.cwd(), packet)", "runtime_main(packet)"), True),
+        (bridge, wrapper + "parser = argparse.ArgumentParser()\n", True),
+        ("src/agentic_workspace/cli.py", wrapper, True),
+    ]
+    monkeypatch.setattr(checker, "REPO_ROOT", tmp_path)
+    for relative, source, rejected in cases:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source, encoding="utf-8")
+        monkeypatch.setattr(checker, "_tracked_python_source_files", lambda: [relative])
+        assert bool(checker._validate_python_shipped_source_executable_retirement()) == rejected
 
 
 def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None:

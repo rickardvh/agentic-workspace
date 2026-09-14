@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tomllib
 import zipfile
@@ -49,7 +50,7 @@ def _console_script(env_root: Path, name: str) -> Path:
 
 def _build_python_artifacts(dist: Path) -> list[Path]:
     uv = shutil.which("uv") or "uv"
-    _run([uv, "build", "--wheel", "--out-dir", dist], cwd=REPO_ROOT)
+    _run([uv, "build", "--wheel", "--sdist", "--out-dir", dist], cwd=REPO_ROOT)
     for package in ("agentic-workspace-memory", "agentic-workspace-planning", "agentic-workspace-verification"):
         _run([uv, "build", "--wheel", "--package", package, "--out-dir", dist], cwd=REPO_ROOT)
     wheels = sorted(dist.glob("*.whl"))
@@ -358,14 +359,30 @@ def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
 
     absent = start()
     with zipfile.ZipFile(wheel) as archive:
-        manifest = json.loads(archive.read("agentic_workspace/contracts/workspace_surfaces.json"))
+        metadata = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
+        version = next(line[9:] for line in archive.read(metadata).decode().splitlines() if line.startswith("Version: "))
+    # Native wheels embed the payload in Rust, not a second Python resource
+    # tree. Build the fixture from the paired distributed source artifact.
+    sdist = wheel.parent / f"agentic_workspace-{version}.tar.gz"
+    with tarfile.open(sdist) as archive:
+        prefix = f"agentic_workspace-{version}/"
+
+        def read(ref: str) -> bytes:
+            member = archive.getmember(prefix + ref)
+            assert member.isfile(), ref
+            stream = archive.extractfile(member)
+            assert stream is not None, ref
+            return stream.read()
+
+        metadata = read("PKG-INFO").decode()
+        assert f"Version: {version}" in metadata.splitlines(), "paired source artifact version"
+        manifest = json.loads(read("src/agentic_workspace/contracts/workspace_surfaces.json"))
         refs = manifest["payload_files"]
         for ref in refs:
             path = target / ref
+            assert path.resolve().is_relative_to(target.resolve()), ref
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(archive.read("agentic_workspace/_payload/" + ref))
-        metadata = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
-        version = next(line[9:] for line in archive.read(metadata).decode().splitlines() if line.startswith("Version: "))
+            path.write_bytes(read("src/agentic_workspace/_payload/" + ref))
     before = _snapshot(target)
     present = start()
     # Exact source/owner revisions change with shipped context; effective
