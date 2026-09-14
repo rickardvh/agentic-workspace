@@ -68,6 +68,7 @@
   ],
   "release_commit_allowed_paths": [
     "pyproject.toml",
+    ".agentic-workspace/payload-provenance.json",
     "packages/memory/pyproject.toml",
     "packages/planning/pyproject.toml",
     "packages/verification/pyproject.toml",

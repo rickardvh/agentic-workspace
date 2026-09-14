@@ -5,6 +5,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -248,7 +250,6 @@ def _write_source_current_payload_fixture(tmp_path: Path) -> None:
 
         [payload]
         target_release = "source-current"
-        dogfood_latest = true
         """,
     )
     _write(tmp_path / "pyproject.toml", '[project]\nname = "fixture"\nversion = "1.2.3"')
@@ -256,8 +257,9 @@ def _write_source_current_payload_fixture(tmp_path: Path) -> None:
         tmp_path / ".agentic-workspace/payload-provenance.json",
         json.dumps(
             {
-                "installed_by": {"version": "1.2.3"},
-                "release_identity": {"version": "1.2.3", "tag": "v1.2.3"},
+                **json.loads((WORKSPACE_ROOT / ".agentic-workspace/payload-provenance.json").read_text(encoding="utf-8")),
+                "release_identity": {"package": "agentic-workspace", "version": "1.2.3"},
+                "payload_files": [".agentic-workspace/skills/workspace-startup/SKILL.md"],
             }
         ),
     )
@@ -284,18 +286,23 @@ def test_committed_payload_alignment_accepts_matching_source_current_state(tmp_p
     assert alignment["drift"] == []
 
 
-def test_committed_payload_alignment_rejects_stale_provenance_and_managed_payload(tmp_path: Path) -> None:
+@pytest.mark.parametrize("drift", ["version", "package", "kind", "schema", "capabilities", "files", "malformed"])
+def test_committed_payload_alignment_rejects_stale_provenance_and_managed_payload(tmp_path: Path, drift: str) -> None:
     mod = _load_module(_checker_script_path(), "source_payload_committed_alignment_drift")
     _write_source_current_payload_fixture(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/payload-provenance.json",
-        json.dumps(
-            {
-                "installed_by": {"version": "1.2.2"},
-                "release_identity": {"version": "1.2.2", "tag": "v1.2.2"},
-            }
-        ),
-    )
+    path = tmp_path / ".agentic-workspace/payload-provenance.json"
+    provenance = json.loads(path.read_text(encoding="utf-8"))
+    if drift in {"version", "package"}:
+        provenance["release_identity"][drift] = "wrong"
+    elif drift == "kind":
+        provenance["kind"] = "unknown"
+    elif drift == "schema":
+        provenance["payload_schema"] = "unknown"
+    elif drift == "capabilities":
+        provenance["payload_capabilities"] = []
+    elif drift == "files":
+        provenance["payload_files"] = []
+    _write(path, "[invalid" if drift == "malformed" else json.dumps(provenance))
     _write(tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md", "stale")
     _write(tmp_path / ".agentic-workspace/memory/skills/memory-router/SKILL.md", "stale")
 

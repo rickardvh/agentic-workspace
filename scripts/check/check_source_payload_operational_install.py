@@ -204,9 +204,8 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
             "rule": "Invalid workspace config is owned by config validation, not payload alignment.",
         }
     payload_target = config.get("payload", {})
-    enabled = isinstance(payload_target, dict) and bool(payload_target.get("dogfood_latest"))
-    target_release = payload_target.get("target_release") if isinstance(payload_target, dict) else None
-    if not enabled or target_release not in {None, "source-current"}:
+    enabled = isinstance(payload_target, dict) and payload_target.get("target_release") == "source-current"
+    if not enabled:
         return {
             "status": "not-configured",
             "enabled": False,
@@ -231,27 +230,38 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
             provenance = {}
     if not provenance:
         drift.append({"path": ".agentic-workspace/payload-provenance.json", "reason": "payload provenance is missing or invalid"})
-    elif source_version:
-        installed_by = provenance.get("installed_by", {})
+    else:
         release_identity = provenance.get("release_identity", {})
         observed = {
-            "installed_by.version": installed_by.get("version") if isinstance(installed_by, dict) else None,
+            "kind": provenance.get("kind"),
+            "payload_schema": provenance.get("payload_schema"),
+            "release_identity.package": release_identity.get("package") if isinstance(release_identity, dict) else None,
             "release_identity.version": release_identity.get("version") if isinstance(release_identity, dict) else None,
-            "release_identity.tag": release_identity.get("tag") if isinstance(release_identity, dict) else None,
         }
         expected = {
-            "installed_by.version": source_version,
+            "kind": "agentic-workspace/payload-provenance/v1",
+            "payload_schema": "agentic-workspace/payload/v1",
+            "release_identity.package": "agentic-workspace",
             "release_identity.version": source_version,
-            "release_identity.tag": f"v{source_version}",
         }
         for field, expected_value in expected.items():
-            if observed[field] != expected_value:
+            if not expected_value or observed[field] != expected_value:
                 drift.append(
                     {
                         "path": ".agentic-workspace/payload-provenance.json",
                         "reason": f"{field} is {observed[field]!r}; expected {expected_value!r}",
                     }
                 )
+        capabilities = provenance.get("payload_capabilities")
+        required = payload_target.get("minimum_capabilities", [])
+        if (
+            not isinstance(capabilities, list)
+            or "installed-state-sync-v2" not in capabilities
+            or any(capability not in capabilities for capability in required)
+        ):
+            drift.append(
+                {"path": ".agentic-workspace/payload-provenance.json", "reason": "required native payload capability identity is missing"}
+            )
 
     manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
     source_payload_root = repo_root / "src" / "agentic_workspace" / "_payload"
@@ -261,6 +271,11 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
         for relative in payload_files if isinstance(payload_files, list) else []:
             if not isinstance(relative, str):
                 continue
+            declared = provenance.get("payload_files")
+            if not isinstance(declared, list) or relative not in declared:
+                drift.append(
+                    {"path": ".agentic-workspace/payload-provenance.json", "reason": f"declared payload identity is missing {relative}"}
+                )
             source = source_payload_root / relative
             installed = repo_root / relative
             if not source.is_file() or not installed.is_file():
@@ -304,9 +319,7 @@ def _committed_payload_alignment_warnings(*, repo_root: Path) -> list[BoundaryWa
         BoundaryWarning(
             WARNING_COMMITTED_PAYLOAD_DRIFT,
             ".agentic-workspace/payload-provenance.json",
-            "Committed source-current payload does not match its source: "
-            + "; ".join(samples)
-            + (" ..." if len(drift) > 8 else ""),
+            "Committed source-current payload does not match its source: " + "; ".join(samples) + (" ..." if len(drift) > 8 else ""),
         )
     ]
 
@@ -518,9 +531,7 @@ def _installed_target_available(target: str, available: set[str]) -> bool:
     return any(fnmatch.fnmatch(candidate, target) for candidate in available)
 
 
-def _discover_operational_references(
-    *, manifest: dict[str, object], repo_root: Path, installed_sources: set[str]
-) -> set[tuple[str, str]]:
+def _discover_operational_references(*, manifest: dict[str, object], repo_root: Path, installed_sources: set[str]) -> set[tuple[str, str]]:
     discovery = manifest.get("reference_discovery", {})
     if not isinstance(discovery, dict):
         return set()
@@ -642,9 +653,7 @@ def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[s
         installed_sources=installed_sources,
     )
     declared = {
-        (str(reference.get("source", "")), str(reference.get("target", "")))
-        for reference in references
-        if isinstance(reference, dict)
+        (str(reference.get("source", "")), str(reference.get("target", ""))) for reference in references if isinstance(reference, dict)
     }
     for source, target in sorted(discovered - declared):
         errors.append(f"discovered installed reference is missing from required_references: {source} -> {target}")
@@ -867,9 +876,7 @@ def _classified_source_only_payload_files(*, package_name: str, expected: list[s
     for relative in extra:
         classification = "unexpected-source-extra"
         rule = "Unexpected bootstrap source extras require classification before they can be treated as intentional."
-        if package_name == "planning" and (
-            "__pycache__" in relative
-        ):
+        if package_name == "planning" and ("__pycache__" in relative):
             classification = "intentional-source-extra"
             rule = "Transient planning bytecode/cache files are ignored as source-only extras."
         elif package_name == "memory" and _is_allowed_memory_bootstrap_extra(relative):
@@ -925,11 +932,15 @@ def _package_sync_proof(
     actual_payload = _package_payload_files(repo_root, package_name)
     missing = _missing_payload_sources(expected=expected_payload, actual=actual_payload)
     extra = sorted(set(actual_payload) - set(expected_payload))
-    classified_source_only = _classified_source_only_payload_files(package_name=package_name, expected=expected_payload, actual=actual_payload)
+    classified_source_only = _classified_source_only_payload_files(
+        package_name=package_name, expected=expected_payload, actual=actual_payload
+    )
     classification_counts = _classification_counts(classified_source_only)
     unexpected_extra = [item["path"] for item in classified_source_only if item["classification"] == "unexpected-source-extra"]
     force_include = _force_include_entries(repo_root, package_name)
-    manifest_missing = sorted(relative for relative in expected_payload if not _force_include_covers_bootstrap_path(force_include, relative))
+    manifest_missing = sorted(
+        relative for relative in expected_payload if not _force_include_covers_bootstrap_path(force_include, relative)
+    )
     root = _root_status(repo_root, root_sentinels)
     package_warnings = [
         warning.warning_class
@@ -939,7 +950,14 @@ def _package_sync_proof(
     package_local_warning_classes = sorted({warning for warning in package_warnings if warning == WARNING_PACKAGE_LOCAL_INSTALL_DRIFT})
     executable_payload_files = _executable_payload_files(repo_root, package_name)
     status = "current"
-    if missing or unexpected_extra or manifest_missing or root["status"] != "current" or package_local_warning_classes or executable_payload_files:
+    if (
+        missing
+        or unexpected_extra
+        or manifest_missing
+        or root["status"] != "current"
+        or package_local_warning_classes
+        or executable_payload_files
+    ):
         status = "warning"
     return {
         "package": package_name,
