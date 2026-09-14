@@ -1,4 +1,4 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "patch"
-summary = "Refresh generated execution-posture contracts and align aggregate checks with native artifacts and sealed transport."
+summary = "Ship the sealed Codex bridge, refresh generated execution-posture contracts and align aggregate checks with native artifacts."
 issues = [3208, 2909, 2616, 3020]
