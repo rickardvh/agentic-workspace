@@ -74,6 +74,7 @@ jobs:
         run: |
           python scripts/release/coordinated_release.py prepare
           uv lock
+          uv run python scripts/generate/generate_external_consumer_profile.py
           uv run python scripts/generate/generate_command_packages.py
           python scripts/release/coordinated_release.py verify
 

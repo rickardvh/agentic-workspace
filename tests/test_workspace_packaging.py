@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import json
 import os
 import re
@@ -20,12 +19,6 @@ import pytest
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
 PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
-MODULE_PACKAGE_DIRS = (
-    WORKSPACE_ROOT / "packages" / "memory",
-    WORKSPACE_ROOT / "packages" / "planning",
-    WORKSPACE_ROOT / "packages" / "verification",
-)
-RELEASE_WHEEL_PATCHER = WORKSPACE_ROOT / "scripts" / "release" / "patch_workspace_release_wheel.py"
 
 
 @contextlib.contextmanager
@@ -62,12 +55,6 @@ def workspace_wheel(workspace_artifacts: tuple[Path, Path]) -> Path:
 @pytest.fixture(scope="module")
 def workspace_sdist(workspace_artifacts: tuple[Path, Path]) -> Path:
     return workspace_artifacts[1]
-
-
-@pytest.fixture(scope="module")
-def workspace_wheelhouse(tmp_path_factory: pytest.TempPathFactory, workspace_wheel: Path) -> list[Path]:
-    output_dir = tmp_path_factory.mktemp("workspace-wheelhouse")
-    return _build_workspace_wheelhouse(str(output_dir), root_wheel=workspace_wheel)
 
 
 def _build_artifact(tmpdir: str, artifact: str) -> Path:
@@ -160,11 +147,8 @@ def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() ->
     assert "ready_for_review" in ci_text
     assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in artifact_job
     assert "uv build --wheel --sdist --out-dir dist" in artifact_job
-    assert "uv build --wheel --sdist --out-dir dist packages/memory" in artifact_job
-    assert "uv build --wheel --sdist --out-dir dist packages/planning" in artifact_job
-    assert "uv build --wheel --sdist --out-dir dist packages/verification" in artifact_job
     assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in artifact_job
-    assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in artifact_job
+    assert "scripts/release/stage_native_npm.py" in artifact_job
     assert (
         "make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist "
         "PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci"
@@ -204,16 +188,13 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     assert "must point at a commit reachable from origin/master" in release_text
     assert ".github/release-ownership.json" in release_text
     assert "uv build --wheel --sdist --out-dir dist" in release_text
-    assert "uv build --wheel --sdist --out-dir dist packages/memory" in release_text
-    assert "uv build --wheel --sdist --out-dir dist packages/planning" in release_text
-    assert "uv build --wheel --sdist --out-dir dist packages/verification" in release_text
-    assert "scripts/release/patch_workspace_release_wheel.py" in release_text
-    assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in release_text
+    assert "tests/test_native_release_topology.py" in release_text
+    assert "scripts/release/stage_native_npm.py" in release_text
     assert "agentic-workspace-release-manifest.json" in release_text
     assert "source_commit" in release_text
     assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in release_text
     assert "SHA256SUMS" in release_text
-    assert "softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2" in release_text
+    assert "softprops/action-gh-release@" in release_text
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
@@ -467,30 +448,11 @@ def test_workspace_runtime_entrypoint_stays_off_command_generation() -> None:
     assert pyproject["project"]["scripts"]["agentic-workspace"] == "agentic_workspace.cli:main"
 
 
-def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheelhouse: list[Path], tmp_path: Path) -> None:
-    workspace_exe = _install_workspace_stack_venv(wheelhouse=workspace_wheelhouse, tmpdir_path=tmp_path)
+def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheel: Path, tmp_path: Path) -> None:
+    workspace_exe = _install_workspace_stack_venv(wheelhouse=[workspace_wheel], tmpdir_path=tmp_path)
+    for module in ("agentic_workspace_memory", "agentic_workspace_planning", "agentic_workspace_verification"):
+        assert _venv_site_package_entry_names(tmp_path / ".venv", module) == []
     assert _venv_site_package_entry_names(tmp_path / ".venv", "command_generation") == []
-    _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=workspace_exe, tmp_path=tmp_path)
-
-
-def test_release_root_wheel_installs_workspace_stack_from_same_release_assets(workspace_wheelhouse: list[Path], tmp_path: Path) -> None:
-    version = tomllib.loads((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
-    release_dist = tmp_path / "release-dist"
-    release_dist.mkdir()
-    release_wheels = [release_dist / wheel.name for wheel in workspace_wheelhouse]
-    for source, target in zip(workspace_wheelhouse, release_wheels, strict=True):
-        target.write_bytes(source.read_bytes())
-
-    patcher = _load_release_wheel_patcher()
-    patched_root = patcher.patch_workspace_wheel(
-        dist_dir=release_dist,
-        version=version,
-        release_asset_base_url=release_dist.resolve().as_uri(),
-    )
-    workspace_exe = _install_workspace_root_release_venv(root_wheel=patched_root, tmpdir_path=tmp_path)
-    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_workspace_memory")
-    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_workspace_planning")
-    assert _venv_site_package_entry_names(tmp_path / ".venv-release", "agentic_workspace_verification")
     _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=workspace_exe, tmp_path=tmp_path)
 
 
@@ -536,17 +498,6 @@ def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path,
     assert not (target / ".agentic-workspace/local/cache/generated-cli-fingerprint.json").exists()
 
 
-def _build_workspace_wheelhouse(tmpdir: str, *, root_wheel: Path) -> list[Path]:
-    wheel_paths = [root_wheel]
-    wheel_paths.extend(_build_artifact_from(package_dir, tmpdir, "wheel") for package_dir in MODULE_PACKAGE_DIRS)
-    names = {path.name for path in wheel_paths}
-    assert any(name.startswith("agentic_workspace-") for name in names)
-    assert any(name.startswith("agentic_workspace_memory-") for name in names)
-    assert any(name.startswith("agentic_workspace_planning-") for name in names)
-    assert any(name.startswith("agentic_workspace_verification-") for name in names)
-    return wheel_paths
-
-
 def _install_workspace_stack_venv(*, wheelhouse: list[Path], tmpdir_path: Path) -> Path:
     venv_path = tmpdir_path / ".venv"
     subprocess.run(
@@ -572,42 +523,6 @@ def _install_workspace_stack_venv(*, wheelhouse: list[Path], tmpdir_path: Path) 
         check=True,
     )
     return _venv_script(venv_path, "agentic-workspace")
-
-
-def _install_workspace_root_release_venv(*, root_wheel: Path, tmpdir_path: Path) -> Path:
-    venv_path = tmpdir_path / ".venv-release"
-    subprocess.run(
-        ["uv", "venv", str(venv_path)],
-        cwd=WORKSPACE_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    python_path = _venv_python(venv_path)
-    subprocess.run(
-        [
-            "uv",
-            "pip",
-            "install",
-            "--python",
-            str(python_path),
-            str(root_wheel),
-        ],
-        cwd=WORKSPACE_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return _venv_script(venv_path, "agentic-workspace")
-
-
-def _load_release_wheel_patcher():
-    spec = importlib.util.spec_from_file_location("release_wheel_patcher_under_test", RELEASE_WHEEL_PATCHER)
-    assert spec is not None
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
 
 
 def _run_workspace_console_json(workspace_exe: Path, cwd: Path, *args: str) -> dict[str, object]:

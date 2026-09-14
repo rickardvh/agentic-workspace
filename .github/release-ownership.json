@@ -72,6 +72,8 @@
     "generated/workspace/typescript/package.json",
     ".release/releases/",
     "uv.lock",
+    "generated/workspace/python/external_contract_bundle.json",
+    "generated/workspace/typescript/external_contract_bundle.json",
     ".release/changes/",
     "generated/workspace/.agentic-workspace-cli-fingerprint.json",
     "generated/memory/.agentic-workspace-cli-fingerprint.json",

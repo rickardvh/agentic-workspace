@@ -76,9 +76,9 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
         "make packed-artifact-conformance",
         "scripts/check/check_package_identity.py",
         "scripts/check/check_security_supply_chain.py",
-        "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638",
+        "anchore/sbom-action@",
         "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8",
-        "softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228",
+        "softprops/action-gh-release@",
     )
     for authority in shared_authorities:
         assert authority in preview

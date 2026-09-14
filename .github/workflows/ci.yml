@@ -319,12 +319,11 @@ jobs:
       - name: Build coordinated artifacts
         run: |
           uv build --wheel --sdist --out-dir dist
-          uv build --wheel --sdist --out-dir dist packages/memory
-          uv build --wheel --sdist --out-dir dist packages/planning
-          uv build --wheel --sdist --out-dir dist packages/verification
+          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
+          (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
       - name: Run built package and external-consumer proof
         run: |
-          uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
+          uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
           uv run python scripts/check/run_external_consumer_readiness.py --dist-dir dist --require-node
       - name: Prove exact npm artifacts
         run: make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci

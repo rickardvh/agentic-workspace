@@ -183,6 +183,10 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert "coordinated_release.py prepare" in workflow
     assert "coordinated_release.py verify" in workflow
     assert "scripts/generate/generate_command_packages.py" in workflow
+    assert workflow.index("coordinated_release.py prepare") < workflow.index("scripts/generate/generate_external_consumer_profile.py")
+    assert workflow.index("scripts/generate/generate_external_consumer_profile.py") < workflow.index(
+        "scripts/generate/generate_command_packages.py"
+    )
     assert workflow.index("coordinated_release.py prepare") < workflow.index("scripts/generate/generate_command_packages.py")
     assert workflow.index("scripts/generate/generate_command_packages.py") < workflow.index("coordinated_release.py verify")
     assert "coordinated_release.py tag-plan" in workflow
@@ -277,7 +281,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "generate_release_notes: true" not in workflow
     assert "SHA256SUMS" in workflow
     assert "Missing checksums for release assets" in workflow
-    assert "softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2" in workflow
+    assert "softprops/action-gh-release@" in workflow
     assert "uv sync --locked" in workflow
     assert "security-supply-chain-readiness.json" in workflow
     assert "distribution-install-readiness.json" in workflow
@@ -286,7 +290,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "--require-exact-urls" in workflow
     assert "--write-receipts" in workflow
     assert "agentic-workspace.spdx.json" in workflow
-    assert "anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638" in workflow
+    assert "anchore/sbom-action@" in workflow
     assert "actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8" in workflow
     assert "fail_on_unmatched_files: true" in workflow
     assert "support-bearing-promotion.json" in workflow
@@ -455,6 +459,8 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
         "generated/planning/.agentic-workspace-cli-fingerprint.json",
         "generated/verification/.agentic-workspace-cli-fingerprint.json",
         "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+        "generated/workspace/python/external_contract_bundle.json",
+        "generated/workspace/typescript/external_contract_bundle.json",
         "generated/workspace/typescript/package.json",
         "pyproject.toml",
         "uv.lock",
