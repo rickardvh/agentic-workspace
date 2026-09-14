@@ -164,8 +164,9 @@ route test passes its unchanged 100,000-byte bound. Existing Configuration tests
 retain invalid source/content and currentness coverage.
 
 The existing interface generator now owns both shipped module ownership mirrors.
-Memory/Planning bootstrap templates and Memory's generated pointer/detection use
-the canonical skill. Focused package lifecycle tests force packaged ownership
+Memory/Planning bootstrap templates, copied compatibility manuals and Memory's
+generated pointer/detection use the canonical skill. The command guard covers
+both complete shipped bootstrap Markdown trees, including hidden payload paths. Focused package lifecycle tests force packaged ownership
 fallback, exercise install and repeated upgrade, preserve human/domain/local
 material through uninstall, and guard generated command examples. Existing
 Memory and Planning package install/upgrade/removal tests cover static support

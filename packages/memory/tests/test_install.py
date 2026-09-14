@@ -1158,7 +1158,7 @@ def test_bootstrap_readme_includes_optional_patterns_and_current_memory_migratio
     assert "symptom captured -> remediation target chosen -> follow-up routed -> remediation lands" in text
     assert "## Improvement Paths" in text
     assert "live decision review: the active planning slice plus `.agentic-workspace/memory/repo/decisions/README.md`" in text
-    assert "promotion-report --mode remediation" in text
+    assert "Only exact package-owned static support is refreshable/removable" in text
     assert "Do not assume memory volume should follow one universal trend" in text
     assert "suggest upstream repo improvements instead of treating memory as the default answer to repo complexity" in text
     assert "remain advisory outside the managed bootstrap surface" in text
