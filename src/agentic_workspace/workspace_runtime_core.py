@@ -10279,7 +10279,7 @@ def _managed_workspace_config_header(*, cli_invoke: str) -> str:
             "# Agentic Workspace managed config.",
             "# Edit this file directly only when changing repo-owned policy.",
             f"# Reference: {WORKSPACE_CONFIG_CONTRACT_DOC}",
-            f"# Check resolved config: {cli_invoke} config --target . --format json",
+            f'# Inspect current owner concerns: {cli_invoke} start --target . --task "Inspect current configuration" --format json',
         ]
     )
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import tomllib
 from pathlib import Path
@@ -21,6 +22,25 @@ MAIN = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 spec = importlib.util.spec_from_file_location("agent_interface_generator", ROOT / "scripts/generate/generate_agent_interface.py")
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
+
+
+def assert_current_command_examples(text: str) -> None:
+    # Check copyable command recipes against the same declaration the native
+    # executable consumes, rather than maintaining a second list of commands.
+    declaration = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["native_cli"]
+    commands = {item["name"] for item in declaration["commands"]}
+    examples = set(re.findall(r"\bagentic-workspace\s+([a-z][a-z-]*)(?=\s+--)", text))
+    assert not examples - commands, f"Non-current native command examples: {sorted(examples - commands)}"
+
+
+def test_active_bootstrap_and_config_command_examples_match_native_surface():
+    surfaces = ["AGENTS.md", MAIN, ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/config.toml", "docs/agentic-workspace-install.md"]
+    for reference in surfaces:
+        assert_current_command_examples((ROOT / reference).read_text())
+    # Same guard rejects the durable drift class, including a removed command
+    # that is not a known historical alias.
+    with pytest.raises(AssertionError, match="Non-current native command"):
+        assert_current_command_examples("agentic-workspace unavailable-operation --target .")
 
 
 def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
@@ -230,6 +250,8 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
         assert agents.read_text().count(workspace_pointer_block()) == 1
         assert (tmp_path / MAIN).read_text() == (ROOT / MAIN).read_text()
         assert not (tmp_path / ".agentic-workspace/skills/workspace-operating-loop/SKILL.md").exists()
+        for reference in ("AGENTS.md", MAIN, ".agentic-workspace/config.toml"):
+            assert_current_command_examples((tmp_path / reference).read_text())
     assert cli.main(["uninstall", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     assert agents.read_text().strip() == "Repository instruction: preserve this line."

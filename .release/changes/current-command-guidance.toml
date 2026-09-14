@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep generated configuration guidance and active repository examples aligned with the native command surface."
+issues = [3224, 3250]

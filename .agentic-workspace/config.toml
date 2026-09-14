@@ -83,7 +83,7 @@ stage = "before-commit"
 force = "recommended"
 scope_tags = ["workspace", "planning", "memory"]
 commands = [
-  "uv run agentic-workspace summary --format json",
+  "agentic-workspace start --target . --task \"Inspect current proof and Planning before committing\" --format json",
   "git status --short",
 ]
 review_hint = "Treat this as a closeout/readiness gate, not as a substitute for task-specific validation."
@@ -101,12 +101,9 @@ scope_tags = [
   "self-improvement",
 ]
 commands = [
-  "uv run agentic-workspace report --target . --section workflow_obligations --format json",
-  "uv run agentic-workspace report --target . --section closeout_trust --format json",
-  "uv run agentic-workspace reconcile --format json",
-  "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
+  "agentic-workspace start --target . --task \"Inspect current lane closeout and actionable dogfood findings\" --format json",
 ]
-review_hint = "Do this without waiting for explicit instruction. Before claiming a lane complete, separate validation success, issue completion, intent satisfaction, and total operating-cost direction; consume improvement_signal_candidates, fix blockers immediately, create narrow issues for durable friction, and promote reusable knowledge to Memory only when it prevents rediscovery. Surface actionable findings clearly in the final answer."
+review_hint = "Do this without waiting for explicit instruction. Use the configured invocation and canonical workspace-startup skill; start is a current query, not reconciliation or proof. Follow exact current owner requests for actionable findings. Before claiming a lane complete, separate validation success, issue completion, intent satisfaction, and total operating-cost direction; fix blockers, route durable friction to its owner, and retain reusable knowledge only when it prevents rediscovery. Surface actionable findings clearly in the final answer."
 
 # Compatibility-only review-stage synchronization for a generated authority surface.
 [workflow_obligations.system_intent_refresh]
@@ -115,6 +112,6 @@ stage = "review"
 force = "recommended"
 scope_tags = ["workspace", "system-intent"]
 commands = [
-  "uv run agentic-workspace system-intent --target . --sync --format json",
+  "agentic-workspace start --target . --task \"Inspect current system-intent source changes\" --format json",
 ]
-review_hint = "Treat system intent as directional input and keep the compiled declaration aligned without turning it into active task state."
+review_hint = "Use the configured invocation and current system-intent owner. Treat system intent as directional input and preserve source currentness; start does not synchronize or authorize rewriting an admitted source revision. An unavailable reconciliation remains an owner gap."
