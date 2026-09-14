@@ -9,7 +9,7 @@ Treat recurring-failures as anti-trap memory for repeated or high-likelihood mis
 
 Treat the CLI as the installer and maintenance entrypoint for this contract, not as the full definition of the product.
 
-It is intended to be copied into an existing repository to provide:
+Its package lifecycle supplies selected static support and initial templates for:
 
 - `AGENTS.md` as the slim local bootstrap entrypoint
 - `.agentic-workspace/memory/repo/` as durable checked-in technical memory
@@ -53,22 +53,18 @@ If a remediation suggestion starts depending on repo-shape-specific judgement, p
 When maintaining this repository, treat `bootstrap/` as the source of truth for installed files. The packaged wheel payload is built from this directory.
 Keep it structural: directory `README.md`, `AGENTS.template.md`, `*.template.md`, schemas, and managed `.agentic-workspace/` payload only.
 
-## Copy targets
+## Installation boundary
 
-Copy as-is:
+Follow the canonical workspace startup/setup skill and the selected artifact's
+actual owner operations. Do not copy whole module trees into a lived-in target.
+The standalone `agentic-memory` entrypoint is a module maintenance surface;
+it does not replace the ordinary native Workspace procedure or grant domain
+mutation, effect, retention or completion authority.
 
-- `AGENTS.md`
-- `.agentic-workspace/memory/repo/`
-
-Do not install root-level helper directories, maintainer-only repo docs, implementation notes, optional fragments, raw scripts, or any other executable code by default. Executable behavior belongs in the CLI/package source, not in checked-in bootstrap payload files.
-
-## Recommended installation order
-
-1. Copy `AGENTS.md`.
-2. Copy `.agentic-workspace/memory/repo/`, including optional routing calibration under `.agentic-workspace/memory/repo/current/`.
-3. Copy `.agentic-workspace/memory/`.
-4. Run `agentic-workspace doctor --target ./repo --format json`.
-5. Run `agentic-workspace report --target ./repo --format json` when repeated friction or memory drift should stay visible in normal workflow.
+Only exact package-owned static support is refreshable/removable. Existing human
+instructions and durable Memory/Planning/local state remain with their owners.
+Report a missing canonical workspace bootstrap instead of inventing a second
+startup manual. A successful query alone does not reconcile or retain a finding.
 
 ## Placeholder replacement
 
@@ -87,18 +83,18 @@ The installer can also fill these placeholders when you pass the matching explic
 Delete unused routing examples once the target repository has concrete notes.
 When adding the first repo-specific note of a class, start from `.agentic-workspace/memory/repo/templates/memory-note.template.md`, `.agentic-workspace/memory/repo/templates/invariant.template.md`, or `.agentic-workspace/memory/repo/templates/runbook.template.md` instead of copying old prose by hand.
 
-`AGENTS.md` should stay short and point to `.agentic-workspace/memory/WORKFLOW.md` for the shared operating model.
+`AGENTS.md` should stay short and point to `.agentic-workspace/skills/workspace-startup/SKILL.md` for the canonical procedure. Memory-specific references do not replace it.
 Bootstrap should modify `AGENTS.md` only through the managed workflow pointer block. Repo-specific `AGENTS.md` prose outside that block is repo-owned and should not be treated as shared upgradeable guidance.
 
-This bootstrap is planning-system agnostic. The installed `.agentic-workspace/memory/repo/` tree owns durable repo knowledge, `.agentic-workspace/memory/repo/current/` is optional routing calibration and legacy current-memory migration review, repo-specific memory skills can live under `.agentic-workspace/memory/repo/skills/`, and `.agentic-workspace/memory/` is the bootstrap-managed surface for shared workflow rules, shipped skills, and temporary bootstrap workspace files. Keep the managed package home concentrated there instead of spreading package-managed machinery through wider repo roots.
+This bootstrap is planning-system agnostic. The installed `.agentic-workspace/memory/repo/` tree owns durable repo knowledge, `.agentic-workspace/memory/repo/current/` is optional routing calibration and legacy current-memory migration review, repo-specific memory skills can live under `.agentic-workspace/memory/repo/skills/`, and only the specifically declared static support files inside `.agentic-workspace/memory/` are package-managed. The enclosing domain root remains repository-owned. Keep the managed package home concentrated there instead of spreading package-managed machinery through wider repo roots.
 When planning is installed too, the combined install should be cheaper than either one alone: planning should borrow durable context from memory, and completed planning work should promote durable residue back into memory or canonical docs instead of re-explaining it forever.
 
 Bundled product skills should stay limited to bootstrap lifecycle operations. Repo-local memory procedures should live in repo-owned `.agentic-workspace/memory/repo/skills/`. General non-memory skills should not.
 
 Ownership split:
 
-- bootstrap-managed and upgrade-replaceable: the workflow pointer block in `AGENTS.md`, `.agentic-workspace/memory/`, and other shared replaceable payload files
-- repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer block, repo-added sibling skills under `.agentic-workspace/memory/repo/skills/`, and ordinary notes outside the product-managed shared directories
+- bootstrap-managed and upgrade-replaceable: the explicit workflow pointer fence and declared static support files; never the whole Memory or Planning root
+- repo-owned and expected to diverge: `AGENTS.md` content outside the managed pointer fence, durable records and notes, local owner state and repo-added skills under `.agentic-workspace/memory/repo/skills/`
 
 Legacy `.agentic-workspace/memory/repo/current/project-state.md` and `task-context.md` files should be migrated out of shared memory: durable facts move into primary memory notes or canonical docs, active state moves back to planning/status, and transient context moves to local-only scratch.
 
@@ -187,29 +183,13 @@ Ask one more question before expanding a note: what repo change would let this n
 
 ## Upgrade model
 
-Prefer this flow for existing or older installs:
+Use the canonical workspace procedure and exact operations exposed by the selected
+artifact. Standalone module maintenance retains its existing install/adopt/upgrade/
+uninstall boundary over declared static payload, without owning whole domain roots.
+Inspect proposed changes and preserve repository-specific meaning. Use explicit
+entrypoint patching only for the package's managed fence; unrelated human prose
+remains repository-owned. Repeating refresh should leave current bytes unchanged.
 
-1. Run `agentic-workspace doctor --target <repo> --modules memory`.
-2. Run `agentic-workspace upgrade --dry-run --target <repo> --modules memory`.
-3. Apply the minimal-safe upgrade plan.
-4. Use `--apply-local-entrypoint` only when you want the installer to patch `AGENTS.md`.
-
-Upgrade is normally triggered through the checked-in `memory-upgrade` skill under `.agentic-workspace/memory/skills/`, which runs the packaged upgrade implementation using the resolved source record in `.agentic-workspace/memory/UPGRADE-SOURCE.toml`. Temporary bootstrap workspace files are for install and adopt lifecycle completion, not the primary upgrade path.
-
-Use `agentic-workspace modules --target <repo> --format json` to inspect installed module surfaces.
-Use `agentic-workspace memory promotion-report --target <repo>` to identify notes that should likely be promoted into canonical docs or reviewed as elimination candidates.
-Use `agentic-workspace memory promotion-report --mode remediation --target <repo>` to focus on medium/high-confidence remediation targets for shrinking or removing memory.
-Use `agentic-workspace doctor --target <repo> --modules memory` before adopting stricter repo policy.
-Use `--policy-profile strict-doc-ownership` with `install`, `adopt`, or `upgrade` to set `forbid_core_docs_depend_on_memory = true` in `.agentic-workspace/memory/repo/manifest.toml`.
-
-## Automation notes
-
-A later automation script should:
-
-- copy stable files as-is
-- merge append-only fragments into existing files
-- replace placeholders or leave them for a human to fill in
-- avoid overwriting existing repo-specific memory notes blindly
-- treat `.agentic-workspace/memory/VERSION.md` as the installed system version marker
-- run the freshness audit after installation
-- optionally enforce repo-local policy that core docs must not depend on memory
+Current runtime decisions and semantic owner changes belong to the native owners.
+This package README is descriptive support, not another operating procedure or
+permission to modify managed records directly.

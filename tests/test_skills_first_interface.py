@@ -36,8 +36,10 @@ def assert_current_command_examples(text: str) -> None:
 def test_active_bootstrap_and_config_command_examples_match_native_surface():
     surfaces = ["AGENTS.md", MAIN, ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/config.toml", "docs/agentic-workspace-install.md"]
     surfaces += json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())["payload_files"]
+    for module in ("memory", "planning"):
+        surfaces += [path.relative_to(ROOT).as_posix() for path in (ROOT / f"packages/{module}/bootstrap").rglob("*.md")]
     for reference in surfaces:
-        assert_current_command_examples((ROOT / reference).read_text())
+        assert_current_command_examples((ROOT / reference).read_text(encoding="utf-8").replace("<effective-cli>", "agentic-workspace"))
     # Same guard rejects the durable drift class, including a removed command
     # that is not a known historical alias.
     with pytest.raises(AssertionError, match="Non-current native command"):
