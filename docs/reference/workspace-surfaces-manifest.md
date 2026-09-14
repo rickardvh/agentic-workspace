@@ -29,11 +29,11 @@ Manifest of workspace-owned surfaces, generated artifacts, and ownership roles.
 | `reference_resolution.installed-local` | string | yes |  | Resolution rule for paths installed into the host repository. |  |  |
 | `reference_resolution.package-resource` | string | yes |  | Resolution rule for stable resources retained inside the installed package. |  |  |
 | `reference_resolution.optional` | string | yes |  | Resolution rule for optional references with a declared degraded behavior. |  |  |
-| `no_cli_fallback` | object | yes |  | Content-level fallback boundary exercised from installed files with the CLI unavailable. |  |  |
-| `no_cli_fallback.entrypoint` | string | yes |  | Installed executable used as the no-CLI fallback entrypoint. |  |  |
-| `no_cli_fallback.policy` | string | yes |  | Installed machine-readable authority consumed by the executable fallback. |  |  |
-| `no_cli_fallback.forbidden_actions` | array of string | yes |  | Canonical forbidden-action decisions that the executable fallback must return. |  |  |
-| `no_cli_fallback.next_safe_action` | string | yes |  | Stable action returned when the installed CLI is unavailable. |  |  |
+| `no_cli_fallback` | object | yes |  | Compatibility pointers to the canonical skill; no fallback runtime or operating decision. |  |  |
+| `no_cli_fallback.entrypoint` | string | yes |  | Compatibility entrypoint that directs consumers to the canonical skill without synthesizing runtime decisions. |  |  |
+| `no_cli_fallback.policy` | string | yes |  | Compatibility procedure-pointer file; it is not an executable fallback policy or owner-state snapshot. |  |  |
+| `no_cli_fallback.procedure` | string | yes |  | Canonical startup skill containing the selective read-only procedure for consumers without executable AW. |  |  |
+| `no_cli_fallback.authority` | const `"none"` | yes |  | Compatibility pointers grant no runtime, mutation, proof or completion authority. |  |  |
 | `system_intent_mirror_kind` | string | yes |  | System intent mirror kind text value used by this contract. |  |  |
 | `subsystem_intent_kind` | string | yes |  | Subsystem intent set kind used by the editable scoped durable-intent store. |  |  |
 | `default_agents_path` | string | yes |  | Default agents path text value used by this contract. |  |  |

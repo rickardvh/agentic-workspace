@@ -197,16 +197,20 @@
     ],
     "properties": {
       "entrypoint": {
-        "type": "string"
+        "type": "string",
+        "description": "Compatibility entrypoint that directs consumers to the canonical skill without synthesizing runtime decisions."
       },
       "policy": {
-        "type": "string"
+        "type": "string",
+        "description": "Compatibility procedure-pointer file; it is not an executable fallback policy or owner-state snapshot."
       },
       "procedure": {
-        "type": "string"
+        "type": "string",
+        "description": "Canonical startup skill containing the selective read-only procedure for consumers without executable AW."
       },
       "authority": {
-        "const": "none"
+        "const": "none",
+        "description": "Compatibility pointers grant no runtime, mutation, proof or completion authority."
       }
     },
     "description": "Compatibility pointers to the canonical skill; no fallback runtime or operating decision."
