@@ -10,6 +10,8 @@ import tarfile
 import zipfile
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/release/support_bearing_promotion.py"
 spec = importlib.util.spec_from_file_location("support_bearing_promotion_under_test", SCRIPT)
@@ -100,7 +102,8 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
         archive.writestr("artifact.json", json.dumps(manifest))
         for name in ("agentic-workspace", "agentic-workspace-core"):
             archive.writestr(name, binary)
-    with tarfile.open(dist / "root.tgz", "w:gz") as archive:
+    (dist / "agentic_workspace-1.0.0.tar.gz").write_bytes(b"fixture source archive")
+    with tarfile.open(dist / "agentic-workspace-workspace-cli-1.0.0.tgz", "w:gz") as archive:
         for name, data in {
             "package/package.json": {"os": ["linux"], "cpu": ["x64"]},
             "package/src/native/bin/artifact.json": manifest,
@@ -140,14 +143,23 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
         )
     semantic = []
     for major in (20, 24, 25):
+        receipt = {
+            "kind": "agentic-workspace/native-release-conformance/v1",
+            "status": "passed",
+            "execution_context": "hosted-ci",
+            "subject": {
+                "node_version": f"v{major}.0.0",
+                "source_commit": commit,
+                "source_diff_sha256": hashlib.sha256(b"").hexdigest(),
+                "proof_fingerprint": PROMOTION.NATIVE_PROOF.proof_identity(),
+                "release_artifacts": PROMOTION.NATIVE_PROOF.inventory(dist),
+            },
+        }
+        receipt["receipt_id"] = hashlib.sha256(json.dumps(receipt, sort_keys=True).encode()).hexdigest()
         semantic.append(
             _write(
                 dist / f"generated-command-conformance-node{major}.json",
-                {
-                    "kind": "agentic-workspace/native-release-conformance/v1",
-                    "status": "passed",
-                    "subject": {"node_version": f"v{major}.0.0"},
-                },
+                receipt,
             )
         )
     _write(
@@ -164,11 +176,11 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             "kind": "agentic-workspace/redistributable-package-readiness/v1",
             "status": "passed",
             "license_spdx": "MIT",
-            "artifact_count": 3,
+            "artifact_count": 4,
             "artifacts": [
                 {"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
                 for path in dist.iterdir()
-                if path.suffix in {".whl", ".tgz", ".zip"}
+                if path.name.endswith((".whl", ".tgz", ".zip", ".tar.gz"))
             ],
         },
     )
@@ -204,6 +216,15 @@ def test_composed_promotion_passes_only_with_every_exact_receipt(tmp_path: Path)
     assert result["status"] == "passed"
     assert set(result["domains"].values()) == {"passed", "ready"}
     assert result["artifacts"]
+
+    # A complete valid matrix cannot hide an additional invalid proof input.
+    receipt = json.loads((tmp_path / "dist/generated-command-conformance-node20.json").read_text(encoding="utf-8"))
+    receipt["receipt_id"] = "corrupt"
+    extra = _write(tmp_path / "invalid-extra.json", receipt)
+    assert PROMOTION.main([*args, "--semantic-receipt", str(extra)]) == 1
+    result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text(encoding="utf-8"))
+    assert result["domains"]["semantic_conformance"] == "blocked"
+    assert any("Receipt digest mismatch" in failure for failure in result["failures"])
 
 
 def test_composed_promotion_fails_closed_on_stale_or_missing_evidence(tmp_path: Path) -> None:
@@ -250,17 +271,36 @@ def test_composed_promotion_rejects_missing_runtime_receipt(tmp_path: Path) -> N
     assert any("missing runtime support receipt" in failure for failure in result["failures"])
 
 
-def test_composed_promotion_fails_closed_on_invalid_semantic_runtime(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "field,value,error",
+    [
+        ("node_version", "20.0.0", "invalid semantic-conformance Node version"),
+        ("source_commit", "foreign-source", "Stale artifact bytes or source commit"),
+        ("release_artifacts", [], "Stale artifact bytes or source commit"),
+        ("source_diff_sha256", "dirty", "Tracked source changed since proof"),
+        ("proof_fingerprint", "stale", "Stale native release proof implementation"),
+        ("execution_context", "local", "Execution context mismatch"),
+        ("receipt_id", "corrupt", "Receipt digest mismatch"),
+        ("status", "failed", "Unsupported or failed native release receipt"),
+        ("subject", None, "invalid semantic-conformance Node version"),
+    ],
+)
+def test_composed_promotion_fails_closed_on_invalid_semantic_receipt(tmp_path: Path, field, value, error) -> None:
     args = _compose_fixture(tmp_path)
     receipt = tmp_path / "dist/generated-command-conformance-node20.json"
     payload = json.loads(receipt.read_text(encoding="utf-8"))
-    payload["subject"]["node_version"] = "20.0.0"
+    target = payload if field in {"execution_context", "receipt_id", "status", "subject"} else payload["subject"]
+    target[field] = value
+    if field != "receipt_id":
+        unsigned = {key: item for key, item in payload.items() if key != "receipt_id"}
+        payload["receipt_id"] = hashlib.sha256(json.dumps(unsigned, sort_keys=True).encode()).hexdigest()
     _write(receipt, payload)
 
     assert PROMOTION.main(args) == 1
     result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text(encoding="utf-8"))
-    assert "generated-command-conformance-node20.json has invalid semantic-conformance Node version '20.0.0'" in result["failures"]
+    assert any(error in failure for failure in result["failures"])
     assert "missing semantic conformance for Node majors: [20]" in result["failures"]
+    assert result["domains"]["semantic_conformance"] == "blocked"
 
 
 def test_composed_promotion_rejects_redistribution_artifact_drift(tmp_path: Path) -> None:
@@ -289,5 +329,5 @@ def test_published_linux_set_requires_npm_and_standalone_pair(tmp_path):
     _compose_fixture(tmp_path)
     policy = json.loads((ROOT / ".github/support-bearing-promotion.json").read_text())
     assert PROMOTION.published_platform_failures(policy, tmp_path / "dist") == []
-    (tmp_path / "dist/root.tgz").unlink()
+    (tmp_path / "dist/agentic-workspace-workspace-cli-1.0.0.tgz").unlink()
     assert any("installable npm" in failure for failure in PROMOTION.published_platform_failures(policy, tmp_path / "dist"))

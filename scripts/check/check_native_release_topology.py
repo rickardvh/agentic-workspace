@@ -41,6 +41,36 @@ def proof_identity() -> str:
     return hashlib.sha256(b"".join(path.read_bytes() for path in paths)).hexdigest()
 
 
+def verify_receipt(
+    receipt: dict,
+    *,
+    artifact_dir: Path,
+    source_commit: str,
+    source_diff_sha256: str,
+    expected_node_major: int | None = None,
+    expected_execution_context: str | None = None,
+) -> None:
+    """Validate the same exact-subject receipt for standalone and composed admission."""
+    if receipt.get("kind") != KIND or receipt.get("status") != "passed":
+        raise ValueError("Unsupported or failed native release receipt")
+    subject = receipt.get("subject")
+    if not isinstance(subject, dict):
+        raise ValueError("Missing native release receipt subject")
+    if subject.get("release_artifacts") != inventory(artifact_dir) or subject.get("source_commit") != source_commit:
+        raise ValueError("Stale artifact bytes or source commit")
+    if subject.get("source_diff_sha256") != source_diff_sha256:
+        raise ValueError("Tracked source changed since proof")
+    if subject.get("proof_fingerprint") != proof_identity():
+        raise ValueError("Stale native release proof implementation")
+    if expected_node_major and int(str(subject.get("node_version", "")).lstrip("v").split(".")[0]) != expected_node_major:
+        raise ValueError("Node runtime mismatch")
+    if expected_execution_context and receipt.get("execution_context") != expected_execution_context:
+        raise ValueError("Execution context mismatch")
+    unsigned = {key: value for key, value in receipt.items() if key != "receipt_id"}
+    if receipt.get("receipt_id") != hashlib.sha256(json.dumps(unsigned, sort_keys=True).encode()).hexdigest():
+        raise ValueError("Receipt digest mismatch")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--artifact-dir", type=Path, required=True)
@@ -56,22 +86,14 @@ def main() -> int:
     source_diff_digest = hashlib.sha256(source_diff).hexdigest()
     if args.verify_receipt:
         receipt = json.loads(args.verify_receipt.read_text(encoding="utf-8"))
-        subject = receipt["subject"]
-        if receipt.get("kind") != KIND or receipt.get("status") != "passed":
-            raise ValueError("Unsupported or failed native release receipt")
-        if subject["release_artifacts"] != artifacts or subject["source_commit"] != source:
-            raise ValueError("Stale artifact bytes or source commit")
-        if subject["source_diff_sha256"] != source_diff_digest:
-            raise ValueError("Tracked source changed since proof")
-        if subject["proof_fingerprint"] != proof_identity():
-            raise ValueError("Stale native release proof implementation")
-        if args.expected_node_major and int(subject["node_version"].lstrip("v").split(".")[0]) != args.expected_node_major:
-            raise ValueError("Node runtime mismatch")
-        if args.expected_execution_context and receipt["execution_context"] != args.expected_execution_context:
-            raise ValueError("Execution context mismatch")
-        receipt_id = receipt.pop("receipt_id")
-        if receipt_id != hashlib.sha256(json.dumps(receipt, sort_keys=True).encode()).hexdigest():
-            raise ValueError("Receipt digest mismatch")
+        verify_receipt(
+            receipt,
+            artifact_dir=args.artifact_dir,
+            source_commit=source,
+            source_diff_sha256=source_diff_digest,
+            expected_node_major=args.expected_node_major,
+            expected_execution_context=args.expected_execution_context,
+        )
     else:
         if not args.receipt_out:
             parser.error("--receipt-out is required when proving artifacts")

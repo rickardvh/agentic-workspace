@@ -38,6 +38,11 @@ context; verification rejects stale inputs. Historical receipt filenames remain
 for release manifest compatibility, with the new `native-release-conformance/v1`
 kind. Historical generated-command proofs remain source-only checks.
 
+The final promotion composer uses this same receipt validator for the exact
+source and artifact set. Only intact hosted proofs from clean source may satisfy
+its semantic runtime lanes; a passed status or recognized Node version alone
+cannot admit a receipt.
+
 Host-labelled artifacts establish support only for the host exercised. Linux
 wheels retain `linux_*` tags; they do not claim manylinux compatibility. The
 release matrix runs the same isolated native proof per host/runtime, and final
