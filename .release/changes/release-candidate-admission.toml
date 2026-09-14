@@ -1,3 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
 bump = "patch"
 issues = [2985]
 summary = "Refresh versioned external contracts and prove native coordinated release artifacts without retired module distributions."
