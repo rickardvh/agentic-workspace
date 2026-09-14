@@ -11,12 +11,17 @@ import tarfile
 from pathlib import Path
 
 import pytest
+from tests import native_artifact_consumers
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture(scope="module")
-def packed(tmp_path_factory: pytest.TempPathFactory) -> Path:
+def packed(tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest) -> Path:
+    if os.environ.get("AW_NATIVE_ARTIFACT_DIR"):
+        request.getfixturevalue("shared_core_binary")
+        assert native_artifact_consumers.CURRENT is not None
+        return native_artifact_consumers.CURRENT["package"]
     root = tmp_path_factory.mktemp("packed-native-routes")
     stage = root / "stage"
     staged = subprocess.run(
