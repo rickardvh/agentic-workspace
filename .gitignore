@@ -28,3 +28,6 @@ scratch/
 
 # Rust build output
 /target/
+
+# Distribution build output
+/dist/
