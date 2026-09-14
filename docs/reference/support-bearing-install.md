@@ -1,7 +1,7 @@
 <!-- GENERATED FILE: edit the source projection and rerun `make render-schema-reference`. -->
 # Current Support-Bearing Install
 
-Human-copyable projection of the latest immutable release-owned installation receipt.
+Human-copyable projection of the recorded immutable release-owned installation receipt.
 
 This receipt describes only its named release. It does not install newer branch or admitted-but-unpublished behavior; consult the [installation guide](../agentic-workspace-install.md) for the current implementation boundary.
 
