@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts/generate/generate_contract_catalogues.py"
 
@@ -35,11 +37,23 @@ def test_surface_catalogue_renders_profile_cells_and_selected_unconfigured_state
     assert "| Module-owned |" in text
 
 
-def test_checked_in_catalogues_are_fresh() -> None:
+@pytest.mark.parametrize("line_ending", [b"\n", b"\r\n"], ids=["lf-checkout", "crlf-checkout"])
+def test_checked_in_catalogues_are_fresh(tmp_path: Path, line_ending: bytes) -> None:
     module = _module()
+    for path in [module.CLI_PATH, module.SURFACES_PATH, module.MODULES_PATH, module.SUPPORT_INSTALL_PATH]:
+        target = tmp_path / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((REPO_ROOT / path).read_bytes().replace(b"\r\n", b"\n").replace(b"\n", line_ending))
+    module.REPO_ROOT = tmp_path
     assert (REPO_ROOT / module.CLI_OUTPUT).read_text(encoding="utf-8") == module.render_cli_catalogue()
     assert (REPO_ROOT / module.SURFACES_OUTPUT).read_text(encoding="utf-8") == module.render_surface_catalogue()
     assert (REPO_ROOT / module.SUPPORT_INSTALL_OUTPUT).read_text(encoding="utf-8") == module.render_support_install()
+    content = module.render_surface_catalogue()
+    module._write_or_check(module.SURFACES_OUTPUT, content, check=False)
+    assert (tmp_path / module.SURFACES_OUTPUT).read_bytes() == content.encode("utf-8")
+    source = tmp_path / module.SURFACES_PATH
+    source.write_bytes(source.read_bytes().replace(b"necessary-surfaces", b"changed-profile"))
+    assert module.render_surface_catalogue() != content
 
 
 def test_support_install_projection_is_immutable_and_hash_bound() -> None:
