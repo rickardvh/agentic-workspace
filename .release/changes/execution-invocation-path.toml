@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve configured interpreter launch paths while observing executable identity, and bind source CLI tests to Rust."
+issues = [3208, 2916, 3193, 2909]
