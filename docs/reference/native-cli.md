@@ -1,89 +1,56 @@
 # Native command boundary
 
-The source-built `agentic-workspace` binary is an adapter over the shared Rust
-authority. Build it with `cargo build --locked -p agentic-workspace-cli`.
-The CLI crate owns argument parsing, JSON transport, rendering and exit codes.
-Public commands and argument declarations come from `source_decision_contract.json`.
+`agentic-workspace` is the ordinary Rust CLI over one shared Rust authority.
+Build both source-checkout binaries with `cargo build --locked --workspace --bins`.
+Installed wheel, npm and host-labelled native archives carry the paired CLI/core;
+see [release topology](../maintainer/native-release-topology.md) for provenance
+and the supported artifact boundary.
 
-`agentic-workspace start --target <repository> --task "<task>" --format json`
-reads current owner sources and returns a decision. Repeated `--changed` arguments
-declare the changed paths. Supply a returned public request through `--input <file>`
-or JSON stdin with `--input -`; a bounded array can preserve distinct owner answers.
-`invoke` accepts the exact returned operation invocation through the same input.
-Clients cannot supply source admission, custody, capability contracts or debug facts.
+The CLI owns argument parsing, JSON transport, rendering and exit codes. Its
+public command and option declarations come from `source_decision_contract.json`:
 
-Python `agentic_workspace.decision.start`/`invoke`, the corresponding exports in
-`bindings/node/semantic-decision.mjs`, and JSON `start`/`invoke` independently consume
-the same Rust ingress. The native executable does not launch Python or Node.
+| Command | Current purpose |
+| --- | --- |
+| `start` | Resolve current owner information, requests and available effects. |
+| `invoke` | Execute an exact action returned by its current owner. |
+| `worker` | Project sealed Assignment input or assemble unproven return re-entry. |
+| `resources` | Inspect hygiene and propose or execute an admitted resource operation. |
 
-Current native source ingress covers semantic route discovery, configured decision
-provenance, shared/local configuration visibility and restrictions, the selected
-Planning owner, Planning reconciliation custody and conservative Verification
-evidence visibility. Planning writes retain the existing owner selection, preserve
-former source bytes, acquire custody before writing, revalidate before commit, and
-replay only an admitted current result. Direct-task identity has one Rust owner
-shared with the existing Python consumer.
+`start --target <repository> --task "<task>" --format json` reads current owner
+sources. Repeated `--changed` arguments declare changed paths. Supply a returned
+request through `--input <file>` or JSON stdin with `--input -`; a bounded array
+can preserve distinct owner answers. `invoke` accepts the exact returned action.
+Clients cannot invent source admission, custody, capability contracts or proof.
 
-This is not the ordinary repository CLI cutover. Unsupported configuration controls
-remain explicit owner gaps. Full Verification strategy/evidence and returned judgment
-admission, delegation, other owner operations, packaging and platform admission remain
-incomplete. The trusted development core executable is not a public substitute for
-these missing operations. The repository adapter retains its configured invocation
-until the representative stateful gate and ordinary operation coverage are complete.
+Python `agentic_workspace` and the installed npm root/`./operating` exports
+project `start`, `invoke` and the reference/carriage helpers. The npm `./native`
+export provides low-level JSON transport. JSON and native entry independently
+consume the same Rust authority; no binding supplies a parallel domain runtime.
+The native executable does not launch Python or Node to decide semantics.
+Missing or incompatible paired cores fail explicitly, without source-build or
+alternate-runtime fallback.
 
-Proof lives in `tests/test_native_public_cli.py`, the CLI transport tests and the
-native owner tests. Fresh processes exercise all four consumers, including the native
-binary with an empty executable search path, a real former Planning source, exact
-replay and unrelated claim-sensitive work. Passing these checks does not grant
-independent review, supported-provider success or first-stable admission.
+Compact, full and carried views preserve current requests, restrictions and
+available effects. Owner details omit internal contribution objects; composed
+blockers and actions identify their owner. Exact references and disposable
+carriage avoid reconstructing hidden fields. Delivery suppresses unchanged
+source prose only; it grants no compliance, mutation, proof or completion claim.
 
-Native scoped instructions use the same Rust applicability owner as Python:
-path scope and current semantic route scope are both required. Current guidance,
-read references and preferred procedures grant no execution or proof authority.
-Hard checks/protection retain immutable source admission. Planning reconciliation
-also checks its actual bounded write set (including custody and temporary files),
-so omitted task paths cannot bypass protection. Character classes share the same
-path matcher with native Verification. Discovery creates no state.
+Current native owners cover configuration, instruction/source reconciliation,
+Planning, Memory and repository decisions, Verification, Assignment and bounded
+delegation. Read current capability dispositions rather than treating discovery,
+owner quiescence or process success as completion. See
+[execution configurations](../maintainer/native-execution-configurations.md),
+[proof execution](../maintainer/native-proof-execution.md), and the canonical
+[workspace procedure](../../.agentic-workspace/skills/workspace-startup/SKILL.md).
+Unsupported transport/result classes remain explicit gaps. Semantic judgment,
+independent review and human approval retain their own authority.
 
-A shared-source Planning continuation acquires absent local selection and retains
-attempt custody inside the same `planning.reconcile` operation. A pre-existing
-source-only local selector remains readable but cannot be overwritten merely
-because its shape is valid. Its current owner must admit transfer; that native
-transfer route remains unresolved. Current producer custody supports exact replay
-and fresh-process continuation. No caller-authored local selector is needed for
-the shared-source journey.
-
-For semantic lifetime, source applicability is recomputed from bounded current
-inputs; retaining its result would add custody and invalidation work to a cheap
-calculation. Planning derives current subject meaning from its stronger source
-owner and reuses only exactly admitted effect/attempt custody. A historical next
-decision is never retained as current authority. These choices do not complete
-#2981's remaining measured expensive-proof and negative-result reuse evidence.
-
-Memory discovery reads the existing manifest only for current path/semantic-route
-signals and returns bounded advisory source references. A returned
-`memory/read-current-note/v1` request retrieves one selected exact revision in a
-fresh process. Neither the manifest's canonical label nor a matching content hash
-proves factual freshness; unadmitted freshness and promotion stay explicit. Note
-bodies are omitted from initial discovery. Malformed advisory sources produce
-Memory diagnostics while direct work remains available; explicit stale or
-out-of-scope read requests fail closed.
-
-Configured assignment scope exposes `assignment/judge-task-requirements/v1`.
-Its typed answer supplies acting-agent result/proof requirements for one exact
-task and current Planning subject, with human execution guarantees preserved.
-The request binds current configuration and Verification strategy revisions;
-it creates no policy, assignment or persistent judgment record. An evaluator
-requires a current role-specific Verification obligation; the native owner does
-not yet supply that obligation and reports the gap. Source-bound requirements
-do not by themselves complete native capability discovery, best-fit choice or
-replace the older ordinary assignment adapter's generic defaults.
-
-
-The final native packet exposes composed authority through `decision_packet` and
-one global `capability_contract`. Owner details omit internal `contribution`
-objects; inspect composed blockers or pending actions by their `owner` field.
-Verification assurance gaps retain `requirement_id`, status and rule. Their full
-current source body appears once in `assurance_applicability.requirements`, joined
-by `id`. Request declarations and exact current envelopes remain inline and
-constructible; this projection change adds no cache or deferred-detail protocol.
+`tests/test_native_public_cli.py` and existing native owner scenarios exercise
+fresh native/JSON/Python/TypeScript consumers, real former/current sources,
+currentness, exact replay and claim-sensitive negatives. Exhaustive artifact mode
+runs those consumers outside the checkout against one packaged set. Command proof
+reuse additionally binds the actual core location: byte-identical installations
+at different locations cannot silently inherit each other's receipts.
+These checks do not grant independent acceptance, live-provider success or
+first-stable admission.

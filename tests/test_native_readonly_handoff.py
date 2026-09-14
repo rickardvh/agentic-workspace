@@ -10,6 +10,7 @@ import shlex
 import sys
 
 import pytest
+from tests import native_artifact_consumers
 from tests.test_native_npm_routes import packed as packed
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
@@ -81,7 +82,14 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]",
     )
     if host:
-        process_transport = '{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}"
+        if native_artifact_consumers.CURRENT is not None:
+            # The provider primitive is shipped in the wheel; do not import it
+            # from the source checkout when proving installed handoffs.
+            installed_command = [str(native_artifact_consumers.CURRENT["python"]), "-I", str(worker)]
+            config = config.replace(json.dumps([sys.executable, str(worker)]), json.dumps(installed_command))
+        else:
+            installed_command = [sys.executable, str(worker)]
+        process_transport = '{kind="process",command=' + json.dumps(installed_command) + ",timeout_seconds=30}"
         native_transport = process_transport.replace(
             'kind="process",command=', 'kind="native",adapter="codex-app-server/v1",parameters={model="fixture"},command='
         )

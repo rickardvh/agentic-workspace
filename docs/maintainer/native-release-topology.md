@@ -51,3 +51,26 @@ supported release classes; local Windows validation is development evidence. Pre
 promotion still requires the separate exact-subject server, runtime, install,
 redistribution and security receipts. Implementation completion does not grant
 independent review acceptance, merge readiness or parent-issue closure.
+
+## Exact installed owner conformance
+
+Explicit exhaustive CI builds one coordinated artifact set before Workspace,
+Planning handoff and declared-runtime proof. Those jobs download the same assets
+and select `AW_NATIVE_ARTIFACT_DIR`; existing shared fixtures then install the
+wheel/npm packages outside the checkout and extract the native pair. Source
+commit, manifest identities and actual executable bytes must agree. Missing or
+mismatched artifacts fail before owner execution, without a Cargo fallback.
+Public consumers clear development binary/module overrides and use the installed
+bindings, retaining the original owner assertions rather than duplicating semantics.
+
+Command evidence binds the actual producer executable location. A Python/npm
+proof-reuse case therefore produces through that installation's paired native
+CLI. Cross-location and changed-binary rejection remain separate negatives.
+The sealed provider handoff fixture uses the installed wheel's transport primitive;
+its simulated provider response does not establish live-provider availability.
+
+The existing topology checker retains receipts on each declared runtime and Node
+semantic major. Those receipts prove installed topology and exact asset identity;
+owner, Planning and custody behavior is evidenced by the corresponding CI job
+results. Neither the receipt alone nor the workflow prerequisite aggregate supplies
+independent admission or a publication decision. Ordinary PR checks remain bounded.
