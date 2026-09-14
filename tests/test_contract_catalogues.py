@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import pytest
@@ -60,5 +61,11 @@ def test_support_install_projection_is_immutable_and_hash_bound() -> None:
     text = _module().render_support_install()
     assert "# Current Support-Bearing Install" in text
     assert "uv tool install" in text
-    assert "#sha256=91293e2b" in text
-    assert "Receipt digest: `sha256:38e53f2d" in text
+    # Renderer parity is distinct from the maintainer's live release-currentness check.
+    projection = json.loads((REPO_ROOT / _module().SUPPORT_INSTALL_PATH).read_text(encoding="utf-8"))
+    artifact = projection["artifact"]
+    assert projection["install_command"] in text
+    assert f"{artifact['url']}#sha256={artifact['sha256']}" in text
+    assert f"Receipt digest: `sha256:{projection['receipt']['sha256']}`" in text
+    assert f"/releases/tag/v{projection['version']}" in text
+    assert f"/releases/download/v{projection['version']}/{artifact['name']}" in artifact["url"]
