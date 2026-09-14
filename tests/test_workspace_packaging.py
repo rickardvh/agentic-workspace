@@ -148,7 +148,7 @@ def test_ci_retains_root_package_artifacts_for_explicit_exhaustive_dispatch() ->
     assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in artifact_job
     assert "uv build --wheel --sdist --out-dir dist" in artifact_job
     assert "test_installed_workspace_stack_runs_fresh_repo_cli_sequence" in artifact_job
-    assert "scripts/release/stage_native_npm.py" in artifact_job
+    assert "run_external_consumer_readiness.py --dist-dir dist --require-node" in artifact_job
     assert (
         "make packed-artifact-conformance PACKED_ARTIFACT_DIR=dist "
         "PACKED_ARTIFACT_RECEIPT=dist/generated-command-conformance-ci.json PACKED_ARTIFACT_CONTEXT=hosted-ci"

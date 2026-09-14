@@ -319,8 +319,6 @@ jobs:
       - name: Build coordinated artifacts
         run: |
           uv build --wheel --sdist --out-dir dist
-          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
-          (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
       - name: Run built package and external-consumer proof
         run: |
           uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence -q
