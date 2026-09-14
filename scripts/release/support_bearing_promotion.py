@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -15,6 +16,10 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / ".github/support-bearing-promotion.json"
+_native_spec = importlib.util.spec_from_file_location("native_release_proof", ROOT / "scripts/check/check_native_release_topology.py")
+assert _native_spec is not None and _native_spec.loader is not None
+NATIVE_PROOF = importlib.util.module_from_spec(_native_spec)
+_native_spec.loader.exec_module(NATIVE_PROOF)
 
 
 def published_platform_failures(policy: dict[str, Any], artifact_dir: Path) -> list[str]:
@@ -230,14 +235,30 @@ def _compose(args: argparse.Namespace) -> int:
             failures.append(f"missing runtime support receipt for {key}")
 
     observed_node_majors = set()
+    semantic_failed = False
     for path in args.semantic_receipt:
         payload = require(path, "agentic-workspace/native-release-conformance/v1", "passed")
-        node_version = str(payload.get("subject", {}).get("node_version") or "")
+        subject = payload.get("subject")
+        node_version = str(subject.get("node_version") or "") if isinstance(subject, dict) else ""
         node_major = _node_major(node_version)
         if node_major is None:
             failures.append(f"{path.name} has invalid semantic-conformance Node version {node_version!r}")
-        else:
-            observed_node_majors.add(node_major)
+            semantic_failed = True
+            continue
+        try:
+            NATIVE_PROOF.verify_receipt(
+                payload,
+                artifact_dir=artifact_dir,
+                source_commit=args.commit,
+                source_diff_sha256=hashlib.sha256(b"").hexdigest(),
+                expected_node_major=node_major,
+                expected_execution_context="hosted-ci",
+            )
+        except (ValueError, OSError) as error:
+            failures.append(f"{path.name} semantic-conformance receipt rejected: {error}")
+            semantic_failed = True
+            continue
+        observed_node_majors.add(node_major)
     missing_nodes = sorted(set(policy["semantic_node_majors"]) - observed_node_majors)
     if missing_nodes:
         failures.append(f"missing semantic conformance for Node majors: {missing_nodes}")
@@ -289,7 +310,7 @@ def _compose(args: argparse.Namespace) -> int:
         "domains": {
             "server_promotion": server.get("status", "missing"),
             "runtime_support": "passed" if not any("runtime" in failure for failure in failures) else "blocked",
-            "semantic_conformance": "passed" if not missing_nodes else "blocked",
+            "semantic_conformance": "passed" if not missing_nodes and not semantic_failed else "blocked",
             "install_identity": install.get("status", "missing"),
             "redistribution": redistribution.get("status", "missing"),
             "security_supply_chain": security.get("status", "missing"),
