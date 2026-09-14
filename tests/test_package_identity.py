@@ -161,8 +161,8 @@ def test_source_package_identity_is_coordinated() -> None:
 
 def test_source_package_identity_rejects_conflicting_license(tmp_path: Path) -> None:
     _copy_source_fixture(tmp_path)
-    (tmp_path / "packages/planning/LICENSE").write_text("not MIT\n", encoding="utf-8")
-    assert any("packages/planning/pyproject.toml does not project" in error for error in CHECKER.source_identity_errors(tmp_path))
+    (tmp_path / "generated/workspace/typescript/LICENSE").write_text("not MIT\n", encoding="utf-8")
+    assert any("generated/workspace/typescript/package.json does not carry" in error for error in CHECKER.source_identity_errors(tmp_path))
 
 
 @pytest.fixture(scope="module")
@@ -173,25 +173,20 @@ def coordinated_artifacts(tmp_path_factory: pytest.TempPathFactory) -> tuple[Pat
     local_dist.mkdir()
     release_dist.mkdir()
     _run([UV, "build", "--wheel", "--sdist", "--out-dir", str(local_dist)])
-    for package in ("packages/memory", "packages/planning", "packages/verification"):
-        _run([UV, "build", "--wheel", "--sdist", "--out-dir", str(local_dist), package])
     for artifact in local_dist.iterdir():
         shutil.copy2(artifact, release_dist / artifact.name)
-    version = json.loads((ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"]
+    staged_npm = root / "native-npm"
     _run(
         [
             sys.executable,
-            "scripts/release/patch_workspace_release_wheel.py",
-            "--dist-dir",
+            "scripts/release/stage_native_npm.py",
+            "--output",
+            str(staged_npm),
+            "--native-archive-dir",
             str(release_dist),
-            "--version",
-            version,
-            "--release-asset-base-url",
-            f"https://github.com/rickardvh/agentic-workspace/releases/download/v{version}",
         ]
     )
-    for package_root in sorted((ROOT / "generated").glob("*/typescript")):
-        _run([NPM, "pack", "--pack-destination", str(release_dist)], cwd=package_root)
+    _run([NPM, "pack", "--pack-destination", str(release_dist)], cwd=staged_npm)
     return local_dist, release_dist
 
 
@@ -222,7 +217,11 @@ def test_source_package_identity_rejects_unexpected_owner_url_or_distribution(tm
 
 
 def test_built_artifacts_carry_exact_identity(coordinated_artifacts: tuple[Path, Path]) -> None:
-    _, release_dist = coordinated_artifacts
+    local_dist, release_dist = coordinated_artifacts
+    wheels = list(local_dist.glob("*.whl"))
+    assert len(wheels) == 1
+    assert list(release_dist.glob("*.whl")) == [release_dist / wheels[0].name]
+    assert wheels[0].read_bytes() == (release_dist / wheels[0].name).read_bytes()
     assert CHECKER.artifact_identity_errors(ROOT, release_dist, require_exact_urls=True) == []
 
 
@@ -234,7 +233,7 @@ def test_redistributable_receipt_binds_exact_artifact_names_and_hashes(
     assert CHECKER.redistributable_receipt_errors(ROOT, release_dist) == []
     receipt_path = release_dist / "redistributable-package-readiness.json"
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-    assert receipt["artifact_count"] == len(receipt["artifacts"]) == 12
+    assert receipt["artifact_count"] == len(receipt["artifacts"]) == 4
     assert receipt["artifacts"] == sorted(receipt["artifacts"], key=lambda item: item["name"])
     assert all(set(artifact) == {"name", "sha256"} and len(artifact["sha256"]) == 64 for artifact in receipt["artifacts"])
 
