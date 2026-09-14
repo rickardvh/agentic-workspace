@@ -48,6 +48,9 @@ Optional tooling disposition under #3246:
 | Release-profile tuning | Defer: no measured artifact-size/latency tradeoff justifies changing the default profile. |
 | Miri/fuzzing/vet/semver tooling | Not adopted: no current distinct required threat/failure class was established in this tranche. |
 
-Rust advisory/license/source policy is the separate dependency-policy outcome of
-#3246. This baseline does not substitute for it or close the parent. Existing
-GitHub dependency review and supply-chain evidence retain their distinct roles.
+Rust advisory/license/source policy is enforced by `deny.toml` and the pinned
+runner under the existing [security owner](../security/threat-model.md#rust-dependency-admission).
+Security CI and both publishers execute it over the locked full workspace;
+dependency review retains its distinct PR-delta/non-Rust role. #3246 still needs
+independent acceptance of the combined substrate result; optional deferred tools
+and unclaimed platforms do not become release blockers.

@@ -204,4 +204,6 @@ def test_source_archive_has_no_development_host_or_workspace_dependencies():
         assert not any("/src/agentic_workspace/operations/" in name or "/generated/workspace/python/" in name for name in names)
         assert f"{root}/Cargo.lock" in names
         assert f"{root}/rust-toolchain.toml" in names
+        assert f"{root}/deny.toml" in names
+        assert f"{root}/scripts/check/check_rust_dependencies.py" in names
         assert f"{root}/scripts/release/native_toolchain.py" in names

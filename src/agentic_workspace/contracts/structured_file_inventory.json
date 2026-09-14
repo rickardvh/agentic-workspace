@@ -1,6 +1,56 @@
 {
   "entries": [
     {
+      "checked_in_justification": "Pinned compiler and components are the shared source-build and artifact provenance authority.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Packaging validates the declaration against the observed compiler; no lower MSRV is implied.",
+      "owner": "workspace-release-maintainers",
+      "pattern": "rust-toolchain.toml",
+      "schema_or_validator": "validator: scripts/release/native_toolchain.py::observe",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Compact generated read profile allows selective repository-only discovery from existing ownership declarations.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": true,
+      "notes": "Generated from OWNERSHIP.toml; profile identity grants no runtime or effect authority.",
+      "owner": "workspace-agent-interface",
+      "pattern": ".agentic-workspace/READING.json",
+      "reconstructable_from": [".agentic-workspace/OWNERSHIP.toml", "scripts/generate/generate_agent_interface.py"],
+      "schema_or_validator": "validator: python scripts/generate/generate_agent_interface.py --check",
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter"
+    },
+    {
+      "checked_in_justification": "Shipped copy of the compact generated repository read profile.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": true,
+      "notes": "The agent-interface generator maintains parity with the installed profile.",
+      "owner": "workspace-agent-interface",
+      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/READING.json",
+      "reconstructable_from": [".agentic-workspace/OWNERSHIP.toml", "scripts/generate/generate_agent_interface.py"],
+      "schema_or_validator": "validator: python scripts/generate/generate_agent_interface.py --check",
+      "status": "typed-validator-backed",
+      "storage_class": "generated-required-adapter"
+    },
+    {
+      "checked_in_justification": "One explicit Rust advisory, license and source policy under the existing security owner.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "The pinned cargo-deny runner validates this policy; no second Rust audit engine.",
+      "owner": "workspace-security-supply-chain",
+      "pattern": "deny.toml",
+      "schema_or_validator": "validator: python scripts/check/check_rust_dependencies.py",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "A separate Rust crate proves independently linked public owner ingress without core owner-name branches.",
       "editable_by_agents": true,
       "format": "toml",
@@ -2363,6 +2413,26 @@
     }
   ],
   "generated_mirrors": [
+    {
+      "pattern": ".agentic-workspace/READING.json",
+      "max_bytes": 1000000,
+      "source_command": "uv run python scripts/generate/generate_agent_interface.py",
+      "named_consumer": "repository-only readers using the canonical startup skill and shipped payload",
+      "checked_in_justification": "Selective source discovery must remain available without an executable runtime.",
+      "freshness_check": "uv run python scripts/generate/generate_agent_interface.py --check",
+      "ordinary_agent_route": "canonical startup skill no-runtime branch; source refs only",
+      "removal_or_demotion_path": "remove only when the supported repository-only reader has an equivalent selective source discovery surface"
+    },
+    {
+      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/READING.json",
+      "max_bytes": 1000000,
+      "source_command": "uv run python scripts/generate/generate_agent_interface.py",
+      "named_consumer": "shipped repository-only read profile",
+      "checked_in_justification": "Source packaging must preserve selective discovery without an executable runtime.",
+      "freshness_check": "uv run python scripts/generate/generate_agent_interface.py --check",
+      "ordinary_agent_route": "canonical startup skill no-runtime branch; source refs only",
+      "removal_or_demotion_path": "remove only when the supported repository-only reader has an equivalent selective source discovery surface"
+    },
     {
       "pattern": "generated/*/.agentic-workspace-cli-fingerprint.json",
       "source_command": "uv run python scripts/generate/generate_command_packages.py",

@@ -12,6 +12,15 @@ permissions:
   contents: read
 
 jobs:
+  rust-dependencies:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check locked Rust advisories, licenses and sources
+        run: python scripts/check/check_rust_dependencies.py --install
+
   dependency-review:
     if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
     runs-on: ubuntu-latest
