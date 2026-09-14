@@ -4,6 +4,52 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::io::Read;
 use std::path::{Path, PathBuf};
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::{PermissionsExt, symlink};
+
+    #[test]
+    fn executable_keeps_invocation_path_and_reobserves_symlink_target() {
+        let root = std::env::temp_dir().join(format!(
+            "aw-executable-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let original = root.join("original");
+        let replacement = root.join("replacement");
+        let alias = root.join("configured-command");
+        for path in [&original, &replacement] {
+            std::fs::write(path, b"#!/bin/sh\nprintf '%s' \"$0\"\n").unwrap();
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        symlink(&original, &alias).unwrap();
+        let first = executable(&root, alias.to_str().unwrap(), &mut Default::default()).unwrap();
+        assert_eq!(first["path"], json!(alias));
+        assert_eq!(first["resolved_path"], json!(original));
+        let output = std::process::Command::new(first["path"].as_str().unwrap())
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            alias.to_str().unwrap()
+        );
+        std::fs::remove_file(&alias).unwrap();
+        symlink(&replacement, &alias).unwrap();
+        let changed = executable(&root, alias.to_str().unwrap(), &mut Default::default()).unwrap();
+        assert_eq!(changed["path"], first["path"]);
+        assert_eq!(changed["content_digest"], first["content_digest"]);
+        assert_ne!(changed["resolved_path"], first["resolved_path"]);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+}
+
 pub(crate) fn declaration() -> Value {
     let schema: Value = serde_json::from_str(include_str!(
         "../../../src/agentic_workspace/contracts/schemas/source_decision_input.schema.json"
@@ -53,7 +99,12 @@ fn executable(
                 continue;
             }
         }
-        let Ok(path) = path.canonicalize() else {
+        // Invocation identity matters: resolving a venv interpreter symlink
+        // before launching it changes its environment and import semantics.
+        let Ok(path) = std::path::absolute(&path) else {
+            continue;
+        };
+        let Ok(resolved_path) = path.canonicalize() else {
             continue;
         };
         if let Some(observed) = observed_paths.get(&path) {
@@ -87,7 +138,7 @@ fn executable(
         {
             return None;
         }
-        let observed = json!({"path":path,"size":after.len(),"modified":after.modified().ok().and_then(|t|t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string()),"content_digest":format!("sha256:{:x}",hasher.finalize())});
+        let observed = json!({"path":path,"resolved_path":resolved_path,"size":after.len(),"modified":after.modified().ok().and_then(|t|t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d|d.as_nanos().to_string()),"content_digest":format!("sha256:{:x}",hasher.finalize())});
         observed_paths.insert(path, observed.clone());
         return Some(observed);
     }

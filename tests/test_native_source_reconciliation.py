@@ -134,6 +134,11 @@ def test_exact_answer_stales_before_publication(tmp_path, shared_core_binary, na
     }
     path = tmp_path / paths[drift]
     path.write_text(path.read_text() + "\n# changed\n")
+    if drift == "policy":
+        # Shared policy currentness binds interpreted configuration, so a
+        # comment alone preserves the answer. Change an actual policy value.
+        assert call({"request": answer})["decision_packet"]["primary_action"] is not None
+        path.write_text(path.read_text() + '\n[workspace]\ncli_invoke="aw-current"\n')
     if drift == "instruction":
         assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
     else:

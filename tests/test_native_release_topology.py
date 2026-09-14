@@ -33,7 +33,10 @@ def test_wheel_contains_only_binding_and_paired_core(wheel):
     with zipfile.ZipFile(wheel) as archive:
         files = archive.namelist()
         code = {name for name in files if name.endswith(".py")}
-        assert code == {f"agentic_workspace/{name}.py" for name in ("__init__", "cli", "decision", "native_core")}
+        assert code == {
+            f"agentic_workspace/{name}.py"
+            for name in ("__init__", "cli", "decision", "native_core", "native_transport", "sealed_codex_transport")
+        }
         metadata = archive.read(next(name for name in files if name.endswith("/METADATA"))).decode()
         assert "Requires-Dist:" not in metadata
         manifest = json.loads(archive.read("agentic_workspace/_native/artifact.json"))
@@ -160,7 +163,7 @@ def test_exact_archive_and_language_packages_share_native_bytes(wheel, tmp_path)
         manifest = json.loads(native.read("artifact.json"))
         binaries = [name for name in native.namelist() if name not in {"artifact.json", "LICENSE"}]
         assert len(binaries) == 2
-        with tarfile.open(next(directory.glob("*.tgz"))) as node:
+        with tarfile.open(next(directory.glob("agentic-workspace-workspace-cli-*.tgz"))) as node:
             for name in binaries:
                 data = native.read(name)
                 key = "sha256" if "-core" in name else "cli_sha256"
@@ -181,7 +184,7 @@ def test_source_archive_has_no_development_host_or_workspace_dependencies():
     if not os.environ.get("AW_NATIVE_ARTIFACT_DIR"):
         pytest.skip("requires the exact release source archive")
     directory = Path(os.environ["AW_NATIVE_ARTIFACT_DIR"])
-    with tarfile.open(next(directory.glob("*.tar.gz"))) as archive:
+    with tarfile.open(next(directory.glob("agentic_workspace-*.tar.gz"))) as archive:
         names = archive.getnames()
         root = names[0].split("/")[0]
         metadata = archive.extractfile(f"{root}/pyproject.toml").read().decode()

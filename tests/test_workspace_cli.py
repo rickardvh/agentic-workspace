@@ -8246,13 +8246,13 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     for path in package_seed_paths:
         relative = path.relative_to(tmp_path).as_posix()
         assert remove_actions[relative]["class"] == "removable-package-owned-payload"
-    assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    assert (workspace / "skills" / "workspace-startup" / "SKILL.md").exists()
     assert (workspace / "memory" / "repo" / "decisions" / "decision.md").exists()
 
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
     applied = json.loads(capsys.readouterr().out)["migration"]
     assert applied["status"] == "applied"
-    assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    assert (workspace / "skills" / "workspace-startup" / "SKILL.md").exists()
     assert (workspace / "docs" / "module-map.md").exists()
     assert (workspace / "docs" / "workspace-config-contract.md").exists()
     assert (workspace / "planning" / "skills" / "planning-reporting" / "SKILL.md").exists()
@@ -8271,7 +8271,7 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     assert cli.main(["skills", "--target", str(tmp_path), "--format", "json"]) == 0
     skills_payload = json.loads(capsys.readouterr().out)
     skill_ids = {entry["id"] for entry in skills_payload["skills"]}
-    assert "workspace-operating-loop" in skill_ids
+    assert "workspace-startup" in skill_ids
     assert "memory-router" in skill_ids
 
     assert cli.main(["status", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -9003,7 +9003,7 @@ def test_upgrade_to_necessary_surfaces_respects_explicit_mirror_receipt(tmp_path
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
     applied = json.loads(capsys.readouterr().out)["migration"]
     assert applied["status"] == "mirror-intent-present"
-    assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    assert (workspace / "skills" / "workspace-startup" / "SKILL.md").exists()
     receipt = json.loads((workspace / "adoption-receipt.json").read_text(encoding="utf-8"))
     assert receipt["payload_mirror"] is True
 
@@ -12979,7 +12979,7 @@ def test_ordinary_planning_consumers_project_one_route_authority_without_orienta
     assert not (tmp_path / ".agentic-workspace" / "local" / "planning-carry.json").exists()
 
 
-def test_planning_route_consumer_inventory_and_degraded_capsule_are_closed_and_current() -> None:
+def test_legacy_planning_route_inventory_keeps_restrictions() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     inventory = json.loads((repo_root / "docs/maintainer/planning-route-consumer-inventory.json").read_text(encoding="utf-8"))
     required = {
@@ -13011,21 +13011,8 @@ def test_planning_route_consumer_inventory_and_degraded_capsule_are_closed_and_c
     assert {"proof-complete", "issue-closeable", "task-complete"}.issubset(policy["forbidden_claims"])
     assert policy["restoration"]["action"] == "restore-configured-cli-and-rerun-start"
 
-    workflow = (repo_root / ".agentic-workspace/WORKFLOW.md").read_text(encoding="utf-8")
-    installed_workflow = (repo_root / "src/agentic_workspace/_payload/.agentic-workspace/WORKFLOW.md").read_text(encoding="utf-8")
-    assert workflow == installed_workflow
-    assert len(workflow.encode()) < 4_000
-    assert "python .agentic-workspace/fallback/no_cli_startup.py" in workflow
-    assert "Fallback Work Shape" not in workflow
-    assert "do not reconstruct work shape" in workflow
-
-    startup_skill = (repo_root / ".agentic-workspace/skills/workspace-startup/SKILL.md").read_text(encoding="utf-8")
-    installed_startup_skill = (repo_root / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md").read_text(
-        encoding="utf-8"
-    )
-    assert startup_skill == installed_startup_skill
-    assert "planning_route_decision" in startup_skill
-    assert "Do not reclassify the task" in startup_skill
+    # Current entry/pointer and no-runtime behavior are proved by the existing
+    # skills-first interface suite, not this retained compatibility inventory.
 
 
 def test_startup_profiles_and_skill_projection_share_current_planning_route(tmp_path: Path, capsys) -> None:
