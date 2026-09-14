@@ -62,10 +62,10 @@ def test_real_configuration_admits_only_the_exact_planning_effect(
     restrictions = first["decision_packet"]["blockers"]
     assert any(b["code"] == "local-command-safety-ceiling" for b in restrictions)
     assert any(b["code"] == "local-human-review-required" for b in restrictions)
-    closeout = next(r for r in first["configuration"]["residuals"] if r["field"] == "workflow_obligations.dogfooding_lane_closeout")
-    assert "claim:complete" in closeout["affects"] and "task" not in closeout["affects"]
-    initiative = next(r for r in first["configuration"]["residuals"] if r["field"] == "workspace.improvement_latitude")
-    assert initiative["value"] == "proactive" and initiative["affects"] == ["effect:initiative"]
+    assert not any(r["field"].startswith("workflow_obligations.") for r in first["configuration"]["residuals"])
+    assert first["configuration"]["improvement_latitude"] == "proactive"
+    closeout = next(r for r in first["configuration"]["residuals"] if r["field"] == "assurance.strict_closeout")
+    assert closeout["affects"] == ["claim:complete"]
     assert {p: p.read_bytes() for p in before} == before, "discovery never transfers source custody"
     transfer = first["planning"]["selector_transfer"]["request"]
     transfer["arguments"]["answer"] = "authorize-selector-transfer"
@@ -104,7 +104,7 @@ def test_config_force_and_payload_labels_cannot_waive_requirements(
 
     config = tmp_path / ".agentic-workspace/config.toml"
     original = config.read_text()
-    config.write_text(original.replace('enforcement = "advisory"', 'enforcement = "blocking"'))
+    config.write_text(original + '\n[cli_compatibility]\nenforcement="blocking"\n', encoding="utf-8")
     blocking = call()
     assert any(
         b["code"].startswith("native-config-owner:") and "cli_compatibility" in b["code"] and "task" in b["affects"]

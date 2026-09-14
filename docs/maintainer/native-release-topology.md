@@ -62,6 +62,8 @@ commit, manifest identities and actual executable bytes must agree. Missing or
 mismatched artifacts fail before owner execution, without a Cargo fallback.
 Public consumers clear development binary/module overrides and use the installed
 bindings, retaining the original owner assertions rather than duplicating semantics.
+Scenarios preserve required host tools such as Git for pinned-source admission;
+explicit empty-PATH and missing-core cases still prove unavailable-runtime rejection.
 
 Command evidence binds the actual producer executable location. A Python/npm
 proof-reuse case therefore produces through that installation's paired native

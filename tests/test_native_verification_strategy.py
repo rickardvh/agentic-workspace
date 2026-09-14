@@ -216,8 +216,11 @@ def test_current_scope_judgment_travels_with_profile_execution(tmp_path: Path, s
     chosen = call({**context, "request": scope})["verification"]
     execution = chosen["execution_requests"][0]
     assert len(execution) == 2
-    assert not call({**context, "request": execution})["decision_packet"]["ready_actions"]
-    action = call({**context, "request": [startup_read, *execution]})["decision_packet"]["primary_action"]
+    delivered = call({**context, "request": execution})
+    assert delivered["startup_adapter"]["status"] == "source-context-delivered"
+    assert delivered["startup_adapter"]["response"]["text"] == startup.read_text(encoding="utf-8")
+    action = delivered["decision_packet"]["primary_action"]
+    assert call({**context, "request": [startup_read, *execution]})["decision_packet"]["primary_action"] == action
     assert action["source_requests"] == [startup_read]
     original = startup.read_bytes()
     startup.write_bytes(original + b"\nChanged startup source")

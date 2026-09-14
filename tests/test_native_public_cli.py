@@ -136,7 +136,7 @@ def consume(
     native: Path,
     context: dict,
     *,
-    host_path: str = "",
+    host_path: str | None = None,
     allow_failure: bool = False,
     reference_helper: bool = False,
 ) -> dict:
@@ -195,14 +195,18 @@ def consume(
                 "const a=Object.hasOwn(c,'answer')?[c.answer]:[]; delete c.answer; "
                 "console.log(JSON.stringify(selectReference(c,r,...a)));"
             )
-    environment = {**os.environ, "PATH": host_path} if surface == "native" else None
+    # Keep each scenario's host-tool contract. Native defaults to no lookup;
+    # other adapters historically inherit Git/shell tools unless explicitly
+    # restricted. Package isolation must not remove an owner's required tools.
+    effective_path = host_path if host_path is not None else ("" if surface == "native" else os.environ.get("PATH", ""))
+    environment = {**os.environ, "PATH": effective_path} if surface == "native" else None
     if installed:
         environment = {
             key: value
             for key, value in os.environ.items()
             if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH", "PYTHONHOME", "NODE_PATH"}
         }
-        environment["PATH"] = host_path
+        environment["PATH"] = effective_path
     result = subprocess.run(
         command,
         input=stdin,

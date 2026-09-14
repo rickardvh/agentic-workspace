@@ -2,7 +2,9 @@
 
 `workspace.agent_instructions_file` selects existing startup text. Native resolution
 returns its exact reference, content revision and a current public read request.
-It does not copy the body into ordinary context or create a generated adapter.
+Ordinary entry delivers the required current source text before affected work;
+continued consumers can carry the exact delivery reference to suppress unchanged
+prose. This creates no generated adapter or durable read ledger.
 An absent explicit selection stays quiet; this reader does not infer source
 authority from arbitrary repository Markdown.
 
