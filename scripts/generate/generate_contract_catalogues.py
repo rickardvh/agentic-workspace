@@ -26,7 +26,10 @@ def _digest(paths: list[Path]) -> str:
     value = hashlib.sha256()
     for path in paths:
         value.update(path.as_posix().encode("utf-8"))
-        value.update((REPO_ROOT / path).read_bytes())
+        # Hash repository text, not the checkout's platform line endings.
+        # This matches the LF form declared by .gitattributes while retaining
+        # every other source-byte change in the catalogue freshness identity.
+        value.update((REPO_ROOT / path).read_bytes().replace(b"\r\n", b"\n"))
     return value.hexdigest()
 
 
@@ -190,7 +193,7 @@ def _write_or_check(path: Path, content: str, *, check: bool) -> bool:
     if check:
         return target.exists() and target.read_text(encoding="utf-8") == content
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
+    target.write_text(content, encoding="utf-8", newline="\n")
     return True
 
 
