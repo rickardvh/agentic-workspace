@@ -29,6 +29,8 @@ The coordinated Python distributions currently advertise `Development Status :: 
 | Generated/runtime targets | alpha unless a release explicitly states otherwise | conformance and packaging are substantial but target parity/support claims remain tied to current release evidence |
 | Public independent-module compatibility profile | alpha | the v2 descriptor and out-of-tree conformance fixture are public, while incompatible evolution remains possible under the alpha release contract |
 
+For the native reconstruction, the root package carries the current runtime; the separate module distributions in this table are retained source-development fixtures, not additional shipped native dependencies. Exact artifact admission establishes the bounded behavior and platform evidence in [Evidence and support](evidence-and-support.md#admitted-native-reconstruction). It does not itself change classifiers, publish a stable version or promote the maturity label.
+
 This table describes public support maturity, not feature count. A capability can have strong deterministic or dogfooding evidence and still remain alpha while its compatibility or ownership boundary is changing materially.
 
 ## Promotion rule

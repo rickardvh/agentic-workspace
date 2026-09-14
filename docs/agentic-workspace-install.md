@@ -28,13 +28,13 @@ For an explicitly published preview:
    agentic-workspace start --target . --task "Inspect this repository" --format json
    ```
 
-The root wheel and coordinated module dependencies are bound to exact assets in that same preview release. Preview versions are immutable public identities and are not later reused for different stable or preview bytes.
+Use only the asset/dependency set declared by that exact preview. The admitted native reconstruction ships a root wheel/source archive, npm package and native CLI/core archive; separate Memory, Planning and Verification packages are source-development fixtures, not native release dependencies. Preview versions are immutable public identities and are not later reused for different stable or preview bytes.
 
 A preview is intentionally unstable. Interfaces and behavior may change before first stable; the preview establishes no blanket OS, shell, provider, production-readiness, Stable/1.0, or support-bearing guarantee. Its purpose is to make exact packaged reconstruction bytes available for external testing while preserving those boundaries.
 
 ## Stable/support-bearing prerequisites
 
-The current coordinated Python distributions require **Python 3.11 or newer**.
+The native root wheel declares **Python 3.11 or newer**. The admitted runtime range is Python 3.11–3.14; a metadata lower bound does not prove future Python versions. The npm projection has evidence for Node 20, 24 and 25. Standalone native execution requires neither Python nor Node.
 
 Building from source additionally requires the exact repository toolchain in
 `rust-toolchain.toml`; no lower Rust MSRV is currently supported. Installed native
@@ -44,13 +44,16 @@ This page is the canonical support/prerequisite owner. Exact release identity is
 
 | Concern | Supported contract | Unknown or excluded |
 | --- | --- | --- |
-| Python | CPython-compatible Python 3.11+ as declared by coordinated package metadata | alternative implementations are not promised unless release evidence says so |
+| Python | 3.11–3.14; 3.11/3.13/3.14 exercised, 3.12 bounded by minimum/primary lanes | later versions and alternative implementations are unproven |
+| Node | npm projection: majors 20, 24 and 25 exercised | other majors are unproven |
 | Installer | `uv tool install` using the exact hash-bound stable release receipt command | ordinary registry resolution, mutable branches, editable/source installs are not support-bearing |
 | Git/repository | a Git working tree for shared checked-in operating context and ownership | non-Git hosts are not part of the current public adoption contract |
 | Network | required to obtain release assets and for explicitly configured external adapters | ordinary local resolve/act/reconcile does not imply a network service |
-| OS/shell | only what the selected stable release evidence actually exercises | no blanket OS, shell, container, or runner guarantee is inferred |
+| OS/shell | native reconstruction: Linux x64, GNU target, `linux_x86_64` wheel | no manylinux, Windows, macOS, ARM or blanket shell/container/runner guarantee |
 | Credentials | remain in caller/platform boundaries | AW is not a credential host or sandbox |
 | Runtime tools | repository-configured commands run with caller authority | arbitrary host tools are not bundled or silently trusted |
+
+The [checked-in install projection](reference/support-bearing-install.md) tracks the current stable release, `v0.51.0`, which predates the native reconstruction. It must not be used as an install identity for the native behavior described here. Exact reconstruction admission is recorded in [#2990](https://github.com/rickardvh/agentic-workspace/issues/2990); admission and canonical branch cutover do not themselves publish native stable assets. Until an immutable native release exists, use an explicitly published preview only for its own documented behavior.
 
 The support-bearing public installation identity is a **stable versioned GitHub Release** and the exact command recorded in that release's `distribution-install-readiness.json`. That receipt currently owns the canonical `uv tool install` command, exact root-wheel release URL, and SHA-256 binding. Therefore the support-bearing public path requires a working `uv` installation capable of executing that receipt command.
 
