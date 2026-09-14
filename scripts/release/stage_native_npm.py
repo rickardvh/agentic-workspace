@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import platform
 import shutil
@@ -28,8 +29,11 @@ def stage(output: Path, *, profile: str = "release") -> Path:
         raise ValueError("generated native binding is stale")
     if output.exists():
         raise ValueError("staging destination must be absent")
-    rust = subprocess.run(["rustc", "-vV"], check=True, capture_output=True, text=True)
-    host = next(line.removeprefix("host: ") for line in rust.stdout.splitlines() if line.startswith("host: "))
+    spec = importlib.util.spec_from_file_location("native_toolchain", ROOT / "scripts/release/native_toolchain.py")
+    toolchain_module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(toolchain_module)
+    toolchain = toolchain_module.observe(ROOT)
+    host = toolchain["host"]
     machine = platform.machine().lower()
     architecture = host.split("-", 1)[0]
     compatible_arch = {"x86_64": {"amd64", "x86_64"}, "aarch64": {"arm64", "aarch64"}}
@@ -39,6 +43,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     built = subprocess.run(
         ["cargo", "build", "--locked", "--profile", profile, "--target", host, "--workspace", "--bins", "--message-format=json"],
         cwd=ROOT,
+        env=toolchain_module.build_environment(),
         check=True,
         capture_output=True,
         text=True,
@@ -64,17 +69,6 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     binary = binaries["agentic-workspace-core"]
     for executable in binaries.values():
         shutil.copy2(executable, native / executable.name)
-    revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=False)
-    head = revision.stdout.strip() if revision.returncode == 0 else None
-    dirty = (
-        bool(
-            subprocess.run(
-                ["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT, capture_output=True, text=True, check=True
-            ).stdout.strip()
-        )
-        if head
-        else None
-    )
     (native / "artifact.json").write_text(
         json.dumps(
             {
@@ -84,10 +78,11 @@ def stage(output: Path, *, profile: str = "release") -> Path:
                 "arch": node_arch,
                 "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
                 "cli_sha256": hashlib.sha256(binaries["agentic-workspace"].read_bytes()).hexdigest(),
-                "source_head": head,
-                "source_dirty": dirty,
+                **toolchain_module.source_identity(ROOT),
                 "profile": profile,
                 "rust_host": host,
+                "rust_target": host,
+                "rust_toolchain": toolchain,
             },
             indent=2,
         )

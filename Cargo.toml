@@ -1,3 +1,10 @@
 [workspace]
 members = ["crates/agentic-workspace-core", "crates/agentic-workspace-cli"]
 resolver = "2"
+
+[workspace.metadata]
+# Source compatibility is the pinned compiler, not an untested lower MSRV.
+source-build-toolchain = "rust-toolchain.toml"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"

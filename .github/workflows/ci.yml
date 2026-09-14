@@ -40,16 +40,16 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
-      - name: Admit Rust stable core toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
       - name: Verify frozen dependency graph
         run: |
           uv lock --check
           uv sync --locked --all-groups
       - name: Run universal static merge checks
         run: |
-          cargo +stable check --locked --workspace --all-targets
-          cargo +stable fmt --all -- --check
+          cargo check --locked --workspace --all-targets
+          cargo fmt --all -- --check
           make lint-workspace
           make typecheck-nosync
       - name: Run compact public integration guard
@@ -73,7 +73,7 @@ jobs:
             -q
       - name: Verify bounded route registries and Unix confinement
         run: |
-          cargo +stable test --locked -p agentic-workspace-core native_routes::
+          cargo test --locked -p agentic-workspace-core native_routes::
           uv run pytest tests/test_native_former_routes.py -q
       - name: Verify skills-first interface convergence
         run: |
@@ -81,11 +81,11 @@ jobs:
           uv run pytest tests/test_skills_first_interface.py -q
       - name: Verify schema validator reuse
         timeout-minutes: 2
-        run: cargo +stable test --locked -p agentic-workspace-core schema_reuse_tests
+        run: cargo test --locked -p agentic-workspace-core schema_reuse_tests
       - name: Verify delivery identity and opaque source discovery
         timeout-minutes: 2
         run: |
-          cargo +stable test --locked -p agentic-workspace-core delivery_tokens_bind_work
+          cargo test --locked -p agentic-workspace-core delivery_tokens_bind_work
           uv run pytest tests/test_native_operating_carriage.py::test_delivery_is_not_satisfaction_and_opaque_sources_redeliver -q
       - name: Verify resource transport parity
         timeout-minutes: 2
@@ -174,8 +174,8 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
-      - name: Admit Rust stable core toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
       - name: Verify lock without rewriting it
         run: uv lock --check
       - name: Sync the workspace once
@@ -197,8 +197,8 @@ jobs:
         run: uv run pytest tests/test_native_repository_decisions.py tests/test_native_memory_capture.py -q
       - name: Run shared operating-decision core proof
         run: |
-          cargo +stable build --locked --workspace --bins
-          cargo +stable test --workspace
+          cargo build --locked --workspace --bins
+          cargo test --locked --workspace
           uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
       - name: Run workspace lint
         run: make lint-workspace
@@ -229,8 +229,8 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
-      - name: Admit Rust stable core toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
       - name: Verify lock without rewriting it
         run: uv lock --check
       - name: Sync the workspace once
@@ -258,8 +258,8 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
-      - name: Admit Rust stable core toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
       - name: Verify lock without rewriting it
         run: uv lock --check
       - name: Sync the workspace once
@@ -371,16 +371,16 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ matrix.node }}
-      - name: Admit Rust stable core toolchain
-        run: rustup toolchain install stable --profile minimal
+      - name: Admit the repository Rust toolchain
+        run: rustup show active-toolchain
       - name: Verify frozen dependency graph
         run: |
           uv lock --check
           uv sync --locked --all-groups
       - name: Prove path, subprocess, install, and semantic behavior
         run: |
-          cargo +stable build --locked --workspace --bins
-          cargo +stable test --workspace
+          cargo build --locked --workspace --bins
+          cargo test --locked --workspace
           uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
           uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
           uv run pytest tests/test_native_maintainer_logging.py::test_native_logging_concurrent_append_preserves_valid_sequence tests/test_native_maintainer_logging.py::test_native_logging_concurrent_registration_preserves_existing_identities -q

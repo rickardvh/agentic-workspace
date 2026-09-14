@@ -5,6 +5,9 @@ edition = "2024"
 license = "MIT"
 description = "Native command-line adapter for Agentic Workspace"
 
+[lints]
+workspace = true
+
 [dependencies]
 serde_json = "1"
 

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Pin the Rust build toolchain and record compiler identity in native artifacts."
+issues = [3246, 3247]

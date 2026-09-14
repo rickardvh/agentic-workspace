@@ -347,7 +347,7 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     assert "name: Merge sufficiency" in merge
     assert "github.event_name == 'push'" in merge
     assert "github.event_name == 'pull_request'" in merge
-    assert "cargo +stable check --locked --workspace --all-targets" in merge
+    assert "cargo check --locked --workspace --all-targets" in merge
     assert "make lint-workspace" in merge
     assert "make typecheck-nosync" in merge
     assert "test_public_read_real_repository_decision_preserves_currentness" in merge
@@ -363,7 +363,7 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     assert "timeout-minutes: 3" in merge
 
     for release_only in (
-        "cargo +stable test --workspace",
+        "cargo test --locked --workspace",
         "uv build --wheel --sdist",
         "make check-memory-nosync",
         "make check-planning-nosync",
@@ -387,7 +387,7 @@ def test_ci_pr_path_is_merge_sufficiency_not_release_admission() -> None:
     assert "uv build --wheel --sdist --out-dir dist" in exhaustive
     assert "packed-artifact-conformance" in exhaustive
     assert "windows-latest" not in exhaustive
-    assert "cargo +stable test --workspace" in exhaustive
+    assert "cargo test --locked --workspace" in exhaustive
 
 
 def test_master_ruleset_and_release_policy_require_merge_sufficiency_before_support_proof() -> None:

@@ -208,6 +208,8 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
     for reference in [
         "Cargo.toml",
         "Cargo.lock",
+        "rust-toolchain.toml",
+        "scripts/release/native_toolchain.py",
         "crates/agentic-workspace-core/src/native_routes.rs",
         "bindings/node/semantic-decision.mjs",
         "scripts/release/stage_native_npm.py",
@@ -218,17 +220,25 @@ def test_sdist_retains_native_npm_build_inputs(tmp_path: Path) -> None:
     assert not any("/src/native/bin/" in name for name in names)
 
 
-def test_stage_rejects_rust_host_platform_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("mismatch", ["host", "compiler"])
+def test_stage_rejects_rust_build_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mismatch: str) -> None:
     import runpy
+    import tomllib
 
     stage_native_npm = runpy.run_path(str(ROOT / "scripts/release/stage_native_npm.py"))
 
     def observe(command, **kwargs):
         assert command == ["rustc", "-vV"], "mismatched host must fail before Cargo build"
-        return subprocess.CompletedProcess(command, 0, stdout="host: unsupported-unknown-platform\n", stderr="")
+        release = tomllib.loads((ROOT / "rust-toolchain.toml").read_text())["toolchain"]["channel"] if mismatch == "host" else "0.0.0"
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=f"host: unsupported-unknown-platform\nrelease: {release}\ncommit-hash: fixture\ncommit-date: fixture\nLLVM version: fixture\n",
+            stderr="",
+        )
 
     monkeypatch.setattr(stage_native_npm["subprocess"], "run", observe)
-    with pytest.raises(ValueError, match="does not match Node artifact host"):
+    with pytest.raises(ValueError, match="does not match Node artifact host|Native packaging requires Rust"):
         stage_native_npm["stage"](tmp_path / "stage", profile="dev")
     assert not (tmp_path / "stage").exists()
 

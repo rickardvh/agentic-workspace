@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import re
 import subprocess
@@ -40,8 +41,11 @@ class CustomBuildHook(BuildHookInterface):
         build_data.setdefault("force_include", {})[str(root / "bindings/python/__init__.py")] = "agentic_workspace/__init__.py"
         # An explicit host target prevents an ambient cross-compilation target
         # from being silently labelled as a locally executable wheel.
-        rust = subprocess.run(["rustc", "-vV"], check=True, capture_output=True, text=True)
-        host = next(line.removeprefix("host: ") for line in rust.stdout.splitlines() if line.startswith("host: "))
+        spec = importlib.util.spec_from_file_location("native_toolchain", root / "scripts/release/native_toolchain.py")
+        toolchain_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(toolchain_module)
+        toolchain = toolchain_module.observe(root)
+        host = toolchain["host"]
         platform_tag = sysconfig.get_platform().replace("-", "_").replace(".", "_")
         architectures = {"x86_64": ("x86_64", "amd64"), "aarch64": ("aarch64", "arm64"), "i686": ("i686", "i386", "win32")}
         architecture = host.split("-", 1)[0]
@@ -65,6 +69,7 @@ class CustomBuildHook(BuildHookInterface):
                 "--bins",
             ],
             cwd=root,
+            env=toolchain_module.build_environment(),
             check=True,
             capture_output=True,
             text=True,
@@ -95,6 +100,9 @@ class CustomBuildHook(BuildHookInterface):
                     "kind": "agentic-workspace/native-python-artifact/v1",
                     "package_version": tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"],
                     "rust_host": host,
+                    "rust_target": host,
+                    "rust_toolchain": toolchain,
+                    **toolchain_module.source_identity(root),
                     "sha256": hashlib.sha256(executables["agentic-workspace-core"].read_bytes()).hexdigest(),
                     "cli_sha256": hashlib.sha256(executables["agentic-workspace"].read_bytes()).hexdigest(),
                 }
