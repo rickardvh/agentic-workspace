@@ -21,7 +21,14 @@ def digest(path: Path) -> str:
 
 def inventory(directory: Path) -> list[dict[str, str]]:
     entries = []
-    for pattern in ("*.whl", "*.tar.gz", "*.tgz", "agentic-workspace-native-*.zip"):
+    # Coordinated CI output also contains module packages. This proof binds
+    # the root release set; module installation has its own consumer proof.
+    for pattern in (
+        "agentic_workspace-*.whl",
+        "agentic_workspace-*.tar.gz",
+        "agentic-workspace-workspace-cli-*.tgz",
+        "agentic-workspace-native-*.zip",
+    ):
         paths = list(directory.glob(pattern))
         if len(paths) != 1:
             raise ValueError(f"Expected exactly one {pattern} in {directory}")

@@ -15,10 +15,18 @@ checker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checker)
 
 
-@pytest.mark.parametrize("change", ["artifact", "proof", "context", "extra-package"])
-def test_receipt_rejects_changed_subject(tmp_path, monkeypatch, change):
-    for name in ("root.whl", "root.tar.gz", "root.tgz", "agentic-workspace-native-test.zip"):
+@pytest.mark.parametrize("change", [None, "artifact", "proof", "context", "extra-package"])
+def test_receipt_admits_only_unchanged_root_subject(tmp_path, monkeypatch, change):
+    for name in (
+        "agentic_workspace-1.0-py3-none-any.whl",
+        "agentic_workspace-1.0.tar.gz",
+        "agentic-workspace-workspace-cli-1.0.tgz",
+        "agentic-workspace-native-test.zip",
+        "agentic_workspace_memory-1.0-py3-none-any.whl",
+        "agentic_workspace_memory-1.0.tar.gz",
+    ):
         (tmp_path / name).write_bytes(name.encode())
+    assert len(checker.inventory(tmp_path)) == 4
     receipt = {
         "kind": checker.KIND,
         "status": "passed",
@@ -37,9 +45,9 @@ def test_receipt_rejects_changed_subject(tmp_path, monkeypatch, change):
     path = tmp_path / "fixture-receipt.json"
     path.write_text(json.dumps(receipt))
     if change == "artifact":
-        (tmp_path / "root.whl").write_bytes(b"changed")
+        (tmp_path / "agentic_workspace-1.0-py3-none-any.whl").write_bytes(b"changed")
     if change == "extra-package":
-        (tmp_path / "legacy-module.whl").write_bytes(b"extra")
+        (tmp_path / "agentic_workspace-2.0-py3-none-any.whl").write_bytes(b"extra")
     monkeypatch.setattr(
         sys,
         "argv",
@@ -53,5 +61,8 @@ def test_receipt_rejects_changed_subject(tmp_path, monkeypatch, change):
             "hosted-ci" if change == "context" else "local",
         ],
     )
-    with pytest.raises(ValueError):
-        checker.main()
+    if change is None:
+        assert checker.main() == 0
+    else:
+        with pytest.raises(ValueError):
+            checker.main()
