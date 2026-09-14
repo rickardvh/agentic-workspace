@@ -12,6 +12,16 @@ duplicating a compiler version in both crates. Cargo.lock owns the resolved
 dependency graph. Builds, tests and Clippy use `--locked`; formatting and Clippy's
 `-D warnings` remain ordinary merge checks.
 
+Both crates inherit `[workspace.lints]`; new members must opt in with
+`[lints] workspace = true` as well. The workspace forbids unsafe Rust: current
+native operations use safe dependency APIs and require no locally owned unsafe
+implementation. `forbid` prevents a crate from silently allowing an exception.
+A future unsafe requirement needs a deliberate workspace policy change and review.
+Rustc and default Clippy remain the primary source lint stack, with warnings
+denied by the ordinary Clippy command. No additional Clippy rules or broad lint
+groups are enabled without a concrete uncovered invariant; blanket panic API bans
+would conflate production behavior with test assertions.
+
 Native wheel/npm/archive producers reject a different observed compiler release
 or a compiler wrapper/override. They record the declaration digest, observed
 compiler version/commit/date/LLVM/host, explicit build target, Git source identity
@@ -31,6 +41,7 @@ Optional tooling disposition under #3246:
 
 | Tool/change | Disposition and evidence boundary |
 | --- | --- |
+| Rustdoc strictness | Defer: the Rust crates are implementation substrate, with no supported public Rust API contract requiring exhaustive API documentation. |
 | nextest | Defer: the observed long aggregate lane is Python/public handoff integration; no Rust test-runner bottleneck has been measured. |
 | Cargo caching | Defer: existing uncached builds pass; no measured total-cost benefit justifies another retained cache/invalidation path. |
 | Rust coverage | Defer: no named unprotected semantic class is answered by a percentage threshold. Use existing owner proofs. |
