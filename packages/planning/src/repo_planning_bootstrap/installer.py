@@ -12207,7 +12207,7 @@ def _ownership_review(target_root: Path) -> dict[str, Any]:
         for entry in ledger.get("fences", [])
         if isinstance(entry, dict)
     ]
-    package_owned_roots = [entry["path"] for entry in module_roots if entry.get("path")]
+    package_owned_roots = [entry["path"] for entry in module_roots if entry.get("path") and entry.get("ownership") == "module_managed"]
     repo_owned_surfaces = [
         entry["surface"] for entry in authority_surfaces if entry.get("ownership") == "repo_owned" and entry.get("surface")
     ]

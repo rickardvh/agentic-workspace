@@ -183,14 +183,12 @@ ALLOWED_HIGH_LEVEL_NOTES = {
 
 WORKFLOW_MARKER_START = "<!-- agentic-memory:workflow:start -->"
 WORKFLOW_MARKER_END = "<!-- agentic-memory:workflow:end -->"
-WORKFLOW_POINTER_BLOCK = (
-    f"{WORKFLOW_MARKER_START}\nRead `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules.\n{WORKFLOW_MARKER_END}"
-)
+WORKFLOW_POINTER_BLOCK = f"{WORKFLOW_MARKER_START}\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical Agentic Workspace procedure.\n{WORKFLOW_MARKER_END}"
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 WORKSPACE_POINTER_BLOCK = (
     f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
-    'For non-trivial requests with known changed paths, first run `agentic-workspace implement --changed <paths> --format json`; otherwise run `agentic-workspace start --task "<task>" --format json` using the user\'s request as `<task>`. Follow `immediate_next_allowed_action` and `skill_routing` before opening raw `.agentic-workspace` files. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the CLI is unavailable, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.\n'
+    "Use `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical Agentic Workspace procedure.\n"
     f"{WORKSPACE_WORKFLOW_MARKER_END}"
 )
 EMBEDDED_WORKFLOW_HEADINGS = (

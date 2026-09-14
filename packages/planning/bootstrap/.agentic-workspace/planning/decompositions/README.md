@@ -6,4 +6,4 @@ An epic is a work-shape classification, not a freehand artifact type. A `plannin
 
 Use `parent_acceptance` to keep the user's full original intent separate from slice mechanics. Each lane should state how it advances the parent, what parent intent remains, and whether its proof is slice-only, parent-closing, or requires human confirmation.
 
-Create records by copying `TEMPLATE.decomposition.json` when a request needs product shaping before a lane can be promoted. After editing, run `agentic-workspace summary --format json` or the planning surface checker.
+Use the current native Planning owner to create or change managed decomposition records when product shaping is needed. The template describes record structure; it does not grant write or promotion authority.

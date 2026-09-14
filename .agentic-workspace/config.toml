@@ -1,4 +1,4 @@
-# Agentic Workspace managed config.
+# Repository-owned Agentic Workspace policy.
 # Edit this file directly only when changing repo-owned policy.
 # Reference: .agentic-workspace/docs/workspace-config-contract.md
 # Resolve through the configured native start route in AGENTS.md.
@@ -26,21 +26,6 @@ default_level = "medium"
 agent_may_escalate = true
 agent_may_deescalate = false
 strict_closeout = true
-test_data_policy = {}
-
-[cli_compatibility]
-enforcement = "advisory"
-source_classes = ["source-checkout"]
-target_relations = ["inside-target"]
-contract_schema = "agentic-workspace/installed-state-compatibility/v1"
-minimum_reader_epoch = 1
-required_reader_capabilities = ["pre-state-runtime-compatibility-v1"]
-required_resources = [
-  "agentic_workspace:contracts/context_authority_registry.json",
-  "agentic_workspace:contracts/schemas/operating_decision.schema.json",
-  "agentic_workspace:contracts/workspace_defaults/payload.json",
-]
-resolution_policy = "frozen"
 
 [payload]
 target_release = "source-current"
@@ -50,71 +35,3 @@ policy = "required-before-work"
 [system_intent]
 sources = ["SYSTEM_INTENT.md", "README.md"]
 preferred_source = "SYSTEM_INTENT.md"
-
-[update.modules.planning]
-source_type = "git"
-source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/planning"
-source_label = "agentic-planning monorepo master"
-recommended_upgrade_after_days = 30
-
-[update.modules.memory]
-source_type = "git"
-source_ref = "git+https://github.com/rickardvh/agentic-workspace@master#subdirectory=packages/memory"
-source_label = "agentic-memory monorepo master"
-recommended_upgrade_after_days = 30
-
-# Compatibility-only stage gate: generated adapter surfaces must be refreshed
-# before a completion claim when their structured owners change.
-[workflow_obligations.adapter_surface_refresh]
-summary = "Refresh adapter surfaces when structured startup, routing, or query contracts change."
-stage = "before-claiming-completion"
-force = "required-before-closeout"
-scope_tags = ["workspace", "planning", "adapter-surfaces"]
-commands = [
-  "make maintainer-surfaces",
-  "uv run python scripts/check/check_planning_surfaces.py",
-]
-review_hint = "Use when AGENTS.md, generated agent docs, routing contracts, or workspace query surfaces changed."
-
-# Compatibility-only VCS stage gate; this is not ordinary repo guidance.
-[workflow_obligations.commit_after_proof]
-summary = "Commit only after the bounded proof lane passes and the active execplan reflects the current milestone."
-stage = "before-commit"
-force = "recommended"
-scope_tags = ["workspace", "planning", "memory"]
-commands = [
-  "uv run agentic-workspace summary --format json",
-  "git status --short",
-]
-review_hint = "Treat this as a closeout/readiness gate, not as a substitute for task-specific validation."
-
-# Compatibility-only terminal reconciliation gate with typed reporting consumers.
-[workflow_obligations.dogfooding_lane_closeout]
-summary = "At the end of each lane, and whenever actionable friction appears during implementation, run a dogfooding review and route what could have been safer, cheaper, or more efficient."
-stage = "closeout"
-force = "required-before-closeout"
-scope_tags = [
-  "workspace",
-  "planning",
-  "memory",
-  "dogfooding",
-  "self-improvement",
-]
-commands = [
-  "uv run agentic-workspace report --target . --section workflow_obligations --format json",
-  "uv run agentic-workspace report --target . --section closeout_trust --format json",
-  "uv run agentic-workspace reconcile --format json",
-  "uv run agentic-workspace skills --target . --task \"dogfooding closeout review\" --format json",
-]
-review_hint = "Do this without waiting for explicit instruction. Before claiming a lane complete, separate validation success, issue completion, intent satisfaction, and total operating-cost direction; consume improvement_signal_candidates, fix blockers immediately, create narrow issues for durable friction, and promote reusable knowledge to Memory only when it prevents rediscovery. Surface actionable findings clearly in the final answer."
-
-# Compatibility-only review-stage synchronization for a generated authority surface.
-[workflow_obligations.system_intent_refresh]
-summary = "Refresh declared system-intent sources and the compiled interpretation when higher-level direction changes materially."
-stage = "review"
-force = "recommended"
-scope_tags = ["workspace", "system-intent"]
-commands = [
-  "uv run agentic-workspace system-intent --target . --sync --format json",
-]
-review_hint = "Treat system intent as directional input and keep the compiled declaration aligned without turning it into active task state."

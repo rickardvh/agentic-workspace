@@ -187,23 +187,30 @@
       "description": "Canonical interpretation of installed reference kinds."
     },
     "no_cli_fallback": {
-      "type": "object",
-      "required": ["entrypoint", "policy", "forbidden_actions", "next_safe_action"],
-      "properties": {
-        "entrypoint": {"type": "string", "description": "Installed executable used as the no-CLI fallback entrypoint."},
-        "policy": {"type": "string", "description": "Installed machine-readable authority consumed by the executable fallback."},
-        "forbidden_actions": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {"type": "string", "minLength": 1},
-          "description": "Canonical forbidden-action decisions that the executable fallback must return."
-        },
-        "next_safe_action": {"type": "string", "minLength": 1, "description": "Stable action returned when the installed CLI is unavailable."}
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "entrypoint",
+      "policy",
+      "procedure",
+      "authority"
+    ],
+    "properties": {
+      "entrypoint": {
+        "type": "string"
       },
-      "additionalProperties": false,
-      "description": "Content-level fallback boundary exercised from installed files with the CLI unavailable."
+      "policy": {
+        "type": "string"
+      },
+      "procedure": {
+        "type": "string"
+      },
+      "authority": {
+        "const": "none"
+      }
     },
+    "description": "Compatibility pointers to the canonical skill; no fallback runtime or operating decision."
+  },
     "system_intent_mirror_kind": {
       "type": "string",
       "description": "System intent mirror kind text value used by this contract."

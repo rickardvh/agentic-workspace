@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import re
 import subprocess
 import tomllib
 from pathlib import Path
@@ -21,6 +22,28 @@ MAIN = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 spec = importlib.util.spec_from_file_location("agent_interface_generator", ROOT / "scripts/generate/generate_agent_interface.py")
 generator = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(generator)
+
+
+def assert_current_command_examples(text: str) -> None:
+    # Check copyable command recipes against the same declaration the native
+    # executable consumes, rather than maintaining a second list of commands.
+    declaration = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["native_cli"]
+    commands = {item["name"] for item in declaration["commands"]}
+    examples = set(re.findall(r"\bagentic-workspace\s+([a-z][a-z-]*)(?=\s+--)", text))
+    assert not examples - commands, f"Non-current native command examples: {sorted(examples - commands)}"
+
+
+def test_active_bootstrap_and_config_command_examples_match_native_surface():
+    surfaces = ["AGENTS.md", MAIN, ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/config.toml", "docs/agentic-workspace-install.md"]
+    surfaces += json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())["payload_files"]
+    for module in ("memory", "planning"):
+        surfaces += [path.relative_to(ROOT).as_posix() for path in (ROOT / f"packages/{module}/bootstrap").rglob("*.md")]
+    for reference in surfaces:
+        assert_current_command_examples((ROOT / reference).read_text(encoding="utf-8").replace("<effective-cli>", "agentic-workspace"))
+    # Same guard rejects the durable drift class, including a removed command
+    # that is not a known historical alias.
+    with pytest.raises(AssertionError, match="Non-current native command"):
+        assert_current_command_examples("agentic-workspace unavailable-operation --target .")
 
 
 def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
@@ -222,6 +245,16 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
     subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
     agents = tmp_path / "AGENTS.md"
     agents.write_text("Repository instruction: preserve this line.\n")
+    retained = {}
+    for reference in (
+        ".agentic-workspace/memory/repo/retained.md",
+        ".agentic-workspace/planning/retained.md",
+        ".agentic-workspace/local/instructions/retained.md",
+    ):
+        path = tmp_path / reference
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("Current owner state; preserve this meaning.\n")
+        retained[reference] = path.read_bytes()
     for operation in ("init", "upgrade", "upgrade"):
         options = ["--mirror-payload"] if operation == "init" and mirror else []
         assert cli.main([operation, "--target", str(tmp_path), *options, "--format", "json"]) == 0
@@ -230,10 +263,14 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
         assert agents.read_text().count(workspace_pointer_block()) == 1
         assert (tmp_path / MAIN).read_text() == (ROOT / MAIN).read_text()
         assert not (tmp_path / ".agentic-workspace/skills/workspace-operating-loop/SKILL.md").exists()
+        for reference in ("AGENTS.md", MAIN, ".agentic-workspace/config.toml"):
+            assert_current_command_examples((tmp_path / reference).read_text())
     assert cli.main(["uninstall", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     assert agents.read_text().strip() == "Repository instruction: preserve this line."
     assert not (tmp_path / MAIN).exists()
+    for reference, original in retained.items():
+        assert (tmp_path / reference).read_bytes() == original
 
 
 def test_generated_fresh_bootstrap_is_only_an_activation_pointer():
@@ -313,3 +350,52 @@ def test_known_leaf_returns_current_procedure_and_shared_applicability(tmp_path,
         assert not stale["memory"]["selected_notes"]
         assert "detail" not in stale["semantic_routes"]["discovery"]
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("module", ["memory", "planning"])
+def test_shipped_package_lifecycle_preserves_domain_state_and_current_guidance(tmp_path, monkeypatch, module):
+    import importlib
+
+    owner = importlib.import_module(f"repo_{module}_bootstrap.installer")
+    ownership = importlib.import_module(f"repo_{module}_bootstrap._ownership")
+    monkeypatch.setattr(ownership, "_workspace_manifest_path", lambda: None)
+    ownership._ownership_data.cache_clear()
+    try:
+        ledger = ownership._ownership_data()
+        for row in ledger["module_roots"]:
+            if row["module"] in {"memory", "planning"}:
+                assert row["ownership"] == "repo_owned"
+                assert row["uninstall_policy"] == "preserve-current-owner-state"
+        template = (ROOT / f"packages/{module}/bootstrap/AGENTS.template.md").read_text(encoding="utf-8")
+        assert_current_command_examples(template.replace("<effective-cli>", "agentic-workspace"))
+        assert "skills/workspace-startup/SKILL.md" in template
+        assert "repository-owned and must be preserved" in template
+        if module == "planning":
+            projected = owner._ownership_review(tmp_path)
+            assert ".agentic-workspace/planning/" not in projected["package_owned_roots"]
+            assert ".agentic-workspace/memory/" not in projected["package_owned_roots"]
+        else:
+            shared = importlib.import_module("repo_memory_bootstrap._installer_shared")
+            assert_current_command_examples(shared.WORKSPACE_POINTER_BLOCK)
+        (tmp_path / ".git").mkdir()
+        retained = {}
+        for reference in (
+            "AGENTS.md",
+            ".agentic-workspace/memory/repo/retained.md",
+            ".agentic-workspace/planning/retained.md",
+            ".agentic-workspace/local/instructions/retained.md",
+        ):
+            path = tmp_path / reference
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("Repository-owned meaning must survive.\n", encoding="utf-8", newline="\n")
+            retained[reference] = path.read_bytes()
+        for operation in (owner.install_bootstrap, owner.upgrade_bootstrap, owner.upgrade_bootstrap):
+            operation(target=tmp_path)
+            agents = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+            assert_current_command_examples(agents.replace("<effective-cli>", "agentic-workspace"))
+            assert agents.startswith(retained["AGENTS.md"].decode())
+        owner.uninstall_bootstrap(target=tmp_path)
+        for reference, expected in retained.items():
+            assert (tmp_path / reference).read_bytes() == expected
+    finally:
+        ownership._ownership_data.cache_clear()

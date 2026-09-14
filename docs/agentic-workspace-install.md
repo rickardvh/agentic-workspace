@@ -98,13 +98,13 @@ Exact installed files and required/optional degraded references are generated in
 
 The native `agentic-workspace` CLI remains the ordinary deterministic product authority after bootstrap unless the host uses another supported thin external-consumer projection. Do not assume installation is a one-shot file-copy operation.
 
-The repo-owned compatibility/config surfaces identify the expected contract and configured invocation posture. Ordinary startup/diagnostics should inspect that identity without silently rewriting dependency locks or moving VCS/source revisions. Explicit install/upgrade/sync operations own dependency or expected-identity changes.
+The repo-owned compatibility/config surfaces identify the expected contract and configured invocation posture. Ordinary startup should inspect that identity without silently rewriting dependency locks or moving VCS/source revisions. Installing a new artifact does not reconcile the target's managed payload. If the selected artifact exposes no supported operation for that target change, preserve the sources and report the missing owner operation.
 
 If the target owns a dependency lock, use the supported environment-manager mode that preserves it (for example a frozen `uv` invocation when that is the configured adapter). Machine-local executable paths and credentials should not become durable shared repo state.
 
 ## If the CLI is missing
 
-Recover through the exact install receipt for the selected immutable release class: the published preview receipt when deliberately testing a preview, or the support-bearing stable receipt when using a stable release. Then rerun the intended lifecycle command.
+Recover through the exact install receipt for the selected immutable release class: the published preview receipt when deliberately testing a preview, or the support-bearing stable receipt when using a stable release. Then return to the canonical skill and the operations actually exposed by that artifact.
 
 Prefer the host repo's normal tool/dependency convention when it can preserve the same compatible installed identity. Use `uvx` or `pipx run` only as explicit temporary/debug fallback routes; repeated ordinary work should have a stable configured invocation.
 
@@ -119,23 +119,36 @@ Prefer the host repo's normal tool/dependency convention when it can preserve th
 
 ## Follow-up checks
 
-After initialization/adoption, inspect the resolved config and health through the root CLI:
+For an already bootstrapped target, inspect current sources and remaining owner concerns through the configured native invocation. For example:
 
 ```bash
-agentic-workspace config --target . --format json
-agentic-workspace doctor --target . --format json
+agentic-workspace start --target . --task "Inspect this repository's current configuration and owner concerns" --format json
 ```
 
-Then follow the target repository's thin agent adapter, normally `AGENTS.md`, and start ordinary work through the compact Workspace route rather than reading the entire `.agentic-workspace/` tree.
+Use the canonical skill to interpret the returned current facts and exact owner requests. A successful query does not install or synchronize payload, discharge proof obligations, or establish adoption completion.
 
 Temporary finishing briefs or diagnostics under `.agentic-workspace/local/` are local-only and should not be checked in. Mirrored-payload profiles may have additional explicit managed artifacts; their ownership should remain visible in the installed-surface contract.
 
-A repository configured with `payload.target_release = "source-current"` and `payload.dogfood_latest = true` has a stronger committed-state obligation: every commit must carry the workspace payload declared by `workspace_surfaces.json`, module-managed skills from each package's `bootstrap/` source, and release provenance matching the source package version and tag. The upgrade-source records and `.agentic-workspace/payload-provenance.json` are part of that installed-state projection, not local scratch. `check_source_payload_operational_install.py --strict` treats drift in this source-current profile as fatal; refresh through the owning install or upgrade operation rather than editing a mirror or weakening the check.
+An existing payload policy can require installed files and provenance to match the
+native artifact's shipped bytes. Startup checks this read-only; provenance labels
+alone cannot satisfy it. The current Configuration owner exposes a
+`payload_discovery_request` with exact per-file refresh proposals. Inspect each
+proposal and authorize its exact artifact bytes through the returned decision;
+then invoke the returned action and resolve again. Interrupted publication uses
+that same owner's recovery request. A second discovery reports current files
+without writing them.
 
-## Worked adoption example
+This bounded refresh applies only to the artifact's declared package files. It
+cannot accept arbitrary paths or caller-supplied replacement bytes, initialize
+human policy, or reset domain state. Preserve useful target-specific meaning
+before authorizing a package-file replacement; unknown ownership is not deletion
+authority. See the canonical setup skill for this procedure. Earlier published
+artifacts may lack the operation; their actual contract remains authoritative.
+
+## Worked example for an already bootstrapped target
 
 1. Install with the exact receipt for the immutable release class you intend to exercise. For ordinary support-bearing use, follow [current support-bearing install](reference/support-bearing-install.md); for external preview testing, use only the receipt from the exact published `preview-v...` prerelease.
-2. Initialize the smallest footprint that solves a recurring cost, or select no module when routing alone is enough.
+2. Follow the target's existing bootstrap to the canonical skill. For an unbootstrapped target, first establish whether the selected artifact supplies a supported adoption operation; stop at the exact limitation if it does not. Do not copy payload or invoke a historical initialization command.
 3. Start a small direct task:
 
    ```bash

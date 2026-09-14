@@ -312,7 +312,7 @@
       "editable_by_agents": true,
       "format": "json",
       "generated": false,
-      "notes": "The source/payload operational-install checker keeps this repository policy aligned with the packaged fallback contract.",
+      "notes": "Canonical no-runtime compatibility pointer; the operational-install checker verifies that it grants no runtime authority.",
       "owner": "workspace-payload",
       "pattern": ".agentic-workspace/fallback/no-cli-policy.json",
       "schema_or_validator": "scripts/check/check_source_payload_operational_install.py",
@@ -321,15 +321,16 @@
     },
     {
       "checked_in_justification": "The installed no-CLI fallback must retain an auditable fail-closed policy after source packaging and workspace installation.",
-      "editable_by_agents": true,
+      "editable_by_agents": false,
       "format": "json",
-      "generated": false,
-      "notes": "The source/payload operational-install checker validates this policy against the workspace surface contract and executes the installed fallback in a CLI-free process.",
+      "generated": true,
+      "notes": "Generated package copy of the canonical compatibility pointer; no runtime or module discovery authority.",
       "owner": "workspace-payload",
       "pattern": "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
+      "reconstructable_from": [".agentic-workspace/fallback/no-cli-policy.json", "scripts/generate/generate_agent_interface.py"],
       "schema_or_validator": "scripts/check/check_source_payload_operational_install.py",
       "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "generated-required-adapter"
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
@@ -1600,15 +1601,16 @@
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
-      "editable_by_agents": true,
+      "editable_by_agents": false,
       "format": "toml",
-      "generated": false,
-      "notes": "Package ownership metadata is consumed by package verification.",
+      "generated": true,
+      "notes": "Standalone package fallback mirror of the canonical ownership ledger.",
       "owner": "package-lifecycle",
       "pattern": "packages/*/src/**/_ownership.toml",
-      "schema_or_validator": "package payload ownership checks",
+      "reconstructable_from": [".agentic-workspace/OWNERSHIP.toml", "scripts/generate/generate_agent_interface.py"],
+      "schema_or_validator": "validator: python scripts/generate/generate_agent_interface.py --check",
       "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
+      "storage_class": "generated-required-adapter"
     },
     {
       "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools.",
@@ -2413,6 +2415,26 @@
     }
   ],
   "generated_mirrors": [
+    {
+      "pattern": "packages/*/src/**/_ownership.toml",
+      "max_bytes": 100000,
+      "source_command": "uv run python scripts/generate/generate_agent_interface.py",
+      "named_consumer": "standalone Memory and Planning package lifecycle ownership readers",
+      "checked_in_justification": "Installed packages need exact ownership declarations outside the source checkout.",
+      "freshness_check": "uv run python scripts/generate/generate_agent_interface.py --check",
+      "ordinary_agent_route": "package maintenance only; not ordinary startup procedure",
+      "removal_or_demotion_path": "remove when package lifecycle no longer needs its standalone ownership fallback"
+    },
+    {
+      "pattern": "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
+      "max_bytes": 10000,
+      "source_command": "uv run python scripts/generate/generate_agent_interface.py",
+      "named_consumer": "installed compatibility pointer checker",
+      "checked_in_justification": "Shipped pointer must agree with the canonical no-runtime procedure reference.",
+      "freshness_check": "uv run python scripts/generate/generate_agent_interface.py --check",
+      "ordinary_agent_route": "canonical startup skill; compatibility pointer grants no authority",
+      "removal_or_demotion_path": "remove with the compatibility entrypoint when no supported consumer needs its pointer"
+    },
     {
       "pattern": ".agentic-workspace/READING.json",
       "max_bytes": 1000000,

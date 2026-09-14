@@ -14,6 +14,8 @@ const RECOVER: &str = "configuration/recover-write/v1";
 const DEFER: &str = "configuration.defer-choice";
 const READ: &str = "configuration/read-choice/v1";
 const READ_CREATION: &str = "configuration/read-creation-choices/v1";
+const READ_PAYLOAD: &str = "configuration/read-payload-choices/v1";
+const PAYLOAD_KEY: &str = "package.payload";
 const EFFECT: &str = "configuration-source";
 // Durable choices consumed by current owners, including explicit native module
 // admission. Task answers, learned evidence and operational registries stay out.
@@ -103,7 +105,25 @@ fn sources(target: &Path) -> Result<Value, CoreError> {
     }
     Ok(values)
 }
+fn bound_sources(target: &Path, source: Option<&str>) -> Result<Value, CoreError> {
+    let mut values = sources(target)?;
+    if let Some(source) = source.filter(|source| crate::native_payload::paths().contains(source)) {
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+        values[source] = crate::native_planning::read(&root, source)?
+            .map(|bytes| json!(crate::native_intent::hash(&bytes)))
+            .unwrap_or(Value::Null);
+    }
+    Ok(values)
+}
 fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec<u8>, CoreError> {
+    if key == PAYLOAD_KEY {
+        let bytes = crate::native_payload::shipped(source)?;
+        if *value != crate::native_intent::hash(&bytes) {
+            return Err(err("payload choice differs from the current artifact"));
+        }
+        bound_sources(target, Some(source))?;
+        return Ok(bytes);
+    }
     crate::schema_validator(&choice_schema(source, key)?, "configuration choice")?
         .validate(value)
         .map_err(err)?;
@@ -212,15 +232,21 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     // Choice schemas are delivered by READ, not copied into every ordinary
     // capability projection. proposed() still validates the exact value against
     // the source-owned schema before any disposition or publication.
-    let alternatives = [SHARED, LOCAL].map(|source| json!({"properties":{
-        "source":{"const":source},"key":{"enum":CHOICES.iter().filter(|(s,_)| *s == source).map(|(_,key)| *key).collect::<Vec<_>>()}}}));
+    let mut alternatives: Vec<Value> = [SHARED, LOCAL].map(|source| json!({"properties":{
+        "source":{"const":source},"key":{"enum":CHOICES.iter().filter(|(s,_)| *s == source).map(|(_,key)| *key).collect::<Vec<_>>()}}})).to_vec();
+    // Artifact paths are lazy discovery data. proposed()/bound_sources() enforce
+    // their exact ownership before publication; do not repeat the roster in
+    // every ordinary capability schema.
+    alternatives.push(json!({"properties":{"source":{"type":"string"},"key":{"const":PAYLOAD_KEY},"value":{"type":"string"}}}));
     let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
     args["properties"]["nomination"] = crate::native_owner_change::schema();
-    let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
-    let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v3","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
+    args["properties"]["source"] = json!({"type":"string"});
+    let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"type":"string"},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
+    let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v4","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
     let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write"), operation(DEFER)]});
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
-    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"}},"oneOf":alternatives}}));
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_PAYLOAD,"result_kind":"agentic-workspace/configuration-payload-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"}}}}));
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
@@ -233,7 +259,7 @@ fn marker(source: &str, post: &str) -> Result<String, CoreError> {
     ))
 }
 fn outcome(invocation: &Value) -> Value {
-    json!({"status":"applied","effects":[EFFECT],"value":{"kind":"agentic-workspace/configuration-write-result/v1","source":invocation["arguments"]["request"]["arguments"]["source"],"post_revision":invocation["arguments"]["post_revision"],"source_ownership":"repo-human","continuing_custody":false,"completion_authority":false}})
+    json!({"status":"applied","effects":[EFFECT],"value":{"kind":"agentic-workspace/configuration-write-result/v1","source":invocation["arguments"]["request"]["arguments"]["source"],"post_revision":invocation["arguments"]["post_revision"],"source_ownership":if invocation["arguments"]["request"]["arguments"]["key"] == PAYLOAD_KEY {"package-managed"} else {"repo-human"},"continuing_custody":false,"completion_authority":false}})
 }
 fn retained(target: &Path, source: &str, post: &str) -> Result<Option<Value>, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
@@ -305,7 +331,10 @@ pub(crate) fn view(
         .find(|v| v["owner"] == "configuration")
         .unwrap();
     let mut result = json!({"requests":[],"creation_requests":[],"recovery_requests":[],"status":"not-applicable","contribution":{"owner":"configuration","revision":owner["revision"],"actions":[]}});
-    let current = match sources(target) {
+    let current = match bound_sources(
+        target,
+        request.and_then(|r| r["arguments"]["source"].as_str()),
+    ) {
         Ok(v) => v,
         Err(e) => {
             if request.is_some() {
@@ -317,6 +346,7 @@ pub(crate) fn view(
     let binding = json!({"sources":current,"effective_policy_revision":config["revision"],"capability_revision":contract["revision"]});
     result["contribution"]["revision"] = json!(digest(&binding)?);
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
+    result["payload_discovery_request"] = template(READ_PAYLOAD, json!({}));
     result["choice_requests"] = json!(
         PROGRESSIVE_CHOICES
             .iter()
@@ -441,6 +471,46 @@ pub(crate) fn view(
             "configuration source, policy or capability changed; resolve a fresh request",
         ));
     }
+    if request["request_kind"] == READ_PAYLOAD {
+        let mut choices = Vec::new();
+        for source in crate::native_payload::paths() {
+            let bytes = crate::native_payload::shipped(source)?;
+            let post = crate::native_intent::hash(&bytes);
+            let mut exact_binding = binding.clone();
+            exact_binding["sources"] = bound_sources(target, Some(source))?;
+            let mut choice = template(
+                EDIT,
+                json!({"source":source,"key":PAYLOAD_KEY,"value":post}),
+            );
+            choice["source_revision"] = json!(digest(&exact_binding)?);
+            let mut row = json!({"source":source,"status":if exact_binding["sources"][source] == post {"current"} else {"refresh-available"},"request":choice});
+            if let Some(record) = retained(target, source, &post)? {
+                let prepared = crate::attempt_store::prepare_commit(
+                    target.to_str().unwrap(),
+                    record["custody"].clone(),
+                    record["outcome"].clone(),
+                )?;
+                if exact_binding["sources"][source] == post
+                    && crate::native_planning::read(
+                        &root,
+                        prepared["custody"]["committed"]["path"].as_str().unwrap(),
+                    )?
+                    .is_none()
+                {
+                    let mut recovery = template(
+                        RECOVER,
+                        json!({"source":source,"record_revision":digest(&record)?}),
+                    );
+                    recovery["source_revision"] = json!(digest(&exact_binding)?);
+                    row["recovery_request"] = recovery;
+                }
+            }
+            choices.push(row);
+        }
+        result["status"] = json!("payload-choices-delivered");
+        result["payload_choices"] = json!(choices);
+        return Ok(result);
+    }
     if request["request_kind"] == READ_CREATION {
         result["status"] = json!("creation-choices-delivered");
         return Ok(result);
@@ -487,8 +557,13 @@ pub(crate) fn view(
         if args["record_revision"] != digest(&record)? {
             return Err(err("retained write changed"));
         }
-        let other = if source == SHARED { LOCAL } else { SHARED };
-        if current[other] != record["invocation"]["arguments"]["binding"]["sources"][other] {
+        if [SHARED, LOCAL]
+            .iter()
+            .filter(|other| **other != source)
+            .any(|other| {
+                current[*other] != record["invocation"]["arguments"]["binding"]["sources"][*other]
+            })
+        {
             return Err(err("other configuration changed; recovery is stale"));
         }
         "configuration.recover-write"
@@ -513,15 +588,24 @@ pub(crate) fn view(
         post = crate::native_intent::hash(&bytes);
         let before = crate::native_planning::read(&root, source)?
             .unwrap_or_else(|| b"schema_version=1\n".to_vec());
-        let parsed: toml::Value =
-            toml::from_str(std::str::from_utf8(&before).map_err(err)?).map_err(err)?;
-        let before_value = parsed
-            .get(section)
-            .and_then(|v| v.get(field))
-            .map(serde_json::to_value)
-            .transpose()
-            .map_err(err)?
-            .unwrap_or(Value::Null);
+        let before_value = if key == PAYLOAD_KEY {
+            if args["nomination"].is_object() {
+                return Err(err(
+                    "payload refresh requires its exact package-source proposal",
+                ));
+            }
+            json!(crate::native_intent::hash(&before))
+        } else {
+            let parsed: toml::Value =
+                toml::from_str(std::str::from_utf8(&before).map_err(err)?).map_err(err)?;
+            parsed
+                .get(section)
+                .and_then(|v| v.get(field))
+                .map(serde_json::to_value)
+                .transpose()
+                .map_err(err)?
+                .unwrap_or(Value::Null)
+        };
         if let Some(disposition) =
             crate::native_owner_change::disposition(target, config, args, before_value == *value)?
         {
@@ -539,7 +623,10 @@ pub(crate) fn view(
         if args["answer"].is_null() {
             if !matches!(
                 key,
-                "assurance.decision_delegations" | "modules.independent" | "modules.enabled"
+                "assurance.decision_delegations"
+                    | "modules.independent"
+                    | "modules.enabled"
+                    | PAYLOAD_KEY
             ) && let Some(authority) = crate::native_decision_authority::delegated(
                 config,
                 "configuration",
@@ -555,8 +642,8 @@ pub(crate) fn view(
             let mut answer = request.clone();
             answer["arguments"]["proposal_revision"] = json!(proposal);
             result["status"] = json!("human-decision-required");
-            result["proposal"] = json!({"before":before_value,"after":value,"source":source,"key":key,"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"authority":"bounded-human-answer"});
-            result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":"Authorize this exact configuration-source edit? The source remains repo/human-owned.","response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
+            result["proposal"] = json!({"before":before_value,"after":value,"source":source,"key":key,"binding":binding,"postimage":std::str::from_utf8(&bytes).map_err(err)?,"post_revision":post,"authority":"bounded-human-answer","source_ownership":if key == PAYLOAD_KEY {"package-managed; unrelated source and local state preserved"} else {"repo-human"}});
+            result["contribution"]["decisions"] = json!([{"id":"configuration-write-authorization","question":if key == PAYLOAD_KEY {"Authorize this exact artifact-derived package file refresh? Preserve unrelated repository and local state."} else {"Authorize this exact configuration-source edit? The source remains repo/human-owned."},"response_request":{"request_kind":EDIT,"arguments":answer["arguments"]},"choices":[{"id":"authorize-write","label":"Authorize this exact write"},{"id":"defer","label":"Defer without mutation"}],"affects":["task","effect:configuration-source"]}]);
             result["contribution"]["decisions"][0]["material"] = result["proposal"].clone();
             return Ok(result);
         }
@@ -763,6 +850,14 @@ fn execute_checked(
         f.sync_all().map_err(err)?;
     }
     observe("prepared")?;
+    if args["request"]["arguments"]["key"] == PAYLOAD_KEY {
+        let parent = Path::new(source)
+            .parent()
+            .ok_or_else(|| err("payload parent missing"))?;
+        // proposed() admitted the exact shipped path and read every existing
+        // prefix with the same no-link confinement rule before creation.
+        root.create_dir_all(parent).map_err(err)?;
+    }
     // Exclusive temporary creation preserves unknown prior work after a crash.
     if let Some(existing) = crate::native_planning::read(&root, &temporary)? {
         if existing != bytes {
@@ -779,7 +874,7 @@ fn execute_checked(
         f.sync_all().map_err(err)?;
     }
     revalidate()?;
-    if sources(target)? != args["binding"]["sources"]
+    if bound_sources(target, Some(source))? != args["binding"]["sources"]
         || crate::native_config::view(target)?["revision"]
             != args["binding"]["effective_policy_revision"]
     {
@@ -805,6 +900,69 @@ fn execute_checked(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn interrupted_payload_publication_recovers_without_rewriting() {
+        let target = std::env::temp_dir().join(format!(
+            "aw-payload-recovery-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&target).unwrap();
+        let discovery =
+            resolve(&target, None)["configuration_write"]["payload_discovery_request"].clone();
+        let request = resolve(&target, Some(discovery))["configuration_write"]["payload_choices"]
+            [0]["request"]
+            .clone();
+        let source = request["arguments"]["source"].as_str().unwrap().to_owned();
+        let mut answer = resolve(&target, Some(request))["decision_packet"]["decision_request"]["response_request"].clone();
+        answer["arguments"]["answer"] = json!("authorize-write");
+        let ready = resolve(&target, Some(answer));
+        let action = ready["decision_packet"]["primary_action"].clone();
+        let failed = execute_checked(
+            &target,
+            &ready["decision_packet"],
+            &action,
+            &mut || Ok(()),
+            &mut |stage| {
+                if stage == "published" {
+                    Err(err("payload interruption"))
+                } else {
+                    Ok(())
+                }
+            },
+        );
+        assert!(
+            failed
+                .unwrap_err()
+                .to_string()
+                .contains("payload interruption")
+        );
+        let post = std::fs::read(target.join(&source)).unwrap();
+        let discovery =
+            resolve(&target, None)["configuration_write"]["payload_discovery_request"].clone();
+        let rows = resolve(&target, Some(discovery));
+        let recovery = rows["configuration_write"]["payload_choices"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["source"] == source)
+            .unwrap()["recovery_request"]
+            .clone();
+        let recovery_action =
+            resolve(&target, Some(recovery))["decision_packet"]["primary_action"].clone();
+        assert_eq!(
+            recovery_action["operation_id"],
+            "configuration.recover-write"
+        );
+        let result = invoke(&target, recovery_action).unwrap();
+        assert_eq!(result["value"]["material_written"], false);
+        assert_eq!(std::fs::read(target.join(source)).unwrap(), post);
+        assert!(invoke(&target, action).is_err());
+        std::fs::remove_dir_all(target).unwrap();
+    }
     #[test]
     fn interrupted_source_creation_recovers_publication_without_rewriting() {
         let target = std::env::temp_dir().join(format!(

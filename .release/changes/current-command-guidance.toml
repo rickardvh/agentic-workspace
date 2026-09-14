@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Converge package guidance and repository policy through exact native payload refresh while preserving current owner state."
+issues = [2613, 2767, 3224, 3249, 3250]

@@ -541,7 +541,5 @@ def _agents_has_workspace_workflow_pointer(text: str) -> bool:
     return (
         WORKSPACE_WORKFLOW_MARKER_START in text
         and WORKSPACE_WORKFLOW_MARKER_END in text
-        and ".agentic-workspace/workflow.md" in lowered
-        and "agentic-workspace start --task" in lowered
-        and "immediate_next_allowed_action" in lowered
+        and ".agentic-workspace/skills/workspace-startup/skill.md" in lowered
     )

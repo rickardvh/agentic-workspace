@@ -1,30 +1,16 @@
-# Setup Findings Contract
+# Configuration findings reference
 
-Setup findings are optional agent-produced input from post-bootstrap discovery. They let setup, review, validation friction, and memory-improvement signals enter one improvement-intake path without making setup a repo analyzer.
+Use the canonical `../skills/workspace-startup/SKILL.md` for ordinary procedure.
+Use `../skills/workspace-instruction-correction/SKILL.md` when a material finding
+needs a current owner-backed correction or retention decision.
 
-## Artifact
+A finding is evidence and agent judgment, not mutation authority. Route a product
+failure to its smallest semantic owner. Preserve current human/local policy and
+useful domain state. A temporary observation needs no durable artifact unless it
+has a current owner and future decision value.
 
-The optional artifact is `tools/setup-findings.json` with kind `workspace-setup-findings/v1`. It is validated against `src/agentic_workspace/contracts/schemas/setup_findings.schema.json`.
-
-Use:
-
-```bash
-agentic-workspace setup --target . --format json
-agentic-workspace defaults --section improvement_intake --format json
-```
-
-## Accepted Classes
-
-`repo_friction_evidence` is for concrete repeated friction that can become a durable improvement issue, check, doc, memory note, contract, or workflow change.
-
-`planning_candidate` is for bounded future work that has a clear owner, next action, and reason it should not be handled inside current setup.
-
-## Promotion Rule
-
-Preserve a setup finding only when it has enough evidence to reduce future rediscovery or route bounded follow-up. Prefer findings with concrete paths, commands, symptoms, reproduction notes, confidence, and a durable owner.
-
-Dismiss or keep transient any finding that is speculative, generic, broad, missing a next action, or only useful to the current chat.
-
-## Boundaries
-
-Do not build a workspace-owned analyzer. Do not auto-write Planning or Memory state from setup input. Do not preserve findings that have no durable owner or bounded next action.
+Historical setup reports and `tools/setup-findings.json` are not native admission
+or a required source. Do not create another setup registry or run former commands
+to consume them. Any useful meaning must be considered through the current owner,
+with source currentness and explicit scope preserved. Keep private local material
+local; a retained note is not proof, completion or continuing write permission.

@@ -10,6 +10,41 @@ include!(concat!(env!("OUT_DIR"), "/payload.rs"));
 const PROVENANCE: &str = ".agentic-workspace/payload-provenance.json";
 const CAPABILITIES: &[&str] = &["installed-state-sync-v2"];
 
+/// The artifact, not caller-supplied filenames or provenance labels, defines
+/// which package files Configuration can refresh. Domain/local state is absent.
+pub(crate) fn paths() -> Vec<&'static str> {
+    PAYLOAD
+        .iter()
+        .map(|(path, _)| *path)
+        .chain([PROVENANCE])
+        .collect()
+}
+
+pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
+    if let Some((_, bytes)) = PAYLOAD.iter().find(|(p, _)| *p == path) {
+        return text(bytes)
+            .map(String::into_bytes)
+            .ok_or_else(|| CoreError::new("shipped payload is not UTF-8"));
+    }
+    if path != PROVENANCE {
+        return Err(CoreError::new(
+            "source is not in the artifact's payload declaration",
+        ));
+    }
+    let product: toml::Value = toml::from_str(include_str!("../../../pyproject.toml"))
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let version = product["project"]["version"].as_str().unwrap();
+    let value = json!({"kind":"agentic-workspace/payload-provenance/v1",
+        "payload_schema":"agentic-workspace/payload/v1",
+        "payload_capabilities":CAPABILITIES,
+        "payload_files":PAYLOAD.iter().map(|(path,_)| *path).collect::<Vec<_>>(),
+        "release_identity":{"package":"agentic-workspace","version":version},
+        "rule":"Artifact-derived payload identity; native admission also checks every shipped byte. No domain-state or completion authority."});
+    let mut bytes = serde_json::to_vec_pretty(&value).map_err(|e| CoreError::new(e.to_string()))?;
+    bytes.push(b'\n');
+    Ok(bytes)
+}
+
 fn text(bytes: &[u8]) -> Option<String> {
     std::str::from_utf8(bytes)
         .ok()

@@ -25,14 +25,14 @@ uninstall_policy = "remove-managed-files-only"
 [[module_roots]]
 module = "memory"
 path = ".agentic-workspace/memory/"
-ownership = "module_managed"
-uninstall_policy = "remove-managed-files-only"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 [[module_roots]]
 module = "planning"
 path = ".agentic-workspace/planning/"
-ownership = "module_managed"
-uninstall_policy = "remove-managed-files-only"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 [[managed_surfaces]]
 module = "workspace"
@@ -73,15 +73,15 @@ uninstall_policy = "remove-if-owned"
 module = "memory"
 path = ".agentic-workspace/memory/**"
 kind = "module-root"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 [[managed_surfaces]]
 module = "planning"
 path = ".agentic-workspace/planning/**"
 kind = "module-root"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 
 [[managed_surfaces]]

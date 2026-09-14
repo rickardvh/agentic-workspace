@@ -154,7 +154,7 @@ fn resolve_with_baseline(
         "current_work":work, "source":route_source,
         "request":request_for("semantic-routes")
     });
-    let configuration = native_config::view(target)?;
+    let mut configuration = native_config::view(target)?;
     let independent = crate::native_independent::Runtime::discover(
         target,
         &work,
@@ -162,7 +162,8 @@ fn resolve_with_baseline(
         &requests,
         &configuration,
     )?;
-    let available = |owner: &str| native_config::module_enabled(&configuration, owner);
+    let module_selection = json!({"modules":configuration["modules"]});
+    let available = |owner: &str| native_config::module_enabled(&module_selection, owner);
     for request in &requests {
         if matches!(
             request["owner"].as_str(),
@@ -187,7 +188,7 @@ fn resolve_with_baseline(
     let mut startup_adapter =
         crate::native_startup::view(target, &work, &configuration, None, None)?;
     let mut system_intent = crate::native_intent::view(target, &work, &configuration, None, None)?;
-    let admissions = &configuration["admissions"];
+    let admissions = configuration["admissions"].clone();
     let repository_capture_available = admissions["decision_record_target"]
         .as_str()
         .is_some_and(|s| !s.is_empty());
@@ -366,6 +367,29 @@ fn resolve_with_baseline(
         .unwrap()
         .extend(configuration_gap_scopes.clone());
     config_write_contract["revision"] = json!(digest(&config_write_contract)?);
+    // Payload nonconformance normally restricts the whole task. Its exact
+    // Configuration repair may proceed while every other effect/claim remains
+    // restricted; no caller can nominate a broader repair exception.
+    if configuration["contribution"]["blockers"]
+        .as_array()
+        .is_some_and(|rows| {
+            rows.iter()
+                .any(|row| row["code"] == "native-payload-target-unproven")
+        })
+    {
+        for authority in configuration["capability_contract"]["restriction_authorities"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+        {
+            authority["affects"]
+                .as_array_mut()
+                .unwrap()
+                .extend(configuration_gap_scopes.clone());
+        }
+        configuration["capability_contract"]["revision"] =
+            json!(digest(&configuration["capability_contract"])?);
+    }
     let contract = combined_contract(&[
         &config_write_contract,
         &decision_read_contract,
@@ -593,6 +617,29 @@ fn resolve_with_baseline(
         &contract,
         request_for("configuration"),
     )?;
+    if config_write["contribution"]["actions"]
+        .as_array()
+        .is_some_and(|actions| {
+            actions.iter().any(|action| {
+                matches!(
+                    action["operation_id"].as_str(),
+                    Some("configuration.write" | "configuration.recover-write")
+                ) && action["arguments"]["request"]["arguments"]["source"]
+                    .as_str()
+                    .is_some_and(|source| crate::native_payload::paths().contains(&source))
+            })
+        })
+    {
+        for blocker in configuration["contribution"]["blockers"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+        {
+            if blocker["code"] == "native-payload-target-unproven" {
+                blocker["affects"] = json!(configuration_gap_scopes);
+            }
+        }
+    }
     if independent_views
         .as_object()
         .into_iter()

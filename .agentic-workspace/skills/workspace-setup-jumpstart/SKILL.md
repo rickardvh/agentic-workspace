@@ -50,6 +50,15 @@ the responsible owner supplies current questions, operations and authority.
    agent for ordinary durable choices. Apply already-authorized choices first;
    capability enablement and delegation-policy editing still require the exact
    human answer. Never create a grant just to automate setup.
+8. For package-managed payload refresh, submit the Configuration owner's
+   `payload_discovery_request`. Its `payload_choices` name only files declared
+   by the current artifact. Inspect each `refresh-available` row's exact proposal;
+   an authorized answer permits that file's refresh through the existing writer.
+   It does not authorize replacing unrelated repository, human or local state.
+   Re-resolve after each write and follow an offered `recovery_request` after
+   interrupted publication. A second pass with every row `current` needs no writes.
+   Byte convergence does not settle unresolved semantic source dispositions or
+   establish proof, review acceptance or completion of broader adoption intent.
 
 Shared policy stays stronger than local preference. Preserve unrelated keys,
 comments and files. Former source intent must be represented, explicitly

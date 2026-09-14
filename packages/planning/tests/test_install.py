@@ -470,27 +470,11 @@ def test_bootstrap_review_template_includes_mode_and_cap_fields() -> None:
     ]
 
 
-def test_bootstrap_delegated_judgment_doc_is_part_of_contract() -> None:
+def test_bootstrap_execution_compatibility_reference_uses_canonical_procedure() -> None:
     text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
-
-    assert "# Execution and Milestone Flow Contract" in text
-    assert "## Delegated Judgment" in text
-    assert "Agents have bounded initiative to" in text
-    assert "Escalation is required" in text
-    assert "The path is blocked" in text
-    assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-
-
-def test_bootstrap_environment_recovery_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
-
-    assert "agentic-workspace report" in text
-    assert "summary" in text
-    assert "recover current context" in text
-    assert "### Resumable Execution" in text
-    assert "Environment and State Recovery" in text
-    assert "agentic-workspace report" in text
-    assert "agentic-workspace doctor --target ./repo" in text
+    assert "skills/workspace-startup/SKILL.md" in text
+    assert "no effect, proof or" in text
+    assert len(text.encode()) < 1000
     assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
@@ -514,33 +498,6 @@ def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     assert "Native runtime artifacts such as `implementation_plan.md`" in text
     assert "## Execution Summary" in text
     assert "Outcome delivered" in text
-
-
-def test_bootstrap_execution_summary_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
-    assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert "Execution Summary" in text
-    assert "Execution Summary" in text
-    assert "Captured Outcome" in text
-    assert "Unfinished Detail" in text
-    assert "Stable References" in text
-
-
-def test_bootstrap_iterative_follow_through_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
-
-    assert "## Iterative Follow-Through" in text
-    assert "Follow-Through Section" in text
-    assert "residue" in text
-    assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-
-
-def test_bootstrap_resumable_execution_contract_is_part_of_payload() -> None:
-    text = (installer_mod.payload_root() / ".agentic-workspace" / "docs" / "execution-flow-contract.md").read_text(encoding="utf-8")
-    assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
-    assert "Resumable Execution" in text
-    assert "agentic-workspace report" in text
-    assert Path(".agentic-workspace/docs/execution-flow-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
