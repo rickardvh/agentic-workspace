@@ -58,7 +58,7 @@ def _repo_path(path: Path) -> str:
 
 
 def _run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(args, cwd=ROOT, check=check, capture_output=True, text=True)
+    return subprocess.run(args, cwd=ROOT, check=check, capture_output=True, text=True, encoding="utf-8")
 
 
 def load_ownership() -> dict[str, Any]:
@@ -272,14 +272,35 @@ def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
-def set_workspace_payload_release_identity(ownership: dict[str, Any], version: str, *, tag: str | None = None) -> None:
+def normalized_payload_provenance(payload: Any, version: str) -> dict[str, Any]:
+    """Normalize only the package version owned by native_payload.rs::shipped.
+
+    Tags belong to release metadata/receipts. Preserve unrelated source fields;
+    normalization cannot manufacture a missing or malformed payload identity.
+    """
     Version.parse(version)
-    release_tag = tag or f"v{version}"
-    release_class, tag_version = parse_release_tag(release_tag)
-    if str(tag_version) != version:
-        raise SystemExit(f"Release tag {release_tag!r} does not match workspace version {version!r}")
-    if release_class not in {"stable", "preview"}:
-        raise AssertionError(release_class)
+    if not isinstance(payload, dict):
+        raise SystemExit("Workspace payload provenance must be an object")
+    identity = payload.get("release_identity")
+    if (
+        payload.get("kind") != "agentic-workspace/payload-provenance/v1"
+        or payload.get("payload_schema") != "agentic-workspace/payload/v1"
+        or not isinstance(identity, dict)
+        or identity.get("package") != "agentic-workspace"
+        or not isinstance(identity.get("version"), str)
+        or not identity["version"]
+        or any(
+            not isinstance(payload.get(field), list)
+            or not payload[field]
+            or any(not isinstance(value, str) or not value for value in payload[field])
+            for field in ("payload_files", "payload_capabilities")
+        )
+    ):
+        raise SystemExit("Workspace payload provenance has an invalid native payload identity")
+    return {**payload, "release_identity": {**identity, "version": version}}
+
+
+def set_workspace_payload_release_identity(ownership: dict[str, Any], version: str) -> None:
     workspace_package = next(
         (package for package in ownership["packages"] if package.get("name") == "agentic-workspace"),
         None,
@@ -290,15 +311,8 @@ def set_workspace_payload_release_identity(ownership: dict[str, Any], version: s
     if not provenance_ref:
         raise SystemExit("Release ownership must declare the agentic-workspace payload_provenance path")
     provenance_path = ROOT / provenance_ref
-    payload = json.loads(provenance_path.read_text(encoding="utf-8"))
-    installed_by = payload.get("installed_by")
-    release_identity = payload.get("release_identity")
-    if not isinstance(installed_by, dict) or not isinstance(release_identity, dict):
-        raise SystemExit(f"{_repo_path(provenance_path)} must declare installed_by and release_identity objects")
-    installed_by["version"] = version
-    release_identity["version"] = version
-    release_identity["tag"] = release_tag
-    provenance_path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    payload = normalized_payload_provenance(json.loads(provenance_path.read_text(encoding="utf-8")), version)
+    provenance_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def write_release_note(ownership: dict[str, Any], *, version: str, changesets: list[Changeset]) -> Path:
@@ -385,7 +399,7 @@ def prepare_preview_release(ownership: dict[str, Any], *, tag: str, source_commi
 
     pending_changesets = [_repo_path(changeset.path) for changeset in parse_changesets(ownership)]
     set_workspace_version(ownership, str(version))
-    set_workspace_payload_release_identity(ownership, str(version), tag=tag)
+    set_workspace_payload_release_identity(ownership, str(version))
     note_path = write_preview_release_note(ownership, tag=tag, source_commit=source_commit)
     metadata_path = write_preview_metadata(ownership, tag=tag, source_commit=source_commit)
     return {
@@ -399,21 +413,6 @@ def prepare_preview_release(ownership: dict[str, Any], *, tag: str, source_commi
         "preview_metadata": _repo_path(metadata_path),
         "preserved_changesets": pending_changesets,
     }
-
-
-def _workspace_payload_release_identity(ownership: dict[str, Any]) -> dict[str, Any]:
-    workspace_package = next(
-        (package for package in ownership["packages"] if package.get("name") == "agentic-workspace"),
-        None,
-    )
-    if workspace_package is None:
-        raise SystemExit("Release ownership must declare the agentic-workspace package")
-    provenance_path = ROOT / str(workspace_package["payload_provenance"])
-    payload = json.loads(provenance_path.read_text(encoding="utf-8"))
-    release_identity = payload.get("release_identity")
-    if not isinstance(release_identity, dict):
-        raise SystemExit(f"{_repo_path(provenance_path)} must declare release_identity")
-    return release_identity
 
 
 def verify_preview_release(
@@ -452,9 +451,9 @@ def verify_preview_release(
         raise SystemExit("Preview metadata must identify the reconstruction source commit")
 
     provenance_ref = next(package["payload_provenance"] for package in ownership["packages"] if package["name"] == "agentic-workspace")
-    release_identity = json.loads(read(ROOT / provenance_ref)).get("release_identity", {})
-    if release_identity.get("version") != str(version) or release_identity.get("tag") != tag:
-        raise SystemExit("Workspace payload release identity does not match preview tag/version")
+    payload = json.loads(read(ROOT / provenance_ref))
+    if payload != normalized_payload_provenance(payload, str(version)):
+        raise SystemExit("Workspace payload release identity does not match preview version")
 
     subject_commit = artifact_commit or _run(["git", "rev-parse", "HEAD"]).stdout.strip()
     parents = _run(["git", "rev-list", "--parents", "-n", "1", subject_commit]).stdout.strip().split()
@@ -486,8 +485,7 @@ def verify_preview_release(
             raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
     provenance_ref = next(package["payload_provenance"] for package in ownership["packages"] if package["name"] == "agentic-workspace")
     before = json.loads(_run(["git", "show", f"{expected_source}:{provenance_ref}"]).stdout)
-    before["installed_by"]["version"] = str(version)
-    before["release_identity"].update(version=str(version), tag=tag)
+    before = normalized_payload_provenance(before, str(version))
     if before != json.loads(read(ROOT / provenance_ref)):
         raise SystemExit("Preview changed non-release payload provenance")
     for language in ("python", "typescript"):
@@ -528,6 +526,11 @@ def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = No
     version = current_workspace_version(ownership)
     if tag and tag != f"v{version}":
         raise SystemExit(f"Release tag {tag!r} must match workspace version {version!r}")
+    for package in ownership["packages"]:
+        if package.get("name") == "agentic-workspace" and package.get("payload_provenance"):
+            payload = json.loads((ROOT / package["payload_provenance"]).read_text(encoding="utf-8"))
+            if payload != normalized_payload_provenance(payload, version):
+                raise SystemExit("Workspace payload version does not match coordinated package version")
     release_versions = existing_release_versions(ownership)
     target = Version.parse(version)
     higher_or_equal = [release_version for release_version in release_versions if release_version >= target]

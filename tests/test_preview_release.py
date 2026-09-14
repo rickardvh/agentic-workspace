@@ -42,9 +42,8 @@ def _fixture(root: Path) -> dict[str, object]:
     (root / ".agentic-workspace/payload-provenance.json").write_text(
         json.dumps(
             {
-                "kind": "agentic-workspace/payload-provenance/v1",
-                "installed_by": {"version": "0.51.0"},
-                "release_identity": {"version": "0.51.0", "tag": "v0.51.0"},
+                **json.loads((ROOT / ".agentic-workspace/payload-provenance.json").read_text(encoding="utf-8")),
+                "release_identity": {"package": "agentic-workspace", "version": "0.51.0"},
             }
         )
         + "\n",
@@ -107,7 +106,7 @@ def test_prepare_preview_normalizes_detached_subject_without_consuming_changeset
     assert 'version = "0.52.0"' in (tmp_path / "packages/memory/pyproject.toml").read_text(encoding="utf-8")
     assert json.loads((tmp_path / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"] == "0.52.0"
     provenance = json.loads((tmp_path / ".agentic-workspace/payload-provenance.json").read_text(encoding="utf-8"))
-    assert provenance["release_identity"] == {"version": "0.52.0", "tag": "preview-v0.52.0"}
+    assert provenance["release_identity"] == {"package": "agentic-workspace", "version": "0.52.0"}
     metadata = json.loads((tmp_path / ".release/previews/preview-v0.52.0.json").read_text(encoding="utf-8"))
     assert metadata == {
         "kind": "agentic-workspace/coordinated-preview-subject/v1",
@@ -368,6 +367,15 @@ def test_preview_rejects_forged_delta_and_subjects(tmp_path, monkeypatch):
         module.verify_preview_release(ownership, tag="preview-v0.52.0", source_commit="c" * 40)
     with pytest.raises(SystemExit, match="Release tag"):
         module.verify_workspace_versions(ownership, tag="preview-v0.52.0")
+    provenance_path = tmp_path / ".agentic-workspace/payload-provenance.json"
+    original_provenance = provenance_path.read_text(encoding="utf-8")
+    for field, value in [("version", "0.51.0"), ("package", "foreign"), ("tag", "preview-v0.52.0")]:
+        changed = json.loads(original_provenance)
+        changed["release_identity"][field] = value
+        provenance_path.write_text(json.dumps(changed), encoding="utf-8")
+        with pytest.raises(SystemExit, match="payload"):
+            module.verify_preview_release(ownership, tag="preview-v0.52.0", source_commit=source)
+    provenance_path.write_text(original_provenance, encoding="utf-8")
     original = (tmp_path / "pyproject.toml").read_text()
     (tmp_path / "pyproject.toml").write_text(original.replace("agentic-workspace", "forged-package"))
     _git(tmp_path, "add", ".")

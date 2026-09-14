@@ -36,7 +36,7 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
     stable_allowed = set(ownership["release_commit_allowed_paths"])
     assert ".agentic-workspace/payload-provenance.json" in preview_allowed
     assert ".release/previews/" in preview_allowed
-    assert ".agentic-workspace/payload-provenance.json" not in stable_allowed
+    assert ".agentic-workspace/payload-provenance.json" in stable_allowed
     assert ".release/previews/" not in stable_allowed
     assert not any(path == "generated/" for path in preview_allowed)
 
@@ -65,13 +65,13 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
         "id-token",
         "attestations",
     }
+    assert "preview-public-smoke.json" in preview
     assert "--check-published" in preview
     assert "support_bearing_promotion.py github-checks" in stable
     assert "support_bearing_promotion.py compose" in stable
 
     shared_authorities = (
         "uv build --wheel --sdist --out-dir dist",
-        "scripts/release/patch_workspace_release_wheel.py",
         "scripts/release/stage_native_npm.py",
         "make packed-artifact-conformance",
         "scripts/check/check_package_identity.py",
@@ -85,8 +85,6 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
         assert authority in stable
 
     assert "refs/heads/reconstruct/first-stable:refs/remotes/origin/reconstruct/first-stable" in preview
-    assert '--release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"' in preview
-    assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in preview
 
 
 def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:

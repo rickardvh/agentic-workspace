@@ -75,9 +75,8 @@ def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, m
     payload_provenance.write_text(
         json.dumps(
             {
-                "kind": "agentic-workspace/payload-provenance/v1",
-                "installed_by": {"version": "0.1.0"},
-                "release_identity": {"version": "0.1.0", "tag": "v0.1.0"},
+                **json.loads((ROOT / ".agentic-workspace/payload-provenance.json").read_text(encoding="utf-8")),
+                "release_identity": {"package": "agentic-workspace", "version": "0.1.0"},
             }
         )
         + "\n",
@@ -102,6 +101,7 @@ def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, m
         "typescript_packages": [{"package_json": "generated/workspace/typescript/package.json"}],
     }
 
+    before_provenance = json.loads(payload_provenance.read_text(encoding="utf-8"))
     plan = module.prepare_release(ownership)
 
     assert plan["version"] == "0.2.0"
@@ -110,8 +110,20 @@ def test_prepare_updates_all_version_mirrors_and_consumes_changesets(tmp_path, m
     assert 'version = "0.2.0"' in package_pyproject.read_text(encoding="utf-8")
     assert json.loads(package_json.read_text(encoding="utf-8"))["version"] == "0.2.0"
     provenance = json.loads(payload_provenance.read_text(encoding="utf-8"))
-    assert provenance["installed_by"]["version"] == "0.2.0"
-    assert provenance["release_identity"] == {"version": "0.2.0", "tag": "v0.2.0"}
+    assert "installed_by" not in provenance
+    assert provenance["release_identity"] == {"package": "agentic-workspace", "version": "0.2.0"}
+    before_provenance["release_identity"]["version"] = "0.2.0"
+    assert provenance == before_provenance
+    assert module.verify_workspace_versions(ownership)["version"] == "0.2.0"
+    import pytest
+
+    for field, value in [("version", "0.1.0"), ("package", "foreign")]:
+        changed = json.loads(json.dumps(provenance))
+        changed["release_identity"][field] = value
+        payload_provenance.write_text(json.dumps(changed), encoding="utf-8")
+        with pytest.raises(SystemExit, match="payload"):
+            module.verify_workspace_versions(ownership)
+    payload_provenance.write_text(json.dumps(provenance), encoding="utf-8")
     assert release_note.read_text(encoding="utf-8").count("Feature") == 1
     assert not changeset.exists()
 
