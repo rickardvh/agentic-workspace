@@ -77,7 +77,12 @@
     "generated/planning/typescript/package.json",
     "generated/verification/typescript/package.json",
     ".release/releases/",
-    "uv.lock"
+    "uv.lock",
+    ".release/changes/",
+    "generated/workspace/.agentic-workspace-cli-fingerprint.json",
+    "generated/memory/.agentic-workspace-cli-fingerprint.json",
+    "generated/planning/.agentic-workspace-cli-fingerprint.json",
+    "generated/verification/.agentic-workspace-cli-fingerprint.json"
   ],
   "preview_release_commit_allowed_paths": [
     "pyproject.toml",

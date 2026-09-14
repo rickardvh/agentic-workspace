@@ -449,10 +449,15 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
     assert "gh workflow run release.yml" in post_merge_workflow
     assert sorted(ownership["release_commit_allowed_paths"]) == [
         ".agentic-workspace/payload-provenance.json",
+        ".release/changes/",
         ".release/releases/",
+        "generated/memory/.agentic-workspace-cli-fingerprint.json",
         "generated/memory/typescript/package.json",
+        "generated/planning/.agentic-workspace-cli-fingerprint.json",
         "generated/planning/typescript/package.json",
+        "generated/verification/.agentic-workspace-cli-fingerprint.json",
         "generated/verification/typescript/package.json",
+        "generated/workspace/.agentic-workspace-cli-fingerprint.json",
         "generated/workspace/typescript/package.json",
         "packages/memory/pyproject.toml",
         "packages/planning/pyproject.toml",
