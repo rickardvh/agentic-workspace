@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Keep package guidance, Planning diagnostics and composed upgrades consistent with canonical workspace sources."
+issues = [2767, 3224, 3249, 3253]

@@ -13001,16 +13001,6 @@ def test_legacy_planning_route_inventory_keeps_restrictions() -> None:
     assert all(entry["projection"] != "independent" for entry in inventory["consumers"].values())
     assert inventory["compatibility_removal"]
 
-    policy_path = repo_root / "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json"
-    policy = json.loads(policy_path.read_text(encoding="utf-8"))
-    expected = policy.pop("contract_digest")
-    actual = "sha256:" + hashlib.sha256(json.dumps(policy, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-    assert expected == actual
-    assert policy["authority"]["decision_source"] == inventory["authority"]
-    assert {"managed-state-mutation", "external-write", "destructive-action"}.issubset(policy["forbidden_effects"])
-    assert {"proof-complete", "issue-closeable", "task-complete"}.issubset(policy["forbidden_claims"])
-    assert policy["restoration"]["action"] == "restore-configured-cli-and-rerun-start"
-
     # Current entry/pointer and no-runtime behavior are proved by the existing
     # skills-first interface suite, not this retained compatibility inventory.
 

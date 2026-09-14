@@ -39,6 +39,16 @@ def synchronize(*, check: bool = False) -> list[str]:
             drift.append(destination.relative_to(ROOT).as_posix())
             if not check:
                 destination.write_text(expected, encoding="utf-8", newline="\n")
+    # Planning's compatibility installer shares this path with Workspace.
+    # Derive identical bytes so alternating upgrades cannot overwrite each
+    # other's configuration guidance on every pass.
+    reference = ".agentic-workspace/docs/workspace-config-contract.md"
+    destination = ROOT / "packages/planning/bootstrap" / reference
+    expected = (ROOT / reference).read_text(encoding="utf-8")
+    if destination.read_text(encoding="utf-8") != expected:
+        drift.append(destination.relative_to(ROOT).as_posix())
+        if not check:
+            destination.write_text(expected, encoding="utf-8", newline="\n")
     for retired in manifest.get("retired_surface_files", []):
         destination = payload / retired["path"]
         if destination.exists():

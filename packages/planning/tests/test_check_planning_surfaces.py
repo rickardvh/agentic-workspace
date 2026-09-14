@@ -528,9 +528,10 @@ def _baseline_execplans_readme() -> str:
     return """
 # Execution Plans
 
-Use `agentic-workspace summary --format json` first when the question is active planning state.
+Follow the canonical workspace startup skill when the question is active planning state.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient.
-`agentic-workspace summary --format json` exposes a typed payload and `planning_record` is the canonical active planning record.
+Legacy `state.toml` is upgrade input, not current selection authority.
+Managed record changes require current native owner operations.
 
 ## Meaning Boundary
 
