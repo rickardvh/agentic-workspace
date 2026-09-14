@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Validate exact native receipt source, artifacts, proof and integrity in the final promotion decision."
+issues = [3257]
