@@ -29,6 +29,13 @@ flowchart TD
 
 The repository remains the source of truth. Workspace composes the current effect of relevant sources; the generated operating contract does not replace them.
 
+The canonical skill supplies agent procedure, while Rust-backed operations supply
+deterministic resolution and bounded effects. Those responsibilities do not impose
+a phase loop on every task. A repository-only reader uses the same skill and a
+generated profile of existing ownership refs; it cannot infer a static operating
+decision or acquire runtime/proof authority. Profile generation is build/install
+serialization and does not participate in executable `start` resolution.
+
 ## Operating context
 
 Operating context is not a central store. It is the set of source-owned facts and procedures whose current or durable availability can materially change agent behavior.

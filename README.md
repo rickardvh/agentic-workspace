@@ -28,6 +28,11 @@ intent, unresolved judgment and new material; it does not memorize a packet
 protocol. A tool succeeding is separate from the requested outcome being complete.
 See [everyday use](docs/everyday-use.md) for small practical examples.
 
+An agent with only repository read access uses the same skill and its generated
+read profile to reach relevant owner sources. It can recover recorded intent and
+context, while runtime availability, local state and fresh proof remain unknown.
+This read path grants no permission to mutate or approve work.
+
 ## First-party modules
 
 Most of Agentic Workspace's current higher-level functionality is provided by three first-party modules. They are independently selectable rather than mandatory: a repository can use the Workspace routing/control layer on its own or add the modules that solve recurring problems.
@@ -103,7 +108,7 @@ See [`docs/security/threat-model.md`](docs/security/threat-model.md) for the ful
 
 ## Learn more
 
-- [`docs/package/overview.md`](docs/package/overview.md) — product model and ordinary operating loop.
+- [`docs/package/overview.md`](docs/package/overview.md) — product model and source ownership.
 - [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md) — installation and adoption.
 - [`docs/package/modules.md`](docs/package/modules.md) — first-party modules and ownership.
 - [`docs/architecture.md`](docs/architecture.md) — operating context, dynamic control, programmable instructions, and extension boundaries.

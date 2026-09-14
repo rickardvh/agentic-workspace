@@ -8,6 +8,8 @@ This section is for source-checkout maintenance of this repository. It is not th
 - [Maintainer commands](maintainer-commands.md): literal command index.
 - [Dogfooding feedback](dogfooding-feedback.md): friction classification and admission policy.
 - [Testing strategy](testing-strategy.md): inventory, consolidation, pruning, and contract-owned conformance guidance.
+- [Candidate conformance input](c54-conformance-input.md): owner/evidence composition and the remaining exact-candidate gates.
+- [Repository-only reading](repository-read-profile.md): generated source refs, Git identities and no-runtime authority limits.
 - [Contract-owned test replacement plan](contract-test-replacement-plan.md): sequencing and inventory for replacing regression tests with contract-owned conformance cases.
 - [AW contract test replacement inventory](aw-contract-test-replacement-inventory.md): retained keep/convert/merge/delete record for AW-side generated-command behavior tests.
 - [Generated command check inventory](generated-command-check-inventory.md): checked split between AW-owned generated-command proof and command-generation-owned generic target baselines.
