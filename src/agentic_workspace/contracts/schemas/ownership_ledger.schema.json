@@ -190,6 +190,17 @@
         "summary": {
           "type": "string",
           "description": "Short explanation of what the surface decides."
+        },
+        "read": {
+          "type": "object",
+          "description": "Optional source-owned metadata projected into the static read profile; it grants no executable authority.",
+          "required": ["refs", "select", "unknown"],
+          "additionalProperties": false,
+          "properties": {
+            "refs": {"type": "array", "items": {"type": "string"}, "description": "Exact repository-relative read refs or bounded immediate directories."},
+            "select": {"type": "string", "description": "Semantic selection and source interpretation guidance for a read-only agent."},
+            "unknown": {"type": "array", "items": {"type": "string"}, "description": "Owner conclusions unavailable from repository bytes alone."}
+          }
         }
       }
     },

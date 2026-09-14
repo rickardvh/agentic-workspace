@@ -1,6 +1,7 @@
 {
   "schema_version": "workspace-surfaces-manifest/v1",
   "payload_files": [
+    ".agentic-workspace/READING.json",
     ".agentic-workspace/WORKFLOW.md",
     ".agentic-workspace/OWNERSHIP.toml",
     ".agentic-workspace/docs/jumpstart-contract.md",
@@ -21,6 +22,7 @@
     ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
   ],
   "necessary_surface_files": [
+    ".agentic-workspace/READING.json",
     ".agentic-workspace/WORKFLOW.md",
     ".agentic-workspace/OWNERSHIP.toml",
     ".agentic-workspace/docs/jumpstart-contract.md",

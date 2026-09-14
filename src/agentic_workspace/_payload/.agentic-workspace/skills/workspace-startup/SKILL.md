@@ -76,13 +76,15 @@ Detailed schemas and packet fields belong to generated contracts/reference surfa
 Use the **same skills-first model**, but stop at repository-readable facts.
 
 1. Read this skill and the applicable repo instructions; do not switch to a competing no-runtime operating manual.
-2. Use `.agentic-workspace/OWNERSHIP.toml` as the compact static orientation map for package-managed and repo-owned authority surfaces. Follow only the owner/source refs relevant to the current planning, shaping, review, or context question.
-3. Read canonical repository sources directly where the ledger or relevant skill points: for example `SYSTEM_INTENT.md`, scoped instructions/config, Planning-owned records, relevant Memory material, or Verification/proof declarations. Prefer exact refs over broad `.agentic-workspace/**` scanning.
+2. Read `.agentic-workspace/READING.json`, the compact generated read profile over existing ownership declarations. Accept `agentic-workspace/repository-read-profile/v1` only when its source Git blob matches `.agentic-workspace/OWNERSHIP.toml` at the same repository revision. If your reader cannot obtain blob identities, say currentness is unverified. Select only relevant entries by meaning; this is not runtime capability discovery.
+3. Follow the selected entry's exact refs and owner metadata; enumerate only a named immediate directory when a source ref is not already supplied, never its archive/history subtree. Read canonical repository sources directly: for example `SYSTEM_INTENT.md`, scoped instructions/config, Planning-owned records, relevant Memory material, or Verification/proof declarations. Prefer exact refs over broad `.agentic-workspace/**` scanning.
 4. Treat only facts established by the repository bytes you actually read as known. Runtime capability, machine-local state not present in those bytes, live external state, current effect admission, and owner conclusions requiring executable resolution remain **unknown**.
 5. Do not mutate managed owner state, claim an AW effect, manufacture proof/completion authority, or emulate `start` from static files. Record the exact source paths/revisions used so later reasoning can be reconsidered if those sources change.
 6. If executable AW later becomes available, return to the ordinary path above; no new mental model or migration is required.
 
-A missing, malformed, stale, or insufficient static surface is a reason to narrow the conclusion or request executable/current owner resolution—not to infer an operating decision.
+Bind each observation to the selected file's repository/blob identity and field or section. Read its declared dependencies before treating a recorded consequence as applicable; changed dependencies require reconsideration, while unrelated repository changes do not invalidate unchanged source blobs. Planning progress and Verification receipts are recorded assertions until their owner admits a current claim. Missing local state is unknown, not evidence that no work or restrictions exist.
+
+For an absent, incompatible, malformed or stale profile, use only directly readable facts and the exact matching authority entry in `.agentic-workspace/OWNERSHIP.toml`. Ask a runtime-capable maintainer to restore the installed profile or reconcile the named source; do not run a fallback renderer or infer an operating decision. The profile grants no issue-close or owner-reconciliation authority.
 
 ## Directness and residue
 

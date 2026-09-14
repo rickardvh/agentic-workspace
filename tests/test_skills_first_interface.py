@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -13,6 +14,7 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 from agentic_workspace.config import workspace_pointer_block
+from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
 
 ROOT = Path(__file__).resolve().parents[1]
 MAIN = ".agentic-workspace/skills/workspace-startup/SKILL.md"
@@ -38,6 +40,91 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert "Do not mutate managed owner state" in skill
     ledger = tomllib.loads((ROOT / ".agentic-workspace/OWNERSHIP.toml").read_text())
     assert ledger["workspace"]["main_skill_path"] == MAIN
+    with pytest.raises(ValueError, match="Unsupported ownership ledger"):
+        render("schema_version=2\n")
+    with pytest.raises(tomllib.TOMLDecodeError):
+        render("[malformed")
+
+
+def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():
+    """Consumer access is fetch/list only; no AW, shell, or renderer is called.
+
+    Selection here is explicit example agent judgment, not a product classifier.
+    The harness supplies Git blob identities as a repository API would.
+    """
+
+    def blob(content):
+        raw = content.encode()
+        return hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+
+    files = {ref: (ROOT / ref).read_text() for ref in ["AGENTS.md", MAIN, LEDGER, PROFILE]}
+    plan = ".agentic-workspace/planning/execplans/selected.plan.json"
+    manifest = ".agentic-workspace/memory/repo/manifest.toml"
+    note = ".agentic-workspace/memory/repo/domains/relevant.md"
+    instruction = ".agentic-workspace/instructions/selected.md"
+    proof = ".agentic-workspace/verification/manifest.toml"
+    files.update(
+        {
+            ".agentic-workspace/planning/state.toml": f'[[active.execplans]]\nid="selected"\nsurface="{plan}"\n',
+            plan: json.dumps(
+                {
+                    "kind": "planning-execplan/v1",
+                    "intent": {"outcome": "Preserve the API", "non_goals": ["No release"]},
+                    "scope": {"owned": ["src/api.rs"]},
+                    "proof": {"refs": [proof]},
+                    "blockers": [],
+                    "next_action": "Check the changed response",
+                    "continuation": {"residual_intent": "Independent acceptance remains"},
+                }
+            ),
+            manifest: f'version=1\n[notes."{note}"]\nroutes_from=["src/api.rs"]\nnote_type="domain"\n[notes."{note}".dependencies]\n"src/api.rs"="recorded earlier source"\n',
+            note: "Advisory: consumers rely on the existing response shape.",
+            instruction: "---\npaths: [src/api.rs]\nprotect: [review]\n---\nPreserve response compatibility.",
+            proof: "version=1\n# Independent review remains required; no fresh receipt is present.\n",
+            "src/api.rs": "current API source",
+            ".agentic-workspace/planning/execplans/archive/unrelated.plan.json": "Unrelated history",
+            ".agentic-workspace/memory/repo/domains/unrelated.md": "Unrelated lesson",
+        }
+    )
+    fetched = {}
+
+    def fetch(ref):
+        content = files[ref]
+        fetched[ref] = blob(content)
+        return content
+
+    assert MAIN in fetch("AGENTS.md")
+    assert PROFILE in fetch(MAIN)
+    profile = json.loads(fetch(PROFILE))
+    assert profile["kind"] == "agentic-workspace/repository-read-profile/v1"
+    assert profile["source"]["git_blob_sha1"] == blob(fetch(profile["source"]["path"]))
+    entries = {entry["concern"]: entry for entry in profile["entries"]}
+    # Planning/shaping: choose the intended owner, not an inferred local selector.
+    state = tomllib.loads(fetch(entries["bounded-planning-continuity"]["refs"][0]))
+    selected = json.loads(fetch(state["active"]["execplans"][0]["surface"]))
+    assert selected["intent"] == {"outcome": "Preserve the API", "non_goals": ["No release"]}
+    assert selected["continuation"]["residual_intent"] == "Independent acceptance remains"
+    assert "local selected owner" in entries["bounded-planning-continuity"]["unknown"]
+    # Review: metadata and the explicit task scope identify just these sources.
+    assert instruction.startswith(entries["startup-instructions"]["refs"][1])
+    assert "protect: [review]" in fetch(instruction)
+    assert fetch(entries["verification-manifest"]["refs"][0]) == files[proof]
+    notes = tomllib.loads(fetch(entries["memory-shared-support"]["refs"][0]))["notes"]
+    assert notes[note]["routes_from"] == ["src/api.rs"]
+    assert fetch(note).startswith("Advisory:")
+    for ref in notes[note]["dependencies"]:
+        fetch(ref)
+    assert "factual freshness" in entries["memory-shared-support"]["unknown"]
+    assert not any("unrelated" in ref or "/local/" in ref for ref in fetched)
+    # The read set carries exact repository facts, not an active decision.
+    files["unrelated.txt"] = "An unrelated repository change"
+    assert all(blob(files[ref]) == revision for ref, revision in fetched.items())
+    files["src/api.rs"] += " changed"
+    assert [ref for ref, revision in fetched.items() if blob(files[ref]) != revision] == ["src/api.rs"]
+    files[LEDGER] += "\n# Changed owner descriptor\n"
+    assert profile["source"]["git_blob_sha1"] != blob(files[LEDGER])
+    assert "stale" in profile["recovery"] and "Do not guess" in profile["recovery"]
+    assert "no mutation" in profile["authority"] and "issue-close" in profile["authority"]
 
 
 def test_canonical_procedure_preserves_correction_retention_boundary():
@@ -83,6 +170,9 @@ def test_source_lifecycle_retires_only_exact_package_bytes(tmp_path):
     assert (tmp_path / MAIN).read_text() == (ROOT / MAIN).read_text()
     ledger = tomllib.loads(owner._host_ownership_ledger_text())
     assert ledger["workspace"]["main_skill_path"] == MAIN
+    installed = json.loads((tmp_path / PROFILE).read_text())
+    assert installed == json.loads(render((tmp_path / LEDGER).read_text()))
+    assert len((tmp_path / PROFILE).read_bytes()) < 8_000
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -95,6 +185,9 @@ def test_fresh_skill_consumer_queries_then_performs_bounded_write(tmp_path, shar
     first = consume(surface, shared_core_binary, native_cli, context)
     assert first["decision_packet"]["status"] == "direct"
     assert not (tmp_path / ".agentic-workspace/local").exists()
+    # Static profile damage cannot become an executable semantic dependency.
+    (tmp_path / PROFILE).write_text('{"kind":"unsupported-profile/v2"}')
+    assert consume(surface, shared_core_binary, native_cli, context)["decision_packet"] == first["decision_packet"]
     first = consume(
         surface, shared_core_binary, native_cli, {**context, "request": first["configuration_write"]["creation_discovery_request"]}
     )

@@ -1,0 +1,91 @@
+{
+  "kind": "agentic-workspace/repository-read-profile/v1",
+  "source": {
+    "path": ".agentic-workspace/OWNERSHIP.toml",
+    "git_blob_sha1": "bc25f029e3b41ddf36dcbb76f259d761d16e50d2"
+  },
+  "authority": "orientation-only; no mutation, effect, proof, completion or issue-close authority",
+  "currentness": "Read one repository revision; record each selected path and provider blob identity. Reconsider changed selected sources/dependencies; unrelated blobs do not invalidate the reading. Source identity is not truth or runtime admission.",
+  "recovery": "If kind/source identity is absent, incompatible or stale, or a selected ref is missing/malformed, keep only directly observed repository facts. Follow the exact owner ref in OWNERSHIP.toml; ask a runtime-capable maintainer to restore the generated profile or reconcile the source. Do not guess an operating decision.",
+  "entries": [
+    {
+      "concern": "startup-instructions",
+      "owner": "repo",
+      "refs": [
+        "AGENTS.md",
+        ".agentic-workspace/instructions/"
+      ],
+      "select": "Read the repository bootstrap and only task-relevant scoped instruction files; their paths/routes and checks/protect/reconcile metadata retain source authority. Local instructions are not repository-visible.",
+      "unknown": [
+        "runtime applicability",
+        "local instruction state",
+        "publication admission"
+      ]
+    },
+    {
+      "concern": "workspace-policy",
+      "owner": "repo",
+      "refs": [
+        ".agentic-workspace/config.toml"
+      ],
+      "select": "Follow system_intent.sources/preferred_source to repository intent and assurance.decision_record_target to settled decisions; absent intent configuration uses SYSTEM_INTENT.md and README.md. Policy bytes describe requirements, not observed runtime capabilities.",
+      "unknown": [
+        "effective local overrides",
+        "live provider capability",
+        "current decision admission"
+      ]
+    },
+    {
+      "concern": "canonical-agent-procedure",
+      "owner": "workspace",
+      "refs": [
+        ".agentic-workspace/skills/REGISTRY.json",
+        "tools/skills/REGISTRY.json"
+      ],
+      "select": "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime.",
+      "unknown": [
+        "runtime route admission"
+      ]
+    },
+    {
+      "concern": "bounded-planning-continuity",
+      "owner": "planning",
+      "refs": [
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/"
+      ],
+      "select": "Prefer a task-supplied owner ref; otherwise follow active.execplans.surface in the optional state file or enumerate only immediate *.plan.json names, excluding archive. Select the relevant owner by meaning. Read intent.outcome/non_goals, scope, proof/relationships, blockers, next_action and continuation from that record; recorded status is not fresh proof or local active selection.",
+      "unknown": [
+        "local selected owner",
+        "current custody",
+        "task completion"
+      ]
+    },
+    {
+      "concern": "memory-shared-support",
+      "owner": "memory",
+      "refs": [
+        ".agentic-workspace/memory/repo/manifest.toml"
+      ],
+      "select": "Use notes metadata (routes_from, semantic_routes and task_relevance) to select relevant note paths; follow only those notes and their stated dependencies. Treat notes as advisory, even if historical metadata says canonical or decision. Stale/superseded/contradicted or changed dependencies require reconsideration.",
+      "unknown": [
+        "factual freshness",
+        "governing decision authority",
+        "promotion admission"
+      ]
+    },
+    {
+      "concern": "verification-manifest",
+      "owner": "verification",
+      "refs": [
+        ".agentic-workspace/verification/manifest.toml"
+      ],
+      "select": "Read relevant requirements, protocol/source refs and proof/claim limits. Follow exact evidence refs only when needed. An asserted check, receipt or accepted progress is repository-recorded evidence, not a new successful check or permission to approve/close.",
+      "unknown": [
+        "current proof selection",
+        "fresh check success",
+        "claim/effect authority"
+      ]
+    }
+  ]
+}
