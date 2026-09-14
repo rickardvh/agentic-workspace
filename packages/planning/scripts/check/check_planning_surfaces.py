@@ -1414,9 +1414,10 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
         (
             repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
             (
-                "agentic-workspace summary --format json` first",
+                "canonical workspace startup skill",
                 "raw `todo.md` and execplan prose after that only when the compact summary is insufficient",
-                "planning_record` is the canonical active planning record",
+                "Legacy `state.toml` is upgrade input, not current selection authority",
+                "Managed record changes require current native owner operations",
                 "Meaning Boundary",
                 "machine-readable state",
                 "compact prose",
@@ -1424,7 +1425,7 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
                 "What should I do next?",
                 "resumable_contract",
             ),
-            "Execplans README must keep summary-first inspection, planning_record primacy, and the meaning boundary explicit.",
+            "Execplans README must keep the canonical startup procedure, current native owner authority, and the meaning boundary explicit.",
         ),
     )
 

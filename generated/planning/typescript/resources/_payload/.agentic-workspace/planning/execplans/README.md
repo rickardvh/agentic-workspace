@@ -2,13 +2,13 @@
 
 Checked-in execution plans for multi-milestone or multi-thread work live in this directory.
 
-Use `agentic-workspace summary --format json` first when the question is active planning state.
+Follow the canonical workspace startup skill and inspect the current Planning owner only when active planning state matters.
 Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient or when you are maintaining the human-readable plan directly.
-Use raw `.agentic-workspace/planning/state.toml` when you need direct maintenance access to canonical machine-readable planning state.
+Legacy `state.toml` is upgrade input, not current selection authority. Managed record changes require current native owner operations.
 Use `.agentic-workspace/planning/execplans/*.plan.json` as the canonical execplan state when a machine-first plan sidecar is present; the adjacent `.md` file is the derived human view.
 Use `.agentic-workspace/docs/candidate-lanes-contract.md` for the native `roadmap` lane shape in `.agentic-workspace/planning/state.toml` when grouped deferred work needs more structure than a flat candidate bullet.
 Use `docs/planning-routing-contract.md` when deciding whether newly discovered work belongs in `roadmap`, `todo.active_items`, `.agentic-workspace/planning/execplans/`, or `.agentic-workspace/planning/reviews/`.
-Use `agentic-workspace doctor --target ./repo --format json` for advisory shape and drift warnings across `todo.active_items`, active execplans, and `roadmap`.
+Current owner observations establish applicable constraints; historical queue/roadmap projections do not establish current admission.
 Use `promote-to-plan` and `archive-plan` as thin file-native helpers around the same checked-in contract. `archive-plan` is the compatibility command name for closeout: by default it distills reusable information and removes the completed execplan from Planning. Retaining an archive is legacy/audit-only.
 Use `docs/environment-recovery-contract.md` for task-local recovery and environment assumptions.
 Use `.agentic-workspace/docs/system-intent-contract.md` for the durable larger-intent and honest-reinterpretation rule.
@@ -56,9 +56,9 @@ Silent shaping may improve means, decomposition, and validation scope, but it mu
 
 For ordinary inspection, keep the hierarchy explicit:
 
-1. `agentic-workspace summary --format json`
+1. The canonical startup skill and current Planning observation
 2. one relevant selector or view inside that payload
-3. raw `.agentic-workspace/planning/state.toml` or execplan prose only when the compact state is insufficient
+3. Relevant source records only when current owner observations identify them
 
 When planning has one active TODO item and one active execplan, the compact hierarchy question should be answerable from the summary/report surfaces alone: active chunk, parent lane, next likely chunk, continuation owner, and proof state.
 
@@ -69,7 +69,7 @@ Do not create a plan just because a stronger agent could write one. Use a checke
 
 Capability-aware delegation is allowed but optional. If the environment supports it, a more capable agent or model may write a compact execplan and then hand implementation to a smaller or less capable agent when that is likely to save tokens without sacrificing quality. Do not assume subagents exist; the same contract must still work for one agent executing end-to-end. Prefer silent shaping and better planning over repeated prompts to switch executors manually.
 
-Native runtime artifacts such as `implementation_plan.md`, `task.md`, or `walkthrough.md` may exist when an agent UI provides them, but they must not become a second durable source of truth. Before review, handoff, or session end, mirror any durable execution state back into `.agentic-workspace/planning/state.toml` and the active execplan so the next agent can continue from repo-owned surfaces alone.
+Native runtime artifacts such as `implementation_plan.md`, `task.md`, or `walkthrough.md` may exist when an agent UI provides them, but they must not become a second durable source of truth. At a handoff boundary, reconcile durable continuation through its current native Planning owner. Do not directly mirror transient UI state into managed records or legacy aggregate state.
 
 Each active plan should stay compact and include:
 
@@ -161,7 +161,7 @@ Delegated judgment belongs under `## Delegated Judgment` for active plans that s
 Keep this section compact.
 It exists to preserve the intended end state, the allowed local latitude, and the escalation boundary when a safe first slice might otherwise drift into a substitute for the larger request.
 Use `none` only when the slice is so local that delegated-judgment framing would add no value beyond the surrounding plan.
-`agentic-workspace summary --format json` exposes a typed `planning-summary/v1` payload. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
+The module maintenance summary can expose a historical typed `planning-summary/v1` projection; it is not native current-work authority. Inside that payload, `planning_record` is the canonical active planning record when planning has one active TODO item and one active execplan. `active_contract` is the narrower intent projection over that record.
 `intent_validation_contract` is the compact inspection view for dangling larger intent, lower-trust closeout, and optional external evidence reconciliation when no active execplan is present.
 Treat `planning_record` as canonical active state when it is available; raw `.agentic-workspace/planning/state.toml` and execplan prose remain the thin human maintenance layer and semantic fallback.
 When an execplan also has a `.plan.json` sidecar, that sidecar is the canonical plan record and the `.md` file becomes a rendered compatibility view.

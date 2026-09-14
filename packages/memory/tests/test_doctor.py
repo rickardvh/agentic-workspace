@@ -454,8 +454,7 @@ def test_doctor_accepts_local_only_agents_indirection(tmp_path: Path) -> None:
     (target / "AGENTS.local.md").write_text(
         "# Local Agent Instructions\n\n"
         "<!-- agentic-workspace:workflow:start -->\n"
-        'Run `agentic-workspace start --task "<task>" --format json` and read `.agentic-workspace/WORKFLOW.md` '
-        "only as fallback after `immediate_next_allowed_action`.\n"
+        "Use `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical procedure.\n"
         "<!-- agentic-workspace:workflow:end -->\n",
         encoding="utf-8",
     )
