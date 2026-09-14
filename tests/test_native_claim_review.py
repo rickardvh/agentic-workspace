@@ -10,10 +10,16 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("binding_assignment", [False, True])
+def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path, shared_core_binary, native_cli, binding_assignment):
     from tests.test_native_proof_producer import fixture
 
     context = fixture(tmp_path)
+    if binding_assignment:
+        (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+            'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\n'
+            '[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
+        )
 
     def call(**extra):
         return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
@@ -31,12 +37,30 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     decision = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")
     answer = decision["response_request"]
     answer["arguments"]["answer"] = "confirm"
-    reviewed = call(request=answer)
+    reentry = [answer]
+    if binding_assignment:
+        # The existing task-requirements ingress can report work produced outside
+        # AW. A real proof and exact claim judgment must not retrospectively
+        # manufacture Assignment admission for those already-present bytes.
+        external = call()["task_requirements"]["requests"][0]
+        external["arguments"]["required_result_classes"] = ["already-materialized"]
+        reentry.append(external)
+    reviewed = call(request=reentry)
     assert reviewed["verification"]["claim_review"]["status"] == "current", reviewed["verification"]["claim_review"]
     assert not any(b["code"] == "verification-evidence-unresolved" for b in reviewed["decision_packet"]["blockers"])
+    if binding_assignment:
+        admission = reviewed["task_requirements"]["implementation_admission"]
+        assert admission["status"] == "returned-unadmitted"
+        assert admission["historical_compliance"] == "not-established"
+        assert admission["result_use_allowed"] is False
+        blocker = next(b for b in reviewed["decision_packet"]["blockers"] if b["code"] == "current-binding-assignment-required")
+        assert "claim:complete" in blocker["affects"]
+        assert "claim:pr-complete" in blocker["affects"]
+        assert "effect:implementation" in blocker["affects"]
+        assert any(r["owner"] == "assignment" for r in reviewed["consequence_recovery"])
     (tmp_path / "a.txt").write_text("Changed resulting work")
     with pytest.raises(AssertionError, match="stale"):
-        call(request=answer)
+        call(request=reentry)
 
 
 def test_claim_review_keeps_planning_subject_and_unfinished_work(tmp_path, shared_core_binary, native_cli):

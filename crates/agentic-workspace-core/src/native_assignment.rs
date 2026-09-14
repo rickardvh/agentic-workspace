@@ -2,6 +2,45 @@
 use crate::{CoreError, digest};
 use serde_json::{Value, json};
 
+pub(crate) const IMPLEMENTATION_SCOPES: &[&str] = &[
+    "effect:implementation",
+    "claim:complete",
+    "claim:pr-complete",
+    "claim:claim-work-complete",
+    "claim:claim-slice-complete",
+];
+
+/// Current admission at the shared native continuation/claim boundary. This is
+/// a projection of Assignment and result owners, never a second work ledger.
+pub(crate) fn implementation_admission(requirements: &Value) -> Value {
+    let assignment = &requirements["assignment"]["result"];
+    if assignment["binding"] != true {
+        return json!({"status":"not-required","historical_compliance":"not-established"});
+    }
+    let result = &requirements["assignment"]["result_admission"];
+    let materialized = requirements["result"]["requirements"]["required_result_classes"]
+        .as_array()
+        .is_some_and(|classes| classes.contains(&json!("already-materialized")));
+    let observed = materialized || requirements["delegation"]["observation"].is_object();
+    let status = if result["result_use_allowed"] == true {
+        "returned-admitted"
+    } else if observed {
+        "returned-unadmitted"
+    } else if assignment["local_assignment_satisfied"] == true {
+        "admitted-local"
+    } else if assignment["status"] == "assigned-nonlocal-handoff-required" {
+        "admitted-nonlocal"
+    } else {
+        "assessment-required"
+    };
+    json!({"status":status,"assignment_identity":assignment["assignment_identity"],
+        "local_continuation_allowed":assignment["local_assignment_satisfied"] == true && !materialized,
+        "result_use_allowed":result["result_use_allowed"] == true,
+        "historical_compliance":if result["result_use_allowed"] == true {"owner-admitted-result"} else {"not-established"},
+        "recovery_owner":"assignment",
+        "boundary":"Native start/invoke continuation, patch integration and completion claims. External editor, shell and Git effects are not intercepted. A current local choice does not attest earlier external implementation."})
+}
+
 fn configuration_key(value: &Value) -> Result<String, CoreError> {
     digest(&json!([
         value["id"],
@@ -209,7 +248,7 @@ pub(crate) fn view(
     }
     let mut blockers = Vec::new();
     if policy["binding"] == true && result["local_assignment_satisfied"] != true {
-        blockers.push(json!({"code":if policy["enforceable"]!=true{"binding-policy-current-target-unresolved"}else if result["status"]=="assigned-nonlocal-handoff-required"{"current-nonlocal-assignment-handoff-required"}else{"current-binding-assignment-required"},"message":"Current binding assignment requires resolved comparison and exact admitted continuation; unavailable manual/provider alternatives cannot silently authorize local implementation.","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}));
+        blockers.push(json!({"code":if policy["enforceable"]!=true{"binding-policy-current-target-unresolved"}else if result["status"]=="assigned-nonlocal-handoff-required"{"current-nonlocal-assignment-handoff-required"}else{"current-binding-assignment-required"},"message":"Current binding assignment requires resolved comparison and exact admitted continuation; unavailable manual/provider alternatives cannot silently authorize local implementation or completion of externally produced work.","affects":IMPLEMENTATION_SCOPES}));
     }
     Ok(
         json!({"result":result,"requests":requests,"source_revision":source,"contribution":{"owner":"assignment","revision":owner["revision"],"blockers":blockers}}),

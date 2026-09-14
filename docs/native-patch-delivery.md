@@ -40,6 +40,42 @@ fit the native source reader before an integration attempt is admitted.
 
 ## Admission and integration
 
+The supported enforcement boundary is the shared Rust `start`/`invoke` boundary
+used by native, Python, TypeScript and JSON clients. It mechanically gates native
+patch integration and preserves required Assignment restrictions during
+Verification claim re-entry, including generic `complete` and `pr-complete`
+claims. A successful check or exact claim judgment cannot discharge an unresolved
+Assignment. Runtime failure, a stale request, or an unavailable required transport
+does not supply permission to continue locally.
+
+With binding Assignment, `task_requirements.implementation_admission` projects
+the current owner state:
+
+| Status | Meaning |
+| --- | --- |
+| `assessment-required` | Current comparison/admission is missing or unresolved. Follow the Assignment recovery requests. |
+| `admitted-local` | Current retained-local continuation is valid; no worker dispatch is required. |
+| `admitted-nonlocal` | Follow only the selected Assignment's exact handoff/transport envelope; this is not local implementation permission. |
+| `returned-unadmitted` | A returned result or declared `already-materialized` work has no admitted result use. Existing bytes and proof cannot establish admission. |
+| `returned-admitted` | The result owner admits the exact observed result. Patch integration and Verification retain their separate requirements. |
+
+This status creates no new session history or Assignment ledger. A current local
+choice does not authenticate earlier externally performed implementation:
+`historical_compliance` remains `not-established`. A host reporting already-produced
+work must preserve that result class through the existing task-requirements
+request. Arbitrary editor, shell and Git actions remain outside mechanical
+control; callers that conceal those actions cannot claim AW enforced them.
+Unsupported materialized returns require current owner re-resolution or a new
+supported captured-baseline patch journey; they cannot be relabeled into proof
+of prior compliance. No implicit override or retired reassignment command is
+provided.
+
+Configured `supports_internal_delegation` alone does not make nonlocal dispatch
+constructible. Current execution configuration reports the actual process or
+adapter boundary and its gaps. Unknown visibility, persistence, resume and
+cleanup guarantees remain unknown; read-only discovery creates no provider work.
+Direct work without an Assignment requirement gains no admission procedure.
+
 Process output is an unproven observation. Assignment's current `use-result`
 judgment admits that exact returned result. Integration then constructs a new
 proposal against current file contents, retaining disjoint concurrent edits and

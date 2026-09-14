@@ -1133,6 +1133,10 @@ fn resolve_with_baseline(
     delegation.as_object_mut().unwrap().remove("contribution");
     requirements["delegation"] = delegation;
     requirements["handoff"] = handoff;
+    if requirements["assignment"]["result"]["binding"] == true {
+        requirements["implementation_admission"] =
+            crate::native_assignment::implementation_admission(&requirements);
+    }
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.extend(independent_contributions);
