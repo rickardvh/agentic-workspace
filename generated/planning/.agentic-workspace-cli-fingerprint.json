@@ -48,7 +48,7 @@
     "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
     "uv.lock"
   ],
-  "fingerprint": "e9542fe5be2a65d5205ef1a8ad86171437693ab2223d44e35887fbfb5f748e99",
+  "fingerprint": "687f80722b9d2c02440213a6f2e5060ae084b6e861aeff7148f54a351d22d445",
   "generation_command": "uv run python scripts/generate/generate_command_packages.py",
   "identity_role": "owner-scoped-semantic-content",
   "kind": "generated-cli-owner-source-manifest/v1",
