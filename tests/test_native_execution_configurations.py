@@ -140,7 +140,8 @@ def test_native_adapter_and_unknown_transport_do_not_become_capabilities(tmp_pat
     result = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["task_requirements"][
         "execution_configurations"
     ]
-    assert any(row["gap"] == "native-provider-adapter-observation-unavailable" for row in result["unavailable_adapters"])
+    assert any(row["gap"] == "native-provider-adapter-command-unavailable" for row in result["unavailable_adapters"])
+    assert not any(row["eligible"] and row["configuration"]["target"] == "native" for row in result["configurations"]["candidates"])
     assert source.read_bytes() == before
     assert not (tmp_path / "marker.txt").exists()
 
