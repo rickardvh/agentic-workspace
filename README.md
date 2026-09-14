@@ -85,6 +85,8 @@ Use the installation guide for current installation and adoption guidance:
 
 During reconstruction, an explicitly published `preview-vMAJOR.MINOR.PATCH` GitHub prerelease may be used for external testing. Its `agentic-workspace-preview-release-manifest.json` and `distribution-install-readiness.json` identify the exact immutable preview subject and hash-bound root-wheel install command. A preview is unstable and **non-support-bearing**: it does not establish Stable/1.0 status or a general platform-support claim. If no such prerelease has been published, there is no public preview install identity to infer from the reconstruction branch.
 
+The native reconstruction has passed [exact artifact admission](https://github.com/rickardvh/agentic-workspace/issues/2990), with Linux x64 as its evidenced platform. Admission and a canonical branch move do not publish a stable release or change package maturity. The install reference currently names a historical release that predates this native implementation; see the [installation guide](docs/agentic-workspace-install.md) before selecting bytes.
+
 The later support-bearing install path is a stable `vMAJOR.MINOR.PATCH` GitHub Release. Each coordinated stable release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches and ordinary registry resolution are not support-bearing identities unless release policy says otherwise.
 
 After adoption, use the canonical skill and the installed CLI's `--help`.

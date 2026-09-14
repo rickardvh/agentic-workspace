@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reconcile native support and installation guidance with admitted artifact and publication boundaries."
+issues = [2616, 3249]

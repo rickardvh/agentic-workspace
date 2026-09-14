@@ -3,6 +3,8 @@
 
 Human-copyable projection of the latest immutable release-owned installation receipt.
 
+This receipt describes only its named release. It does not install newer branch or admitted-but-unpublished behavior; consult the [installation guide](../agentic-workspace-install.md) for the current implementation boundary.
+
 - Release: [0.41.1](https://github.com/rickardvh/agentic-workspace/releases/tag/v0.41.1)
 - Published: `2026-08-17T11:14:43Z`
 - Dereferenced source commit: `cdf9f39050aa0f4243f3f4a8b2f65d6c13bb50c5`

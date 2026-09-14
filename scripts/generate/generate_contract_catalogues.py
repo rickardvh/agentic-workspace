@@ -170,6 +170,8 @@ def render_support_install() -> str:
             "",
             "Human-copyable projection of the latest immutable release-owned installation receipt.",
             "",
+            "This receipt describes only its named release. It does not install newer branch or admitted-but-unpublished behavior; consult the [installation guide](../agentic-workspace-install.md) for the current implementation boundary.",
+            "",
             f"- Release: [{projection['version']}]({projection['release_url']})",
             f"- Published: `{projection['published_at']}`",
             f"- Dereferenced source commit: `{projection['source_commit']}`",

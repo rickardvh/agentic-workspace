@@ -1,6 +1,6 @@
 # Evidence And Support Summary
 
-Public maturity is **alpha** across the coordinated Python distributions. Evidence can be strong without promoting the support contract; deterministic compatibility proof and live-agent behavior answer different questions.
+The native reconstruction has independently passed exact release-equivalent artifact admission. That admission does not publish a release or change the **alpha** package maturity label. Deterministic compatibility proof, public release support and live-agent behavior are separate claims.
 
 ## Deterministic evidence
 
@@ -50,3 +50,15 @@ gates are tracked in the [candidate conformance input](maintainer/c54-conformanc
 These additions do not retroactively change C53's published bytes or evidence.
 Independent acceptance, exact artifact proof and public-byte installation remain
 required before attributing them to a new published candidate.
+
+## Admitted native reconstruction
+
+The exact candidate and artifact receipts are recorded in [admission #2990](https://github.com/rickardvh/agentic-workspace/issues/2990), with the independent projection review in [PR #3259](https://github.com/rickardvh/agentic-workspace/pull/3259). This evidence supersedes the older candidate inputs above for current native behavior; each historical report keeps its original subject.
+
+The admitted set contains the root Python wheel/source archive, npm package and native CLI/core archive. The Python and npm packages carry the same Rust executables. Memory, Planning and Verification capabilities execute through that core; their separate source-development packages are not dependencies or extra shipped module assets.
+
+The exercised release platform is **Linux x64** (`x86_64-unknown-linux-gnu`, wheel `linux_x86_64`), with no manylinux, Windows, macOS or ARM guarantee. Runtime evidence covers Python 3.11, 3.13 and 3.14 with Node 20/24, plus Node 25 topology. Python 3.12 is a declared intermediate bounded by the minimum/primary lanes, not a separate measured lane. See the [installation contract](agentic-workspace-install.md#stablesupport-bearing-prerequisites).
+
+Installed-consumer proof covers current owner behavior, source transitions, carried actions, continuation, proof/custody rejection and bounded removal. Local/sealed-process delegation and the packaged sealed provider bridge have deterministic transport evidence. Simulated providers do not establish live account/model availability, arbitrary provider support, unrestricted shared-worktree writes or economic superiority.
+
+Canonical branch cutover requires separate exact human approval under [#3014](https://github.com/rickardvh/agentic-workspace/issues/3014). A later support-bearing publication requires its own immutable version and release-owned install, redistribution, security and promotion receipts. CI build version metadata, a green prerequisite aggregate and a branch move supply none of those publication claims. Existing previews retain their original bytes and non-support-bearing status.
