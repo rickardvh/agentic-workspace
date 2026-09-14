@@ -3,7 +3,7 @@
 
 Exact footprint, ownership, and availability values generated from `workspace_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:7c195ae33bdfac626dd73408a3b3f8783c1e5924cd2d2d5f7c0c732c1d547da5`
+- Contract digest: `sha256:4e0a40eab4f79bc75e046d9bfec03e894b70ce0f24fd10a2c4c9411e30d665cb`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
@@ -454,10 +454,8 @@ File count: 25
 | `.agentic-workspace/system-intent/intent.toml` | `optional` | necessary-surfaces, full-mirror | — | Keep system intent unavailable until an authoritative mirror is installed. |
 | `.agentic-workspace/fallback/no_cli_startup.py` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/fallback/no-cli-policy.json` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
-| `.agentic-workspace/docs/module-map.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/skills/workspace-startup/SKILL.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
-| `.agentic-workspace/memory/repo/index.md` | `installed-local` | necessary-surfaces, full-mirror | memory | required in the selected footprint |
-| `.agentic-workspace/planning/execplans/README.md` | `installed-local` | necessary-surfaces, full-mirror | planning | required in the selected footprint |
+| `.agentic-workspace/docs/module-map.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/docs/setup-findings-contract.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/docs/jumpstart-contract.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
 | `.agentic-workspace/docs/workspace-config-contract.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
@@ -466,6 +464,13 @@ File count: 25
 | `.agentic-workspace/config.local.toml` | `optional` | necessary-surfaces, full-mirror | — | Use repo-owned config.toml when no machine-local override exists. |
 | `.agentic-workspace/system-intent/subsystems.toml` | `optional` | necessary-surfaces, full-mirror | — | Leave scoped subsystem intent absent until declared subsystem ownership exists. |
 | `.agentic-workspace/skills/workspace-resources/SKILL.md` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
+| `.agentic-workspace/READING.json` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
+| `.agentic-workspace/skills/REGISTRY.json` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
+| `.agentic-workspace/local/current-task-routes.json` | `optional` | necessary-surfaces, full-mirror | — | Absent former local route carriage supplies no current route selection; use the current routing owner. |
+| `.agentic-workspace/memory/repo/manifest.toml` | `optional` | necessary-surfaces, full-mirror | memory | Absent retained Memory state supplies no current knowledge; do not seed or promote material implicitly. |
+| `.agentic-workspace/instructions/*.md` | `optional` | necessary-surfaces, full-mirror | — | Select existing canonical instruction sources through the instruction owner; an absent source needs its exact creation proposal. |
+| `.agentic-workspace/local/instructions/*.md` | `optional` | necessary-surfaces, full-mirror | — | Local instructions may be absent; preserve the local scope and current owner creation boundary. |
+| `.agentic-workspace/config.toml` | `optional` | necessary-surfaces, full-mirror | — | A missing shared source remains absent; use current defaults or an exact Configuration creation request without inventing repository policy. |
 
 ## Ownership classes
 
