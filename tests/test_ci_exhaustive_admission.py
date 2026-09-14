@@ -32,6 +32,11 @@ def test_exhaustive_admission_is_single_gate_for_broad_runner_fanout() -> None:
     )
     for name, next_name in job_pairs:
         block = _job_block(workflow, name, next_name)
-        assert "needs: exhaustive-admission" in block
+        if name in {"workspace-checks", "planning-handoff-checks", "declared-runtime-matrix"}:
+            assert "needs: [exhaustive-admission, workspace-package-artifacts]" in block
+            assert "name: agentic-workspace-package-artifacts" in block
+            assert "AW_NATIVE_ARTIFACT_DIR: ${{ github.workspace }}/admission-dist" in block
+        else:
+            assert "needs: exhaustive-admission" in block
         assert "if: ${{ github.event_name == 'workflow_dispatch' }}" in block
         assert "Verify dispatched release head" not in block
