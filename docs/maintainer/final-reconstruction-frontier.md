@@ -4,6 +4,8 @@ P0 disposition for #3249, observed 2026-09-14 against integrated
 `b9638adae9aefbf45ce1cd8d719a0c4b125797e5` plus this dependency-policy PR.
 This is implementation-owned input for independent review, not candidate
 selection, independent acceptance, or permission to close an issue.
+Refreshed against the [P0 coordination amendment](https://github.com/rickardvh/agentic-workspace/issues/3249#issuecomment-5662737272)
+and #3250: dependency-policy integration alone no longer empties P0.
 
 ## Post-C54 change audit
 
@@ -41,7 +43,7 @@ new validation mechanism or generated product surface.
 
 ## Open-issue classification
 
-The audit inventories all 92 open issues using their completion boundaries,
+The refreshed audit inventories all 93 open issues using their completion boundaries,
 the current #3208 acceptance/checklist, C53/C54 owner evidence maps and #3138
 ledger. Some individual issue
 bodies still describe pre-C54 partial slices; the later accepted cumulative
@@ -52,9 +54,11 @@ to the final candidate. No row is new independent final-owner acceptance.
 | Classification | Issues | Current consequence |
 | --- | --- | --- |
 | Release blocker: implementation/substrate | #3246 | This PR needs independent acceptance and integration. Then reconcile its combined toolchain/lint/provenance/dependency/platform result. |
+| Release blocker: P0 lived-in convergence | #3250 | Current-surface corrections, actual-checkout owner-state preservation, supported convergence and second-pass idempotence must pass before candidate freeze. No convergence proof is claimed by this inventory. |
+| Release blocker: bounded current-surface corrections | #3224, #2613, #2767 | The 2026-09-14 owner amendments supply concrete counterevidence to the earlier candidate-complete classification. Correct managed procedure/defaults, disposition config by lifetime, and support owner-preserving convergence only as needed by #3250; the broad parents do not become wholesale release gates. |
 | Release blocker: exact-candidate evidence | #3020, #3059, #2909, #3077 | C54 disposition exists; refresh only changed claims and required exact-subject proof in P1. No known additional implementation is inferred from open state. |
 | Release blocker: admission/public truth/cutover | #2990, #2616, #3014, #2983, #3249 | P2-P4 completion rules still apply. This PR cannot freeze/admit/promote the candidate or close these parents. |
-| Candidate-complete / awaiting administrative closure: interface and control | #3224, #3223, #3218, #3217, #2989, #2987, #2986, #2985, #2981, #2930, #2767, #2638, #2613, #2606, #2334 | Accepted C53 foundations plus C54 owner/aggregate outcome. Keep currentness, proof, independent-owner and explicit unavailable-operation boundaries. |
+| Candidate-complete / awaiting administrative closure: interface and control | #3223, #3218, #3217, #2989, #2987, #2986, #2985, #2981, #2930, #2638, #2606, #2334 | Accepted C53 foundations plus C54 owner/aggregate outcome. Keep currentness, proof, independent-owner and explicit unavailable-operation boundaries. |
 | Candidate-complete / awaiting administrative closure: safety and maintainer preparation | #3236, #3232, #3227, #3226, #3221, #3220, #3013, #3012, #3001, #3000, #2997, #2995, #2984 | Accepted C53/C54 safety, instruction, resource, source-preservation and test-strategy dispositions; #3138 already lists the independently accepted migration/intent leaves. |
 | Candidate-complete / awaiting administrative closure: Planning | #3195, #2970, #2661 | Accepted portable work/lifetime behavior; local custody and exact final-candidate proof remain distinct. |
 | Candidate-complete / awaiting administrative closure: Assignment | #3231, #3194, #3193, #2947, #2916, #2818, #2817, #2210, #2209 | C54 accepted supported posture/transport/return/replacement/evidence composition. No universal provider or economic claim. |
@@ -76,11 +80,37 @@ retain their precise supported boundaries.
 
 At audit entry there were no open PRs targeting `reconstruct/first-stable`.
 The only open repository PR was draft #3138, from reconstruction to `master`;
-it remains a promotion ledger and must not be ordinarily merged. This single
-P0 PR becomes the only release-relevant implementation continuation. After its
-independent acceptance/merge, re-query PRs and current owners before declaring
-the frontier empty or selecting an exact P1 commit/tree. No candidate is frozen
-here, and no later exact-subject gate is declared current.
+it remains a promotion ledger and must not be ordinarily merged. At refresh,
+#3251 is the only open PR targeting reconstruction. That PR inventory is not an
+empty implementation frontier: #3250 and its bounded upstream corrections remain
+P0 work even without another open PR. No candidate is frozen here, and no later
+exact-subject gate is declared current.
+
+The amended P0 exit sequence is:
+
+1. Independently accept/integrate the #3246 dependency-policy result and reconcile
+   its combined toolchain/lint/provenance/dependency/platform outcome.
+2. Under #3224/#2613/#2767, correct the release-relevant managed/default/config
+   sources consumed by #3250. Disposition config sections as retain, derive,
+   transfer, ask or retire according to their current semantic owner. Cleaning
+   installed copies while refresh recreates them is insufficient.
+3. For #3250, inventory checked-in installed surfaces by owner/lifetime and
+   separately audit ignored local state on the actual checkout. Preserve current
+   human/local policy and useful Planning/Memory/Verification/instruction/decision
+   state; keep local contents local. Execute the supported current convergence
+   path and record its exact source identity and before/after evidence.
+4. Repeat that path on the same candidate. Prove no unexplained semantic diff,
+   lost owner state, resurrected retired commands/manuals/config obligations, or
+   incorrect necessary-surface/removal classification. A clean fixture or one
+   successful pass cannot satisfy this gate.
+5. Independently accept the bounded owner corrections and lived-in proof, then
+   re-query PRs and owners for remaining release-relevant work. Feed the evidence
+   to #2909/#2990 before freezing the exact P1 candidate.
+
+Any reusable defect found during dogfood returns to its smallest product owner
+and remains P0 until fixed and re-tested. Proof-only gaps on a stable converged
+tree can be resolved before P1 freeze without expanding product scope. This is
+a temporary batch-exit condition, not a new migration framework or authority.
 
 Focused proof covers the real locked positive scan, separate advisory/license/
 source rejection experiments, the runner's version and failure boundary, missing
@@ -91,11 +121,13 @@ platform admission remains P1/P2. The experiments do not add permanent tests of
 cargo-deny's own policy engine. Small retained tests protect only AW's runner,
 wiring and receipt/source-package contracts.
 
-The immediate dogfood finding was repaired in the existing provenance owner with
+The earlier provenance finding was repaired in the existing provenance owner with
 explicit authorization; no second payload synchronizer or audit stack was added.
+That repair does not establish #3250's broader lived-in convergence outcome.
 Recurring cost is one Rust scan in security CI plus the same scan at publication;
 tool installation is pinned and uncached. Optional nextest, caches, coverage,
 rustdoc strictness and profile tuning remain deferred as documented under #3246.
 Stop implementation proof once the bounded checks and normal hooks pass; escalate
-only a named failed boundary. Independent review and the final no-open-
-continuation check are the remaining P0 acceptance steps.
+only a named failed boundary. Independent review is the next step for this
+dependency-policy implementation; the amended convergence gate above remains
+required before the final no-open-continuation check can permit P0 exit.
