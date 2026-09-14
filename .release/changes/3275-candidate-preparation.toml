@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Prepare Candidate A preview publication from accepted master and remove obsolete workspace-member dependency locks while retaining Alpha."
+issues = [3275, 2985]

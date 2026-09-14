@@ -22,7 +22,7 @@ def test_release_ownership_keeps_preview_distinct_from_support_bearing_release()
     assert stable["trigger"] == "existing-tag-only"
     assert preview == {
         "workflow": ".github/workflows/preview-release.yml",
-        "trigger": "workflow_dispatch on reconstruct/first-stable with immutable preview tag and exact artifact SHA",
+        "trigger": "workflow_dispatch on master with immutable preview tag and exact artifact SHA",
         "release_class": "preview",
         "support_bearing": False,
         "tag_rule": (
@@ -84,18 +84,18 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
         assert authority in preview
         assert authority in stable
 
-    assert "refs/heads/reconstruct/first-stable:refs/remotes/origin/reconstruct/first-stable" in preview
+    assert "refs/heads/master:refs/remotes/origin/master" in preview
 
 
 def test_preview_helper_defaults_to_fetched_reconstruction_authority() -> None:
     helper = (ROOT / "scripts" / "release" / "preview_release.py").read_text(encoding="utf-8")
 
-    assert 'DEFAULT_RECONSTRUCTION_REF = "reconstruct/first-stable"' in helper
+    assert 'DEFAULT_RECONSTRUCTION_REF = "master"' in helper
     assert 'f"{head_ref}:{tracking_ref}"' in helper
     assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper
     assert 'default="HEAD"' not in helper
     assert "--source-commit" in helper
-    assert "freshly fetched reconstruction branch head" in helper
+    assert "freshly fetched master head" in helper
     assert '"merge-base", "--is-ancestor", source_commit, remote_ref' in helper
     assert '_git("push", remote, f"refs/tags/{tag}")' in helper
     assert "refs/heads/" in helper
@@ -135,14 +135,14 @@ def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> Non
     workflow = yaml.safe_load((WORKFLOW_ROOT / "preview-release.yml").read_text())
     # PyYAML treats the YAML 1.1 word "on" as True.
     assert set(workflow[True]) == {"workflow_dispatch", "push"}
-    assert workflow[True]["push"] == {"branches": ["reconstruct/first-stable"], "paths": [".github/workflows/preview-release.yml"]}
+    assert workflow[True]["push"] == {"branches": ["master"], "paths": [".github/workflows/preview-release.yml"]}
     jobs = workflow["jobs"]
     registration = jobs["preview-registration"]
-    assert registration["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/reconstruct/first-stable'"
+    assert registration["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/master'"
     assert registration["steps"] == [{"run": 'echo "Preview publisher registered; publication requires explicit dispatch."'}]
     assert "permissions" not in registration
     admission = jobs["preview-admission"]
-    assert admission["if"] == "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/reconstruct/first-stable'"
+    assert admission["if"] == "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'"
     assert workflow["permissions"] == admission["permissions"] == {"contents": "read"}
     checkout = admission["steps"][0]
     assert checkout["with"]["ref"] == "${{ github.sha }}"

@@ -1,10 +1,9 @@
 name: Preview Release
 
 on:
-  # Register the workflow when it lands on reconstruction, even while master
-  # lacks it. This event cannot admit or publish a preview.
+  # Register the publisher from the accepted default branch. This event cannot admit or publish a preview.
   push:
-    branches: [reconstruct/first-stable]
+    branches: [master]
     paths: [.github/workflows/preview-release.yml]
   workflow_dispatch:
     inputs:
@@ -26,13 +25,13 @@ permissions:
 
 jobs:
   preview-registration:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/reconstruct/first-stable'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - run: echo "Preview publisher registered; publication requires explicit dispatch."
 
   preview-admission:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/reconstruct/first-stable'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -135,7 +134,7 @@ jobs:
       - name: Verify exact preview identity and reconstruction source
         run: |
           set -euo pipefail
-          git fetch origin "refs/heads/reconstruct/first-stable:refs/remotes/origin/reconstruct/first-stable" --tags
+          git fetch origin "refs/heads/master:refs/remotes/origin/master" --tags
           TAG_COMMIT="$(git rev-list -n 1 "${RELEASE_TAG}")"
           HEAD_COMMIT="$(git rev-parse HEAD)"
           if [ "${TAG_COMMIT}" != "${HEAD_COMMIT}" ]; then
@@ -144,8 +143,8 @@ jobs:
           fi
           python scripts/release/coordinated_release.py verify-preview --tag "${RELEASE_TAG}" > preview-subject.json
           SOURCE_COMMIT="$(python -c 'import json; print(json.load(open("preview-subject.json", encoding="utf-8"))["reconstruction_source_commit"])')"
-          if ! git merge-base --is-ancestor "${SOURCE_COMMIT}" refs/remotes/origin/reconstruct/first-stable; then
-            echo "Preview source ${SOURCE_COMMIT} is not reachable from reconstruct/first-stable" >&2
+          if ! git merge-base --is-ancestor "${SOURCE_COMMIT}" refs/remotes/origin/master; then
+            echo "Preview source ${SOURCE_COMMIT} is not reachable from master" >&2
             exit 1
           fi
           if [ "$(git rev-parse HEAD^)" != "${SOURCE_COMMIT}" ]; then
