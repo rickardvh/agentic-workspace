@@ -65,7 +65,14 @@ def _pack_typescript_artifact(dist: Path, npm: str) -> Path:
     with tempfile.TemporaryDirectory(prefix="aw-readiness-native-stage-") as temporary:
         package = Path(temporary) / "workspace"
         _run(
-            [sys.executable, REPO_ROOT / "scripts/release/stage_native_npm.py", "--output", package],
+            [
+                sys.executable,
+                REPO_ROOT / "scripts/release/stage_native_npm.py",
+                "--output",
+                package,
+                "--native-archive-dir",
+                dist.resolve(),
+            ],
             cwd=REPO_ROOT,
         )
         completed = _run(
