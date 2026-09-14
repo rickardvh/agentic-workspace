@@ -8513,14 +8513,14 @@ uninstall_policy = "remove-managed-files-only"
 [[module_roots]]
 module = "memory"
 path = ".agentic-workspace/memory/"
-ownership = "module_managed"
-uninstall_policy = "remove-managed-files-only"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 [[module_roots]]
 module = "planning"
 path = ".agentic-workspace/planning/"
-ownership = "module_managed"
-uninstall_policy = "remove-managed-files-only"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 [[managed_surfaces]]
 module = "workspace"
@@ -8561,15 +8561,15 @@ uninstall_policy = "remove-if-owned"
 module = "memory"
 path = ".agentic-workspace/memory/**"
 kind = "module-root"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 [[managed_surfaces]]
 module = "planning"
 path = ".agentic-workspace/planning/**"
 kind = "module-root"
-ownership = "module_managed"
-uninstall_policy = "remove-if-owned"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
 
 
 [[managed_surfaces]]
@@ -10276,7 +10276,7 @@ def _ensure_repo_owned_local_gitignore(*, target_root: Path, dry_run: bool) -> d
 def _managed_workspace_config_header(*, cli_invoke: str) -> str:
     return "\n".join(
         [
-            "# Agentic Workspace managed config.",
+            "# Repository-owned Agentic Workspace policy.",
             "# Edit this file directly only when changing repo-owned policy.",
             f"# Reference: {WORKSPACE_CONFIG_CONTRACT_DOC}",
             f'# Inspect current owner concerns: {cli_invoke} start --target . --task "Inspect current configuration" --format json',

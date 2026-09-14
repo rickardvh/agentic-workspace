@@ -3,11 +3,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
-import subprocess
-import sys
 from pathlib import Path
-
-import pytest
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,6 +43,13 @@ def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True
             "verification": [".agentic-workspace/verification/manifest.toml"],
         },
         "required_references": [
+            {
+                "source": ".agentic-workspace/fallback/no_cli_startup.py",
+                "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+                "kind": "installed-local",
+                "profiles": ["necessary-surfaces", "full-mirror"],
+                "modules": [],
+            },
             {
                 "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
                 "target": ".agentic-workspace/docs/module-map.md",
@@ -186,102 +189,37 @@ def test_installed_reference_discovery_rejects_undeclared_toml_reference(tmp_pat
     ]
 
 
-@pytest.mark.parametrize(
-    "modules",
-    list(
-        (
-            (),
-            ("memory",),
-            ("planning",),
-            ("verification",),
-            ("memory", "planning"),
-            ("memory", "verification"),
-            ("planning", "verification"),
-            ("memory", "planning", "verification"),
-        )
-    ),
-)
-def test_no_cli_black_box_preserves_boundaries_for_each_module_combination(tmp_path: Path, modules: tuple[str, ...]) -> None:
-    mod = _load_module(_checker_script_path(), f"source_payload_no_cli_{'_'.join(modules) or 'none'}")
-    host_root = tmp_path / "clean-host"
-    host_root.mkdir()
-    subprocess.run(["git", "init", "--quiet"], cwd=host_root, check=True)
-    command = [
-        sys.executable,
-        str(WORKSPACE_ROOT / "scripts/run_agentic_workspace.py"),
-        "install",
-        "--target",
-        str(host_root),
-        "--non-interactive",
-        "--format",
-        "json",
-    ]
-    command.extend(["--modules", ",".join(modules) if modules else "none"])
-    completed = subprocess.run(command, cwd=WORKSPACE_ROOT, text=True, capture_output=True, check=False)
-    assert completed.returncode == 0, completed.stderr or completed.stdout
-    if "planning" in modules:
-        assert not (host_root / ".agentic-workspace/planning/state.toml").exists()
-        assert (host_root / ".agentic-workspace/planning/execplans/README.md").is_file()
-    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
+def _pointer_fixture(host_root: Path) -> dict:
+    # Isolated pointer contract fixture. Native payload delivery is exercised by
+    # the Configuration-owner tests, not by a historical install command.
+    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    for key in ("entrypoint", "policy", "procedure"):
+        reference = manifest["no_cli_fallback"][key]
+        destination = host_root / reference
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((WORKSPACE_ROOT / "src/agentic_workspace/_payload" / reference).read_bytes())
+    return manifest
 
-    cli_available = (host_root / "bin" / "agentic-workspace").exists()
-    result = mod.evaluate_no_cli_fallback(
-        host_root=host_root,
-        modules=modules,
-        manifest=manifest,
-        cli_available=cli_available,
-    )
 
+def test_no_runtime_pointer_claims_no_module_or_effect_authority(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_no_cli_pointer")
+    manifest = _pointer_fixture(tmp_path)
+    result = mod.evaluate_no_cli_fallback(host_root=tmp_path, modules=(), manifest=manifest, cli_available=False)
     assert result["status"] == "passed", result
-    assert result["network_access"] == "not-required"
-    assert result["implementation_allowed"] is False
-    assert result["completion_claim_allowed"] is False
-    assert set(result["selected_modules"]) == set(modules)
-    assert result["forbidden_actions"] == [
-        "mutate-managed-state-by-hand",
-        "bypass-planning-safety-gate",
-        "claim-completion-without-proof",
-    ]
-    assert result["contract_digest"].startswith("sha256:")
-    assert result["next_safe_action"] == "continue-from-installed-startup-without-managed-state-mutation"
+    assert result["authority"] == "none"
+    assert result["runtime_facts"] == "unknown"
+    assert "selected_modules" not in result
+    assert "next_safe_action" not in result
+    assert result["procedure"] == manifest["no_cli_fallback"]["procedure"]
 
 
-def test_no_cli_black_box_fails_when_required_fallback_target_is_removed(tmp_path: Path) -> None:
-    mod = _load_module(_checker_script_path(), "source_payload_no_cli_missing_target")
-    host_root = tmp_path / "clean-host"
-    host_root.mkdir()
-    subprocess.run(["git", "init", "--quiet"], cwd=host_root, check=True)
-    completed = subprocess.run(
-        [
-            sys.executable,
-            str(WORKSPACE_ROOT / "scripts/run_agentic_workspace.py"),
-            "install",
-            "--target",
-            str(host_root),
-            "--non-interactive",
-            "--modules",
-            "memory",
-            "--format",
-            "json",
-        ],
-        cwd=WORKSPACE_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert completed.returncode == 0, completed.stderr or completed.stdout
-    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
-    (host_root / ".agentic-workspace/memory/repo/index.md").unlink()
-
-    result = mod.evaluate_no_cli_fallback(
-        host_root=host_root,
-        modules=("memory",),
-        manifest=manifest,
-        cli_available=False,
-    )
-
+def test_no_runtime_pointer_requires_its_canonical_procedure(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "source_payload_no_cli_missing_procedure")
+    manifest = _pointer_fixture(tmp_path)
+    (tmp_path / manifest["no_cli_fallback"]["procedure"]).unlink()
+    result = mod.evaluate_no_cli_fallback(host_root=tmp_path, modules=(), manifest=manifest, cli_available=False)
     assert result["status"] == "failed"
-    assert any("memory/repo/index.md" in error for error in result["errors"])
+    assert any("canonical procedure" in error for error in result["errors"])
 
 
 def _write_root_surfaces(tmp_path: Path) -> None:

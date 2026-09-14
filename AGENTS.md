@@ -11,6 +11,20 @@ Source checkout preparation: run `cargo build --locked --workspace --bins` befor
 first use and after Rust or bundled contract/payload changes. Build both native
 binaries together; do not substitute the former Python host if either is missing.
 
+Repository completion requirements:
+
+- Changes to structured startup, routing or query contracts must include current
+  generated adapter surfaces and their applicable validation before completion.
+- Prefer committing after the bounded proof lane passes; keep the current Planning
+  milestone truthful through its owner when this work uses Planning.
+- Before claiming a lane complete, distinguish validation, issue completion,
+  intent satisfaction and total operating cost. Route actionable dogfood friction
+  through its current owner and retain knowledge only when it prevents rediscovery.
+  Required reconciliation cannot be replaced by a successful current-state query.
+- For material system-direction changes, prefer current source-owner reconciliation.
+  Preserve unresolved source admissions; do not advance trust revisions merely
+  because HEAD changed or substitute direct edits to interpreted owner state.
+
 <!-- agentic-workspace:workflow:start -->
 Use `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical Agentic Workspace procedure.
 

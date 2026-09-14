@@ -592,17 +592,16 @@ def evaluate_no_cli_fallback(
     if not isinstance(result, dict):
         return {"status": "failed", "errors": ["fallback emitted a non-object result"]}
     errors: list[str] = []
-    expected_modules = sorted(modules)
-    if completed.returncode != 0 or result.get("status") != "fallback":
-        errors.extend(str(value) for value in result.get("errors", []))
-    if sorted(str(value) for value in result.get("selected_modules", [])) != expected_modules:
-        errors.append("fallback selected modules do not match installed module surfaces")
-    if result.get("implementation_allowed") is not False or result.get("completion_claim_allowed") is not False:
-        errors.append("fallback did not preserve forbidden implementation/completion boundaries")
-    if result.get("forbidden_actions") != contract.get("forbidden_actions"):
-        errors.append("fallback forbidden actions drifted from the canonical contract")
-    if result.get("next_safe_action") != contract.get("next_safe_action"):
-        errors.append("fallback next safe action drifted from the canonical contract")
+    expected = {
+        "kind": "agentic-workspace/procedure-pointer/v1",
+        "procedure": contract.get("procedure"),
+        "runtime_facts": "unknown",
+        "authority": "none",
+    }
+    if completed.returncode != 1 or result != expected:
+        errors.append("no-runtime compatibility entry must only point to the canonical skill")
+    if not (host_root / str(contract.get("procedure", ""))).is_file():
+        errors.append("canonical procedure is unavailable; no runtime or fallback authority is established")
     return {**result, "status": "passed" if not errors else "failed", "errors": errors}
 
 

@@ -35,6 +35,7 @@ def assert_current_command_examples(text: str) -> None:
 
 def test_active_bootstrap_and_config_command_examples_match_native_surface():
     surfaces = ["AGENTS.md", MAIN, ".agentic-workspace/WORKFLOW.md", ".agentic-workspace/config.toml", "docs/agentic-workspace-install.md"]
+    surfaces += json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())["payload_files"]
     for reference in surfaces:
         assert_current_command_examples((ROOT / reference).read_text())
     # Same guard rejects the durable drift class, including a removed command
@@ -242,6 +243,16 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
     subprocess.run(["git", "init", "--quiet", str(tmp_path)], check=True)
     agents = tmp_path / "AGENTS.md"
     agents.write_text("Repository instruction: preserve this line.\n")
+    retained = {}
+    for reference in (
+        ".agentic-workspace/memory/repo/retained.md",
+        ".agentic-workspace/planning/retained.md",
+        ".agentic-workspace/local/instructions/retained.md",
+    ):
+        path = tmp_path / reference
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("Current owner state; preserve this meaning.\n")
+        retained[reference] = path.read_bytes()
     for operation in ("init", "upgrade", "upgrade"):
         options = ["--mirror-payload"] if operation == "init" and mirror else []
         assert cli.main([operation, "--target", str(tmp_path), *options, "--format", "json"]) == 0
@@ -256,6 +267,8 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
     capsys.readouterr()
     assert agents.read_text().strip() == "Repository instruction: preserve this line."
     assert not (tmp_path / MAIN).exists()
+    for reference, original in retained.items():
+        assert (tmp_path / reference).read_bytes() == original
 
 
 def test_generated_fresh_bootstrap_is_only_an_activation_pointer():

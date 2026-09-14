@@ -1,59 +1,42 @@
-# Workspace Config Contract
+# Configuration source boundary
 
-This installed contract is the no-CLI companion to `.agentic-workspace/config.toml`.
-It is intentionally self-contained so a necessary-surface footprint does not depend on source-checkout documentation.
+Use the canonical `../skills/workspace-startup/SKILL.md` for ordinary procedure
+and `../skills/workspace-setup-jumpstart/SKILL.md` for configuration work.
 
-## Authority
+Shared `.agentic-workspace/config.toml` is repository-owned policy. Optional
+`.agentic-workspace/config.local.toml` holds machine-local human choices and
+environment declarations; stronger shared policy cannot be overridden locally.
+Repository-native policy sources may be edited under their explicit authority.
+A recognized path or a previous native write grants no continuing custody.
 
-- `.agentic-workspace/config.toml` is repo-owned policy.
-- `.agentic-workspace/config.local.toml` is optional machine-local policy and must not become shared authority.
-- `.agentic-workspace/OWNERSHIP.toml` owns subsystem and managed-surface boundaries.
-- Planning owns active execution state; Memory owns durable anti-rediscovery knowledge; Verification owns reported evidence.
-- `AGENTS.md` and installed skills are routing adapters over these structured owners.
+Keep durable policy and necessary environment declarations in config. Module
+selection, invocation/source choices, assurance ceilings, and explicit artifact
+requirements have that lifetime. Current task answers, proof results, learned
+confidence, caches, setup continuation and operational registries belong to their
+current domain owners. Historical compatibility/update/procedure fields require
+semantic disposition; do not preserve them merely because an earlier install
+wrote them, or erase their useful meaning without a receiving owner.
 
-## Safe fallback
+The native Configuration owner returns schemas and exact current choices. It can
+create or edit supported canonical sources, preserve unrelated text, defer a
+current choice and recover an interrupted write through its existing attempt
+boundary. Read-only discovery does not recommend capability enablement. Supply
+only authorized judgments; keep the owner's source, policy, capability and
+proposal bindings. Unsupported choices remain explicit owner gaps.
 
-When the configured CLI is unavailable, preserve the last known forbidden actions and avoid mutating managed Planning, Memory, Verification, provenance, or generated surfaces by hand. Read the installed startup skill and module map, then inspect only the named owner surface. Restore a compatible configured invocation before claiming implementation or closeout.
+Package payload choices are derived from the current native artifact. They use
+the same exact writer and recovery path, with an explicit file proposal and no
+arbitrary content supplied by the caller. Package byte identity and useful
+repo/local semantic state are separate: inspect the source disposition before
+authorizing replacement, preserve unknown material, and re-resolve after each
+write. Current bytes need no write. Provenance alone never waives byte checks.
 
-When the CLI works, use its configured `start --target . --task "<task>" --format json` route. Follow the decision packet, submit only bounded answers in returned requests, and execute only the exact returned action through `invoke`.
+Verification owns operational proof requirements in its manifest. Planning owns
+work continuation; Memory and decision owners retain useful knowledge. A source
+transfer must preserve force, applicability and provenance, and does not itself
+grant proof or acceptance. Keep unresolved admissions visible. No current-state
+query or successful configuration write establishes whole-task completion.
 
-## Verification source boundary
-
-Keep durable workspace choices and general trust policy in shared configuration.
-Operational Verification requirements, proof profiles, domain lanes and subsystem
-metadata belong in `.agentic-workspace/verification/manifest.toml` under `[assurance]`.
-A source transfer preserves the declarations' force, provenance, commands and
-applicability; it does not grant proof, waive policy or acquire native custody.
-
-Former shared-config sections remain recognized for bounded transition. Do not
-author new operational registries there. A section present in both sources is an
-ownership conflict, even if its bytes look equivalent; preserve both until its
-owner resolves the transfer. Re-resolve current requests after a transfer or edit.
-The manifest cannot replace shared assurance level/escalation policy. Unsupported
-subsystem semantics remain an explicit Verification gap.
-
-Local target confidence is a human-authored prior. Lifecycle learning belongs to
-the target-evidence owner; it must not tune `config.local.toml`. Task answers,
-setup continuation and proof results are not durable configuration choices.
-
-## Editing rule
-
-Edit shared config only for an intentional repo-policy change. Keep machine paths, credentials, and local execution preferences in local config. Module state is not workspace config and must be changed through its owning module when that command surface is available.
-
-Use the current configuration owner requests returned by native startup. The
-admitted writer can set `workspace.cli_invoke` in an existing canonical shared
-or local source, including insertion when unrelated bytes can be preserved. It binds the selected source bytes, effective policy,
-capability revision and exact value, revalidates immediately before writing, and
-preserves unrelated source text. An irreducible human choice requires the exact
-bounded human answer. It grants no continuing custody or capability enablement.
-
-Other keys, new source creation and the complete configure-once journey require
-their current owner; do not substitute a retired setup/config command. Preserve
-recognized unresolved sources and keep their blockers scoped to affected behavior.
-
-Task answers, setup continuation, receipts and learned conclusions belong with
-their domain owners outside human-facing configuration. Preserve any former local
-`[setup]` or assignment-answer source until its owner explicitly dispositions it;
-do not write new task state there or infer that an old answer remains current.
-Interruption recovery for an admitted configuration write uses its exact retained
-attempt/result, without treating that record as future source ownership.
+Without executable AW, the same canonical skill supplies the bounded read-only
+path. Runtime, local and external facts remain unknown; no static file can
+manufacture an operating decision or owner effect.

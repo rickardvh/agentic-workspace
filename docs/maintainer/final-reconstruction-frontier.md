@@ -1,45 +1,30 @@
 # Final reconstruction implementation frontier
 
-P0 disposition for #3249, observed 2026-09-14 against integrated
-`b9638adae9aefbf45ce1cd8d719a0c4b125797e5` plus this dependency-policy PR.
-This is implementation-owned input for independent review, not candidate
-selection, independent acceptance, or permission to close an issue.
-Refreshed against the [P0 coordination amendment](https://github.com/rickardvh/agentic-workspace/issues/3249#issuecomment-5662737272)
-and #3250: dependency-policy integration alone no longer empties P0.
+P0 implementation disposition for #3249, observed 2026-09-14 in PR #3252
+against integrated `12105291f3d87abb12a4de0a2e5a7fcc2fd9a1c3`.
+This is implementation-owned evidence for independent review. It does not freeze
+P1, independently accept this PR, or close the coordination parents.
 
-## Post-C54 change audit
+## Accepted substrate and post-C54 audit
 
-The source baseline is C54 `08a4e0e20c246b59ca3eb7987ab73f1b90a92ad9`, not
-the release-normalized P54 commit. [#3208](https://github.com/rickardvh/agentic-workspace/issues/3208)
-records independent acceptance of #3238/#3239/#3241/#3242/#3244/#3245, aggregate
-run 34824210173 and publisher/public-byte run 34826351874. The immutable preview
-remains evidence; it is not the eventual stable subject.
+The source baseline is C54 `08a4e0e20c246b59ca3eb7987ab73f1b90a92ad9`.
+#3208 records the accepted immutable preview, aggregate run 34824210173 and
+publisher/public-byte run 34826351874. That preview remains historical evidence.
 
-The entire integrated post-C54 delta is #3248: pinned compiler/provenance,
-inherited unsafe-code prohibition, and a local-output ignore rule. Its recorded
-Windows and fresh Linux builds, Clippy, Rust tests, five native topology cases,
-13 npm/source-artifact cases and hosted merge-sufficiency run 34829129036 cover
-that bounded substrate. No product-semantic change or second implementation
-continuation appears in the integrated log. This audit does not self-review #3248
-or replace its accepted independent disposition in #3249.
+The accepted post-C54 substrate is #3248 plus #3251. Together they establish
+#3246's pinned compiler/components and provenance, inherited unsafe-code
+prohibition, default Clippy with warnings denied, locked builds and one pinned
+cargo-deny advisory/license/source gate in security and publication. The narrow
+RSA public-key-only exception remains explicit in `deny.toml`. Source archives
+carry the same policy and runner. Existing actual Windows and Linux substrate
+proof is reused for those unchanged mechanisms; published platform support still
+requires the selected artifact's actual-host admission. No lower MSRV is implied.
+See `rust-toolchain.md` for the deliberate deferral of nextest, coverage, caches,
+rustdoc strictness and profile tuning. This reconciliation records the accepted
+#3248/#3251 outcome; it is not a new review of those changes.
 
-This PR completes the remaining advisory/license/source mechanism under #3246:
-one pinned cargo-deny, full locked workspace, explicit license/source policy,
-blocking security and publisher execution, and a documented RSA public-key-only
-advisory exception. The existing security receipt fingerprints the Rust inputs
-and verifies wiring; scan execution remains the actual checker/job result.
-Source archives include the same policy and runner for reproducible checking.
-
-One concrete local preparation defect surfaced: the installed `READING.json`
-matched the shipped file byte-for-byte, but was absent from the checked-in
-payload provenance roster. Native startup therefore returned
-`native-payload-target-unproven`. The user explicitly authorized the roster
-repair. Adding the missing entry makes native payload status `satisfied`,
-without changing installed bytes, product behavior or admission policy.
-The full structured-file audit also found the existing read-profile copies and
-Rust toolchain declaration unclassified. Their entries now point to their
-existing generator/toolchain owners alongside the new deny policy; this adds no
-new validation mechanism or generated product surface.
+PR #3252 supplies the remaining #3224/#2613/#2767 corrections and #3250 lived-in
+convergence below. Its new product behavior needs independent acceptance.
 
 ## Open-issue classification
 
@@ -53,8 +38,8 @@ to the final candidate. No row is new independent final-owner acceptance.
 
 | Classification | Issues | Current consequence |
 | --- | --- | --- |
-| Release blocker: implementation/substrate | #3246 | This PR needs independent acceptance and integration. Then reconcile its combined toolchain/lint/provenance/dependency/platform result. |
-| Release blocker: P0 lived-in convergence | #3250 | Current-surface corrections, actual-checkout owner-state preservation, supported convergence and second-pass idempotence must pass before candidate freeze. No convergence proof is claimed by this inventory. |
+| Release blocker: implementation/substrate | #3246 | Accepted #3248/#3251 core result reconciled above; optional tools remain deferred. |
+| Release blocker: P0 lived-in convergence | #3250 | PR #3252 supplies current-surface corrections and actual-checkout convergence evidence below; independent acceptance remains required before freeze. |
 | Release blocker: bounded current-surface corrections | #3224, #2613, #2767 | The 2026-09-14 owner amendments supply concrete counterevidence to the earlier candidate-complete classification. Correct managed procedure/defaults, disposition config by lifetime, and support owner-preserving convergence only as needed by #3250; the broad parents do not become wholesale release gates. |
 | Release blocker: exact-candidate evidence | #3020, #3059, #2909, #3077 | C54 disposition exists; refresh only changed claims and required exact-subject proof in P1. No known additional implementation is inferred from open state. |
 | Release blocker: admission/public truth/cutover | #2990, #2616, #3014, #2983, #3249 | P2-P4 completion rules still apply. This PR cannot freeze/admit/promote the candidate or close these parents. |
@@ -77,58 +62,96 @@ without actual-host artifact admission. These are not whole issues falsely marke
 retired. The safety, delegation, C53/C54 conformance and Rust-toolchain documents
 retain their precise supported boundaries.
 
-## P0 handoff and proof boundary
+## Source and lifetime disposition
 
-At audit entry there were no open PRs targeting `reconstruct/first-stable`.
-The only open repository PR was draft #3138, from reconstruction to `master`;
-it remains a promotion ledger and must not be ordinarily merged. At refresh,
-#3251 is the only open PR targeting reconstruction. That PR inventory is not an
-empty implementation frontier: #3250 and its bounded upstream corrections remain
-P0 work even without another open PR. No candidate is frozen here, and no later
-exact-subject gate is declared current.
+| Surface | Disposition and current owner |
+| --- | --- |
+| Config schema, module selection, invocation, artifact posture and latitude | Retain durable repository/environment choices; config is repository-owned policy. |
+| Assurance level/escalation/closeout and instruction/decision admissions | Retain owner policy and exact existing archive revisions; do not advance trust from HEAD. |
+| System-intent source selection | Retain repository intent; the native owner derives current observations. |
+| Payload target/capability/required-before-work | Retain target admission policy; derive byte currentness from the selected artifact and actual files. |
+| Compatibility advisory defaults | Retire old reader/resource preferences; current contracts derive capability, not a copied compatibility registry. |
+| Module update URLs/cadence | Retire obsolete master/git update machinery; installation identity comes from the selected immutable artifact, without automatic dependency movement. |
+| Workflow obligations | Transfer still-useful required/recommended repository expectations to AGENTS.md with the same force. Retire command recipes and generic procedural duplication. |
+| Empty test-data policy | Retire inert empty representation; it carried no constraint. |
+| Jumpstart/config/findings manuals and system-intent WORKFLOW | Replace competing procedure with narrow references to the canonical skill/current owner. Historical setup findings are not current admission. |
+| No-CLI script/policy | Compatibility pointer only, exit 1, runtime facts unknown and authority none; no synthetic decision packet or module discovery. |
+| Package copies/read profile | Derive through the existing interface generator and artifact roster. Correct reference closure against actual installed files. |
+| Planning/Memory roots | Preserve repository-owned domain state. Package-file removal never owns the whole domain tree. |
+| Human config/instructions and promoted output | Remain repository-owned; no package-wide overwrite or reset. |
 
-The amended P0 exit sequence is:
+The fix changes canonical sources and their existing generator, so another source
+refresh does not recreate the removed policy/manuals. The installed command guard
+checks every declared shipped file against the current native CLI contract.
 
-1. Independently accept/integrate the #3246 dependency-policy result and reconcile
-   its combined toolchain/lint/provenance/dependency/platform outcome.
-2. Under #3224/#2613/#2767, correct the release-relevant managed/default/config
-   sources consumed by #3250. Disposition config sections as retain, derive,
-   transfer, ask or retire according to their current semantic owner. Cleaning
-   installed copies while refresh recreates them is insufficient.
-3. For #3250, inventory checked-in installed surfaces by owner/lifetime and
-   separately audit ignored local state on the actual checkout. Preserve current
-   human/local policy and useful Planning/Memory/Verification/instruction/decision
-   state; keep local contents local. Execute the supported current convergence
-   path and record its exact source identity and before/after evidence.
-4. Repeat that path on the same candidate. Prove no unexplained semantic diff,
-   lost owner state, resurrected retired commands/manuals/config obligations, or
-   incorrect necessary-surface/removal classification. A clean fixture or one
-   successful pass cannot satisfy this gate.
-5. Independently accept the bounded owner corrections and lived-in proof, then
-   re-query PRs and owners for remaining release-relevant work. Feed the evidence
-   to #2909/#2990 before freezing the exact P1 candidate.
+## Native convergence and preservation evidence
 
-Any reusable defect found during dogfood returns to its smallest product owner
-and remains P0 until fixed and re-tested. Proof-only gaps on a stable converged
-tree can be resolved before P1 freeze without expanding product scope. This is
-a temporary batch-exit condition, not a new migration framework or authority.
+The existing Configuration writer now offers lazy payload discovery and exact
+per-file proposals from the selected native artifact. It reuses its source-bound
+human decision, admission, confinement, publication marker and recovery machinery.
+There is no new CLI family, lifecycle registry, migration ledger or Python host.
+Caller-chosen paths/content are rejected. Package refresh cannot be automatically
+delegated through a config-policy grant. A payload mismatch permits its bounded
+Configuration repair while still blocking unrelated implementation/claims.
 
-Focused proof covers the real locked positive scan, separate advisory/license/
-source rejection experiments, the runner's version and failure boundary, missing
-publisher gates and Rust-input fingerprint changes in the existing security
-tests, and source-archive policy inclusion. Existing compiler/native topology
-proof is reused for unchanged substrate; broader release-equivalent and actual
-platform admission remains P1/P2. The experiments do not add permanent tests of
-cargo-deny's own policy engine. Small retained tests protect only AW's runner,
-wiring and receipt/source-package contracts.
+Actual checkout baseline: 1,924 tracked AW/instruction files and 675 existing
+non-scratch local files were hash-inventoried before source convergence. No file
+was lost. The only 12 tracked changes were AGENTS.md, shared config, ownership,
+read profile, three managed reference docs, two fallback pointers, setup skill,
+system-intent pointer and provenance. All other tracked owner files and all 675
+original local files remained byte-identical. The local config and existing
+Planning/Memory/Verification/instruction/decision content were preserved.
 
-The earlier provenance finding was repaired in the existing provenance owner with
-explicit authorization; no second payload synchronizer or audit stack was added.
-That repair does not establish #3250's broader lived-in convergence outcome.
-Recurring cost is one Rust scan in security CI plus the same scan at publication;
-tool installation is pinned and uncached. Optional nextest, caches, coverage,
-rustdoc strictness and profile tuning remain deferred as documented under #3246.
-Stop implementation proof once the bounded checks and normal hooks pass; escalate
-only a named failed boundary. Independent review is the next step for this
-dependency-policy implementation; the amended convergence gate above remains
-required before the final no-open-continuation check can permit P0 exit.
+After building both native executables from the proposed source, the actual
+checkout followed each current Configuration request/authorization/action. The
+first native pass refreshed only payload provenance (postimage SHA-256
+`5a4e125f8f6f54adc597a0b4e69c7790eb78aca3a78a5cc20dd80d5a1807493c`)
+and reported all 20 declared files current. The second pass reported the same
+20 current files and made zero writes. Package source corrections had already
+been derived by their canonical generator; native convergence proved artifact
+byte parity rather than silently copying arbitrary target content. The exact
+committed subject and final validation are recorded in PR #3252.
+
+Ignored local state was separately classified through the current Resources
+owner. Existing effects, decision-point intent, Planning and Verification proof
+receipts retain their structured owners; logs are local runtime material;
+scratch remains disposable only through its current resource owner. README,
+assignment-runs, conclusions, correction-event artifacts, delegation artifacts,
+former-root-scratch, improvement-pressure, locks, mutation-claims and
+transport-capabilities were reported as unowned residue and preserved. A bounded
+native-source audit found no matching current readers for those historical
+names. Their existence confers no current semantic authority or deletion right.
+No private contents or hash inventory are promoted into shared state.
+
+One earlier dependency-policy scratch container exceeds the Resources owner's
+16 MiB removal bound. Its retained experiments are historical proof material;
+cleanup refusal was respected. It neither supplies current domain authority nor
+blocks convergence. This does not claim every historical byte was removed.
+
+## Necessary surfaces, removal and proof boundary
+
+Full installed-reference closure passes against the current source and shipped
+payload. Required local references resolve; optional absent module/local sources
+carry explicit degraded semantics. The existing source-maintenance lifecycle
+fixtures cover generated policy/ownership, repeated upgrades and bounded removal;
+they are not the installed native convergence proof. Native coverage separately
+exercises all 20 payload files, preservation of human/local bytes, refusal of
+arbitrary paths/content and stale source, and a no-write second pass. Interruption
+after payload publication recovers without rewriting the committed source, using
+the same writer as config creation/edit recovery.
+
+Removal classification preserves whole Memory/Planning roots, human config,
+local owner state and repository output. Only explicitly declared package files
+are replaceable/removable under their own contracts. There is no blanket native
+uninstall or arbitrary-target adoption claim. Unknown files are preserved until
+an actual owner admits removal; no recursive domain reset is implied.
+
+## P0 handoff
+
+All remaining P0 implementation is in PR #3252. #3223 remains an open parent:
+its bounded consolidation dependency needs independent acceptance, and later
+aggregate/exact-candidate evidence remains with #2909. The implementation-owned
+checks above do not count as review. Independently accept and integrate this PR,
+then re-query current PRs and owners for any remaining release-relevant
+continuation before selecting the P1 candidate. A concrete failure returns to
+#3224/#2613/#2767 as appropriate; #2990 and #3014 do not implement fixes.

@@ -166,46 +166,10 @@
     },
     {
       "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/config.toml",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/docs/module-map.md",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/fallback/no-cli-policy.json",
       "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
       "kind": "installed-local",
       "profiles": ["necessary-surfaces", "full-mirror"],
       "modules": []
-    },
-    {
-      "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/memory/repo/index.md",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["memory"]
-    },
-    {
-      "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/planning/execplans/README.md",
-      "kind": "installed-local",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["planning"]
-    },
-    {
-      "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/verification/manifest.toml",
-      "kind": "optional",
-      "profiles": ["necessary-surfaces", "full-mirror"],
-      "modules": ["verification"],
-      "degraded_behavior": "Preserve the Verification boundary from config without inventing repo-owned proof policy."
     },
     {
       "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
@@ -345,11 +309,98 @@
       "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
       "target": ".agentic-workspace/skills/workspace-resources/SKILL.md",
       "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
+      "profiles": ["necessary-surfaces", "full-mirror"],
       "modules": []
+    },
+    {
+      "source": ".agentic-workspace/fallback/no_cli_startup.py",
+      "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/READING.json",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/skills/REGISTRY.json",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/local/current-task-routes.json",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Absent former local route carriage supplies no current route selection; use the current routing owner."
+    },
+    {
+      "source": ".agentic-workspace/OWNERSHIP.toml",
+      "target": ".agentic-workspace/memory/repo/manifest.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": ["memory"],
+      "degraded_behavior": "Absent retained Memory state supplies no current knowledge; do not seed or promote material implicitly."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
+      "target": ".agentic-workspace/instructions/*.md",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Select existing canonical instruction sources through the instruction owner; an absent source needs its exact creation proposal."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
+      "target": ".agentic-workspace/local/instructions/*.md",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Local instructions may be absent; preserve the local scope and current owner creation boundary."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "target": ".agentic-workspace/OWNERSHIP.toml",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "target": ".agentic-workspace/READING.json",
+      "kind": "installed-local",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "target": ".agentic-workspace/config.local.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "Absent local policy is not a discovered machine capability or an override of shared policy."
+    },
+    {
+      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "target": ".agentic-workspace/config.toml",
+      "kind": "optional",
+      "profiles": ["necessary-surfaces", "full-mirror"],
+      "modules": [],
+      "degraded_behavior": "A missing shared source remains absent; use current defaults or an exact Configuration creation request without inventing repository policy."
     }
   ],
   "reference_discovery": {
@@ -393,12 +444,8 @@
   "no_cli_fallback": {
     "entrypoint": ".agentic-workspace/fallback/no_cli_startup.py",
     "policy": ".agentic-workspace/fallback/no-cli-policy.json",
-    "forbidden_actions": [
-      "mutate-managed-state-by-hand",
-      "bypass-planning-safety-gate",
-      "claim-completion-without-proof"
-    ],
-    "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation"
+    "procedure": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+    "authority": "none"
   },
   "system_intent_mirror_kind": "agentic-workspace/system-intent/v1",
   "subsystem_intent_kind": "agentic-workspace/subsystem-intent-set/v1",

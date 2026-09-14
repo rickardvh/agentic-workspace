@@ -129,7 +129,21 @@ Use the canonical skill to interpret the returned current facts and exact owner 
 
 Temporary finishing briefs or diagnostics under `.agentic-workspace/local/` are local-only and should not be checked in. Mirrored-payload profiles may have additional explicit managed artifacts; their ownership should remain visible in the installed-surface contract.
 
-An existing payload policy can require the installed files and provenance to match the native artifact's shipped bytes. Native startup checks that policy read-only; provenance labels alone cannot satisfy it. A mismatch remains unresolved until a supported owner operation reconciles the source. Historical source-maintenance checks and Python lifecycle fixtures do not supply an installed native refresh path.
+An existing payload policy can require installed files and provenance to match the
+native artifact's shipped bytes. Startup checks this read-only; provenance labels
+alone cannot satisfy it. The current Configuration owner exposes a
+`payload_discovery_request` with exact per-file refresh proposals. Inspect each
+proposal and authorize its exact artifact bytes through the returned decision;
+then invoke the returned action and resolve again. Interrupted publication uses
+that same owner's recovery request. A second discovery reports current files
+without writing them.
+
+This bounded refresh applies only to the artifact's declared package files. It
+cannot accept arbitrary paths or caller-supplied replacement bytes, initialize
+human policy, or reset domain state. Preserve useful target-specific meaning
+before authorizing a package-file replacement; unknown ownership is not deletion
+authority. See the canonical setup skill for this procedure. Earlier published
+artifacts may lack the operation; their actual contract remains authoritative.
 
 ## Worked example for an already bootstrapped target
 

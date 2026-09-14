@@ -11,6 +11,68 @@ from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_path, shared_core_binary, native_cli):
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    config = workspace / "config.toml"
+    config.write_text(
+        'schema_version=1\n[modules]\nenabled=[]\n[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n'
+    )
+    human = tmp_path / "AGENTS.md"
+    human.write_text("Preserve the repository's human policy.\n")
+    local = workspace / "local" / "human.txt"
+    local.parent.mkdir()
+    local.write_text("Private machine-local material")
+    preserved = {path: path.read_bytes() for path in [config, human, local]}
+    context = {"target": str(tmp_path), "task": "Refresh the declared package payload"}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+
+    def choices():
+        current = call()
+        request = current["configuration_write"]["payload_discovery_request"]
+        return call(request=request)["configuration_write"]["payload_choices"]
+
+    initial = choices()
+    assert all(row["status"] == "refresh-available" for row in initial)
+    wrong = copy.deepcopy(initial[0]["request"])
+    wrong["arguments"]["source"] = "AGENTS.md"
+    with pytest.raises(AssertionError):
+        call(request=wrong)
+    wrong = copy.deepcopy(initial[0]["request"])
+    wrong["arguments"]["value"] = "sha256:caller-chosen-content"
+    with pytest.raises(AssertionError, match="artifact"):
+        call(request=wrong)
+    for row in initial:
+        request = next(item["request"] for item in choices() if item["source"] == row["source"])
+        proposal = call(request=request)
+        answer = proposal["decision_packet"]["decision_request"]["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        ready = call(request=answer)
+        action = ready["decision_packet"]["primary_action"]
+        assert action is not None, ready["decision_packet"]
+        if row == initial[0]:
+            path = tmp_path / row["source"]
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("A source changed after the exact proposal")
+            with pytest.raises(AssertionError):
+                call(invocation=action)
+            assert path.read_text() == "A source changed after the exact proposal"
+            path.unlink()
+        # The exact repair does not admit unrelated implementation while the
+        # required package identity remains unsatisfied.
+        assert any("effect:implementation" in b["affects"] for b in ready["decision_packet"]["blockers"])
+        result = call(invocation=action)
+        assert result["effect_outcome"]["status"] == "committed"
+        assert (tmp_path / row["source"]).read_bytes() == proposal["configuration_write"]["proposal"]["postimage"].encode()
+    assert all(row["status"] == "current" for row in choices())
+    assert {path: path.read_bytes() for path in preserved} == preserved
+    # A second pass issues no writes, even though the discovery stays available.
+    current = choices()[0]["request"]
+    assert call(request=current)["configuration_write"]["status"] == "unchanged"
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 @pytest.mark.parametrize(
     "key,value,source_name",
