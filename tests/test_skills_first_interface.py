@@ -348,3 +348,52 @@ def test_known_leaf_returns_current_procedure_and_shared_applicability(tmp_path,
         assert not stale["memory"]["selected_notes"]
         assert "detail" not in stale["semantic_routes"]["discovery"]
     assert not (tmp_path / ".agentic-workspace/local").exists()
+
+
+@pytest.mark.parametrize("module", ["memory", "planning"])
+def test_shipped_package_lifecycle_preserves_domain_state_and_current_guidance(tmp_path, monkeypatch, module):
+    import importlib
+
+    owner = importlib.import_module(f"repo_{module}_bootstrap.installer")
+    ownership = importlib.import_module(f"repo_{module}_bootstrap._ownership")
+    monkeypatch.setattr(ownership, "_workspace_manifest_path", lambda: None)
+    ownership._ownership_data.cache_clear()
+    try:
+        ledger = ownership._ownership_data()
+        for row in ledger["module_roots"]:
+            if row["module"] in {"memory", "planning"}:
+                assert row["ownership"] == "repo_owned"
+                assert row["uninstall_policy"] == "preserve-current-owner-state"
+        template = (ROOT / f"packages/{module}/bootstrap/AGENTS.template.md").read_text(encoding="utf-8")
+        assert_current_command_examples(template.replace("<effective-cli>", "agentic-workspace"))
+        assert "skills/workspace-startup/SKILL.md" in template
+        assert "repository-owned and must be preserved" in template
+        if module == "planning":
+            projected = owner._ownership_review(tmp_path)
+            assert ".agentic-workspace/planning/" not in projected["package_owned_roots"]
+            assert ".agentic-workspace/memory/" not in projected["package_owned_roots"]
+        else:
+            shared = importlib.import_module("repo_memory_bootstrap._installer_shared")
+            assert_current_command_examples(shared.WORKSPACE_POINTER_BLOCK)
+        (tmp_path / ".git").mkdir()
+        retained = {}
+        for reference in (
+            "AGENTS.md",
+            ".agentic-workspace/memory/repo/retained.md",
+            ".agentic-workspace/planning/retained.md",
+            ".agentic-workspace/local/instructions/retained.md",
+        ):
+            path = tmp_path / reference
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("Repository-owned meaning must survive.\n", encoding="utf-8", newline="\n")
+            retained[reference] = path.read_bytes()
+        for operation in (owner.install_bootstrap, owner.upgrade_bootstrap, owner.upgrade_bootstrap):
+            operation(target=tmp_path)
+            agents = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
+            assert_current_command_examples(agents.replace("<effective-cli>", "agentic-workspace"))
+            assert agents.startswith(retained["AGENTS.md"].decode())
+        owner.uninstall_bootstrap(target=tmp_path)
+        for reference, expected in retained.items():
+            assert (tmp_path / reference).read_bytes() == expected
+    finally:
+        ownership._ownership_data.cache_clear()

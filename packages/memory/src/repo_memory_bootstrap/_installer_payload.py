@@ -488,7 +488,9 @@ def _plan_agents_entrypoint(
 ) -> None:
     startup_label = destination.name
     embeds_shared_rules = _embeds_shared_workflow_rules(existing)
-    workspace_shared_layer_present = (destination.parent / WORKSPACE_WORKFLOW_PATH).exists()
+    workspace_shared_layer_present = (destination.parent / ".agentic-workspace/skills/workspace-startup/SKILL.md").is_file() or (
+        destination.parent / WORKSPACE_WORKFLOW_PATH
+    ).is_file()
     workspace_pointer_present = _agents_has_workspace_workflow_pointer(existing)
     delegated_through_workspace = workspace_shared_layer_present and workspace_pointer_present
 

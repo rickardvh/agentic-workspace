@@ -234,16 +234,19 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     // the source-owned schema before any disposition or publication.
     let mut alternatives: Vec<Value> = [SHARED, LOCAL].map(|source| json!({"properties":{
         "source":{"const":source},"key":{"enum":CHOICES.iter().filter(|(s,_)| *s == source).map(|(_,key)| *key).collect::<Vec<_>>()}}})).to_vec();
-    alternatives.push(json!({"properties":{"source":{"enum":crate::native_payload::paths()},"key":{"const":PAYLOAD_KEY},"value":{"type":"string"}}}));
+    // Artifact paths are lazy discovery data. proposed()/bound_sources() enforce
+    // their exact ownership before publication; do not repeat the roster in
+    // every ordinary capability schema.
+    alternatives.push(json!({"properties":{"source":{"type":"string"},"key":{"const":PAYLOAD_KEY},"value":{"type":"string"}}}));
     let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"value":{},"answer":{"enum":["authorize-write","defer"]},"proposal_revision":{"type":"string"}},"required":["source","key","value"],"additionalProperties":false,"oneOf":alternatives});
     args["properties"]["nomination"] = crate::native_owner_change::schema();
     args["properties"]["source"] = json!({"type":"string"});
-    let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"enum":([vec![SHARED,LOCAL],crate::native_payload::paths()].concat())},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
+    let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"source":{"type":"string"},"record_revision":{"type":"string"}},"required":["source","record_revision"],"additionalProperties":false});
     let operation = |id: &str| json!({"id":id,"semantic_revision":"configuration-external-source-write-v4","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}},"required":["target","request","binding","post_revision"],"additionalProperties":false},"result_kind":"agentic-workspace/configuration-write-result/v1","effects":[EFFECT],"reads":["configuration"]});
     let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write"), operation(DEFER)]});
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_PAYLOAD,"result_kind":"agentic-workspace/configuration-payload-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
-    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"}},"oneOf":alternatives}}));
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"}}}}));
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);

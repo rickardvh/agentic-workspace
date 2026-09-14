@@ -161,18 +161,8 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "`Iterative Follow-Through`" in readme_text
     assert "`Execution Summary`" in readme_text
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
-    assert "Keep this file thin." in bootstrap_agents_text
-    assert '<effective-cli> start --task "<task>" --format json' in bootstrap_agents_text
-    assert "<effective-cli> preflight --format json" in bootstrap_agents_text
-    assert "<effective-cli> summary --format json" in bootstrap_agents_text
-    assert "<effective-cli> defaults --section startup --format json" in bootstrap_agents_text
-    assert (
-        "Use `<effective-cli> config --target . --format json` when the configured entrypoint, posture, or workflow obligations matter; add `--select <field[,field...]>` for exact detail."
-        in bootstrap_agents_text
-    )
-    assert "do not substitute bare `agentic-workspace`" in bootstrap_agents_text
-    assert "Read package-local `AGENTS.md` only for the package being edited." in bootstrap_agents_text
-    assert "## When Needed" not in bootstrap_agents_text
+    assert "skills/workspace-startup/SKILL.md" in bootstrap_agents_text
+    assert "repository-owned and must be preserved" in bootstrap_agents_text
     assert "without maintaining aggregate queue residue" in execplans_readme_text
     assert "## Authority Table" not in quickstart_text
     assert "## Escalation Table" not in quickstart_text

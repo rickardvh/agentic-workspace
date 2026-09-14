@@ -30,6 +30,15 @@ def synchronize(*, check: bool = False) -> list[str]:
             if not check:
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_text(expected, encoding="utf-8", newline="\n")
+    # Standalone first-party packages fall back to these shipped declarations.
+    # Keep them derived from the same owner as the root payload.
+    for module in ("memory", "planning"):
+        destination = ROOT / f"packages/{module}/src/repo_{module}_bootstrap/_ownership.toml"
+        expected = (ROOT / LEDGER).read_text(encoding="utf-8")
+        if destination.read_text(encoding="utf-8") != expected:
+            drift.append(destination.relative_to(ROOT).as_posix())
+            if not check:
+                destination.write_text(expected, encoding="utf-8", newline="\n")
     for retired in manifest.get("retired_surface_files", []):
         destination = payload / retired["path"]
         if destination.exists():

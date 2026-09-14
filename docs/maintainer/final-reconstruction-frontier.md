@@ -80,8 +80,12 @@ retain their precise supported boundaries.
 | Planning/Memory roots | Preserve repository-owned domain state. Package-file removal never owns the whole domain tree. |
 | Human config/instructions and promoted output | Remain repository-owned; no package-wide overwrite or reset. |
 
-The fix changes canonical sources and their existing generator, so another source
-refresh does not recreate the removed policy/manuals. The installed command guard
+The fix changes canonical sources and their existing generator, including the
+standalone Memory/Planning ownership mirrors and bootstrap templates. Package
+lifecycle pointers select the canonical skill and distinguish static package
+support from repository-owned domain records. Planning ownership projections
+filter roots by their declared ownership. Another source refresh therefore does
+not recreate the removed policy/manuals. The installed command guard
 checks every declared shipped file against the current native CLI contract.
 
 ## Native convergence and preservation evidence
@@ -145,6 +149,27 @@ local owner state and repository output. Only explicitly declared package files
 are replaceable/removable under their own contracts. There is no blanket native
 uninstall or arbitrary-target adoption claim. Unknown files are preserved until
 an actual owner admits removal; no recursive domain reset is implied.
+
+## Review blocker corrections
+
+Independent review of `d52ab532c1719925b985353e50dc89fa850559e4` found two
+implementation gaps: repeated payload path lists overflowed the existing ordinary
+packet bound, and standalone module lifecycle defaults still carried old guidance
+and ownership. Both corrections remain in PR #3252.
+
+Payload path enumeration is now lazy Configuration discovery data. The writer
+still validates every proposed artifact path/content and recovery source; ordinary
+capability schemas do not repeat that roster. The existing four-surface former
+route test passes its unchanged 100,000-byte bound. Existing Configuration tests
+retain invalid source/content and currentness coverage.
+
+The existing interface generator now owns both shipped module ownership mirrors.
+Memory/Planning bootstrap templates and Memory's generated pointer/detection use
+the canonical skill. Focused package lifecycle tests force packaged ownership
+fallback, exercise install and repeated upgrade, preserve human/domain/local
+material through uninstall, and guard generated command examples. Existing
+Memory and Planning package install/upgrade/removal tests cover static support
+removal separately; domain preservation does not make every package file durable.
 
 ## P0 handoff
 

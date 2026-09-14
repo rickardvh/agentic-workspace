@@ -794,7 +794,9 @@ def test_upgrade_migrates_legacy_layout_by_default(tmp_path: Path) -> None:
     assert (target / ".agentic-workspace/memory" / "UPGRADE-SOURCE.toml").read_text(encoding="utf-8").startswith('source_type = "local"')
     assert not (target / "memory" / "system").exists()
     assert not (target / "memory" / "skills").exists()
-    assert "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules." in (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert "Use `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical Agentic Workspace procedure." in (
+        target / "AGENTS.md"
+    ).read_text(encoding="utf-8")
     assert any(action.kind == "moved" for action in result.actions)
     assert not any(action.kind == "manual review" and "legacy managed layout detected" in action.detail for action in result.actions)
 
@@ -856,7 +858,9 @@ def test_migrate_layout_moves_legacy_managed_files_into_agentic_memory_root(tmp_
     assert (target / ".agentic-workspace/memory" / "bootstrap" / "README.md").read_text(encoding="utf-8") == "bootstrap\n"
     assert (target / ".agentic-workspace/memory" / "skills" / "memory-router" / "SKILL.md").read_text(encoding="utf-8") == "router\n"
     assert not (target / "memory" / "system" / "WORKFLOW.md").exists()
-    assert "Read `.agentic-workspace/memory/WORKFLOW.md` for shared workflow rules." in (target / "AGENTS.md").read_text(encoding="utf-8")
+    assert "Use `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical Agentic Workspace procedure." in (
+        target / "AGENTS.md"
+    ).read_text(encoding="utf-8")
     assert any(action.kind == "moved" for action in result.actions)
 
 
