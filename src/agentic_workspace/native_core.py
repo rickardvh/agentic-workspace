@@ -1,4 +1,4 @@
-"""Resolve packaged native artifacts or an explicitly configured development core."""
+"""Resolve verified package artifacts, a prepared source checkout, or an explicit core."""
 
 from __future__ import annotations
 
@@ -25,7 +25,28 @@ def _verify(path: Path, key: str) -> None:
 def core_binary() -> Path:
     name = "agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core"
     configured = os.environ.get("AGENTIC_WORKSPACE_CORE_BINARY")
-    path = Path(configured) if configured else Path(__file__).with_name("_native") / name
+    packaged = Path(__file__).with_name("_native")
+    path = Path(configured) if configured else packaged / name
+    # Only this module's source tree can supply an implicit development build.
+    # Never search cwd/PATH or fall back from a present packaged distribution.
+    root = Path(__file__).resolve().parents[2]
+    if (
+        not configured
+        and not packaged.exists()
+        and Path(__file__).resolve().parent.parent == root / "src"
+        and (root / "Cargo.lock").is_file()
+        and (root / "crates/agentic-workspace-core/Cargo.toml").is_file()
+        and (root / "crates/agentic-workspace-cli/Cargo.toml").is_file()
+    ):
+        directory = root / "target/debug"
+        path = directory / name
+        cli = directory / ("agentic-workspace.exe" if os.name == "nt" else "agentic-workspace")
+        if not path.is_file() or not cli.is_file():
+            raise RuntimeError(
+                f"source-checkout native binary pair is unavailable at {directory}; "
+                "run cargo build --locked --workspace --bins from this checkout; "
+                "for a custom target directory explicitly set AGENTIC_WORKSPACE_CORE_BINARY to its paired core"
+            )
     if not path.is_file():
         raise RuntimeError(
             "shared Agentic Workspace core is unavailable; install the native package or explicitly set AGENTIC_WORKSPACE_CORE_BINARY for development"

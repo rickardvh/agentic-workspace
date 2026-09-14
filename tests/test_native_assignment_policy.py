@@ -131,10 +131,25 @@ def test_legacy_source_and_canonical_alias_precedence_keep_binding(tmp_path, sha
     fresh = call(surface, shared_core_binary, native_cli, tmp_path)
     assert fresh["configuration"]["assignment_policy"]["binding"] is False
     assert any(
-        s["reference"] == "agentic-workspace.local.toml" and s["status"] == "superseded-by-current-local-source"
+        s["reference"] == "agentic-workspace.local.toml" and s["status"] == "current-local-source-derivation"
         for s in fresh["configuration"]["sources"]
     )
+    assert fresh["configuration"]["assignment_policy"]["current_target"] == "local"
+    assert fresh["configuration"]["assignment_policy"]["execution_permitted"] is False
+    # A smaller canonical file has no authority to erase omitted binding intent.
+    current.write_text('schema_version=1\n[workspace]\ncli_invoke="agentic-workspace"\n')
+    preserved = call(surface, shared_core_binary, native_cli, tmp_path)
+    assert preserved["configuration"]["assignment_policy"]["binding"] is True
+    assert preserved["configuration"]["assignment_policy"]["execution_permitted"] is False
+    # Once represented by the source owner, the old representation is unnecessary.
+    current.write_bytes(before)
+    represented = call(surface, shared_core_binary, native_cli, tmp_path)
+    assert any(s["status"] == "represented-by-current-local-source" for s in represented["configuration"]["sources"])
     assert former.read_bytes() == before
+    former.unlink()
+    independent = call(surface, shared_core_binary, native_cli, tmp_path)
+    assert independent["configuration"]["assignment_policy"]["binding"] is True
+    assert independent["configuration"]["assignment_policy"]["execution_permitted"] is False
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
