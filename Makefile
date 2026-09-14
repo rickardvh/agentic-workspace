@@ -285,7 +285,7 @@ sync-verification:
 
 test-rust-core:
 	@cargo build --locked --workspace --bins
-	@cargo test --workspace
+	@cargo test --locked --workspace
 
 test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration
 
@@ -327,7 +327,7 @@ lint-workspace:
 	@$(COMPACT_RUN) --label "workspace lint" -- uv run ruff check src tests
 	@$(COMPACT_RUN) --label "prompt semantic markers" -- uv run python scripts/check/check_prompt_semantic_markers.py
 	@cargo fmt --all -- --check
-	@cargo clippy --workspace --all-targets -- -D warnings
+	@cargo clippy --locked --workspace --all-targets -- -D warnings
 
 lint-memory:
 	@$(COMPACT_RUN) --label "memory lint" --cwd packages/memory -- uv run ruff check .

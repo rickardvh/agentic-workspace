@@ -36,6 +36,10 @@ A preview is intentionally unstable. Interfaces and behavior may change before f
 
 The current coordinated Python distributions require **Python 3.11 or newer**.
 
+Building from source additionally requires the exact repository toolchain in
+`rust-toolchain.toml`; no lower Rust MSRV is currently supported. Installed native
+artifacts do not require Cargo. See the [maintainer toolchain contract](maintainer/rust-toolchain.md).
+
 This page is the canonical support/prerequisite owner. Exact release identity is projected separately so changing releases does not require copying commands through conceptual prose.
 
 | Concern | Supported contract | Unknown or excluded |

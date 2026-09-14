@@ -1,5 +1,9 @@
 # Native route discovery in the workspace npm artifact
 
+Compiler selection and source-build compatibility follow the shared
+[Rust toolchain contract](rust-toolchain.md). Native manifests carry that exact
+compiler identity alongside the existing host and executable digests.
+
 The workspace npm release asset includes the same Rust core used by the Python binding. `instructions routes` reads canonical skill registries through that core; root and branch results contain identities, and exact discovery expands only the selected leaf metadata. The `./native` export exposes the existing thin start/invoke binding.
 
 Stage the current build host artifact with `python scripts/release/stage_native_npm.py --output <absent staging directory>`, then run `npm test` and `npm pack` in that directory. Cargo receives its explicit Rust host target. Staging rejects Rust/Node host mismatch and unequal product/package versions. The staged package declares its actual OS and architecture; its binding checks the package version, platform and executable digest before use. The manifest records build context and artifact integrity, not signed or independent provenance. Source archives retain the inputs; they do not embed build output. Unstaged generated development consumers may explicitly set `AGENTIC_WORKSPACE_CORE_BINARY`; this does not claim package provenance or self-sufficient installation. Staged artifacts require their manifest even when that development override is present.

@@ -1,0 +1,42 @@
+# Rust source builds and native artifacts
+
+`rust-toolchain.toml` is the compiler and component authority for this repository.
+Use ordinary `cargo` commands from the checkout; rustup selects and installs the
+declared release, minimal profile, rustfmt and Clippy. Do not independently select
+`+stable` in admission or release commands. Update the declaration deliberately,
+then validate the locked workspace and native artifact set before acceptance.
+
+Source-build compatibility is **the pinned toolchain only**. There is no lower
+MSRV promise; the workspace metadata points to that same declaration instead of
+duplicating a compiler version in both crates. Cargo.lock owns the resolved
+dependency graph. Builds, tests and Clippy use `--locked`; formatting and Clippy's
+`-D warnings` remain ordinary merge checks.
+
+Native wheel/npm/archive producers reject a different observed compiler release
+or a compiler wrapper/override. They record the declaration digest, observed
+compiler version/commit/date/LLVM/host, explicit build target, Git source identity
+when available, and existing binary hashes. Source archives carry the declaration
+and build helper. Missing Git identity in an unpacked source archive is reported
+as unknown, never borrowed from another build. These manifests describe build
+observations; signed release attestations remain the provenance owner.
+
+The current public preview artifact class is Linux x86_64 on the exercised Ubuntu
+hosts, using the declared Python/Node combinations. Windows local builds exercise
+Windows code, but do not establish a published Windows support class. macOS,
+other architectures and libc compatibility classes remain unclaimed until
+actual-host artifact/install evidence exists. Cross-compilation alone adds no
+runtime-support promise. See [installation/support](../agentic-workspace-install.md).
+
+Optional tooling disposition under #3246:
+
+| Tool/change | Disposition and evidence boundary |
+| --- | --- |
+| nextest | Defer: the observed long aggregate lane is Python/public handoff integration; no Rust test-runner bottleneck has been measured. |
+| Cargo caching | Defer: existing uncached builds pass; no measured total-cost benefit justifies another retained cache/invalidation path. |
+| Rust coverage | Defer: no named unprotected semantic class is answered by a percentage threshold. Use existing owner proofs. |
+| Release-profile tuning | Defer: no measured artifact-size/latency tradeoff justifies changing the default profile. |
+| Miri/fuzzing/vet/semver tooling | Not adopted: no current distinct required threat/failure class was established in this tranche. |
+
+Rust advisory/license/source policy is the separate dependency-policy outcome of
+#3246. This baseline does not substitute for it or close the parent. Existing
+GitHub dependency review and supply-chain evidence retain their distinct roles.

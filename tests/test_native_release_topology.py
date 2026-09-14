@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tomllib
 import zipfile
 from pathlib import Path
 
@@ -41,6 +42,11 @@ def test_wheel_contains_only_binding_and_paired_core(wheel):
         assert "Requires-Dist:" not in metadata
         manifest = json.loads(archive.read("agentic_workspace/_native/artifact.json"))
         assert manifest["sha256"] and manifest["cli_sha256"]
+        toolchain = manifest["rust_toolchain"]
+        assert toolchain["release"] == tomllib.loads((ROOT / "rust-toolchain.toml").read_text())["toolchain"]["channel"]
+        assert toolchain["commit_hash"] and toolchain["commit_date"] and toolchain["llvm_version"]
+        assert toolchain["host"] == manifest["rust_host"] == manifest["rust_target"]
+        assert toolchain["declaration_sha256"] == hashlib.sha256((ROOT / "rust-toolchain.toml").read_bytes()).hexdigest()
         assert not any("_payload" in name or "_generated" in name for name in files)
 
 
@@ -161,9 +167,14 @@ def test_exact_archive_and_language_packages_share_native_bytes(wheel, tmp_path)
     assert len(archives) == 1
     with zipfile.ZipFile(archives[0]) as native, zipfile.ZipFile(wheel) as python:
         manifest = json.loads(native.read("artifact.json"))
+        python_manifest = json.loads(python.read("agentic_workspace/_native/artifact.json"))
         binaries = [name for name in native.namelist() if name not in {"artifact.json", "LICENSE"}]
         assert len(binaries) == 2
         with tarfile.open(next(directory.glob("agentic-workspace-workspace-cli-*.tgz"))) as node:
+            node_manifest = json.load(node.extractfile("package/src/native/bin/artifact.json"))
+            for field in ("rust_toolchain", "rust_host", "rust_target", "source_head", "source_dirty"):
+                assert manifest[field] == python_manifest[field] == node_manifest[field]
+            assert manifest["source_head"] == subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
             for name in binaries:
                 data = native.read(name)
                 key = "sha256" if "-core" in name else "cli_sha256"
@@ -192,3 +203,5 @@ def test_source_archive_has_no_development_host_or_workspace_dependencies():
         assert "[dependency-groups]" not in metadata
         assert not any("/src/agentic_workspace/operations/" in name or "/generated/workspace/python/" in name for name in names)
         assert f"{root}/Cargo.lock" in names
+        assert f"{root}/rust-toolchain.toml" in names
+        assert f"{root}/scripts/release/native_toolchain.py" in names
