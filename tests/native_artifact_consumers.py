@@ -81,7 +81,16 @@ def install(directory: Path, work: Path) -> dict[str, Path]:
         "core": native / ("agentic-workspace-core" + suffix),
         "cli": native / ("agentic-workspace" + suffix),
         "python": python,
+        "python_cli": python_manifest_path.parent / ("agentic-workspace" + suffix),
+        "typescript_cli": package / "src/native/bin" / ("agentic-workspace" + suffix),
         "node": Path(node),
         "package": package,
         "cwd": consumer,
     }
+
+
+def paired_cli(surface: str, standalone: Path) -> Path:
+    """Proof reuse binds the producer location, even for byte-identical packages."""
+    if CURRENT is not None and surface in {"python", "typescript"}:
+        return CURRENT[f"{surface}_cli"]
+    return standalone

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import pytest
+from tests import native_artifact_consumers
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -204,6 +205,7 @@ def test_native_proof_cannot_bypass_current_source_protection(tmp_path: Path, sh
 def test_native_producer_reused_by_fresh_adapters_through_same_core(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, consumer: str
 ) -> None:
+    native_cli = native_artifact_consumers.paired_cli(consumer, native_cli)
     context = fixture(tmp_path)
 
     def call(surface: str, value: dict) -> dict:
@@ -370,9 +372,13 @@ def test_shared_publication_identity_preserves_legacy_unicode_and_defaults(share
     assert _proof_publication_identity(sealed) == {**expected, "execution_artifact": sealed["execution_artifact"]}
 
 
-def test_native_proof_uses_actual_reconciled_planning_subject(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
+@pytest.mark.parametrize("consumer", ["native", "json", "python", "typescript"])
+def test_native_proof_uses_actual_reconciled_planning_subject(
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, consumer: str
+) -> None:
     from tests.test_native_public_cli import ROOT
 
+    native_cli = native_artifact_consumers.paired_cli(consumer, native_cli)
     context = fixture(tmp_path)
     reference = Path(".agentic-workspace/planning/execplans/delegation-lane-sweep.plan.json")
     plan = tmp_path / reference
@@ -410,12 +416,10 @@ def test_native_proof_uses_actual_reconciled_planning_subject(tmp_path: Path, sh
         assert evidence["task_judgment"]["current_judgment_count"] == 0
         return evidence
 
-    for consumer in ["native", "json", "python", "typescript"]:
-        assert evidence_for(consumer)["evidence_freshness"] == "reusable"
+    assert evidence_for(consumer)["evidence_freshness"] == "reusable"
     original = (tmp_path / "a.txt").read_bytes()
     (tmp_path / "a.txt").write_text("changed proof input")
-    for consumer in ["native", "json", "python", "typescript"]:
-        assert evidence_for(consumer)["evidence_freshness"] == "stale"
+    assert evidence_for(consumer)["evidence_freshness"] == "stale"
     (tmp_path / "a.txt").write_bytes(original)
     body = json.loads(plan.read_bytes())
     body["canonical_core"]["hard_constraints"] = "New material Planning boundary"
@@ -425,8 +429,7 @@ def test_native_proof_uses_actual_reconciled_planning_subject(tmp_path: Path, sh
     action = call({**context, "request": request})["decision_packet"]["primary_action"]
     call({**context, "invocation": action})
     assert call(context)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] != subject["revision"]
-    for consumer in ["native", "json", "python", "typescript"]:
-        assert evidence_for(consumer)["evidence_freshness"] == "stale"
+    assert evidence_for(consumer)["evidence_freshness"] == "stale"
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
 
 
