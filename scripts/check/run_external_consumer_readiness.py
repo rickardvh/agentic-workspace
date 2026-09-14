@@ -51,12 +51,18 @@ def _console_script(env_root: Path, name: str) -> Path:
 def _build_python_artifacts(dist: Path) -> list[Path]:
     uv = shutil.which("uv") or "uv"
     _run([uv, "build", "--wheel", "--sdist", "--out-dir", dist], cwd=REPO_ROOT)
+    wheels = sorted(dist.glob("agentic_workspace-*.whl"))
+    if len(wheels) != 1:
+        raise ReadinessCheckError("expected exactly one coordinated root wheel")
+    return wheels
+
+
+def _build_optional_module_fixtures(dist: Path) -> list[Path]:
+    """Keep source-only presence fixtures outside the coordinated artifact set."""
+    uv = shutil.which("uv") or "uv"
     for package in ("agentic-workspace-memory", "agentic-workspace-planning", "agentic-workspace-verification"):
         _run([uv, "build", "--wheel", "--package", package, "--out-dir", dist], cwd=REPO_ROOT)
-    wheels = sorted(dist.glob("*.whl"))
-    if len(wheels) < 4:
-        raise ReadinessCheckError("expected workspace plus three module wheels")
-    return wheels
+    return sorted(dist.glob("*.whl"))
 
 
 def _pack_typescript_artifact(dist: Path, npm: str) -> Path:
@@ -456,13 +462,16 @@ def run(*, dist_dir: Path | None = None, require_node: bool = False) -> dict[str
         assert not temp_root.is_relative_to(REPO_ROOT)
         dist = dist_dir.resolve() if dist_dir else temp_root / "dist"
         dist.mkdir(parents=True, exist_ok=True)
-        wheels = sorted(dist.glob("*.whl"))
-        if len(wheels) < 4:
+        wheels = sorted(dist.glob("agentic_workspace-*.whl"))
+        if not wheels:
             wheels = _build_python_artifacts(dist)
-        wheel = next(p for p in wheels if p.name.startswith("agentic_workspace-"))
+        if len(wheels) != 1:
+            raise ReadinessCheckError("expected exactly one coordinated root wheel")
+        wheel = wheels[0]
         archive = _pack_typescript_artifact(dist, npm)
         host_env = temp_root / "host-env"
-        _install_python_stack(host_env, wheels)
+        optional_fixtures = _build_optional_module_fixtures(temp_root / "optional-module-fixtures")
+        _install_python_stack(host_env, [wheel, *optional_fixtures])
         host_cli = _console_script(host_env, "agentic-workspace")
         python_root = temp_root / "python-consumer"
         # Native owners are artifact-owned: optional Python module distributions

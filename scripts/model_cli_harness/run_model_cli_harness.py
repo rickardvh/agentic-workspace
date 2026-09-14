@@ -58,12 +58,8 @@ HARNESS_SETUP_MUTATION_PATHS = (
     "scripts/run_agentic_workspace.py",
 )
 SANDBOX_ADAPTER_KIND = "agentic-workspace/model-cli-sandbox-adapter/v1"
-LOCAL_AW_WHEEL_PACKAGES = {
-    "agentic-workspace": "agentic_workspace",
-    "agentic-workspace-memory": "agentic_workspace_memory",
-    "agentic-workspace-planning": "agentic_workspace_planning",
-    "agentic-workspace-verification": "agentic_workspace_verification",
-}
+LOCAL_AW_WHEEL_PACKAGES = {"agentic-workspace": "agentic_workspace"}
+
 FINAL_ANSWER_PATH_RULE = (
     "Final answer path rule: cite changed files and evidence using repo-relative paths only. "
     "Before writing the final answer, convert any absolute cwd, fixture, run_root, session, prompt-file, "
@@ -497,19 +493,13 @@ def _build_local_aw_wheelhouse(output_root: Path) -> Path:
     if wheelhouse.exists():
         shutil.rmtree(wheelhouse)
     wheelhouse.mkdir(parents=True)
-    for package_root in (
-        REPO_ROOT,
-        REPO_ROOT / "packages" / "memory",
-        REPO_ROOT / "packages" / "planning",
-        REPO_ROOT / "packages" / "verification",
-    ):
-        subprocess.run(
-            ["uv", "build", "--wheel", "--out-dir", str(wheelhouse), str(package_root)],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+    subprocess.run(
+        ["uv", "build", "--wheel", "--out-dir", str(wheelhouse), str(REPO_ROOT)],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     return wheelhouse
 
 
@@ -544,30 +534,6 @@ def _find_wheel(wheelhouse: Path, prefix: str, version: str) -> Path:
     if len(matches) != 1:
         raise RuntimeError(f"expected exactly one {prefix} {version} wheel in {wheelhouse}, found {len(matches)}")
     return matches[0]
-
-
-def _patch_local_aw_wheelhouse(*, source_wheelhouse: Path, target_wheelhouse: Path, release_asset_base_url: str, version: str) -> None:
-    if target_wheelhouse.exists():
-        shutil.rmtree(target_wheelhouse)
-    shutil.copytree(source_wheelhouse, target_wheelhouse)
-    subprocess.run(
-        [
-            "uv",
-            "run",
-            "python",
-            "scripts/release/patch_workspace_release_wheel.py",
-            "--dist-dir",
-            str(target_wheelhouse),
-            "--version",
-            version,
-            "--release-asset-base-url",
-            release_asset_base_url,
-        ],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
 
 
 def _relative_project_source_path(*, path: Path, repo_path: Path) -> str:
@@ -609,13 +575,11 @@ def _fixture_local_wheel_metadata(
             ]
         return list(LOCAL_AW_WHEEL_PACKAGES), uv_sources
 
-    release_asset_base_url = _fixture_file_url(target_wheelhouse, adapter=adapter)
-    _patch_local_aw_wheelhouse(
-        source_wheelhouse=source_wheelhouse,
-        target_wheelhouse=target_wheelhouse,
-        release_asset_base_url=release_asset_base_url,
-        version=version,
-    )
+    if target_wheelhouse.exists():
+        shutil.rmtree(target_wheelhouse)
+    target_wheelhouse.mkdir(parents=True)
+    source_wheel = _find_wheel(source_wheelhouse, "agentic_workspace", version)
+    shutil.copy2(source_wheel, target_wheelhouse / source_wheel.name)
     root_wheel = _find_wheel(target_wheelhouse, "agentic_workspace", version)
     return [f"agentic-workspace @ {_fixture_file_url(root_wheel, adapter=adapter)}"], {}
 
@@ -1352,31 +1316,12 @@ def _fixture_runtime_provenance(*, repo_path: Path, env: dict[str, str], timeout
             "uv",
             "run",
             "--offline",
-            "python",
-            "scripts/run_agentic_workspace.py",
+            "agentic-workspace",
             "start",
             "--target",
             ".",
             "--task",
             "Verify local-wheelhouse fixture provenance",
-            "--format",
-            "json",
-        ],
-        cwd=repo_path,
-        timeout_seconds=timeout_seconds,
-        env=env,
-    )
-    evaluation = _run_command(
-        [
-            "uv",
-            "run",
-            "--offline",
-            "python",
-            "scripts/run_agentic_workspace.py",
-            "evaluation",
-            "status",
-            "--target",
-            ".",
             "--format",
             "json",
         ],
@@ -1394,8 +1339,6 @@ def _fixture_runtime_provenance(*, repo_path: Path, env: dict[str, str], timeout
             repo_path=repo_path,
         ),
         "startup_succeeded": startup.get("returncode") == 0 and _json_document(str(startup.get("stdout") or "")) is not None,
-        "evaluation_operation_succeeded": evaluation.get("returncode") == 0
-        and _json_document(str(evaluation.get("stdout") or "")) is not None,
     }
     verified = all(checks.values())
     return {
@@ -1408,7 +1351,6 @@ def _fixture_runtime_provenance(*, repo_path: Path, env: dict[str, str], timeout
             "fixture_sync_returncode": fixture_sync.get("returncode"),
             "identity_returncode": identity.get("returncode"),
             "startup_returncode": startup.get("returncode"),
-            "evaluation_returncode": evaluation.get("returncode"),
         },
         "recovery_command": "uv sync --offline --reinstall && rerun local-wheelhouse provenance preflight",
         "rule": "Fallback or degraded execution cannot satisfy ordinary fixture provenance proof.",
@@ -2261,8 +2203,7 @@ def _operation_receipt_warnings(
         matches = [
             document
             for document in documents
-            if document.get("operation_id") == operation_id
-            and (not result_kinds or document.get("kind") in result_kinds)
+            if document.get("operation_id") == operation_id and (not result_kinds or document.get("kind") in result_kinds)
         ]
         minimum = int(requirement.get("minimum_result_count", 1))
         required_statuses = requirement.get("required_statuses", [])
@@ -2276,10 +2217,7 @@ def _operation_receipt_warnings(
             if (not required_statuses or document.get("status") in required_statuses)
             and (not required_outcomes or document.get("outcome") in required_outcomes)
             and all(_nested_value(document, str(path)) == value for path, value in expected_fields.items())
-            and (
-                "mutation_applied" not in requirement
-                or document.get("mutation_applied") is requirement.get("mutation_applied")
-            )
+            and ("mutation_applied" not in requirement or document.get("mutation_applied") is requirement.get("mutation_applied"))
         ]
         if len(qualified_matches) < minimum:
             add(
