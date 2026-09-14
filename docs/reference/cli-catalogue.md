@@ -3,7 +3,7 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:040e8f1e270eb0ae751cc0060129ed1ea3e04bb392e6070f8af5cd250d5f3c4f`
+- Contract digest: `sha256:93d53e9f980d8580419a3d6d63bfc42ac619891ff6aea99dd8525aaa4ea262f5`
 - Program: `agentic-workspace`
 - Command count: 4
 

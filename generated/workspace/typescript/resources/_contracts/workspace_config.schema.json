@@ -13,6 +13,41 @@
       "const": 1,
       "default": 1
     },
+    "execution_posture": {
+      "type": "object",
+      "maxProperties": 256,
+      "description": "Provider-neutral execution posture keyed by current repository semantic route. Requirements narrow eligibility; preferences inform comparison only.",
+      "additionalProperties": {
+        "description": "Posture for one exact current semantic route, without a built-in task taxonomy.",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "independent_context": {"type":"boolean","description":"Require a current work-relative independent context; a static target tag cannot establish independence."},
+          "required_execution_guarantees": {
+            "description": "Hard provider-neutral execution requirements applied before comparison.",
+            "type": "array",
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "preferred_execution_guarantees": {
+            "description": "Soft comparison preferences among already eligible alternatives.",
+            "type": "array",
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        }
+      }
+    },
     "modules": {
       "type": "object",
       "additionalProperties": false,
