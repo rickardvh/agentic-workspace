@@ -1,5 +1,11 @@
 # Native delegation transport
 
+This page describes the Python provider adapter protocol and its historical
+source-host evidence. It is not the installed Rust owner capability inventory.
+The current [native execution configurations](../maintainer/native-execution-configurations.md)
+admit only their implemented sealed transport/result classes; the wider adapter
+protocol below does not make every mode available through ordinary native Assignment.
+
 The Python repository host can discover `codex-app-server/v1` for configured
 OpenAI target/model identities as a peer of a process, API, or manual transport.
 The retained current-host route remains distinct from launching that same target

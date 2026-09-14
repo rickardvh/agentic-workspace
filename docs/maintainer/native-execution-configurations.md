@@ -11,16 +11,17 @@ completion authority.
 | Path | Current native support |
 | --- | --- |
 | Retained current host | Read-only work and direct implementation remain with the current agent, after current Assignment admission. |
-| Process with stdout return | The configured executable can receive the sealed read-only capsule and return through the native dispatch/admission lifecycle. It cannot deliver a file-changing patch. |
+| Process with stdout return | The configured executable can return a sealed read-only observation or a bounded unapplied patch through native dispatch, admission and integration. |
 | Manual | Read-only handoff after the required bounded inputs have been observed and judged complete. It grants no automatic invocation. |
-| API, process JSON-file output, provider-native transport | The complete native action/return path is unavailable. An executable or configured label cannot make these routes constructible. |
+| Sealed provider bridge | A configured `codex-app-server/v1` command can carry a bounded fresh read-only capsule through the shipped Python transport primitive and native result admission. Provider availability is independently required. |
+| API, process JSON-file output, arbitrary provider-native transport | Unimplemented action/return classes remain unavailable. An executable or configured label cannot make them constructible. |
 
 Discovery and dispatch share the process-support predicate. Result classes
-reflect the implemented path: external process and manual candidates advertise
-`read-only`; retained-local implementation can support `unapplied-patch`. A
-required patch excludes a read-only external route on capability grounds, without
-claiming target failure or target-quality inferiority. Unresolved viable
-alternatives still block rather than silently authorizing local work.
+reflect the implemented path: process candidates can support `read-only` and
+`unapplied-patch`, while read-only manual routes do not acquire patch capability.
+Retained-local implementation can support `unapplied-patch`. Required result
+classes exclude incapable routes without claiming target-quality inferiority.
+Unresolved viable alternatives still block rather than silently authorizing local work.
 
 Canonical and former declarations use the same Rust decoder. Discovery never
 runs the configured command. It observes the executable's current path, size,
@@ -53,10 +54,13 @@ totaling at most 256 KiB, into the sealed packet. Outcome, role, scope, stop
 conditions, current assignment/configuration and typed return re-entry accompany
 the capsule; the worker does not need hidden parent-chat fields.
 
-The current packet uses the established `unapplied-patch` delivery envelope with
-empty `changed_paths` and `patch`. That envelope does not advertise mutation
-support. File-changing returns fail admission. Packet checksums establish
-structural integrity only; they cannot grant Assignment or semantic authority.
+A read-only packet uses the `unapplied-patch` delivery envelope with empty
+`changed_paths` and `patch`; file-changing returns fail its admission. A separately
+admitted patch task captures concrete mutation baselines before dispatch and
+uses the [native patch delivery](../../docs/native-patch-delivery.md) contract to
+preserve concurrent work through integration. The envelope alone never authorizes
+mutation. Packet checksums establish structural integrity only; they cannot grant
+Assignment or semantic authority.
 
 For a supported process, the exact native dispatch action retains execution
 custody and publishes a bounded returned observation. Interrupted publication
@@ -67,11 +71,13 @@ return acceptance, Planning consumption, Verification evidence and completion
 remain distinct authorities. Source/input/configuration drift rejects stale
 handoffs and results; unrelated work must remain preserved.
 
-The read-only process and matched local proof serve only their bounded outcome.
-Provider-native execution, mutation/shared-worktree attribution, and complete
-pause/resume/recovery remain open under #2947/#2817/#2818/#2210. A configured
-transport or incomplete worker cannot satisfy those gaps or establish lifecycle
-cost superiority.
+Read-only/patch process and sealed fresh-provider execution serve only their bounded
+outcome. They do not advertise direct worker writes into shared worktrees, arbitrary
+provider continuation, live steering or universal pause/resume support. A configured
+transport or incomplete worker cannot satisfy missing capabilities or establish
+lifecycle cost superiority. Current deterministic lifecycle and source/custody
+negatives live in the handoff and delegation suites; live-provider evidence retains
+its original host, mode and identity boundaries.
 
 ## Evidence
 

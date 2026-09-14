@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from tests import native_artifact_consumers
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -121,6 +122,8 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
 
 @pytest.fixture(scope="module")
 def native_cli(shared_core_binary: Path) -> Path:
+    if native_artifact_consumers.CURRENT is not None:
+        return native_artifact_consumers.CURRENT["cli"]
     subprocess.run(
         ["cargo", "build", "--locked", "-p", "agentic-workspace-core", "-p", "agentic-workspace-cli", "--bins"], cwd=ROOT, check=True
     )
@@ -133,11 +136,12 @@ def consume(
     native: Path,
     context: dict,
     *,
-    host_path: str = "",
+    host_path: str | None = None,
     allow_failure: bool = False,
     reference_helper: bool = False,
 ) -> dict:
     context = {"projection": "full", **context}
+    installed = native_artifact_consumers.CURRENT
     encoded = json.dumps(context)
     verb = "invoke" if "invocation" in context else "start"
     if surface == "native":
@@ -159,7 +163,7 @@ def consume(
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":
         command = [
-            sys.executable,
+            *([str(installed["python"]), "-I"] if installed else [sys.executable]),
             "-c",
             f"import json,sys; from agentic_workspace.decision import {verb}; print(json.dumps({verb}(json.load(sys.stdin))))",
         ]
@@ -172,9 +176,11 @@ def consume(
                 "print(json.dumps(select_reference(c,r,**a)))"
             )
     else:
-        module = (ROOT / "bindings/node/semantic-decision.mjs").as_uri()
+        module = (
+            (installed["package"] / "src/native/semantic-decision.mjs") if installed else (ROOT / "bindings/node/semantic-decision.mjs")
+        ).as_uri()
         command = [
-            "node",
+            str(installed["node"]) if installed else "node",
             "--input-type=module",
             "-e",
             f"import {{{verb}}} from {json.dumps(module)}; import {{readFileSync}} from 'node:fs'; "
@@ -182,15 +188,35 @@ def consume(
         ]
         stdin = encoded
         if reference_helper:
-            module = (ROOT / "bindings/node/operating.mjs").as_uri()
+            module = ((installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/operating.mjs")).as_uri()
             command[-1] = (
                 f"import {{selectReference}} from {json.dumps(module)}; import {{readFileSync}} from 'node:fs'; "
                 "const c=JSON.parse(readFileSync(0,'utf8')); const r=c.reference; delete c.reference; "
                 "const a=Object.hasOwn(c,'answer')?[c.answer]:[]; delete c.answer; "
                 "console.log(JSON.stringify(selectReference(c,r,...a)));"
             )
-    environment = {**os.environ, "PATH": host_path} if surface == "native" else None
-    result = subprocess.run(command, input=stdin, text=True, encoding="utf-8", capture_output=True, cwd=ROOT, check=False, env=environment)
+    # Keep each scenario's host-tool contract. Native defaults to no lookup;
+    # other adapters historically inherit Git/shell tools unless explicitly
+    # restricted. Package isolation must not remove an owner's required tools.
+    effective_path = host_path if host_path is not None else ("" if surface == "native" else os.environ.get("PATH", ""))
+    environment = {**os.environ, "PATH": effective_path} if surface == "native" else None
+    if installed:
+        environment = {
+            key: value
+            for key, value in os.environ.items()
+            if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH", "PYTHONHOME", "NODE_PATH"}
+        }
+        environment["PATH"] = effective_path
+    result = subprocess.run(
+        command,
+        input=stdin,
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        cwd=installed["cwd"] if installed else ROOT,
+        check=False,
+        env=environment,
+    )
     assert result.returncode == 0, result.stderr
     decoded = json.loads(result.stdout)
     if not allow_failure:

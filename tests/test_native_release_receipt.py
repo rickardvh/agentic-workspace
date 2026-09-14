@@ -3,11 +3,14 @@
 import hashlib
 import importlib.util
 import json
+import os
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 import pytest
+from tests import native_artifact_consumers
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("native_release_checker", ROOT / "scripts/check/check_native_release_topology.py")
@@ -66,3 +69,34 @@ def test_receipt_admits_only_unchanged_root_subject(tmp_path, monkeypatch, chang
     else:
         with pytest.raises(ValueError):
             checker.main()
+
+
+@pytest.mark.parametrize("failure", ["missing", "foreign-source", "binary-drift"])
+def test_installed_owner_proof_rejects_unbound_artifacts_before_execution(tmp_path, monkeypatch, failure):
+    # Installed owner scenarios must fail rather than silently rebuild source.
+    directory = tmp_path / "artifacts"
+    directory.mkdir()
+    work = tmp_path / "consumer"
+    work.mkdir()
+    monkeypatch.setattr(subprocess, "check_output", lambda *args, **kwargs: "current-head")
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("No build, install or consumer execution may precede subject validation")
+
+    monkeypatch.setattr(subprocess, "run", forbidden)
+    if failure != "missing":
+        (directory / "agentic_workspace-1.0-py3-none-any.whl").write_bytes(b"unused")
+        (directory / "agentic-workspace-workspace-cli-1.0.tgz").write_bytes(b"unused")
+        with zipfile.ZipFile(directory / "agentic-workspace-native-test.zip", "w") as archive:
+            archive.writestr(
+                "artifact.json",
+                json.dumps(
+                    {
+                        "source_head": "foreign-head" if failure == "foreign-source" else "current-head",
+                        "cli_sha256": hashlib.sha256(b"original").hexdigest(),
+                    }
+                ),
+            )
+            archive.writestr("agentic-workspace" + (".exe" if os.name == "nt" else ""), b"changed")
+    with pytest.raises(ValueError, match="Expected one admission artifact|another source commit|binary digest mismatch"):
+        native_artifact_consumers.install(directory, work)

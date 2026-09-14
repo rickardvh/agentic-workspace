@@ -10,6 +10,7 @@ import shlex
 import sys
 
 import pytest
+from tests import native_artifact_consumers
 from tests.test_native_npm_routes import packed as packed
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
@@ -81,7 +82,14 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         'transports=[{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}]",
     )
     if host:
-        process_transport = '{kind="process",command=' + json.dumps([sys.executable, str(worker)]) + ",timeout_seconds=30}"
+        if native_artifact_consumers.CURRENT is not None:
+            # The provider primitive is shipped in the wheel; do not import it
+            # from the source checkout when proving installed handoffs.
+            installed_command = [str(native_artifact_consumers.CURRENT["python"]), "-I", str(worker)]
+            config = config.replace(json.dumps([sys.executable, str(worker)]), json.dumps(installed_command))
+        else:
+            installed_command = [sys.executable, str(worker)]
+        process_transport = '{kind="process",command=' + json.dumps(installed_command) + ",timeout_seconds=30}"
         native_transport = process_transport.replace(
             'kind="process",command=', 'kind="native",adapter="codex-app-server/v1",parameters={model="fixture"},command='
         )
@@ -749,6 +757,7 @@ def test_shared_seal_preserves_only_exact_known_unicode_checksum(tmp_path, share
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
+    installed = native_artifact_consumers.CURRENT
     packet = {
         "assignment_id": "a",
         "assignment_revision": "revision",
@@ -766,23 +775,32 @@ def test_shared_seal_preserves_only_exact_known_unicode_checksum(tmp_path, share
             stdin = json.dumps({"assignment_packet": payload})
         elif surface == "python":
             command = [
-                sys.executable,
+                *([str(installed["python"]), "-I"] if installed else [sys.executable]),
                 "-c",
                 "import json,sys; from agentic_workspace.decision import assignment_packet; print(json.dumps(assignment_packet(json.loads(sys.argv[1]))))",
                 json.dumps(payload),
             ]
             stdin = None
         else:
-            module = (root / "bindings/node/semantic-decision.mjs").as_uri()
+            module = (
+                (installed["package"] / "src/native/semantic-decision.mjs") if installed else (root / "bindings/node/semantic-decision.mjs")
+            ).as_uri()
             command = [
-                "node",
+                str(installed["node"]) if installed else "node",
                 "--input-type=module",
                 "-e",
                 f"import {{assignmentPacket}} from {json.dumps(module)}; console.log(JSON.stringify(assignmentPacket(JSON.parse(process.argv[1]))));",
                 json.dumps(payload),
             ]
             stdin = None
-        result = subprocess.run(command, input=stdin, text=True, encoding="utf-8", capture_output=True, env=env, cwd=root)
+        if installed:
+            env = {
+                k: v for k, v in os.environ.items() if k not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH", "PYTHONHOME", "NODE_PATH"}
+            }
+            env["PATH"] = ""
+        result = subprocess.run(
+            command, input=stdin, text=True, encoding="utf-8", capture_output=True, env=env, cwd=installed["cwd"] if installed else root
+        )
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 

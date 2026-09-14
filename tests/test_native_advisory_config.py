@@ -27,10 +27,10 @@ def write_config(target: Path, obligation: dict) -> Path:
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_actual_recommended_source_preserved_without_task_veto(
+def test_former_recommended_source_preserved_without_task_veto(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
-    actual = tomllib.loads((ROOT / ".agentic-workspace/config.toml").read_text(encoding="utf-8"))
+    actual = tomllib.loads((ROOT / "tests/fixtures/former-recommended-control.toml").read_text(encoding="utf-8"))
     obligation = actual["workflow_obligations"]["commit_after_proof"]
     context = {"target": str(tmp_path), "task": "Inspect a documentation link", "changed": ["README.md"]}
     quiet = consume(surface, shared_core_binary, native_cli, context)
@@ -95,33 +95,17 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
     )
     config = result["configuration"]
     advisory = {item["field"] for item in config["residuals"] if item["affects"] == []}
-    assert advisory == {
-        "workflow_obligations.commit_after_proof",
-        "workflow_obligations.system_intent_refresh",
-        "cli_compatibility.enforcement",
-        "cli_compatibility.source_classes",
-        "cli_compatibility.target_relations",
-        "cli_compatibility.required_resources",
-        "cli_compatibility.resolution_policy",
-    }
+    # P0 moved these repository instructions to their source owners. The
+    # current config must not resurrect removed compatibility controls.
+    assert advisory == set()
     blockers = workspace_blockers(result)
-    for field in [
-        "workspace.improvement_latitude",
-        "workflow_obligations.adapter_surface_refresh",
-        "workflow_obligations.dogfooding_lane_closeout",
-    ]:
-        assert any(blocker["code"].endswith(":" + field) for blocker in blockers)
+    assert config["improvement_latitude"] == "proactive"
     assert any(
         blocker["code"] == "local-command-safety-ceiling" and blocker["affects"] == ["effect:execute-command"] for blocker in blockers
     )
     assert any(blocker["code"] == "local-human-review-required" and blocker["affects"] == ["claim:pr-complete"] for blocker in blockers)
     assert any(blocker["code"] == "native-payload-target-unproven" and blocker["affects"] == ["task"] for blocker in blockers)
-    assert any(
-        blocker["code"].endswith(":workspace.improvement_latitude") and blocker["affects"] == ["effect:initiative"] for blocker in blockers
-    )
-    for field in ("adapter_surface_refresh", "dogfooding_lane_closeout"):
-        boundary = next(blocker for blocker in blockers if blocker["code"].endswith(":" + "workflow_obligations." + field))
-        assert "task" not in boundary["affects"] and "claim:complete" in boundary["affects"]
+    assert any(blocker["code"].endswith(":assurance.strict_closeout") and blocker["affects"] == ["claim:complete"] for blocker in blockers)
     assert len(blockers) == len(config["residuals"]) - len(advisory) + 3
     assert (source.read_bytes(), local.read_bytes()) == before
     assert not (tmp_path / ".agentic-workspace/local").exists()
