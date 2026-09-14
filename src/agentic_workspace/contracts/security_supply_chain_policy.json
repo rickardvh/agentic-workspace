@@ -10,10 +10,16 @@
     ".github/workflows/release.yml"
   ],
   "required_security_jobs": [
+    "rust-dependencies",
     "dependency-review",
     "codeql",
     "secret-scan"
   ],
+  "rust_dependencies": {
+    "version": "0.20.2",
+    "config": "deny.toml",
+    "runner": "scripts/check/check_rust_dependencies.py"
+  },
   "trusted_shell_sources": [
     "checked-repository-proof-route",
     "explicit-user-executor-command"

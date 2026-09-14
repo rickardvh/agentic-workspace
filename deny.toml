@@ -1,0 +1,25 @@
+# One Rust dependency policy, owned by the existing security/supply-chain lane.
+# Check the whole workspace, including dev dependencies and all feature paths.
+[graph]
+all-features = true
+
+[advisories]
+db-urls = ["https://github.com/RustSec/advisory-db"]
+yanked = "deny"
+unmaintained = "all"
+unused-ignored-advisory = "deny"
+# rsa 0.9.10 is used only for public-key signature verification and OsRng.
+# AW performs no RSA private-key operation; see docs/security/threat-model.md.
+# Reassess on RSA usage/dependency changes; remove when upstream fixes land.
+ignore = [{ id = "RUSTSEC-2023-0071", reason = "Private-key timing attack; AW only verifies signatures with RsaPublicKey, never decrypts or signs with RSA private keys." }]
+
+[licenses]
+# Explicit permissive licenses present in the locked dependency graph.
+allow = ["MIT", "MIT-0", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-3-Clause", "Unicode-3.0", "Zlib"]
+confidence-threshold = 0.95
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

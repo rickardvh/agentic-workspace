@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "scripts/check"))
+from check_rust_dependencies import check as check_rust_dependencies  # noqa: E402
 from check_security_supply_chain import evaluate_security_supply_chain  # noqa: E402
 
 from agentic_workspace import workspace_runtime_core  # noqa: E402
@@ -20,12 +25,21 @@ def _copy_security_surface(target: Path) -> None:
         "src/agentic_workspace/contracts/security_supply_chain_policy.json",
         "scripts/check/check_security_supply_chain.py",
         ".github/workflow-write-permissions.json",
+        "Cargo.toml",
+        "Cargo.lock",
+        "rust-toolchain.toml",
+        "deny.toml",
+        "scripts/check/check_rust_dependencies.py",
     ]
     for relative in paths:
         destination = target / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO_ROOT / relative, destination)
     shutil.copytree(REPO_ROOT / ".github/workflows", target / ".github/workflows")
+    for manifest in (REPO_ROOT / "crates").glob("*/Cargo.toml"):
+        destination = target / manifest.relative_to(REPO_ROOT)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(manifest, destination)
 
 
 def test_repository_security_supply_chain_readiness_is_exact_and_ready() -> None:
@@ -75,7 +89,15 @@ def test_new_unadmitted_shell_boundary_blocks_release_readiness(tmp_path: Path) 
 def test_exact_subject_changes_with_lock_workflow_checker_and_source(tmp_path: Path) -> None:
     _copy_security_surface(tmp_path)
     baseline = evaluate_security_supply_chain(tmp_path)["subject_fingerprint"]
-    for relative in ("uv.lock", ".github/workflows/ci.yml", "scripts/check/check_security_supply_chain.py"):
+    for relative in (
+        "uv.lock",
+        ".github/workflows/ci.yml",
+        "scripts/check/check_security_supply_chain.py",
+        "Cargo.lock",
+        "deny.toml",
+        "scripts/check/check_rust_dependencies.py",
+        "crates/agentic-workspace-core/Cargo.toml",
+    ):
         path = tmp_path / relative
         original = path.read_text(encoding="utf-8")
         path.write_text(original + "\n# freshness change\n", encoding="utf-8")
@@ -140,3 +162,41 @@ def test_release_promotion_requires_matching_current_security_receipt() -> None:
         )
         assert blocked["status"] == "blocked"
         assert blocked["reason"] == reason
+
+
+def test_rust_policy_runner_enforces_version_lock_and_propagates_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = []
+    policy = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/security_supply_chain_policy.json").read_text(encoding="utf-8"))
+    observed = f"cargo-deny {policy['rust_dependencies']['version']}"
+    failed = False
+
+    def run(command, **kwargs):
+        calls.append(command)
+        assert kwargs["check"] is True
+        if "check" in command and failed:
+            raise subprocess.CalledProcessError(1, command)
+        return subprocess.CompletedProcess(command, 0, stdout=observed)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    check_rust_dependencies()
+    assert calls[-1] == ["cargo", "deny", "--locked", "--config", "deny.toml", "check", "advisories", "licenses", "sources"]
+    failed = True
+    with pytest.raises(subprocess.CalledProcessError):
+        check_rust_dependencies()
+    observed = "cargo-deny 0.0.0"
+    calls.clear()
+    with pytest.raises(ValueError, match="Expected cargo-deny"):
+        check_rust_dependencies()
+    assert len(calls) == 1  # A different tool must never evaluate the policy.
+
+
+def test_rust_gate_missing_from_either_publisher_blocks_readiness(tmp_path: Path) -> None:
+    _copy_security_surface(tmp_path)
+    for relative in (".github/workflows/security.yml", ".github/workflows/release.yml", ".github/workflows/preview-release.yml"):
+        path = tmp_path / relative
+        original = path.read_text(encoding="utf-8")
+        path.write_text(original.replace("python scripts/check/check_rust_dependencies.py --install", "echo skipped"), encoding="utf-8")
+        receipt = evaluate_security_supply_chain(tmp_path)
+        assert receipt["release_promotion_allowed"] is False
+        assert any(failure["control"] == "rust-dependency-policy-wiring" for failure in receipt["failures"])
+        path.write_text(original, encoding="utf-8")

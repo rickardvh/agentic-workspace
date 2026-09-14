@@ -240,6 +240,9 @@ jobs:
             uv run python scripts/check/check_native_release_topology.py --verify-receipt "$receipt" --artifact-dir dist --expected-node-major "$runtime_major" --expected-execution-context hosted-ci
           done
 
+      - name: Check locked Rust advisories, licenses and sources
+        run: python scripts/check/check_rust_dependencies.py --install
+
       - name: Generate checksums and release manifest
         env:
           SECURITY_READINESS_COMMAND: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity ${{ github.sha }} --artifact-dir dist --output dist/security-supply-chain-readiness.json

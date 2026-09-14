@@ -133,6 +133,39 @@ def evaluate_security_supply_chain(
             }
         )
 
+    rust_policy = policy["rust_dependencies"]
+    rust_paths = [
+        Path(rust_policy["config"]),
+        Path(rust_policy["runner"]),
+        Path("Cargo.lock"),
+        Path("Cargo.toml"),
+        Path("rust-toolchain.toml"),
+    ]
+    rust_paths.extend(sorted(path.relative_to(root) for path in root.glob("crates/*/Cargo.toml")))
+    missing_rust = [path.as_posix() for path in rust_paths if not (root / path).is_file()]
+    rust_command = f"python {rust_policy['runner']} --install"
+    missing_rust_gates = [
+        path
+        for path in (".github/workflows/security.yml", ".github/workflows/release.yml", ".github/workflows/preview-release.yml")
+        if rust_command not in workflow_text.get(path, "")
+    ]
+    rust_ok = not missing_rust and not missing_rust_gates and re.fullmatch(r"\d+\.\d+\.\d+", rust_policy["version"]) is not None
+    controls.append(
+        {
+            "id": "rust-dependency-policy-wiring",
+            "status": "pass" if rust_ok else "fail",
+            "missing": missing_rust,
+            "missing_gates": missing_rust_gates,
+        }
+    )
+    if not rust_ok:
+        failures.append(
+            {
+                "control": "rust-dependency-policy-wiring",
+                "detail": f"missing={missing_rust}; missing gates={missing_rust_gates}; exact tool version required",
+            }
+        )
+
     trusted_path = root / policy["trusted_shell_implementation"]
     source_files = list((root / "src").rglob("*.py")) if (root / "src").exists() else []
     shell_true_paths = []
@@ -209,6 +242,8 @@ def evaluate_security_supply_chain(
         *([REPOSITORY_PERMISSION_POLICY_PATH] if repository_permission_policy_path.is_file() else []),
         Path("scripts/check/check_security_supply_chain.py"),
         Path("uv.lock"),
+        *rust_paths,
+        Path(".github/workflows/preview-release.yml"),
         *[Path(path) for path in policy["required_workflows"]],
     ]
     artifacts: dict[str, str] = {}

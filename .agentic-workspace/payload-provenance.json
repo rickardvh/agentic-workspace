@@ -21,6 +21,7 @@
     "installed-state-sync-v2"
   ],
   "payload_files": [
+    ".agentic-workspace/READING.json",
     ".agentic-workspace/WORKFLOW.md",
     ".agentic-workspace/OWNERSHIP.toml",
     ".agentic-workspace/docs/jumpstart-contract.md",

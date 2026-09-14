@@ -227,7 +227,9 @@ jobs:
 
       - if: steps.existing.outputs.complete != 'true'
         name: Generate preview security readiness
-        run: uv run python scripts/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
+        run: |
+          python scripts/check/check_rust_dependencies.py --install
+          uv run python scripts/check/check_security_supply_chain.py --format json --source-identity "$(git rev-parse HEAD)" --artifact-dir dist --output dist/security-supply-chain-readiness.json
 
       - if: steps.existing.outputs.complete != 'true'
         name: Compose non-support-bearing preview manifest and checksums
