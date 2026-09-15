@@ -257,13 +257,10 @@ def test_current_level_permission_change_and_profile_conflict(tmp_path: Path, sh
     assert "selected-proof-profile-unavailable:missing" in invalid["gaps"]
     assert invalid["execution_blocked"] is True
     source.write_text(source.read_text().replace('optional_commands=["echo optional"]', 'optional_commands=["echo forbidden"]'))
-    stale = call({**context, "request": request})["verification"]
-    assert "verification-request-stale" in stale["evidence_gaps"]
-    current = call(context)["verification"]["strategy_request"]
-    current["arguments"]["profile_ids"] = ["required"]
-    invalid = call({**context, "request": current})["verification"]["strategy_control"]
-    assert "proof-profile-command-role-conflict:required" in invalid["gaps"]
-    assert invalid["execution_blocked"] is True
+    with pytest.raises(AssertionError, match="contradictory command roles"):
+        call({**context, "request": request})
+    with pytest.raises(AssertionError, match="contradictory command roles"):
+        call(context)
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -365,7 +362,7 @@ def test_subsystem_profile_uses_current_ownership_without_granting_review(tmp_pa
     with pytest.raises(AssertionError, match="scope requires owner"):
         call()
     manifest.write_text(declaration + 'level="low"\n')
-    with pytest.raises(AssertionError, match="unsupported"):
+    with pytest.raises(AssertionError, match="invalid Verification declaration|unsupported"):
         call()
     manifest.write_text('schema_version="agentic-workspace/verification-manifest/v1"\n')
     ownership.write_text("Malformed unrelated ownership source")

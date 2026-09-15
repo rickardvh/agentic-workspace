@@ -13,7 +13,6 @@
       "additionalProperties": {
         "type": "object",
         "description": "Reusable command and review-aid set for a named proof profile.",
-        "x-agentic-workspace-unknown-properties": "error",
         "properties": {
           "required_commands": {
             "description": "Commands that must pass for this proof profile. A command may occupy only one of the required, optional, or disallowed roles.",
@@ -70,7 +69,6 @@
       "additionalProperties": {
         "type": "object",
         "description": "One host-defined domain proof lane. Domain meaning stays in repo-owned authority refs and evidence concepts.",
-        "x-agentic-workspace-unknown-properties": "error",
         "required": [
           "purpose"
         ],
@@ -171,17 +169,7 @@
             "default": []
           },
           "escalation": {
-            "description": "Conditions that should escalate proof or review.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "uniqueItems": true,
-            "default": []
-          },
-          "escalation_conditions": {
-            "description": "Typed escalation condition ids evaluated mechanically, such as cross-owner, cross-claim-boundary, high-risk-requirement, focused-route-insufficient, explicit-request, or structured-override.",
+            "description": "Source-owned conditions for selected agent/owner escalation judgment. No automatic escalation or sufficiency admission.",
             "type": "array",
             "items": {
               "type": "string",
@@ -200,26 +188,6 @@
             "type": "string",
             "minLength": 1
           },
-          "route_role": {
-            "description": "Mechanical lane role for composition and overlap auditing, for example behavior, maintenance, evidence, or broad.",
-            "type": "string",
-            "minLength": 1
-          },
-          "precedence": {
-            "description": "Repo-declared precedence label or rank used when overlapping proof lanes are intentionally composed.",
-            "type": "string",
-            "minLength": 1
-          },
-          "allowed_composition": {
-            "description": "Route roles this lane is allowed to overlap or compose with without creating a contradictory ownership finding.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "uniqueItems": true,
-            "default": []
-          },
           "notes": {
             "description": "Optional repo-local note about this lane.",
             "type": "string",
@@ -236,7 +204,6 @@
       "additionalProperties": {
         "type": "object",
         "description": "One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
-        "x-agentic-workspace-unknown-properties": "reject",
         "required": [
           "level",
           "force"
@@ -412,7 +379,7 @@
             "minLength": 1
           },
           "measurement": {
-            "description": "Optional source-owned measurable condition evaluated against compact assurance evidence; the evidence producer cannot redefine this threshold.",
+            "description": "Source-owned evidence admission conditions. Current native applicability preserves the requirement as unadmitted; parsing or a passing producer command never establishes measurement satisfaction.",
             "type": "object",
             "required": [
               "kind",
@@ -450,7 +417,7 @@
                 "minLength": 1
               },
               "comparator": {
-                "description": "Small supported comparison applied by AW to the observed or evaluated value.",
+                "description": "Required comparison at measurement admission; until that owner result exists, native Verification preserves the unsatisfied restriction.",
                 "enum": [
                   "lte",
                   "gte",
@@ -515,7 +482,7 @@
                 "minLength": 1
               },
               "producer_command": {
-                "description": "Exact bounded command selected by the ordinary proof path when current measurement evidence is absent or stale.",
+                "description": "Candidate bounded measurement producer for selected proof judgment; declaration does not automatically execute it or admit its output.",
                 "type": "string",
                 "minLength": 1
               },
@@ -691,7 +658,6 @@
       "additionalProperties": {
         "type": "object",
         "description": "One host-owned assurance profile for an ownership subsystem.",
-        "x-agentic-workspace-unknown-properties": "error",
         "required": [
           "assurance_level",
           "force"

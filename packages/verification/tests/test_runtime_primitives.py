@@ -352,44 +352,6 @@ review_owner = "data-owner"
     assert "protocol-specific expected_evidence labels" in warning["suggestion"]
 
 
-def test_verification_report_keeps_protocol_specific_labels_with_semantic_concepts_clear(tmp_path: Path) -> None:
-    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text(
-        """
-schema_version = "agentic-workspace/verification-manifest/v1"
-
-[evidence_concepts."host:security_assurance"]
-title = "Security assurance"
-meaning = "Host-owned semantic grouping for access and migration security reviews."
-claim_effect = "reporting-vocabulary"
-
-[protocols.access_review]
-title = "Access review"
-purpose = "Check access controls."
-applies_to_paths = ["src/auth/**"]
-expected_evidence = ["access_security_reviewed"]
-review_owner = "security-owner"
-
-[protocols.migration_review]
-title = "Migration review"
-purpose = "Check migration safety."
-applies_to_paths = ["db/migrations/**"]
-expected_evidence = ["migration_security_reviewed"]
-review_owner = "data-owner"
-""".strip(),
-        encoding="utf-8",
-    )
-
-    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
-
-    guidance = payload["evidence_modeling_guidance"]
-    assert guidance["status"] == "clear"
-    assert guidance["shared_exact_label_warnings"] == []
-    assert guidance["legacy_label_count"] == 2
-    assert payload["evidence_concepts"]["declared_host"][0]["id"] == "host:security_assurance"
-
-
 def test_verification_report_discovers_proof_profiles_and_activation_smoke_tests(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)
@@ -465,37 +427,6 @@ def test_verification_report_keeps_proof_profile_jumpstart_quiet_without_host_to
     assert jumpstart["status"] == "no_host_tooling_detected"
     assert jumpstart["candidate_profiles"] == []
     assert jumpstart["activation_smoke_tests"] == []
-
-
-def test_verification_report_matches_path_protocol_and_evidence(tmp_path: Path) -> None:
-    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text(
-        """
-schema_version = "agentic-workspace/verification-manifest/v1"
-
-[protocols.ui_review]
-title = "UI review"
-purpose = "Check user-visible behavior."
-applies_to_paths = ["web/**"]
-expected_evidence = ["ui_review_passed"]
-review_owner = "frontend"
-
-[evidence_bundles.ui_pass]
-protocol_id = "ui_review"
-evidence_items = ["ui_review_passed"]
-changed_paths = ["web/app.py"]
-""".strip(),
-        encoding="utf-8",
-    )
-
-    payload = verification_report_payload(target_root=tmp_path, changed_paths=["web/app.py"], task_text="")
-
-    assert payload["status"] == "matched"
-    assert payload["configured"] is True
-    assert payload["active_count"] == 1
-    assert payload["active_protocols"][0]["id"] == "ui_review"
-    assert payload["evidence_status"][0]["state"] == "satisfied"
 
 
 def test_verification_report_task_marker_match_reports_configured_protocol_authority(tmp_path: Path) -> None:
@@ -578,45 +509,6 @@ review_owner = "privacy-owner"
     assert {signal["priority"] for signal in record["match_signals"]} == {"structured", "advisory"}
 
 
-def test_verification_report_consumes_current_semantic_task_route(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text(
-        """
-schema_version = "agentic-workspace/verification-manifest/v1"
-
-[protocols.issue_write_review]
-title = "Issue write review"
-purpose = "Check the repo-owned issue procedure before the write."
-applies_to_semantic_routes = ["github/issues/**"]
-review_owner = "workflow-owner"
-""".strip(),
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(
-        "agentic_workspace.semantic_task_routes.current_semantic_task_route_fact",
-        lambda _root: {"status": "current", "posture": "selected", "routes": ["github/issues/create"]},
-    )
-
-    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="unrelated wording")
-
-    record = payload["match_evidence"]["matching"][0]
-    assert record["matched"] is True
-    assert record["structured_signal_count"] == 1
-    assert record["advisory_marker_count"] == 0
-    assert record["match_signals"] == [
-        {
-            "signal_type": "semantic_task_route",
-            "authority": "agent-selected-current-task-fact",
-            "priority": "structured",
-            "value": "github/issues/**",
-            "matched": "github/issues/**",
-            "reason": "semantic task route matched github/issues/**",
-            "authority_effect": "applicability-only",
-        }
-    ]
-
-
 def test_verification_report_rejects_protocol_without_activation(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)
@@ -634,63 +526,6 @@ review_owner = "owner"
 
     with pytest.raises(VerificationUsageError, match="requires at least one activation signal"):
         verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
-
-
-def test_verification_report_rejects_unbounded_transcript_refs(tmp_path: Path) -> None:
-    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text(
-        """
-schema_version = "agentic-workspace/verification-manifest/v1"
-
-[protocols.model_eval]
-title = "Model eval"
-purpose = "Check model-run evidence."
-applies_to_task_markers = ["eval"]
-expected_evidence = ["eval_passed"]
-review_owner = "eval-owner"
-
-[evidence_bundles.eval_run]
-protocol_id = "model_eval"
-evidence_items = ["eval_passed"]
-transcript_refs = [".agentic-workspace/local/scratch/evals/run/transcript.jsonl"]
-""".strip(),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(VerificationUsageError, match="transcript_refs requires bounded transcript metadata"):
-        verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="eval")
-
-
-def test_verification_report_marks_stale_evidence_attention(tmp_path: Path) -> None:
-    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text(
-        """
-schema_version = "agentic-workspace/verification-manifest/v1"
-
-[protocols.ui_review]
-title = "UI review"
-purpose = "Check user-visible behavior."
-applies_to_paths = ["web/**"]
-expected_evidence = ["ui_review_passed"]
-review_owner = "frontend"
-
-[evidence_bundles.ui_pass]
-protocol_id = "ui_review"
-evidence_items = ["ui_review_passed"]
-changed_paths = ["web/app.py"]
-stale_when = ["web/**"]
-""".strip(),
-        encoding="utf-8",
-    )
-
-    payload = verification_report_payload(target_root=tmp_path, changed_paths=["web/app.py"], task_text="")
-
-    assert payload["status"] == "attention"
-    assert payload["evidence_status"][0]["state"] == "stale-evidence"
-    assert payload["evidence_status"][0]["stale_expected_evidence"] == ["ui_review_passed"]
-    assert payload["evidence_status"][0]["missing_evidence"] == ["ui_review_passed"]
 
 
 def test_verification_evidence_strategy_reports_candidate_strategy_sources_without_interpreting_prose(tmp_path: Path) -> None:

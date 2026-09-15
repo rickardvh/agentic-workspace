@@ -62,3 +62,22 @@ Verification is not a generic test runner, compliance engine, evidence warehouse
 A repository can omit Verification entirely, use it alone with the root Workspace layer, or combine it with other modules without changing the ordinary AW mental model.
 
 Public maturity: **alpha**, matching coordinated package metadata. Strong capability evidence does not independently promote the distribution support contract.
+
+## Declaration admission
+
+Native Verification admits `contracts/manifest.schema.json` and the referenced
+assurance schema before using source policy. Unknown keys, dangling named
+protocol/scenario/profile/requirement references and conflicting profile command
+roles require source repair. There is no partial/default policy substitution.
+Selected protocol commands are candidates through the same native proof owner.
+
+Purpose, steps, observations, review aids and escalation prose support selected
+human/agent judgment. They do not automatically compose lanes, satisfy evidence,
+authenticate reviewers or control retention. Retired numeric precedence, role,
+composition and escalation-ID knobs are preserved as source review guidance in
+existing review aids. Populated measurement requirements remain restrictive with
+explicit unavailable admission; their bounded evidence capability is tracked in
+#3324; semantic protocol/domain applicability admission is tracked in #3327.
+Source validation alone is not satisfaction of either requirement. Static
+manifest evidence bundles, authority/concept maps and recorded gap tables are no
+longer authorable; current native receipt and review owners remain authoritative.
