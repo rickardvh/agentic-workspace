@@ -93,6 +93,7 @@ def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_cor
 
     first = call()
     assert any(b["code"] == "current-binding-assignment-required" for b in first["decision_packet"]["blockers"])
+    assert first["task_requirements"]["implementation_admission"]["status"] == "assessment-required"
     compact = call(projection="compact")
     recovery = next(row for row in compact["consequence_recovery"] if row["owner"] == "assignment")
     restricted = {row["consequence_id"] for row in compact["decision_packet"]["blockers"] if "effect:implementation" in row["affects"]}
@@ -106,6 +107,8 @@ def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_cor
     request[-1]["arguments"]["reason"] = "This bounded read requires no external capability; the current local configuration is sufficient."
     current = call(request)
     assert current["task_requirements"]["assignment"]["result"]["status"] == "assigned-current-target"
+    assert current["task_requirements"]["implementation_admission"]["status"] == "admitted-local"
+    assert current["task_requirements"]["implementation_admission"]["historical_compliance"] == "not-established"
     assert not any(b["code"] == "current-binding-assignment-required" for b in current["decision_packet"]["blockers"])
     assert not any("effect:implementation" in b["affects"] for b in current["decision_packet"]["blockers"])
     assert not any(row["owner"] == "assignment" for row in current["consequence_recovery"])
@@ -161,6 +164,8 @@ def test_nonlocal_assignment_keeps_exact_handoff_gap_and_uncertainty(tmp_path, s
     current = call(request)
     result = current["task_requirements"]["assignment"]["result"]
     assert result["status"] == "assigned-nonlocal-handoff-required"
+    assert current["task_requirements"]["implementation_admission"]["status"] == "admitted-nonlocal"
+    assert current["task_requirements"]["implementation_admission"]["local_continuation_allowed"] is False
     assert result["assignment_identity"]["selected"]["configuration"]["execution"]
     local = copy.deepcopy(request)
     local[-1]["arguments"]["alternative"] = "local:internal"

@@ -2,6 +2,62 @@
 use crate::{CoreError, digest};
 use serde_json::{Value, json};
 
+pub(crate) const IMPLEMENTATION_SCOPES: &[&str] = &[
+    "effect:implementation",
+    "claim:complete",
+    "claim:pr-complete",
+    "claim:claim-work-complete",
+    "claim:claim-slice-complete",
+];
+
+/// Current admission at the shared native continuation/claim boundary. This is
+/// a projection and restriction of Assignment/result owners, never a second ledger.
+pub(crate) fn implementation_admission(
+    requirements: &Value,
+    contribution: &mut Value,
+) -> Result<Value, CoreError> {
+    let assignment = &requirements["assignment"]["result"];
+    if assignment["binding"] != true {
+        return Ok(json!({"status":"not-required","historical_compliance":"not-established"}));
+    }
+    let result = &requirements["assignment"]["result_admission"];
+    let materialized = requirements["result"]["requirements"]["required_result_classes"]
+        .as_array()
+        .is_some_and(|classes| classes.contains(&json!("already-materialized")));
+    let observed = materialized || requirements["delegation"]["observation"].is_object();
+    let status = if result["result_use_allowed"] == true {
+        "returned-admitted"
+    } else if observed {
+        "returned-unadmitted"
+    } else if assignment["local_assignment_satisfied"] == true {
+        "admitted-local"
+    } else if assignment["status"] == "assigned-nonlocal-handoff-required" {
+        "admitted-nonlocal"
+    } else {
+        "assessment-required"
+    };
+    let admission = json!({"status":status,"assignment_identity":assignment["assignment_identity"],
+        "local_continuation_allowed":assignment["local_assignment_satisfied"] == true && !observed,
+        "result_use_allowed":result["result_use_allowed"] == true,
+        "historical_compliance":if result["result_use_allowed"] == true {"owner-admitted-result"} else {"not-established"},
+        "recovery_owner":"assignment",
+        "boundary":"Native start/invoke continuation, patch integration and completion claims. External editor, shell and Git effects are not intercepted. A current local choice does not attest earlier external implementation."});
+    if status == "returned-unadmitted" {
+        contribution["blockers"].as_array_mut().unwrap().push(json!({
+            "code":"implementation-result-unadmitted",
+            "message":"Observed implementation remains unadmitted. A later local Assignment does not authorize those results or completion claims; use the current Assignment/result recovery.",
+            "affects":IMPLEMENTATION_SCOPES
+        }));
+        contribution["revision"] = json!(digest(&json!([
+            contribution["revision"],
+            admission,
+            result,
+            requirements["delegation"]["observation"]
+        ]))?);
+    }
+    Ok(admission)
+}
+
 fn configuration_key(value: &Value) -> Result<String, CoreError> {
     digest(&json!([
         value["id"],
@@ -209,9 +265,42 @@ pub(crate) fn view(
     }
     let mut blockers = Vec::new();
     if policy["binding"] == true && result["local_assignment_satisfied"] != true {
-        blockers.push(json!({"code":if policy["enforceable"]!=true{"binding-policy-current-target-unresolved"}else if result["status"]=="assigned-nonlocal-handoff-required"{"current-nonlocal-assignment-handoff-required"}else{"current-binding-assignment-required"},"message":"Current binding assignment requires resolved comparison and exact admitted continuation; unavailable manual/provider alternatives cannot silently authorize local implementation.","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}));
+        blockers.push(json!({"code":if policy["enforceable"]!=true{"binding-policy-current-target-unresolved"}else if result["status"]=="assigned-nonlocal-handoff-required"{"current-nonlocal-assignment-handoff-required"}else{"current-binding-assignment-required"},"message":"Current binding assignment requires resolved comparison and exact admitted continuation; unavailable manual/provider alternatives cannot silently authorize local implementation or completion of externally produced work.","affects":IMPLEMENTATION_SCOPES}));
     }
     Ok(
         json!({"result":result,"requests":requests,"source_revision":source,"contribution":{"owner":"assignment","revision":owner["revision"],"blockers":blockers}}),
     )
+}
+
+#[cfg(test)]
+mod admission_tests {
+    use super::*;
+
+    #[test]
+    fn later_local_assignment_cannot_admit_materialized_or_observed_work() {
+        for materialized in [true, false] {
+            let mut requirements = json!({"assignment":{"result":{"binding":true,"local_assignment_satisfied":false}},
+                "result":{"requirements":{"required_result_classes":if materialized {json!(["already-materialized"])} else {json!(["unapplied-patch"])}}},
+                "delegation":{"observation":if materialized {Value::Null} else {json!({"revision":"returned-result"})}}});
+            for local in [false, true] {
+                requirements["assignment"]["result"]["local_assignment_satisfied"] = json!(local);
+                let mut contribution =
+                    json!({"owner":"assignment","revision":"current","blockers":[]});
+                let admission = implementation_admission(&requirements, &mut contribution).unwrap();
+                assert_eq!(admission["status"], "returned-unadmitted");
+                assert_eq!(admission["historical_compliance"], "not-established");
+                assert_eq!(admission["local_continuation_allowed"], false);
+                assert_eq!(
+                    contribution["blockers"][0]["affects"],
+                    json!(IMPLEMENTATION_SCOPES)
+                );
+                assert_ne!(contribution["revision"], "current");
+            }
+            requirements["assignment"]["result_admission"] = json!({"result_use_allowed":true});
+            let mut contribution = json!({"owner":"assignment","revision":"current","blockers":[]});
+            let admission = implementation_admission(&requirements, &mut contribution).unwrap();
+            assert_eq!(admission["status"], "returned-admitted");
+            assert_eq!(contribution["blockers"], json!([]));
+        }
+    }
 }

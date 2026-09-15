@@ -20,7 +20,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     declarations.push(crate::native_patch::declaration());
     let operation = crate::native_patch::operation();
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
-        "owners":[{"owner":"assignment","revision":digest(&json!([declarations,operation]))?,"requests":declarations,"operations":[operation],"domains":["assignment"],"effects":[{"id":"implementation","domain":"assignment"}]}],"restriction_authorities":[{"owner":"assignment","affects":["effect:implementation","claim:claim-work-complete","claim:claim-slice-complete"]}]});
+        "owners":[{"owner":"assignment","revision":digest(&json!([declarations,operation]))?,"requests":declarations,"operations":[operation],"domains":["assignment"],"effects":[{"id":"implementation","domain":"assignment"}]}],"restriction_authorities":[{"owner":"assignment","affects":crate::native_assignment::IMPLEMENTATION_SCOPES}]});
     contract["revision"] = json!(digest(&contract)?);
     Ok(contract)
 }

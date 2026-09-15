@@ -139,9 +139,13 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     # The concurrent edit is in the same file and allowed pattern. It is never
     # attributed to the worker; only the worker's exact second-line delta is.
     main.write_bytes(before.replace("six", "concurrent").replace("\n", "\r\n").encode())
-    judged = call(reentry)["task_requirements"]["assignment"]["result_admission"]["requests"][0]
+    observed = call(reentry)
+    assert observed["task_requirements"]["implementation_admission"]["status"] == "returned-unadmitted"
+    judged = observed["task_requirements"]["assignment"]["result_admission"]["requests"][0]
     judged[-1]["arguments"].update(answer="use-result", reason="The returned delta satisfies the bounded assignment.")
     admitted = call(judged)
+    assert admitted["task_requirements"]["implementation_admission"]["status"] == "returned-admitted"
+    assert admitted["task_requirements"]["implementation_admission"]["historical_compliance"] == "owner-admitted-result"
     assert admitted["planning"]["adoption_requests"] == []
     if planning_owned:
         retention = admitted["planning"]["handoff_retention_requests"][0]
