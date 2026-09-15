@@ -409,7 +409,7 @@ fn resolve_context(
         Ok(value)
     };
     let threads = load(THREADS)?.unwrap_or(json!({}));
-    let work_id = threads["selected_thread_id"]
+    let selection_scope = threads["selected_thread_id"]
         .as_str()
         .filter(|s| !s.is_empty())
         .unwrap_or("default");
@@ -427,13 +427,25 @@ fn resolve_context(
         {
             return Err(error(SELECTION, "unsupported selection kind or mode"));
         }
-        if selection["current_work_id"]
+        if selection.get("selection_scope").is_some()
+            && selection.get("current_work_id").is_some()
+            && selection["selection_scope"] != selection["current_work_id"]
+        {
+            return Err(error(
+                SELECTION,
+                "conflicting local selection scope aliases",
+            ));
+        }
+        // Legacy current_work_id is a local cursor alias, never public task identity.
+        if selection
+            .get("selection_scope")
+            .unwrap_or(&selection["current_work_id"])
             .as_str()
             .filter(|s| !s.is_empty())
             .unwrap_or("default")
-            != work_id
+            != selection_scope
         {
-            return Err(error(SELECTION, "local selection current-work mismatch"));
+            return Err(error(SELECTION, "local selection scope mismatch"));
         }
         for field in ["target_root", "repo_root", "worktree"] {
             if let Some(path) = selection[field].as_str().filter(|s| !s.is_empty())
@@ -664,8 +676,19 @@ fn resolve_context(
             transition = json!({"prior_sha256":transfer["binding"]["selector"]["revision"],"human_authorization":request,"selection":selection});
             status = "current";
             planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work}});
-        } else if request["arguments"]["answer"] == "unrelated-direct" {
-            status = "direct";
+        } else if matches!(
+            request["arguments"]["answer"].as_str(),
+            Some("independent" | "unrelated-direct")
+        ) {
+            status = if request["arguments"]["answer"] == "unrelated-direct"
+                || request["arguments"]["task_posture"] == "direct"
+            {
+                "direct"
+            } else if request["arguments"]["task_posture"] == "planned" {
+                "planned"
+            } else {
+                "independent"
+            };
             planning_input = Value::Null;
         } else if selected.is_null() {
             return Err(error("request", "no currently selected owner to continue"));
@@ -691,11 +714,16 @@ fn resolve_context(
     if (quiescent || selected["blocked"] == true) && status != "stale" && !transfer_authorized {
         let continuing = retained["current_work"] == *current_work
             || request.is_some_and(|r| r["arguments"]["answer"] == "continue-selected");
-        let unrelated = request.is_some_and(|r| r["arguments"]["answer"] == "unrelated-direct");
+        let unrelated = request.is_some_and(|r| {
+            matches!(
+                r["arguments"]["answer"].as_str(),
+                Some("independent" | "unrelated-direct")
+            )
+        });
         if continuing && !unrelated {
             status = "reentry-required";
             planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work}});
-        } else if quiescent || unrelated {
+        } else if quiescent && !unrelated {
             status = "direct";
             planning_input = Value::Null;
         }
@@ -717,13 +745,42 @@ fn resolve_context(
         json!([])
     };
     let decisions = if matches!(status, "unresolved" | "stale") {
-        json!([{"id":"planning-continuation","question":"Does the current task continue the selected Planning owner?","material":{"selected_owner":selected},"response_request":{"request_kind":"planning/continuation/v1","arguments":{}},"choices":[{"id":"continue-selected","label":"Continue the selected Planning owner"},{"id":"unrelated-direct","label":"Unrelated bounded direct work"}],"affects":["task"]}])
+        json!([{"id":"planning-continuation","question":"Does the current task continue the remembered Planning owner?","material":{"incumbent_owner":selected},"response_request":{"request_kind":"planning/continuation/v1","arguments":{}},"choices":[{"id":"continue-selected","label":"Continue the remembered Planning owner"},{"id":"independent","label":"This work is independent of that owner"}],"affects":["task"]}])
     } else {
         json!([])
     };
-    let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"selected_owner":selected},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
+    let task_relation = if matches!(status, "current" | "reentry-required" | "custody-required") {
+        "continues"
+    } else if request.is_some_and(|r| {
+        matches!(
+            r["arguments"]["answer"].as_str(),
+            Some("independent" | "unrelated-direct")
+        )
+    }) && status != "stale"
+    {
+        "independent"
+    } else if selected.is_null() {
+        "no-incumbent"
+    } else {
+        "unresolved"
+    };
+    let required_transition = match status {
+        "direct" => "direct",
+        "planned" => "create-or-select-owner",
+        "independent" => "determine-posture",
+        "current" => "continue",
+        "reentry-required" => "reconcile",
+        "custody-required" => "acquire-custody",
+        _ => "determine-relation",
+    };
+    let admitted = if task_relation == "continues" {
+        selected.clone()
+    } else {
+        Value::Null
+    };
+    let contribution = json!({"owner":"planning","revision":revision,"facts":{"continuation":status,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted},"decisions":decisions,"blockers":blockers,"settled":status=="direct"});
     Ok(
-        json!({"status":status,"source_revision":revision,"current_work_id":work_id,"selected_owner":selected,"requests":if selected.is_null(){json!([])}else{json!([template])},"selector_transfer":transfer,"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
+        json!({"status":status,"source_revision":revision,"current_work_id":current_work["id"],"selection_scope":selection_scope,"task_relation":task_relation,"required_transition":required_transition,"incumbent_owner":selected,"selected_owner":admitted,"requests":if selected.is_null(){json!([])}else{json!([template])},"selector_transfer":transfer,"capability_contract":contract,"contribution":contribution,"planning_input":planning_input,"selection_transition":transition,"custody_status":"not-admitted"}),
     )
 }
 
@@ -784,20 +841,20 @@ fn resolve_execution(
             reference,
         )?;
     }
-    if view["selected_owner"].is_null()
+    if view["incumbent_owner"].is_null()
         && let Some(reference) =
             crate::native_planning_create::created_reference(target, current_work)?
     {
         view = candidate(target, current_work, &reference, current_full_contract)?;
     }
-    if view["selected_owner"].is_null() {
+    if view["incumbent_owner"].is_null() {
         return Err(error(
             SELECTION,
             "current source-selected owner required for reconciliation execution",
         ));
     }
     if view["planning_input"].is_null() {
-        view["planning_input"] = json!({"target":std::fs::canonicalize(target).map_err(|e|error("target",e))?,"relevant":true,"source":view["selected_owner"]["source"],"intent":{"current_work":current_work}});
+        view["planning_input"] = json!({"target":std::fs::canonicalize(target).map_err(|e|error("target",e))?,"relevant":true,"source":view["incumbent_owner"]["source"],"intent":{"current_work":current_work}});
     }
     let target = std::fs::canonicalize(target).map_err(|e| error("target", e))?;
     let root =
@@ -807,7 +864,7 @@ fn resolve_execution(
         .transpose()?;
     if let Some(retained) = selection.as_ref().and_then(|value| value.get(RETAINED)) {
         validate_retained(retained)?;
-        if retained["source"] == view["selected_owner"]["source"] {
+        if retained["source"] == view["incumbent_owner"]["source"] {
             view["planning_input"]["custody"] = retained["custody"].clone();
             view["planning_input"]["invocation"] = retained["invocation"].clone();
             if let Some(transition) = retained_transition(&target, selection.as_ref().unwrap())? {
@@ -977,10 +1034,10 @@ fn execute_checked(
     let view = resolve_for_invocation(&target, current_work, current_full_contract, invocation)?;
     let initial_selection = json!({
         "kind":"agentic-planning/owner-selection/v1", "mode":"local",
-        "current_work_id":view["current_work_id"],
-        "selected_owner":{"id":view["selected_owner"]["id"],"ref":view["selected_owner"]["ref"]}
+        "selection_scope":view["selection_scope"],
+        "selected_owner":{"id":view["incumbent_owner"]["id"],"ref":view["incumbent_owner"]["ref"]}
     });
-    let source = view["selected_owner"]["source"].clone();
+    let source = view["incumbent_owner"]["source"].clone();
     let mut input = json!({"target":target,"relevant":true,"source":source,"intent":{"current_work":current_work},"capability_contract":current_full_contract,"invocation":invocation});
     if let Some(requests) = invocation.get("source_requests") {
         input["source_requests"] = requests.clone();
@@ -1009,7 +1066,7 @@ fn execute_checked(
                 source["path"].as_str().unwrap(),
                 current_full_contract,
             )?;
-            if fresh["selected_owner"]["source"] != source {
+            if fresh["incumbent_owner"]["source"] != source {
                 return Err(error(
                     SELECTION,
                     "selected semantic source changed during reconciliation",
@@ -1509,6 +1566,46 @@ mod tests {
         assert!(!target.0.join(".agentic-workspace/local/effects").exists());
     }
     #[test]
+    fn remembered_scope_never_admits_task_relation_or_posture() {
+        for explicit_thread in [false, true] {
+            let target = Target::new();
+            target.plan();
+            target.select();
+            if explicit_thread {
+                target.write(
+                    THREADS,
+                    &json!({"selected_thread_id":"thread-a"}).to_string(),
+                );
+                let mut selector: Value =
+                    serde_json::from_slice(&fs::read(target.0.join(SELECTION)).unwrap()).unwrap();
+                selector["current_work_id"] = json!("thread-a");
+                target.write(SELECTION, &selector.to_string());
+            }
+            let before = fs::read(target.0.join(SELECTION)).unwrap();
+            let initial = resolve(&target.0, &work(), None).unwrap();
+            assert!(initial["selected_owner"].is_null());
+            assert_eq!(initial["incumbent_owner"]["ref"], PLAN);
+            assert_eq!(initial["current_work_id"], work()["id"]);
+            assert_ne!(initial["selection_scope"], initial["current_work_id"]);
+            assert_eq!(initial["task_relation"], "unresolved");
+            let mut request = initial["requests"][0].clone();
+            request["arguments"] = json!({"answer":"independent"});
+            let independent = resolve(&target.0, &work(), Some(&request)).unwrap();
+            assert_eq!(independent["required_transition"], "determine-posture");
+            for (posture, transition) in
+                [("direct", "direct"), ("planned", "create-or-select-owner")]
+            {
+                request["arguments"]["task_posture"] = json!(posture);
+                let result = resolve(&target.0, &work(), Some(&request)).unwrap();
+                assert_eq!(result["task_relation"], "independent");
+                assert_eq!(result["required_transition"], transition);
+                assert!(result["selected_owner"].is_null());
+                assert!(result["planning_input"].is_null());
+                assert_eq!(fs::read(target.0.join(SELECTION)).unwrap(), before);
+            }
+        }
+    }
+    #[test]
     fn native_planning_retains_current_custody_across_fresh_reads() {
         let target = Target::new();
         target.plan();
@@ -1520,7 +1617,7 @@ mod tests {
         assert!(fresh_current(&target));
         let after = resolve(&target.0, &work(), None).unwrap();
         assert_eq!(
-            before["selected_owner"]["source"],
+            before["incumbent_owner"]["source"],
             after["selected_owner"]["source"]
         );
         let selection: Value =
@@ -1815,11 +1912,12 @@ mod tests {
             question["response_request"]["capability_revision"],
             contract["revision"]
         );
-        let response = crate::answer_decision_value(json!({"decision":decision,"question":question["consequence_id"],"answer":"unrelated-direct","capability_contract":contract})).unwrap();
+        let response = crate::answer_decision_value(json!({"decision":decision,"question":question["consequence_id"],"answer":"independent","capability_contract":contract})).unwrap();
         let request = response.get("request").unwrap_or(&response);
         let direct =
             resolve_with_contract(&target.0, &work(), Some(request), Some(&contract)).unwrap();
-        assert_eq!(direct["status"], "direct");
+        assert_eq!(direct["status"], "independent");
+        assert_eq!(direct["required_transition"], "determine-posture");
         assert!(resolve(&target.0, &work(), Some(request)).is_err());
     }
     #[test]
@@ -1855,7 +1953,7 @@ mod tests {
             resolve(&target.0, &work(), None)
                 .unwrap_err()
                 .to_string()
-                .contains("current-work mismatch")
+                .contains("selection scope mismatch")
         );
         target.write(THREADS, "{}");
         fs::remove_file(target.0.join(PLAN)).unwrap();

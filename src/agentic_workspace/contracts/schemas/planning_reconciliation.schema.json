@@ -153,15 +153,24 @@
           "type": "string",
           "enum": [
             "continue-selected",
+            "independent",
             "unrelated-direct",
             "authorize-selector-transfer"
           ],
-          "description": "Explicit current-task relationship to the selected owner."
+          "description": "Relation to the remembered incumbent. unrelated-direct is a deprecated shorthand for independent plus task_posture=direct; it cannot accompany creation."
         },
         "transfer_revision": {
           "type": "string",
           "minLength": 1,
           "description": "Owner-derived exact selector/source/work/target/destination binding. The human supplies only the bounded answer."
+        },
+        "task_posture": {
+          "type": "string",
+          "enum": [
+            "direct",
+            "planned"
+          ],
+          "description": "Independent task posture, separate from its relation to the incumbent. Omission leaves posture undecided; planned work uses existing creation/selection requests."
         }
       },
       "required": [
@@ -195,6 +204,20 @@
               "required": [
                 "transfer_revision"
               ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "task_posture"
+            ]
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "const": "independent"
+              }
             }
           }
         }
@@ -552,7 +575,7 @@
             "current_work_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Current work context selected by the owner."
+              "description": "Legacy alias for selection_scope; advisory local cursor only."
             },
             "selected_owner": {
               "type": "object",
@@ -574,15 +597,31 @@
                 "ref"
               ],
               "additionalProperties": false
+            },
+            "selection_scope": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Advisory actor-local selection scope; never the public current-work identity."
             }
           },
           "required": [
             "kind",
             "mode",
-            "current_work_id",
             "selected_owner"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "current_work_id"
+              ]
+            },
+            {
+              "required": [
+                "selection_scope"
+              ]
+            }
+          ]
         }
       },
       "required": [

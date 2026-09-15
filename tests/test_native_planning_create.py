@@ -261,7 +261,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     other = {**context, "task": "Explain this unrelated function"}
     quiet = call(other)
     answer = quiet["planning"]["requests"][0]
-    answer["arguments"]["answer"] = "unrelated-direct"
+    answer["arguments"].update(answer="independent", task_posture="direct")
     assert call({**other, "request": answer})["planning"]["status"] == "direct"
 
 
@@ -511,7 +511,7 @@ def test_creation_preserves_existing_selected_owner(tmp_path: Path, shared_core_
     context = {"target": str(tmp_path), "task": "Create another unselected bounded owner"}
     initial = consume("native", shared_core_binary, native_cli, context)
     continuation = initial["decision_packet"]["decision_request"]["response_request"]
-    continuation["arguments"]["answer"] = "unrelated-direct"
+    continuation["arguments"].update(answer="independent", task_posture="planned")
     creation = initial["planning"]["creation_requests"][0]
     creation["arguments"] = {"material": material()}
     ready = consume("native", shared_core_binary, native_cli, {**context, "request": [continuation, creation]})
@@ -564,11 +564,22 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     first_bytes = first_path.read_bytes()
     context["task"] = "Create a distinct bounded owner"
     current = call(context)
+    assert current["planning"]["selected_owner"] is None
+    assert current["planning"]["incumbent_owner"]["ref"] == first["value"]["owner_path"]
+    assert current["planning"]["current_work_id"] == current["current_work"]["id"]
+    assert current["planning"]["selection_scope"] == "default"
     unrelated = current["decision_packet"]["decision_request"]["response_request"]
-    unrelated["arguments"]["answer"] = "unrelated-direct"
+    unrelated["arguments"].update(answer="independent", task_posture="planned")
     request = current["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
-    action = call({**context, "request": [unrelated, request]})["decision_packet"]["primary_action"]
+    false_direct = {**unrelated, "arguments": {"answer": "unrelated-direct"}}
+    with pytest.raises(AssertionError, match="Direct task posture"):
+        call({**context, "request": [false_direct, request]})
+    planned = call({**context, "request": [unrelated, request]})
+    assert planned["planning"]["task_relation"] == "independent"
+    assert planned["planning"]["required_transition"] == "create-or-select-owner"
+    assert planned["planning"]["selected_owner"] is None
+    action = planned["decision_packet"]["primary_action"]
     second = call({**context, "invocation": action})
     assert selector.read_bytes() == before
     context = second["value"]["selection_context"]

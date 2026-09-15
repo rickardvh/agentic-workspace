@@ -777,6 +777,16 @@ fn resolve_with_baseline(
         owner["settled"] = json!(false);
         owner["revision"] = json!(digest(&json!([owner["revision"], update["action"]]))?);
     }
+    if creation_request.is_some()
+        && planning_request.is_some_and(|r| {
+            r["arguments"]["answer"] == "unrelated-direct"
+                || r["arguments"]["task_posture"] == "direct"
+        })
+    {
+        return Err(CoreError::new(
+            "Direct task posture cannot request planning.create; use independent with planned posture.",
+        ));
+    }
     let mut creation = crate::native_planning_create::view(
         target,
         &work,

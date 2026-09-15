@@ -1,5 +1,33 @@
 # Native Planning creation
 
+## Current work, remembered selection, and task posture
+
+`planning.current_work_id` is the public current-work identity. `selection_scope`
+is the advisory local thread cursor (or `default` storage slot). Old selector
+files named that cursor `current_work_id`; the native reader treats it only as a
+legacy scope alias and rejects conflicting aliases. Newly acquired selectors
+write `selection_scope`. No task wording, thread name, or default-slot match
+admits a current owner.
+
+Fresh entry exposes `incumbent_owner` as remembered context and leaves
+`selected_owner` null until an explicit continuation or exact retained
+current-work/source custody establishes the relation. Existing custody and
+source-currentness checks still govern every mutation.
+
+The continuation request accepts `answer: independent` separately from optional
+`task_posture: direct | planned`. With posture omitted, `task_relation` is
+independent and `required_transition` remains `determine-posture`; this is not a
+direct-work assertion. Direct posture creates no owner or selector residue.
+Planned posture allows the existing creation and explicit selection path,
+preserving the previous owner. The deprecated `unrelated-direct` input derives
+independent/direct semantics and is rejected alongside `planning.create`.
+
+This preserves the separation established by #2175/#2229 and #2277/#2279:
+current work binds admission, actor-local selection supplies a hint, and semantic
+relation and required transition remain distinct. There is no new task registry
+or relevance classifier. Reworded continuation still requires explicit judgment.
+
+
 The public Planning `planning/create/v1` request creates one current compact `planning-execplan/v1` owner. Request material uses the canonical schema's existing field definitions. The acting agent authors outcome, scope, constraints, stops, dependency facts, proof obligations, continuation and next action. Rust supplies only the confined work-bound identity/path and initial planned/shaping revision; it does not fill placeholder judgments or generate proof.
 
 Creation exclusively acquires an absent owner document. It does not acquire a selector, alter the former Planning state file, or activate another owner. Its result offers a separate exact current continuation request. Existing selector ownership remains preserved. Direct unrelated work creates no state.

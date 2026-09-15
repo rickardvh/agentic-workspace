@@ -199,7 +199,7 @@ pub(crate) fn retain_handoff(
         return Ok(result);
     }
     let reference = template["arguments"]["owner_ref"].as_str().unwrap();
-    if planning["selected_owner"]["ref"] != reference {
+    if planning["incumbent_owner"]["ref"] != reference {
         return Err(error(
             "handoff retention must use the selected Planning owner",
         ));
@@ -391,7 +391,7 @@ pub(crate) fn adopt_return(
     let reference = template["arguments"]["owner_ref"]
         .as_str()
         .ok_or_else(|| error("Planning adoption destination missing"))?;
-    if planning["selected_owner"]["ref"] != reference {
+    if planning["incumbent_owner"]["ref"] != reference {
         if request.is_some() {
             return Err(error("Planning adoption must use the selected owner"));
         }
@@ -695,7 +695,7 @@ fn view_material(
     continuation: Option<&Value>,
     custody_update: bool,
 ) -> Result<Value, CoreError> {
-    let selected = &planning["selected_owner"];
+    let selected = &planning["incumbent_owner"];
     let mut result = json!({"requests":[],"action":null,"retained":null});
     let owner = contract["owners"]
         .as_array()
