@@ -32,7 +32,10 @@ If host-native skill discovery is unavailable, read that skill before other pack
 <!-- agentic-workspace:workflow:end -->
 
 If you implemented or materially changed a PR, do not review or approve it yourself
-and do not spawn or direct a reviewer to do so. After implementation or review
-fixes, report `ready for independent review` and stop. An externally initiated
-reviewer uses `tools/skills/pr-review-recheck/SKILL.md`; issue shaping and ordinary
-review feedback do not constitute implementation custody.
+and do not spawn or direct a reviewer to do so. Mark it `ready for independent
+review`. Continue other authorized implementation work, including remaining
+stacked PRs; independent review is not a gate on that work unless explicitly
+required by a dependency or the user. Stop when the authorized implementation
+work is complete, leaving review and approval to an externally initiated reviewer
+using `tools/skills/pr-review-recheck/SKILL.md`. Issue shaping and ordinary review
+feedback do not constitute implementation custody.
