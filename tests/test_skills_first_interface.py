@@ -309,8 +309,7 @@ def test_known_leaf_returns_current_procedure_and_shared_applicability(tmp_path,
     memory.mkdir(parents=True)
     (memory / "context.md").write_text("Historical observation; advisory only.")
     (memory / "manifest.toml").write_text(
-        'version=1\n[notes.".agentic-workspace/memory/repo/context.md"]\n'
-        'note_type="decision"\nauthority="canonical"\nsemantic_routes=["repository/inspect"]\n'
+        'version=1\n[notes.".agentic-workspace/memory/repo/context.md"]\nnote_type="decision"\nsemantic_routes=["repository/inspect"]\n'
     )
     context = {"target": str(tmp_path), "task": "Discuss the words repository inspect"}
 
