@@ -201,3 +201,22 @@ explicit Candidate B owners; neither calls for broad reconstruction, a generic
 why API or cross-domain delta. No new issue is created merely to obtain #2929
 creation dogfood. Its real-creation replay remains bounded-inapplicable unless
 subsequent integration exposes a legitimate new issue need.
+# Review feedback follow-through
+
+The #3287 review identified that file-identity comparison did not supply the actual
+follow-up code patch. Recheck preparation now requests the exact prior-head to
+current-head comparison and includes text patches, with no history/session state
+or authority change. It refuses to treat divergent merge-base output, a capped
+inventory, missing/truncated patches or transport failure as a complete tree
+delta. These cases remain partial and require manual exact-tree inspection.
+Draft and merged state are included and bracketed by the final subject read;
+missing values are explicitly unavailable. The earlier nine-request measurement
+describes unchanged-head rechecks: moved-head preparation now adds one bounded
+GET. No revised latency or total-cost improvement is claimed.
+
+Extended the existing preparation owner tests instead of adding a suite or CI
+constituent: actual patch content and exact endpoints, comparison failure,
+divergence, cap, incomplete/binary patch and head movement share the existing
+recheck scenario. Four owner tests pass. These observations establish evidence
+collection/currentness, not semantic review or independent acceptance. The bounded
+claim has no remaining implementation blocker; independent re-review remains due.

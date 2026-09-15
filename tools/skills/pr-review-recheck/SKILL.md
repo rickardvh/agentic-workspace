@@ -126,7 +126,7 @@ process. Preparation performs only local Git object reads and GitHub GET request
 through the available `gh` transport.
 
 The packet contains exact base/head/repository identities, complete paginated
-files, linked issue references and observations, reviews/comments, CI/status and
+files, current draft/merged state, linked issue references and observations, reviews/comments, CI/status and
 trusted guidance identities. Scoped `AGENTS.md` references follow changed-path
 ancestry; semantic applicability beyond those relationships remains reviewer work.
 Read guidance through its exact baseline/path, not the current worktree.
@@ -137,7 +137,16 @@ fresh preparation. `partial`/`unavailable` observations cannot mean no blockers.
 For a recheck, retain the prior packet with an `obligations` list containing the
 reviewer's unresolved blockers and pass `--previous <prior-packet.json>`. The helper
 reobserves current evidence and reports changed/added/removed evidence and file
-identities. Unchanged observations carry their exact prior identity rather than
+identities. For a usable exact prior head, `evidence.followup_patch` also carries
+the prior-head to current-head text patches from a read-only GitHub comparison;
+an unchanged head yields an empty patch without a compare request. The comparison
+is bounded to fewer than 300 files and requires the prior head to be the merge
+base. Divergent history, transport failure, the file cap, or missing/incomplete
+patches (including binary files) report unavailable and make preparation partial;
+use an exact tree diff manually in those cases. The final subject observation
+also brackets this collection, so a head moving during comparison makes the
+packet stale. Missing draft/merged fields are explicitly unavailable.
+Unchanged observations carry their exact prior identity rather than
 retransmitting their bodies; omit `--previous` to retrieve the full fresh content
 if the earlier evidence is no longer available. Prior obligations are preserved without machine resolution; use the
 delta to focus semantic inspection. Comparison is `REVIEW_ONLY`, with no product

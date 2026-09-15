@@ -92,6 +92,45 @@ def references(body, repo):
     return sorted(refs)
 
 
+def followup(prefix, previous_head, head):
+    """Bounded exact-head patches; never mistake a merge-base diff for a tree diff."""
+    endpoint = f"{prefix}/compare/{previous_head}...{head}?per_page=1&page=1"
+    result = {"source": endpoint, "from_head": previous_head, "to_head": head}
+    try:
+        if previous_head == head:
+            files = []
+        else:
+            comparison = api(endpoint)
+            if comparison["base_commit"]["sha"] != previous_head or comparison["merge_base_commit"]["sha"] != previous_head:
+                raise ValueError("prior head is not the merge base; exact tree delta unavailable after divergent history")
+            # GitHub returns all comparison files on page one, capped at 300,
+            # independently of commit pagination. At the cap completeness is unknown.
+            files = comparison["files"]
+            if not isinstance(files, list) or len(files) >= 300 or len({row["filename"] for row in files}) != len(files):
+                raise ValueError("comparison file inventory is incomplete or at the transport cap")
+            for row in files:
+                patch = row.get("patch", "")
+                if (
+                    sum(line.startswith("+") for line in patch.splitlines()) != row["additions"]
+                    or sum(line.startswith("-") for line in patch.splitlines()) != row["deletions"]
+                ):
+                    raise ValueError(f"missing or incomplete text patch: {row['filename']}")
+                if "patch" not in row:
+                    raise ValueError(f"patch unavailable (possibly binary): {row['filename']}")
+            files = [
+                {key: row.get(key) for key in ["filename", "previous_filename", "sha", "status", "additions", "deletions", "patch"]}
+                for row in files
+            ]
+        result.update(status="observed", value=files, revision=digest(files))
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        result.update(
+            status="unavailable",
+            reason=str(exc),
+            recovery="Inspect an exact prior-head to current-head tree diff manually; do not infer an empty follow-up delta.",
+        )
+    return result
+
+
 def prepare(repo, number, baseline, *, previous=None):
     started = datetime.now(timezone.utc).isoformat()
     prefix = f"repos/{repo}"
@@ -124,11 +163,27 @@ def prepare(repo, number, baseline, *, previous=None):
         "title": pr["title"],
         "body": pr.get("body") or "",
         "state": pr["state"],
+        "draft": pr.get("draft"),
+        "merged": pr.get("merged"),
         "url": pr["html_url"],
         "changed_files": pr["changed_files"],
     }
     subject["revision"] = digest(subject["value"])
     evidence = packet["evidence"]
+    usable_previous = (
+        isinstance(previous, dict)
+        and previous.get("kind") == packet["kind"]
+        and previous.get("repository") == repo
+        and previous.get("number") == number
+        and isinstance(previous.get("identities"), dict)
+        and isinstance(previous.get("obligations"), list)
+        and isinstance(previous.get("file_identities"), dict)
+        and isinstance(previous.get("subject"), dict)
+        and isinstance(previous["subject"].get("value"), dict)
+        and re.fullmatch(r"[0-9a-f]{40}", str(previous["subject"]["value"].get("head", ""))) is not None
+    )
+    if usable_previous:
+        evidence["followup_patch"] = followup(prefix, previous["subject"]["value"]["head"], head)
     evidence["files"] = observe(
         f"{prefix}/pulls/{number}/files?per_page=100",
         collection="list",
@@ -176,9 +231,14 @@ def prepare(repo, number, baseline, *, previous=None):
     packet["status"] = "observed" if all(item["status"] == "observed" for item in evidence.values()) else "partial"
     if any(item["status"] != "observed" for item in packet["guidance"]):
         packet["status"] = "partial"
+    packet["subject_unavailable_fields"] = [key for key in ["draft", "merged"] if not isinstance(pr.get(key), bool)]
+    if packet["subject_unavailable_fields"]:
+        packet["status"] = "partial"
     if final["status"] != "observed":
         packet["status"] = "partial"
-    elif any(final["value"].get(key) != pr.get(key) for key in ["head", "base", "body", "title", "state", "changed_files"]):
+    elif any(
+        final["value"].get(key) != pr.get(key) for key in ["head", "base", "body", "title", "state", "draft", "merged", "changed_files"]
+    ):
         packet["status"] = "stale"
     packet["subject_recheck"] = {key: value for key, value in final.items() if key != "value"}
     packet["observed_until"] = datetime.now(timezone.utc).isoformat()
@@ -187,15 +247,7 @@ def prepare(repo, number, baseline, *, previous=None):
     packet["identities"] = identities
     packet["file_identities"] = {row["filename"]: digest(row) for row in files}
     packet["delta"] = {"mode": "full", "reason": "no usable prior comparison"}
-    if (
-        isinstance(previous, dict)
-        and previous.get("kind") == packet["kind"]
-        and previous.get("repository") == repo
-        and previous.get("number") == number
-        and isinstance(previous.get("identities"), dict)
-        and isinstance(previous.get("obligations"), list)
-        and isinstance(previous.get("file_identities"), dict)
-    ):
+    if usable_previous:
         prior = previous["identities"]
         packet["obligations"] = previous["obligations"]
         packet["delta"] = {
