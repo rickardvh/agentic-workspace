@@ -12,7 +12,10 @@ from the package root and `./operating`, with TypeScript declarations. `./native
 retains the low-level JSON transport projection. The command launchers forward
 to the paired Rust CLI. Packaged manifests bind version and binary digests;
 missing or altered executables fail explicitly. Source developers must build
-both binaries and set `AGENTIC_WORKSPACE_CORE_BINARY` explicitly. Importing a
+both binaries with `cargo build --locked --workspace --bins`. The source Python
+binding and repository launcher resolve that checkout's prepared pair. Custom
+build directories and standalone Node development use an explicit
+`AGENTIC_WORKSPACE_CORE_BINARY` override. Importing a
 binding never starts Cargo or falls back to a Python/generated command host.
 
 Legacy Python clients, operations, generated command trees, and the three module
@@ -76,3 +79,37 @@ semantic major. Those receipts prove installed topology and exact asset identity
 owner, Planning and custody behavior is evidenced by the corresponding CI job
 results. Neither the receipt alone nor the workflow prerequisite aggregate supplies
 independent admission or a publication decision. Ordinary PR checks remain bounded.
+
+## Candidate A publication handoff (#3275)
+
+The implementation stack is configuration convergence (#3280), required Assignment
+admission (#3281), then Candidate A release preparation. Each dependent change needs
+independent review and acceptance before publication from `master`. The publisher
+dispatch and source-ancestry check both trust `master`; the historical
+`reconstruction_source_commit` manifest key and `--reconstruction-ref` option remain
+compatible. A non-master override is limited to local preparation and cannot push.
+
+Candidate A remains [Alpha](../maturity-model.md#candidate-a-disposition-3275).
+The intended version is `preview-v0.55.0`, subject to a fresh unused-version check.
+The implementation stack does not create or reserve that tag. After the stack is
+accepted and merged, record the exact accepted `master` SHA and run the existing
+preview preparation flow with `--version 0.55.0 --source-commit <accepted-sha>`.
+Supply `--isolation-policy-revision` only after reading the resource owner's current
+policy and judging that it permits the concrete normalization isolation. Add
+`--push` only for the accepted publication run. The resource owner manages the
+temporary release checkout and cleanup; a dirty failure must retain its evidence.
+
+Require successful exact-source CI/security, installed native runtime proof,
+provenance, manifest and checksum checks from the existing preview workflow. Then
+run `scripts/release/preview_release.py --check-published preview-v0.55.0 --repo
+rickardvh/agentic-workspace` and the existing public install smoke against the
+published assets. Local tests cannot substitute for those exact published bytes.
+Do not overwrite a tag or asset to recover a failed publication; reuse the existing
+immutable-subject recovery. Keep #3275 and #2985 open until their respective
+independent acceptance and intent conditions are actually satisfied.
+
+The root `uv.lock` is the single dependency lock for the source workspace, including
+its retained module fixtures. Obsolete module-local locks are removed, and the
+existing security readiness control rejects their reintroduction. Dependency alert
+closure must be checked after the accepted default branch is scanned; removal in
+an unmerged PR does not establish closure of a hosted alert.

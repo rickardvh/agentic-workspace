@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import subprocess
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -219,21 +220,31 @@ def evaluate_security_supply_chain(
         failures.append({"control": "release-provenance", "detail": f"missing release controls: {', '.join(missing_release)}"})
 
     lock_path = root / "uv.lock"
+    project_path = root / "pyproject.toml"
+    project = tomllib.loads(project_path.read_text(encoding="utf-8")) if project_path.is_file() else {}
+    members = project.get("tool", {}).get("uv", {}).get("workspace", {}).get("members", [])
+    shadow_locks = sorted(
+        (member / "uv.lock").relative_to(root).as_posix()
+        for pattern in members
+        for member in root.glob(pattern)
+        if (member / "uv.lock").is_file()
+    )
     unlocked_syncs = [relative for relative, text in workflow_text.items() if re.search(r"(?m)^\s*uv sync(?![^\n]*--locked)", text)]
-    lock_ok = lock_path.is_file() and not unlocked_syncs
+    lock_ok = lock_path.is_file() and project_path.is_file() and not unlocked_syncs and not shadow_locks
     controls.append(
         {
             "id": "locked-generator-and-runtime-dependencies",
             "status": "pass" if lock_ok else "fail",
             "lock": "uv.lock",
             "unlocked_workflows": unlocked_syncs,
+            "shadow_workspace_locks": shadow_locks,
         }
     )
     if not lock_ok:
         failures.append(
             {
                 "control": "locked-generator-and-runtime-dependencies",
-                "detail": f"uv.lock missing or unlocked workflow syncs: {unlocked_syncs}",
+                "detail": f"Missing workspace lock/project, unlocked syncs: {unlocked_syncs}, or shadow member locks: {shadow_locks}",
             }
         )
 
@@ -242,6 +253,7 @@ def evaluate_security_supply_chain(
         *([REPOSITORY_PERMISSION_POLICY_PATH] if repository_permission_policy_path.is_file() else []),
         Path("scripts/check/check_security_supply_chain.py"),
         Path("uv.lock"),
+        Path("pyproject.toml"),
         *rust_paths,
         Path(".github/workflows/preview-release.yml"),
         *[Path(path) for path in policy["required_workflows"]],

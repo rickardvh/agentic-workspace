@@ -35,6 +35,22 @@ This table describes public support maturity, not feature count. A capability ca
 
 ## Promotion rule
 
+### Candidate A disposition (#3275)
+
+Candidate A retains **Alpha**. The configuration convergence (#2767) and required
+Assignment admission (#3274) changes need independent acceptance and representative
+ordinary-agent evidence at the accepted source revision. Passing implementation
+tests does not settle whether remaining compatibility changes are mostly additive.
+The exact Candidate A preview's installed-runtime, security and published-byte
+evidence is also still required. These are unresolved promotion inputs, so no
+classifier or separate informal Beta label is advanced by the implementation stack.
+
+After independent acceptance, reconcile this disposition against the rule below
+using the exact accepted source and release evidence. A preview publication alone
+does not promote maturity or complete the broader #2985 intent.
+
+### Required agreement
+
 Promote a public surface only when all relevant owners agree:
 
 1. package/distribution metadata uses the promoted maturity;

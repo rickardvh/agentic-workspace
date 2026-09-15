@@ -83,7 +83,7 @@ def _fixture(root: Path) -> dict[str, object]:
 def test_prepare_preview_normalizes_detached_subject_without_consuming_changesets(tmp_path, monkeypatch) -> None:
     module = _load_module()
     ownership = _fixture(tmp_path)
-    _git(tmp_path, "init", "-b", "reconstruct/first-stable")
+    _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test User")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "add", ".")
@@ -124,7 +124,7 @@ def test_prepare_preview_normalizes_detached_subject_without_consuming_changeset
 def test_preview_tag_versions_raise_the_later_stable_version_floor(tmp_path, monkeypatch) -> None:
     module = _load_module()
     ownership = _fixture(tmp_path)
-    _git(tmp_path, "init", "-b", "reconstruct/first-stable")
+    _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test User")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "add", ".")
@@ -142,7 +142,7 @@ def test_preview_tag_versions_raise_the_later_stable_version_floor(tmp_path, mon
     _git(tmp_path, "add", "pyproject.toml", "packages/memory/pyproject.toml", "generated/workspace/typescript/package.json")
     _git(tmp_path, "commit", "-m", "preview v0.52.0")
     _git(tmp_path, "tag", "preview-v0.52.0")
-    _git(tmp_path, "switch", "reconstruct/first-stable")
+    _git(tmp_path, "switch", "master")
 
     monkeypatch.setattr(module, "ROOT", tmp_path)
     assert sorted(str(version) for version in module.existing_release_versions(ownership)) == ["0.51.0", "0.52.0"]
@@ -157,7 +157,7 @@ def test_preview_tag_versions_raise_the_later_stable_version_floor(tmp_path, mon
 def test_verify_preview_binds_tagged_artifact_commit_to_exact_source_parent(tmp_path, monkeypatch) -> None:
     module = _load_module()
     ownership = _fixture(tmp_path)
-    _git(tmp_path, "init", "-b", "reconstruct/first-stable")
+    _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test User")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "add", ".")
@@ -186,7 +186,7 @@ def test_verify_preview_binds_tagged_artifact_commit_to_exact_source_parent(tmp_
 def test_preview_preparation_rejects_stable_tag(tmp_path, monkeypatch) -> None:
     module = _load_module()
     ownership = _fixture(tmp_path)
-    _git(tmp_path, "init", "-b", "reconstruct/first-stable")
+    _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test User")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "add", ".")
@@ -211,6 +211,8 @@ def _load_helper():
 
 
 def test_existing_tag_recovery_never_normalizes_or_recreates_tag(monkeypatch):
+    import pytest
+
     helper = _load_helper()
     calls = []
     verified = {"tag": "preview-v0.52.0", "version": "0.52.0", "artifact_commit": "b" * 40, "reconstruction_source_commit": "a" * 40}
@@ -226,12 +228,15 @@ def test_existing_tag_recovery_never_normalizes_or_recreates_tag(monkeypatch):
         return subprocess.CompletedProcess(args, 0, "remote-tag", "")
 
     monkeypatch.setattr(helper, "_git", git)
-    result = helper.create_preview_subject(
-        version="0.52.0", source_ref="a" * 40, remote="origin", reconstruction_ref="reconstruct/first-stable", push=True
-    )
+    result = helper.create_preview_subject(version="0.52.0", source_ref="a" * 40, remote="origin", reconstruction_ref="master", push=True)
     assert result["artifact_commit"] == "b" * 40
     assert result["publication_status"] == "publisher-dispatch-requested"
     assert calls == [("push", "origin", "refs/tags/preview-v0.52.0")]
+    calls.clear()
+    for branch in ("reconstruct/first-stable", "candidate-branch"):
+        with pytest.raises(SystemExit, match="trusted master"):
+            helper.create_preview_subject(version="0.52.0", source_ref="a" * 40, remote="origin", reconstruction_ref=branch, push=True)
+        assert calls == []
 
 
 def test_recovery_dispatches_trusted_branch_with_exact_immutable_subject(monkeypatch):
@@ -266,7 +271,7 @@ def test_recovery_dispatches_trusted_branch_with_exact_immutable_subject(monkeyp
         "--repo",
         "owner/repo",
         "--ref",
-        "reconstruct/first-stable",
+        "master",
         "-f",
         "preview_tag=preview-v0.52.0",
         "-f",
@@ -292,7 +297,7 @@ def test_trusted_admission_never_executes_forged_tag_authority(tmp_path, monkeyp
     repo = tmp_path / "repo"
     repo.mkdir()
     ownership = _fixture(repo)
-    _git(repo, "init", "-b", "reconstruct/first-stable")
+    _git(repo, "init", "-b", "master")
     _git(repo, "config", "user.name", "Test")
     _git(repo, "config", "user.email", "test@example.com")
     _git(repo, "add", ".")
@@ -305,7 +310,7 @@ def test_trusted_admission_never_executes_forged_tag_authority(tmp_path, monkeyp
     _git(repo, "commit", "-m", "preview")
     artifact = _git(repo, "rev-parse", "HEAD")
     _git(repo, "tag", "preview-v0.52.0")
-    _git(repo, "switch", "reconstruct/first-stable")
+    _git(repo, "switch", "master")
     remote = tmp_path / "remote.git"
     _git(repo, "clone", "--bare", str(repo), str(remote))
     _git(repo, "remote", "add", "origin", str(remote))
@@ -341,7 +346,7 @@ def test_trusted_admission_never_executes_forged_tag_authority(tmp_path, monkeyp
     # Adversarial fixture replaces its tag, never production recovery code.
     _git(repo, "tag", "-f", "preview-v0.52.0", forged)
     _git(repo, "push", "--force", "origin", "refs/tags/preview-v0.52.0")
-    _git(repo, "switch", "reconstruct/first-stable")
+    _git(repo, "switch", "master")
     with pytest.raises(SystemExit, match="non-release-only"):
         helper.admit_preview_subject(tag="preview-v0.52.0", artifact_commit=forged)
     assert not sentinel.exists()
@@ -352,7 +357,7 @@ def test_preview_rejects_forged_delta_and_subjects(tmp_path, monkeypatch):
 
     module = _load_module()
     ownership = _fixture(tmp_path)
-    _git(tmp_path, "init", "-b", "reconstruct/first-stable")
+    _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "add", ".")
@@ -392,48 +397,9 @@ def test_preview_rejects_forged_delta_and_subjects(tmp_path, monkeypatch):
         module.verify_preview_release(ownership, tag="preview-v0.52.0")
 
 
-def test_built_preview_root_urls_digests_and_external_install(tmp_path):
-    import hashlib
-    import os
-    import shutil
-
-    import pytest
-    from tests.test_workspace_packaging import (
-        _assert_workspace_stack_runs_fresh_repo_cli_sequence,
-        _install_workspace_root_release_venv,
-        _load_release_wheel_patcher,
-        _venv_site_package_entry_names,
-    )
-
-    artifact_dir = os.environ.get("AW_PREVIEW_ARTIFACT_DIR")
-    if not artifact_dir:
-        pytest.skip("requires the normalized preview artifact fixture or publisher dist")
-    dist = Path(artifact_dir).resolve()
-    spec = importlib.util.spec_from_file_location("preview_manifest_test", ROOT / "scripts/release/preview_manifest.py")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["coordinated_release"] = _load_module()
-    spec.loader.exec_module(module)
-    ownership = json.loads((ROOT / ".github/release-ownership.json").read_text())
-    wheels = sorted(dist.glob("*.whl"))
-    root = next(path for path in wheels if path.name.startswith("agentic_workspace-"))
-    version = root.name.split("-")[1]
-    requirements = module.verify_preview_dependencies(ownership=ownership, dist=dist, version=version)
-    assert len(requirements) == len(ownership["packages"]) - 1
-    original_digests = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in wheels}
-    local_assets = tmp_path / "preview-assets"
-    local_assets.mkdir()
-    for path in wheels:
-        shutil.copy2(path, local_assets / path.name)
-    # Transport substitution only: production URLs and hashes were checked above.
-    # The install resolves all coordinated wheels from a local immutable mirror.
-    patched = _load_release_wheel_patcher().patch_workspace_wheel(
-        dist_dir=local_assets, version=version, release_asset_base_url=local_assets.as_uri()
-    )
-    exe = _install_workspace_root_release_venv(root_wheel=patched, tmpdir_path=tmp_path)
-    for name in ("agentic_workspace_memory", "agentic_workspace_planning", "agentic_workspace_verification"):
-        assert _venv_site_package_entry_names(tmp_path / ".venv-release", name)
-    _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=exe, tmp_path=tmp_path)
-    assert original_digests == {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in wheels}
+# Exact preview installation is covered by the workflow's shared native topology
+# proof and test_preview_public_smoke.py. The retired multi-wheel installer is
+# not a second supported release topology.
 
 
 def test_existing_release_assets_are_idempotent_and_mismatches_fail_closed(tmp_path, monkeypatch):
@@ -506,7 +472,7 @@ def test_existing_preview_recovery_uses_recorded_source_after_branch_advances(tm
     repo = tmp_path / "repo"
     repo.mkdir()
     ownership = _fixture(repo)
-    _git(repo, "init", "-b", "reconstruct/first-stable")
+    _git(repo, "init", "-b", "master")
     _git(repo, "config", "user.name", "Test")
     _git(repo, "config", "user.email", "test@example.com")
     _git(repo, "add", ".")
@@ -520,7 +486,7 @@ def test_existing_preview_recovery_uses_recorded_source_after_branch_advances(tm
     artifact = _git(repo, "rev-parse", "HEAD")
     _git(repo, "tag", "-a", "preview-v0.52.0", "-m", "immutable preview")
     tag_object = _git(repo, "rev-parse", "refs/tags/preview-v0.52.0")
-    _git(repo, "switch", "reconstruct/first-stable")
+    _git(repo, "switch", "master")
     (repo / "later.txt").write_text("later reconstruction work")
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "advance reconstruction")
@@ -545,7 +511,7 @@ def test_existing_preview_recovery_uses_recorded_source_after_branch_advances(tm
         return {"publication_status": "publisher-complete"}
 
     monkeypatch.setattr(helper, "_recover_publisher", recover)
-    arguments = dict(version="0.52.0", remote="origin", reconstruction_ref="reconstruct/first-stable", push=True)
+    arguments = dict(version="0.52.0", remote="origin", reconstruction_ref="master", push=True)
     for source_ref in (None, source):
         result = helper.create_preview_subject(**arguments, source_ref=source_ref)
         assert result["status"] == "existing-current"
@@ -557,15 +523,15 @@ def test_existing_preview_recovery_uses_recorded_source_after_branch_advances(tm
         helper.create_preview_subject(**arguments, source_ref=advanced)
     assert effects == before
     assert _git(repo, "rev-parse", "refs/tags/preview-v0.52.0") == tag_object
-    assert _git(repo, "rev-parse", "reconstruct/first-stable") == advanced
+    assert _git(repo, "rev-parse", "master") == advanced
     assert _git(repo, "status", "--porcelain") == ""
     assert _git(remote, "rev-parse", "refs/tags/preview-v0.52.0") == tag_object
 
     # Even a valid immutable subject cannot recover outside the currently
     # allowed reconstruction ancestry.
     unrelated = _git(repo, "commit-tree", "HEAD^{tree}", "-m", "unrelated root")
-    _git(repo, "update-ref", "refs/remotes/origin/reconstruct/first-stable", unrelated)
-    monkeypatch.setattr(helper, "_fetch_reconstruction_ref", lambda **kw: "refs/remotes/origin/reconstruct/first-stable")
+    _git(repo, "update-ref", "refs/remotes/origin/master", unrelated)
+    monkeypatch.setattr(helper, "_fetch_reconstruction_ref", lambda **kw: "refs/remotes/origin/master")
     with pytest.raises(SystemExit, match="not reachable"):
         helper.create_preview_subject(**arguments, source_ref=None)
     assert effects == before
@@ -578,7 +544,7 @@ def test_preview_version_reservation_survives_package_topology_changes(tmp_path,
 
     module = _load_module()
     ownership = _fixture(tmp_path)
-    _git(tmp_path, "init", "-b", "reconstruct/first-stable")
+    _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test")
     _git(tmp_path, "config", "user.email", "test@example.com")
     _git(tmp_path, "add", ".")
@@ -590,7 +556,7 @@ def test_preview_version_reservation_survives_package_topology_changes(tmp_path,
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "published preview")
     _git(tmp_path, "tag", "preview-v0.52.0")
-    _git(tmp_path, "switch", "reconstruct/first-stable")
+    _git(tmp_path, "switch", "master")
 
     added = copy.deepcopy(ownership)
     path = tmp_path / "packages/new/pyproject.toml"
@@ -683,9 +649,7 @@ def test_preview_creation_preserves_primary_failure_and_reports_cleanup(tmp_path
 
         monkeypatch.setattr(helper, "_run", run)
         with pytest.raises(type(primary) if primary is not None else SystemExit) as raised:
-            helper.create_preview_subject(
-                version="0.53.0", source_ref="a" * 40, remote="origin", reconstruction_ref="reconstruct/first-stable", push=False
-            )
+            helper.create_preview_subject(version="0.53.0", source_ref="a" * 40, remote="origin", reconstruction_ref="master", push=False)
         if primary is not None:
             assert raised.value is primary
             assert "work preserved: exact resource path" in capsys.readouterr().err

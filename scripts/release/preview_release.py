@@ -13,7 +13,8 @@ from typing import Any
 import coordinated_release
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_RECONSTRUCTION_REF = "reconstruct/first-stable"
+# Retain the CLI/manifest field names for compatibility; publication trusts master.
+DEFAULT_RECONSTRUCTION_REF = "master"
 DEFAULT_REMOTE = "origin"
 
 
@@ -131,7 +132,7 @@ def admit_preview_subject(*, tag: str, artifact_commit: str) -> dict[str, Any]:
 
 
 def _recover_publisher(*, remote: str, verified: dict[str, Any]) -> dict[str, Any]:
-    """Dispatch current reconstruction authority for the same immutable subject."""
+    """Dispatch current master authority for the same immutable subject."""
     tag, artifact = verified["tag"], verified["artifact_commit"]
     remote_url = _git("remote", "get-url", remote).stdout.strip()
     repo = _run(["gh", "repo", "view", remote_url, "--json", "nameWithOwner", "--jq", ".nameWithOwner"]).stdout.strip()
@@ -296,6 +297,9 @@ def create_preview_subject(
     version_obj = coordinated_release.Version.parse(version)
     tag = f"{coordinated_release.PREVIEW_TAG_PREFIX}{version_obj}"
 
+    if push and _reconstruction_head_ref(reconstruction_ref) != _reconstruction_head_ref(DEFAULT_RECONSTRUCTION_REF):
+        raise SystemExit("Preview publication requires the trusted master source branch")
+
     fetched_reconstruction_ref = _fetch_reconstruction_ref(remote=remote, reconstruction_ref=reconstruction_ref)
     existing = _tag_commit(tag)
     if existing is not None:
@@ -407,9 +411,7 @@ def create_preview_subject(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Create an immutable release-only preview subject without modifying the reconstruction branch."
-    )
+    parser = argparse.ArgumentParser(description="Create an immutable release-only preview subject without modifying the source branch.")
     parser.add_argument(
         "--isolation-policy-revision", help="Exact current native resource policy read and judged to permit preview normalization isolation"
     )
@@ -421,14 +423,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--artifact-dir", type=Path)
     parser.add_argument(
         "--source-commit",
-        help="Exact reconstruction commit/ref to preview (default: freshly fetched reconstruction branch head)",
+        help="Exact accepted source commit/ref to preview (default: freshly fetched master head)",
     )
     parser.add_argument("--remote", default=DEFAULT_REMOTE)
     parser.add_argument("--reconstruction-ref", default=DEFAULT_RECONSTRUCTION_REF)
     parser.add_argument(
         "--push",
         action="store_true",
-        help="Push only the immutable preview tag and dispatch the trusted reconstruction publisher; no branch is pushed.",
+        help="Push only the immutable preview tag and dispatch the trusted master publisher; no branch is pushed.",
     )
     args = parser.parse_args(argv)
 

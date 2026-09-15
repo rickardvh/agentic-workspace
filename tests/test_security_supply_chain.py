@@ -21,6 +21,7 @@ def _copy_security_surface(target: Path) -> None:
         "SECURITY.md",
         "docs/security/threat-model.md",
         "uv.lock",
+        "pyproject.toml",
         "src/agentic_workspace/trusted_execution.py",
         "src/agentic_workspace/contracts/security_supply_chain_policy.json",
         "scripts/check/check_security_supply_chain.py",
@@ -91,6 +92,7 @@ def test_exact_subject_changes_with_lock_workflow_checker_and_source(tmp_path: P
     baseline = evaluate_security_supply_chain(tmp_path)["subject_fingerprint"]
     for relative in (
         "uv.lock",
+        "pyproject.toml",
         ".github/workflows/ci.yml",
         "scripts/check/check_security_supply_chain.py",
         "Cargo.lock",
@@ -130,6 +132,14 @@ def test_semantic_permission_scanner_and_locked_sync_fail_closed(tmp_path: Path)
         assert receipt["status"] == "blocked"
         assert any(failure["control"] == control for failure in receipt["failures"])
     security.write_text(original, encoding="utf-8")
+    shadow = tmp_path / "packages/memory/uv.lock"
+    shadow.parent.mkdir(parents=True)
+    shadow.write_text("# obsolete standalone lock\n", encoding="utf-8")
+    receipt = evaluate_security_supply_chain(tmp_path)
+    lock = next(control for control in receipt["controls"] if control["id"] == "locked-generator-and-runtime-dependencies")
+    assert lock["status"] == "fail"
+    assert lock["shadow_workspace_locks"] == ["packages/memory/uv.lock"]
+    assert receipt["release_promotion_allowed"] is False
 
 
 def test_repo_local_workflow_write_admission_is_required_and_fingerprinted(tmp_path: Path) -> None:
