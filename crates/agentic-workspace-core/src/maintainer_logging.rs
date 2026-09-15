@@ -306,28 +306,36 @@ fn registration_stage(_stage: &str) {
 }
 
 /// Invoked only by the native executable's public transport, after resolution.
-/// Errors are diagnostic omissions and cannot modify the operation result.
-pub fn capture(request: &Value, result: &Result<Value, CoreError>, elapsed: std::time::Duration) {
-    let _ = capture_inner(request, result, elapsed);
+/// Return only a bounded transport advisory after observing capture. It is never
+/// an owner contribution, request identity, effect input or retained decision.
+/// Each invocation replaces this observation: no warning stream or episode ledger.
+pub fn capture(
+    request: &Value,
+    result: &Result<Value, CoreError>,
+    elapsed: std::time::Duration,
+) -> Option<Value> {
+    let mut requested = false;
+    match capture_inner(request, result, elapsed, &mut requested) {
+        Ok(posture) => posture,
+        Err(_) if requested => Some(json!({"status":"capture-failed","authoritative":false})),
+        Err(_) => None,
+    }
 }
 fn capture_inner(
     request: &Value,
     result: &Result<Value, CoreError>,
     elapsed: std::time::Duration,
-) -> Result<(), String> {
+    requested: &mut bool,
+) -> Result<Option<Value>, String> {
     if std::env::var("AW_SESSION_LOGGING_DISABLE").ok().as_deref() == Some("1") {
-        return Ok(());
+        return Ok(None);
     }
     let Some(object) = request.as_object().filter(|v| v.len() == 1) else {
-        return Ok(());
+        return Ok(None);
     };
     let (operation, input) = object.iter().next().unwrap();
     if !matches!(operation.as_str(), "start" | "invoke") {
-        return Ok(());
-    }
-    let identity = std::env::var("AW_SESSION_LOGICAL_IDENTITY").unwrap_or_default();
-    if trim_identity(&identity).is_empty() || identity.len() > 8192 {
-        return Ok(());
+        return Ok(None);
     }
     let target = if input.get("reference").is_some() {
         crate::operating::carried_target(input).ok_or("carried target unavailable")?
@@ -338,11 +346,18 @@ fn capture_inner(
     let Some((local, _)) =
         native_config::load(&root, ".agentic-workspace/config.local.toml", LOCAL_SCHEMA)?
     else {
-        return Ok(());
+        return Ok(None);
     };
     let policy = policy(json!({"local":local,"disable_override":""})).map_err(|e| e.to_string())?;
     if policy["enabled"] != true {
-        return Ok(());
+        return Ok(None);
+    }
+    *requested = true;
+    let identity = std::env::var("AW_SESSION_LOGICAL_IDENTITY").unwrap_or_default();
+    if trim_identity(&identity).is_empty() || identity.len() > 8192 {
+        return Ok(Some(
+            json!({"status":"identity-unavailable","requirement":"AW_SESSION_LOGICAL_IDENTITY","authoritative":false}),
+        ));
     }
     dirs(&root, ROOT)?;
     let _registry_lock = publication_lock(&root)?;
@@ -487,7 +502,8 @@ fn capture_inner(
     safe(&root, &stream)?;
     root.open_with(&stream, OpenOptions::new().append(true).create(true))
         .and_then(|mut f| f.write_all(&line))
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    Ok(Some(json!({"status":"capturing","authoritative":false})))
 }
 
 #[cfg(test)]

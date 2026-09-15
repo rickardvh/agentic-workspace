@@ -288,6 +288,8 @@ def test_carried_diagnostics_follow_explicit_work_target(tmp_path, shared_core_b
     monkeypatch.setenv("AW_SESSION_LOGICAL_IDENTITY", "carriage-fixture")
     context = proposal("json", shared_core_binary, native_cli, tmp_path)
     offered = consume("json", shared_core_binary, native_cli, context | {"projection": "carried"})
+    assert offered["view"]["session_capture"] == {"status": "capturing", "authoritative": False}
+    assert "session_capture" not in json.dumps(offered["carriage"])
     before = len(events(tmp_path))
     consume(
         "json",

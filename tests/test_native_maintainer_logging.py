@@ -48,7 +48,10 @@ def test_native_logging_default_disable_and_result_noninterference(tmp_path, sha
     assert not (tmp_path / ".agentic-workspace/local").exists()
     enabled = call(shared_core_binary, tmp_path)
     assert not any(row["field"].startswith("session_logging.") for row in json.loads(enabled.stdout)["configuration"]["residuals"])
-    assert (enabled.returncode, enabled.stdout, enabled.stderr) == (disabled.returncode, disabled.stdout, disabled.stderr)
+    active_result = json.loads(enabled.stdout)
+    assert active_result.pop("session_capture") == {"status": "capturing", "authoritative": False}
+    assert active_result == json.loads(disabled.stdout)
+    assert (enabled.returncode, enabled.stderr) == (disabled.returncode, disabled.stderr)
     rows = events(tmp_path)
     assert len(rows) == 1
     assert rows[0]["authoritative"] is False
@@ -106,6 +109,7 @@ def test_native_logging_preserves_unknown_or_torn_existing_state(tmp_path, share
     before = {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
     result = call(shared_core_binary, tmp_path, identity="private-session-secret")
     assert result.returncode == 0
+    assert json.loads(result.stdout)["session_capture"] == {"status": "capture-failed", "authoritative": False}
     assert before == {p: p.read_bytes() for p in local.rglob("*") if p.is_file()}
 
 
@@ -134,6 +138,13 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["session_capture"]["status"] == "capturing"
+    # Thin bindings forward the advisory produced by the same native transport.
+    from tests.test_native_public_cli import consume
+
+    for surface in ["python", "typescript"]:
+        value = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect", "projection": "compact"})
+        assert value["session_capture"] == {"status": "capturing", "authoritative": False}
     assert len({row["logical_session_id"] for row in events(tmp_path)}) == 2
     monkeypatch.setenv("AW_SESSION_LOGGING_DISABLE", "1")
     state = session_logging.load_state_for_argv(["--target", str(tmp_path)])
@@ -267,3 +278,52 @@ def test_native_logging_concurrent_registration_preserves_existing_identities(tm
     registry = json.loads((tmp_path / ".agentic-workspace/local/session-logging/sessions.json").read_text(encoding="utf-8"))
     assert len(registry["sessions"]) == 3
     assert len({row["logical_session_id"] for row in events(tmp_path)}) == 3
+
+
+def test_capture_posture_recovers_prospectively_without_episode_residue(tmp_path, shared_core_binary):
+    configured(tmp_path)
+    expected = {"status": "identity-unavailable", "requirement": "AW_SESSION_LOGICAL_IDENTITY", "authoritative": False}
+    baseline = call(shared_core_binary, tmp_path, enabled=False)
+    for identity in ["", "  ", "x" * 8193, ""]:
+        result = call(shared_core_binary, tmp_path, identity=identity)
+        value = json.loads(result.stdout)
+        assert value.pop("session_capture") == expected
+        assert len(json.dumps(expected)) < 160
+        assert value == json.loads(baseline.stdout)
+        assert result.returncode == baseline.returncode
+        assert result.stderr == ""
+        assert not (tmp_path / ".agentic-workspace/local").exists()
+    recovered = call(shared_core_binary, tmp_path)
+    assert json.loads(recovered.stdout)["session_capture"]["status"] == "capturing"
+    assert len(events(tmp_path)) == 1
+    assert events(tmp_path)[0]["sequence"] == 1
+    # Failure is another replaceable observation, including failed effect results.
+    stream = next(tmp_path.glob(".agentic-workspace/local/session-logging/logical-sessions/*/events.jsonl"))
+    original = stream.read_bytes()
+    stream.write_bytes(original + b"{")
+    baseline_failure = call(shared_core_binary, tmp_path, invoke=True, enabled=False)
+    for _ in range(2):
+        failed = call(shared_core_binary, tmp_path, invoke=True)
+        value = json.loads(failed.stdout)
+        assert value.pop("session_capture") == {"status": "capture-failed", "authoritative": False}
+        assert value == json.loads(baseline_failure.stdout)
+        assert failed.returncode == baseline_failure.returncode
+        assert failed.stderr == ""
+        assert stream.read_bytes() == original + b"{"
+    stream.write_bytes(original)
+    assert json.loads(call(shared_core_binary, tmp_path).stdout)["session_capture"]["status"] == "capturing"
+    assert [row["sequence"] for row in events(tmp_path)] == [1, 2]
+    # Even an invalid public request keeps its original error status and payload.
+    import copy
+
+    env = dict(os.environ, AW_SESSION_LOGICAL_IDENTITY="")
+    env.pop("AW_SESSION_LOGGING_DISABLE", None)
+    request = {"start": {"target": str(tmp_path), "unexpected": True}}
+    bad = subprocess.run([str(shared_core_binary)], input=json.dumps(request), text=True, capture_output=True, env=env)
+    disabled_env = copy.copy(env)
+    disabled_env["AW_SESSION_LOGGING_DISABLE"] = "1"
+    quiet = subprocess.run([str(shared_core_binary)], input=json.dumps(request), text=True, capture_output=True, env=disabled_env)
+    error = json.loads(bad.stderr)
+    assert error.pop("session_capture") == expected
+    assert error == json.loads(quiet.stderr)
+    assert bad.returncode == quiet.returncode == 2
