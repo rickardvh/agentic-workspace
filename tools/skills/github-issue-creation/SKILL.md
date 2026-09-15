@@ -14,25 +14,32 @@ this skill owns creation mechanics, not product diagnosis or issue hierarchy.
 1. Preserve the issue kind, hierarchy, **closure shape**, owner, scope, acceptance
    criteria, non-solutions, evidence requirements, and closure boundary produced by
    shaping. Do not reclassify the problem or closure shape here.
-2. Inspect the current `.github/ISSUE_TEMPLATE/*.yml` form for that issue kind.
-   The checked-in form is the authority for required fields and headings.
-3. Translate the closure shape into the template without inventing a new lifecycle
-   surface:
-   - for a **parent outcome / direction**, state that accepted bounded children and
-     dispositions plus immediate aggregate proof permit administrative closure;
-     do not imply that one giant parent-closing PR is required;
-   - for a **bounded implementation leaf**, make the completion rule explicit that
-     one coherent bounded PR plus immediate deterministic/integration proof must be
-     able to make the whole stated implementation outcome true. If the shaped issue
-     cannot honestly satisfy that boundary, return to shaping and split it before
-     creation;
-   - for a **later evidence / review** issue, state explicitly that no product-code
-     PR is required for closure and that concrete implementation findings route to
-     the smallest bounded implementation owner rather than accumulating here.
-4. Build a template-shaped body. The repo helper
-   `.agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py`
-   may be used when it is current and cheaper than constructing the form directly;
-   it is a maintainer aid, not an independent source of issue semantics.
+2. Prepare the already shaped fields through the repository helper:
+
+   ```text
+   uv run --frozen --active --no-sync python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --input-json <shaped-request.json>
+   ```
+
+   The request uses `agentic-workspace/issue-body-request/v1`, a `template`
+   (`direction`, `bug`, or `review`), `title`, and `fields` keyed by current form
+   IDs. Each field is `{"kind":"markdown","value":"<supplied text>"}` (also
+   `text` or `scalar`). Optional `source_refs` carry shaped source IDs, URLs,
+   or repository-relative paths. The helper reads the current form, prepares its
+   headings/order/title prefix/default labels, and preserves the supplied values.
+   It does not infer issue hierarchy or convert Planning records into semantics.
+3. Resolve any `needs-input` diagnostics from shaping. The packet includes current
+   field requirements/options; it supplies no missing dropdown choices, completion
+   rules, or placeholders. Preserve the shaped parent, bounded-leaf, or later-evidence
+   closure text explicitly, including fields whose form has generic default text.
+   A missing or unsupported template, helper, dependency, or source is unavailable:
+   report that limitation and use the Markdown fallback below.
+4. Use only a fresh `prepared` result. It carries exact template/helper/input and
+   local source identities. If preparation inputs may have changed, rerun with
+   `--previous <prior-packet.json>`: it always prepares fresh and identifies stale
+   dependencies; unrelated files do not invalidate the preparation. A comparison
+   marked `current` covers local preparation inputs only. Supplied external URLs/IDs
+   are explicitly unobserved and must be reobserved when subsequent work depends
+   on their current state. Preparation grants no issue-write authority.
 5. Create the issue through the authorized GitHub transport using the shaped title,
    body, and labels. Fill required fields with concrete information; do not create
    an issue containing `TODO` placeholders merely to reserve a number.
@@ -43,6 +50,17 @@ this skill owns creation mechanics, not product diagnosis or issue hierarchy.
    owning Planning continuation says subsequent work depends on that refreshed
    state. Issue creation does **not** require an unconditional
    `external-intent refresh-github` + `reconcile` loop.
+
+## Markdown Fallback
+
+If executable preparation is unavailable, read the selected current
+`.github/ISSUE_TEMPLATE/*.yml` directly and preserve its field headings/order,
+title prefix, required fields, and default labels. Fill semantic fields only from
+shaping, including the explicit closure rule. Return missing or ambiguous
+information to shaping; do not choose the first dropdown option or generate
+completion text. Review the completed body before the separately authorized
+transport step. Python and its dependencies are repository-maintainer tooling,
+not a shipped product runtime requirement.
 
 ## Closure-Shape Examples
 
