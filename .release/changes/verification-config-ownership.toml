@@ -1,3 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
 bump = "minor"
 summary = "Own Verification strategy schemas and preserve unsupported former assurance intent"
 issues = [3301, 3297]
