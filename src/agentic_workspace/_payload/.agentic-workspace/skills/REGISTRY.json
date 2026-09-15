@@ -168,6 +168,12 @@
     {
       "id": "workspace-resources",
       "path": "workspace-resources/SKILL.md",
+      "executable": {
+        "entrypoint": {
+          "kind": "native",
+          "command": "resources"
+        }
+      },
       "scope": "specialized-subskill",
       "stability": "package-managed",
       "visibility": "routed-on-demand",

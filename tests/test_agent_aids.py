@@ -20,6 +20,20 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def test_selected_executable_static_closure_never_runs_helpers(tmp_path):
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    skill = {"id": "example", "executable": {"entrypoint": {"kind": "file", "path": "helper.py"}, "dependencies": ["template.yml"]}}
+    _write(registry, json.dumps({"skills": [skill]}))
+    _write(tmp_path / "helper.py", "raise RuntimeError('must never execute during validation')")
+    assert "template.yml" in check_agent_aids.executable_dependency_findings(tmp_path)[0].message
+    _write(tmp_path / "template.yml", "current template")
+    assert check_agent_aids.executable_dependency_findings(tmp_path) == []
+    skill["executable"]["entrypoint"] = {"kind": "native", "command": "resources"}
+    skill["executable"]["dependencies"] = []
+    _write(registry, json.dumps({"skills": [skill]}))
+    assert check_agent_aids.executable_dependency_findings(tmp_path) == []
+
+
 def _prepare_schema(root: Path) -> None:
     _write(root / "src" / "agentic_workspace" / "contracts" / "schemas" / "agent_aid_manifest.schema.json", _SCHEMA_SOURCE.read_text())
 

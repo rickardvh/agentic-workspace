@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/executable-affordance.schema.json",
+  "title": "Optional selected executable material",
+  "description": "Flat material references in an existing skill registry. No execution or authority is implied.",
+  "x-agentic-workspace-doc-role": "public-contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entrypoint"],
+  "properties": {
+    "entrypoint": {
+      "description": "Existing file helper or packaged native command; a reference is never an execution grant.",
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind", "path"], "properties": {
+          "kind": {"const": "file"}, "path": {"type": "string", "minLength": 1}
+        }},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "command"], "properties": {
+          "kind": {"const": "native"}, "command": {"const": "resources"}
+        }}
+      ]
+    },
+    "dependencies": {"description": "Exact repository-relative material files, excluding optional examples and incidental directory contents.", "type": "array", "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "minLength": 1}}
+  }
+}

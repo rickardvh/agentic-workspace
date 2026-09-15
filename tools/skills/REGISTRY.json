@@ -53,6 +53,15 @@
     {
       "id": "pr-review-recheck",
       "path": "pr-review-recheck/SKILL.md",
+      "executable": {
+        "entrypoint": {
+          "kind": "file",
+          "path": "tools/skills/pr-review-recheck/prepare.py"
+        },
+        "dependencies": [
+          "docs/maintainer/testing-strategy.md"
+        ]
+      },
       "scope": "repo-owned",
       "stability": "repo-managed",
       "summary": "independent external assessment of a submitted change by an agent that did not implement or modify the patch",
@@ -114,6 +123,19 @@
     {
       "id": "github-issue-creation",
       "path": "github-issue-creation/SKILL.md",
+      "executable": {
+        "entrypoint": {
+          "kind": "file",
+          "path": ".agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py"
+        },
+        "dependencies": [
+          ".github/ISSUE_TEMPLATE/01-direction-proposal.yml",
+          ".github/ISSUE_TEMPLATE/02-bug-regression.yml",
+          ".github/ISSUE_TEMPLATE/03-review-friction.yml",
+          "pyproject.toml",
+          "uv.lock"
+        ]
+      },
       "scope": "repo-owned",
       "stability": "repo-managed",
       "summary": "create GitHub issues from current repo issue forms after shaping has established the issue boundary",

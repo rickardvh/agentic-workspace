@@ -113,6 +113,13 @@ PR head's helper or use its modified skill as trusted review procedure. In a
 checkout containing the trusted Git objects, invoke the helper through this
 Git-object loader (replace the baseline, repository and PR arguments):
 
+The selected `github/pr/review` route/procedure detail reports the same optional
+executable material identity used by other skills. Consume it when available in
+the trusted baseline checkout; current worktree material is not admission of
+trusted review tooling. Missing material blocks that executable path. Passive
+discovery leaves external Python/`gh` runtime availability unknown; establish it
+in the explicit trusted invocation environment or use the manual fallback.
+
 ```text
 python -I -c "import subprocess,sys; s=subprocess.check_output(['git','show',sys.argv[1]+':tools/skills/pr-review-recheck/prepare.py']); exec(compile(s,'trusted-review-preparation','exec'),{'__name__':'__main__','TRUSTED_HELPER_BYTES':s})" <trusted-full-commit-sha> --repo <owner/repo> --pr <number> --eligibility independent
 ```

@@ -145,11 +145,7 @@ def _validation_commands(validation: Any) -> list[str]:
 
 
 def _canonical_workflow_paths(tracked: set[str]) -> list[str]:
-    return sorted(
-        path
-        for path in tracked
-        if path in CANONICAL_WORKFLOW_EXACT or path.startswith(CANONICAL_WORKFLOW_PREFIXES)
-    )
+    return sorted(path for path in tracked if path in CANONICAL_WORKFLOW_EXACT or path.startswith(CANONICAL_WORKFLOW_PREFIXES))
 
 
 def _referenced_from_canonical_workflow(entrypoint: str, *, root: Path, tracked: set[str]) -> str | None:
@@ -182,7 +178,9 @@ def _safety_policy_findings(path: str, payload: dict[str, Any], *, root: Path, t
     safety = payload.get("safety")
     if isinstance(safety, dict) and any(bool(safety.get(key)) for key in ("writes_repo", "destructive", "network")):
         if not bool(safety.get("requires_review")):
-            findings.append(Finding(path=path, message="agent aids with writes, destructive actions, or network access must require review"))
+            findings.append(
+                Finding(path=path, message="agent aids with writes, destructive actions, or network access must require review")
+            )
     if payload.get("proof_role") == "canonical-proof" and payload.get("status") != "promoted":
         findings.append(Finding(path=path, message="only promoted aids may declare proof_role='canonical-proof'"))
     if (
@@ -199,8 +197,7 @@ def _safety_policy_findings(path: str, payload: dict[str, Any], *, root: Path, t
                 Finding(
                     path=path,
                     message=(
-                        "candidate or advisory agent aids must not be hidden required workflow entrypoints; "
-                        f"referenced by {workflow_path}"
+                        f"candidate or advisory agent aids must not be hidden required workflow entrypoints; referenced by {workflow_path}"
                     ),
                 )
             )
@@ -214,7 +211,9 @@ def _safety_policy_findings(path: str, payload: dict[str, Any], *, root: Path, t
             and boundary.get("fact_owner") != "external-intent-evidence"
             and payload.get("proof_role") != "canonical-proof"
         ):
-            findings.append(Finding(path=path, message="GitHub-specific advisory aids must route behavior-relevant facts to external-intent evidence"))
+            findings.append(
+                Finding(path=path, message="GitHub-specific advisory aids must route behavior-relevant facts to external-intent evidence")
+            )
     promotion = payload.get("promotion")
     if isinstance(promotion, dict):
         if payload.get("status") == "promoted" and promotion.get("retention_after_promotion") == "delete":
@@ -260,7 +259,7 @@ def agent_aid_findings(paths: list[str] | None = None, root: Path = REPO_ROOT) -
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    findings = agent_aid_findings()
+    findings = agent_aid_findings() + executable_dependency_findings(REPO_ROOT)
     if findings:
         for finding in findings:
             print(f"{finding.path}: {finding.message}", file=sys.stderr)
@@ -268,6 +267,54 @@ def main(argv: list[str] | None = None) -> int:
     if args.quiet_success:
         print("Agent aid manifest check passed.")
     return 0
+
+
+def executable_dependency_findings(root: Path) -> list[Finding]:
+    """Static material closure only: never import/probe declared executables."""
+    schema = json.loads(
+        (REPO_ROOT / "src/agentic_workspace/contracts/schemas/executable_affordance.schema.json").read_text(encoding="utf-8")
+    )
+    validator = Draft202012Validator(schema)
+    pending = ["tools/skills/REGISTRY.json", ".agentic-workspace/skills/REGISTRY.json"]
+    seen = set()
+    findings = []
+    while pending:
+        reference = pending.pop()
+        if reference in seen:
+            continue
+        seen.add(reference)
+        path = root / reference
+        if not path.is_file():
+            continue
+        if not path.resolve().is_relative_to(root.resolve()):
+            findings.append(Finding(reference, "registry reference escapes source root"))
+            continue
+        registry = json.loads(path.read_text(encoding="utf-8"))
+        pending.extend(registry.get("registry_sources", []))
+        for skill in registry.get("skills", []):
+            declaration = skill.get("executable")
+            if declaration is None:
+                continue
+            errors = list(validator.iter_errors(declaration))
+            if errors:
+                findings.extend(Finding(reference, error.message) for error in errors)
+                continue
+            dependencies = list(declaration.get("dependencies", []))
+            if declaration["entrypoint"]["kind"] == "file":
+                dependencies.append(declaration["entrypoint"]["path"])
+            for dependency in dependencies:
+                relative = PurePosixPath(dependency)
+                candidate = root / dependency
+                if (
+                    relative.is_absolute()
+                    or ".." in relative.parts
+                    or "\\" in dependency
+                    or ":" in dependency
+                    or not candidate.resolve().is_relative_to(root.resolve())
+                    or not candidate.is_file()
+                ):
+                    findings.append(Finding(reference, f"{skill['id']}: unavailable executable material {dependency}"))
+    return findings
 
 
 if __name__ == "__main__":

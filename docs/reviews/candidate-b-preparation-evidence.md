@@ -220,3 +220,64 @@ divergence, cap, incomplete/binary patch and head movement share the existing
 recheck scenario. Four owner tests pass. These observations establish evidence
 collection/currentness, not semantic review or independent acceptance. The bounded
 claim has no remaining implementation blocker; independent re-review remains due.
+
+## Minimal selected executable availability (#3263)
+
+The two concrete pilots need helper bytes plus their actual material: current
+issue forms and the existing Python project/lock for issue preparation; trusted
+review helper plus testing procedure for review preparation. Supplied shaped
+sources and external review evidence remain per-invocation inputs, not permanent
+skill dependencies. The selected procedure's own bytes are always included.
+
+The existing skill registry accepts an optional `executable` declaration:
+a file entrypoint or the existing native `resources` command, plus a bounded
+flat set of exact repository-relative files. There is no new registry, graph,
+runtime or import/prose inference. Both repo pilots declare their material in
+`tools/skills/REGISTRY.json`; the packaged resource skill references its existing
+native command without copying source code into installed repositories.
+
+Selected route/procedure detail carries one executable revision over the selected
+declaration/procedure/material, native implementation/contract where applicable,
+and relevant runtime compatibility. Unrelated directory contents and the whole
+registry are excluded. A changed helper/template/contract changes this identity;
+a missing required file fails explicitly. Ordinary root/vocabulary discovery
+does not read those dependencies. Optional files are simply undeclared.
+
+For external file helpers, passive discovery establishes material currentness,
+**not Python, package, GitHub credential or transport availability**. Overall
+availability remains unavailable with an explicit unknown-runtime reason until
+the caller establishes its invocation environment; direct/Markdown use remains
+valid. Native resource availability uses the existing pre-state compatibility
+owner and compiled resource/public-contract identities. Incompatible readers are
+reported as incompatible. A static/no-runtime reader cannot infer that this
+runtime observation occurred from declaration files alone.
+
+The existing aid checker validates the same declaration schema and exact file
+closure without importing or running the helpers. Package-native identities are
+compiled, so required resource code is not mirrored into host repos. Source and
+shipped registry bytes are generated together. No mandatory metadata is added to
+Markdown-only skills.
+
+### Salvage disposition
+
+- #2257 **reuse**: exact material dependencies, unavailable diagnostics, passive
+  declaration checks, and minimal install/resource provenance.
+- #2257 **adapt**: one native selected-detail result replaces the old universal
+  viability/catalogue assumptions; executable material is optional and Markdown
+  competence remains available. Native resources use compiled ownership.
+- #2257 **retire from this design**: mandatory executable closure for every skill,
+  old doctor/profile/lifecycle routing framework and blanket payload mirroring.
+  This does not reopen or claim a reimplementation of closed historical scope.
+- #2822 **evidence-only outside Candidate B**: no kernel/store/replay code, state,
+  candidate graph, cycle detector or research session is promoted into product
+  skill execution. Fresh observation and disposable comparison are already
+  satisfied by existing public/native owners.
+
+### Validation scope
+
+Two native owner cases extend existing route tests for changed/missing material,
+unrelated/optional source controls, passive discovery and installed native
+compatibility/removal. Existing four-surface known-leaf tests cover unchanged
+projection carriage rather than duplicating the new semantics across adapters.
+One existing aid-checker case covers static dangling material and passive helper
+bytes. No new CI constituent, broad scan or runtime probe is introduced.

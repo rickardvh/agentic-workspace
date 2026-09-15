@@ -16,6 +16,14 @@ this skill owns creation mechanics, not product diagnosis or issue hierarchy.
    shaping. Do not reclassify the problem or closure shape here.
 2. Prepare the already shaped fields through the repository helper:
 
+   When native route/procedure detail is available, consume the selected
+   `github/issues/create` executable material identities from the existing route
+   result. Missing material blocks the executable path. External Python/runtime
+   availability remains explicitly unknown to passive discovery; establish it
+   through the existing invocation environment or use the Markdown fallback.
+   Reobserve changed material before preparing; the helper's exact-input check
+   additionally binds the particular form and supplied shaped sources.
+
    ```text
    uv run --frozen --active --no-sync python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --input-json <shaped-request.json>
    ```
