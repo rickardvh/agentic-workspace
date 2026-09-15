@@ -144,7 +144,10 @@ def test_binding_without_targets_remains_owned_and_empty_checkout_quiet(tmp_path
 def test_unobserved_provider_cannot_be_dismissed_by_local_assessment(tmp_path, shared_core_binary, native_cli, surface):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    source.write_text(BASE + '[delegation_targets.native]\ntransports=[{kind="native",adapter="provider-owned",parameters={}}]\n')
+    source.write_text(
+        BASE
+        + '[delegation_targets.native]\ntransports=[{kind="native",adapter="provider-owned",parameters={},command=["unavailable-worker"]}]\n'
+    )
     context = {"target": str(tmp_path), "task": "Inspect current source", "changed": []}
 
     def call(request=None):

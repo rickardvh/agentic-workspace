@@ -76,7 +76,7 @@
             "disallowed"
           ],
           "default": "explicit-only",
-          "description": "When a human override may replace the selected assignment and what provenance is required."
+          "description": "Exact source-admitted replacement policy: explicit-only requires the current human answer; allowed-with-recorded-reason additionally requires a nonempty recorded reason; disallowed rejects replacement. Comparison never supplies human admission."
         },
         "required_execution_guarantees": {
           "type": "array",
@@ -185,7 +185,7 @@
                 "external",
                 "either"
               ],
-              "description": "Where this target runs from the current machine's perspective: local, external, or either. This is a local availability and boundary hint."
+              "description": "Advisory execution-boundary context for comparative judgment; never availability or authorization."
             },
             "confidence": {
               "type": "number",
@@ -207,7 +207,6 @@
                     "enum": [
                       "internal",
                       "process",
-                      "api",
                       "manual",
                       "native"
                     ]
@@ -215,10 +214,6 @@
                   "adapter": {
                     "type": "string",
                     "minLength": 1
-                  },
-                  "parameters": {
-                    "type": "object",
-                    "additionalProperties": true
                   },
                   "command": {
                     "type": "array",
@@ -231,8 +226,7 @@
                   "output_mode": {
                     "type": "string",
                     "enum": [
-                      "stdout",
-                      "json-file"
+                      "stdout"
                     ],
                     "default": "stdout"
                   },
@@ -240,6 +234,11 @@
                     "type": "integer",
                     "minimum": 1,
                     "default": 1800
+                  },
+                  "parameters": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Opaque parameters consumed by the named command adapter from the sealed packet; never native capability evidence."
                   }
                 },
                 "additionalProperties": false,
@@ -255,6 +254,7 @@
                     "then": {
                       "required": [
                         "adapter",
+                        "command",
                         "parameters"
                       ],
                       "not": {
@@ -286,7 +286,7 @@
                         "kind": {
                           "enum": [
                             "process",
-                            "api"
+                            "native"
                           ]
                         }
                       }
@@ -310,15 +310,29 @@
                     },
                     "then": {
                       "not": {
-                        "required": [
-                          "command"
+                        "anyOf": [
+                          {
+                            "required": [
+                              "command"
+                            ]
+                          },
+                          {
+                            "required": [
+                              "timeout_seconds"
+                            ]
+                          },
+                          {
+                            "required": [
+                              "output_mode"
+                            ]
+                          }
                         ]
                       }
                     }
                   }
                 ]
               },
-              "description": "Canonical constructible transport variants. Process/API payload is inseparable from its method; internal readiness is resolved against runtime support."
+              "description": "Supported internal/current-host, manual handoff, process and named native-command transports. Process/native require command argv and use stdout; timeout applies only to those executable variants. Native adapter identity distinguishes command variants and grants no capability."
             },
             "cost_class": {
               "type": "string",

@@ -60,6 +60,25 @@ def test_native_logging_default_disable_and_result_noninterference(tmp_path, sha
     assert before == {p: p.read_bytes() for p in (tmp_path / ".agentic-workspace/local").rglob("*") if p.is_file()}
 
 
+def test_logging_effective_local_policy_preserves_privacy_and_source_failure(tmp_path, shared_core_binary):
+    configured(tmp_path)
+    shared = tmp_path / "shared.local.toml"
+    shared.write_text('[session_logging]\nenabled=true\npath_mode="redacted"\n')
+    local = tmp_path / ".agentic-workspace/config.local.toml"
+    local.write_text('[workspace]\nshared_config_path="shared.local.toml"\n')
+    assert json.loads(call(shared_core_binary, tmp_path).stdout)["session_capture"]["status"] == "capturing"
+    assert events(tmp_path)[-1]["payload"]["entry"]["target"] == "<target>"
+    local.write_text(local.read_text() + '[session_logging]\npath_mode="repo-relative"\n')
+    call(shared_core_binary, tmp_path)
+    assert events(tmp_path)[-1]["payload"]["entry"]["target"] == "."
+    shared.unlink()
+    failed = call(shared_core_binary, tmp_path)
+    disabled = call(shared_core_binary, tmp_path, enabled=False)
+    assert json.loads(failed.stdout) == json.loads(disabled.stdout)
+    assert len(events(tmp_path)) == 2
+    assert any(b["code"] == "assignment-policy-source-unresolved" for b in json.loads(failed.stdout)["decision_packet"]["blockers"])
+
+
 @pytest.mark.parametrize("mode,expected", [("redacted", "<target>"), ("repo-relative", "."), ("absolute", None)])
 def test_native_logging_paths_large_input_and_stable_identity(tmp_path, shared_core_binary, mode, expected):
     configured(tmp_path, mode)

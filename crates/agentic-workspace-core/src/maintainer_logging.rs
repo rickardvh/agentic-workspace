@@ -1,5 +1,5 @@
 //! Failure-isolated native transport diagnostics. Never a semantic input.
-use crate::{CoreError, native_config};
+use crate::CoreError;
 use cap_std::{
     ambient_authority,
     fs::{Dir, OpenOptions},
@@ -336,11 +336,9 @@ fn capture_inner(
         input["target"].as_str().unwrap_or(".")
     };
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(|e| e.to_string())?;
-    let Some((local, _)) =
-        native_config::load(&root, ".agentic-workspace/config.local.toml", LOCAL_SCHEMA)?
-    else {
-        return Ok(None);
-    };
+    let local = crate::native_assignment_policy::load(Path::new(target))
+        .map_err(|e| e.to_string())?
+        .effective;
     let policy = policy(json!({"local":local,"disable_override":""})).map_err(|e| e.to_string())?;
     if policy["enabled"] != true {
         return Ok(None);

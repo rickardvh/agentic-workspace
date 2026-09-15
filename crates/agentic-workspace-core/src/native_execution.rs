@@ -330,6 +330,12 @@ pub(crate) fn view(
         input["selection"] = request["arguments"].clone();
     }
     let result = crate::assignment::configurations(input)?;
+    if requirements["requirements"]["independent_context"] == true {
+        gaps.push("work-relative-independent-context-owner-unavailable");
+        unavailable.push(json!({"owner":"assignment","gap":"work-relative-independent-context-owner-unavailable",
+            "recovery":"A current host/Assignment owner must establish work-relative independence. Configured guarantees, process separation and skill invocation cannot satisfy it; preserve the requirement.",
+            "claim_boundary":"No current native candidate establishes this relation."}));
+    }
     let owner = contract["owners"]
         .as_array()
         .unwrap()
