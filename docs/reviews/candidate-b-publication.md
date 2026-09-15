@@ -117,7 +117,14 @@ unrelated worktrees were preserved. #3291 owns recurrence prevention.
 
 Candidate B does not close #3260, Candidate C, or #2985's support-bearing/maturity
 outcome. Historical source-assurance admissions are not advanced simply because
-the accepted source changed. Publication verification is complete. Independent
-review of this evidence record remains before administrative closure of #3276
-and the real-creation evidence owner #2929. The current Planning continuation
-carries these exact external observations and leaves the larger v1 intent open.
+the accepted source changed. Publication verification is complete. PR #3292 is
+the independent evidence-acceptance and administrative closure transition: its
+merge closes #3276 and the real-creation evidence owner #2929. Before merge, this
+record grants no approval; after merge, no second review/closure task remains.
+
+Planning's post-merge continuation therefore points to Candidate C (#3277), with
+#3264/#3266/#3267 as its current product/disposition owners and #3291 as required
+release-consumer hardening before the next publication. Final preview, #3260
+aggregate closure and support-bearing admission under #2985 remain in that next
+lane. This transition preserves the larger v1 intent without leaving a live
+continuation owned by the Candidate B issues that the same merge closes.

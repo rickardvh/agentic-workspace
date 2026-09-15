@@ -12,9 +12,9 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Candidate B leaves #3261/#3262/#3263/#3265 independently accepted and merged at source 3fd508feba856354e30fd4afc82930f2e6012c87. Immutable preview-v0.56.0 artifact 87cf9ea4b2b0e1d6d59152ef707c3900b5b90595 published; run 34962615722 passed runtime/package/security/provenance/public-byte proof. Separate downloaded-asset verification and manifest attestation passed. Real semantic issue creation produced #3291 and a quiet lexical-overlap control; evidence is in docs/reviews/candidate-b-publication.md.",
-    "owner": "#3276",
-    "residual_intent": "Independent evidence acceptance and administrative #3276/#2929 closure remain. #3291 is a bounded repo-release-consumer follow-up, not a Candidate B portable skill defect. No Candidate C/#3260/#2985 completion or total-cost reduction is claimed."
+    "frontier": "Post-Candidate-B frontier: PR #3292 carries the independently reviewable evidence and auto-closing transition for #3276/#2929. Candidate B implementation and exact preview-v0.56.0 publication are established at source 3fd508feba856354e30fd4afc82930f2e6012c87 and artifact 87cf9ea4b2b0e1d6d59152ef707c3900b5b90595. After that merge, the next lane is Candidate C (#3277); no separate Candidate B review/closure continuation remains.",
+    "owner": "#3277",
+    "residual_intent": "Candidate C #3277 owns #3264/#3266/#3267 dispositions, #3260 aggregate closure, final preview and independent support-bearing v1 admission under #2985. #3291 owns preview-consumer hardening before the next publication. PR #3292 acceptance is the bounded transition into this frontier; this record does not pre-approve it or claim Candidate C, maturity or total-cost success."
   },
   "execution_bounds": {
     "allowed paths": "Tracked product source, first-party packages, generated/released resources, tests, docs, workflows, release metadata, and canonical Planning records required by #2983-#2990.",
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Obtain independent evidence review of Candidate B publication reconciliation and the real #2929 issue-creation trace; then administratively close #3276/#2929. Candidate C and #2985 support-bearing/maturity admission remain separate; #3291 owns the repo preview-helper cleanup/reporting follow-up.",
+  "next_action": "Continue Candidate C through #3277: resolve current #3264 compound-effect, #3266 adaptation/subtraction and #3267 host-disposition owners; require #3291 release-consumer hardening before the next publication. PR #3292 is the Candidate B/#2929 evidence-acceptance and administrative closure transition; its merge closes those issues without a second closure task.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -82,7 +82,7 @@
       "Candidate B #3263: native route owner nine cases pass; Rust library 122 passed/three intentionally ignored; four existing public known-leaf cases and 20 aid checks pass. Generated schema/catalogue and strict payload checks pass. The material control adds 100 irrelevant executable declarations without reading their missing helpers or enlarging roots beyond 1500 bytes. No helper executes during discovery. #2257 reuse/adapt/retire and #2822 evidence-only dispositions are recorded. Resource composition, independent acceptance and publication remain open.",
       "Candidate B resource proof: 30 resource/skills-first cases pass (35.37 s), including minimal/mirrored install/use/uninstall; Rust library 122 pass/three ignored. Native capability mismatch is rejected; generated/static/payload checks pass. Matched scratch lifecycle: public calls 4->2, native owner calls 4->4, extra selected availability checks 0->4, serialized result bytes 7450->4869, one sample elapsed 175.39->148.52 ms, zero containers both paths. Real current-task scratch reentry also returned committed with the same exact resource context through composed native admission. No statistical/provider/total-cost or independent acceptance claim."
     ],
-    "observations": "Candidate B publication: accepted source 3fd508feba856354e30fd4afc82930f2e6012c87; artifact 87cf9ea4b2b0e1d6d59152ef707c3900b5b90595; preview-v0.56.0; hosted run 34962615722 success, 13 public assets, public verifier complete and manifest attestation verified. One public download retry and manual unleased hook-output disposition were required; exact native normalization-worktree cleanup committed. #3291 carries recurrence prevention. Real issue creation consumed current shaping/creation/form/helper/labels before gh mutation; returned title/body/label matched. Independent #2929 evidence review remains.",
+    "observations": "Candidate B publication: accepted source 3fd508feba856354e30fd4afc82930f2e6012c87; artifact 87cf9ea4b2b0e1d6d59152ef707c3900b5b90595; preview-v0.56.0; hosted run 34962615722 success, 13 public assets, public verifier complete and manifest attestation verified. One public download retry and manual unleased hook-output disposition were required; exact native normalization-worktree cleanup committed. #3291 carries recurrence prevention. Real issue creation consumed current shaping/creation/form/helper/labels before gh mutation; returned title/body/label matched. Independent #2929 evidence review remains.Review feedback on #3292: publication and real #2929 creation evidence were found substantively sufficient; the sole blocker was a continuation still pointing to the issues merge would close. Native Planning now assigns the post-merge frontier to #3277 and records #3292 itself as the closure transition. Independent acceptance remains external, with no second administrative-closure action left in the merged continuation.",
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587513916",
@@ -153,7 +153,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 56,
+  "revision": 57,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -205,18 +205,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a1931223fb721563bc6af46058e743295cfa396339b6a25535b8ba1426661082.attempt.json",
-        "revision": "sha256:d5573e58a4bf09c5102e183cdd95c106da6862f587a3b67153e462808f4f8172",
+        "path": ".agentic-workspace/local/effects/84e7006d14238ba5ee462549f52683f762b88392456e513e8899922910ce569e.attempt.json",
+        "revision": "sha256:0b4cc3ec584fc20e755089e8b9baa2fbe613b5f43a05962f9e018c4517854992",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a1931223fb721563bc6af46058e743295cfa396339b6a25535b8ba1426661082.result.json",
-        "revision": "sha256:f8748814977c3818e83875a5bf619c1d172995068b7a9a547bf91f57c5d7bf0c",
+        "path": ".agentic-workspace/local/effects/84e7006d14238ba5ee462549f52683f762b88392456e513e8899922910ce569e.result.json",
+        "revision": "sha256:1807348f1c8e2cfe7e347f7e2ee348e89fffe6b780cb50b1939202ef3aa94ed9",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:f2ec134167c1c0d124cf5a8f591ad33683297189f6c395d18c68642e1b3c0b4b",
+    "invocation_revision": "sha256:b7f0227c4dbd2bb38207268a6f8c0a70b8edfccaced5f9a5ac8e033b2d757d43",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -224,7 +224,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:935d1a25f2455ae182c6d26fa94120de94cf7b977501b175bcba2cc7767d13fd",
+        "document_revision": "sha256:f485b6601393b9e5953832604705ecfb774f922865052d83cb4160d61956a684",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
