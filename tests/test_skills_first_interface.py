@@ -265,10 +265,20 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
         assert not (tmp_path / ".agentic-workspace/skills/workspace-operating-loop/SKILL.md").exists()
         for reference in ("AGENTS.md", MAIN, ".agentic-workspace/config.toml"):
             assert_current_command_examples((tmp_path / reference).read_text())
+    from agentic_workspace.decision import resources
+
+    context = {"target": str(tmp_path), "task": "Installed resource procedure"}
+    created = resources({**context, "request": {"operation": "scratch-create", "compose": True}})
+    assert created["effect_outcome"] == "committed"
+    removed = resources(
+        {**context, "request": {"operation": "scratch-remove", "compose": True, "path": created["resource_context"]["path"]}}
+    )
+    assert removed["effect_outcome"] == "committed"
     assert cli.main(["uninstall", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     assert agents.read_text().strip() == "Repository instruction: preserve this line."
     assert not (tmp_path / MAIN).exists()
+    assert resources({**context, "request": {"operation": "scratch-create", "compose": True}})["status"] == "unavailable"
     for reference, original in retained.items():
         assert (tmp_path / reference).read_bytes() == original
 

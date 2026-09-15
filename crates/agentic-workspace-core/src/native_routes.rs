@@ -87,6 +87,103 @@ fn admit_required_registry(root: &Dir, path: &str) -> Result<(), CoreError> {
     Ok(())
 }
 
+/// Flat, opt-in material references. Never infer imports or execute a dependency.
+fn executable(target: &Path, root: &Dir, declaration: &Value, procedure: &Value) -> Value {
+    #[derive(serde::Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Declaration {
+        entrypoint: Entry,
+        #[serde(default)]
+        dependencies: Vec<String>,
+    }
+    #[derive(serde::Deserialize)]
+    #[serde(deny_unknown_fields, rename_all = "kebab-case", tag = "kind")]
+    enum Entry {
+        File {
+            path: String,
+        },
+        Native {
+            command: String,
+            required_capability: Option<String>,
+        },
+    }
+    let resolve = || -> Result<Value, CoreError> {
+        let schema: Value = serde_json::from_slice(include_bytes!(
+            "../../../src/agentic_workspace/contracts/schemas/executable_affordance.schema.json"
+        ))
+        .expect("checked executable declaration schema");
+        crate::schema_validator(&schema, "executable declaration")?
+            .validate(declaration)
+            .map_err(error)?;
+        let spec: Declaration = serde_json::from_value(declaration.clone()).map_err(error)?;
+        let mut dependencies: BTreeSet<String> = spec.dependencies.into_iter().collect();
+        let mut runtime = json!({"status":"unknown","reason":"external-runtime-unobserved"});
+        let mut packaged = Value::Null;
+        match spec.entrypoint {
+            Entry::File { path } => {
+                dependencies.insert(path);
+            }
+            Entry::Native {
+                command,
+                required_capability,
+            } => {
+                // This pilot references the existing native resource command, not
+                // arbitrary command discovery or a package dependency resolver.
+                if command != "resources" {
+                    return Err(error("unsupported native executable command"));
+                }
+                runtime = crate::runtime_compatibility::native(target)?;
+                if let Some(required) = required_capability
+                    && !runtime["observed_runtime"]["reader_capabilities"]
+                        .as_array()
+                        .is_some_and(|values| values.iter().any(|v| v == &required))
+                {
+                    runtime["status"] = json!("blocked");
+                    runtime["missing_reader_capabilities"] = json!([required]);
+                }
+                packaged = json!({"command":"resources",
+                    "implementation_revision":hash(include_bytes!("native_resources.rs")),
+                    "contract_revision":hash(include_bytes!("../../../src/agentic_workspace/contracts/source_decision_contract.json"))});
+            }
+        }
+        if dependencies.len() > 32 {
+            return Err(error("executable material exceeds 32 exact references"));
+        }
+        let mut material = Vec::new();
+        for path in dependencies {
+            crate::decision_source::relative(&path)?;
+            match crate::native_planning::read(root, &path) {
+                Ok(Some(bytes)) => material.push(json!({"path":path,"status":"current","revision":hash(&bytes)})),
+                Ok(None) => material.push(json!({"path":path,"status":"unavailable","reason":"declared-material-missing"})),
+                Err(problem) => material.push(json!({"path":path,"status":"unavailable","reason":problem.to_string()})),
+            }
+        }
+        let material_current =
+            procedure["status"] == "available" && material.iter().all(|v| v["status"] == "current");
+        let runtime_current = runtime["status"] == "admitted";
+        let status = if !material_current {
+            "unavailable"
+        } else if runtime_current {
+            "current"
+        } else if runtime["status"] == "blocked" {
+            "incompatible"
+        } else {
+            "unavailable"
+        };
+        // Do not include the whole registry, unrelated source files, or volatile
+        // runtime observations in material currentness.
+        let revision = crate::digest(&json!({"declaration":declaration,"procedure":procedure,
+            "material":material,"packaged":packaged,"runtime":runtime,"producer":hash(include_bytes!("native_routes.rs"))}))?;
+        Ok(
+            json!({"status":status,"material_status":if material_current {"current"}else{"unavailable"},
+            "revision":revision,"entrypoint":declaration["entrypoint"],"dependencies":material,"packaged":packaged,"runtime":runtime,
+            "authority_effect":"none","recovery": "Reobserve selected detail after material changes. Restore missing declared material or a compatible existing runtime; external runtime availability must be established at invocation. Otherwise use the Markdown procedure. Never execute during discovery."}),
+        )
+    };
+    resolve().unwrap_or_else(|problem|json!({"status":"unavailable","material_status":"unavailable",
+        "reason":problem.to_string(),"authority_effect":"none","recovery":"Repair the selected declaration or use its Markdown procedure."}))
+}
+
 /// Match semantic_route_catalogue's current explicitly owned registry sources.
 /// Invalid declarations never degrade into an apparently empty current source.
 fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreError> {
@@ -255,6 +352,10 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
                 } else {
                     source["procedure"] =
                         json!({"status":"unavailable","reason":"procedure-path-undeclared"});
+                }
+                if let Some(declaration) = skill.get("executable") {
+                    source["procedure"]["executable"] =
+                        executable(target, &root, declaration, &source["procedure"]);
                 }
                 entry["sources"].as_array_mut().unwrap().push(source);
             }
@@ -541,6 +642,110 @@ mod tests {
         );
         assert!(result.get("selection").is_none());
         assert!(!target.0.join(".agentic-workspace").exists());
+    }
+
+    #[test]
+    fn selected_executable_material_is_passive_selective_and_runtime_honest() {
+        let target = Target::new();
+        let registry = json!({"skills":[{"id":"example","path":"example/SKILL.md","semantic_routes":["example/run"],
+            "executable":{"entrypoint":{"kind":"file","path":"helper.py"},"dependencies":["template.yml","contract.json"]}}]});
+        target.write("tools/skills/REGISTRY.json", &registry.to_string());
+        target.write("tools/skills/example/SKILL.md", "Selected procedure");
+        target.write(
+            "helper.py",
+            "raise RuntimeError('discovery must never execute this')",
+        );
+        target.write("template.yml", "required template");
+        target.write("contract.json", "{}");
+        let vocabulary = source(&target.0).unwrap();
+        let first = procedure(&target.0, "example").unwrap()["procedures"][0]["executable"].clone();
+        assert_eq!(first["material_status"], "current");
+        assert_eq!(first["status"], "unavailable");
+        assert_eq!(first["runtime"]["status"], "unknown");
+        assert_eq!(first["authority_effect"], "none");
+        let mut expanded = registry.clone();
+        for n in 0..100 {
+            expanded["skills"].as_array_mut().unwrap().push(json!({"id":format!("unrelated-{n}"),"path":"missing/SKILL.md",
+                "semantic_routes":[format!("unrelated/{n}")],"executable":{"entrypoint":{"kind":"file","path":"missing.py"}}}));
+        }
+        target.write("tools/skills/REGISTRY.json", &expanded.to_string());
+        assert_eq!(
+            first,
+            procedure(&target.0, "example").unwrap()["procedures"][0]["executable"]
+        );
+        let roots = discovery(json!({"target":target.0})).unwrap();
+        assert!(roots.to_string().len() < 1500);
+        assert!(!roots.to_string().contains("missing.py"));
+        target.write("tools/skills/REGISTRY.json", &registry.to_string());
+        target.write("tools/skills/example/optional.md", "irrelevant example");
+        assert_eq!(
+            first,
+            procedure(&target.0, "example").unwrap()["procedures"][0]["executable"]
+        );
+        for path in ["helper.py", "template.yml", "contract.json"] {
+            let before =
+                procedure(&target.0, "example").unwrap()["procedures"][0]["executable"].clone();
+            target.write(path, "changed exact material");
+            assert_ne!(
+                before["revision"],
+                procedure(&target.0, "example").unwrap()["procedures"][0]["executable"]["revision"]
+            );
+            assert_eq!(vocabulary, source(&target.0).unwrap());
+        }
+        std::fs::remove_file(target.0.join("helper.py")).unwrap();
+        assert_eq!(
+            procedure(&target.0, "example").unwrap()["procedures"][0]["executable"]["material_status"],
+            "unavailable"
+        );
+        assert!(!target.0.join(".agentic-workspace/local").exists());
+    }
+
+    #[test]
+    fn installed_native_affordance_uses_packaged_contract_and_current_runtime() {
+        let target = Target::new();
+        target.write(
+            ".agentic-workspace/skills/REGISTRY.json",
+            include_str!("../../../.agentic-workspace/skills/REGISTRY.json"),
+        );
+        target.write(
+            ".agentic-workspace/skills/workspace-resources/SKILL.md",
+            include_str!("../../../.agentic-workspace/skills/workspace-resources/SKILL.md"),
+        );
+        let first = procedure(&target.0, "workspace-resources").unwrap();
+        let executable = &first["procedures"][0]["executable"];
+        assert_eq!(executable["status"], "current");
+        assert_eq!(executable["packaged"]["command"], "resources");
+        assert_eq!(executable["dependencies"], json!([]));
+        // No product sources or binaries must be copied into the host repository.
+        assert!(!target.0.join("crates").exists());
+        let registry = include_str!("../../../.agentic-workspace/skills/REGISTRY.json");
+        target.write(
+            ".agentic-workspace/skills/REGISTRY.json",
+            &registry.replace("resource-procedure-v1", "future-resource-procedure"),
+        );
+        assert_eq!(
+            procedure(&target.0, "workspace-resources").unwrap()["procedures"][0]["executable"]["status"],
+            "incompatible"
+        );
+        target.write(".agentic-workspace/skills/REGISTRY.json", registry);
+        target.write(
+            ".agentic-workspace/config.toml",
+            "schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=999999\n",
+        );
+        assert_eq!(
+            procedure(&target.0, "workspace-resources").unwrap()["procedures"][0]["executable"]["status"],
+            "incompatible"
+        );
+        std::fs::remove_file(
+            target
+                .0
+                .join(".agentic-workspace/skills/workspace-resources/SKILL.md"),
+        )
+        .unwrap();
+        assert_eq!(
+            procedure(&target.0, "workspace-resources").unwrap()["procedures"][0]["executable"]["material_status"],
+            "unavailable"
+        );
     }
 
     #[test]

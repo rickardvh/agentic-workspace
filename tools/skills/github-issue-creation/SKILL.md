@@ -16,6 +16,14 @@ this skill owns creation mechanics, not product diagnosis or issue hierarchy.
    shaping. Do not reclassify the problem or closure shape here.
 2. Prepare the already shaped fields through the repository helper:
 
+   When native route/procedure detail is available, consume the selected
+   `github/issues/create` executable material identities from the existing route
+   result. Missing material blocks the executable path. External Python/runtime
+   availability remains explicitly unknown to passive discovery; establish it
+   through the existing invocation environment or use the Markdown fallback.
+   Reobserve changed material before preparing; the helper's exact-input check
+   additionally binds the particular form and supplied shaped sources.
+
    ```text
    uv run --frozen --active --no-sync python .agentic-workspace/agent-aids/scripts/github-issue-body/new_github_issue_body.py --input-json <shaped-request.json>
    ```
@@ -64,9 +72,10 @@ not a shipped product runtime requirement.
 
 ## Closure-Shape Examples
 
-- A broad delegation outcome may be a parent while worker-entry and one supported
+- A broad delegation parent outcome permits administrative closure from accepted
+  children and aggregate proof, while worker-entry and one supported
   launch/return path are separate PR-closeable implementation leaves; real-provider
-  economic burden can remain a no-code later-evidence issue.
+  economic burden can remain a later-evidence issue requiring no product-code PR.
 - A bounded adaptation implementation issue may close from current authority,
   mutation/no-retention, and fresh-resolution proof even while a separate evidence
   issue continues observing long-run payoff.

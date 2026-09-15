@@ -51,6 +51,13 @@
     "cross_owner_results": "evidence only until the responsible owner admits a typed request",
     "procedure_references": "non-authoritative"
   },
+  "resource_procedure": {
+    "request": "The existing resources request optionally accepts compose: true. Supply fresh operation intent and the same exact path for recovery; never a retained expected_revision.",
+    "composition": "Check selected executable availability, obtain one native proposal, and carry its exact action through current native admission. No action loop or separate filesystem semantics.",
+    "direct": "operation: direct with compose: true performs zero resource-owner calls and creates no state; ordinary direct work need not call at all.",
+    "judgment": "Missing isolation necessity or current policy judgment yields the native proposal. Composition cannot manufacture permits-isolation.",
+    "result": "Native effect_outcome remains authoritative; resource_context carries the exact target/task/changed/path for fresh reentry. An owner execution error preserves that context with unknown effect outcome, never an automatic retry."
+  },
   "native_cli": {
     "executable": "agentic-workspace",
     "help_flag": "--help",
@@ -63,7 +70,7 @@
       },
       {
         "name": "resources",
-        "description": "Inspect local hygiene or propose/execute one current scratch/worktree resource operation.",
+        "description": "Inspect local hygiene or propose/execute one current resource operation; optional compose carries one exact action after current admission.",
         "input_field": "request",
         "input_required": true
       },
