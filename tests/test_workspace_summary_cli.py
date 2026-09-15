@@ -824,85 +824,6 @@ def test_report_local_aw_state_degrades_without_git(tmp_path: Path, capsys) -> N
     assert packet["degraded"] is True
 
 
-def test_report_local_footprint_splits_managed_and_legacy_scratch(tmp_path: Path, capsys) -> None:
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-    _write(tmp_path / ".gitignore", ".agentic-workspace/local/\nscratch/\n")
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "")
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[local_scratch_retention]\nmax_age_hours = 1\nwarn_total_bytes = 1\nlocal_aw_warn_bytes = 1\n",
-    )
-    run = tmp_path / ".agentic-workspace" / "local" / "scratch" / "runs" / "old-run"
-    _write(
-        run / ".aw-scratch.toml",
-        'owner = "agentic-workspace"\ncreated_at = "2020-01-01T00:00:00+00:00"\npurpose = "test"\nproducer = "pytest"\nretention = "ephemeral"\n',
-    )
-    _write(run / "artifact.txt", "old\n")
-    _write(tmp_path / ".agentic-workspace" / "local" / "scratch" / "legacy" / "artifact.txt", "legacy\n")
-    _write(tmp_path / "scratch" / "host-owned.txt", "host\n")
-    subprocess.run(["git", "add", ".gitignore", ".agentic-workspace/config.toml"], cwd=tmp_path, check=True)
-
-    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_footprint", "--format", "json"]) == 0
-
-    packet = json.loads(capsys.readouterr().out)["answer"]
-    assert packet["kind"] == "agentic-workspace/local-footprint/v1"
-    assert packet["status"] == "attention"
-    scratch = packet["scratch_retention"]
-    assert scratch["managed_run_count"] == 1
-    assert scratch["legacy_entry_count"] == 1
-    assert scratch["eligible_prune_paths"] == [".agentic-workspace/local/scratch/runs/old-run"]
-    assert scratch["legacy_entries"][0]["classification"] == "legacy-aw-local-scratch"
-    assert "largest_files" not in scratch["legacy_entries"][0]
-    assert not any("scratch/host-owned" in json.dumps(item) for item in packet["largest_local_offenders"])
-    assert packet["policy"]["source"] == ".agentic-workspace/config.local.toml"
-    assert packet["next_action"]["legacy_cleanup"]["status"] == "available"
-    assert " --legacy-scratch-cleanup --dry-run " in packet["next_action"]["legacy_cleanup"]["dry_run"]
-    assert " --apply-legacy-scratch-cleanup " in packet["next_action"]["legacy_cleanup"]["apply_after_review"]
-    assert "subtrees" not in packet
-    assert " --section local_footprint --verbose --format json" in packet["detail_command"]
-
-
-def test_upgrade_prunes_manifest_backed_scratch_but_preserves_legacy_and_protected(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    subprocess.run(["git", "init"], cwd=target, check=True, capture_output=True)
-    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        target / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[local_scratch_retention]\nmax_age_hours = 1\nprotected_max_age_hours = 1000000\nmax_total_bytes = 100000\n",
-    )
-    old_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "old-run"
-    protected_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "protected-run"
-    _write(
-        old_run / ".aw-scratch.toml",
-        'owner = "agentic-workspace"\ncreated_at = "2020-01-01T00:00:00+00:00"\npurpose = "test old"\nproducer = "pytest"\nretention = "ephemeral"\n',
-    )
-    _write(old_run / "artifact.txt", "old\n")
-    _write(
-        protected_run / ".aw-scratch.toml",
-        'owner = "agentic-workspace"\ncreated_at = "2020-01-01T00:00:00+00:00"\npurpose = "test protected"\nproducer = "pytest"\nretention = "protected"\nprotect_until = "2999-01-01T00:00:00+00:00"\n',
-    )
-    _write(protected_run / "artifact.txt", "protected\n")
-    legacy = target / ".agentic-workspace" / "local" / "scratch" / "legacy" / "artifact.txt"
-    _write(legacy, "legacy\n")
-
-    assert cli.main(["upgrade", "--target", str(target), "--dry-run", "--format", "json"]) == 0
-    dry_run_payload = json.loads(capsys.readouterr().out)
-    workspace_report = next(report for report in dry_run_payload["reports"] if report["module"] == "workspace")
-    assert any(action["kind"] == "would remove" and action["path"].endswith("old-run") for action in workspace_report["actions"])
-    assert old_run.exists()
-
-    assert cli.main(["upgrade", "--target", str(target), "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
-
-    assert any(action["kind"] == "removed" and action["path"].endswith("old-run") for action in workspace_report["actions"])
-    assert not old_run.exists()
-    assert protected_run.exists()
-    assert legacy.exists()
-
-
 def test_upgrade_legacy_scratch_cleanup_has_explicit_dry_run_and_apply(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1005,35 +926,6 @@ def test_legacy_scratch_cleanup_rejects_symlinked_runs_root(tmp_path: Path) -> N
     assert (outside / "legacy-run").exists()
     assert result["actions"] == []
     assert result["warnings"][0]["message"] == "legacy scratch cleanup skipped; scratch root or runs root is a symlink"
-
-
-def test_scratch_size_budget_subtracts_already_eligible_runs(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    subprocess.run(["git", "init"], cwd=target, check=True, capture_output=True)
-    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        target / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[local_scratch_retention]\nmax_age_hours = 1\nmax_total_bytes = 512\n",
-    )
-    old_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "old-run"
-    current_run = target / ".agentic-workspace" / "local" / "scratch" / "runs" / "current-run"
-    _write(
-        old_run / ".aw-scratch.toml",
-        'owner = "agentic-workspace"\ncreated_at = "2020-01-01T00:00:00+00:00"\npurpose = "old"\nproducer = "pytest"\nretention = "ephemeral"\n',
-    )
-    _write(old_run / "artifact.bin", "x" * 600)
-    _write(
-        current_run / ".aw-scratch.toml",
-        'owner = "agentic-workspace"\ncreated_at = "2999-01-01T00:00:00+00:00"\npurpose = "current"\nproducer = "pytest"\nretention = "ephemeral"\n',
-    )
-    _write(current_run / "artifact.bin", "y" * 100)
-
-    assert cli.main(["report", "--target", str(target), "--section", "local_footprint", "--format", "json"]) == 0
-
-    scratch = json.loads(capsys.readouterr().out)["answer"]["scratch_retention"]
-    assert scratch["eligible_prune_paths"] == [".agentic-workspace/local/scratch/runs/old-run"]
 
 
 def test_scratch_prune_rejects_path_escape_candidates(tmp_path: Path, monkeypatch) -> None:
@@ -1658,7 +1550,7 @@ def test_workspace_summary_completion_task_surfaces_closeout_trust(tmp_path: Pat
     install_bootstrap(target=tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
-        "schema_version = 1\n\n[assurance]\nstrict_closeout = true\n",
+        "\n[assurance]\nstrict_closeout = true\n",
     )
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "state.toml",

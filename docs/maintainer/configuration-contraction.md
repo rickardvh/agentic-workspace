@@ -128,6 +128,27 @@ prerelease human configuration.
 
 ## Implementation validation
 
+### Review correction: active producers
+
+The initial audit overstated the inline-fixture migration. Independent review of
+`38b561e0206e2db2316c58aaf7f6b463d8ccb62e` found the shared instruction-admission
+helper still writing a config version marker, blocking invoke continuation.
+The correction removes remaining current-config markers from that helper,
+intent/adaptation/payload/proof fixtures, operation conformance setup, and external
+consumer readiness. Non-config owner versions and explicit rejection fixtures
+remain. The readiness negative now tests an unknown current-config section.
+
+The model harness no longer branches on a local config version; its source-checkout
+and configured-orchestration producers use the current invocation/transport fields.
+Scoped named-requirement discovery and its existing test now use the Verification
+manifest. Tests asserting removed config-owned overlays and scratch-retention knobs
+are retired; current native instruction, Verification and resource guards remain.
+The shared fixture correction passes the existing invoke-continuation guard across
+all 12 surface/projection combinations, without adding duplicate regressions.
+Scoped-instruction and source-checkout checks pass (21 tests); three focused harness
+preparation/startup checks also pass. Required hosted merge validation is reported
+on the PR for the pushed correction head, separately from this local evidence.
+
 - Actual shared and ignored local sources load through the closed Python reader;
   native `start` reports both sources through the current configuration view.
   A parsed comparison against the baseline confirms that removing the shared

@@ -630,91 +630,6 @@ def test_authority_effect_resolver_intersects_delegated_authority(tmp_path: Path
     assert delegation["rejected_effects"] == ["write-outside-scope"]
 
 
-def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.high_risk.validation_profiles.migration]
-category = "migration"
-applies_to_paths = ["db/migrations/**"]
-required_commands = ["python -c \\"print('migration validation')\\""]
-manual_checks = ["Confirm rollback note exists."]
-impact = "blocking"
-""",
-    )
-    _write(tmp_path / "db" / "migrations" / "001_init.sql", "select 1;\n")
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "db/migrations/001_init.sql",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    decision = payload["decision_packet"]
-    assert "python -c \"print('migration validation')\"" in decision["proof"]["required_commands"]
-    overlay = next(item for item in decision["attention"] if item["signal"] == "high-risk proof overlay")
-    assert overlay["active_count"] == 1
-    assert overlay["detail_selector"] == "proof.high_risk_overlay"
-
-
-def test_implement_tiny_surfaces_ordinary_local_overlay_without_high_risk(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.guidance.local_cli]
-signal = "local-tool-availability"
-category = "tooling"
-applies_to_paths = ["tools/**"]
-guidance = "Local CLI is available in this checkout."
-required_commands = ["python -c \\"print('tool ok')\\""]
-impact = "advisory"
-""",
-    )
-    _write(tmp_path / "tools" / "run.py", "print('ok')\n")
-
-    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "tools/run.py", "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    decision = payload["decision_packet"]
-    overlay = next(item for item in decision["attention"] if item["signal"] == "local proof overlay")
-    assert overlay["active_count"] == 1
-    assert not any(item["signal"] == "high-risk proof overlay" for item in decision["attention"])
-
-
 def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -8936,11 +8851,10 @@ def test_implement_required_best_fit_blocks_unknown_current_target(tmp_path: Pat
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'assignment_policy = "required-best-fit"',
-                'mode = "manual"',
+                'transport_authority = "manual"',
             ]
         ),
     )

@@ -246,7 +246,6 @@ def _write_source_current_payload_fixture(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace/config.toml",
         """
-        schema_version = 1
 
         [payload]
         target_release = "source-current"

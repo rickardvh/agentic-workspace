@@ -561,7 +561,7 @@ def test_real_route_health_signal_executes_registered_owner_operation(tmp_path: 
 
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
     config_path.parent.mkdir(parents=True)
-    config_path.write_text("schema_version = 1\n", encoding="utf-8")
+    config_path.write_text("", encoding="utf-8")
     changed_paths = ["src/example.py"]
     health = workspace_runtime_proof._proof_route_health_payload(
         selected_commands=[
@@ -648,7 +648,7 @@ def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evi
 
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
     config_path.parent.mkdir(parents=True)
-    config_path.write_text("schema_version = 1\n", encoding="utf-8")
+    config_path.write_text("", encoding="utf-8")
     changed_paths = ["src/example.py"]
     test_path = tmp_path / "tests" / "test_example.py"
     test_path.parent.mkdir(parents=True)

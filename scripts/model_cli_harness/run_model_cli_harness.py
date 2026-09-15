@@ -351,8 +351,6 @@ def startup_instructions_file(repo_path: Path) -> str:
             payload = tomllib.loads(config_path.read_text(encoding="utf-8"))
         except (OSError, tomllib.TOMLDecodeError):
             continue
-        if relative_path.endswith("config.local.toml") and payload.get("schema_version") != 1:
-            continue
         workspace = payload.get("workspace")
         if not isinstance(workspace, dict):
             continue
@@ -741,7 +739,7 @@ def _prepare_source_checkout_invocation(
 
     local_config = repo_path / ".agentic-workspace" / "config.local.toml"
     if not local_config.exists():
-        local_config.write_text('schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
+        local_config.write_text('\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
 
 
 def _uv_source_toml_value(source: Any) -> str:

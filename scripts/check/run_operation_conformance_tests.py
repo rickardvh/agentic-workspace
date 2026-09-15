@@ -905,13 +905,13 @@ def _write_local_invoke_config(fixture_root: Path) -> None:
     local_config = config_dir / "config.local.toml"
     command = f"{Path(sys.executable).as_posix()} {(REPO_ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
     local_config.write_text(
-        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(command) + "\n",
+        "[workspace]\ncli_invoke = " + json.dumps(command) + "\n",
         encoding="utf-8",
         newline="\n",
     )
     config = config_dir / "config.toml"
     if not config.is_file():
-        config.write_text('schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8", newline="\n")
+        config.write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8", newline="\n")
 
 
 class ReadinessExecutorError(RuntimeError):
@@ -1462,7 +1462,7 @@ def _external_readiness_results(
                 if disabled_local_config.exists():
                     disabled_local_config.unlink()
                 disabled_config.write_text(
-                    'schema_version = 1\n[workspace]\nenabled = false\ncli_invoke = "agentic-workspace"\n',
+                    '[workspace]\nenabled = false\ncli_invoke = "agentic-workspace"\n',
                     encoding="utf-8",
                     newline="\n",
                 )

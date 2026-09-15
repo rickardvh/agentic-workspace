@@ -245,7 +245,7 @@ def _capability_candidates(root: Path) -> dict[str, list[str]]:
             )
         except (OSError, json.JSONDecodeError):
             pass
-    config_path = root / ".agentic-workspace/config.toml"
+    config_path = root / ".agentic-workspace/verification/manifest.toml"
     if config_path.is_file():
         try:
             config = tomllib.loads(config_path.read_text(encoding="utf-8-sig"))
