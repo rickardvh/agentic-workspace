@@ -102,7 +102,10 @@ def test_real_source_requirement_keeps_claim_boundary_when_scope_is_unknown(
     path = tmp_path / ".agentic-workspace/verification/manifest.toml"
     path.parent.mkdir(parents=True)
     path.write_text(
-        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.requirements.test_evidence_change_decision]' + section,
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.requirements.test_evidence_change_decision]'
+        + section
+        + "\n[assurance.proof_profiles.test_evidence_change]\n"
+        + text.split("[assurance.proof_profiles.test_evidence_change]", 1)[1].split("\n[", 1)[0],
         encoding="utf-8",
     )
     report = runtime._assurance_requirements_report_payload(

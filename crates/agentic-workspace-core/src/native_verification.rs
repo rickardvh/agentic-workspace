@@ -519,7 +519,106 @@ fn receipt_view(
 }
 
 /// Verification owns operational route/profile declarations in its manifest.
+fn admit_manifest(manifest: &Value) -> Result<(), CoreError> {
+    if manifest.is_null() {
+        return Ok(());
+    }
+    let mut schema: Value = serde_json::from_str(include_str!("../../../packages/verification/src/repo_verification_bootstrap/contracts/manifest.schema.json")).expect("Verification manifest schema");
+    schema["properties"]["assurance"] = serde_json::from_str(include_str!("../../../packages/verification/src/repo_verification_bootstrap/contracts/assurance.schema.json")).expect("Verification assurance schema");
+    crate::schema_validator(&schema, "Verification manifest")?.validate(manifest).map_err(|e| CoreError::new(format!("invalid Verification declaration at {MANIFEST}; repair source without weakening requirements: {e}")))?;
+    let references =
+        |row: &Value, field: &str, target: &Value, source: &str| -> Result<(), CoreError> {
+            for reference in row[field]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+            {
+                if target.get(reference).is_none() {
+                    return Err(CoreError::new(format!(
+                        "{MANIFEST}#{source}.{field}: missing declaration {reference}"
+                    )));
+                }
+            }
+            Ok(())
+        };
+    let assurance = &manifest["assurance"];
+    for family in ["protocols", "proof_routes", "scenarios"] {
+        for (id, row) in manifest[family].as_object().into_iter().flatten() {
+            let source = format!("{family}.{id}");
+            references(row, "protocol_refs", &manifest["protocols"], &source)?;
+            references(row, "scenario_refs", &manifest["scenarios"], &source)?;
+            references(row, "proof_profiles", &assurance["proof_profiles"], &source)?;
+            references(
+                row,
+                "assurance_requirement_refs",
+                &assurance["requirements"],
+                &source,
+            )?;
+            if let Some(protocol) = row["protocol_id"].as_str()
+                && manifest["protocols"].get(protocol).is_none()
+            {
+                return Err(CoreError::new(format!(
+                    "{MANIFEST}#{source}.protocol_id: missing protocol {protocol}"
+                )));
+            }
+        }
+    }
+    for family in ["requirements", "subsystem_profiles", "domain_proof_lanes"] {
+        for (id, row) in assurance[family].as_object().into_iter().flatten() {
+            let source = format!("assurance.{family}.{id}");
+            references(row, "proof_profiles", &assurance["proof_profiles"], &source)?;
+            references(
+                row,
+                "applies_to_proof_profiles",
+                &assurance["proof_profiles"],
+                &source,
+            )?;
+            references(
+                row,
+                "assurance_requirement_refs",
+                &assurance["requirements"],
+                &source,
+            )?;
+            if let Some(profile) = row["proof_profile"].as_str()
+                && assurance["proof_profiles"].get(profile).is_none()
+            {
+                return Err(CoreError::new(format!(
+                    "{MANIFEST}#{source}.proof_profile: missing profile {profile}"
+                )));
+            }
+        }
+    }
+    for (id, profile) in assurance["proof_profiles"]
+        .as_object()
+        .into_iter()
+        .flatten()
+    {
+        let mut commands = std::collections::BTreeSet::new();
+        for field in [
+            "required_commands",
+            "optional_commands",
+            "disallowed_commands",
+        ] {
+            for command in profile[field]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+            {
+                if !commands.insert(command) {
+                    return Err(CoreError::new(format!(
+                        "{MANIFEST}#assurance.proof_profiles.{id}: contradictory command roles for {command}"
+                    )));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError> {
+    admit_manifest(manifest)?;
     let Some(owned) = manifest.get("assurance") else {
         return Ok(config.clone());
     };
@@ -878,6 +977,15 @@ pub(crate) fn view_with_applicability(
             } else if !protocol["applies_to_paths"].is_null() {
                 gaps.push(format!("invalid-path-selectors:{id}"));
             }
+            if !protocols.contains_key(id)
+                && protocol["applies_to_task_markers"]
+                    .as_array()
+                    .is_some_and(|items| !items.is_empty())
+            {
+                selector_gaps.push(format!(
+                    "protocol-semantic-scope-requires-owner-judgment:{id}"
+                ));
+            }
         }
     }
     let mut routes = serde_json::Map::new();
@@ -890,6 +998,32 @@ pub(crate) fn view_with_applicability(
             }) {
                 routes.insert(id.clone(), route.clone());
             }
+        }
+    }
+    // A protocol command is a declared candidate, never a passing obligation.
+    for (id, protocol) in &protocols {
+        let commands: Vec<Value> = protocol["commands"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|command| {
+                !routes.values().any(|route| {
+                    route["protocol_refs"]
+                        .as_array()
+                        .is_some_and(|refs| refs.contains(&json!(id)))
+                        && route["commands"]
+                            .as_array()
+                            .is_some_and(|commands| commands.contains(command))
+                })
+            })
+            .cloned()
+            .collect();
+        if !commands.is_empty() {
+            let route_id = format!("protocol:{id}");
+            if routes.contains_key(&route_id) {
+                return Err(CoreError::new("protocol command route identity collision"));
+            }
+            routes.insert(route_id, json!({"protocol_refs":[id],"commands":commands,"scenario_refs":protocol["scenario_refs"]}));
         }
     }
     let mut instruction_checks = Vec::new();
@@ -1208,7 +1342,11 @@ pub(crate) fn view_with_applicability(
     // A repository closeout floor also covers work without a selected protocol.
     // Only the existing source-bound claim judgment can discharge this floor.
     let strict_closeout = config["assurance"]["strict_closeout"] == true;
-    let applicable = strict_closeout || requested || !protocols.is_empty() || !gaps.is_empty();
+    let applicable = strict_closeout
+        || requested
+        || !protocols.is_empty()
+        || !gaps.is_empty()
+        || !selector_gaps.is_empty();
     if applicable {
         gaps.extend(selector_gaps.clone());
         gaps.push("current-task-claim-judgment-not-admitted".into());
@@ -1332,7 +1470,14 @@ pub(crate) fn view_with_applicability(
                 && b["code"] != "strict-closeout-judgment-required"
         });
     }
-    let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row|json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":row["source_requirement"],"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})).collect();
+    let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row| {
+        let source = &row["source_requirement"];
+        let mut missing = vec!["required-evidence-not-admitted"];
+        if source.get("measurement").is_some() { missing.push("measurement-owner-result-unavailable"); }
+        if source.get("review_owner").is_some() { missing.push("required-reviewer-result-not-admitted"); }
+        if source.get("source_intent_ref").is_some() { missing.push("source-intent-reconciliation-not-admitted"); }
+        json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":source,"missing_admissions":missing,"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})
+    }).collect();
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,

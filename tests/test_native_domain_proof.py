@@ -85,7 +85,11 @@ def test_real_domain_lane_and_semantic_only_scope_stay_source_owned(
     text = (ROOT / ".agentic-workspace/verification/manifest.toml").read_text()
     start = text.index("[assurance.domain_proof_lanes.proof_subject_owner]")
     end = text.index("\n[", start + 1)
-    source.write_text('schema_version="agentic-workspace/verification-manifest/v1"\n' + text[start:end])
+    profile_start = text.index("[assurance.proof_profiles.workspace_behavior]")
+    profile_end = text.index("\n[", profile_start + 1)
+    source.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n' + text[start:end] + "\n" + text[profile_start:profile_end]
+    )
     current = tomllib.loads(source.read_text())["assurance"]["domain_proof_lanes"]["proof_subject_owner"]
     result = consume(
         surface,

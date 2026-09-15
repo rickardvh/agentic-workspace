@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "agentic-workspace/verification-manifest/v1"
+    },
+    "protocols": {
+      "type": "object",
+      "maxProperties": 128,
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "review_owner": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "ownerless_reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "applies_to_paths": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "applies_to_task_markers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "assurance_requirement_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "proof_profiles": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "scenario_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "expected_evidence": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "authority_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "stale_when": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "non_goals": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "review_aids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "independent_required": {
+            "type": "boolean"
+          },
+          "manual_required": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scenarios": {
+      "type": "object",
+      "maxProperties": 128,
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "protocol_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "automation_hint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "manual_boundary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "expected_observations": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "pass_evidence_labels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "fail_evidence_labels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "proof_routes": {
+      "type": "object",
+      "maxProperties": 128,
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "protocol_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "scenario_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "assurance_requirement_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "review_aids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "proof_lane_hint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "timeout_seconds": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1200
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "assurance": {
+      "$ref": "assurance.schema.json"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schema_version"
+  ]
+}
