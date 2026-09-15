@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Resolve prepared source-native binaries and preserve still-current local configuration intent during canonical convergence."
+issues = [2767, 3275]

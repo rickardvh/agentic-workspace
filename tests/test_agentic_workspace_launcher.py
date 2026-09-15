@@ -4,10 +4,12 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from tests.test_native_public_cli import native_cli as native_cli
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "run_agentic_workspace.py"
 GENERATOR_PATH = Path(__file__).resolve().parents[1] / "scripts" / "generate" / "generate_command_packages.py"
@@ -79,6 +81,57 @@ def _source_manifest(module, root: Path, *, paths: list[str] | None = None) -> d
 
 def _git(root: Path, *args: str) -> None:
     subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+
+def test_source_launcher_uses_documented_pair_and_preserves_explicit_selection(tmp_path, monkeypatch, capsys):
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", tmp_path)
+    monkeypatch.delenv("AGENTIC_WORKSPACE_CORE_BINARY", raising=False)
+    resolver = tmp_path / "src/agentic_workspace/native_core.py"
+    _write(resolver, (SCRIPT_PATH.parent.parent / "src/agentic_workspace/native_core.py").read_text())
+    for marker in ("Cargo.lock", "crates/agentic-workspace-core/Cargo.toml", "crates/agentic-workspace-cli/Cargo.toml"):
+        _write(tmp_path / marker, "source fixture")
+    suffix = ".exe" if os.name == "nt" else ""
+    directory = tmp_path / "target/debug"
+    cli = directory / f"agentic-workspace{suffix}"
+    core = directory / f"agentic-workspace-core{suffix}"
+    calls = []
+    monkeypatch.setattr(module.subprocess, "call", lambda argv: calls.append(argv) or 0)
+    for missing in (cli, core):
+        other = core if missing == cli else cli
+        _write(other, "fixture binary")
+        missing.unlink(missing_ok=True)
+        assert module._dispatch_to_source_cli(["start"]) == 2
+        assert "cargo build --locked --workspace --bins" in capsys.readouterr().err
+        assert not calls
+    _write(core, "fixture binary")
+    assert module._dispatch_to_source_cli(["start", "--task", "Unicode å context"]) == 0
+    assert calls == [[str(cli), "start", "--task", "Unicode å context"]]
+    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", "explicit-core")
+    assert module._dispatch_to_source_cli(["start"]) == 2
+    assert "shared Agentic Workspace core is unavailable" in capsys.readouterr().err
+    assert len(calls) == 1
+    monkeypatch.delenv("AGENTIC_WORKSPACE_CORE_BINARY")
+    # A damaged installed artifact must never borrow a source build.
+    resolver.with_name("_native").mkdir()
+    assert module._dispatch_to_source_cli(["start"]) == 2
+    assert "shared Agentic Workspace core is unavailable" in capsys.readouterr().err
+    assert len(calls) == 1
+
+
+def test_source_launcher_reaches_current_native_start_without_environment_override(tmp_path, native_cli):
+    env = dict(os.environ)
+    env.pop("AGENTIC_WORKSPACE_CORE_BINARY", None)
+    result = subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "start", "--target", str(tmp_path), "--task", "Read ordinary prose"],
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+    packet = json.loads(result.stdout)
+    assert packet["decision_packet"]["status"] == "direct"
+    assert not (tmp_path / ".agentic-workspace").exists()
 
 
 def test_launcher_skips_generation_when_fingerprint_cache_matches(tmp_path: Path) -> None:

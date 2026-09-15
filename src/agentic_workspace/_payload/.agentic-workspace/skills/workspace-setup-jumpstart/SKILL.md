@@ -9,6 +9,19 @@ Use this procedure when the user asks for configuration help or the current
 operating decision routes a configuration concern here. It is a judgment aid;
 the responsible owner supplies current questions, operations and authority.
 
+Start with the user's outcome, not a list of configuration fields. For example,
+"use this checkout's build" concerns invocation; "use our existing instructions"
+concerns the instruction source; "remember this repository's decisions" concerns
+Memory's current admission and source choices. Discover only that owner's current
+capability and requests. A high-level request is not permission to enable every
+module, choose a provider, or replace repository policy.
+
+Before an irreducible question, compare the existing value with the requested
+outcome and inspect the named repository/runtime facts. Apply an inferable value
+only when the current owner admits the existing human authorization or explicit
+agent grant. A missing value alone is not a required configuration decision.
+If no applicable concern remains, finish without creating configuration or state.
+
 1. Use the invocation already selected by the adapter. Run
    `start --target . --task "<configuration outcome>" --format json` and read its
    `decision_packet`. Preserve any required source-read or Planning request.
@@ -59,6 +72,40 @@ the responsible owner supplies current questions, operations and authority.
    interrupted publication. A second pass with every row `current` needs no writes.
    Byte convergence does not settle unresolved semantic source dispositions or
    establish proof, review acceptance or completion of broader adoption intent.
+
+## Source and capability convergence
+
+In a source checkout, run the documented `cargo build --locked --workspace --bins`
+preparation. `scripts/run_agentic_workspace.py` selects that checkout's paired
+`target/debug` binaries by default. A custom build directory uses an explicit
+`AGENTIC_WORKSPACE_CORE_BINARY`; missing either binary requires rebuilding the
+pair. An unavailable runtime supplies no Assignment or configuration permission.
+Installed bindings continue to use their artifact-verified native distribution.
+
+When a smaller canonical local source coexists with `agentic-workspace.local.toml`,
+explicit canonical fields take precedence, while omitted choices remain derived
+from the former source and visible as current dependencies. Preserve that source.
+Do not claim retirement from a new filename or successful startup. Once its
+meaning is represented in the current source, fresh resolution must work without
+the former representation. Deprecated fields do not acquire new semantics from
+this derivation; unresolved meaning remains with its current owner.
+
+For a relevant independent module, use its returned `configuration_request` and
+`configuration_schema`. Supply only the missing owner-specific settings through
+the resulting Configuration edit; retain unrelated module admissions. Do not add
+module-name branches or a fixed module questionnaire to this procedure.
+
+Read Assignment's execution configurations for actual constructibility and its
+named gaps. Configured internal-delegation support is a preference/declaration,
+not evidence that the host session permits dispatch. Report visibility,
+persistence, resumability and cleanup as unknown unless the current adapter
+guarantees them. Discovery must not create provider work. Any real probe uses
+the existing bounded Assignment/transport operation and its cleanup owner.
+
+After a capability or source change, revisit the affected current request; never
+replay a stale answer or rewrite settled unrelated choices. A second resolution
+should need no writes for settled choices. Deferred optional choices stay with
+their existing owner and do not force unrelated direct work through this skill.
 
 Shared policy stays stronger than local preference. Preserve unrelated keys,
 comments and files. Former source intent must be represented, explicitly
