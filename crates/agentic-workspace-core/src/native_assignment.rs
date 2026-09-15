@@ -11,11 +11,14 @@ pub(crate) const IMPLEMENTATION_SCOPES: &[&str] = &[
 ];
 
 /// Current admission at the shared native continuation/claim boundary. This is
-/// a projection of Assignment and result owners, never a second work ledger.
-pub(crate) fn implementation_admission(requirements: &Value) -> Value {
+/// a projection and restriction of Assignment/result owners, never a second ledger.
+pub(crate) fn implementation_admission(
+    requirements: &Value,
+    contribution: &mut Value,
+) -> Result<Value, CoreError> {
     let assignment = &requirements["assignment"]["result"];
     if assignment["binding"] != true {
-        return json!({"status":"not-required","historical_compliance":"not-established"});
+        return Ok(json!({"status":"not-required","historical_compliance":"not-established"}));
     }
     let result = &requirements["assignment"]["result_admission"];
     let materialized = requirements["result"]["requirements"]["required_result_classes"]
@@ -33,12 +36,26 @@ pub(crate) fn implementation_admission(requirements: &Value) -> Value {
     } else {
         "assessment-required"
     };
-    json!({"status":status,"assignment_identity":assignment["assignment_identity"],
-        "local_continuation_allowed":assignment["local_assignment_satisfied"] == true && !materialized,
+    let admission = json!({"status":status,"assignment_identity":assignment["assignment_identity"],
+        "local_continuation_allowed":assignment["local_assignment_satisfied"] == true && !observed,
         "result_use_allowed":result["result_use_allowed"] == true,
         "historical_compliance":if result["result_use_allowed"] == true {"owner-admitted-result"} else {"not-established"},
         "recovery_owner":"assignment",
-        "boundary":"Native start/invoke continuation, patch integration and completion claims. External editor, shell and Git effects are not intercepted. A current local choice does not attest earlier external implementation."})
+        "boundary":"Native start/invoke continuation, patch integration and completion claims. External editor, shell and Git effects are not intercepted. A current local choice does not attest earlier external implementation."});
+    if status == "returned-unadmitted" {
+        contribution["blockers"].as_array_mut().unwrap().push(json!({
+            "code":"implementation-result-unadmitted",
+            "message":"Observed implementation remains unadmitted. A later local Assignment does not authorize those results or completion claims; use the current Assignment/result recovery.",
+            "affects":IMPLEMENTATION_SCOPES
+        }));
+        contribution["revision"] = json!(digest(&json!([
+            contribution["revision"],
+            admission,
+            result,
+            requirements["delegation"]["observation"]
+        ]))?);
+    }
+    Ok(admission)
 }
 
 fn configuration_key(value: &Value) -> Result<String, CoreError> {
@@ -253,4 +270,37 @@ pub(crate) fn view(
     Ok(
         json!({"result":result,"requests":requests,"source_revision":source,"contribution":{"owner":"assignment","revision":owner["revision"],"blockers":blockers}}),
     )
+}
+
+#[cfg(test)]
+mod admission_tests {
+    use super::*;
+
+    #[test]
+    fn later_local_assignment_cannot_admit_materialized_or_observed_work() {
+        for materialized in [true, false] {
+            let mut requirements = json!({"assignment":{"result":{"binding":true,"local_assignment_satisfied":false}},
+                "result":{"requirements":{"required_result_classes":if materialized {json!(["already-materialized"])} else {json!(["unapplied-patch"])}}},
+                "delegation":{"observation":if materialized {Value::Null} else {json!({"revision":"returned-result"})}}});
+            for local in [false, true] {
+                requirements["assignment"]["result"]["local_assignment_satisfied"] = json!(local);
+                let mut contribution =
+                    json!({"owner":"assignment","revision":"current","blockers":[]});
+                let admission = implementation_admission(&requirements, &mut contribution).unwrap();
+                assert_eq!(admission["status"], "returned-unadmitted");
+                assert_eq!(admission["historical_compliance"], "not-established");
+                assert_eq!(admission["local_continuation_allowed"], false);
+                assert_eq!(
+                    contribution["blockers"][0]["affects"],
+                    json!(IMPLEMENTATION_SCOPES)
+                );
+                assert_ne!(contribution["revision"], "current");
+            }
+            requirements["assignment"]["result_admission"] = json!({"result_use_allowed":true});
+            let mut contribution = json!({"owner":"assignment","revision":"current","blockers":[]});
+            let admission = implementation_admission(&requirements, &mut contribution).unwrap();
+            assert_eq!(admission["status"], "returned-admitted");
+            assert_eq!(contribution["blockers"], json!([]));
+        }
+    }
 }
