@@ -12,6 +12,7 @@ SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
+from generate_configuration_schemas import main as configuration_schemas  # noqa: E402
 from workspace_command_generation import (  # noqa: E402
     generate_workspace_command_packages,
     load_workspace_command_package_ir,
@@ -78,6 +79,8 @@ def _source_cli_fingerprint_manifest_status(
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if configuration_schemas(["--check"] if args.check else []):
+        return 1
     stale_outputs = generate_workspace_command_packages(repo_root=REPO_ROOT, check=bool(args.check))
     if args.check:
         if stale_outputs:

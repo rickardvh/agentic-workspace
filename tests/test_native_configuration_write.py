@@ -88,7 +88,9 @@ def test_durable_choices_are_exact_and_do_not_admit_operational_state(
 ) -> None:
     source = tmp_path / ".agentic-workspace" / source_name
     source.parent.mkdir()
-    before = b"# Human-owned configuration\r\nschema_version=1\r\n"
+    before = (
+        b"# Human-owned configuration\r\nschema_version=1\r\n[workspace]\r\nmaintainer_mode=false # Former material stays byte-exact\r\n"
+    )
     source.write_bytes(before)
     (tmp_path / "GUIDE.md").write_text("Fixture instructions, retained as a source.\n")
     context = {"target": str(tmp_path), "task": "Apply a deliberate fixture configuration choice", "changed": []}
@@ -103,6 +105,14 @@ def test_durable_choices_are_exact_and_do_not_admit_operational_state(
     selected = call(request=detail)["configuration_write"]["selected_choice"]
     assert selected["schema"]["type"] == {"modules.enabled": "array", "workspace.agent_instructions_file": "string"}.get(key, "boolean")
     assert selected["edit_request"] == request
+    if surface == "native" and key == "modules.enabled":
+        for field, authorable in [("assurance.instruction_revision", True), ("workspace.maintainer_mode", False)]:
+            route = copy.deepcopy(detail)
+            route["arguments"]["key"] = field
+            result = call(request=route)["configuration_write"]["selected_choice"]
+            assert result["authorable"] is authorable
+            assert result["edit_request"] is None
+        assert source.read_bytes() == before
     malformed = copy.deepcopy(request)
     malformed["arguments"]["value"] = {"not": "a valid choice"}
     with pytest.raises(AssertionError, match="is not of type"):
@@ -276,4 +286,4 @@ def test_configuration_defer_resumes_outside_human_policy(tmp_path, shared_core_
     assert call()["configuration_write"]["deferred_choices"] == []
     assert (
         tmp_path / ".agentic-workspace/config.local.toml"
-    ).read_text() == "schema_version=1\n\n[safety]\nsafe_to_auto_run_commands = false\n"
+    ).read_text() == "schema_version=2\n\n[safety]\nsafe_to_auto_run_commands = false\n"

@@ -2951,10 +2951,10 @@ def main(argv: list[str] | None = None) -> int:
         ("context authority changed-path enforcement", _validate_context_authority_changed_path_enforcement()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
-        ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),
+        ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config_former.schema.json")),
         (
             "workspace local override sample",
-            _validate(_sample_workspace_local_override_payload(), "workspace_local_override.schema.json"),
+            _validate(_sample_workspace_local_override_payload(), "workspace_local_override_former.schema.json"),
         ),
         (
             "delegation outcomes sample",
@@ -3370,8 +3370,8 @@ def main(argv: list[str] | None = None) -> int:
             checks.append(("cli command manifest parity", ["resolved handwritten command ordering drifted from cli_commands.json"]))
     if "modules" not in cli._command_suggestions("moduls"):  # type: ignore[attr-defined]
         checks.append(("cli command manifest parity", ["command suggestions no longer derive the expected known commands"]))
-    workspace_config_schema = contract_schema("workspace_config.schema.json")
-    local_override_schema = contract_schema("workspace_local_override.schema.json")
+    workspace_config_schema = contract_schema("workspace_config_former.schema.json")
+    local_override_schema = contract_schema("workspace_local_override_former.schema.json")
     agent_instructions_schema = workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]
     if agent_instructions_schema.get("type") != "string" or agent_instructions_schema.get("minLength") != 1:
         checks.append(("workspace config schema parity", ["agent_instructions_file must accept any non-empty string path"]))

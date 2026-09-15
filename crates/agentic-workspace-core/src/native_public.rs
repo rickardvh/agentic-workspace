@@ -382,8 +382,13 @@ fn resolve_with_baseline(
     if configuration["contribution"]["blockers"]
         .as_array()
         .is_some_and(|rows| {
-            rows.iter()
-                .any(|row| row["code"] == "native-payload-target-unproven")
+            rows.iter().any(|row| {
+                row["code"] == "native-payload-target-unproven"
+                    || row["code"] == "workspace-disabled"
+                    || row["code"]
+                        .as_str()
+                        .is_some_and(|code| code.starts_with("native-config-owner:"))
+            })
         })
     {
         for authority in configuration["capability_contract"]["restriction_authorities"]
@@ -645,6 +650,39 @@ fn resolve_with_baseline(
             .flatten()
         {
             if blocker["code"] == "native-payload-target-unproven" {
+                blocker["affects"] = json!(configuration_gap_scopes);
+            }
+        }
+    }
+    // An exact current-key edit preserves unrelated former source bytes. Keep
+    // every non-Configuration effect/claim blocked until its owner resolves it.
+    if config_write["contribution"]["actions"]
+        .as_array()
+        .is_some_and(|actions| {
+            actions.iter().any(|action| {
+                matches!(
+                    action["operation_id"].as_str(),
+                    Some("configuration.write" | "configuration.recover-write")
+                ) && matches!(
+                    action["arguments"]["request"]["arguments"]["source"].as_str(),
+                    Some(".agentic-workspace/config.toml" | ".agentic-workspace/config.local.toml")
+                )
+            })
+        })
+    {
+        for blocker in configuration["contribution"]["blockers"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+        {
+            if blocker["affects"]
+                .as_array()
+                .is_some_and(|scopes| scopes.iter().any(|scope| scope == "task"))
+                && (blocker["code"] == "workspace-disabled"
+                    || blocker["code"]
+                        .as_str()
+                        .is_some_and(|code| code.starts_with("native-config-owner:")))
+            {
                 blocker["affects"] = json!(configuration_gap_scopes);
             }
         }

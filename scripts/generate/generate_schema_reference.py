@@ -291,8 +291,6 @@ def _annotation_errors(schema_path: Path, *, repo_root: Path = REPO_ROOT) -> lis
             "workspace.agent_instructions_file",
             "workspace.workflow_artifact_profile",
             "workspace.improvement_latitude",
-            "workspace.optimization_bias",
-            "workspace.advanced_features",
         ):
             matching = next((row for row in rows if row["path"] == public_field), None)
             if matching is None:

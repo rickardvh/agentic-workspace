@@ -20,6 +20,11 @@ const EFFECT: &str = "configuration-source";
 // Durable choices consumed by current owners, including explicit native module
 // admission. Task answers, learned evidence and operational registries stay out.
 const CHOICES: &[(&str, &str)] = &[
+    (SHARED, "workspace.enabled"),
+    (LOCAL, "workspace.enabled"),
+    (LOCAL, "session_logging.enabled"),
+    (LOCAL, "session_logging.path_mode"),
+    (LOCAL, "clarification.mode"),
     (SHARED, "workspace.cli_invoke"),
     (SHARED, "workspace.improvement_latitude"),
     (LOCAL, "workspace.cli_invoke"),
@@ -77,31 +82,18 @@ fn source_schema(source: &str) -> Result<&'static str, CoreError> {
 fn sources(target: &Path) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     let mut values = json!({});
-    let mut observed = json!({});
     for source in [SHARED, LOCAL] {
         values[source] =
             match crate::native_config::load(&root, source, source_schema(source)?).map_err(err)? {
-                Some((value, revision)) => {
-                    if value["workspace"]["shared_config_path"]
-                        .as_str()
-                        .is_some_and(|p| p != SHARED)
-                    {
-                        return Err(err(
-                            "redirected shared configuration is outside this writer boundary",
-                        ));
-                    }
-                    observed[source] = value;
+                Some((_, revision)) => {
                     json!(revision)
                 }
                 None => Value::Null,
             };
     }
-    if observed[SHARED]["workspace"]["enabled"] == false
-        && observed[LOCAL]["workspace"]["enabled"] == true
-    {
-        return Err(err(
-            "local enablement conflicts with stronger shared policy",
-        ));
+    // Shared-local and former files are read dependencies, never write targets.
+    for source in crate::native_assignment_policy::load(target)?.sources {
+        values[source["reference"].as_str().unwrap()] = source["revision"].clone();
     }
     Ok(values)
 }
@@ -135,7 +127,7 @@ fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     sources(target)?;
     let raw = crate::native_planning::read(&root, source)?
-        .unwrap_or_else(|| b"schema_version=1\n".to_vec());
+        .unwrap_or_else(|| b"schema_version=2\n".to_vec());
     let text = std::str::from_utf8(&raw).map_err(err)?;
     if text.starts_with('\u{feff}') {
         return Err(err(
@@ -208,24 +200,9 @@ fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec
     }
     let parsed: toml::Value = toml::from_str(&rendered).map_err(err)?;
     let parsed = serde_json::to_value(parsed).map_err(err)?;
-    let schema: Value = serde_json::from_str(source_schema(source)?).map_err(err)?;
-    crate::schema_validator(&schema, "configuration write")?
-        .validate(&parsed)
-        .map_err(err)?;
-    // This first slice does not arbitrate override policy. Explicit shared and
-    // local values must agree after the edit; ambiguity cannot widen authority.
-    let other = if source == SHARED { LOCAL } else { SHARED };
-    if key == "workspace.cli_invoke"
-        && let Some((other, _)) =
-            crate::native_config::load(&root, other, source_schema(other)?).map_err(err)?
-        && other["workspace"]["cli_invoke"]
-            .as_str()
-            .is_some_and(|v| Some(v) != value.as_str())
-    {
-        return Err(err(
-            "shared/local invocation conflict; no override authority inferred",
-        ));
-    }
+    crate::native_config::validate_source(&parsed, source_schema(source)?).map_err(err)?;
+    // Local enablement/invocation are preference overrides. Independent module,
+    // source-admission, proof and safety requirements remain with their owners.
     Ok(rendered.into_bytes())
 }
 pub(crate) fn contract() -> Result<Value, CoreError> {
@@ -518,8 +495,20 @@ pub(crate) fn view(
     let args = &request["arguments"];
     if request["request_kind"] == READ {
         let key = args["key"].as_str().unwrap();
-        let (section, field) = key.split_once('.').unwrap();
+        let (section, field) = key
+            .split_once('.')
+            .ok_or_else(|| err("configuration key malformed"))?;
         let source = args["source"].as_str().unwrap();
+        if !CHOICES.contains(&(source, key)) {
+            let schema: Value = serde_json::from_str(source_schema(source)?).map_err(err)?;
+            let shape = &schema["properties"][section]["properties"][field];
+            result["status"] = json!("source-owner-route");
+            result["selected_choice"] = json!({"source":source,"key":key,
+                "authorable":!shape.is_null(),"schema":shape,"edit_request":null,
+                "route":if shape.is_null(){"former-source disposition; preserve unresolved meaning"}else{"repository/local source authoring; preserve independently admitted trust and authority"},
+                "authority":"Read-only route; no write, migration or trust admission."});
+            return Ok(result);
+        }
         let schema = choice_schema(source, key)?;
         let current =
             crate::native_config::load(&root, source, source_schema(source)?).map_err(err)?;
@@ -557,13 +546,9 @@ pub(crate) fn view(
         if args["record_revision"] != digest(&record)? {
             return Err(err("retained write changed"));
         }
-        if [SHARED, LOCAL]
-            .iter()
-            .filter(|other| **other != source)
-            .any(|other| {
-                current[*other] != record["invocation"]["arguments"]["binding"]["sources"][*other]
-            })
-        {
+        let mut prior_sources = record["invocation"]["arguments"]["binding"]["sources"].clone();
+        prior_sources[source] = current[source].clone();
+        if prior_sources != current {
             return Err(err("other configuration changed; recovery is stale"));
         }
         "configuration.recover-write"
@@ -587,7 +572,7 @@ pub(crate) fn view(
         let bytes = proposed(target, source, key, value)?;
         post = crate::native_intent::hash(&bytes);
         let before = crate::native_planning::read(&root, source)?
-            .unwrap_or_else(|| b"schema_version=1\n".to_vec());
+            .unwrap_or_else(|| b"schema_version=2\n".to_vec());
         let before_value = if key == PAYLOAD_KEY {
             if args["nomination"].is_object() {
                 return Err(err(

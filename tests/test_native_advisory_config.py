@@ -187,10 +187,16 @@ def test_exact_configuration_write_preserves_source_authority_and_rejects_drift(
     with pytest.raises(AssertionError):
         call(invocation=action)
     assert source.read_bytes() == original
-    fresh = call()["configuration_write"]["requests"][1]
+    fresh = next(
+        r
+        for r in call()["configuration_write"]["requests"]
+        if r["arguments"]["source"].endswith(source_name) and r["arguments"]["key"] == "workspace.cli_invoke"
+    )
     fresh["arguments"]["value"] = "another-override"
-    with pytest.raises(AssertionError, match="conflict"):
-        call(request=fresh)
+    override = call(request=fresh)["configuration_write"]
+    assert override["status"] == "human-decision-required"
+    assert "another-override" in override["proposal"]["postimage"]
+    assert source.read_bytes() == original
     local.unlink()
     source.write_bytes(original + b"# changed since authorization\r\n")
     with pytest.raises(AssertionError):

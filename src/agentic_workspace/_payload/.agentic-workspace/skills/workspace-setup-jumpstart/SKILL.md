@@ -73,6 +73,24 @@ If no applicable concern remains, finish without creating configuration or state
    Byte convergence does not settle unresolved semantic source dispositions or
    establish proof, review acceptance or completion of broader adoption intent.
 
+## Current authoring and former sources
+
+New sources use `schema_version = 2`. Version 1 is bounded source recognition,
+not an alternative current authoring mode. The exact writer checks the selected
+new value against the current schema while preserving unrelated former material,
+comments and the existing version. Do not upgrade or retire a whole source as a
+side effect of one setting change. Deprecated/read-only fields are not current
+choices. A read-choice result without an edit request names the responsible
+repository/local source authoring route; it grants no edit or trust approval.
+
+Local enabled/cli_invoke override shared availability/invocation defaults, including
+shared-local then checkout-local precedence. Independent proof, source admission,
+module grants and local safety remain binding. Shared-local sources are read
+inputs; the canonical writer does not acquire user-file write authority. Use
+session_logging.enabled/path_mode for diagnostics and clarification.mode only
+as an advisory preference. Use existing defer/recovery for continuation, not setup
+fields. Never derive instruction or decision trust pins from HEAD or source hashes.
+
 ## Source and capability convergence
 
 In a source checkout, run the documented `cargo build --locked --workspace --bins`

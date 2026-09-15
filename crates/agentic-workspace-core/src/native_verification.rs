@@ -538,7 +538,7 @@ fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError
         ));
     }
     let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+        "../../../src/agentic_workspace/contracts/schemas/workspace_config_former.schema.json"
     ))
     .expect("checked schema");
     crate::schema_validator(&schema, "Verification strategy source")?

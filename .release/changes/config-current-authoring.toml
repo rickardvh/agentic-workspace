@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Separate strict version-2 configuration authoring from bounded former sources, preserve exact mixed-source edits, and align core local override and diagnostic choices."
+issues = [3300, 3297]

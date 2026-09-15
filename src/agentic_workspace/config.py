@@ -9,6 +9,20 @@ from typing import Any
 
 from agentic_workspace.result_adapter import serialise_value
 
+
+def _validate_current_authoring(payload: dict[str, Any], *, local: bool) -> None:
+    # The retained source-maintenance reader must not accept malformed v2 as v1.
+    if payload.get("schema_version") == 2:
+        from jsonschema import Draft202012Validator
+
+        from agentic_workspace.contract_tooling import contract_schema
+
+        name = "workspace_local_override" if local else "workspace_config"
+        errors = list(Draft202012Validator(contract_schema(f"{name}.schema.json")).iter_errors(payload))
+        if errors:
+            raise WorkspaceUsageError(f"Invalid current configuration at {list(errors[0].absolute_path)}")
+
+
 WORKSPACE_CONFIG_PATH = Path(".agentic-workspace/config.toml")
 LEGACY_WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
 WORKSPACE_LOCAL_CONFIG_PATH = Path(".agentic-workspace/config.local.toml")
@@ -2986,10 +3000,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
 
     local_payload = load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
 
+    _validate_current_authoring(local_payload, local=True)
     schema_version = local_payload.get("schema_version")
-    if schema_version != 1:
+    if schema_version not in (1, 2):
         raise WorkspaceUsageError(
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 2 (current) or 1 (former) for the local mixed-agent override contract."
         )
     local_workspace_for_shared = _local_config_table(local_payload, "workspace")
     shared_config_path = _resolve_shared_local_config_path(
@@ -3005,10 +3020,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         shared_display = _local_config_display_path(path=shared_config_path, target_root=target_root)
         if shared_config_exists:
             shared_payload = load_toml_payload(path=shared_config_path, surface_name=shared_display)
+            _validate_current_authoring(shared_payload, local=True)
             shared_schema_version = shared_payload.get("schema_version")
-            if shared_schema_version != 1:
+            if shared_schema_version not in (1, 2):
                 raise WorkspaceUsageError(
-                    f"{shared_display} must set schema_version = 1 for the current local mixed-agent override contract."
+                    f"{shared_display} must set schema_version = 2 (current) or 1 (former) for the local mixed-agent override contract."
                 )
             shared_config_applied = True
         else:
@@ -3803,10 +3819,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         )
         payload: dict[str, Any] = {"schema_version": 1}
 
+    _validate_current_authoring(payload, local=False)
     schema_version = payload.get("schema_version")
-    if schema_version != 1:
+    if schema_version not in (1, 2):
         raise WorkspaceUsageError(
-            f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current workspace config contract."
+            f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 2 (current) or 1 (former) for the workspace config contract."
         )
 
     unknown_top_level = sorted(
