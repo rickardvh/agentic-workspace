@@ -166,3 +166,35 @@ priors and cost/latency as rough preferences. Observed outcomes/economics belong
 to their evidence owner. Former aliases may be derived only where equivalent;
 omitted former/shared-local intent survives until represented or explicitly
 retired. Do not replace removed ranking hints with invented guarantees.
+
+## Retiring former guidance and local/package controls
+
+Current authoring has no workflow_obligations, local_overlay, local_memory,
+runtime observation/handoff bags or independently updated module policy. For each
+former entry, separate durable guidance/constraints, proof, original source or
+template references, current observations and useful unanswered questions. Use
+existing scoped instructions and Verification with the original strength, scope
+and shared/local authority. Reobserve stale facts; retain questions only through
+the responsible continuation owner when useful. Never bulk-translate prose or
+promote local material into shared evidence.
+
+A candidate instruction destination can be written through its exact independent
+authorization while former guidance remains blocking for other work. Confirm its
+meaning and admission before the source owner retires the old entry. The write
+neither retires config nor refreshes trust pins. Reenter with relevant and unrelated
+scope and confirm no old form is recreated. Unknown mandatory meaning remains an
+owner blocker, not a successful migration.
+
+All six former local_memory controls are unsupported native topology selections.
+Use the reported explicit-source metadata to distinguish missing, empty,
+inaccessible/unconfined and present-unclassified material. Do not read an empty
+default instead, infer a user-home location, copy private content or retire useful
+material from its mere absence in a review. Repository Memory is a distinct source;
+target guidance and corrections retain their own owners and lifetimes.
+
+Keep payload target_release/minimum_capabilities/policy and reader
+minimum_reader_epoch/required_reader_capabilities as deliberate floors. Derive
+artifact contents/identity and reader contract facts. Former dogfood_latest can
+be represented by source-current only while preserving any explicit target and
+floor. Former module update provenance or incompatible reader pins require their
+source owner's disposition. Payload choices still name only artifact-owned files.

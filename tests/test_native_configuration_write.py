@@ -16,7 +16,7 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
     workspace.mkdir()
     config = workspace / "config.toml"
     config.write_text(
-        'schema_version=1\n[modules]\nenabled=[]\n[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n'
+        'schema_version=1\n[modules]\nenabled=[]\n[payload]\ndogfood_latest=true\nminimum_capabilities=["installed-state-sync-v2"]\npolicy="required-before-work"\n'
     )
     human = tmp_path / "AGENTS.md"
     human.write_text("Preserve the repository's human policy.\n")
@@ -34,6 +34,26 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
         request = current["configuration_write"]["payload_discovery_request"]
         return call(request=request)["configuration_write"]["payload_choices"]
 
+    former_update = '[update.modules.planning]\nsource_type="local"\nsource_ref="former-module-checkout"\n'
+    config.write_text(config.read_text() + former_update)
+    former = config.read_bytes()
+    observed = call()["configuration"]
+    assert next(row for row in observed["residuals"] if row["field"] == "update.modules")["affects"] == ["effect:package-update"]
+    assert config.read_bytes() == former
+    prior = observed["payload"]
+    assert prior["current_policy"]["target_release"] == "source-current"
+    # Explicit package-source decision retires the old module source in favor of
+    # the already selected coordinated artifact; reading never makes that choice.
+    config.write_text(
+        config.read_text()
+        .replace(former_update, "")
+        .replace("schema_version=1", "schema_version=2")
+        .replace("dogfood_latest=true", 'target_release="source-current"')
+    )
+    current_policy = call()["configuration"]["payload"]
+    assert current_policy["current_policy"] == prior["current_policy"]
+    assert current_policy["status"] == prior["status"] == "unresolved"
+    preserved[config] = config.read_bytes()
     initial = choices()
     assert all(row["status"] == "refresh-available" for row in initial)
     wrong = copy.deepcopy(initial[0]["request"])

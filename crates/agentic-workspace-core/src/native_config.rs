@@ -188,6 +188,16 @@ fn residual(source: &str, field: &str, value: &Value, config: &Value) -> Value {
     let mut result = json!({"source":source, "field":field, "owner":owner,
         "value_revision":digest(value).expect("JSON value hashes"),
         "affects":affects, "reason":"current-control-requires-native-owner"});
+    if field.starts_with("local_overlay.") || field.starts_with("workflow_obligations.") {
+        result["transition"] = json!({"status":"entry-level-owner-disposition-required",
+            "authority":if source == LOCAL {"local; never promote into shared policy"} else {"repository"},
+            "durable_guidance":"applicable scoped instructions; preserve advisory versus binding strength",
+            "proof":"supported Verification requirement/check with its existing admission",
+            "template_and_source":"reference the actual repository owner, do not copy its schema",
+            "observations":"reobserve with current owner, not timeless instructions",
+            "questions":"existing responsible decision/continuation only if useful; no retention is valid",
+            "retirement":"preserve former bytes until destination meaning and admission are confirmed; reads never retire"});
+    }
     if field == "delegation.replacement" {
         result["work_identity"] = json!({"id":value["work_id"],"revision":value["work_revision"]});
     }
@@ -411,6 +421,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         },
         Err(error)=>blockers.push(json!({"code":"assignment-policy-source-unresolved","message":error.to_string(),"affects":["effect:implementation"]})),
     }
+    let local_sources = crate::native_memory::former_sources(target, &local["local_memory"])?;
     for (source, value) in [(SHARED, &shared), (LOCAL, &local)] {
         for (section, content) in value.as_object().into_iter().flatten() {
             if section == "schema_version" {
@@ -570,7 +581,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         }
     }
     let revision = digest(
-        &json!({"sources":configuration_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
+        &json!({"sources":configuration_sources,"local_sources":local_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
     )?;
     // Restriction targets come only from the owner mappings above, never from
     // config-authored effect names. A ceiling grants no operation, effect or claim.
@@ -590,7 +601,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     capability_contract["revision"] = json!(digest(&capability_contract)?);
     Ok(
         json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
-        "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
+        "sources":sources,"local_sources":local_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "clarification":local["clarification"],"agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
         "improvement_latitude":shared["workspace"]["improvement_latitude"],"execution_posture":shared["execution_posture"],"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),

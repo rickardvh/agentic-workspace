@@ -104,3 +104,61 @@ def test_current_check_releases_claim_but_preserves_same_instruction_protection(
     restored = next(b for b in stale["decision_packet"]["blockers"] if b["code"] == code)
     assert "claim:complete" in restored["affects"]
     assert "effect:write:.agentic-workspace/local/instructions/**" in restored["affects"]
+
+
+def test_former_mixed_guidance_converges_through_scoped_owners(tmp_path, shared_core_binary, native_cli):
+    repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    workspace.mkdir()
+    shared = workspace / "config.toml"
+    local = workspace / "config.local.toml"
+    shared.write_text(
+        'schema_version=1\n[workflow_obligations.proof]\nsummary="Shared proof before completion"\nstage="closeout"\nforce="required-before-closeout"\ncommands=["echo shared-proof"]\nscope_tags=["workspace"]\n'
+    )
+    local.write_text(
+        'schema_version=1\n[local_overlay.high_risk.guardrails.fixture]\napplies_to_paths=["src/**"]\nimpact="blocking"\nsensitive_data=["private fixtures"]\nsynthetic_fixture_guidance=["Use synthetic examples"]\nrequired_sources=["templates/form.md"]\nheadings=["Evidence"]\nvalidation_state="ci_unavailable"\nlocal_substitute_commands=["echo local-only"]\nlocal_substitute_policy="insufficient"\nquestion="Is old CI still unavailable?"\ncategory="safe-follow-up"\n'
+    )
+    template = tmp_path / "templates/form.md"
+    template.parent.mkdir()
+    template.write_text("# Evidence\n")
+    context = {"target": str(tmp_path), "task": "Inspect fixture behavior", "changed": ["src/a.txt"]}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra})
+
+    old = shared.read_bytes(), local.read_bytes()
+    before = call()
+    residual = next(row for row in before["configuration"]["residuals"] if row["field"] == "local_overlay.high_risk")
+    assert residual["transition"]["authority"].startswith("local;")
+    destinations = {
+        ".agentic-workspace/instructions/shared-proof.md": "---\npaths: [src/**]\nchecks:\n  - run: echo shared-proof\n---\nRequired shared proof before completion.\n",
+        ".agentic-workspace/local/instructions/fixtures.md": "---\npaths: [src/**]\nread: [templates/form.md]\nprotect: [private/**]\n---\nDo not expose private fixture data; use synthetic examples. Consult the original form. Optional local-only validation (`echo local-only`) cannot replace shared proof.\n",
+    }
+    for source, content in destinations.items():
+        _, _, action = instruction(call, source, content)
+        assert action is not None
+        call(invocation=action)
+        assert (shared.read_bytes(), local.read_bytes()) == old
+    # The source owner confirms each meaning before retiring the former entries.
+    # Template structure stays in its original file. Old CI status is reobserved,
+    # and its obsolete safe-follow-up question is deliberately not retained.
+    staged = call()
+    assert staged["configuration"]["residuals"]
+    assert staged["decision_packet"]["claim_boundary"]["allowed"] == []
+    shared.write_text("schema_version=2\n")
+    local.write_text("schema_version=2\n")
+    fresh = call()
+    assert fresh["configuration"]["residuals"] == []
+    rows = {row["source"]["reference"]: row for row in fresh["instructions"]["sources"]}
+    for source in destinations:
+        assert rows[source]["applicable"]
+        assert rows[source]["binding_admission"]["status"] == "current"
+    assert fresh["verification"]["instruction_checks"]
+    assert fresh["decision_packet"]["claim_boundary"]["allowed"] == []
+    assert "local-only" not in (tmp_path / ".agentic-workspace/instructions/shared-proof.md").read_text()
+    assert template.read_text() == "# Evidence\n"
+    unrelated = call(changed=["unrelated.txt"], task="src private shared-proof keyword overlap")
+    assert not any(row["applicable"] for row in unrelated["instructions"]["sources"])
+    assert unrelated["verification"]["instruction_checks"] == []
+    assert call()["configuration"]["residuals"] == []
+    assert shared.read_text() == local.read_text() == "schema_version=2\n"

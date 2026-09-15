@@ -221,45 +221,6 @@
       },
       "additionalProperties": false
     },
-    "update": {
-      "description": "Module update-source policy for installed Agentic Workspace modules.",
-      "type": "object",
-      "default": {},
-      "x-agentic-workspace-doc-role": "maintainer",
-      "x-agentic-workspace-unknown-properties": "warn",
-      "properties": {
-        "modules": {
-          "description": "Per-module update-source overrides. Omitted modules use product defaults.",
-          "type": "object",
-          "default": {},
-          "properties": {
-            "planning": {
-              "description": "Update-source policy for the planning module.",
-              "$ref": "#/$defs/module_update_policy"
-            },
-            "memory": {
-              "description": "Update-source policy for the memory module.",
-              "$ref": "#/$defs/module_update_policy"
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "workflow_obligations": {
-      "description": "Specialized compatibility-only stage-bound workflow obligations. Ordinary repo guidance belongs in .agentic-workspace/instructions/*.md.",
-      "type": "object",
-      "default": {},
-      "x-agentic-workspace-doc-role": "maintainer",
-      "patternProperties": {
-        "^.+$": {
-          "$ref": "#/$defs/workflow_obligation",
-          "description": "+$ referenced contract shape used by this contract."
-        }
-      },
-      "additionalProperties": false
-    },
     "system_intent": {
       "description": "Repo-owned sources for durable product or project intent.",
       "type": "object",
@@ -454,11 +415,6 @@
             "required-before-work"
           ],
           "default": "advisory"
-        },
-        "dogfood_latest": {
-          "description": "For the Agentic Workspace source repo, require the checked-in payload to track the latest source-checkout payload before ordinary work.",
-          "type": "boolean",
-          "default": false
         }
       },
       "additionalProperties": false
@@ -476,94 +432,6 @@
         ]
       },
       "properties": {
-        "enforcement": {
-          "description": "How strictly CLI compatibility expectations should be enforced.",
-          "enum": [
-            "off",
-            "advisory",
-            "blocking"
-          ],
-          "default": "off"
-        },
-        "minimum_version": {
-          "description": "Minimum accepted Agentic Workspace CLI version.",
-          "type": "string",
-          "minLength": 1,
-          "examples": [
-            "0.4.0"
-          ]
-        },
-        "exact_version": {
-          "description": "Exact accepted Agentic Workspace CLI version when a repo must pin execution.",
-          "type": "string",
-          "minLength": 1,
-          "examples": [
-            "0.4.0"
-          ]
-        },
-        "source_classes": {
-          "description": "Allowed source classes for the invoked CLI executable.",
-          "type": "array",
-          "items": {
-            "enum": [
-              "source-checkout",
-              "installed-package",
-              "editable-dev",
-              "unknown"
-            ],
-            "description": "One entry in the source classes list."
-          },
-          "uniqueItems": true,
-          "default": []
-        },
-        "target_relations": {
-          "description": "Allowed relation between the invoked CLI executable and the target repo.",
-          "type": "array",
-          "items": {
-            "enum": [
-              "inside-target",
-              "outside-target",
-              "no-target"
-            ],
-            "description": "One entry in the target relations list."
-          },
-          "uniqueItems": true,
-          "default": []
-        },
-        "command": {
-          "description": "Expected CLI command string when the repo wants compatibility checks to match a specific invocation.",
-          "type": "string",
-          "minLength": 1,
-          "examples": [
-            "agentic-workspace"
-          ]
-        },
-        "contract_schema": {
-          "description": "Durable installed-state contract schema expected by this repository.",
-          "type": "string",
-          "minLength": 1,
-          "default": "agentic-workspace/installed-state-compatibility/v1"
-        },
-        "required_capabilities": {
-          "description": "Reader/runtime compatibility capabilities required from the configured Agentic Workspace CLI. Install-target capabilities belong only in payload.minimum_capabilities and cannot be duplicated here.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true,
-          "default": []
-        },
-        "required_resources": {
-          "description": "Package resources required from the configured Agentic Workspace runtime, expressed as package:relative/path.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true,
-          "default": []
-        },
         "minimum_reader_epoch": {
           "description": "Minimum pre-state compatibility reader epoch required before this repository's managed state may be interpreted.",
           "type": "integer",
@@ -578,15 +446,6 @@
           },
           "uniqueItems": true,
           "default": []
-        },
-        "resolution_policy": {
-          "description": "Required dependency-resolution posture for the configured invocation.",
-          "enum": [
-            "direct",
-            "locked",
-            "frozen"
-          ],
-          "default": "direct"
         }
       },
       "additionalProperties": false
@@ -599,113 +458,5 @@
     "docs/generated"
   ],
   "x-agentic-workspace-unknown-properties": "reject",
-  "additionalProperties": false,
-  "$defs": {
-    "module_update_policy": {
-      "description": "Update source metadata for a managed module.",
-      "type": "object",
-      "x-agentic-workspace-doc-role": "maintainer",
-      "properties": {
-        "source_type": {
-          "description": "Where upgrade or install should resolve the module payload from.",
-          "enum": [
-            "git",
-            "local"
-          ]
-        },
-        "source_ref": {
-          "description": "Git URL/ref or local path, depending on source_type.",
-          "type": "string",
-          "minLength": 1
-        },
-        "source_label": {
-          "description": "Human-readable label for status and report output.",
-          "type": "string",
-          "minLength": 1
-        },
-        "recommended_upgrade_after_days": {
-          "description": "Age threshold after which status or doctor may suggest checking for updates.",
-          "type": "integer"
-        }
-      },
-      "x-agentic-workspace-unknown-properties": "warn",
-      "additionalProperties": false
-    },
-    "workflow_obligation": {
-      "description": "Specialized compatibility obligation surfaced only for a concrete stage-bound lifecycle consumer; not a generic repo-guidance format.",
-      "type": "object",
-      "required": [
-        "summary",
-        "stage",
-        "scope_tags",
-        "commands"
-      ],
-      "x-agentic-workspace-doc-role": "maintainer",
-      "properties": {
-        "summary": {
-          "description": "Short explanation of the obligation.",
-          "type": "string",
-          "minLength": 1
-        },
-        "stage": {
-          "description": "Workflow stage where this obligation matters.",
-          "enum": [
-            "pre-work",
-            "before-claiming-completion",
-            "before-commit",
-            "review",
-            "closeout"
-          ]
-        },
-        "force": {
-          "description": "How strongly a matched obligation affects the next action or closeout gate.",
-          "enum": [
-            "informational",
-            "recommended",
-            "required-before-closeout",
-            "blocking"
-          ],
-          "default": "recommended"
-        },
-        "scope_tags": {
-          "description": "Tags used to match the obligation to touched work scopes.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "description": "One entry in the scope tags list."
-          },
-          "minItems": 1,
-          "examples": [
-            [
-              "contracts",
-              "docs"
-            ]
-          ]
-        },
-        "commands": {
-          "description": "Commands to run or consider at the matching workflow stage.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1,
-            "description": "One entry in the commands list."
-          },
-          "minItems": 1,
-          "examples": [
-            [
-              "make maintainer-surfaces"
-            ]
-          ]
-        },
-        "review_hint": {
-          "description": "Short reminder to surface during review or closeout.",
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "x-agentic-workspace-unknown-properties": "warn",
-      "additionalProperties": false
-    }
-  }
+  "additionalProperties": false
 }

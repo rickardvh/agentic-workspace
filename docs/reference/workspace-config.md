@@ -40,26 +40,6 @@ Current human configuration authoring, version 2. Version 1 sources are read sep
 | `workspace.workflow_artifact_profile` | enum `"repo-owned"`, `"gemini"` | no | `"repo-owned"` | Shape of generated workflow and handoff artifacts. |  |  |
 | `workspace.improvement_latitude` | enum `"none"`, `"reporting"`, `"conservative"`, `"balanced"`, `"proactive"` | no | `"conservative"` | How much repo-directed improvement initiative Agentic Workspace may surface by default. |  |  |
 | `workspace.cli_invoke` | string | no | `"agentic-workspace"` | Repo-owned command prefix agents should use to invoke Agentic Workspace in this repository, such as a source-checkout or dev-dependency invocation. User-specific installs can still override this with .agentic-workspace/config.local.toml. | `"agentic-workspace"`<br>`"uv run agentic-workspace"`<br>`"npm exec agentic-workspace"` | x-agentic-workspace-effective-default-source: "product-default-or-repo-config-or-local-override" |
-| `update` | object | no | `{}` | Module update-source policy for installed Agentic Workspace modules. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
-| `update.modules` | object | no | `{}` | Per-module update-source overrides. Omitted modules use product defaults. |  |  |
-| `update.modules.planning` | ref `#/$defs/module_update_policy` | no |  | Update-source policy for the planning module. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
-| `update.modules.planning.source_type` | enum `"git"`, `"local"` | no |  | Where upgrade or install should resolve the module payload from. |  |  |
-| `update.modules.planning.source_ref` | string | no |  | Git URL/ref or local path, depending on source_type. |  |  |
-| `update.modules.planning.source_label` | string | no |  | Human-readable label for status and report output. |  |  |
-| `update.modules.planning.recommended_upgrade_after_days` | integer | no |  | Age threshold after which status or doctor may suggest checking for updates. |  |  |
-| `update.modules.memory` | ref `#/$defs/module_update_policy` | no |  | Update-source policy for the memory module. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
-| `update.modules.memory.source_type` | enum `"git"`, `"local"` | no |  | Where upgrade or install should resolve the module payload from. |  |  |
-| `update.modules.memory.source_ref` | string | no |  | Git URL/ref or local path, depending on source_type. |  |  |
-| `update.modules.memory.source_label` | string | no |  | Human-readable label for status and report output. |  |  |
-| `update.modules.memory.recommended_upgrade_after_days` | integer | no |  | Age threshold after which status or doctor may suggest checking for updates. |  |  |
-| `workflow_obligations` | object | no | `{}` | Specialized compatibility-only stage-bound workflow obligations. Ordinary repo guidance belongs in .agentic-workspace/instructions/*.md. |  | x-agentic-workspace-doc-role: "maintainer" |
-| `workflow_obligations.<^.+$>` | ref `#/$defs/workflow_obligation` | no |  | +$ referenced contract shape used by this contract. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
-| `workflow_obligations.<^.+$>.summary` | string | yes |  | Short explanation of the obligation. |  |  |
-| `workflow_obligations.<^.+$>.stage` | enum `"pre-work"`, `"before-claiming-completion"`, `"before-commit"`, `"review"`, `"closeout"` | yes |  | Workflow stage where this obligation matters. |  |  |
-| `workflow_obligations.<^.+$>.force` | enum `"informational"`, `"recommended"`, `"required-before-closeout"`, `"blocking"` | no | `"recommended"` | How strongly a matched obligation affects the next action or closeout gate. |  |  |
-| `workflow_obligations.<^.+$>.scope_tags` | array of string | yes |  | Tags used to match the obligation to touched work scopes. | `["contracts", "docs"]` |  |
-| `workflow_obligations.<^.+$>.commands` | array of string | yes |  | Commands to run or consider at the matching workflow stage. | `["make maintainer-surfaces"]` |  |
-| `workflow_obligations.<^.+$>.review_hint` | string | no |  | Short reminder to surface during review or closeout. |  |  |
 | `system_intent` | object | no | `{}` | Repo-owned sources for durable product or project intent. |  | x-agentic-workspace-doc-role: "public"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `system_intent.sources` | array of string | no |  | Ordered candidate files that describe durable repo intent. | `["README.md", "docs/product.md"]` | x-agentic-workspace-effective-default-source: "autodetected-existing-or-product-default" |
 | `system_intent.preferred_source` | string | no |  | Preferred intent source, usually one of system_intent.sources. | `"README.md"` | x-agentic-workspace-effective-default-source: "autodetected-existing-or-product-default" |
@@ -79,17 +59,6 @@ Current human configuration authoring, version 2. Version 1 sources are read sep
 | `payload.target_release` | string | no |  | Desired checked-in Agentic Workspace payload release. Use source-current for source-checkout dogfooding. | `"0.24.0"`<br>`"source-current"` |  |
 | `payload.minimum_capabilities` | array of string | no | `[]` | Payload-owned install-target capabilities that must be present in checked-in payload provenance before the target is satisfied. The same capability cannot also appear in cli_compatibility.required_capabilities. | `["installed-state-sync-v2"]` |  |
 | `payload.policy` | enum `"advisory"`, `"required-before-claim"`, `"required-before-work"` | no | `"advisory"` | How strongly startup should gate work when the installed payload does not satisfy the repo-declared target. |  |  |
-| `payload.dogfood_latest` | boolean | no | `false` | For the Agentic Workspace source repo, require the checked-in payload to track the latest source-checkout payload before ordinary work. |  |  |
 | `cli_compatibility` | object | no | `{}` | Expected CLI identity and posture for commands executed in this repo. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
-| `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | no | `"off"` | How strictly CLI compatibility expectations should be enforced. |  |  |
-| `cli_compatibility.minimum_version` | string | no |  | Minimum accepted Agentic Workspace CLI version. | `"0.4.0"` |  |
-| `cli_compatibility.exact_version` | string | no |  | Exact accepted Agentic Workspace CLI version when a repo must pin execution. | `"0.4.0"` |  |
-| `cli_compatibility.source_classes` | array of enum `"source-checkout"`, `"installed-package"`, `"editable-dev"`, `"unknown"` | no | `[]` | Allowed source classes for the invoked CLI executable. |  |  |
-| `cli_compatibility.target_relations` | array of enum `"inside-target"`, `"outside-target"`, `"no-target"` | no | `[]` | Allowed relation between the invoked CLI executable and the target repo. |  |  |
-| `cli_compatibility.command` | string | no |  | Expected CLI command string when the repo wants compatibility checks to match a specific invocation. | `"agentic-workspace"` |  |
-| `cli_compatibility.contract_schema` | string | no | `"agentic-workspace/installed-state-compatibility/v1"` | Durable installed-state contract schema expected by this repository. |  |  |
-| `cli_compatibility.required_capabilities` | array of string | no | `[]` | Reader/runtime compatibility capabilities required from the configured Agentic Workspace CLI. Install-target capabilities belong only in payload.minimum_capabilities and cannot be duplicated here. |  |  |
-| `cli_compatibility.required_resources` | array of string | no | `[]` | Package resources required from the configured Agentic Workspace runtime, expressed as package:relative/path. |  |  |
 | `cli_compatibility.minimum_reader_epoch` | integer | no |  | Minimum pre-state compatibility reader epoch required before this repository's managed state may be interpreted. |  |  |
 | `cli_compatibility.required_reader_capabilities` | array of string | no | `[]` | Root-reader capabilities required before generated handlers or managed repository state may be loaded. |  |  |
-| `cli_compatibility.resolution_policy` | enum `"direct"`, `"locked"`, `"frozen"` | no | `"direct"` | Required dependency-resolution posture for the configured invocation. |  |  |

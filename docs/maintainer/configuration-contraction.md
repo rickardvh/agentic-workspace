@@ -155,3 +155,83 @@ preservation and a new absent-grant/stale-binding control. The existing work-cla
 journey now authors version 2 sources and continues to prove requirements before
 preferences and relational independence. Current-schema projection preserves
 conditional predicates instead of incorrectly closing partial `if` shapes.
+
+## Guidance, local sources and package policy (#3304–#3306)
+
+Current authoring has no workflow-obligation map, local guidance/high-risk maps,
+local_memory family, empty handoff bag, runtime capability observations or module
+update-source policy. There is no replacement generic policy bag. The existing
+native owners remain responsible for applicability, source admission and proof.
+A config residual names the required entry-level disposition; writing a candidate
+instruction destination does not retire its source or admit completion.
+
+| Former meaning | Destination / disposition |
+| --- | --- |
+| Shared advisory method | Applicable repository instruction/procedure, retaining advisory strength |
+| Binding proof/check or review requirement | Supported Verification requirement or instruction check, retaining scope, force and its separate admission |
+| Local guidance/privacy constraint | Existing local scoped instruction; retain protection and local provenance |
+| Template fields/headings, source/runbook content | Original repository-owned file; instruction references it instead of copying a second definition |
+| Unavailable CI, validation/drift state | Reobserve through current owner; never convert into standing guidance |
+| Local substitute command | Local optional method only; cannot discharge stronger shared proof without its owner's authorization |
+| Unresolved question | Existing responsible decision/continuation if still useful; explicit no-retention for obsolete observations is valid |
+
+The mixed transition proof creates the candidate shared/local instructions through
+the normal exact authorization path while old bytes remain. The source owner then
+confirms each meaning and retires the old entries. Fresh relevant work consumes
+both destinations, shared proof stays required, private policy stays local, the
+original template stays intact and unrelated task words do not activate paths.
+A second pass creates no old configuration. Unknown mandatory meaning remains a
+blocker until supported and admitted; this is not a general prose translator.
+
+All six local_memory fields are unsupported as native local topology controls:
+`enabled`/`path` do not select repository Memory; `target_guidance_enabled` and
+`user_guidance_root` concern scoped guidance/target owners;
+`target_guidance_overlay_path` and `correction_events_path` concern operational
+owner material. Each is former recognition only. Explicit source metadata reports
+missing, empty, inaccessible/unconfined or present-unclassified material without
+reading content or inferring a home directory. Repository Memory's manifest is a
+distinct supported source, never a fallback. Source owner judgment is required for
+meaningfulness, transfer, retention or retirement. No local content is copied,
+deleted, moved or recreated, and existing uninstall controls are unchanged.
+
+Current package policy has three fields: `payload.target_release` chooses an exact
+artifact or source-current, `minimum_capabilities` supplies a floor, and `policy`
+chooses advisory/before-work/before-claim enforcement. Former dogfood_latest=true
+without an explicit target has the same artifact-following meaning as source-current;
+an explicit target and capability floor always survive. Former update.modules
+provenance remains unresolved at the package owner; it is not silently switched
+to the coordinated artifact. Payload refresh writes only artifact-declared paths.
+
+Current reader policy retains `minimum_reader_epoch` and
+`required_reader_capabilities`. Contract identity and available capabilities are
+derived from the actual reader. Former contract_schema still checks its explicit
+pin, including rejecting an unsupported contract. Former minimum/exact versions,
+source classes, target relations, command, capabilities/resources, enforcement and
+resolution_policy retain their prior advisory or unresolved binding disposition;
+no retired launcher is restored. A mismatch cannot become admitted by hiding the
+old source. The invocation preference stays in workspace.cli_invoke.
+
+The actual checkout audit found no workflow_obligations, local_overlay,
+local_memory, update or cli_compatibility material to transfer. Its existing
+payload target, floor and enforcement remain unchanged. Private target/policy
+choices and all source-trust pins remain untouched. Existing unsupported assurance
+intent remains visible; no aggregate acceptance or trust refresh is inferred.
+
+## Aggregate implementation evidence and cost
+
+Against baseline 5e35307320ed380b1a0fac093168fc08bfd933a0, fixed-property occurrences
+outside reusable definitions contract from 179 to 44 shared and 110 to 41 local.
+The metric is structural, not independent human decisions. The meaningful
+subtractions are the parallel policy frameworks, stale observations and copied
+module metadata; the remaining choices have distinct authority or preference
+roles documented above. Ordinary unconfigured work still creates no setup state
+or external probe. Detailed module discovery loads only one selected descriptor;
+former local-source inspection touches only explicitly configured metadata.
+
+Retain bounded tests with the current configuration, independent-admission,
+Assignment, Verification, instruction and payload owners. Do not retain a test per
+former field, migration transcript, personal-source inventory or a new CI lane.
+Validation proves the implemented contracts and representative convergence; issue
+acceptance, parent closure and total operating cost are separate judgments. This
+stack includes no release publication and no self-review. Ready for independent
+review after its focused checks; source-specific unresolved consent stays visible.

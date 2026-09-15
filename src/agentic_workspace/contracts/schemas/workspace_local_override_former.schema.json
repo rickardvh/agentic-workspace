@@ -65,7 +65,8 @@
         }
       },
       "additionalProperties": false,
-      "description": "Capabilities of the current agent/runtime on this machine."
+      "description": "Capabilities of the current agent/runtime on this machine.",
+      "x-current-authoring": false
     },
     "handoff": {
       "type": "object",
@@ -78,7 +79,8 @@
         }
       },
       "additionalProperties": false,
-      "description": "Local preferences for internal or external delegation handoff."
+      "description": "Local preferences for internal or external delegation handoff.",
+      "x-current-authoring": false
     },
     "safety": {
       "type": "object",
@@ -362,7 +364,8 @@
         }
       },
       "additionalProperties": false,
-      "description": "Machine-local memory opt-in and path configuration."
+      "description": "Machine-local memory opt-in and path configuration.",
+      "x-current-authoring": false
     },
     "session_logging": {
       "type": "object",
@@ -430,7 +433,8 @@
         }
       },
       "additionalProperties": false,
-      "description": "Machine-local guidance overlay. It may shape the acting checkout workflow but is not checked-in host policy."
+      "description": "Machine-local guidance overlay. It may shape the acting checkout workflow but is not checked-in host policy.",
+      "x-current-authoring": false
     },
     "delegation_targets": {
       "type": "object",

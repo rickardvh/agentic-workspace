@@ -1,3 +1,10 @@
+"""Source-maintenance parsing, including bounded former configuration recognition.
+
+Historical dataclass paths and overlay projections do not establish native owner
+support. Current version-2 authoring is validated separately; native Memory uses
+its repository manifest and explicitly preserves unsupported former local sources.
+"""
+
 from __future__ import annotations
 
 import json
@@ -2921,7 +2928,7 @@ def _normalize_local_overlay(
     if legacy_high_risk_overlay not in (None, {}):
         message = (
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay] is deprecated; "
-            "use [local_overlay.high_risk] so high-risk workflow guidance consumes the general local overlay substrate."
+            "preserve its former intent and use the responsible scoped instruction/Verification owner for current authoring."
         )
         warnings.append(message)
         overlay_warnings.append(message)

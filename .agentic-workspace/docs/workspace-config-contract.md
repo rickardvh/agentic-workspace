@@ -47,3 +47,10 @@ query or successful configuration write establishes whole-task completion.
 Without executable AW, the same canonical skill supplies the bounded read-only
 path. Runtime, local and external facts remain unknown; no static file can
 manufacture an operating decision or owner effect.
+
+Current package policy is payload target/floor/enforcement plus reader epoch and
+required capabilities. Current independent-module choices prepare one exact
+implementation/contract binding with separately approved grants. Verification
+owns supported assurance definitions. Former guidance maps and local_memory path
+controls are not current authoring: preserve unresolved intent through the named
+source owners, never infer a default fallback, waiver or trust-pin refresh.

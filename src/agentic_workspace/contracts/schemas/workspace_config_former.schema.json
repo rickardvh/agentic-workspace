@@ -309,7 +309,8 @@
           "additionalProperties": false
         }
       },
-      "additionalProperties": true
+      "additionalProperties": true,
+      "x-current-authoring": false
     },
     "workflow_obligations": {
       "description": "Specialized compatibility-only stage-bound workflow obligations. Ordinary repo guidance belongs in .agentic-workspace/instructions/*.md.",
@@ -322,7 +323,8 @@
           "description": "+$ referenced contract shape used by this contract."
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "x-current-authoring": false
     },
     "system_intent": {
       "description": "Repo-owned sources for durable product or project intent.",
@@ -1546,7 +1548,8 @@
         "dogfood_latest": {
           "description": "For the Agentic Workspace source repo, require the checked-in payload to track the latest source-checkout payload before ordinary work.",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-current-authoring": false
         }
       },
       "additionalProperties": true
@@ -1571,7 +1574,8 @@
             "advisory",
             "blocking"
           ],
-          "default": "off"
+          "default": "off",
+          "x-current-authoring": false
         },
         "minimum_version": {
           "description": "Minimum accepted Agentic Workspace CLI version.",
@@ -1579,7 +1583,8 @@
           "minLength": 1,
           "examples": [
             "0.4.0"
-          ]
+          ],
+          "x-current-authoring": false
         },
         "exact_version": {
           "description": "Exact accepted Agentic Workspace CLI version when a repo must pin execution.",
@@ -1587,7 +1592,8 @@
           "minLength": 1,
           "examples": [
             "0.4.0"
-          ]
+          ],
+          "x-current-authoring": false
         },
         "source_classes": {
           "description": "Allowed source classes for the invoked CLI executable.",
@@ -1602,7 +1608,8 @@
             "description": "One entry in the source classes list."
           },
           "uniqueItems": true,
-          "default": []
+          "default": [],
+          "x-current-authoring": false
         },
         "target_relations": {
           "description": "Allowed relation between the invoked CLI executable and the target repo.",
@@ -1616,7 +1623,8 @@
             "description": "One entry in the target relations list."
           },
           "uniqueItems": true,
-          "default": []
+          "default": [],
+          "x-current-authoring": false
         },
         "command": {
           "description": "Expected CLI command string when the repo wants compatibility checks to match a specific invocation.",
@@ -1624,13 +1632,15 @@
           "minLength": 1,
           "examples": [
             "agentic-workspace"
-          ]
+          ],
+          "x-current-authoring": false
         },
         "contract_schema": {
           "description": "Durable installed-state contract schema expected by this repository.",
           "type": "string",
           "minLength": 1,
-          "default": "agentic-workspace/installed-state-compatibility/v1"
+          "default": "agentic-workspace/installed-state-compatibility/v1",
+          "x-current-authoring": false
         },
         "required_capabilities": {
           "description": "Reader/runtime compatibility capabilities required from the configured Agentic Workspace CLI. Install-target capabilities belong only in payload.minimum_capabilities and cannot be duplicated here.",
@@ -1640,7 +1650,8 @@
             "minLength": 1
           },
           "uniqueItems": true,
-          "default": []
+          "default": [],
+          "x-current-authoring": false
         },
         "required_resources": {
           "description": "Package resources required from the configured Agentic Workspace runtime, expressed as package:relative/path.",
@@ -1650,7 +1661,8 @@
             "minLength": 1
           },
           "uniqueItems": true,
-          "default": []
+          "default": [],
+          "x-current-authoring": false
         },
         "minimum_reader_epoch": {
           "description": "Minimum pre-state compatibility reader epoch required before this repository's managed state may be interpreted.",
@@ -1674,7 +1686,8 @@
             "locked",
             "frozen"
           ],
-          "default": "direct"
+          "default": "direct",
+          "x-current-authoring": false
         }
       },
       "additionalProperties": true
