@@ -1,5 +1,41 @@
 # Native Planning creation
 
+## Current work, remembered selection, and task posture
+
+`planning.current_work_id` is the public current-work identity. `selection_scope`
+is the advisory local thread cursor (or `default` storage slot). Old selector
+files named that cursor `current_work_id`; the native reader treats it only as a
+legacy scope alias and rejects conflicting aliases. Newly acquired selectors
+write `selection_scope` and mechanically derive the legacy cursor alias from it.
+No task wording, thread name, or default-slot match
+admits a current owner.
+
+Fresh entry exposes `incumbent_owner` as remembered context and leaves
+`selected_owner` null until an explicit continuation or exact retained
+current-work/source custody establishes the relation. Existing custody and
+source-currentness checks still govern every mutation. An unresolved or independent
+relation exposes no material update, recovery, handoff retention or result adoption
+request. Retargeting a material request to fresh work cannot bypass this gate.
+An exact retained update can establish same-work continuation only against its
+committed postimage; it does not refresh the previous source reconciliation.
+
+The continuation request accepts `answer: independent` separately from optional
+`task_posture: direct | planned`. With posture omitted, `task_relation` is
+independent and `required_transition` remains `determine-posture`; this is not a
+direct-work assertion. The emitted `planning-posture` decision then offers direct
+and planned choices through `planning/posture/v1`; ordinary bounded answering
+constructs the next request without manually adding a hidden posture field.
+Direct posture creates no owner or selector residue.
+Planned posture allows the existing creation and explicit selection path,
+preserving the previous owner. The deprecated `unrelated-direct` input derives
+independent/direct semantics and is rejected alongside `planning.create`.
+
+This preserves the separation established by #2175/#2229 and #2277/#2279:
+current work binds admission, actor-local selection supplies a hint, and semantic
+relation and required transition remain distinct. There is no new task registry
+or relevance classifier. Reworded continuation still requires explicit judgment.
+
+
 The public Planning `planning/create/v1` request creates one current compact `planning-execplan/v1` owner. Request material uses the canonical schema's existing field definitions. The acting agent authors outcome, scope, constraints, stops, dependency facts, proof obligations, continuation and next action. Rust supplies only the confined work-bound identity/path and initial planned/shaping revision; it does not fill placeholder judgments or generate proof.
 
 Creation exclusively acquires an absent owner document. It does not acquire a selector, alter the former Planning state file, or activate another owner. Its result offers a separate exact current continuation request. Existing selector ownership remains preserved. Direct unrelated work creates no state.
@@ -25,7 +61,7 @@ Closeout remains active, and unknown lifecycle values fail closed. Explicit
 selection of another live owner continues to require native selector custody;
 historical selectors gain no transfer authority from being closed.
 
-Native-created owners expose `planning/update/v1` through `planning.update_requests`.
+Native-created owners with admitted continuation expose `planning/update/v1` through `planning.update_requests`.
 The caller supplies the canonical material and frontier fields; Rust preserves
 identity, path and creation custody and returns an exact `planning.update`
 invocation. Historical Plans without native creation custody remain read-only.
@@ -40,7 +76,7 @@ attempts retain the preceding invocations. Unknown bytes are preserved. A proces
 exit after common admission but before the Plan retains its postimage leaves the
 original source intact and the attempt uncertain: neither an existing attempt
 filename nor retry grants custody. A process exit after the exact postimage is
-retained permits fresh `start` to return `planning.pending_update.invocation`;
+retained permits fresh `start` with admitted continuation to return `planning.pending_update.invocation`;
 `invoke` still validates current task, capability and restrictions before it
 finishes the prepared commit. This is process-interruption evidence, not a
 power-loss durability claim or complete automatic recovery of the initial gap.
@@ -53,7 +89,7 @@ not participants in that cooperative protocol.
 
 The original invocation keeps its exact task identity, including wording and
 changed paths. A fresh caller with different wording can submit the returned
-`planning.update_recovery_requests` entry together with the existing current
+`planning.update_recovery_requests` entry exposed after continuation, together with the existing current
 `continue-selected` request. This selects `planning.update-recover`, a new
 current re-entry action bound to the exact retained postimage, effect and
 selected owner. It cannot also change selection, admit historical custody or

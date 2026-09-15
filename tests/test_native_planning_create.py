@@ -230,8 +230,11 @@ def test_real_former_owner_can_evolve_after_native_custody(
     (tmp_path / applied["custody"]["committed"]["path"]).unlink()
     context = {**context, "task": "Resume the same reconstruction owner after interruption"}
     pending = call(context)
-    recovery = pending["planning"]["update_recovery_requests"][0]
     continuation = pending["planning"]["requests"][0]
+    assert not pending["planning"]["update_requests"]
+    assert not pending["planning"]["update_recovery_requests"]
+    admitted = call({**context, "request": continuation})
+    recovery = admitted["planning"]["update_recovery_requests"][0]
     with pytest.raises(AssertionError):
         call({**context, "request": recovery})
     ready = call({**context, "request": [continuation, recovery]})
@@ -261,7 +264,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     other = {**context, "task": "Explain this unrelated function"}
     quiet = call(other)
     answer = quiet["planning"]["requests"][0]
-    answer["arguments"]["answer"] = "unrelated-direct"
+    answer["arguments"].update(answer="independent", task_posture="direct")
     assert call({**other, "request": answer})["planning"]["status"] == "direct"
 
 
@@ -291,7 +294,10 @@ def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared
     current = {**context, "task": "Continue the same bounded owner revision after restart"}
     fresh = call(current)
     continuation = fresh["planning"]["requests"][0]
-    recovery = fresh["planning"]["update_recovery_requests"][0]
+    assert not fresh["planning"]["update_requests"]
+    assert not fresh["planning"]["update_recovery_requests"]
+    admitted = call({**current, "request": continuation})
+    recovery = admitted["planning"]["update_recovery_requests"][0]
     with pytest.raises(AssertionError):
         call({**current, "invocation": old})
     with pytest.raises(AssertionError):
@@ -511,7 +517,7 @@ def test_creation_preserves_existing_selected_owner(tmp_path: Path, shared_core_
     context = {"target": str(tmp_path), "task": "Create another unselected bounded owner"}
     initial = consume("native", shared_core_binary, native_cli, context)
     continuation = initial["decision_packet"]["decision_request"]["response_request"]
-    continuation["arguments"]["answer"] = "unrelated-direct"
+    continuation["arguments"].update(answer="independent", task_posture="planned")
     creation = initial["planning"]["creation_requests"][0]
     creation["arguments"] = {"material": material()}
     ready = consume("native", shared_core_binary, native_cli, {**context, "request": [continuation, creation]})
@@ -564,11 +570,30 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     first_bytes = first_path.read_bytes()
     context["task"] = "Create a distinct bounded owner"
     current = call(context)
+    assert current["planning"]["selected_owner"] is None
+    assert current["planning"]["incumbent_owner"]["ref"] == first["value"]["owner_path"]
+    assert current["planning"]["current_work_id"] == current["current_work"]["id"]
+    assert current["planning"]["selection_scope"] == "default"
     unrelated = current["decision_packet"]["decision_request"]["response_request"]
-    unrelated["arguments"]["answer"] = "unrelated-direct"
+    unrelated["arguments"]["answer"] = "independent"
+    independent = call({**context, "request": unrelated})
+    assert independent["planning"]["required_transition"] == "determine-posture"
+    posture = independent["decision_packet"]["decision_request"]
+    assert {choice["id"] for choice in posture["choices"]} == {"direct", "planned"}
+    direct = {**posture["response_request"], "arguments": {**posture["response_request"]["arguments"], "answer": "direct"}}
+    assert call({**context, "request": direct})["planning"]["status"] == "direct"
+    unrelated = posture["response_request"]
+    unrelated["arguments"]["answer"] = "planned"
     request = current["planning"]["creation_requests"][0]
     request["arguments"] = {"material": material()}
-    action = call({**context, "request": [unrelated, request]})["decision_packet"]["primary_action"]
+    false_direct = direct
+    with pytest.raises(AssertionError, match="Direct task posture"):
+        call({**context, "request": [false_direct, request]})
+    planned = call({**context, "request": [unrelated, request]})
+    assert planned["planning"]["task_relation"] == "independent"
+    assert planned["planning"]["required_transition"] == "create-or-select-owner"
+    assert planned["planning"]["selected_owner"] is None
+    action = planned["decision_packet"]["primary_action"]
     second = call({**context, "invocation": action})
     assert selector.read_bytes() == before
     context = second["value"]["selection_context"]
@@ -817,6 +842,24 @@ def test_native_created_owner_typed_material_update(tmp_path: Path, shared_core_
     # Only a typed risk reference changes: unchanged scope/frontier cannot hide
     # this material revision, and Planning cannot turn the declaration into proof.
     old_subject = old["planning"]["current_owner"]["reconciliation"]["subject"]
+    # A remembered native owner is advisory until this task admits continuation.
+    unrelated = {**context, "task": "Explain an unrelated helper"}
+    unresolved = call(unrelated)
+    assert unresolved["planning"]["task_relation"] == "unresolved"
+    assert unresolved["planning"]["selected_owner"] is None
+    assert unresolved["planning"]["incumbent_owner"]
+    assert not unresolved["planning"]["update_requests"]
+    assert not unresolved["planning"]["update_recovery_requests"]
+    assert not unresolved["planning"]["adoption_requests"]
+    owner_path = tmp_path / created["value"]["owner_path"]
+    selector_path = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
+    preserved = owner_path.read_bytes(), selector_path.read_bytes()
+    forged = json.loads(json.dumps(old["planning"]["update_requests"][0]))
+    forged["task_identity"] = unresolved["current_work"]
+    forged["arguments"]["material"] = {**authored, "lifecycle": "live", "phase": "implementation"}
+    with pytest.raises(AssertionError, match="admitted current-owner continuation"):
+        call({**unrelated, "request": forged})
+    assert (owner_path.read_bytes(), selector_path.read_bytes()) == preserved
     risk_update = old["planning"]["update_requests"][0]
     risk_update["arguments"]["material"] = {**authored, "lifecycle": "planned", "phase": "shaping", "risk_registry_refs": ["risk:revised"]}
     risk_action = call({**context, "request": risk_update})["decision_packet"]["primary_action"]

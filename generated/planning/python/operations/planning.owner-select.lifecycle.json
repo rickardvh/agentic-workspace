@@ -14,7 +14,7 @@
   },
   "guards": [
     "Never create or overwrite an owner body.",
-    "Local current-work selection is the default; checked-in shared selection requires explicit mode and reason.",
+    "Local selection is advisory incumbent context only. The legacy current_work_id input names local selection scope, never public current-work identity or admitted task relation; checked-in shared selection requires explicit mode and reason.",
     "Validate Planning and current-work revisions, owner lifecycle/schema, and lane relationships before writing.",
     "Rollback all touched surfaces when mutation or receipt validation fails."
   ],

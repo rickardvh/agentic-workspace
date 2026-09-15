@@ -132,6 +132,26 @@ pub(crate) fn retained_continuation_current(
     Ok(held["planning_subject"] == json!({"id":current["id"],"revision":current["revision"]}))
 }
 
+/// Exact committed source/work custody can establish continuation without a cursor judgment.
+pub(crate) fn retained_work_current(
+    target: &Path,
+    selected: &Value,
+    work: &Value,
+) -> Result<bool, CoreError> {
+    let Some(reference) = selected["ref"].as_str() else {
+        return Ok(false);
+    };
+    let bytes = read(target, reference)?;
+    let body: Value = serde_json::from_slice(&bytes).map_err(error)?;
+    let Some(retained) = inspect(target, reference, &body)? else {
+        return Ok(false);
+    };
+    Ok(retained["committed"] == true
+        && retained["invocation"]["arguments"]["request"]["task_identity"] == *work
+        && payload(&retained["invocation"], &retained["custody"])? == body
+        && bytes == serde_json::to_vec_pretty(&body).map_err(error)?)
+}
+
 fn clear_handoff(document: &mut Value, assignment: &Value) {
     for (field, key) in HANDOFF_SLOTS {
         let Some(record) = document["relationships"].get_mut(field) else {
@@ -199,7 +219,7 @@ pub(crate) fn retain_handoff(
         return Ok(result);
     }
     let reference = template["arguments"]["owner_ref"].as_str().unwrap();
-    if planning["selected_owner"]["ref"] != reference {
+    if planning["incumbent_owner"]["ref"] != reference {
         return Err(error(
             "handoff retention must use the selected Planning owner",
         ));
@@ -391,7 +411,7 @@ pub(crate) fn adopt_return(
     let reference = template["arguments"]["owner_ref"]
         .as_str()
         .ok_or_else(|| error("Planning adoption destination missing"))?;
-    if planning["selected_owner"]["ref"] != reference {
+    if planning["incumbent_owner"]["ref"] != reference {
         if request.is_some() {
             return Err(error("Planning adoption must use the selected owner"));
         }
@@ -695,7 +715,7 @@ fn view_material(
     continuation: Option<&Value>,
     custody_update: bool,
 ) -> Result<Value, CoreError> {
-    let selected = &planning["selected_owner"];
+    let selected = &planning["incumbent_owner"];
     let mut result = json!({"requests":[],"action":null,"retained":null});
     let owner = contract["owners"]
         .as_array()
@@ -745,6 +765,24 @@ fn view_material(
         if effective.is_some() {
             return Err(error(
                 "Planning update requires acquired creation or reconciliation custody; historical owner preserved",
+            ));
+        }
+        return Ok(result);
+    }
+    let admitted_relation = planning["task_relation"] == "continues"
+        && matches!(
+            planning["status"].as_str(),
+            Some("current" | "reentry-required")
+        )
+        && planning["selected_owner"]["ref"] == reference;
+    // Resuming the exact already-admitted attempt cannot introduce new material.
+    let exact_replay = invocation.zip(retained.as_ref()).is_some_and(|(i, r)| {
+        r["invocation"] == *i && i["arguments"]["request"]["task_identity"] == *work
+    });
+    if !admitted_relation && !exact_replay {
+        if effective.is_some() {
+            return Err(error(
+                "Planning material requires admitted current-owner continuation",
             ));
         }
         return Ok(result);
@@ -940,7 +978,7 @@ fn view_material(
                 "Planning update needs an explicit supported frontier",
             ));
         }
-        result["action"] = json!({"operation_id":"planning.update","dependency_revision":digest(&json!({"source":current_revision,"document":document}))?,"arguments":{"target":target,"request":request,"owner_path":reference,"prior_revision":current_revision,"document":document,"provenance_format":"repo-relative-v2","planning_request":null},"effects":["planning-state"]});
+        result["action"] = json!({"operation_id":"planning.update","dependency_revision":digest(&json!({"source":current_revision,"document":document}))?,"arguments":{"target":target,"request":request,"owner_path":reference,"prior_revision":current_revision,"document":document,"provenance_format":"repo-relative-v2","planning_request":continuation},"effects":["planning-state"]});
         if target_transition {
             result["action"]["arguments"]["integration_observation"] =
                 result["integration"].clone();
@@ -1151,13 +1189,15 @@ mod tests {
         created["value"]["owner_path"].as_str().unwrap().to_owned()
     }
     fn ready(target: &Path) -> Value {
-        let mut update = start(target)["planning"]["update_requests"][0].clone();
+        let continuation = start(target)["planning"]["requests"][0].clone();
+        let admitted = request(target, continuation.clone());
+        let mut update = admitted["planning"]["update_requests"][0].clone();
         let mut material = material();
         material["lifecycle"] = json!("live");
         material["phase"] = json!("implementation");
         material["scope"] = json!({"allowed":"one exact revised component"});
         update["arguments"]["material"] = material;
-        request(target, update)
+        request(target, json!([continuation, update]))
     }
     #[test]
     #[ignore = "subprocess fixture"]
@@ -1241,7 +1281,7 @@ mod tests {
                 );
                 assert_eq!(read(&target, &relative).unwrap(), foreign);
             } else {
-                let fresh = start(&target);
+                let fresh = request(&target, start(&target)["planning"]["requests"][0].clone());
                 let recovered = fresh["planning"]["pending_update"]["invocation"].clone();
                 assert_eq!(recovered, action);
                 assert_ne!(fresh["decision_packet"]["status"], "terminal");
@@ -1320,6 +1360,12 @@ mod tests {
         forged["arguments"]["document"]["id"] = json!("another-owner");
         assert!(invoke(&target, forged).is_err());
         assert_eq!(read(&target, &relative).unwrap(), original);
+        let applied = invoke(&target, action.clone()).unwrap();
+        assert_eq!(applied["status"], "applied");
+        assert_eq!(
+            invoke(&target, action.clone()).unwrap()["value"],
+            applied["value"]
+        );
         let mut historical: Value = serde_json::from_slice(&original).unwrap();
         historical
             .as_object_mut()
@@ -1382,9 +1428,12 @@ mod tests {
             let mut context = context(&target);
             context["task"] = json!("Continue the same owner after interruption");
             let fresh = crate::native_public::start(context.clone()).unwrap();
+            let continuation = fresh["planning"]["requests"][0].clone();
+            context["request"] = continuation.clone();
+            let admitted = crate::native_public::start(context.clone()).unwrap();
             context["request"] = json!([
-                fresh["planning"]["requests"][0],
-                fresh["planning"]["update_recovery_requests"][0]
+                continuation,
+                admitted["planning"]["update_recovery_requests"][0]
             ]);
             let recovery = crate::native_public::start(context.clone()).unwrap();
             let action = &recovery["decision_packet"]["primary_action"];
