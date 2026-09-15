@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Candidate A is implemented in a three-PR stack: #3280, #3281, and dependent release preparation. Configuration and Assignment bounded proof passed; release/security suite passed 32 cases. Review, accepted-source hosted release proof and immutable publication remain external gates. No runtime-unavailable fallback permission or historical Assignment compliance is inferred.",
+    "frontier": "Addressed the external #3281 finding: returned-unadmitted now restricts implementation and completion even after local Assignment acceptance. #3282 includes the upstream fix. The changed heads await independent re-review and hosted checks; Candidate A remains Alpha and unpublished.",
     "owner": "#3275",
     "residual_intent": "Independent acceptance of #2767/#3274, coherent maturity disposition, then exact immutable preview publication and verification. #2985 remains open."
   },
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Ready for independent review of Candidate A stack: #3280 configuration convergence, #3281 required Assignment admission, and dependent release preparation. After external acceptance and merge, verify exact master source and immutable preview-v0.55.0 publication; no issue completion or release admission is claimed.",
+  "next_action": "Ready for independent re-review of corrected #3281 and updated dependent #3282. #3280 has external no-blocker review at d0578b7e3; do not infer stack acceptance, issue closure or preview publication from the implementation fix.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -71,7 +71,8 @@
       "Truthful invoke local proof: 329 broad owner cases passed before a previously loaded logging assertion stopped the run; the updated logging and remaining independent-owner cases plus carriage/continuation cases then passed, 84 total. Rust library: 109 passed, three subprocess helpers intentionally ignored. Fresh installed Python/TypeScript lifecycle, stale rejection and removal/no-residue proof passed. The deterministic config trace uses 4022 versus 114 model protocol bytes, 4 versus 3 public calls and 3 versus 1 modeled interactions, zero required detail calls. Failure injection at the shared continuation boundary preserves a real configuration write and custody. These observations do not authenticate independent review or parent completion.",
       "Candidate A #3275 implementation proof: source launcher 30 cases; configuration/source-policy/advisory 73 passed and one Windows file-symlink skip, plus 39 independent-module/repository-decision cases; Assignment/claim/execution 41 passed and all eight real process patch lifecycle cases; complete Rust workspace 129 passed/three helpers ignored; release/security 32 passed. Paired build, lint/clippy, generated-contract and strict payload checks passed. The first CI lane passed merge sufficiency/security but required missing release changesets, now supplied. Exact final hosted checks remain external observations, not independent acceptance.",
       "Dogfood reconciliation: prepared source launcher availability is repaired in #3280; smaller canonical local configuration no longer hides omitted current former-source intent. First managed generic completion claims now retain required Assignment non-admission in #3281. Obsolete member dependency locks are removed in release preparation; hosted alert closure awaits default-branch scan. Alpha is retained with unresolved representative-evidence and release inputs. No source-assurance trust revision is advanced.",
-      "Operating-cost boundary: useful existing owner/transport proof lanes were reused; no new worker or review agent was launched. Configuration and process proof includes explicit fixture limitations. Total comparative agent cost remains unknown; the 8-case process lane took 309.80 seconds and 32-case release/security lane 11.85 seconds. Initial stale generated/payload/test fixture failures and missing changesets were corrected, not counted as successful first-pass proof."
+      "Operating-cost boundary: useful existing owner/transport proof lanes were reused; no new worker or review agent was launched. Configuration and process proof includes explicit fixture limitations. Total comparative agent cost remains unknown; the 8-case process lane took 309.80 seconds and 32-case release/security lane 11.85 seconds. Initial stale generated/payload/test fixture failures and missing changesets were corrected, not counted as successful first-pass proof.",
+      "2026-09-15 review fix: the external review correctly found implementation_admission was only descriptive. The Assignment owner now contributes a restriction after result-owner resolution; local acceptance does not clear unadmitted materialized/observed work. The native owner control covers later-local combinations; public ingress already rejects already-materialized transport, and the shared claim test verifies restriction/recovery. 28 public claim/Assignment cases, the focused Rust control, and eight real process lifecycle cases passed (326.60 seconds). Paired build, Clippy/Ruff and generated contracts pass. Windows temporarily prevented rebuilding a running binary; rebuild passed after tests completed. Total comparative agent cost remains unknown. This fixes implementation, not independent acceptance or issue completion."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -143,7 +144,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 47,
+  "revision": 48,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -195,18 +196,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/0bc3bbce2952925a512dea706c4424bccff04b416c2f3c0d4ca09da32a1c36ea.attempt.json",
-        "revision": "sha256:8ad97fa7a1b06b57ade9a1568c5340fc30ad8677fed195d2723e9132a2783b34",
+        "path": ".agentic-workspace/local/effects/3c97f2c06176c9d6273307c722075ad5f56c89f7e123cea6cd6fd0bceba81544.attempt.json",
+        "revision": "sha256:e7f7efeb0fb508edebcd854bae074967283d136092834ac614466bc00942c0f1",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/0bc3bbce2952925a512dea706c4424bccff04b416c2f3c0d4ca09da32a1c36ea.result.json",
-        "revision": "sha256:a35ac8a1a5d0c9505ac73ad02bf3f6ecfa9a504500f78192d3eae95bbef80439",
+        "path": ".agentic-workspace/local/effects/3c97f2c06176c9d6273307c722075ad5f56c89f7e123cea6cd6fd0bceba81544.result.json",
+        "revision": "sha256:f67b4365c54dfbc0ea4d918140df5b7b66cbd48053430f0a28894eb39d52513e",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:e686dde2df7792413ece80c1297c43341312e3026c249b38202303fbcd989c85",
+    "invocation_revision": "sha256:aba270b041317abfa698e51c894b4aafc0ac53a42f5f6b4055b69ba35a2157b2",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -214,7 +215,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:f6a9876de4bbea7516468023a5fe15a18042fba3a56a1e270aaa1c0ea5298a9e",
+        "document_revision": "sha256:0e00a035690ef001db145db3792900bf35c500d49c4d6581231cc6168a9fc990",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
