@@ -253,7 +253,6 @@ VALID_CANONICALITY_VALUES = {
     "canonical_elsewhere",
     "deprecated",
 }
-VALID_TASK_RELEVANCE_VALUES = {"required", "optional"}
 VALID_MEMORY_ROLE_VALUES = {"durable_truth", "improvement_signal"}
 VALID_DURABLE_FACT_STATUS_VALUES = {"active", "candidate", "deprecated"}
 VALID_DURABLE_FACT_AUTHORITY_VALUES = {"canonical", "advisory", "supporting"}
@@ -447,8 +446,8 @@ class MemoryNoteRecord:
     path: Path
     note_type: str
     canonical_home: Path
-    authority: str
-    audience: str
+    authority: str = "supporting"
+    audience: str = "human+agent"
     summary: str = ""
     canonicality: str = "agent_only"
     task_relevance: str = "optional"

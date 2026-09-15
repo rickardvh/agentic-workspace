@@ -11,7 +11,6 @@ from typing import Iterable, TypedDict
 
 from repo_memory_bootstrap._installer_output import _current_note_structure_findings
 from repo_memory_bootstrap._installer_shared import (
-    ALLOWED_HIGH_LEVEL_NOTES,
     ALWAYS_READ_SURFACE,
     DEFAULT_CORE_DOC_EXCLUDE_GLOBS,
     DEFAULT_CORE_DOC_GLOBS,
@@ -24,16 +23,6 @@ from repo_memory_bootstrap._installer_shared import (
     ROUTING_FEEDBACK_MAX_LINES,
     ROUTING_FEEDBACK_MAX_RESOLVED,
     SHADOW_DOC_MIN_SHARED_TERMS,
-    VALID_CANONICALITY_VALUES,
-    VALID_CONFIG_TREATMENT_VALUES,
-    VALID_DURABLE_FACT_AUTHORITY_VALUES,
-    VALID_DURABLE_FACT_STATUS_VALUES,
-    VALID_ELIMINATION_TARGET_VALUES,
-    VALID_MEMORY_ROLE_VALUES,
-    VALID_PREFERRED_REMEDIATION_VALUES,
-    VALID_RETENTION_AFTER_PROMOTION_VALUES,
-    VALID_SYMPTOM_OF_VALUES,
-    VALID_TASK_RELEVANCE_VALUES,
     DurableFactRecord,
     InstallResult,
     MemoryManifest,
@@ -115,15 +104,8 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 path=Path(note_path),
                 note_type=str(raw.get("note_type", "memory-note")),
                 canonical_home=Path(str(raw.get("canonical_home", note_path))),
-                authority=str(raw.get("authority", "supporting")),
-                audience=str(raw.get("audience", "human+agent")),
                 summary=str(raw.get("summary", "") or "").strip(),
-                canonicality=str(raw.get("canonicality", "agent_only")),
                 task_relevance=str(raw.get("task_relevance", "optional")),
-                subsystems=tuple(_string_list(raw.get("subsystems"))),
-                surfaces=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("surfaces"))),
-                applies_to=tuple(_string_list(raw.get("applies_to"))),
-                use_when=tuple(_string_list(raw.get("use_when"))),
                 semantic_routes=tuple(_string_list(raw.get("semantic_routes"))),
                 routes_from=tuple(_string_list(raw.get("routes_from"))),
                 stale_when=tuple(_string_list(raw.get("stale_when"))),
@@ -131,22 +113,8 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 valid_until=str(raw.get("valid_until", "") or "").strip(),
                 superseded_by=tuple(_string_list(raw.get("superseded_by"))),
                 contradicted_by=tuple(_string_list(raw.get("contradicted_by"))),
-                evidence=tuple(_string_list(raw.get("evidence"))),
-                related_validations=tuple(_string_list(raw.get("related_validations"))),
                 routing_only=raw.get("note_type") == "routing",
                 high_level=raw.get("note_type") == "routing",
-                memory_role=str(raw.get("memory_role", "") or "").strip(),
-                symptom_of=str(raw.get("symptom_of", "") or "").strip(),
-                preferred_remediation=str(raw.get("preferred_remediation", "") or "").strip(),
-                improvement_candidate=bool(raw.get("improvement_candidate", False)),
-                improvement_note=str(raw.get("improvement_note", "") or "").strip(),
-                elimination_target=str(raw.get("elimination_target", "") or "").strip(),
-                retention_justification=str(raw.get("retention_justification", "") or "").strip(),
-                config_treatment=str(raw.get("config_treatment", "") or "").strip(),
-                config_note=str(raw.get("config_note", "") or "").strip(),
-                promotion_target=str(raw.get("promotion_target", "") or "").strip(),
-                promotion_trigger=str(raw.get("promotion_trigger", "") or "").strip(),
-                retention_after_promotion=str(raw.get("retention_after_promotion", "") or "").strip(),
             )
         )
 
@@ -159,11 +127,8 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 fact_id=str(fact_id),
                 summary=str(raw.get("summary", "") or "").strip(),
                 owner=str(raw.get("owner", "") or "").strip(),
-                authority_class=str(raw.get("authority_class", "supporting") or "").strip(),
-                route_keys=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("route_keys"))),
-                touched_surfaces=tuple(_normalise_surface_name(value) for value in _string_list(raw.get("touched_surfaces"))),
+                authority_class=str(raw.get("authority_class", "advisory") or "").strip(),
                 evidence=tuple(_string_list(raw.get("evidence"))),
-                affected_decisions=tuple(_string_list(raw.get("affected_decisions"))),
                 note_ref=str(raw.get("note_ref", "") or "").strip(),
                 promotion=str(raw.get("promotion", "") or "").strip(),
                 demotion_or_expiry=str(raw.get("demotion_or_expiry", "") or "").strip(),
@@ -171,8 +136,6 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 promotion_trigger=str(raw.get("promotion_trigger", "") or "").strip(),
                 preferred_remediation=str(raw.get("preferred_remediation", "") or "").strip(),
                 elimination_target=str(raw.get("elimination_target", "") or "").strip(),
-                retention_after_promotion=str(raw.get("retention_after_promotion", "") or "").strip(),
-                status=str(raw.get("status", "active") or "").strip(),
             )
         )
 
@@ -205,6 +168,8 @@ def _memory_manifest_typed_validator_findings(path: Path) -> list[str]:
 
     schema = json.loads((Path(__file__).parent / "contracts/manifest.schema.json").read_text(encoding="utf-8"))
     findings: list[str] = []
+    if type(data.get("version")) is not int or data["version"] != schema["properties"]["version"]["const"]:
+        findings.append("manifest version must be integer 1")
     for table in ("rules", "notes", "durable_facts"):
         value = data.get(table, {})
         if not isinstance(value, dict):
@@ -220,6 +185,18 @@ def _memory_manifest_typed_validator_findings(path: Path) -> list[str]:
                     f"unsupported manifest {table}.{name}.{key}; use current native Memory admission"
                     for key in row.keys() - shape["properties"].keys()
                 )
+                findings.extend(f"manifest {table}.{name}.{key} is required" for key in shape.get("required", []) if key not in row)
+                for key, value in row.items():
+                    field = shape["properties"].get(key, {})
+                    location = f"manifest {table}.{name}.{key}"
+                    if "const" in field and value != field["const"]:
+                        findings.append(f"{location} must be {field['const']!r}")
+                    if "enum" in field and value not in field["enum"]:
+                        findings.append(f"{location} must be one of {field['enum']!r}")
+                    if field.get("type") == "string" and (not isinstance(value, str) or not value.strip()):
+                        findings.append(f"{location} must be a nonempty string")
+                    if field.get("type") == "array" and not _is_string_array(value):
+                        findings.append(f"{location} must be an array of strings")
     findings.extend(f"unsupported manifest section {key}" for key in data.keys() - schema["properties"].keys())
     return findings
 
@@ -331,27 +308,6 @@ def _task_board_dependency_warning(*, note: MemoryNoteRecord, manifest: MemoryMa
     return ""
 
 
-def _durable_fact_manifest_findings(fact: DurableFactRecord) -> list[str]:
-    findings: list[str] = []
-    if not fact.summary:
-        findings.append("durable fact records must declare summary")
-    if not fact.owner:
-        findings.append("durable fact records must declare owner")
-    if fact.authority_class not in VALID_DURABLE_FACT_AUTHORITY_VALUES:
-        findings.append("durable fact authority_class must be canonical, advisory, or supporting")
-    if fact.status not in VALID_DURABLE_FACT_STATUS_VALUES:
-        findings.append("durable fact status must be active, candidate, or deprecated")
-    if not fact.route_keys and not fact.touched_surfaces:
-        findings.append("durable fact records need route_keys or touched_surfaces so they can be pulled selectively")
-    if not fact.evidence:
-        findings.append("durable fact records must include evidence anchors")
-    if not fact.promotion:
-        findings.append("durable fact records must declare a promotion expectation")
-    if not fact.demotion_or_expiry:
-        findings.append("durable fact records must declare demotion_or_expiry expectations")
-    return findings
-
-
 def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement: bool = False) -> None:
     manifest_path = target_root / MANIFEST_PATH
     for finding in _memory_manifest_typed_validator_findings(manifest_path):
@@ -369,350 +325,9 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
     if manifest is None:
         return
 
-    routing_only = _routing_baseline_paths(manifest)
-    high_level = _high_level_paths(manifest)
-
-    if routing_only and tuple(routing_only) != ALWAYS_READ_SURFACE:
-        result.add(
-            "manual review",
-            target_root / MANIFEST_PATH,
-            "rules.routing_only should contain only .agentic-workspace/memory/repo/index.md so the always-read surface stays small",
-            role="memory-manifest",
-            safety="manual",
-            source=MANIFEST_PATH.as_posix(),
-            category="contract-drift",
-        )
-    if Path(".agentic-workspace/memory/repo/current/task-context.md") in high_level:
-        result.add(
-            "manual review",
-            target_root / MANIFEST_PATH,
-            "rules.high_level should not include .agentic-workspace/memory/repo/current/task-context.md; keep continuation notes opt-in",
-            role="memory-manifest",
-            safety="manual",
-            source=MANIFEST_PATH.as_posix(),
-            category="contract-drift",
-        )
-    if len(set(high_level)) > len(ALLOWED_HIGH_LEVEL_NOTES):
-        result.add(
-            "manual review",
-            target_root / MANIFEST_PATH,
-            (
-                "rules.high_level is expanding beyond the intended compact always-read "
-                "surface; keep only .agentic-workspace/memory/repo/index.md and optional project-state-level "
-                "context there"
-            ),
-            role="memory-manifest",
-            safety="manual",
-            source=MANIFEST_PATH.as_posix(),
-            category="contract-drift",
-        )
-
-    for fact in manifest.durable_facts:
-        for finding in _durable_fact_manifest_findings(fact):
-            result.add(
-                "manual review",
-                target_root / MANIFEST_PATH,
-                f"durable_facts.{fact.fact_id}: {finding}",
-                role="memory-manifest",
-                safety="manual",
-                source=MANIFEST_PATH.as_posix(),
-                category="contract-drift",
-            )
-
+    # Declaration validity belongs to the closed schema above. Repository layout
+    # advice is separate from that contract and cannot resurrect retired fields.
     for note in manifest.notes:
-        if note.canonicality not in VALID_CANONICALITY_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                ("manifest canonicality must be one of: agent_only, candidate_for_promotion, canonical_elsewhere, deprecated"),
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.task_relevance not in VALID_TASK_RELEVANCE_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest task_relevance must be required or optional",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.memory_role and note.memory_role not in VALID_MEMORY_ROLE_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest memory_role must be durable_truth or improvement_signal when present",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.symptom_of and note.symptom_of not in VALID_SYMPTOM_OF_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                (
-                    "manifest symptom_of must be one of: workflow_friction, "
-                    "guidance_drift, missing_guardrail, architecture_friction, "
-                    "operator_complexity"
-                ),
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.preferred_remediation and note.preferred_remediation not in VALID_PREFERRED_REMEDIATION_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest preferred_remediation must be one of: docs, skill, script, test, validation, refactor, code",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.elimination_target and note.elimination_target not in VALID_ELIMINATION_TARGET_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest elimination_target must be one of: shrink, promote, automate, refactor_away",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.config_treatment and note.config_treatment not in VALID_CONFIG_TREATMENT_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest config_treatment must be one of: promote, cleanup, retain, no_action",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.retention_after_promotion and note.retention_after_promotion not in VALID_RETENTION_AFTER_PROMOTION_VALUES:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "manifest retention_after_promotion must be one of: retain, shrink, stub, delete",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.memory_role == "improvement_signal":
-            if not note.config_treatment:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    (
-                        "improvement-signal notes should declare config_treatment so config-shaped promotion, cleanup, retention, "
-                        "or no-action is explicit instead of inferred"
-                    ),
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="manual-review",
-                )
-            if not note.config_note:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    "improvement-signal notes should pair config_treatment with config_note so the shaping config cue is explicit",
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="manual-review",
-                )
-            has_remediation = bool(note.preferred_remediation and note.improvement_note)
-            has_retention_justification = bool(note.retention_justification)
-            if not has_remediation and not has_retention_justification:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    (
-                        "improvement-signal notes should declare either "
-                        "preferred_remediation plus improvement_note, or "
-                        "retention_justification explaining why the note should remain"
-                    ),
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="manual-review",
-                )
-            if not note.elimination_target:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    (
-                        "improvement-signal note is missing elimination_target; add one "
-                        "to clarify whether the note should shrink, promote, automate, "
-                        "or refactor away after remediation"
-                    ),
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="manual-review",
-                )
-        if note.canonicality == "canonical_elsewhere" and not _is_non_memory_canonical_home(note.canonical_home, note.path):
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "canonical_elsewhere notes must point canonical_home at a checked-in canonical doc outside memory/",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.path == Path(".agentic-workspace/memory/WORKFLOW.md") and note.task_relevance == "required":
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "WORKFLOW.md should remain reference policy, not default required reading for every task",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.path == Path(".agentic-workspace/memory/repo/current/project-state.md") and note.task_relevance != "optional":
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "project-state should stay optional high-level context rather than required task setup",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.path.as_posix().startswith(".agentic-workspace/memory/repo/current/") and note.authority not in {"advisory", "supporting"}:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "current-memory notes should stay weak-authority context rather than canonical durable authority",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.path.as_posix().startswith(".agentic-workspace/memory/repo/current/") and note.memory_role:
-            result.add(
-                "manual review",
-                target_root / note.path,
-                (
-                    "current-memory notes should not declare durable-truth or "
-                    "improvement-signal memory roles; move durable facts to a "
-                    "primary home"
-                ),
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-        if note.path == Path(".agentic-workspace/memory/repo/current/task-context.md"):
-            if note.task_relevance != "optional":
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    "task-context should stay optional continuation compression rather than required task setup",
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
-            if note.surfaces or note.routes_from:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    (
-                        "task-context should not advertise broad routing metadata; load "
-                        "it only when active continuation context is genuinely needed"
-                    ),
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
-            if note.canonicality != "agent_only":
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    "current-memory notes should stay agent_only rather than becoming promotion or canonical-doc targets",
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
-        if note.path == Path(".agentic-workspace/memory/repo/current/routing-feedback.md"):
-            if note.task_relevance != "optional":
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    "routing-feedback should stay optional calibration context rather than required task setup",
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
-            if note.canonicality != "agent_only":
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    "routing-feedback should stay agent_only calibration context rather than a promotion or canonical-doc target",
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
-            if note.memory_role:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    "routing-feedback should stay calibration-only rather than declaring durable truth or improvement-signal memory",
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
-            if note.surfaces or note.routes_from or note.stale_when:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    (
-                        "routing-feedback should not advertise broad routing or freshness metadata; "
-                        "keep it as a compact calibration surface only"
-                    ),
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
-        if note.path == Path(".agentic-workspace/memory/repo/current/project-state.md") and note.canonicality != "agent_only":
-            result.add(
-                "manual review",
-                target_root / note.path,
-                "project-state should stay agent_only current context rather than a promotion or canonical-doc target",
-                role="memory-manifest",
-                safety="manual",
-                source=note.path.as_posix(),
-                category="contract-drift",
-            )
-            if note.surfaces or note.routes_from:
-                result.add(
-                    "manual review",
-                    target_root / note.path,
-                    (
-                        "task-context should not advertise broad routing metadata; load "
-                        "it only when active continuation context is genuinely needed"
-                    ),
-                    role="memory-manifest",
-                    safety="manual",
-                    source=note.path.as_posix(),
-                    category="contract-drift",
-                )
         if path_family_warning := _manifest_note_path_family_warning(note):
             result.add(
                 "manual review",
@@ -721,7 +336,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 role="memory-manifest",
                 safety="manual",
                 source=note.path.as_posix(),
-                category="contract-drift",
+                category="manual-review",
             )
         if canonical_dir_warning := _canonical_dir_warning(note=note, manifest=manifest):
             result.add(
@@ -731,7 +346,7 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 role="memory-manifest",
                 safety="manual",
                 source=note.path.as_posix(),
-                category="contract-drift",
+                category="manual-review",
             )
         if task_board_warning := _task_board_dependency_warning(note=note, manifest=manifest):
             result.add(
@@ -741,20 +356,8 @@ def _audit_memory_doc_ownership(*, target_root: Path, result, force_enforcement:
                 role="memory-manifest",
                 safety="manual",
                 source=note.path.as_posix(),
-                category="contract-drift",
+                category="manual-review",
             )
-
-    required_high_level = [note.path for note in manifest.notes if note.path in high_level and note.task_relevance == "required"]
-    if len(required_high_level) > len(ALLOWED_HIGH_LEVEL_NOTES):
-        result.add(
-            "manual review",
-            target_root / MANIFEST_PATH,
-            "too many notes are both high-level and required; keep the default read surface compact and route the rest on demand",
-            role="memory-manifest",
-            safety="manual",
-            source=MANIFEST_PATH.as_posix(),
-            category="contract-drift",
-        )
 
     _audit_index_compactness(target_root=target_root, manifest=manifest, result=result)
     _audit_note_overlap(target_root=target_root, manifest=manifest, result=result)
