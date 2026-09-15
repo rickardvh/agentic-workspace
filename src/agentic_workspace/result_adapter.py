@@ -115,8 +115,10 @@ def adapt_action(*, action: Any, target_root: Path) -> dict[str, Any]:
 def serialise_value(value: Any) -> Any:
     if isinstance(value, Path):
         return value.as_posix()
+    if is_dataclass(value) and not isinstance(value, type):
+        return serialise_value(asdict(value))
     if isinstance(value, dict):
         return {key: serialise_value(inner) for key, inner in value.items()}
-    if isinstance(value, list):
+    if isinstance(value, (list, tuple)):
         return [serialise_value(item) for item in value]
     return value

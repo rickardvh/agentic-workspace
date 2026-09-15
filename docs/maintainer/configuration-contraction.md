@@ -149,6 +149,12 @@ Scoped-instruction and source-checkout checks pass (21 tests); three focused har
 preparation/startup checks also pass. Required hosted merge validation is reported
 on the PR for the pushed correction head, separately from this local evidence.
 
+The first correction's hosted run passed the public integration guard and exposed
+a later lifecycle serialization failure. The result adapter now converts nested
+configuration dataclasses and tuples into JSON values. The existing skills-first
+lifecycle suite passes all 18 tests, including initialization and upgrade with and
+without a mirrored payload.
+
 - Actual shared and ignored local sources load through the closed Python reader;
   native `start` reports both sources through the current configuration view.
   A parsed comparison against the baseline confirms that removing the shared
