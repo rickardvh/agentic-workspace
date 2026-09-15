@@ -89,12 +89,36 @@ def test_preparation_preserves_current_form_and_supplied_semantics(kind, prefix,
     expected = [
         f"## {item['attributes']['label']}\n{request['fields'][item['id']]['value']}" for item in form["body"] if item["type"] != "markdown"
     ]
+    if kind == "bug":
+        expected[expected.index("## Steps to reproduce\nExplicit shaped reproduction.")] = (
+            "## Steps to reproduce\n```shell\nExplicit shaped reproduction.\n```"
+        )
     assert rendered["status"] == "prepared"
     assert rendered["body"] == "\n\n".join(expected) + "\n"
     assert rendered["title"] == prefix + " Prepared issue"
     assert rendered["duplicate_prefix_normalized"]
     assert rendered["labels"] == labels
     assert rendered["identities"]["template"]["revision"].startswith("sha256:")
+
+
+def test_textarea_render_preserves_code_and_follows_current_form(tmp_path):
+    shutil.copytree(_REPO_ROOT / ".github/ISSUE_TEMPLATE", tmp_path / ".github/ISSUE_TEMPLATE")
+    request = _request("bug")
+    request["fields"]["reproduction"]["value"] = "echo example\n```\n## This remains code\n"
+    result = issue_body.render_issue_request(request, target_root=tmp_path)
+    assert "## Steps to reproduce\n````shell\necho example\n```\n## This remains code\n````\n" in result["body"]
+    path = tmp_path / ".github/ISSUE_TEMPLATE" / issue_body.TEMPLATE_BY_KIND["bug"]
+    form = yaml.safe_load(path.read_text(encoding="utf-8"))
+    reproduction = next(item for item in form["body"] if item.get("id") == "reproduction")
+    reproduction["attributes"]["render"] = "python"
+    path.write_text(yaml.safe_dump(form), encoding="utf-8")
+    changed = issue_body.render_issue_request(request, target_root=tmp_path, previous=result)
+    assert changed["comparison"]["changed"] == ["template"]
+    assert "## Steps to reproduce\n````python\necho example\n```\n## This remains code\n````\n" in changed["body"]
+    reproduction["attributes"]["render"] = "shell\n```"
+    path.write_text(yaml.safe_dump(form), encoding="utf-8")
+    with pytest.raises(ValueError, match="unsupported render attribute"):
+        issue_body.render_issue_request(request, target_root=tmp_path)
 
 
 @pytest.mark.parametrize(

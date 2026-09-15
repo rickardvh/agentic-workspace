@@ -12,7 +12,7 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "#3262 issue-form preparation is implemented locally: current-form validation, explicit missing-input diagnostics, unchanged supplied semantics, exact local identities, and ordinary creation-skill integration. Focused owner/aid proof passes 33 cases; manifest and strict source/payload checks pass. Independent review remains required.",
+    "frontier": "External review of #3285 head 442009270 found missing textarea render fidelity. The helper now honors the current bug form's shell code block, protects embedded fences, and rejects unsupported render syntax. All 34 focused cases pass; independent recheck remains required.",
     "owner": "#3276",
     "residual_intent": "All Candidate B leaves and broad-owner reconciliation remain open. Candidate C and final #2985 support-bearing admission are separate work."
   },
@@ -76,7 +76,8 @@
       "Candidate A publication 2026-09-15: accepted master b5a7748a493a6ea257ec4ad5a9696336a66bfdf2 is the exact single parent of immutable preview-v0.55.0 artifact ce0eef8cc89bbecdbda39fbe0051118dd9492eae. Hosted run 34946934597 passed three runtime jobs, artifact/install/redistribution/security/provenance/checksum/public-byte checks; public smoke returned runtime 0.55.0. Separate trusted Git-object admission and download verification returned complete:true for 13 assets; downloaded manifest attestation verified successfully. Exact manifest SHA-256 bf04966bff10f1fb16889d52098b8f5f5acef5a74126c1f581fdefa395f5930d. Maturity remains Alpha.",
       "Closure reconciliation reuses independent #3281 corrected-head acceptance for #3274 and #3280 plus accepted #3178/#3185/#3230/#3241/#3252/#3254 owner evidence for #2767; both are now closed. The user had already closed #3275 administratively before release; closure alone was not used as proof. #2985 remains open. No source-assurance trust revision is advanced. Historical source admissions remain unchanged.",
       "Operating cost/recovery: source launcher succeeds after paired build without an explicit core environment override. The release resource owner refused cleanup of hook-created unleased caches/output. Those exact new paths were preserved in task scratch, uv removed its 2360 cache files (88.5 MiB), and native worktree removal committed; unrelated worktrees remain untouched. Direct coordinated verification from the development checkout correctly rejected the version mismatch; exact-tag admission verified Git objects instead. Hosted Dependabot alerts 1-3 still report removed member locks open; current source/security passed but hosted alert closure is not claimed. Total comparative cost remains unknown.",
-      "Candidate B #3262 bounded proof: 33 issue-body/agent-aid tests pass; source/payload strict and aid manifests pass. Existing Planning conversion/default synthesis is subtracted. One fresh-process preparation trace takes 4.78 ms versus 4.12 ms baseline and emits 2221 versus 1501 compact packet bytes. Procedure-step accounting removes separate model form inspection for complete shaped input; no controlled inference or lower-total-cost claim. See docs/reviews/candidate-b-preparation-evidence.md. #2929 creation replay is bounded-inapplicable to this leaf because no legitimate new issue is needed. All other Candidate B leaves/reconciliation and independent acceptance remain open."
+      "Candidate B #3262 bounded proof: 33 issue-body/agent-aid tests pass; source/payload strict and aid manifests pass. Existing Planning conversion/default synthesis is subtracted. One fresh-process preparation trace takes 4.78 ms versus 4.12 ms baseline and emits 2221 versus 1501 compact packet bytes. Procedure-step accounting removes separate model form inspection for complete shaped input; no controlled inference or lower-total-cost claim. See docs/reviews/candidate-b-preparation-evidence.md. #2929 creation replay is bounded-inapplicable to this leaf because no legitimate new issue is needed. All other Candidate B leaves/reconciliation and independent acceptance remain open.",
+      "PR #3285 review correction: current-form render attributes now determine textarea code blocks. Existing bug-form expectation plus one owner case cover embedded fences, changed language/currentness and unsupported syntax. 34 issue-body/agent-aid cases passed in 0.60 seconds. Earlier operating-cost measurements remain pre-correction evidence. Independent acceptance and all remaining Candidate B work remain open."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -148,7 +149,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 51,
+  "revision": 52,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -200,18 +201,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a7251da498705609421589451366dbfffc3b3bd533738ae3a5cf9541295d6b2f.attempt.json",
-        "revision": "sha256:13c93e27d00fc8145072c6f55cc55ad7b3461176d8423ba3cda5a8977fd0ecb1",
+        "path": ".agentic-workspace/local/effects/be4b338c2e7598f3200cda3b1dcffba40418a69468e3e0a9962d7ed4b8d5c266.attempt.json",
+        "revision": "sha256:e6b9f6902831857989492afabe9c5482607e9e1a5de55c1d6a6eaf94832221be",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/a7251da498705609421589451366dbfffc3b3bd533738ae3a5cf9541295d6b2f.result.json",
-        "revision": "sha256:04d03b06e7edb43defef031b821f399ffdedff0f99e47df9ba19b8d9fc9e366c",
+        "path": ".agentic-workspace/local/effects/be4b338c2e7598f3200cda3b1dcffba40418a69468e3e0a9962d7ed4b8d5c266.result.json",
+        "revision": "sha256:06d8952a903553fe01bbc4de085852ba34b85b204255894e45f78b9c0e788dd0",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:52d04014d389115e0823efbe839f651303aea5e6e833eecc614342a2069761e3",
+    "invocation_revision": "sha256:1b93607e171ac09bb6870d4d67b606f3a7ff010b9587d8034d2cc8e88fa0b8e0",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -219,7 +220,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:7b42c785c2795895ca5f2f116bb0a926805715ab1ba40ec05af571878cd9f83e",
+        "document_revision": "sha256:56fd6a6e7f55790e9ceb2ec9acde27c49a1e808d437ab1aca94d074218987889",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

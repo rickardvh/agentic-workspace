@@ -88,3 +88,16 @@ Stop after focused owner/integration checks and repository commit checks pass,
 then obtain independent review. Tests do not establish external-write authority,
 independent acceptance, broad-owner reconciliation, Candidate B publication, or
 #3276 completion. Total comparative operating cost remains unknown.
+
+### Independent-review correction
+
+The external review of `442009270` found that the bug form's `render: shell`
+textarea attribute was ignored. The helper now wraps supplied text in the
+form-selected code block, choosing a longer fence when the text contains
+backticks. Unsupported render attributes fail explicitly. The current-form
+assertion now expects the shell block; one focused owner case covers embedded
+fences, a changed render language, and unsupported render syntax. This extends
+form-structure fidelity without a new CI lane or adapter matrix. All 34 focused
+issue-body/agent-aid cases pass. The earlier measurement remains a pre-correction
+trace; it is not relabeled as a measurement of the corrected helper. Independent
+recheck is still required.

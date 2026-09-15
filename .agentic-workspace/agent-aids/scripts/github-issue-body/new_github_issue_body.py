@@ -126,6 +126,12 @@ def render_issue_request(
         validations = item.get("validations", {})
         if not isinstance(attributes, dict) or not isinstance(validations, dict):
             raise ValueError("current issue form has malformed attributes or validations")
+        if "render" in attributes and (
+            item.get("type") != "textarea"
+            or not isinstance(attributes["render"], str)
+            or not re.fullmatch(r"[A-Za-z0-9_+.-]+", attributes["render"])
+        ):
+            raise ValueError(f"unsupported render attribute for {field_id}; use the Markdown procedure")
         if item.get("type") in {"dropdown", "checkboxes"}:
             options = attributes.get("options")
             if not isinstance(options, list) or not options:
@@ -167,6 +173,11 @@ def render_issue_request(
             required = {f"- [x] {option['label']}" for option in options if option.get("required")}
             if not set(lines) <= allowed or len(lines) != len(set(lines)) or not required <= set(lines):
                 problems.append({"field": field_id, "reason": "supply current checkbox options and explicitly check required options"})
+        if "render" in attributes:
+            # Keep supplied backtick fences inside the code block, never as structure.
+            fence = "`" * max(3, 1 + max((len(run) for run in re.findall(r"`+", value)), default=0))
+            ending = "" if value.endswith("\n") else "\n"
+            value = f"{fence}{attributes['render']}\n{value}{ending}{fence}"
         sections.append(f"## {attributes['label']}\n{value}")
 
     prefix = str(template.get("title", "")).strip()
