@@ -184,6 +184,7 @@ def test_former_local_sources_are_distinguished_without_default_fallback(tmp_pat
     source.write_text("schema_version=2\n")
     for _ in range(2):
         fresh = consume("json", shared_core_binary, native_cli, context)
-        assert fresh["configuration"]["local_sources"]["status"] == "not-configured"
+        assert "local_sources" not in fresh["configuration"]
+        assert "local_source_selection" not in fresh["memory"]
         assert private.read_bytes() == before[1]
         assert not (tmp_path / ".agentic-workspace/memory").exists()

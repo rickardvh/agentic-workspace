@@ -86,6 +86,11 @@ def test_former_selection_requires_exact_current_agent_request(
     assert candidate["current_task_relation"] == "unproven"
     assert candidate["routes"] == fact["routes"]
     assert first["decision_packet"]["semantic_task_routes"]["posture"] == "unresolved"
+    assert "local_sources" not in first["configuration"]
+    assert "local_source_selection" not in first["memory"]
+    for capture in ("capture", "advisory_capture"):
+        assert "contribution" not in first["memory"][capture]
+        assert first["memory"][capture]["requests"]
     assert len(json.dumps(first)) < 100_000, {key: len(json.dumps(value)) for key, value in first.items()}
     assert len(json.dumps(candidate)) < 8_000
     request = candidate["selection_request"]

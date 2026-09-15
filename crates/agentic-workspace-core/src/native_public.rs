@@ -299,7 +299,9 @@ fn resolve_with_baseline(
     } else {
         native_memory::disabled(target)?
     };
-    memory["local_source_selection"] = configuration["local_sources"].clone();
+    if configuration["local_sources"]["status"] != "not-configured" {
+        memory["local_source_selection"] = configuration["local_sources"].clone();
+    }
     let planning_probe = if available("planning") {
         native_planning::resolve(target, &work, None)?
     } else {
@@ -1363,6 +1365,14 @@ fn resolve_with_baseline(
     }
     planning["current_owner"] = planning_detail;
     let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    // Keep absent local topology out of public discovery. Its internal source
+    // binding remains intact; explicit former choices still expose observations.
+    if public["configuration"]["local_sources"]["status"] == "not-configured" {
+        public["configuration"]
+            .as_object_mut()
+            .unwrap()
+            .remove("local_sources");
+    }
     public["configuration"]
         .as_object_mut()
         .unwrap()
@@ -1392,6 +1402,16 @@ fn resolve_with_baseline(
     for owner in public.as_object_mut().unwrap().values_mut() {
         if let Some(object) = owner.as_object_mut() {
             object.remove("capability_contract");
+            object.remove("contribution");
+        }
+    }
+    // Memory capture fragments have already joined the same composed decision.
+    // Publish their exact requests/results, not a second copy of internal authority.
+    for capture in ["capture", "advisory_capture"] {
+        if let Some(object) = public["memory"]
+            .get_mut(capture)
+            .and_then(Value::as_object_mut)
+        {
             object.remove("contribution");
         }
     }

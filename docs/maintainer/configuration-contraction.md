@@ -227,6 +227,11 @@ module metadata; the remaining choices have distinct authority or preference
 roles documented above. Ordinary unconfigured work still creates no setup state
 or external probe. Detailed module discovery loads only one selected descriptor;
 former local-source inspection touches only explicitly configured metadata.
+Unconfigured local topology contributes no public Configuration/Memory detail.
+Explicit former sources still expose observations and unresolved boundaries;
+internal source binding is retained. Memory capture requests/results remain
+public, while their internal contributions appear only through the composed
+decision. The existing full-projection size bound remains unchanged.
 
 Retain bounded tests with the current configuration, independent-admission,
 Assignment, Verification, instruction and payload owners. Do not retain a test per
