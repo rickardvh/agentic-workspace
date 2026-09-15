@@ -763,6 +763,30 @@ mod tests {
     }
 
     #[test]
+    fn current_transport_predicates_preserve_variant_requirements() {
+        let schema = include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"
+        );
+        for (transport, valid) in [
+            (
+                json!({"kind":"native","adapter":"selected-owner","parameters":{}}),
+                true,
+            ),
+            (json!({"kind":"native","adapter":"selected-owner"}), false),
+            (json!({"kind":"process","command":["worker"]}), true),
+            (json!({"kind":"process"}), false),
+            (json!({"kind":"manual","command":["worker"]}), false),
+            (
+                json!({"kind":"process","command":["worker"],"parameters":{}}),
+                false,
+            ),
+        ] {
+            let value = json!({"schema_version":2,"delegation_targets":{"worker":{"transports":[transport]}}});
+            assert_eq!(validate_source(&value, schema).is_ok(), valid, "{value}");
+        }
+    }
+
+    #[test]
     fn supported_overrides_and_source_currentness_are_exact() {
         let repo = Repo::new();
         repo.write(

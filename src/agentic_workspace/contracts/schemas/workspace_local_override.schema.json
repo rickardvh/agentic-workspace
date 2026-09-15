@@ -461,8 +461,7 @@
                         "kind": {
                           "const": "native"
                         }
-                      },
-                      "additionalProperties": false
+                      }
                     },
                     "then": {
                       "required": [
@@ -501,8 +500,7 @@
                             "api"
                           ]
                         }
-                      },
-                      "additionalProperties": false
+                      }
                     },
                     "then": {
                       "required": [
@@ -519,8 +517,7 @@
                             "manual"
                           ]
                         }
-                      },
-                      "additionalProperties": false
+                      }
                     },
                     "then": {
                       "not": {

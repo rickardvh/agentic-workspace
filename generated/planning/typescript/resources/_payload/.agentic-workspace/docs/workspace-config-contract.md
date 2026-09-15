@@ -5,9 +5,16 @@ and `../skills/workspace-setup-jumpstart/SKILL.md` for configuration work.
 
 Shared `.agentic-workspace/config.toml` is repository-owned policy. Optional
 `.agentic-workspace/config.local.toml` holds machine-local human choices and
-environment declarations; stronger shared policy cannot be overridden locally.
+environment declarations. Local enablement/invocation override shared defaults;
+independently required proof, source trust, module grants and safety are not waived.
 Repository-native policy sources may be edited under their explicit authority.
 A recognized path or a previous native write grants no continuing custody.
+
+New authoring uses strict `schema_version = 2`. Existing version-1 sources remain
+bounded former inputs, not another current authoring mode. Invalid current syntax
+never falls back to the former reader. Exact current-key edits preserve unrelated
+former bytes and never implicitly upgrade the source version. Shared-local files
+are read dependencies, not canonical-writer targets.
 
 Keep durable policy and necessary environment declarations in config. Module
 selection, invocation/source choices, assurance ceilings, and explicit artifact

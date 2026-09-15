@@ -30,7 +30,7 @@ def current(node: object) -> object:
             if not value.get("deprecated") and not value.get("readOnly") and value.get("x-current-authoring", True)
         }
         # Fixed objects are closed; explicit owner schema/pattern slots survive.
-        if node.get("additionalProperties") is True or "additionalProperties" not in node:
+        if node.get("type") == "object" and (node.get("additionalProperties") is True or "additionalProperties" not in node):
             result["additionalProperties"] = False
         if "required" in result:
             result["required"] = [key for key in result["required"] if key in result["properties"]]
