@@ -1345,10 +1345,10 @@ def _load_assurance_requirements(
             config_path=requirement_path,
             allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
         )
-        if requirement_class is not None and not (source_intent_ref and source_intent_revision and source_intent_current is not None):
+        if requirement_class is not None and not (source_intent_ref and source_intent_revision):
             raise WorkspaceUsageError(
                 f"{requirement_path.as_posix()} named repo requirements require source_intent_ref, "
-                "source_intent_revision, and source_intent_current."
+                "and source_intent_revision. Currentness is established by the source owner."
             )
         if requirement_class == "guideline":
             if not preference_target or not preference_target.startswith(("surface:", "skill:", "operation:")):
@@ -3684,6 +3684,12 @@ def _verification_assurance_source(effective_root: Path, raw_assurance: Any) -> 
             owned = strategy["assurance"]
             if not isinstance(owned, dict) or set(owned) - {"proof_profiles", "domain_proof_lanes", "requirements", "subsystem_profiles"}:
                 raise WorkspaceUsageError("Verification assurance contains unsupported owner fields.")
+            requirements = owned.get("requirements", {})
+            if not isinstance(requirements, dict):
+                raise WorkspaceUsageError("Verification requirements must be a table.")
+            for requirement in requirements.values():
+                if isinstance(requirement, dict) and {"waiver", "dismissal", "source_intent_current"} & requirement.keys():
+                    raise WorkspaceUsageError("Verification policy cannot contain recorded outcomes or currentness.")
             for field, value in owned.items():
                 if field in raw_assurance:
                     raise WorkspaceUsageError(f"Competing Verification {field} sources: config and manifest; preserve both.")

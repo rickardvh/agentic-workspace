@@ -68,6 +68,7 @@ Current human configuration authoring, version 2. Version 1 sources are read sep
 | `assurance.default_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no | `"low"` | Baseline assurance level for proof and trust guidance. |  |  |
 | `assurance.agent_may_escalate` | boolean | no | `true` | Whether agents may raise assurance level when risk or scope warrants it. |  |  |
 | `assurance.agent_may_deescalate` | boolean | no | `false` | Whether agents may lower assurance level below the configured default. |  |  |
+| `assurance.strict_closeout` | boolean | no | `false` | Require a current task-bound Verification claim judgment before completion, even when no protocol matches. False does not waive independently binding proof or review obligations. |  |  |
 | `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset. | `"docs/decisions/"` |  |
 | `assurance.decision_record_fallback` | object | no |  | Independent Memory source-owner admission of a bounded decision archive snapshot and its semantic provenance; never a public request argument. |  |  |
 | `assurance.decision_record_fallback.archive` | string | yes |  | Exact repository-relative Memory source archive admitted by its host owner. |  |  |

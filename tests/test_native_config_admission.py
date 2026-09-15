@@ -64,8 +64,9 @@ def test_real_configuration_admits_only_the_exact_planning_effect(
     assert any(b["code"] == "local-human-review-required" for b in restrictions)
     assert not any(r["field"].startswith("workflow_obligations.") for r in first["configuration"]["residuals"])
     assert first["configuration"]["improvement_latitude"] == "proactive"
-    closeout = next(r for r in first["configuration"]["residuals"] if r["field"] == "assurance.strict_closeout")
-    assert closeout["affects"] == ["claim:complete"]
+    assert not any(r["field"] == "assurance.strict_closeout" for r in first["configuration"]["residuals"])
+    closeout = next(b for b in restrictions if b["code"] == "strict-closeout-judgment-required")
+    assert "claim:complete" in closeout["affects"]
     assert {p: p.read_bytes() for p in before} == before, "discovery never transfers source custody"
     transfer = first["planning"]["selector_transfer"]["request"]
     transfer["arguments"]["answer"] = "authorize-selector-transfer"

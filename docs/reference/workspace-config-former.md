@@ -71,7 +71,7 @@ Bounded version-1 source recognition only. Not a current authoring or permission
 | `assurance.default_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no | `"low"` | Baseline assurance level for proof and trust guidance. |  |  |
 | `assurance.agent_may_escalate` | boolean | no | `true` | Whether agents may raise assurance level when risk or scope warrants it. |  |  |
 | `assurance.agent_may_deescalate` | boolean | no | `false` | Whether agents may lower assurance level below the configured default. |  |  |
-| `assurance.strict_closeout` | boolean | no | `false` | Whether closeout should block when required proof references or gates are missing. |  |  |
+| `assurance.strict_closeout` | boolean | no | `false` | Require a current task-bound Verification claim judgment before completion, even when no protocol matches. False does not waive independently binding proof or review obligations. |  |  |
 | `assurance.classification_owner` | enum `"config-native"`, `"repository-owned"` | no | `"config-native"` | Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source. |  |  |
 | `assurance.classification_source` | string | no |  | Repo-relative source or operation ref for the repository-owned classifier; forbidden for config-native ownership. |  |  |
 | `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset. | `"docs/decisions/"` |  |
@@ -109,31 +109,10 @@ Bounded version-1 source recognition only. Not a current authoring or permission
 | `assurance.requirements.<name>.review_owner` | string | no |  | Repo-local owner label for review or waiver decisions. |  |  |
 | `assurance.requirements.<name>.force` | enum `"informational"`, `"recommended"`, `"required-before-closeout"`, `"blocking"` | yes |  | How strongly this requirement affects guidance and closeout claim gates. |  |  |
 | `assurance.requirements.<name>.blocking_claims` | array of enum `"claim-slice-complete"`, `"claim-work-complete"`, `"close-parent-lane"` | no | `[]` | Completion option ids blocked while required evidence for this requirement is missing. |  |  |
-| `assurance.requirements.<name>.waiver` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions. |  |  |
-| `assurance.requirements.<name>.waiver.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
-| `assurance.requirements.<name>.waiver.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
-| `assurance.requirements.<name>.waiver.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
-| `assurance.requirements.<name>.waiver.applicability.application_id` | string | no |  | Exact assurance application for which this disposition is valid. |  |  |
-| `assurance.requirements.<name>.waiver.applicability.source_revision` | string | no |  | Classification-source revision for which this disposition is valid. |  |  |
-| `assurance.requirements.<name>.waiver.applicability.current_work_id` | string | no |  | Current-work identity for which this disposition is valid. |  |  |
-| `assurance.requirements.<name>.waiver.applicability.proof_subject_fingerprint` | string | no |  | Optional proof subject to which this disposition is bound. |  |  |
-| `assurance.requirements.<name>.waiver.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
-| `assurance.requirements.<name>.waiver.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
-| `assurance.requirements.<name>.dismissal` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions. |  |  |
-| `assurance.requirements.<name>.dismissal.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
-| `assurance.requirements.<name>.dismissal.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
-| `assurance.requirements.<name>.dismissal.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
-| `assurance.requirements.<name>.dismissal.applicability.application_id` | string | no |  | Exact assurance application for which this disposition is valid. |  |  |
-| `assurance.requirements.<name>.dismissal.applicability.source_revision` | string | no |  | Classification-source revision for which this disposition is valid. |  |  |
-| `assurance.requirements.<name>.dismissal.applicability.current_work_id` | string | no |  | Current-work identity for which this disposition is valid. |  |  |
-| `assurance.requirements.<name>.dismissal.applicability.proof_subject_fingerprint` | string | no |  | Optional proof subject to which this disposition is bound. |  |  |
-| `assurance.requirements.<name>.dismissal.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
-| `assurance.requirements.<name>.dismissal.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
 | `assurance.requirements.<name>.notes` | string | no |  | Optional repo-local note about this requirement. |  |  |
 | `assurance.requirements.<name>.requirement_class` | enum `"invariant"`, `"current-evidence"`, `"guideline"` | no |  | Optional standing repo requirement class. Omit for legacy task-scoped assurance requirements. |  |  |
 | `assurance.requirements.<name>.source_intent_ref` | string | no |  | Strongest current intent, requirement, or explicit repo-policy owner for this standing requirement. |  |  |
 | `assurance.requirements.<name>.source_intent_revision` | string | no |  | Revision of the source intent or requirement used to derive this observable contract. |  |  |
-| `assurance.requirements.<name>.source_intent_current` | boolean | no |  | Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate. |  |  |
 | `assurance.requirements.<name>.preference_target` | string | no |  | Existing surface, skill, or operation target influenced by a guideline. |  |  |
 | `assurance.requirements.<name>.evidence_owner` | string | no |  | Existing assurance, Verification, proof, or domain owner that produces the evidence. |  |  |
 | `assurance.requirements.<name>.detail_route` | string | no |  | Bounded owner route for evidence detail or recovery. |  |  |
@@ -155,6 +134,29 @@ Bounded version-1 source recognition only. Not a current authoring or permission
 | `assurance.requirements.<name>.measurement.source_revision` | string | yes |  | Revision of the evidence-producing fixture or measurement method. |  |  |
 | `assurance.requirements.<name>.measurement.producer_command` | string | yes |  | Exact bounded command selected by the ordinary proof path when current measurement evidence is absent or stale. |  |  |
 | `assurance.requirements.<name>.measurement.excluded_costs` | array of string | no | `[]` | Explicit costs excluded by the maintained measurement method. |  |  |
+| `assurance.requirements.<name>.requirement_refs` | array of string | no | `[]` | Repo-owned requirement refs normally applying to this subsystem. |  |  |
+| `assurance.requirements.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this subsystem profile. |  |  |
+| `assurance.requirements.<name>.waiver` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions. |  |  |
+| `assurance.requirements.<name>.waiver.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
+| `assurance.requirements.<name>.waiver.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
+| `assurance.requirements.<name>.waiver.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.application_id` | string | no |  | Exact assurance application for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.source_revision` | string | no |  | Classification-source revision for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.current_work_id` | string | no |  | Current-work identity for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.proof_subject_fingerprint` | string | no |  | Optional proof subject to which this disposition is bound. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
+| `assurance.requirements.<name>.waiver.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
+| `assurance.requirements.<name>.dismissal` | ref `#/$defs/assurance_requirement_disposition` | no |  | Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions. |  |  |
+| `assurance.requirements.<name>.dismissal.reason` | string | yes |  | Why the requirement was waived, dismissed, or found not applicable. |  |  |
+| `assurance.requirements.<name>.dismissal.owner` | string | yes |  | Repo-local owner or role accountable for the waiver or dismissal. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability` | object | no |  | Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.application_id` | string | no |  | Exact assurance application for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.source_revision` | string | no |  | Classification-source revision for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.current_work_id` | string | no |  | Current-work identity for which this disposition is valid. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.proof_subject_fingerprint` | string | no |  | Optional proof subject to which this disposition is bound. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.expires_at` | string | no |  | Time after which the disposition is inactive. |  |  |
+| `assurance.requirements.<name>.dismissal.applicability.review_after` | string | no |  | Time at which owner review is required and the disposition becomes inactive. |  |  |
+| `assurance.requirements.<name>.source_intent_current` | boolean | no |  | Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate. |  |  |
 | `assurance.subsystem_profiles` | object | no | `{}` | Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids. |  | x-agentic-workspace-source-owner: ".agentic-workspace/verification/manifest.toml#assurance.subsystem_profiles" |
 | `assurance.subsystem_profiles.<name>` | object | no |  | One host-owned assurance profile for an ownership subsystem. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `assurance.subsystem_profiles.<name>.assurance_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | yes |  | Repo-interpreted assurance level for the matched subsystem. |  |  |

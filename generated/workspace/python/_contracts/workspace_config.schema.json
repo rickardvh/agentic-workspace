@@ -336,6 +336,11 @@
           "type": "boolean",
           "default": false
         },
+        "strict_closeout": {
+          "description": "Require a current task-bound Verification claim judgment before completion, even when no protocol matches. False does not waive independently binding proof or review obligations.",
+          "type": "boolean",
+          "default": false
+        },
         "decision_record_target": {
           "description": "Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset.",
           "type": "string",

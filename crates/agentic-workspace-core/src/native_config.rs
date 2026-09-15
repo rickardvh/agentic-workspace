@@ -461,6 +461,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                             field.as_str(),
                             "assurance.requirements"
                                 | "assurance.default_level"
+                                | "assurance.strict_closeout"
                                 | "assurance.agent_may_escalate"
                                 | "assurance.agent_may_deescalate"
                                 | "assurance.proof_profiles"
@@ -818,11 +819,26 @@ mod tests {
     }
 
     #[test]
+    fn strict_closeout_remains_unresolved_without_verification() {
+        let repo = Repo::new();
+        repo.write(SHARED, "schema_version=2\n[assurance]\nstrict_closeout=true\n[modules]\nenabled=[\"memory\"]\n");
+        let result = view(&repo.0).unwrap();
+        assert!(
+            result["residuals"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|row| row["field"] == "assurance.strict_closeout")
+        );
+        assert!(validate_source(&json!({"schema_version":2,"assurance":{"strict_closeout":false}}), include_str!("../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json")).is_err());
+    }
+
+    #[test]
     fn unsupported_shared_proof_remains_binding_despite_local_preferences() {
         let repo = Repo::new();
         repo.write(
             SHARED,
-            "schema_version=1\n[assurance]\nstrict_closeout=true\n",
+            "schema_version=1\n[assurance]\nclassification_owner=\"config-native\"\n",
         );
         repo.write(
             LOCAL,
@@ -831,7 +847,7 @@ mod tests {
         let result = view(&repo.0).unwrap();
         let residual = &result["residuals"][0];
         assert_eq!(residual["source"], SHARED);
-        assert_eq!(residual["field"], "assurance.strict_closeout");
+        assert_eq!(residual["field"], "assurance.classification_owner");
         assert_eq!(residual["affects"], json!(["claim:complete"]));
     }
 
@@ -840,7 +856,7 @@ mod tests {
         let repo = Repo::new();
         repo.write(
             SHARED,
-            "schema_version=1\n[assurance]\nstrict_closeout=true\n",
+            "schema_version=1\n[assurance]\nclassification_owner=\"config-native\"\n",
         );
         repo.write(
             LOCAL,

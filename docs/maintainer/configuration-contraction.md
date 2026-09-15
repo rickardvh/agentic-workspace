@@ -70,14 +70,26 @@ in current shared authoring. Equal competing source values are still a conflict.
 Transfer one family only after its destination is validated and its former source
 is explicitly retired. Reading or generating schemas never changes source bytes.
 
-`default_level`, `agent_may_escalate` and `agent_may_deescalate` remain deliberate
+`strict_closeout`, `default_level`, `agent_may_escalate` and `agent_may_deescalate` remain deliberate
 repository proof floors. Binding requirements survive an attempted de-escalation.
+`strict_closeout = true` requires a current task-bound Verification claim judgment
+before completion, including work with no matching protocol. False does not waive
+independently binding requirements. The existing claim-review request and exact
+human answer or admitted delegation discharge this floor; config is never proof.
 Proof results, currentness, review and waivers remain separate owner judgments.
+Current manifest requirements reject `waiver`, `dismissal` and
+`source_intent_current`. The former reader preserves these recorded fields without
+admitting their claimed outcome; applicability never satisfies evidence or waivers.
+Currentness must be established against the actual source and evidence owners.
+The repository manifest removes its twelve static `source_intent_current = true`
+assertions; source refs/revisions, evidence owners, selectors and blocking claims
+remain unchanged. This retires the policy assertions, not the required outcomes
+or their unresolved source/evidence admissions.
 
 `closeout_postures` has no supported native destination: keep existing entries and
 their unresolved claim boundary until a source owner judges each actual outcome.
 The manifest rejects these entries rather than pretending a schema annotation
-implements them. `strict_closeout`, `classification_owner` and
+implements them. `classification_owner` and
 `classification_source` likewise remain recognized former inputs, not supported
 current knobs. Do not silently replace a repository classifier or required gate
 with the native path matcher. Existing native requirements can express explicit

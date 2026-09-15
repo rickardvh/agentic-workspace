@@ -105,7 +105,8 @@ def test_current_shared_controls_keep_hard_and_unresolved_owner_boundaries(
     )
     assert any(blocker["code"] == "local-human-review-required" and blocker["affects"] == ["claim:pr-complete"] for blocker in blockers)
     assert any(blocker["code"] == "native-payload-target-unproven" and blocker["affects"] == ["task"] for blocker in blockers)
-    assert any(blocker["code"].endswith(":assurance.strict_closeout") and blocker["affects"] == ["claim:complete"] for blocker in blockers)
+    assert not any(row["field"] == "assurance.strict_closeout" for row in config["residuals"])
+    assert any(b["code"] == "strict-closeout-judgment-required" for b in result["decision_packet"]["blockers"])
     assert len(blockers) == len(config["residuals"]) - len(advisory) + 3
     assert (source.read_bytes(), local.read_bytes()) == before
     assert not (tmp_path / ".agentic-workspace/local").exists()

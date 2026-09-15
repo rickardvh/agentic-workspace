@@ -21,6 +21,16 @@ def verification_former() -> str:
     schema = json.loads((SCHEMAS / "workspace_config_former.schema.json").read_text(encoding="utf-8"))
     owner = json.loads(VERIFICATION.read_text(encoding="utf-8"))
     for key, definition in owner["properties"].items():
+        definition = copy.deepcopy(definition)
+        if key == "requirements":
+            # Preserve recorded former syntax only in its versioned reader.
+            former = schema["properties"]["assurance"]["properties"][key]["additionalProperties"]
+            requirement = definition["additionalProperties"]
+            for field in ("waiver", "dismissal", "source_intent_current"):
+                requirement["properties"][field] = former["properties"][field]
+            requirement["allOf"] = former["allOf"]
+            requirement["additionalProperties"] = True
+            requirement["x-agentic-workspace-unknown-properties"] = "warn"
         schema["properties"]["assurance"]["properties"][key] = {
             "deprecated": True,
             "readOnly": True,

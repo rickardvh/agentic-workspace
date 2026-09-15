@@ -378,10 +378,9 @@
           "default": false
         },
         "strict_closeout": {
-          "description": "Whether closeout should block when required proof references or gates are missing.",
+          "description": "Require a current task-bound Verification claim judgment before completion, even when no protocol matches. False does not waive independently binding proof or review obligations.",
           "type": "boolean",
-          "default": false,
-          "x-current-authoring": false
+          "default": false
         },
         "classification_owner": {
           "description": "Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source.",
@@ -744,14 +743,6 @@
                 "uniqueItems": true,
                 "default": []
               },
-              "waiver": {
-                "description": "Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions.",
-                "$ref": "#/$defs/assurance_requirement_disposition"
-              },
-              "dismissal": {
-                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions.",
-                "$ref": "#/$defs/assurance_requirement_disposition"
-              },
               "notes": {
                 "description": "Optional repo-local note about this requirement.",
                 "type": "string",
@@ -774,10 +765,6 @@
                 "description": "Revision of the source intent or requirement used to derive this observable contract.",
                 "type": "string",
                 "minLength": 1
-              },
-              "source_intent_current": {
-                "description": "Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate.",
-                "type": "boolean"
               },
               "preference_target": {
                 "description": "Existing surface, skill, or operation target influenced by a guideline.",
@@ -942,6 +929,33 @@
                   }
                 ],
                 "additionalProperties": false
+              },
+              "requirement_refs": {
+                "description": "Repo-owned requirement refs normally applying to this subsystem.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "claim_boundary": {
+                "description": "Human-readable boundary for claims supported by this subsystem profile.",
+                "type": "string",
+                "minLength": 1
+              },
+              "waiver": {
+                "description": "Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions.",
+                "$ref": "#/$defs/assurance_requirement_disposition"
+              },
+              "dismissal": {
+                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions.",
+                "$ref": "#/$defs/assurance_requirement_disposition"
+              },
+              "source_intent_current": {
+                "description": "Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate.",
+                "type": "boolean"
               }
             },
             "allOf": [

@@ -236,7 +236,7 @@
       "additionalProperties": {
         "type": "object",
         "description": "One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
-        "x-agentic-workspace-unknown-properties": "warn",
+        "x-agentic-workspace-unknown-properties": "reject",
         "required": [
           "level",
           "force"
@@ -383,14 +383,6 @@
             "uniqueItems": true,
             "default": []
           },
-          "waiver": {
-            "description": "Recorded waiver with reason and owner for this requirement. Waiver and dismissal are mutually exclusive terminal dispositions.",
-            "$ref": "#/$defs/assurance_requirement_disposition"
-          },
-          "dismissal": {
-            "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement. Dismissal and waiver are mutually exclusive terminal dispositions.",
-            "$ref": "#/$defs/assurance_requirement_disposition"
-          },
           "notes": {
             "description": "Optional repo-local note about this requirement.",
             "type": "string",
@@ -413,10 +405,6 @@
             "description": "Revision of the source intent or requirement used to derive this observable contract.",
             "type": "string",
             "minLength": 1
-          },
-          "source_intent_current": {
-            "description": "Whether the source intent revision remains current; false forces re-evaluation instead of an immortal gate.",
-            "type": "boolean"
           },
           "preference_target": {
             "description": "Existing surface, skill, or operation target influenced by a guideline.",
@@ -581,6 +569,21 @@
               }
             ],
             "additionalProperties": false
+          },
+          "requirement_refs": {
+            "description": "Repo-owned requirement refs normally applying to this subsystem.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true,
+            "default": []
+          },
+          "claim_boundary": {
+            "description": "Human-readable boundary for claims supported by this subsystem profile.",
+            "type": "string",
+            "minLength": 1
           }
         },
         "allOf": [
@@ -593,8 +596,7 @@
             "then": {
               "required": [
                 "source_intent_ref",
-                "source_intent_revision",
-                "source_intent_current"
+                "source_intent_revision"
               ]
             }
           },
@@ -689,7 +691,7 @@
             }
           }
         ],
-        "additionalProperties": true
+        "additionalProperties": false
       }
     },
     "subsystem_profiles": {
@@ -805,66 +807,6 @@
         },
         "additionalProperties": true
       }
-    }
-  },
-  "$defs": {
-    "assurance_requirement_disposition": {
-      "description": "Recorded waiver or dismissal for a repo-declared assurance requirement.",
-      "type": "object",
-      "required": [
-        "reason",
-        "owner"
-      ],
-      "properties": {
-        "reason": {
-          "description": "Why the requirement was waived, dismissed, or found not applicable.",
-          "type": "string",
-          "minLength": 1
-        },
-        "owner": {
-          "description": "Repo-local owner or role accountable for the waiver or dismissal.",
-          "type": "string",
-          "minLength": 1
-        },
-        "applicability": {
-          "description": "Optional bounds that keep the disposition active only for the classified application, proof subject, work identity, source revision, and review window.",
-          "type": "object",
-          "properties": {
-            "application_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Exact assurance application for which this disposition is valid."
-            },
-            "source_revision": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Classification-source revision for which this disposition is valid."
-            },
-            "current_work_id": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Current-work identity for which this disposition is valid."
-            },
-            "proof_subject_fingerprint": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Optional proof subject to which this disposition is bound."
-            },
-            "expires_at": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Time after which the disposition is inactive."
-            },
-            "review_after": {
-              "type": "string",
-              "format": "date-time",
-              "description": "Time at which owner review is required and the disposition becomes inactive."
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
     }
   }
 }
