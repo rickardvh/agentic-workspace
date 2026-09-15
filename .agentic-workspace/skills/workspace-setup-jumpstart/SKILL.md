@@ -141,6 +141,13 @@ Verification policy definitions are authored in the existing Verification manife
 using its package-owned assurance schema. Only proof_profiles, domain_proof_lanes,
 requirements and subsystem_profiles have supported native destinations. Reject
 competing former/shared and manifest sources even when equal. Preserve unsupported
-closeout_postures, strict_closeout, classifier and decision/registry/test-data
+closeout_postures, classifier and decision/registry/test-data
 conventions until their source owner confirms each destination or retirement;
 never translate them wholesale or infer a trust revision from HEAD.
+
+Author and preserve `assurance.strict_closeout` as current shared configuration
+policy. When true, it requires a current task-bound Verification claim judgment
+before completion, including work with no matching protocol. False does not waive
+independently binding proof or review requirements. Local config cannot override
+this floor; disabling Verification leaves it unresolved. Use the existing
+Verification claim-review owner to establish judgment, never config as evidence.

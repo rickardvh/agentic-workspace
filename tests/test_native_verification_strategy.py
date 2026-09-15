@@ -462,14 +462,15 @@ def test_subsystem_profile_uses_current_ownership_without_granting_review(tmp_pa
     assert source.exists() and (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp_path, shared_core_binary, native_cli, surface):
+# These owner semantics have no adapter-specific encoding. Exercise the core JSON
+# ingress once; existing cross-surface conformance/transfer cases own adapter parity.
+def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp_path, shared_core_binary, native_cli):
     setup(tmp_path)
     source = tmp_path / ".agentic-workspace/config.toml"
     context = {"target": str(tmp_path), "task": "Check resulting work", "changed": ["a.txt"]}
 
     def call(**extra):
-        return consume(surface, shared_core_binary, native_cli, {**context, **extra})
+        return consume("json", shared_core_binary, native_cli, {**context, **extra})
 
     source.write_text("schema_version=2\n[assurance]\nstrict_closeout=false\n")
     assert call()["verification"]["judgment_request"] is None
@@ -495,8 +496,7 @@ def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp
         call(request=answer)
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_current_requirement_rejects_recorded_outcomes_but_former_preserves_them(tmp_path, shared_core_binary, native_cli, surface):
+def test_current_requirement_rejects_recorded_outcomes_but_former_preserves_them(tmp_path, shared_core_binary, native_cli):
     from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
 
     context = setup(tmp_path)
@@ -513,7 +513,7 @@ def test_current_requirement_rejects_recorded_outcomes_but_former_preserves_them
     )
 
     def call():
-        return consume(surface, shared_core_binary, native_cli, context)
+        return consume("json", shared_core_binary, native_cli, context)
 
     original = source.read_text()
     manifest.write_text(header + policy)
