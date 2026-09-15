@@ -8,14 +8,35 @@ description: Clarify ambiguous human intent and classify direct, bounded, lane, 
 Use this subskill after `workspace-startup` or compact routing when a prompt is broad, vague, high-stakes, or outcome-shaped enough that silently choosing a first implementation slice could miss the user's real goal.
 This subskill owns the merged intent/work-shape decision. `workspace-work-shape` is reference support, not a competing peer skill.
 
+## Selected executable preparation
+
+Use `python .agentic-workspace/skills/workspace-intent-discovery/prepare.py
+--native-cli <current-executable> --target . --task "<task>" --procedure intent
+--judgment clear|ambiguous|required-decision` after making the semantic judgment.
+Pass repeated `--changed` paths when known. The helper calls native `start` afresh;
+it never reads or merges configuration files. Python and the current native CLI
+are prerequisites. If either is unavailable, report preparation as unexecuted and
+use the startup skill's conservative source-reading procedure.
+
+The prepared posture consumes effective `clarification.mode`: clear work stays
+direct; an independently required decision always remains with its owner;
+`ask-first` awaits the bounded human answer; `suggest` surfaces the question and
+assumptions while safe independent progress continues; `auto-continue` states the
+smallest safe interpretation and correction point. Choose the actual question,
+safe scope and remaining uncertainty yourself. No posture grants effects.
+
+Use `--expected-revision` only to check carried preparation against fresh owners.
+Changed relevant preferences, procedure bytes, task judgment or restrictions make
+it stale. The helper stores no session and never answers an owner request.
+
 ## Protocol
 
-1. Name two or three plausible interpretations, not just one inferred intent.
-2. Ask one compact question that captures why the work matters, desired outcome, non-goals, and an acceptable first slice.
-3. If the user does not answer and progress is still safe, proceed only with stated assumptions and visible uncertainty.
-4. Classify the work as `direct`, `bounded`, `lane`, or `epic`.
-5. Carry the clarified result into the smallest existing surface: `task_intent`, `acceptance`, `durable_intent`, Memory, Planning, or an issue, including a `completion-boundary` when closure could otherwise be ambiguous.
-6. Stop the dialogue after one bounded clarification unless the user's answer exposes a real safety, authority, or scope blocker.
+1. Distinguish a clear task, meaningful ambiguity and a required owner decision.
+2. Prepare the selected posture above; follow it for one bounded clarification.
+3. Classify work as `direct`, `bounded`, `lane`, or `epic` using continuity value.
+4. Carry useful clarified intent to its existing issue or current owner. Create
+   Planning only through its exact native operation when durable continuity helps.
+5. Preserve uncertainty and hard owner restrictions under every mode.
 
 ## Shape Rules
 

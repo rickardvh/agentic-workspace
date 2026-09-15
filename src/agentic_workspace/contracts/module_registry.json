@@ -533,7 +533,6 @@
       "description": "Repo-native execution planning bootstrap and maintenance.",
       "selection_rank": 10,
       "install_signals": [
-        ".agentic-workspace/planning/agent-manifest.json",
         ".agentic-workspace/planning/execplans"
       ],
       "workflow_surfaces": [

@@ -23,7 +23,13 @@ It exists to keep external trackers as intent authorities while preserving execu
 
 ## Workflow
 
-1. Read `AGENTS.md`, the canonical Planning summary, and `.agentic-workspace/planning/upstream-task-intake.md`.
+1. Read the startup skill and use current native `start` for the task. Inspect its
+   applicable instructions and Planning relation/posture before deciding whether
+   durable continuity is useful. When available, the shared executable
+   `.agentic-workspace/skills/workspace-intent-discovery/prepare.py` with
+   `--procedure planning --judgment clear` prepares those current inputs. It creates
+   nothing. No runtime means source-reading only; use `READING.json` and the named
+   owner record without inferring custody.
 2. Read the upstream task or issue that is being ingested.
 3. Normalize it into a compact summary:
    - source system
@@ -38,7 +44,12 @@ It exists to keep external trackers as intent authorities while preserving execu
    - a bounded lane or decomposition record
    - an execplan plus an issue-relation record when execution custody is accepted
 5. Preserve the upstream source reference in the chosen planning surface.
-6. Keep execution detail in checked-in planning, not in the upstream tracker.
+6. If Planning is warranted, submit the current `planning.creation_requests` or
+   selected-owner update request through native `start`/`invoke`. Keep milestone,
+   continuation, dependencies, proof and risk/invariant facts with that owner.
+   An incumbent selection alone does not establish the current task relation.
+   Direct work needs no plan. Never infer a numeric threshold or automatic
+   creation rule from the task title.
 
 ## Output Expectations
 

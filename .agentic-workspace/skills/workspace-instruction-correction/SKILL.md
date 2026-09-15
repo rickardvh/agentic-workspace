@@ -88,3 +88,18 @@ current source comparison. A dismissed/no-action proposal is carried only in the
 current response; no backlog or standing suppression is created. Changed evidence
 or owner state needs fresh judgment. Do not start a reflection phase for unrelated
 work or promise durable handling for a correction that was never delivered to AW.
+
+## Selected improvement preparation
+
+For a repository opportunity, use the shared intent-discovery `prepare.py` with
+`--procedure improvement --judgment ambiguous --scope current-work|proactive`
+and the current task/native CLI. `clear` means no material opportunity and returns
+no action. Effective latitude yields: `none` no nomination, `reporting` a bounded
+report, `conservative` a current-work proposal (report out-of-work opportunities),
+and `proactive` a proposal in either scope. The former `balanced` value is removed:
+its current-work initiative is already represented by `conservative`.
+
+This selects initiative only. Trusted corrections, hard owner defects, source
+admission and publication still follow the owner procedure above. Do not run this
+helper or scan for opportunities on unrelated work. Its fresh result carries
+current restrictions and grants no write, proof or completion authority.

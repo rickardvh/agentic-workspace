@@ -563,7 +563,6 @@ def _freehand_planning_artifact_warnings(*, repo_root: Path) -> list[PlanningWar
     )
     allowed_planning_root_names = {
         "state.toml",
-        "agent-manifest.json",
         "README.md",
         "TEMPLATE.md",
         "TEMPLATE.plan.json",
@@ -1115,208 +1114,8 @@ def _check_promotion_linkage(*, roadmap_path: Path, active_items: list[dict[str,
 
 
 def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
-    warnings: list[PlanningWarning] = []
-    agents_path = repo_root / "AGENTS.md"
-    routing_path = repo_root / "docs" / "routing-contract.md"
-    manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
-    quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
-    readme_path = repo_root / "README.md"
-    contributor_path = repo_root / "docs" / "maintainer" / "contributor-playbook.md"
-
-    if not (agents_path.exists() and manifest_path.exists() and quickstart_path.exists()):
-        return warnings
-
-    agents_text = "\n".join(_read_lines(agents_path)).lower()
-    quickstart_text = "\n".join(_read_lines(quickstart_path)).lower()
-    routing_text = "\n".join(_read_lines(routing_path)).lower() if routing_path.exists() else ""
-    readme_text = "\n".join(_read_lines(readme_path)).lower() if readme_path.exists() else ""
-    contributor_text = "\n".join(_read_lines(contributor_path)).lower() if contributor_path.exists() else ""
-
-    required_agents_fragments = (
-        "<!-- agentic-workspace:workflow:start -->",
-        ".agentic-workspace/skills/workspace-startup/skill.md",
-        "invocation rule:",
-        "ordinary route:",
-        "before non-trivial answers",
-        "configured aw invocation",
-        "start --target . --task",
-        "config.local.toml",
-        "authoritative `decision_packet`",
-        "action, effects, claim boundary, and routed detail",
-        "before opening raw `.agentic-workspace` files",
-        "do not bake machine-local aw invocation paths into checked-in generic guidance",
-        "module skill trees as required operating surfaces",
-        "routed drill-down or recovery surfaces",
-        "shared startup fallback reached through this adapter",
-        "<!-- agentic-workspace:workflow:end -->",
-    )
-    if not all(fragment in agents_text for fragment in required_agents_fragments):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(agents_path),
-                "AGENTS startup policy is missing the thin managed workflow fence.",
-            )
-        )
-
-    if (
-        'agentic-workspace start --task "<task>" --format json' not in quickstart_text
-        or "agentic-workspace summary --format json" not in quickstart_text
-        or "do not bulk-read all planning surfaces" not in quickstart_text
-        or "## authority table" in quickstart_text
-        or "generated static adapter" not in quickstart_text
-    ):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(quickstart_path),
-                "Quickstart must remain a static routing adapter with compact query order and bulk-read constraints explicit.",
-            )
-        )
-
-    if routing_text and not all(
-        fragment in routing_text
-        for fragment in (
-            "authoritative routing home",
-            "startup and first contact",
-            "agentic-workspace summary --format json",
-            "agentic-workspace report --target ./repo --format json",
-        )
-    ):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(routing_path),
-                "routing-contract.md must act as the authoritative routing home and point normal work back to compact summary surfaces.",
-            )
-        )
-
-    required_readme_fragments = (
-        "for agent maintainers, the primary operating path is",
-        "`agents.md`",
-        "active execplan",
-        "`docs/maintainer/contributor-playbook.md`",
-    )
-    if (
-        readme_text
-        and _readme_claims_maintainer_startup_guidance(readme_text)
-        and not all(fragment in readme_text for fragment in required_readme_fragments)
-    ):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(readme_path),
-                "README maintainer startup path is missing required agent-startup guidance.",
-            )
-        )
-
-    required_contributor_fragments = (
-        "default startup path for an agent maintainer",
-        "read `agents.md`",
-        "active execplan",
-        "package-local `agents.md`",
-    )
-    if contributor_text and not all(fragment in contributor_text for fragment in required_contributor_fragments):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(contributor_path),
-                "Contributor playbook startup path is missing required maintainer guidance.",
-            )
-        )
-
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "agent-manifest.json is invalid JSON; startup policy cannot be validated.",
-            )
-        )
-        return warnings
-
-    bootstrap = manifest.get("bootstrap", {}) if isinstance(manifest, dict) else {}
-    first_reads = bootstrap.get("first_reads", []) if isinstance(bootstrap, dict) else []
-    first_queries = bootstrap.get("first_queries", []) if isinstance(bootstrap, dict) else []
-    surface_roles = bootstrap.get("surface_roles", []) if isinstance(bootstrap, dict) else []
-    conditional_reads = bootstrap.get("conditional_reads", []) if isinstance(bootstrap, dict) else []
-
-    first_reads_lower = [str(item).lower() for item in first_reads]
-    first_queries_lower = [str(item).lower() for item in first_queries]
-    surface_roles_lower = [str(item).lower() for item in surface_roles]
-    conditional_reads_lower = [str(item).lower() for item in conditional_reads]
-
-    if not any('start --task "<task>" --format json' in row for row in first_queries_lower):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest first_queries must include the Startup Router as the ordinary first-contact query.",
-            )
-        )
-
-    if (
-        "TODO.md" in first_reads_lower
-        or ".agentic-workspace/planning/state.toml" in first_reads_lower
-        or "roadmap.md" in first_reads_lower
-        or ".agentic-workspace/planning/execplans/readme.md" in first_reads_lower
-    ):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest first_reads must stay lightweight: start from AGENTS.md and keep .agentic-workspace/planning/state.toml conditional.",
-            )
-        )
-
-    if not any("implement --changed <paths>" in row for row in first_queries_lower):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest first_queries must include implement --changed for known changed paths.",
-            )
-        )
-
-    if not any(".agentic-workspace/docs/routing-contract.md" in row and "authoritative routing home" in row for row in surface_roles_lower):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest surface_roles must keep routing-contract.md as the authoritative routing home.",
-            )
-        )
-
-    if not any("agents.md" in row and "agent entrypoint router" in row for row in surface_roles_lower):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest surface_roles must keep AGENTS.md as the agent entrypoint router.",
-            )
-        )
-
-    if not any("agentic-workspace summary --format json" in row and "startup router" in row for row in conditional_reads_lower):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest conditional_reads must route planning recovery through the Startup Router before summary detail.",
-            )
-        )
-
-    if not any("do not bulk-read all planning surfaces" in row for row in conditional_reads_lower):
-        warnings.append(
-            PlanningWarning(
-                WARNING_STARTUP_POLICY_DRIFT,
-                _render_path(manifest_path),
-                "Manifest conditional_reads must include the no-bulk-read startup constraint.",
-            )
-        )
-
-    return warnings
+    # Startup policy is admitted by the native instruction owner; no prose mirror.
+    return []
 
 
 def _check_active_surface_hygiene(repo_root: Path) -> list[PlanningWarning]:
@@ -1446,81 +1245,16 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
 
 
 def _check_generated_agent_docs(repo_root: Path) -> list[PlanningWarning]:
-    warnings: list[PlanningWarning] = []
-    source_manifest_path = repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
-    mirror_manifest_path = repo_root / "tools" / "agent-manifest.json"
-    quickstart_path = repo_root / "tools" / "AGENT_QUICKSTART.md"
-    routing_path = repo_root / "tools" / "AGENT_ROUTING.md"
-
-    if not all(path.exists() for path in (source_manifest_path, mirror_manifest_path, quickstart_path, routing_path)):
-        return warnings
-
-    try:
-        manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        warnings.append(
-            PlanningWarning(
-                WARNING_GENERATED_DOCS_DRIFT,
-                _render_path(source_manifest_path),
-                "Source agent manifest is invalid JSON; generated docs cannot be validated.",
+    renderer = _load_render_module()
+    warnings = []
+    for name, expected in (("AGENT_QUICKSTART.md", renderer.render_quickstart()), ("AGENT_ROUTING.md", renderer.render_routing())):
+        path = repo_root / "tools" / name
+        if path.exists() and path.read_text(encoding="utf-8") != expected:
+            warnings.append(
+                PlanningWarning(
+                    WARNING_GENERATED_DOCS_DRIFT, _render_path(path), "Generated procedure pointer is stale; rerender agent docs."
+                )
             )
-        )
-        return warnings
-
-    render_module = _load_render_module()
-    expected_manifest = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
-    expected_quickstart = render_module.render_quickstart(manifest)
-    expected_routing = render_module.render_routing(manifest)
-
-    actual_manifest = mirror_manifest_path.read_text(encoding="utf-8")
-    actual_quickstart = quickstart_path.read_text(encoding="utf-8")
-    actual_routing = routing_path.read_text(encoding="utf-8")
-
-    if actual_manifest != expected_manifest:
-        warnings.append(
-            PlanningWarning(
-                WARNING_GENERATED_DOCS_DRIFT,
-                _render_path(mirror_manifest_path),
-                "Generated manifest mirror is out of date; rerender agent docs from the source manifest.",
-            )
-        )
-
-    if actual_quickstart != expected_quickstart:
-        warnings.append(
-            PlanningWarning(
-                WARNING_GENERATED_DOCS_DRIFT,
-                _render_path(quickstart_path),
-                "Generated quickstart is out of date; rerender agent docs from the source manifest.",
-            )
-        )
-
-    if actual_routing != expected_routing:
-        warnings.append(
-            PlanningWarning(
-                WARNING_GENERATED_DOCS_DRIFT,
-                _render_path(routing_path),
-                "Generated routing guide is out of date; rerender agent docs from the source manifest.",
-            )
-        )
-
-    if GENERATED_DOC_NOTICE_FRAGMENT not in actual_quickstart.lower():
-        warnings.append(
-            PlanningWarning(
-                WARNING_GENERATED_DOCS_DRIFT,
-                _render_path(quickstart_path),
-                "Generated quickstart is missing the non-manual generated-file marker.",
-            )
-        )
-
-    if GENERATED_DOC_NOTICE_FRAGMENT not in actual_routing.lower():
-        warnings.append(
-            PlanningWarning(
-                WARNING_GENERATED_DOCS_DRIFT,
-                _render_path(routing_path),
-                "Generated routing guide is missing the non-manual generated-file marker.",
-            )
-        )
-
     return warnings
 
 

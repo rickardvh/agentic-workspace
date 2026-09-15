@@ -149,11 +149,8 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     execplans_readme_text = (installer_mod.payload_root() / ".agentic-workspace" / "planning" / "execplans" / "README.md").read_text(
         encoding="utf-8"
     )
-    manifest_payload = json.loads(
-        (installer_mod.payload_root() / ".agentic-workspace" / "planning" / "agent-manifest.json").read_text(encoding="utf-8")
-    )
-    quickstart_text = render_module.render_quickstart(manifest_payload)
-    routing_text = render_module.render_routing(manifest_payload)
+    quickstart_text = render_module.render_quickstart()
+    routing_text = render_module.render_routing()
 
     assert "Execplans now treat four fields as first-class" in readme_text
     assert "Do not maintain a checked-in aggregate current queue" in readme_text
@@ -166,37 +163,18 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "without maintaining aggregate queue residue" in execplans_readme_text
     assert "## Authority Table" not in quickstart_text
     assert "## Escalation Table" not in quickstart_text
-    assert "Generated, non-authoritative helper" in quickstart_text
-    assert 'agentic-workspace start --task "<task>" --format json' in quickstart_text
-    assert "agentic-workspace preflight --format json" in quickstart_text
+    assert "repository bytes cannot establish live authority" in quickstart_text
+    assert 'start --target . --task "<task>" --format json' in quickstart_text
+    assert "agentic-workspace preflight" not in quickstart_text
     assert "## Routing Table" not in routing_text
-    assert "Secondary generated adapter" in routing_text
-    assert "## Use" in routing_text
+    assert "canonical workspace startup skill" in routing_text
+    assert "current native Planning relation/posture" in routing_text
     assert "## Compact Queries" not in routing_text
     assert "agentic-workspace preflight --format json" not in routing_text
-    assert 'agentic-workspace start --task "<task>" --format json' in routing_text
+    assert "Select specialized" in routing_text
     assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
-    assert any(
-        'Use `agentic-workspace start --task "<task>" --format json` before non-trivial work.' in item
-        for item in manifest_payload["bootstrap"]["first_queries"]
-    )
-    assert any(
-        "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery or ownership boundary review."
-        in item
-        for item in manifest_payload["bootstrap"]["conditional_reads"]
-    )
-    assert any(
-        "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery or ownership boundary review."
-        in item
-        for item in manifest_payload["bootstrap"]["conditional_reads"]
-    )
-    assert any("prefer the Startup Router before broader prose" in item for item in manifest_payload["bootstrap"]["conditional_reads"])
-    assert any("Ask the Startup Router first" in item for item in manifest_payload["bootstrap"]["tiny_safe_model"])
-    assert manifest_payload["bootstrap"]["boundary_triggered_escalation"][0]["boundary"] == "workspace"
-    assert manifest_payload["bootstrap"]["top_level_capabilities"][1]["module"] == "planning"
-    assert any("Do not preserve repository-global queue" in item for item in manifest_payload["bootstrap"]["completion_reminders"])
-    assert "generated static adapter" in quickstart_text
-    assert "Do not bulk-read all planning surfaces" in quickstart_text
+    assert "GENERATED STATIC ROUTING ADAPTER" in quickstart_text
+    assert "Direct work stays direct" in quickstart_text
     assert "clear the matched queue residue in the same pass" not in quickstart_text
 
 

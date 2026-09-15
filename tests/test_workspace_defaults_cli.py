@@ -561,7 +561,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["improvement_latitude"]["supported_modes"][1]["mode"] == "reporting"
     assert payload["improvement_latitude"]["supported_modes"][1]["initiative_posture"] == "reporting-only"
     assert "review outputs" in payload["improvement_latitude"]["supported_modes"][1]["reporting_destinations"]
-    assert payload["improvement_latitude"]["supported_modes"][3]["mode"] == "balanced"
+    assert payload["improvement_latitude"]["supported_modes"][3]["mode"] == "proactive"
     assert "repeated shared evidence" in payload["improvement_latitude"]["supported_modes"][3]["allows"][1]
     assert payload["improvement_latitude"]["evidence_source"] == "agentic-workspace report --target ./repo --format json"
     assert payload["improvement_latitude"]["evidence_classes"] == [

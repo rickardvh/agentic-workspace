@@ -794,9 +794,6 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md": (
             "Root operational planning install is missing `.agentic-workspace/planning/execplans/README.md`."
         ),
-        repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json": (
-            "Root operational planning install is missing `.agentic-workspace/planning/agent-manifest.json`."
-        ),
     }
 
     for path, message in required_root_surfaces.items():
@@ -845,7 +842,6 @@ def gather_boundary_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         repo_root / ".agentic-workspace" / "memory" / "WORKFLOW.md",
         repo_root / ".agentic-workspace" / "memory" / "SKILLS.md",
         repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
-        repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json",
     ]
 
     return {
@@ -1016,7 +1012,6 @@ def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
             expected_payload=planning_expected,
             root_sentinels=[
                 ".agentic-workspace/planning/execplans/README.md",
-                ".agentic-workspace/planning/agent-manifest.json",
             ],
             intentional_differences=[
                 {
