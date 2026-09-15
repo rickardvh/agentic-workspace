@@ -13,6 +13,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Compact Memory declaration admission shared by current native producers and consumers.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Native selection and capture enforce closed shape; descriptive context remains advisory.",
+      "owner": "memory",
+      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/*.schema.json",
+      "schema_or_validator": "JSON Schema draft 2020-12",
+      "status": "schema-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Pinned compiler and components are the shared source-build and artifact provenance authority.",
       "editable_by_agents": true,
       "format": "toml",

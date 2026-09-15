@@ -228,12 +228,12 @@ __all__ = [
     "build_substitutions",
     "cleanup_bootstrap_workspace",
     "collect_status",
-    "create_memory_note",
     "detect_install_mode",
     "detect_bootstrap_layout",
     "doctor_bootstrap",
     "format_actions",
     "format_result_json",
+    "create_memory_note",
     "install_bootstrap",
     "list_bundled_skills",
     "list_payload_files",
@@ -396,15 +396,8 @@ def _append_manifest_note_entry(
     note_path: Path,
     note_type: str,
     summary: str,
-    applies_to: tuple[str, ...],
-    use_when: tuple[str, ...],
     routes_from: tuple[str, ...],
     stale_when: tuple[str, ...],
-    evidence: tuple[str, ...],
-    memory_role: str,
-    promotion_target: str,
-    promotion_trigger: str,
-    retention_after_promotion: str,
 ) -> None:
     relative = note_path.as_posix()
     lines = [
@@ -412,32 +405,16 @@ def _append_manifest_note_entry(
         f"[notes.{_toml_string(relative)}]",
         f"note_type = {_toml_string(note_type)}",
         f"canonical_home = {_toml_string(relative)}",
-        'authority = "supporting"',
-        'audience = "human+agent"',
         f"summary = {_toml_string(summary)}",
-        'canonicality = "agent_only"',
         'task_relevance = "optional"',
     ]
     optional_arrays = {
-        "applies_to": applies_to,
-        "use_when": use_when,
         "routes_from": routes_from,
         "stale_when": stale_when,
-        "evidence": evidence,
     }
     for key, values in optional_arrays.items():
         if values:
             lines.append(f"{key} = {_toml_array(values)}")
-    optional_strings = {
-        "memory_role": memory_role,
-        "promotion_target": promotion_target,
-        "promotion_trigger": promotion_trigger,
-        "retention_after_promotion": retention_after_promotion,
-    }
-    for key, value in optional_strings.items():
-        if value:
-            lines.append(f"{key} = {_toml_string(value)}")
-
     existing = manifest_path.read_text(encoding="utf-8").rstrip()
     manifest_path.write_text(existing + "\n" + "\n".join(lines) + "\n", encoding="utf-8")
 
@@ -484,6 +461,11 @@ def create_memory_note(
     if note_path.exists():
         result.add("manual review", note_path, "memory note already exists; choose a new slug or edit intentionally")
         return result
+    if not local and _memory_manifest_typed_validator_findings(manifest_path):
+        result.add(
+            "manual review", manifest_path, "Unsupported Memory declarations; repair through the current owner before creating a note"
+        )
+        return result
     manifest = None if local else _load_memory_manifest(manifest_path)
     if not local and manifest is not None and any(note.path == note_relative for note in manifest.notes):
         result.add("manual review", manifest_path, f"manifest already has a note entry for {note_relative.as_posix()}")
@@ -522,6 +504,15 @@ def create_memory_note(
             rendered_note = rendered_note.replace("## Purpose\n\n", local_metadata + "## Purpose\n\n", 1)
         else:
             rendered_note = rendered_note + "\n\n" + local_metadata
+    context = {
+        "Memory role": memory_role,
+        "Promotion target": promotion_target,
+        "Promotion trigger": promotion_trigger,
+        "After admitted promotion": retention_after_promotion,
+    }
+    review = [f"- {label}: {value}" for label, value in context.items() if value]
+    if review:
+        rendered_note += "\n## Advisory review context\n\n" + "\n".join(review) + "\n"
     note_path.write_text(rendered_note, encoding="utf-8")
     if local:
         result.add("created", note_path, "local-only Memory note markdown")
@@ -531,15 +522,8 @@ def create_memory_note(
         note_path=note_relative,
         note_type=note_type.strip() or "memory-note",
         summary=note_summary,
-        applies_to=normalised_applies_to,
-        use_when=normalised_use_when,
         routes_from=normalised_routes_from,
         stale_when=normalised_stale_when,
-        evidence=normalised_evidence,
-        memory_role=memory_role.strip(),
-        promotion_target=promotion_target.strip(),
-        promotion_trigger=promotion_trigger.strip(),
-        retention_after_promotion=retention_after_promotion.strip(),
     )
     result.add("created", note_path, "minimal Memory note markdown")
     result.add("updated", manifest_path, "schema-valid manifest note entry")

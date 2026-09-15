@@ -283,21 +283,13 @@ version = 1
 [notes.".agentic-workspace/memory/repo/domains/memory-package-context.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/memory-package-context.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-surfaces = ["architecture"]
 routes_from = ["packages/memory/**"]
 
 [notes.".agentic-workspace/memory/repo/domains/planning-package-context.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/planning-package-context.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-surfaces = ["architecture"]
 routes_from = ["packages/planning/**"]
 """.strip()
         + "\n",
@@ -335,21 +327,13 @@ version = 1
 [notes.".agentic-workspace/memory/repo/domains/memory-package-context.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/memory-package-context.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-surfaces = ["architecture"]
 routes_from = ["packages/memory/**"]
 
 [notes.".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"]
 note_type = "runbook"
 canonical_home = ".agentic-workspace/memory/repo/runbooks/package-context-inspection.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-surfaces = ["runtime"]
 routes_from = ["packages/memory/**", "packages/planning/**"]
 """.strip()
         + "\n",
@@ -521,49 +505,6 @@ status = "active"
     assert any(action.role == "memory-manifest" and "durable_facts.too-vague" in action.detail for action in result.actions)
 
 
-def test_doctor_emits_improvement_pressure_suggestions_from_manifest(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 32\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
-        "# Recurring failures\n\n- This keeps happening.\n", encoding="utf-8"
-    )
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
-note_type = "recurring-failures"
-canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-memory_role = "improvement_signal"
-preferred_remediation = "test"
-improvement_candidate = true
-elimination_target = "shrink"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert any(
-        action.path == target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md"
-        and action.kind == "consider"
-        and "regression test" in action.detail
-        and action.remediation_kind == "test"
-        and action.remediation_target == "tests/test_recurring-failures.py"
-        and action.memory_action == "shrink"
-        for action in result.actions
-    )
-
-
 def test_doctor_flags_legacy_upgrade_runbook_for_removal(tmp_path: Path) -> None:
     target = tmp_path / "repo"
     (target / ".git").mkdir(parents=True, exist_ok=True)
@@ -638,49 +579,6 @@ def test_doctor_audits_routing_feedback_hygiene(tmp_path: Path) -> None:
     assert any("missing expected missing/unexpected note entries" in detail for detail in details)
 
 
-def test_doctor_audit_flags_core_docs_that_depend_on_memory_when_policy_enabled(
-    tmp_path: Path,
-) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
-    (target / "docs").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[rules]
-forbid_core_docs_depend_on_memory = true
-core_doc_globs = ["README.md", "docs/**/*.md"]
-core_doc_exclude_globs = [".agentic-workspace/memory/repo/**/*.md", "AGENTS.md"]
-
-[notes.".agentic-workspace/memory/repo/index.md"]
-note_type = "routing"
-canonical_home = ".agentic-workspace/memory/repo/index.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "required"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-    (target / "README.md").write_text(
-        "See `.agentic-workspace/memory/repo/runbooks/deploy.md` for the stable deployment procedure.\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert any(
-        action.path == target / "README.md" and action.kind == "manual review" and "core doc depends on memory" in action.detail
-        for action in result.actions
-    )
-
-
 def test_doctor_strict_doc_ownership_forces_audit_without_manifest_opt_in(
     tmp_path: Path,
 ) -> None:
@@ -696,17 +594,11 @@ def test_doctor_strict_doc_ownership_forces_audit_without_manifest_opt_in(
 version = 1
 
 [rules]
-core_doc_globs = ["README.md"]
-core_doc_exclude_globs = [".agentic-workspace/memory/repo/**/*.md", "AGENTS.md"]
-forbid_core_docs_depend_on_memory = false
 
 [notes.".agentic-workspace/memory/repo/index.md"]
 note_type = "routing"
 canonical_home = ".agentic-workspace/memory/repo/index.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "required"
+task_relevance = "optional"
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -716,80 +608,6 @@ task_relevance = "required"
     result = installer.doctor_bootstrap(target=target, strict_doc_ownership=True)
 
     assert any(action.path == target / "README.md" and "core doc depends on memory" in action.detail for action in result.actions)
-
-
-def test_doctor_validates_manifest_canonicality_values(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/domains/api.md"]
-note_type = "domain"
-canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "wrong"
-task_relevance = "sometimes"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert any(
-        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
-        and "manifest canonicality must be one of" in action.detail
-        for action in result.actions
-    )
-    assert any(
-        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
-        and "manifest task_relevance must be required or optional" in action.detail
-        for action in result.actions
-    )
-
-
-def test_doctor_validates_optional_improvement_manifest_values(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 33\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/domains/api.md"]
-note_type = "domain"
-canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-memory_role = "weird"
-symptom_of = "bad"
-preferred_remediation = "robot"
-elimination_target = "gone"
-retention_after_promotion = "forever"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert any("manifest memory_role must be durable_truth or improvement_signal" in action.detail for action in result.actions)
-    assert any("manifest symptom_of must be one of" in action.detail for action in result.actions)
-    assert any("manifest preferred_remediation must be one of" in action.detail for action in result.actions)
-    assert any("manifest elimination_target must be one of" in action.detail for action in result.actions)
-    assert any("manifest retention_after_promotion must be one of" in action.detail for action in result.actions)
 
 
 def test_doctor_reports_invalid_manifest_toml(tmp_path: Path) -> None:
@@ -859,121 +677,13 @@ status = "active"
     result = installer.doctor_bootstrap(target=target)
     details = [action.detail for action in result.actions if action.role == "memory-manifest"]
 
-    assert "manifest version must be an integer" in details
-    assert "manifest rules.routing_only must be an array of strings" in details
-    assert "manifest rules.forbid_core_docs_depend_on_memory must be a boolean" in details
+    assert "manifest version must be integer 1" in details
+    assert any("unsupported manifest rules.rules.routing_only" in detail for detail in details)
+    assert any("unsupported manifest rules.rules.forbid_core_docs_depend_on_memory" in detail for detail in details)
     assert any("routes_from must be an array of strings" in detail for detail in details)
-    assert any("use_when must be an array of strings" in detail for detail in details)
-    assert any("evidence must be an array of strings" in detail for detail in details)
-    assert any("retention_after_promotion must be a non-empty string when present" in detail for detail in details)
-    assert any("improvement_candidate must be a boolean" in detail for detail in details)
-    assert any("missing-fields.md.note_type must be a non-empty string" in detail for detail in details)
-    assert any("missing-fields.md.authority must be a non-empty string" in detail for detail in details)
-    assert any("durable_facts.memory-owner-boundary.route_keys must be an array of strings" in detail for detail in details)
     assert any("durable_facts.memory-owner-boundary.evidence must be an array of strings" in detail for detail in details)
-
-
-def test_doctor_flags_incomplete_improvement_signal_lifecycle(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
-        "# Recurring Failures\n", encoding="utf-8"
-    )
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
-note_type = "recurring-failures"
-canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-memory_role = "improvement_signal"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert any("preferred_remediation plus improvement_note, or retention_justification" in action.detail for action in result.actions)
-    assert any("missing elimination_target" in action.detail for action in result.actions)
-    assert any("should declare config_treatment" in action.detail for action in result.actions)
-    assert any("should pair config_treatment with config_note" in action.detail for action in result.actions)
-
-
-def test_doctor_accepts_retention_justification_for_improvement_signal(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "mistakes" / "recurring-failures.md").write_text(
-        "# Recurring Failures\n", encoding="utf-8"
-    )
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
-note_type = "recurring-failures"
-canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-memory_role = "improvement_signal"
-retention_justification = "The repo still lacks an executable replacement for this recurring operator trap."
-elimination_target = "shrink"
-config_treatment = "retain"
-config_note = "Current config does not change the need to keep this trap visible until an executable replacement exists."
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert not any("retention_justification" in action.detail for action in result.actions)
-    assert not any("config_treatment" in action.detail for action in result.actions)
-
-
-def test_doctor_flags_invalid_config_treatment_metadata(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "recurring-friction-ledger.md").write_text(
-        "# Recurring Friction Ledger\n", encoding="utf-8"
-    )
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
-note_type = "runbook"
-canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-memory_role = "improvement_signal"
-preferred_remediation = "validation"
-improvement_note = "Promote repeated friction into stronger remediation."
-elimination_target = "promote"
-config_treatment = "escalate"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert any("manifest config_treatment must be one of" in action.detail for action in result.actions)
-    assert any("should pair config_treatment with config_note" in action.detail for action in result.actions)
+    assert any("durable_facts.memory-owner-boundary.note_ref is required" in detail for detail in details)
+    assert any("authority_class must be 'advisory'" in detail for detail in details)
 
 
 def test_doctor_emits_recurring_friction_promotion_pressure_for_repeated_entry(tmp_path: Path) -> None:
@@ -1060,11 +770,7 @@ version = 1
 [notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
 note_type = "runbook"
 canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-memory_role = "improvement_signal"
 preferred_remediation = "validation"
 improvement_candidate = true
 improvement_note = "Promote repeated friction into stronger remediation."
@@ -1165,11 +871,7 @@ version = 1
 [notes.".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"]
 note_type = "runbook"
 canonical_home = ".agentic-workspace/memory/repo/runbooks/recurring-friction-ledger.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-memory_role = "improvement_signal"
 preferred_remediation = "validation"
 improvement_candidate = true
 improvement_note = "Promote repeated friction into stronger remediation."
@@ -1184,51 +886,6 @@ config_note = "Current repo posture prefers escalating repeated workflow drift."
     result = installer.doctor_bootstrap(target=target)
 
     assert any("missing Config treatment" in action.detail for action in result.actions)
-
-
-def test_doctor_flags_manifest_routing_drift_for_small_default_surface(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[rules]
-routing_only = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/WORKFLOW.md"]
-high_level = [".agentic-workspace/memory/repo/index.md", ".agentic-workspace/memory/repo/current/task-context.md"]
-
-[notes.".agentic-workspace/memory/WORKFLOW.md"]
-note_type = "workflow-policy"
-canonical_home = ".agentic-workspace/memory/WORKFLOW.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "required"
-
-[notes.".agentic-workspace/memory/repo/current/task-context.md"]
-note_type = "current-context"
-canonical_home = ".agentic-workspace/memory/repo/current/task-context.md"
-authority = "canonical"
-audience = "agent"
-canonicality = "agent_only"
-task_relevance = "required"
-surfaces = ["api"]
-routes_from = ["src/**/*.py"]
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-    details = [action.detail for action in result.actions]
-
-    assert any("rules.routing_only should contain only .agentic-workspace/memory/repo/index.md" in detail for detail in details)
-    assert any("rules.high_level should not include .agentic-workspace/memory/repo/current/task-context.md" in detail for detail in details)
-    assert any("WORKFLOW.md should remain reference policy" in detail for detail in details)
-    assert any("task-context should stay optional continuation compression" in detail for detail in details)
-    assert any("task-context should not advertise broad routing metadata" in detail for detail in details)
 
 
 def test_doctor_flags_task_board_dependence_outside_current_notes(tmp_path: Path) -> None:
@@ -1247,9 +904,6 @@ task_board_globs = ["TODO.md"]
 [notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 routes_from = ["TODO.md"]
 stale_when = ["TODO.md"]
@@ -1281,17 +935,11 @@ canonical_dirs = [".agentic-workspace/memory/repo/domains", ".agentic-workspace/
 [notes.".agentic-workspace/memory/repo/domains/wrong.md"]
 note_type = "invariant"
 canonical_home = ".agentic-workspace/memory/repo/domains/wrong.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 
 [notes."memory/misc/api.md"]
 note_type = "invariant"
 canonical_home = "memory/misc/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 """.strip()
         + "\n",
@@ -1304,164 +952,6 @@ task_relevance = "optional"
     assert any(
         "notes under .agentic-workspace/memory/repo/domains/ should keep note_type = domain" in action.detail for action in result.actions
     )
-
-
-def test_doctor_enforces_routing_feedback_as_calibration_only(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "routing-feedback.md").write_text(
-        """# Routing Feedback
-
-## Status
-
-Active
-
-## Scope
-
-- Calibration only.
-
-## Load when
-
-- Reviewing routing.
-
-## Review when
-
-- Routes change.
-
-## Missed-note entries
-
-## Over-routing entries
-
-## Synthesis
-
-- Keep this compact.
-
-## Last confirmed
-
-2026-04-05
-""",
-        encoding="utf-8",
-    )
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/current/routing-feedback.md"]
-note_type = "routing-feedback"
-canonical_home = "docs/routing.md"
-authority = "canonical"
-audience = "agent"
-canonicality = "candidate_for_promotion"
-task_relevance = "required"
-memory_role = "durable_truth"
-routes_from = ["src/**/*.py"]
-stale_when = ["src/**/*.py"]
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-    details = [
-        action.detail for action in result.actions if action.path == target / ".agentic-workspace/memory/repo/current/routing-feedback.md"
-    ]
-
-    assert any("routing-feedback should stay optional calibration context" in detail for detail in details)
-    assert any("routing-feedback should stay agent_only calibration context" in detail for detail in details)
-    assert any("routing-feedback should stay calibration-only" in detail for detail in details)
-    assert any("should not advertise broad routing or freshness metadata" in detail for detail in details)
-
-
-def test_doctor_flags_current_note_authority_and_memory_role_drift(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "current").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "current" / "project-state.md").write_text(
-        """
-# Project State
-
-## Status
-
-Active
-
-## Scope
-
-- Overview only.
-
-## Applies to
-
-- README.md
-
-## Load when
-
-- Starting work.
-
-## Review when
-
-- Focus changes.
-
-## Current focus
-
-- Short summary.
-
-## Recent meaningful progress
-
-- None yet.
-
-## Blockers
-
-- None.
-
-## High-level notes
-
-- Keep brief.
-
-## Failure signals
-
-- Drift.
-
-## Verify
-
-- Check current state.
-
-## Verified against
-
-- README.md
-
-## Last confirmed
-
-2026-04-06
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/current/project-state.md"]
-note_type = "current-overview"
-canonical_home = ".agentic-workspace/memory/repo/current/project-state.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
-task_relevance = "optional"
-memory_role = "durable_truth"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-    details = [
-        action.detail for action in result.actions if action.path == target / ".agentic-workspace/memory/repo/current/project-state.md"
-    ]
-
-    assert any("weak-authority context" in detail for detail in details)
-    assert any("should not declare durable-truth or improvement-signal memory roles" in detail for detail in details)
 
 
 def test_doctor_emits_note_type_specific_size_warning(tmp_path: Path) -> None:
@@ -1479,9 +969,6 @@ version = 1
 [notes.".agentic-workspace/memory/repo/invariants/api.md"]
 note_type = "invariant"
 canonical_home = ".agentic-workspace/memory/repo/invariants/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 """.strip()
         + "\n",
@@ -1492,41 +979,6 @@ task_relevance = "optional"
 
     assert any(
         action.role == "memory-size-audit" and "invariant note is oversized" in action.detail and "expected <= 80" in action.detail
-        for action in result.actions
-    )
-
-
-def test_doctor_emits_note_lifecycle_pressure_for_promotion_candidate(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md").write_text(
-        "# API\n\n" + ("Stable guidance.\n" * 45), encoding="utf-8"
-    )
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/domains/api.md"]
-note_type = "domain"
-canonical_home = "docs/api.md"
-authority = "advisory"
-audience = "human+agent"
-canonicality = "candidate_for_promotion"
-task_relevance = "optional"
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    result = installer.doctor_bootstrap(target=target)
-
-    assert any(
-        action.role == "memory-lifecycle"
-        and action.path == target / ".agentic-workspace/memory/repo/domains/api.md"
-        and "move canonical guidance into docs/api.md" in action.detail
-        and "short stub" in action.detail
         for action in result.actions
     )
 
@@ -1547,9 +999,6 @@ version = 1
 [notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 """.strip()
         + "\n",
@@ -1601,9 +1050,6 @@ version = 1
 [notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 """.strip()
         + "\n",
@@ -1634,9 +1080,6 @@ version = 1
 [notes.".agentic-workspace/memory/repo/runbooks/release.md"]
 note_type = "runbook"
 canonical_home = ".agentic-workspace/memory/repo/runbooks/release.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 """.strip()
         + "\n",
@@ -1650,44 +1093,6 @@ task_relevance = "optional"
         and action.path == target / ".agentic-workspace/memory/repo/runbooks/release.md"
         and ".agentic-workspace/memory/repo/invariants/release.md" in action.detail
         for action in result.actions
-    )
-
-
-def test_doctor_rejects_canonical_elsewhere_targets_inside_memory(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    (target / ".git").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "repo" / "domains").mkdir(parents=True, exist_ok=True)
-    (target / "AGENTS.md").write_text("# Agent instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory").mkdir(parents=True, exist_ok=True)
-    (target / ".agentic-workspace" / "memory" / "VERSION.md").write_text("Version: 30\n", encoding="utf-8")
-    (target / ".agentic-workspace" / "memory" / "repo" / "manifest.toml").write_text(
-        """
-version = 1
-
-[notes.".agentic-workspace/memory/repo/domains/api.md"]
-note_type = "domain"
-canonical_home = ".agentic-workspace/memory/repo/invariants/api.md"
-authority = "advisory"
-audience = "human+agent"
-canonicality = "canonical_elsewhere"
-task_relevance = "optional"
-surfaces = ["api"]
-""".strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    doctor = installer.doctor_bootstrap(target=target)
-    routed = installer.route_memory(target=target, surfaces=["api"])
-
-    assert any(
-        action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "api.md"
-        and "canonical_elsewhere notes must point canonical_home" in action.detail
-        for action in doctor.actions
-    )
-    assert not any(
-        action.path == target / ".agentic-workspace" / "memory" / "repo" / "invariants" / "api.md" and action.kind == "required"
-        for action in routed.actions
     )
 
 
@@ -1709,21 +1114,13 @@ version = 1
 [notes.".agentic-workspace/memory/repo/domains/api.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-surfaces = ["api"]
 routes_from = ["src/**/*.py"]
 
 [notes.".agentic-workspace/memory/repo/invariants/api.md"]
 note_type = "invariant"
 canonical_home = ".agentic-workspace/memory/repo/invariants/api.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-surfaces = ["api"]
 routes_from = ["src/**/*.py"]
 """.strip()
         + "\n",
@@ -1817,20 +1214,12 @@ version = 1
 [notes.".agentic-workspace/memory/repo/decisions/wishlist.md"]
 note_type = "decision"
 canonical_home = ".agentic-workspace/memory/repo/decisions/wishlist.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["memory-system"]
 
 [notes.".agentic-workspace/memory/repo/mistakes/recurring-failures.md"]
 note_type = "recurring-failures"
 canonical_home = ".agentic-workspace/memory/repo/mistakes/recurring-failures.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
-subsystems = ["memory-system"]
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -1863,23 +1252,17 @@ def test_doctor_shadow_doc_detection_flags_overlap(tmp_path: Path) -> None:
 version = 1
 
 [rules]
-forbid_core_docs_depend_on_memory = true
-core_doc_globs = ["docs/**/*.md"]
-core_doc_exclude_globs = [".agentic-workspace/memory/repo/**/*.md", "AGENTS.md"]
 
 [notes.".agentic-workspace/memory/repo/domains/deploy.md"]
 note_type = "domain"
 canonical_home = ".agentic-workspace/memory/repo/domains/deploy.md"
-authority = "canonical"
-audience = "human+agent"
-canonicality = "agent_only"
 task_relevance = "optional"
 """.strip()
         + "\n",
         encoding="utf-8",
     )
 
-    result = installer.doctor_bootstrap(target=target)
+    result = installer.doctor_bootstrap(target=target, strict_doc_ownership=True)
 
     assert any(
         action.path == target / ".agentic-workspace" / "memory" / "repo" / "domains" / "deploy.md"
@@ -1887,3 +1270,56 @@ task_relevance = "optional"
         and "shadow-doc overlap" in action.detail
         for action in result.actions
     )
+
+
+@pytest.mark.parametrize(
+    "context", ["", 'owner = "Memory"\npromotion = "review destination"\ndemotion_or_expiry = "source changes"\nevidence = ["README.md"]\n']
+)
+def test_doctor_accepts_current_fact_and_review_only_note(tmp_path: Path, context: str) -> None:
+    import tomllib
+
+    from jsonschema import Draft202012Validator
+
+    from repo_memory_bootstrap._installer_memory import _load_memory_manifest
+
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+    manifest_path = target / ".agentic-workspace/memory/repo/manifest.toml"
+    manifest_path.write_text(
+        "version = 1\n"
+        '[notes.".agentic-workspace/memory/repo/current/project-state.md"]\n'
+        'note_type = "current-overview"\ntask_relevance = "review-only"\n'
+        '[durable_facts.current]\nsummary = "Current advisory lesson"\n'
+        'note_ref = ".agentic-workspace/memory/repo/current/project-state.md"\n'
+        'authority_class = "advisory"\n' + context,
+        encoding="utf-8",
+    )
+    schema = json.loads((PACKAGE_ROOT / "src/repo_memory_bootstrap/contracts/manifest.schema.json").read_text())
+    Draft202012Validator(schema).validate(tomllib.loads(manifest_path.read_text()))
+    manifest = _load_memory_manifest(manifest_path)
+    assert manifest is not None
+    assert manifest.notes[0].task_relevance == "review-only"
+    assert manifest.durable_facts[0].authority_class == "advisory"
+    result = installer.doctor_bootstrap(target=target)
+    assert not [action.detail for action in result.actions if action.category == "contract-drift" and action.role == "memory-manifest"]
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        'task_relevance = "required"',
+        'authority = "canonical"',
+        'canonicality = "agent_only"',
+        'memory_role = "improvement_signal"',
+        'retention_after_promotion = "retain"',
+    ],
+)
+def test_doctor_rejects_retired_note_declarations(tmp_path: Path, field: str) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+    installer.install_bootstrap(target=target)
+    manifest_path = target / ".agentic-workspace/memory/repo/manifest.toml"
+    manifest_path.write_text('version = 1\n[notes."note.md"]\n' + field + "\n", encoding="utf-8")
+    result = installer.doctor_bootstrap(target=target)
+    assert any(action.category == "contract-drift" and action.role == "memory-manifest" for action in result.actions)
