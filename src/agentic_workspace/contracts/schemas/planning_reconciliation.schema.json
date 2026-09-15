@@ -72,7 +72,7 @@
       "anyOf": [
         {
           "$ref": "#/$defs/selection_transition",
-          "description": "Native owner-admitted selector transition; effect currentness only, never material Planning identity or caller authority."
+          "description": "Native selector currentness; no material identity or caller authority."
         },
         {
           "type": "null",
@@ -124,7 +124,7 @@
     },
     "update_recovery_request": {
       "type": "object",
-      "description": "Select an exact retained native update for current same-owner continuation. Requires the existing current continue-selected request; grants no custody or material revision.",
+      "description": "Exact update recovery; requires continue-selected; no material edit.",
       "properties": {
         "owner_ref": {
           "type": "string",
@@ -132,7 +132,7 @@
         },
         "pending_revision": {
           "type": "string",
-          "description": "Exact retained update invocation revision returned by the owner."
+          "description": "Owner-returned update revision."
         }
       },
       "required": [
@@ -143,11 +143,11 @@
     },
     "continuation_request": {
       "type": "object",
-      "description": "Current relation and independent posture; no mutation or completion authority.",
+      "description": "Relation/posture only; no effect authority.",
       "properties": {
         "owner_ref": {
           "type": "string",
-          "description": "Destination choice; replacement requires native selector custody."
+          "description": "Destination; native custody required."
         },
         "answer": {
           "type": "string",
@@ -157,12 +157,12 @@
             "unrelated-direct",
             "authorize-selector-transfer"
           ],
-          "description": "Incumbent relation; legacy unrelated-direct derives independent/direct."
+          "description": "Relation; unrelated-direct means independent/direct."
         },
         "transfer_revision": {
           "type": "string",
           "minLength": 1,
-          "description": "Owner-bound selector/source/work/target/destination revision."
+          "description": "Exact owner-bound transfer revision."
         },
         "task_posture": {
           "type": "string",
@@ -506,7 +506,7 @@
     },
     "operation_arguments": {
       "type": "object",
-      "description": "Exact operation arguments returned by Planning; clients do not author them.",
+      "description": "Planning-returned arguments; never caller-authored.",
       "properties": {
         "target": {
           "type": "string",
@@ -518,7 +518,7 @@
         },
         "selection_transition": {
           "$ref": "#/$defs/selection_transition",
-          "description": "Native owner-admitted selector transition; effect currentness only, never material Planning identity or caller authority."
+          "description": "Native selector currentness; no material identity or caller authority."
         }
       },
       "required": [
@@ -528,7 +528,7 @@
       "additionalProperties": false
     },
     "selection_transition": {
-      "description": "Exact native release or human-authorized legacy transfer only.",
+      "description": "Native release or human-authorized legacy transfer.",
       "oneOf": [
         {
           "$ref": "#/$defs/native_selection_transition"
@@ -545,24 +545,24 @@
         "prior_sha256": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$",
-          "description": "Exact existing selector bytes before replacement."
+          "description": "Exact selector preimage."
         },
         "prior_custody": {
           "$ref": "#/$defs/custody",
           "properties": {
             "committed": {
               "$ref": "#/$defs/evidence",
-              "description": "Committed prior admission; uncertain attempts cannot release."
+              "description": "Committed admission required for release."
             }
           },
           "required": [
             "committed"
           ],
-          "description": "Independently validated current native Planning producer custody."
+          "description": "Validated native Planning producer custody."
         },
         "selection": {
           "type": "object",
-          "description": "Destination fields; custody is retained separately.",
+          "description": "Destination; separate custody.",
           "properties": {
             "kind": {
               "const": "agentic-planning/owner-selection/v1",
@@ -579,7 +579,7 @@
             },
             "selected_owner": {
               "type": "object",
-              "description": "Current destination semantic owner.",
+              "description": "Destination owner.",
               "properties": {
                 "id": {
                   "type": "string",
@@ -631,7 +631,7 @@
         },
         "human_authorization": {
           "type": "object",
-          "description": "Owner request with human answer; revalidated before transfer.",
+          "description": "Human answer; revalidate before transfer.",
           "properties": {
             "arguments": {
               "$ref": "#/$defs/continuation_request",
@@ -652,13 +652,32 @@
         },
         "selection": {
           "type": "object",
-          "description": "Legacy selector preserved verbatim except added custody."
+          "description": "Legacy selector plus custody only."
         }
       },
       "required": [
         "prior_sha256",
         "human_authorization",
         "selection"
+      ],
+      "additionalProperties": false
+    },
+    "posture_request": {
+      "type": "object",
+      "properties": {
+        "task_relation": {
+          "const": "independent"
+        },
+        "answer": {
+          "enum": [
+            "direct",
+            "planned"
+          ]
+        }
+      },
+      "required": [
+        "task_relation",
+        "answer"
       ],
       "additionalProperties": false
     }

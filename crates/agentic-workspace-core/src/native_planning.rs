@@ -557,6 +557,9 @@ fn resolve_context(
     let mut shape = schema["$defs"]["continuation_request"].clone();
     shape["$schema"] = schema["$schema"].clone();
     let declaration = json!({"kind":"planning/continuation/v1","result_kind":"agentic-workspace/planning-continuation-result/v1","input_schema":shape});
+    let mut posture_shape = schema["$defs"]["posture_request"].clone();
+    posture_shape["$schema"] = schema["$schema"].clone();
+    let posture_declaration = json!({"kind":"planning/posture/v1","result_kind":"agentic-workspace/planning-continuation-result/v1","input_schema":posture_shape});
     let creation_declaration = crate::native_planning_create::declaration();
     let update_declaration = crate::native_planning_update::declaration();
     let recovery_declaration = crate::native_planning_update::recovery_declaration();
@@ -564,13 +567,14 @@ fn resolve_context(
     let handoff_declaration = crate::native_planning_update::handoff_declaration();
     let owner_revision = digest(&json!([
         declaration,
+        posture_declaration,
         creation_declaration,
         update_declaration,
         recovery_declaration,
         adoption_declaration,
         handoff_declaration
     ]))?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,posture_declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
     {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);
@@ -638,10 +642,19 @@ fn resolve_context(
     if !selected.is_null()
         && retained["kind"] == "agentic-planning/reconciliation-custody/v1"
         && retained["current_work"] == *current_work
-        && retained["source"] == selected["source"]
+        && (retained["source"] == selected["source"]
+            || crate::native_planning_update::retained_work_current(
+                &target,
+                &selected,
+                current_work,
+            )?)
     {
         status = "current";
-        planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work},"custody":retained["custody"],"invocation":retained["invocation"]});
+        planning_input = json!({"target":target,"relevant":true,"source":selected["source"],"intent":{"current_work":current_work}});
+        if retained["source"] == selected["source"] {
+            planning_input["custody"] = retained["custody"].clone();
+            planning_input["invocation"] = retained["invocation"].clone();
+        }
         if let Some(previous) = &selection
             && let Some(recovered) = retained_transition(&target, previous)?
         {
@@ -661,6 +674,13 @@ fn resolve_context(
             )?
         {
             status = "stale";
+            planning_input = Value::Null;
+        } else if request["request_kind"] == "planning/posture/v1" {
+            status = if request["arguments"]["answer"] == "direct" {
+                "direct"
+            } else {
+                "planned"
+            };
             planning_input = Value::Null;
         } else if request["arguments"]["answer"] == "authorize-selector-transfer" {
             if transfer.is_null()
@@ -718,7 +738,7 @@ fn resolve_context(
             matches!(
                 r["arguments"]["answer"].as_str(),
                 Some("independent" | "unrelated-direct")
-            )
+            ) || r["request_kind"] == "planning/posture/v1"
         });
         if continuing && !unrelated {
             status = "reentry-required";
@@ -746,6 +766,8 @@ fn resolve_context(
     };
     let decisions = if matches!(status, "unresolved" | "stale") {
         json!([{"id":"planning-continuation","question":"Does the current task continue the remembered Planning owner?","material":{"incumbent_owner":selected},"response_request":{"request_kind":"planning/continuation/v1","arguments":{}},"choices":[{"id":"continue-selected","label":"Continue the remembered Planning owner"},{"id":"independent","label":"This work is independent of that owner"}],"affects":["task"]}])
+    } else if status == "independent" {
+        json!([{"id":"planning-posture","question":"Is this independent work direct or planned?","response_request":{"request_kind":"planning/posture/v1","arguments":{"task_relation":"independent"}},"choices":[{"id":"direct","label":"Bounded direct work"},{"id":"planned","label":"Create or select a Planning owner"}],"affects":["task"]}])
     } else {
         json!([])
     };
@@ -755,7 +777,7 @@ fn resolve_context(
         matches!(
             r["arguments"]["answer"].as_str(),
             Some("independent" | "unrelated-direct")
-        )
+        ) || r["request_kind"] == "planning/posture/v1"
     }) && status != "stale"
     {
         "independent"
@@ -1923,6 +1945,23 @@ mod tests {
         assert_eq!(direct["status"], "independent");
         assert_eq!(direct["required_transition"], "determine-posture");
         assert!(resolve(&target.0, &work(), Some(request)).is_err());
+        for posture in ["direct", "planned"] {
+            let decision = crate::compile_value(json!({"contributions":[direct["contribution"]],"intent":{"current_work":work()},"capability_contract":contract})).unwrap();
+            let question = &decision["pending_consequences"]["decisions"][0];
+            let response = crate::answer_decision_value(json!({"decision":decision,"question":question["consequence_id"],"answer":posture,"capability_contract":contract})).unwrap();
+            let request = response.get("request").unwrap_or(&response);
+            let result =
+                resolve_with_contract(&target.0, &work(), Some(request), Some(&contract)).unwrap();
+            assert_eq!(result["status"], posture);
+            assert_eq!(result["task_relation"], "independent");
+            assert!(result["selected_owner"].is_null());
+            assert!(
+                result["contribution"]["decisions"]
+                    .as_array()
+                    .unwrap()
+                    .is_empty()
+            );
+        }
     }
     #[test]
     fn native_planning_source_and_work_drift_cannot_reuse_intention() {

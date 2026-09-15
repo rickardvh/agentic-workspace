@@ -106,7 +106,10 @@ fn resolve_with_baseline(
                     .as_ref()
                     .is_some_and(|i| i["operation_id"] == "proof.report")
                     && request["owner"] == "planning"
-                    && request["request_kind"] == "planning/continuation/v1")
+                    && matches!(
+                        request["request_kind"].as_str(),
+                        Some("planning/continuation/v1" | "planning/posture/v1")
+                    ))
         })
     {
         return Err(CoreError::new(
@@ -116,7 +119,13 @@ fn resolve_with_baseline(
     let request_for = |owner: &str| requests.iter().find(|request| request["owner"] == owner);
     let planning_request = requests
         .iter()
-        .find(|r| r["owner"] == "planning" && r["request_kind"] == "planning/continuation/v1")
+        .find(|r| {
+            r["owner"] == "planning"
+                && matches!(
+                    r["request_kind"].as_str(),
+                    Some("planning/continuation/v1" | "planning/posture/v1")
+                )
+        })
         .or_else(|| {
             input
                 .invocation
@@ -124,7 +133,7 @@ fn resolve_with_baseline(
                 .filter(|i| {
                     matches!(
                         i["operation_id"].as_str(),
-                        Some("planning.create" | "planning.update-recover")
+                        Some("planning.create" | "planning.update" | "planning.update-recover")
                     )
                 })
                 .and_then(|i| i["arguments"].get("planning_request"))
@@ -781,6 +790,8 @@ fn resolve_with_baseline(
         && planning_request.is_some_and(|r| {
             r["arguments"]["answer"] == "unrelated-direct"
                 || r["arguments"]["task_posture"] == "direct"
+                || (r["request_kind"] == "planning/posture/v1"
+                    && r["arguments"]["answer"] == "direct")
         })
     {
         return Err(CoreError::new(
