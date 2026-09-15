@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,6 +17,26 @@ def _load_runner():
     assert spec.loader is not None
     spec.loader.exec_module(module)
     return module
+
+
+def test_compact_runner_rejects_output_escape_before_writing(tmp_path) -> None:
+    root = tmp_path / "repo"
+    script = root / "scripts/check/run_compact_command.py"
+    script.parent.mkdir(parents=True)
+    script.write_bytes(SCRIPT_PATH.read_bytes())
+    outside = tmp_path / "outside"
+    for override in (str(outside), "../outside"):
+        result = subprocess.run(
+            [sys.executable, str(script), "--label", "escape", "--", sys.executable, "-c", "raise AssertionError('must not run')"],
+            cwd=root,
+            env={**os.environ, "AW_VALIDATION_OUTPUT_ROOT": override},
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode != 0
+        assert "must resolve inside the current repository" in result.stderr
+        assert not outside.exists()
+        assert not (root / "scratch").exists()
 
 
 def test_compact_runner_timeout_writes_tailed_log(tmp_path, capsys) -> None:

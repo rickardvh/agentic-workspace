@@ -17,6 +17,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 # A resource-owning caller may place disposable hook output in its leased tree.
 OUTPUT_ROOT = REPO_ROOT / os.environ.get("AW_VALIDATION_OUTPUT_ROOT", "scratch")
+OUTPUT_ROOT = OUTPUT_ROOT.resolve()
+if not OUTPUT_ROOT.is_relative_to(REPO_ROOT.resolve()):
+    raise SystemExit("AW_VALIDATION_OUTPUT_ROOT must resolve inside the current repository")
 LOG_ROOT = OUTPUT_ROOT / "command-logs"
 RESULT_ROOT = OUTPUT_ROOT / "validation-results"
 PLAN_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
