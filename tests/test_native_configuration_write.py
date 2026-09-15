@@ -16,7 +16,7 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
     workspace.mkdir()
     config = workspace / "config.toml"
     config.write_text(
-        'schema_version=1\n[modules]\nenabled=[]\n[payload]\ndogfood_latest=true\nminimum_capabilities=["installed-state-sync-v2"]\npolicy="required-before-work"\n'
+        '[modules]\nenabled=[]\n[payload]\ntarget_release="source-current"\nminimum_capabilities=["installed-state-sync-v2"]\npolicy="required-before-work"\n'
     )
     human = tmp_path / "AGENTS.md"
     human.write_text("Preserve the repository's human policy.\n")
@@ -34,26 +34,6 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
         request = current["configuration_write"]["payload_discovery_request"]
         return call(request=request)["configuration_write"]["payload_choices"]
 
-    former_update = '[update.modules.planning]\nsource_type="local"\nsource_ref="former-module-checkout"\n'
-    config.write_text(config.read_text() + former_update)
-    former = config.read_bytes()
-    observed = call()["configuration"]
-    assert next(row for row in observed["residuals"] if row["field"] == "update.modules")["affects"] == ["effect:package-update"]
-    assert config.read_bytes() == former
-    prior = observed["payload"]
-    assert prior["current_policy"]["target_release"] == "source-current"
-    # Explicit package-source decision retires the old module source in favor of
-    # the already selected coordinated artifact; reading never makes that choice.
-    config.write_text(
-        config.read_text()
-        .replace(former_update, "")
-        .replace("schema_version=1", "schema_version=2")
-        .replace("dogfood_latest=true", 'target_release="source-current"')
-    )
-    current_policy = call()["configuration"]["payload"]
-    assert current_policy["current_policy"] == prior["current_policy"]
-    assert current_policy["status"] == prior["status"] == "unresolved"
-    preserved[config] = config.read_bytes()
     initial = choices()
     assert all(row["status"] == "refresh-available" for row in initial)
     wrong = copy.deepcopy(initial[0]["request"])
@@ -108,9 +88,7 @@ def test_durable_choices_are_exact_and_do_not_admit_operational_state(
 ) -> None:
     source = tmp_path / ".agentic-workspace" / source_name
     source.parent.mkdir()
-    before = (
-        b"# Human-owned configuration\r\nschema_version=1\r\n[workspace]\r\nmaintainer_mode=false # Former material stays byte-exact\r\n"
-    )
+    before = b"# Human-owned configuration\r\n[workspace]\r\nenabled=true # Human comment stays byte-exact\r\n"
     source.write_bytes(before)
     (tmp_path / "GUIDE.md").write_text("Fixture instructions, retained as a source.\n")
     context = {"target": str(tmp_path), "task": "Apply a deliberate fixture configuration choice", "changed": []}
@@ -160,7 +138,7 @@ def test_durable_choices_are_exact_and_do_not_admit_operational_state(
     answer["arguments"]["answer"] = "authorize-write"
     action = call(request=answer)["decision_packet"]["primary_action"]
     other = source.with_name("config.toml" if source_name == "config.local.toml" else "config.local.toml")
-    other.write_text("schema_version=1\n")
+    other.write_text("")
     with pytest.raises(AssertionError):
         call(invocation=action)
     assert source.read_bytes() == before
@@ -209,7 +187,7 @@ def test_optional_configuration_creation_is_bound_to_absence(
     action = call(request=answer)["decision_packet"]["primary_action"]
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    raced = b"schema_version=1\n# Another author arrived first\n"
+    raced = b"# Another author arrived first\n"
     source.write_bytes(raced)
     with pytest.raises(AssertionError, match="stale|changed"):
         call(request=discovery)
@@ -240,7 +218,7 @@ def test_configuration_postimage_cannot_exceed_its_reader(tmp_path: Path, shared
     assert not (tmp_path / ".agentic-workspace").exists()
     source = tmp_path / ".agentic-workspace/config.toml"
     source.parent.mkdir()
-    prefix = b"schema_version=1\n[workspace]\ncli_invoke='a'\n#"
+    prefix = b"[workspace]\ncli_invoke='a'\n#"
     # Publication and recovery use the narrower confined source reader.
     original = prefix + b"x" * (262_144 - len(prefix))
     source.write_bytes(original)
@@ -255,9 +233,7 @@ def test_configuration_postimage_cannot_exceed_its_reader(tmp_path: Path, shared
 def test_config_explicit_policy_choice_does_not_self_grant(tmp_path, shared_core_binary, native_cli):
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text(
-        'schema_version=1\n[assurance]\ndecision_delegations=[{owner="configuration",scope=["path:.agentic-workspace/config.local.toml"]}]\n'
-    )
+    config.write_text('[assurance]\ndecision_delegations=[{owner="configuration",scope=["path:.agentic-workspace/config.local.toml"]}]\n')
     context = {"target": str(tmp_path), "task": "Apply authorized local safety choice", "changed": []}
 
     def call(**extra):
@@ -304,6 +280,4 @@ def test_configuration_defer_resumes_outside_human_policy(tmp_path, shared_core_
     answer["arguments"]["answer"] = "authorize-write"
     call(invocation=call(request=answer)["decision_packet"]["primary_action"])
     assert call()["configuration_write"]["deferred_choices"] == []
-    assert (
-        tmp_path / ".agentic-workspace/config.local.toml"
-    ).read_text() == "schema_version=2\n\n[safety]\nsafe_to_auto_run_commands = false\n"
+    assert (tmp_path / ".agentic-workspace/config.local.toml").read_text() == "[safety]\nsafe_to_auto_run_commands = false\n"

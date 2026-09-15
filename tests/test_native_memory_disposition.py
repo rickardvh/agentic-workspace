@@ -183,8 +183,7 @@ def test_memory_receiver_needs_current_admitted_whole_lesson(
         _write_native(tmp_path / "design/choice.md", record)
         revision = _commit_native(tmp_path)
         config.write_text(
-            'schema_version=1\n[modules]\nenabled=["memory"]\n[assurance]\n'
-            f'decision_record_target="design"\ndecision_record_revision="{revision}"\n',
+            f'[modules]\nenabled=["memory"]\n[assurance]\ndecision_record_target="design"\ndecision_record_revision="{revision}"\n',
             encoding="utf-8",
         )
 

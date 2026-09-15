@@ -207,36 +207,6 @@ def test_existing_mechanism_adapters_cover_each_effect() -> None:
     }
 
 
-def test_workflow_obligations_compile_to_bounded_clause_effects_without_command_identity() -> None:
-    mechanisms, capabilities = _projection_instruction_mechanisms(
-        {
-            "workflow_obligations": {
-                "relevant_to_current_work": [
-                    {
-                        "id": "docs-review",
-                        "force": "recommended",
-                        "commands": ["arbitrary shell text is owner metadata"],
-                    },
-                    {
-                        "id": "closeout-review",
-                        "force": "required-before-closeout",
-                        "commands": ["arbitrary shell text is not action identity"],
-                    },
-                ]
-            }
-        },
-        {"blocked_claim_classes": []},
-    )
-    projection = compile_instruction_program(
-        instruction_program_from_existing_mechanisms({"instruction_mechanisms": mechanisms, "instruction_capabilities": capabilities})
-    )
-
-    assert projection["effects"]["surface"][0]["target"] == "surface:workflow-obligation:docs-review"
-    assert projection["effects"]["require"][0]["target"] == "claim:claim-work-complete"
-    assert projection["effects"]["require"][0]["satisfier"] == "human:workflow-obligation-disposition:closeout-review"
-    assert "arbitrary shell text" not in json.dumps(projection)
-
-
 def test_assurance_adapter_requires_an_explicit_bounded_target() -> None:
     program = instruction_program_from_existing_mechanisms(
         {

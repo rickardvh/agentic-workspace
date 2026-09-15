@@ -21,7 +21,7 @@ def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_pa
         context, material = repository(tmp_path)
     else:
         (tmp_path / ".agentic-workspace").mkdir()
-        (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version=1\n[assurance]\n")
+        (tmp_path / ".agentic-workspace/config.toml").write_text("[assurance]\n")
         (tmp_path / "constraint.md").write_text("Exact fixture constraint")
         context = {"target": str(tmp_path), "task": "Settle the exact fixture boundary", "changed": ["src/core.rs"]}
         material = {
@@ -51,7 +51,7 @@ def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_pa
     scope = json.dumps(subject["subject"]["scope"])
     grant = f'decision_delegations=[{{owner="{destination}",scope={scope}}}]\n'
     local = tmp_path / ".agentic-workspace/config.local.toml"
-    local.write_text("schema_version=1\n[assurance]\n" + grant)
+    local.write_text("[assurance]\n" + grant)
     assert propose()[section]["capture"]["status"] == "human-decision-required"
     local.unlink()
     config.write_text(original + grant)  # Explicit fixture repository-policy admission.
@@ -144,7 +144,7 @@ def repository(root: Path):
     revision = _commit_native(root)
     config = root / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text(f'schema_version=1\n[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n')
+    config.write_text(f'[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n')
     text = (ROOT / "docs/decisions/shared-semantic-authority.md").read_text()
     original = json.loads(text.split("```aw-decision\n")[1].split("\n```", 1)[0])
     material = {
@@ -168,7 +168,7 @@ def repository(root: Path):
 def test_standing_decision_scope_uses_bounded_configuration_admission(tmp_path, shared_core_binary, native_cli, surface):
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text("schema_version=1\n")
+    config.write_text("")
     context = {"target": str(tmp_path), "task": "Fixture standing policy", "changed": ["src/a.rs", "src/b.rs"]}
 
     def call(**extra):
@@ -183,10 +183,10 @@ def test_standing_decision_scope_uses_bounded_configuration_admission(tmp_path, 
         invalid["arguments"]["value"] = [{"owner": "memory", "scope": [f"path:{pattern}"]}]
         with pytest.raises(AssertionError):
             call(request=invalid)
-        assert config.read_text() == "schema_version=1\n"
+        assert config.read_text() == ""
     edit["arguments"]["value"] = [{"owner": "memory", "scope": ["path:src/b.rs", "path:src/a.rs"]}]
     proposed = call(request=edit)
-    assert config.read_text() == "schema_version=1\n"
+    assert config.read_text() == ""
     answer = proposed["decision_packet"]["decision_request"]["response_request"]
     answer["arguments"]["answer"] = "authorize-write"  # Fixture human policy choice only.
     call(invocation=call(request=answer)["decision_packet"]["primary_action"])

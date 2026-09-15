@@ -56,7 +56,6 @@ Knowledge gates can be triggered by:
 - Verification protocols that can change proof selection, evidence collection,
   or known-gap reporting;
 - module participation declarations that match the current loop step;
-- configured `workflow_obligations` for the current stage or scope;
 - external source freshness policies that require current vendor, legal,
   platform, or product behavior before design or claim;
 - closeout residue that must be captured or dismissed before the work can be

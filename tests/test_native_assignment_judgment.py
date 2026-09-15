@@ -3,87 +3,19 @@
 from __future__ import annotations
 
 import copy
-import json
 
 import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
-BASE = 'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n'
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_former_exact_answer_cannot_block_unrelated_admitted_local_work(tmp_path, shared_core_binary, native_cli, surface):
-    source = tmp_path / ".agentic-workspace/config.local.toml"
-    source.parent.mkdir()
-    answer = {
-        key: "former"
-        for key in (
-            "assignment_id",
-            "assignment_revision",
-            "work_id",
-            "work_revision",
-            "target",
-            "transport",
-            "execution_revision",
-            "packet_integrity",
-        )
-    }
-
-    def write():
-        source.write_text(BASE + "[delegation.replacement]\n" + "".join(f"{k}={json.dumps(v)}\n" for k, v in answer.items()))
-        return source.read_bytes()
-
-    context = {"target": str(tmp_path), "task": "Inspect different current work", "changed": []}
-
-    def call(request=None):
-        return consume(surface, shared_core_binary, native_cli, {**context, **({"request": request} if request is not None else {})})
-
-    def admit():
-        task = call()["task_requirements"]["requests"][0]
-        task["arguments"]["required_result_classes"] = ["read-only"]
-        choice = call(task)["task_requirements"]["assignment"]["requests"][0]
-        choice[-1]["arguments"].update(alternative="local:internal", reason="Current local executor is sufficient for this read.")
-        return choice, call(choice)
-
-    before = write()
-    pending = call()
-    assert any(b["code"] == "current-binding-assignment-required" for b in pending["decision_packet"]["blockers"])
-    assert any(
-        b["code"].endswith("delegation.replacement") and "effect:implementation" in b["affects"]
-        for b in pending["decision_packet"]["blockers"]
-    )
-    choice, current = admit()
-    assert current["task_requirements"]["assignment"]["result"]["former_replacement"]["status"] == "outside-current-work"
-    blocker = next(b for b in current["decision_packet"]["blockers"] if b["code"].endswith("delegation.replacement"))
-    assert "effect:implementation" not in blocker["affects"]
-    assert "effect:delegation" in blocker["affects"] and "claim:complete" in blocker["affects"]
-    assert source.read_bytes() == before
-
-    # A matching identity remains unresolved even with a different revision.
-    answer["work_id"] = current["current_work"]["id"]
-    before = write()
-    with pytest.raises(AssertionError, match="stale|changed"):
-        call(choice)
-    _, matching = admit()
-    assert matching["task_requirements"]["assignment"]["result"]["former_replacement"]["status"] == "current-owner-answer-required"
-    assert any(
-        b["code"].endswith("delegation.replacement") and "effect:implementation" in b["affects"]
-        for b in matching["decision_packet"]["blockers"]
-    )
-    assert source.read_bytes() == before
-    answer["work_id"] = ""
-    write()
-    malformed = call()
-    assert any("effect:implementation" in b["affects"] or "task" in b["affects"] for b in malformed["decision_packet"]["blockers"])
-    assert not (tmp_path / ".agentic-workspace/local").exists()
+BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_core_binary, native_cli, surface):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    source.write_text(BASE + "[runtime]\nstrong_planner_available=true\nsupports_internal_delegation=true\n")
+    source.write_text(BASE)
     context = {"target": str(tmp_path), "task": "Inspect current source", "changed": []}
 
     def call(request=None, **updates):
@@ -111,10 +43,7 @@ def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_cor
     assert current["task_requirements"]["implementation_admission"]["historical_compliance"] == "not-established"
     assert not any(b["code"] == "current-binding-assignment-required" for b in current["decision_packet"]["blockers"])
     assert not any("effect:implementation" in b["affects"] for b in current["decision_packet"]["blockers"])
-    assert not any(row["owner"] == "assignment" for row in current["consequence_recovery"])
-    assert any(
-        row["owner"] == "workspace-config" and row["status"] == "public-owner-route-unavailable" for row in current["consequence_recovery"]
-    )
+    assert not current.get("consequence_recovery")
     assert current["decision_packet"].get("primary_action") is None
     assert not (tmp_path / ".agentic-workspace/local").exists()
     with pytest.raises(AssertionError, match="stale|changed"):
@@ -123,7 +52,7 @@ def test_current_comparison_and_stale_work_preserve_binding(tmp_path, shared_cor
     forged[-1]["arguments"]["alternative"] = "unlisted"
     with pytest.raises(AssertionError, match="admitted"):
         call(forged)
-    source.write_text(BASE + '\n[delegation_targets.expert]\nstrength="strong"\ntransports=[{kind="manual"}]\n')
+    source.write_text(BASE + '\n[delegation_targets.expert]\ntransports=[{kind="manual"}]\n')
     with pytest.raises(AssertionError, match="stale|changed"):
         call(request)
     fresh = call()
@@ -149,7 +78,6 @@ def test_nonlocal_assignment_keeps_exact_handoff_gap_and_uncertainty(tmp_path, s
     from tests.test_native_execution_configurations import fixture
 
     source, executable, context = fixture(tmp_path)
-    source.write_text(source.read_text().replace("[delegation]\n", '[delegation]\nassignment_policy="required-best-fit"\n'))
 
     def call(request=None):
         return consume(surface, shared_core_binary, native_cli, {**context, **({"request": request} if request else {})})
@@ -207,7 +135,7 @@ def test_binding_without_targets_remains_owned_and_empty_checkout_quiet(tmp_path
     assert not any(b.get("owner") == "assignment" for b in quiet["decision_packet"]["blockers"])
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    source.write_text('schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\n')
+    source.write_text('[delegation]\nassignment_policy="required-best-fit"\n')
     blocked = call()
     assert any(b["code"] == "binding-policy-current-target-unresolved" for b in blocked["decision_packet"]["blockers"])
 
@@ -216,9 +144,7 @@ def test_binding_without_targets_remains_owned_and_empty_checkout_quiet(tmp_path
 def test_unobserved_provider_cannot_be_dismissed_by_local_assessment(tmp_path, shared_core_binary, native_cli, surface):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    source.write_text(
-        BASE + '[delegation_targets.native]\nstrength="strong"\ntransports=[{kind="native",adapter="provider-owned",parameters={}}]\n'
-    )
+    source.write_text(BASE + '[delegation_targets.native]\ntransports=[{kind="native",adapter="provider-owned",parameters={}}]\n')
     context = {"target": str(tmp_path), "task": "Inspect current source", "changed": []}
 
     def call(request=None):
@@ -242,11 +168,7 @@ def test_unobserved_provider_cannot_be_dismissed_by_local_assessment(tmp_path, s
 def test_current_target_scope_and_known_manual_result_mismatch(tmp_path, shared_core_binary, native_cli, surface):
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    original = (
-        BASE
-        + '[delegation_targets.bounded]\nstrength="medium"\nforbidden_task_classes=["boundary-shaping"]\ntransports=[{kind="manual"}]\n'
-    )
-    original += "[runtime]\nsupports_internal_delegation=true\nstrong_planner_available=true\n"
+    original = BASE + '[delegation_targets.bounded]\nforbidden_task_classes=["boundary-shaping"]\ntransports=[{kind="manual"}]\n'
     source.write_text(original)
     context = {"target": str(tmp_path), "task": "Repair an authority boundary", "changed": ["owner.rs"]}
 
@@ -274,7 +196,6 @@ def test_current_target_scope_and_known_manual_result_mismatch(tmp_path, shared_
     admitted = call(request)
     assert admitted["task_requirements"]["assignment"]["result"]["local_assignment_satisfied"] is True
     assert not any("effect:implementation" in b["affects"] for b in admitted["decision_packet"]["blockers"])
-    assert any("effect:delegation" in b["affects"] for b in admitted["decision_packet"]["blockers"])
     assert source.read_text() == original
 
     # A non-applicable restriction is not a capability grant: manual remains read-only.
@@ -300,32 +221,6 @@ def test_current_target_scope_and_known_manual_result_mismatch(tmp_path, shared_
     source.write_text(original.replace("boundary-shaping", "reasoning-heavy"))
     with pytest.raises(AssertionError, match="stale|changed"):
         call(request)
-    source.write_text(original.replace("[runtime]", 'revision_policy="revalidate"\n[runtime]'))
-    fresh_task = call()["task_requirements"]["requests"][0]
-    fresh_task["arguments"].update(
-        required_result_classes=["unapplied-patch"],
-        target_scope={"bounded": {"status": "applies", "reason": "The boundary-shaping restriction applies."}},
-    )
-    fresh = call(fresh_task)["task_requirements"]["assignment"]["requests"][0]
-    fresh[-1]["arguments"].update(alternative="local:internal", reason="Current executor remains eligible.")
-    retained = call(fresh)
-    assert retained["task_requirements"]["assignment"]["result"]["local_assignment_satisfied"] is True
-    assert any(
-        b["code"].endswith("delegation_targets.bounded") and "effect:implementation" in b["affects"]
-        for b in retained["decision_packet"]["blockers"]
-    ), "Unconsumed lifecycle policy is not cleared by Assignment"
-    source.write_text(original.replace('strength="weak"', 'strength="weak"\nhuman_control_modes=["auto"]'))
-    mode_task = call()["task_requirements"]["requests"][0]
-    mode_task["arguments"].update(
-        required_result_classes=["unapplied-patch"],
-        target_scope={"bounded": {"status": "applies", "reason": "The boundary-shaping restriction applies."}},
-    )
-    mode_choice = call(mode_task)["task_requirements"]["assignment"]["requests"][0]
-    mode_choice[-1]["arguments"].update(alternative="local:internal", reason="A preference cannot consume unhandled mode policy.")
-    assert any(
-        b["code"].endswith("delegation_targets.local") and "effect:implementation" in b["affects"]
-        for b in call(mode_choice)["decision_packet"]["blockers"]
-    )
     source.write_text(original)
     assert source.read_text() == original
     assert not (tmp_path / ".agentic-workspace/local").exists()

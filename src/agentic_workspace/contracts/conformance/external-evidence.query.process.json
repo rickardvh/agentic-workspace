@@ -7,7 +7,7 @@
     "command_template": ["{agentic_workspace_cli}", "external-evidence-query", "--target", ".", "--candidate-json", "{\"kind\":\"agentic-workspace/external-evidence-candidate/v1\",\"proof_route\":\"unit\",\"evidence_class\":\"test-result\",\"proof_subject\":{}}", "--host-result-ref", "external-evidence-host-result:missing", "--format", "json"],
     "cwd": "fixture_root"
   },
-  "fixtures": [{"id": "minimal-repo", "files": {".git/.keep": "", ".agentic-workspace/config.toml": "schema_version = 1\n"}}],
+  "fixtures": [{"id": "minimal-repo", "files": {".git/.keep": "", ".agentic-workspace/config.toml": ""}}],
   "expectations": {
     "exit": {"code": 2},
     "stdout": {"format": "json", "field_assertions": [{"path": ["kind"], "equals": "agentic-workspace/external-evidence-operation-error/v1"}]},

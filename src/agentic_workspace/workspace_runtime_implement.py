@@ -145,7 +145,6 @@ from agentic_workspace.workspace_runtime_core import (
     _unplanned_parent_intent_status_payload,
     _vague_outcome_orientation_payload,
     _validate_target_root,
-    _workflow_obligations_report_payload,
     _workflow_sufficiency_payload,
     _workspace_disabled_payload,
 )
@@ -1625,12 +1624,6 @@ def _implement_payload(
             "detail_command": f"{config.cli_invoke} implement --changed <paths> --select test_strategy_check --format json",
             "rule": "Test strategy analysis is deferred on compact implement output; select this field for full evidence.",
         }
-    workflow_obligations = _workflow_obligations_report_payload(
-        config=config,
-        active_planning_record=active_planning_record_for_intent,
-        task_text=task_text,
-        changed_paths=normalized_paths,
-    )
     projection_cancellation_checkpoint()
     improvement_pressure = _session_improvement_pressure_payload(
         target_root=target_root,
@@ -1644,7 +1637,6 @@ def _implement_payload(
         surface="implement",
         task_text=task_text,
         changed_paths=normalized_paths,
-        workflow_obligations=workflow_obligations,
         skill_routing={},
         planning_safety_gate=planning_safety_gate,
         proof=proof,

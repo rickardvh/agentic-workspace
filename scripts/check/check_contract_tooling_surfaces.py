@@ -48,7 +48,6 @@ from agentic_workspace.contract_tooling import (
     setup_findings_policy_manifest,
     target_support_manifest,
     workflow_artifact_profiles_manifest,
-    workflow_definition_format_manifest,
     workspace_runtime_primitive_families_manifest,
     workspace_surfaces_manifest,
 )
@@ -100,8 +99,7 @@ COMMAND_SURFACE_REFRESH_SEQUENCE = (
     "uv run python scripts/generate/generate_command_packages.py",
 )
 COMMAND_SURFACE_REFRESH_GUIDANCE = (
-    f"run {COMMAND_SURFACE_REFRESH_COMMAND} "
-    f"(ordered sequence: {'; '.join(COMMAND_SURFACE_REFRESH_SEQUENCE)})"
+    f"run {COMMAND_SURFACE_REFRESH_COMMAND} (ordered sequence: {'; '.join(COMMAND_SURFACE_REFRESH_SEQUENCE)})"
 )
 
 
@@ -176,71 +174,20 @@ def _sample_report_payload() -> dict[str, object]:
 
 def _sample_workspace_config_payload() -> dict[str, object]:
     return {
-        "schema_version": 1,
         "workspace": {
             "agent_instructions_file": "AGENTS.md",
             "workflow_artifact_profile": "repo-owned",
             "improvement_latitude": "balanced",
-            "optimization_bias": "agent-efficiency",
         },
-        "modules": {
-            "enabled": ["planning", "memory"],
-        },
-        "update": {
-            "modules": {
-                "planning": {
-                    "source_type": "git",
-                    "source_ref": "git+https://example.invalid/planning",
-                    "source_label": "planning source",
-                    "recommended_upgrade_after_days": 30,
-                },
-                "memory": {
-                    "source_type": "local",
-                    "source_ref": "../packages/memory",
-                    "source_label": "local memory source",
-                    "recommended_upgrade_after_days": 7,
-                },
-            }
-        },
-        "workflow_obligations": {
-            "adapter_surface_refresh": {
-                "summary": "Refresh adapter surfaces when structured routing changes.",
-                "stage": "before-claiming-completion",
-                "scope_tags": ["workspace", "adapter-surfaces"],
-                "commands": ["make maintainer-surfaces"],
-                "review_hint": "Use when startup routing, llms, or generated agent docs changed.",
-            }
-        },
-        "system_intent": {
-            "sources": ["SYSTEM_INTENT.md", "README.md"],
-            "preferred_source": "SYSTEM_INTENT.md",
-        },
+        "modules": {"enabled": ["planning", "memory"]},
+        "system_intent": {"sources": ["SYSTEM_INTENT.md", "README.md"], "preferred_source": "SYSTEM_INTENT.md"},
     }
 
 
 def _sample_workspace_local_override_payload() -> dict[str, object]:
     return {
-        "schema_version": 1,
-        "runtime": {
-            "supports_internal_delegation": True,
-            "strong_planner_available": True,
-            "cheap_bounded_executor_available": True,
-        },
-        "handoff": {
-            "prefer_internal_delegation_when_available": False,
-        },
-        "safety": {
-            "safe_to_auto_run_commands": False,
-            "requires_human_verification_on_pr": True,
-        },
-        "delegation_targets": {
-            "mini_impl": {
-                "strength": "weak",
-                "confidence": 0.62,
-                "task_fit": ["bounded-docs", "narrow-tests"],
-                "execution_methods": ["cli"],
-            }
-        },
+        "safety": {"safe_to_auto_run_commands": False, "requires_human_verification_on_pr": True},
+        "delegation_targets": {"worker": {"confidence": 0.62, "transports": [{"kind": "manual"}]}},
     }
 
 
@@ -364,9 +311,7 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
         errors.append("mutation outcome TypeScript system-intent binding must apply or block explicitly")
     exceptions = outcome_contract.get("explicit_exceptions", [])
     exception_ids = {
-        str(item.get("operation_id", ""))
-        for item in exceptions
-        if isinstance(item, dict) and str(item.get("operation_id", ""))
+        str(item.get("operation_id", "")) for item in exceptions if isinstance(item, dict) and str(item.get("operation_id", ""))
     }
     unknown_exceptions = sorted(exception_ids - mutating_ids)
     if unknown_exceptions:
@@ -408,7 +353,9 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 prefix = str(namespace.get("operation_id_prefix", ""))
                 owner = str(namespace.get("contract_owner", ""))
                 if not namespace_id or not prefix or not owner:
-                    errors.append("operation_primitives.json module_ir_ownership namespace missing id, operation_id_prefix, or contract_owner")
+                    errors.append(
+                        "operation_primitives.json module_ir_ownership namespace missing id, operation_id_prefix, or contract_owner"
+                    )
                     continue
                 namespace_prefixes[namespace_id] = prefix
             prefixes = list(namespace_prefixes.values())
@@ -418,9 +365,7 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 overlapping = sorted(other for other in prefixes if other != prefix and other.startswith(prefix))
                 if overlapping:
                     errors.append(
-                        "operation_primitives.json module_ir_ownership contains overlapping prefix "
-                        f"{prefix!r}: "
-                        + ", ".join(overlapping)
+                        f"operation_primitives.json module_ir_ownership contains overlapping prefix {prefix!r}: " + ", ".join(overlapping)
                     )
     extension_boundary = payload.get("primitive_extension_boundary")
     if not isinstance(extension_boundary, dict):
@@ -443,7 +388,9 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
                 conformance_ref = str(entry.get("conformance_ref", ""))
                 unsupported_behavior = str(entry.get("unsupported_behavior", ""))
                 if not target or not status or not conformance_ref or not unsupported_behavior:
-                    errors.append("operation_primitives.json target_support_matrix entries need target, status, conformance_ref, and unsupported_behavior")
+                    errors.append(
+                        "operation_primitives.json target_support_matrix entries need target, status, conformance_ref, and unsupported_behavior"
+                    )
                     continue
                 support_targets[target] = entry
                 implemented = entry.get("implemented_shared_primitives", [])
@@ -568,7 +515,9 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
             }
             missing_support = sorted(schema_backed_primitives - implemented_target_primitives)
             if missing_support:
-                errors.append("operation_primitives.json schema-backed primitives missing implemented target support: " + ", ".join(missing_support))
+                errors.append(
+                    "operation_primitives.json schema-backed primitives missing implemented target support: " + ", ".join(missing_support)
+                )
     operation_step_primitives: set[str] = set()
     for operation_ref in operation_contracts_manifest()["operations"]:
         try:
@@ -591,9 +540,7 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
         errors.append("operation steps reference primitives missing from operation_primitives.json: " + ", ".join(missing_classification))
     used_retired_primitives = sorted(operation_step_primitives & RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES)
     if used_retired_primitives:
-        errors.append(
-            "operation steps reference retired command-generation primitive(s): " + ", ".join(used_retired_primitives)
-        )
+        errors.append("operation steps reference retired command-generation primitive(s): " + ", ".join(used_retired_primitives))
     tiered_primitives = {
         str(primitive["id"]): str(primitive.get("taxonomy_tier"))
         for primitive in primitives
@@ -602,8 +549,7 @@ def _validate_operation_primitives(payload: dict[str, object]) -> list[str]:
     unclassified_steps = sorted(
         primitive
         for primitive in operation_step_primitives
-        if tiered_primitives.get(primitive)
-        not in {"tier-1-portable-codegen", "tier-2-package-domain", "tier-3-deferred-or-out-of-scope"}
+        if tiered_primitives.get(primitive) not in {"tier-1-portable-codegen", "tier-2-package-domain", "tier-3-deferred-or-out-of-scope"}
     )
     if unclassified_steps:
         errors.append("operation step primitives missing valid taxonomy_tier: " + ", ".join(unclassified_steps))
@@ -667,7 +613,9 @@ def _expand_ir_steps(
         primitive_id = str(step.get("uses", "")).strip()
         fragment_id = str(step.get("uses_fragment", "")).strip()
         if primitive_id and fragment_id:
-            errors.append(f"operation {operation_id} ir_plan step {step.get('id', primitive_id)} cannot declare both uses and uses_fragment")
+            errors.append(
+                f"operation {operation_id} ir_plan step {step.get('id', primitive_id)} cannot declare both uses and uses_fragment"
+            )
             continue
         if fragment_id:
             if step.get("arguments") not in (None, {}):
@@ -681,7 +629,9 @@ def _expand_ir_steps(
             if fragment_steps is None:
                 errors.append(f"operation {operation_id} ir_plan uses unknown fragment {fragment_id}")
                 continue
-            expanded.extend(_expand_ir_steps(fragment_steps, fragments=fragments, operation_id=operation_id, errors=errors, stack=(*stack, fragment_id)))
+            expanded.extend(
+                _expand_ir_steps(fragment_steps, fragments=fragments, operation_id=operation_id, errors=errors, stack=(*stack, fragment_id))
+            )
             continue
         if not primitive_id:
             errors.append(f"operation {operation_id} ir_plan step {step.get('id', '<unknown>')} must declare uses or uses_fragment")
@@ -778,20 +728,16 @@ def _validate_operation_ir_plans() -> list[str]:
 def _validate_module_operation_contract_locations() -> list[str]:
     errors: list[str] = []
     root_operations = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "operations"
-    misplaced = sorted(path.name for prefix in ("planning.", "memory.", "verification.") for path in root_operations.glob(f"{prefix}*.json"))
+    misplaced = sorted(
+        path.name for prefix in ("planning.", "memory.", "verification.") for path in root_operations.glob(f"{prefix}*.json")
+    )
     if misplaced:
         errors.append("module-owned operation contracts must not live under root workspace operations: " + ", ".join(misplaced))
 
     module_roots = {
         "planning.": REPO_ROOT / "packages" / "planning" / "src" / "repo_planning_bootstrap" / "contracts" / "operations",
         "memory.": REPO_ROOT / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "contracts" / "operations",
-        "verification.": REPO_ROOT
-        / "packages"
-        / "verification"
-        / "src"
-        / "repo_verification_bootstrap"
-        / "contracts"
-        / "operations",
+        "verification.": REPO_ROOT / "packages" / "verification" / "src" / "repo_verification_bootstrap" / "contracts" / "operations",
     }
     for operation_ref in operation_contracts_manifest()["operations"]:
         operation_id = str(operation_ref.get("id", ""))
@@ -879,8 +825,7 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
             missing_universal = sorted(required_universal - {str(item) for item in universal_truth})
             if missing_universal:
                 errors.append(
-                    "command_adapter_generation.json projection_requirements missing universal truth: "
-                    + ", ".join(missing_universal)
+                    "command_adapter_generation.json projection_requirements missing universal truth: " + ", ".join(missing_universal)
                 )
             if "python" in universal_text or "argparse" in universal_text:
                 errors.append("command_adapter_generation.json universal command truth contains target-specific implementation detail")
@@ -901,8 +846,7 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
             missing_target_kinds = sorted(expected_target_kinds - seen_target_kinds)
             if missing_target_kinds:
                 errors.append(
-                    "command_adapter_generation.json projection_requirements missing target kind(s): "
-                    + ", ".join(missing_target_kinds)
+                    "command_adapter_generation.json projection_requirements missing target kind(s): " + ", ".join(missing_target_kinds)
                 )
     for index, raw_adapter in enumerate(adapters):
         if not isinstance(raw_adapter, dict):
@@ -937,7 +881,9 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
             errors.append(f"command adapter {adapter_id} operation path drifted from operation registry")
         operation = operation_manifest(str(operation_ref.get("path", "")))
         operation_surface = operation.get("command_surface", {})
-        if not isinstance(operation_surface, dict) or not (_adapter_command_surfaces(command) & _operation_command_surfaces(operation_surface)):
+        if not isinstance(operation_surface, dict) or not (
+            _adapter_command_surfaces(command) & _operation_command_surfaces(operation_surface)
+        ):
             errors.append(f"command adapter {adapter_id} command does not match operation command_surface")
         if raw_adapter.get("effect_hints") != operation.get("effects"):
             errors.append(f"command adapter {adapter_id} effect_hints drifted from operation effects")
@@ -961,10 +907,14 @@ def _validate_command_adapter_generation(payload: dict[str, object]) -> list[str
             if conformance.get("operation_id") != operation_id:
                 conformance_operation_ref = operation_refs.get(str(conformance.get("operation_id", "")))
                 conformance_operation = (
-                    operation_manifest(str(conformance_operation_ref.get("path", ""))) if isinstance(conformance_operation_ref, dict) else {}
+                    operation_manifest(str(conformance_operation_ref.get("path", "")))
+                    if isinstance(conformance_operation_ref, dict)
+                    else {}
                 )
                 conformance_surface = conformance_operation.get("command_surface", {}) if isinstance(conformance_operation, dict) else {}
-                if isinstance(conformance_surface, dict) and _adapter_command_surfaces(command) & _operation_command_surfaces(conformance_surface):
+                if isinstance(conformance_surface, dict) and _adapter_command_surfaces(command) & _operation_command_surfaces(
+                    conformance_surface
+                ):
                     continue
                 errors.append(f"command adapter {adapter_id} conformance ref {conformance_ref} targets a different operation")
     return errors
@@ -1082,7 +1032,9 @@ def _validate_command_package_ir(payload: dict[str, object]) -> list[str]:
             command_conformance_refs = command.get("conformance_refs", [])
             if command_conformance_refs != adapter["conformance_refs"]:
                 errors.append(f"command_package_ir command {adapter_id} conformance refs drifted from command_adapter_generation.json")
-            unknown_conformance = sorted(set(command_conformance_refs) - conformance_refs) if isinstance(command_conformance_refs, list) else []
+            unknown_conformance = (
+                sorted(set(command_conformance_refs) - conformance_refs) if isinstance(command_conformance_refs, list) else []
+            )
             if unknown_conformance:
                 errors.append(
                     f"command_package_ir command {adapter_id} references unknown conformance ref(s): "
@@ -1114,20 +1066,22 @@ def _validate_planning_integration_propose_front_door_parity(payload: dict[str, 
         None,
     )
     runtime_binding = root_package.get("python_runtime_binding", {})
-    front_door_handler = next(
-        (
-            handler
-            for handler in runtime_binding.get("runtime_module_handlers", [])
-            if isinstance(handler, dict) and handler.get("operation_id") == "planning.front-door"
-        ),
-        None,
-    ) if isinstance(runtime_binding, dict) else None
+    front_door_handler = (
+        next(
+            (
+                handler
+                for handler in runtime_binding.get("runtime_module_handlers", [])
+                if isinstance(handler, dict) and handler.get("operation_id") == "planning.front-door"
+            ),
+            None,
+        )
+        if isinstance(runtime_binding, dict)
+        else None
+    )
     if not isinstance(planning_command, dict) or not isinstance(front_door_handler, dict):
         return ["Planning integration parity cannot find its declared interface and front-door runtime mapping"]
 
-    forwarded_inputs = {
-        str(item.get("attr", "")) for item in front_door_handler.get("option_specs", []) if isinstance(item, dict)
-    }
+    forwarded_inputs = {str(item.get("attr", "")) for item in front_door_handler.get("option_specs", []) if isinstance(item, dict)}
     errors: list[str] = []
     for command_name in ("integration-propose", "integration-apply"):
         operation_id = f"planning.{command_name}.lifecycle"
@@ -1148,14 +1102,10 @@ def _validate_planning_integration_propose_front_door_parity(payload: dict[str, 
             for item in canonical_operation.get("inputs", [])
             if isinstance(item, dict) and item.get("source") == "cli-option"
         }
-        interface_inputs = {
-            str(item.get("name", "")) for item in integration_interface.get("options", []) if isinstance(item, dict)
-        }
+        interface_inputs = {str(item.get("name", "")) for item in integration_interface.get("options", []) if isinstance(item, dict)}
         missing_interface = sorted(canonical_inputs - interface_inputs)
         if missing_interface:
-            errors.append(
-                f"{operation_id} inputs missing from the Workspace Planning interface: " + ", ".join(missing_interface)
-            )
+            errors.append(f"{operation_id} inputs missing from the Workspace Planning interface: " + ", ".join(missing_interface))
         unforwarded = sorted(canonical_inputs - forwarded_inputs)
         if unforwarded:
             errors.append(f"{operation_id} inputs are not forwarded by planning.front-door: " + ", ".join(unforwarded))
@@ -1175,11 +1125,7 @@ def _validate_operation_conformance_test_ir(payload: dict[str, object]) -> list[
         if isinstance(target, dict)
     }
     required_classes = {"success", "error", "cross-target-parity"}
-    seen_classes = {
-        str(case.get("behavioral_class", ""))
-        for case in payload.get("initial_cases", [])
-        if isinstance(case, dict)
-    }
+    seen_classes = {str(case.get("behavioral_class", "")) for case in payload.get("initial_cases", []) if isinstance(case, dict)}
     missing_classes = sorted(required_classes - seen_classes)
     if missing_classes:
         errors.append("operation_conformance_test_ir.json missing behavioral class(es): " + ", ".join(missing_classes))
@@ -1201,9 +1147,7 @@ def _validate_operation_conformance_test_ir(payload: dict[str, object]) -> list[
         errors.append("operation_conformance_test_ir.json adapter_model must be an object")
     else:
         adapter_kinds = {
-            str(adapter.get("id", "")): adapter
-            for adapter in adapter_model.get("adapter_kinds", [])
-            if isinstance(adapter, dict)
+            str(adapter.get("id", "")): adapter for adapter in adapter_model.get("adapter_kinds", []) if isinstance(adapter, dict)
         }
         for required_adapter in ("python.function", "typescript.function", "cli.process"):
             if required_adapter not in adapter_kinds:
@@ -1270,11 +1214,15 @@ def _validate_operation_conformance_test_ir(payload: dict[str, object]) -> list[
                 continue
             adapter_id = str(artifact.get("adapter_id", ""))
             if adapter_id == "cli.process" and artifact.get("proof_role") != "wrapper-smoke":
-                errors.append(f"operation_conformance_test_ir.json case {case_id} cli.process artifacts must declare wrapper-smoke proof_role")
+                errors.append(
+                    f"operation_conformance_test_ir.json case {case_id} cli.process artifacts must declare wrapper-smoke proof_role"
+                )
             wrapper_refs = {str(ref) for ref in artifact.get("wrapper_refs", [])}
             unknown_wrappers = sorted(wrapper_refs - set(commands))
             if unknown_wrappers:
-                errors.append(f"operation_conformance_test_ir.json case {case_id} references unknown wrapper(s): {', '.join(unknown_wrappers)}")
+                errors.append(
+                    f"operation_conformance_test_ir.json case {case_id} references unknown wrapper(s): {', '.join(unknown_wrappers)}"
+                )
         case_targets = {str(target.get("kind", "")) for target in case.get("targets", []) if isinstance(target, dict)}
         unknown_targets = sorted(case_targets - set(target_matrix))
         if unknown_targets:
@@ -1302,11 +1250,7 @@ def _validate_operation_artifact_registry(payload: dict[str, object]) -> list[st
     if payload.get("schema_version") != "agentic-workspace/operation-artifact-registry/v1":
         return ["operation_artifact_registry.json has unexpected schema_version"]
     conformance_ir = operation_conformance_test_ir_manifest()
-    case_by_id = {
-        str(case.get("id", "")): case
-        for case in conformance_ir.get("initial_cases", [])
-        if isinstance(case, dict)
-    }
+    case_by_id = {str(case.get("id", "")): case for case in conformance_ir.get("initial_cases", []) if isinstance(case, dict)}
     package_ir = command_package_ir_manifest()
     packages = {str(package.get("id", "")): package for package in package_ir.get("packages", []) if isinstance(package, dict)}
     seen_artifacts: set[str] = set()
@@ -1338,7 +1282,9 @@ def _validate_operation_artifact_registry(payload: dict[str, object]) -> list[st
         wrapper_refs = {str(ref) for ref in artifact.get("wrapper_refs", [])}
         unknown_wrappers = sorted(wrapper_refs - set(commands))
         if unknown_wrappers:
-            errors.append(f"operation_artifact_registry.json artifact {artifact_id} references unknown wrapper(s): {', '.join(unknown_wrappers)}")
+            errors.append(
+                f"operation_artifact_registry.json artifact {artifact_id} references unknown wrapper(s): {', '.join(unknown_wrappers)}"
+            )
         if adapter_id == "cli.process" and proof_role != "wrapper-smoke":
             errors.append(f"operation_artifact_registry.json artifact {artifact_id} cli.process must be wrapper-smoke")
         if adapter_id.endswith(".function") and proof_role != "operation-conformance":
@@ -1356,26 +1302,27 @@ def _validate_operation_artifact_registry(payload: dict[str, object]) -> list[st
                 errors.append(f"operation_artifact_registry.json artifact {artifact_id} operation drifted from case {case_id}")
             artifacts_by_case.setdefault(case_id, set()).add(artifact_id)
     for case_id, case in case_by_id.items():
-        declared_artifacts = {
-            str(artifact.get("artifact_id", ""))
-            for artifact in case.get("artifacts", [])
-            if isinstance(artifact, dict)
-        }
+        declared_artifacts = {str(artifact.get("artifact_id", "")) for artifact in case.get("artifacts", []) if isinstance(artifact, dict)}
         missing_from_registry = sorted(declared_artifacts - seen_artifacts)
         if missing_from_registry:
-            errors.append(f"operation_artifact_registry.json missing artifact(s) declared by case {case_id}: {', '.join(missing_from_registry)}")
+            errors.append(
+                f"operation_artifact_registry.json missing artifact(s) declared by case {case_id}: {', '.join(missing_from_registry)}"
+            )
         if not artifacts_by_case.get(case_id):
             errors.append(f"operation_artifact_registry.json no artifacts route to case {case_id}")
     proof_routing = payload.get("proof_routing", {})
     if not isinstance(proof_routing, dict):
         errors.append("operation_artifact_registry.json proof_routing must be an object")
     else:
-        changed_surfaces = {
-            str(route.get("changed_surface", ""))
-            for route in proof_routing.get("routes", [])
-            if isinstance(route, dict)
+        changed_surfaces = {str(route.get("changed_surface", "")) for route in proof_routing.get("routes", []) if isinstance(route, dict)}
+        required_surfaces = {
+            "operation-contract",
+            "implementation-artifact",
+            "implementation-adapter",
+            "cli-wrapper",
+            "schema",
+            "generated-artifact-freshness",
         }
-        required_surfaces = {"operation-contract", "implementation-artifact", "implementation-adapter", "cli-wrapper", "schema", "generated-artifact-freshness"}
         missing_surfaces = sorted(required_surfaces - changed_surfaces)
         if missing_surfaces:
             errors.append("operation_artifact_registry.json proof_routing missing surface(s): " + ", ".join(missing_surfaces))
@@ -1428,8 +1375,7 @@ def _validate_generated_behavior_stratification(payload: dict[str, object]) -> l
         missing = sorted(field for field in required_boundary_fields if not boundary.get(field))
         if missing:
             errors.append(
-                f"generated_behavior_stratification.json retained boundary {boundary.get('id', '<unknown>')} missing: "
-                + ", ".join(missing)
+                f"generated_behavior_stratification.json retained boundary {boundary.get('id', '<unknown>')} missing: " + ", ".join(missing)
             )
     boundary_ids = {str(boundary.get("id", "")) for boundary in retained if isinstance(boundary, dict)}
     if not {"package-domain-runtime-primitives", "wrapper-boundary-tests", "aw-proof-routing-and-integration-tests"} <= boundary_ids:
@@ -1471,13 +1417,10 @@ def _validate_generated_behavior_stratification(payload: dict[str, object]) -> l
                 f"generated_behavior_stratification.json retained ordinary test group {group_id} references unknown retained boundary {boundary_ref}"
             )
         combined_rationale = " ".join(
-            str(group.get(field, ""))
-            for field in ("keep_reason", "future_conversion_condition", "durable_boundary_rationale")
+            str(group.get(field, "")) for field in ("keep_reason", "future_conversion_condition", "durable_boundary_rationale")
         ).lower()
         if "command-generation" not in combined_rationale and "operation conformance" not in combined_rationale:
-            errors.append(
-                f"generated_behavior_stratification.json retained ordinary test group {group_id} must name conversion ownership"
-            )
+            errors.append(f"generated_behavior_stratification.json retained ordinary test group {group_id} must name conversion ownership")
     missing_groups = sorted(required_group_ids - group_ids)
     if missing_groups:
         errors.append("generated_behavior_stratification.json missing retained ordinary test group(s): " + ", ".join(missing_groups))
@@ -1695,9 +1638,7 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
     for output_spec in manifest["generated_outputs"]:
         program = str(output_spec["program"])
         generated_path = repo_root / str(output_spec["path"])
-        output_adapters = [
-            adapter for adapter in manifest["adapters"] if adapter.get("command", {}).get("program") == program
-        ]
+        output_adapters = [adapter for adapter in manifest["adapters"] if adapter.get("command", {}).get("program") == program]
         expected = module._render_generated_json(manifest, program=program)
         current = generated_path.read_text(encoding="utf-8") if generated_path.exists() else ""
         is_current = current == expected
@@ -1710,9 +1651,7 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
                 "source_contract": "src/agentic_workspace/contracts/command_adapter_generation.json",
                 "regenerate": COMMAND_SURFACE_REFRESH_COMMAND,
                 "ordered_sequence": list(COMMAND_SURFACE_REFRESH_SEQUENCE),
-                "command_surfaces": [
-                    str(adapter.get("command", {}).get("name", "")) for adapter in output_adapters
-                ],
+                "command_surfaces": [str(adapter.get("command", {}).get("name", "")) for adapter in output_adapters],
                 "where_to_edit": {
                     "command_interface": "src/agentic_workspace/contracts/command_adapter_generation.json",
                     "runtime_behavior": "hand-written operation/primitive implementation code",
@@ -1721,8 +1660,7 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
         )
         if not is_current:
             errors.append(
-                f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} is stale; "
-                + COMMAND_SURFACE_REFRESH_GUIDANCE
+                f"generated adapter layer: {generated_path.relative_to(repo_root).as_posix()} is stale; " + COMMAND_SURFACE_REFRESH_GUIDANCE
             )
 
         expected_by_command = {
@@ -1758,7 +1696,9 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
                 continue
             for key, expected_value in expected_adapter.items():
                 if actual_adapter.get(key) != expected_value:
-                    errors.append(f"generated adapter layer: {program} command {command_name} {key} drifted from command_adapter_generation.json")
+                    errors.append(
+                        f"generated adapter layer: {program} command {command_name} {key} drifted from command_adapter_generation.json"
+                    )
         for command_name in set(actual_by_command) - set(expected_by_command):
             errors.append(f"generated adapter layer: unexpected generated adapter for {program} command {command_name}")
     return statuses, errors
@@ -1846,15 +1786,11 @@ def _validate_python_contract_consumption_policy(payload: dict[str, object]) -> 
 
     unrecorded_loaders = sorted(set(validated_loader_calls) - declared_loaders - dynamic_loaders - {"python_contract_consumption_manifest"})
     if unrecorded_loaders:
-        errors.append(
-            "validated contract loaders are not recorded in python_contract_consumption.json: "
-            + ", ".join(unrecorded_loaders)
-        )
+        errors.append("validated contract loaders are not recorded in python_contract_consumption.json: " + ", ".join(unrecorded_loaders))
     missing_dynamic_loaders = sorted(dynamic_loaders - implemented_dynamic_loaders)
     if missing_dynamic_loaders:
         errors.append(
-            "dynamic validated loaders are declared but not implemented in contract_tooling.py: "
-            + ", ".join(missing_dynamic_loaders)
+            "dynamic validated loaders are declared but not implemented in contract_tooling.py: " + ", ".join(missing_dynamic_loaders)
         )
     return errors
 
@@ -1941,11 +1877,7 @@ def _validate_python_runtime_boundary_authority(payload: dict[str, object]) -> l
     audit = payload.get("root_cli_authority_audit")
     if not isinstance(audit, dict):
         return ["python_runtime_boundary.json missing root_cli_authority_audit"]
-    classes = {
-        str(item.get("id", ""))
-        for item in audit.get("responsibility_classes", [])
-        if isinstance(item, dict)
-    }
+    classes = {str(item.get("id", "")) for item in audit.get("responsibility_classes", []) if isinstance(item, dict)}
     required_classes = {
         "runtime-primitives",
         "derived-renderers",
@@ -1963,7 +1895,9 @@ def _validate_python_runtime_boundary_authority(payload: dict[str, object]) -> l
         role = str(item.get("tracking_role", "")).strip()
         status = str(item.get("tracking_status", "")).strip()
         if role not in {"live-owner", "historical-provenance"} or not status:
-            errors.append("python_runtime_boundary.json root CLI audit candidates must classify tracking as live-owner or historical-provenance")
+            errors.append(
+                "python_runtime_boundary.json root CLI audit candidates must classify tracking as live-owner or historical-provenance"
+            )
             continue
         tracking_issue = str(item.get("tracking_issue", "")).strip()
         provenance_issue = str(item.get("provenance_issue", "")).strip()
@@ -1975,9 +1909,7 @@ def _validate_python_runtime_boundary_authority(payload: dict[str, object]) -> l
             errors.append(
                 f"python_runtime_boundary.json root CLI audit candidate {item.get('id', '<unknown>')} must name tracking_issue and current_owner for live ownership"
             )
-        if role == "historical-provenance" and (
-            not provenance_issue.startswith("#") or not str(item.get("provenance", "")).strip()
-        ):
+        if role == "historical-provenance" and (not provenance_issue.startswith("#") or not str(item.get("provenance", "")).strip()):
             errors.append(
                 f"python_runtime_boundary.json root CLI audit candidate {item.get('id', '<unknown>')} must name provenance_issue and explain historical provenance"
             )
@@ -2176,11 +2108,7 @@ def _command_parser(
 
 
 def _command_option_actions(parser: argparse.ArgumentParser) -> dict[str, argparse.Action]:
-    return {
-        str(action.dest): action
-        for action in parser._actions
-        if action.option_strings and action.dest != "help"
-    }
+    return {str(action.dest): action for action in parser._actions if action.option_strings and action.dest != "help"}
 
 
 def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> list[str]:
@@ -2199,9 +2127,7 @@ def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> l
         program = str(command.get("program", ""))
         command_name = str(command.get("name", ""))
         if isinstance(command.get("subcommands"), list):
-            subcommand_names: list[str | None] = [
-                str(subcommand) for subcommand in command["subcommands"] if isinstance(subcommand, str)
-            ]
+            subcommand_names: list[str | None] = [str(subcommand) for subcommand in command["subcommands"] if isinstance(subcommand, str)]
         else:
             subcommand_names = [str(command["subcommand"]) if isinstance(command.get("subcommand"), str) else None]
         parser = _program_parser(program)
@@ -2243,13 +2169,11 @@ def _validate_generated_adapter_live_cli_parity(payload: dict[str, object]) -> l
         extra_options = sorted(live_option_names - expected_option_names)
         if missing_options:
             errors.append(
-                f"generated adapter {adapter_id} contract declares CLI option(s) missing from live parser: "
-                + ", ".join(missing_options)
+                f"generated adapter {adapter_id} contract declares CLI option(s) missing from live parser: " + ", ".join(missing_options)
             )
         if extra_options:
             errors.append(
-                f"generated adapter {adapter_id} live parser has CLI option(s) missing from operation contract: "
-                + ", ".join(extra_options)
+                f"generated adapter {adapter_id} live parser has CLI option(s) missing from operation contract: " + ", ".join(extra_options)
             )
         for option_name, expected_required in expected_cli_inputs.items():
             action = live_options.get(option_name)
@@ -2330,11 +2254,7 @@ def _validate_contract_inventory_owner_choice() -> list[str]:
 
     model = manifest.get("owner_choice_model", {})
     concern_classes = model.get("concern_classes", []) if isinstance(model, dict) else []
-    declared = {
-        concern.get("id")
-        for concern in concern_classes
-        if isinstance(concern, dict) and isinstance(concern.get("id"), str)
-    }
+    declared = {concern.get("id") for concern in concern_classes if isinstance(concern, dict) and isinstance(concern.get("id"), str)}
     required = {
         "config_policy",
         "contract_schema_authority",
@@ -2379,9 +2299,7 @@ def _validate_review_artifacts_not_startup_inputs() -> list[str]:
     for name, payload in startup_surfaces.items():
         references = _find_review_references(payload, path=name)
         if references:
-            errors.append(
-                f"{name} routes ordinary startup to historical review artifact(s): " + "; ".join(references)
-            )
+            errors.append(f"{name} routes ordinary startup to historical review artifact(s): " + "; ".join(references))
     return errors
 
 
@@ -2474,6 +2392,7 @@ KEYWORD_ROUTING_AUDIT_ALLOWED_DECISION_AUTHORITIES = {
     "decision-affecting-package-policy",
 }
 
+
 def _keyword_routing_scan_excluded(path: Path) -> bool:
     return any(part == "__pycache__" or part.startswith(".uv-cache") for part in path.parts)
 
@@ -2563,16 +2482,15 @@ def _validate_non_enum_keyword_routing_audit(
         if not isinstance(raw_entry, dict):
             errors.append("non-enum-keyword-routing-audit entries must be objects")
             continue
-        key = "|".join(
-            str(raw_entry.get(field, "")).strip()
-            for field in ("path", "function", "variable")
-        )
+        key = "|".join(str(raw_entry.get(field, "")).strip() for field in ("path", "function", "variable"))
         if key in classified:
             errors.append(f"non-enum-keyword-routing-audit duplicates entry: {key}")
         classified[key] = raw_entry
         classification = str(raw_entry.get("classification") or "").strip()
         if classification == "disallowed-package-policy":
-            errors.append(f"{key} is classified as disallowed-package-policy; remove the keyword table or demote it to non-authoritative evidence")
+            errors.append(
+                f"{key} is classified as disallowed-package-policy; remove the keyword table or demote it to non-authoritative evidence"
+            )
         elif classification not in KEYWORD_ROUTING_AUDIT_ALLOWED_CLASSIFICATIONS:
             allowed = ", ".join(sorted([*KEYWORD_ROUTING_AUDIT_ALLOWED_CLASSIFICATIONS, "disallowed-package-policy"]))
             errors.append(f"{key} has unknown classification {classification!r}; expected one of: {allowed}")
@@ -2606,16 +2524,12 @@ def _validate_workspace_runtime_primitive_families(payload: dict[str, object]) -
         errors.append(f"workspace_runtime_primitive_families migration_policy.migrated_family_id {migrated_family_id!r} is missing")
     migrated_families = migration_policy.get("migrated_families", []) if isinstance(migration_policy, dict) else []
     migrated_family_ids = {
-        str(item.get("family_id"))
-        for item in migrated_families
-        if isinstance(item, dict) and isinstance(item.get("family_id"), str)
+        str(item.get("family_id")) for item in migrated_families if isinstance(item, dict) and isinstance(item.get("family_id"), str)
     }
     for family_id in sorted(migrated_family_ids - set(by_id)):
         errors.append(f"workspace_runtime_primitive_families migration_policy references unknown family {family_id!r}")
     has_cg_owned_migration = any(
-        isinstance(item, dict)
-        and item.get("owner_class") == "cg-owned-declarative"
-        and str(item.get("family_id", "")) in by_id
+        isinstance(item, dict) and item.get("owner_class") == "cg-owned-declarative" and str(item.get("family_id", "")) in by_id
         for item in migrated_families
     )
     if not has_cg_owned_migration:
@@ -2632,9 +2546,7 @@ def _validate_workspace_runtime_primitive_families(payload: dict[str, object]) -
         if required_class not in owner_classes:
             errors.append(f"workspace_runtime_primitive_families missing owner_class {required_class!r}")
     known_primitives = {
-        str(primitive.get("id"))
-        for primitive in operation_primitives_manifest().get("primitives", [])
-        if isinstance(primitive, dict)
+        str(primitive.get("id")) for primitive in operation_primitives_manifest().get("primitives", []) if isinstance(primitive, dict)
     }
     aw_ids: list[str] = []
     for family in families:
@@ -2651,7 +2563,9 @@ def _validate_workspace_runtime_primitive_families(payload: dict[str, object]) -
     if len(aw_ids) != len(set(aw_ids)):
         errors.append("workspace_runtime_primitive_families aw_owned_primitive_ids must be unique across families")
     for primitive_id in sorted(set(aw_ids) - known_primitives):
-        errors.append(f"workspace_runtime_primitive_families aw_owned_primitive_id {primitive_id!r} is not declared in operation_primitives.json")
+        errors.append(
+            f"workspace_runtime_primitive_families aw_owned_primitive_id {primitive_id!r} is not declared in operation_primitives.json"
+        )
     if not aw_ids:
         errors.append("workspace_runtime_primitive_families must declare at least one aw_owned_primitive_ids migration")
     migrated_family = by_id.get(migrated_family_id, {})
@@ -2694,13 +2608,10 @@ def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> lis
     consumers = [str(item) for item in raw_consumers] if isinstance(raw_consumers, list) else []
     if consumers != WORKSPACE_RUNTIME_CORE_CONSUMER_MODULES:
         errors.append(
-            "workspace_runtime_primitive_families shared_core_boundary.consumer_modules must match "
-            "the checked runtime owner module list"
+            "workspace_runtime_primitive_families shared_core_boundary.consumer_modules must match the checked runtime owner module list"
         )
     imports_by_consumer = _runtime_core_imports_by_consumer(WORKSPACE_RUNTIME_CORE_CONSUMER_MODULES)
-    observed: set[tuple[str, str]] = {
-        (consumer, symbol) for consumer, symbols in imports_by_consumer.items() for symbol in symbols
-    }
+    observed: set[tuple[str, str]] = {(consumer, symbol) for consumer, symbols in imports_by_consumer.items() for symbol in symbols}
     raw_families = raw_boundary.get("families", [])
     families = [family for family in raw_families if isinstance(family, dict)] if isinstance(raw_families, list) else []
     symbol_allowed_consumers: dict[str, set[str]] = {}
@@ -2709,9 +2620,7 @@ def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> lis
         raw_symbols = family.get("source_symbols", [])
         raw_allowed_consumers = family.get("allowed_owner_modules", [])
         symbols = [str(symbol) for symbol in raw_symbols] if isinstance(raw_symbols, list) else []
-        allowed_consumers = (
-            {str(consumer) for consumer in raw_allowed_consumers} if isinstance(raw_allowed_consumers, list) else set()
-        )
+        allowed_consumers = {str(consumer) for consumer in raw_allowed_consumers} if isinstance(raw_allowed_consumers, list) else set()
         for consumer in sorted(allowed_consumers - set(WORKSPACE_RUNTIME_CORE_CONSUMER_MODULES)):
             errors.append(
                 f"workspace_runtime_primitive_families shared_core_boundary family {family_id!r} "
@@ -2732,13 +2641,11 @@ def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> lis
     for consumer, symbol in sorted(observed - covered):
         if symbol not in symbol_allowed_consumers:
             errors.append(
-                "workspace_runtime_primitive_families shared_core_boundary missing imported core symbol "
-                f"{symbol!r} for {consumer}"
+                f"workspace_runtime_primitive_families shared_core_boundary missing imported core symbol {symbol!r} for {consumer}"
             )
             continue
         errors.append(
-            "workspace_runtime_primitive_families shared_core_boundary does not allow "
-            f"{consumer} to import core symbol {symbol!r}"
+            f"workspace_runtime_primitive_families shared_core_boundary does not allow {consumer} to import core symbol {symbol!r}"
         )
     declared = set(symbol_allowed_consumers)
     observed_symbols = {symbol for _, symbol in observed}
@@ -2759,9 +2666,7 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         "claim-boundary",
         "future-relevant-residue",
     }
-    observed_dimensions = {
-        str(item.get("dimension") or "") for item in enforcement.get("dimensions", []) if isinstance(item, dict)
-    }
+    observed_dimensions = {str(item.get("dimension") or "") for item in enforcement.get("dimensions", []) if isinstance(item, dict)}
     if observed_dimensions != required_dimensions:
         errors.append("ordinary decision enforcement must cover the complete cross-owner join-identity set")
     operating_decision_source = (REPO_ROOT / "src/agentic_workspace/operating_decision.py").read_text(encoding="utf-8")
@@ -2784,11 +2689,7 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
     if generated.get("status") != "admitted" or not generated_authority:
         errors.append("contract-checks must admit generated-references for changed generated paths")
     else:
-        owner_admission = (
-            generated_authority.get("source", {})
-            .get("admission", {})
-            .get("owner_admission", {})
-        )
+        owner_admission = generated_authority.get("source", {}).get("admission", {}).get("owner_admission", {})
         owner_result = generated_authority.get("source", {}).get("admission", {}).get("owner_result", {})
         if owner_admission.get("producer") != "agentic_workspace.contract_tooling.generated_references":
             errors.append("generated-references must be admitted by its registered contract-tooling owner")
@@ -2827,20 +2728,20 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         task="route startup skill",
         target_root=REPO_ROOT,
     )
-    skill_authority = next((item for item in skills.get("authorities", []) if isinstance(item, dict) and item.get("surface") == "skills"), None)
+    skill_authority = next(
+        (item for item in skills.get("authorities", []) if isinstance(item, dict) and item.get("surface") == "skills"), None
+    )
     if skills.get("status") != "admitted" or not skill_authority:
         errors.append("skills consumer must admit the routed skill dependency closure")
     elif (
-        skill_authority.get("source", {})
-        .get("admission", {})
-        .get("owner_admission", {})
-        .get("producer")
+        skill_authority.get("source", {}).get("admission", {}).get("owner_admission", {}).get("producer")
         != "agentic_workspace.workspace_runtime_core.skill_dependency_resolver"
     ):
         errors.append("skills authority must be admitted by the registered skill dependency resolver")
-    elif skill_authority.get("source", {}).get("admission", {}).get("owner_result", {}).get("skill_dependency_closure", {}).get(
-        "status"
-    ) != "satisfied":
+    elif (
+        skill_authority.get("source", {}).get("admission", {}).get("owner_result", {}).get("skill_dependency_closure", {}).get("status")
+        != "satisfied"
+    ):
         errors.append("skills authority must carry the concrete dependency closure owner result")
 
     for consumer in ["start", "implement", "skills", "proof"]:
@@ -2868,8 +2769,7 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         }
         if overreaching:
             errors.append(
-                f"{consumer} compact unrelated direct work must not gain owner mutation/claim authority: "
-                + ", ".join(sorted(overreaching))
+                f"{consumer} compact unrelated direct work must not gain owner mutation/claim authority: " + ", ".join(sorted(overreaching))
             )
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -2880,7 +2780,7 @@ def _validate_context_authority_changed_path_enforcement() -> list[str]:
         (target / ".agentic-workspace").mkdir(exist_ok=True)
         (target / "SYSTEM_INTENT.md").write_text("Intent\n", encoding="utf-8")
         (target / "AGENTS.md").write_text("Instructions\n", encoding="utf-8")
-        (target / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+        (target / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
         (target / ".agentic-workspace/OWNERSHIP.toml").write_text("[paths]\n", encoding="utf-8")
         (target / ".agentic-workspace/planning/state.toml").write_text("schema_version = 1\n", encoding="utf-8")
         (target / ".agentic-workspace/skills/workspace-startup/SKILL.md").write_text("# Startup\n", encoding="utf-8")
@@ -2951,10 +2851,10 @@ def main(argv: list[str] | None = None) -> int:
         ("context authority changed-path enforcement", _validate_context_authority_changed_path_enforcement()),
         ("compact answer sample", _validate(_sample_compact_answer(), "compact_contract_answer.schema.json")),
         ("workspace report sample", _validate(_sample_report_payload(), "workspace_report.schema.json")),
-        ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config_former.schema.json")),
+        ("workspace config sample", _validate(_sample_workspace_config_payload(), "workspace_config.schema.json")),
         (
             "workspace local override sample",
-            _validate(_sample_workspace_local_override_payload(), "workspace_local_override_former.schema.json"),
+            _validate(_sample_workspace_local_override_payload(), "workspace_local_override.schema.json"),
         ),
         (
             "delegation outcomes sample",
@@ -2987,10 +2887,6 @@ def main(argv: list[str] | None = None) -> int:
         (
             "workflow artifact profiles manifest",
             _validate(workflow_artifact_profiles_manifest(), "workflow_artifact_profiles.schema.json"),
-        ),
-        (
-            "workflow definition format manifest",
-            _validate(workflow_definition_format_manifest(), "workflow_definition_format.schema.json"),
         ),
         (
             "improvement latitude policy manifest",
@@ -3177,9 +3073,7 @@ def main(argv: list[str] | None = None) -> int:
     actual_operation_surfaces = set(operation_surfaces)
     missing_operation_surfaces = sorted(expected_operation_surfaces - actual_operation_surfaces)
     extra_operation_surfaces = sorted(actual_operation_surfaces - expected_operation_surfaces)
-    duplicate_operation_surfaces = sorted(
-        surface for surface in actual_operation_surfaces if operation_surfaces.count(surface) > 1
-    )
+    duplicate_operation_surfaces = sorted(surface for surface in actual_operation_surfaces if operation_surfaces.count(surface) > 1)
     operation_surface_errors: list[str] = []
     if missing_operation_surfaces:
         operation_surface_errors.append(f"missing operation contracts: {missing_operation_surfaces}")
@@ -3214,7 +3108,9 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("workspace surfaces parity", ["workspace agents path drifted from workspace_surfaces.json"]))
     if [path.as_posix() for path in cli.WORKSPACE_HANDOFF_SURFACES] != workspace_surfaces["handoff_surfaces"]:
         checks.append(("workspace surfaces parity", ["workspace handoff surfaces drifted from workspace_surfaces.json"]))
-    if {key: value.as_posix() for key, value in cli.MODULE_UPGRADE_SOURCE_PATHS.items()} != workspace_surfaces["module_upgrade_source_paths"]:
+    if {key: value.as_posix() for key, value in cli.MODULE_UPGRADE_SOURCE_PATHS.items()} != workspace_surfaces[
+        "module_upgrade_source_paths"
+    ]:
         checks.append(("workspace surfaces parity", ["module upgrade source paths drifted from workspace_surfaces.json"]))
     if cli.SETUP_FINDINGS_PATH.as_posix() != workspace_surfaces["setup_findings_path"]:
         checks.append(("workspace surfaces parity", ["setup findings path drifted from workspace_surfaces.json"]))
@@ -3233,37 +3129,59 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(("setup findings policy parity", ["setup finding class payloads drifted from setup_findings_policy.json"]))
     workflow_profiles = workflow_artifact_profiles_manifest()
     if workflow_profiles["default_profile"] != cli.DEFAULT_WORKFLOW_ARTIFACT_PROFILE:
-        checks.append(("workflow artifact profiles parity", ["default workflow artifact profile drifted from workflow_artifact_profiles.json"]))
+        checks.append(
+            ("workflow artifact profiles parity", ["default workflow artifact profile drifted from workflow_artifact_profiles.json"])
+        )
     if [item["profile"] for item in workflow_profiles["profiles"]] != list(cli.SUPPORTED_WORKFLOW_ARTIFACT_PROFILES):
         checks.append(("workflow artifact profiles parity", ["workflow artifact profiles drifted from workflow_artifact_profiles.json"]))
     if workflow_profiles["profiles"] != [cli._workflow_artifact_profile_payload(name) for name in cli.SUPPORTED_WORKFLOW_ARTIFACT_PROFILES]:  # type: ignore[attr-defined]
         checks.append(("workflow artifact profiles parity", ["workflow artifact payloads drifted from workflow_artifact_profiles.json"]))
     improvement_policy = improvement_latitude_policy_manifest()
     if improvement_policy["default_mode"] != cli.DEFAULT_IMPROVEMENT_LATITUDE:
-        checks.append(("improvement latitude policy parity", ["default improvement latitude drifted from improvement_latitude_policy.json"]))
-    if [item["mode"] for item in improvement_policy["modes"]] != list(cli.SUPPORTED_IMPROVEMENT_LATITUDES):
-        checks.append(("improvement latitude policy parity", ["supported improvement latitude modes drifted from improvement_latitude_policy.json"]))
-    if improvement_policy["modes"] != [cli._improvement_latitude_payload(name) for name in cli.SUPPORTED_IMPROVEMENT_LATITUDES]:  # type: ignore[attr-defined]
-        checks.append(("improvement latitude policy parity", ["improvement latitude payloads drifted from improvement_latitude_policy.json"]))
+        checks.append(
+            ("improvement latitude policy parity", ["default improvement latitude drifted from improvement_latitude_policy.json"])
+        )
+    if [item["mode"] for item in improvement_policy["modes"]] != list(runtime_core.config_lib.SUPPORTED_IMPROVEMENT_LATITUDES):
+        checks.append(
+            ("improvement latitude policy parity", ["supported improvement latitude modes drifted from improvement_latitude_policy.json"])
+        )
+    if improvement_policy["modes"] != [
+        cli._improvement_latitude_payload(name) for name in runtime_core.config_lib.SUPPORTED_IMPROVEMENT_LATITUDES
+    ]:  # type: ignore[attr-defined]
+        checks.append(
+            ("improvement latitude policy parity", ["improvement latitude payloads drifted from improvement_latitude_policy.json"])
+        )
     improvement_defaults = defaults_payload["improvement_latitude"]
     if improvement_defaults["default_mode"] != improvement_policy["default_mode"]:
-        checks.append(("improvement latitude policy parity", ["defaults payload default_mode drifted from improvement_latitude_policy.json"]))
+        checks.append(
+            ("improvement latitude policy parity", ["defaults payload default_mode drifted from improvement_latitude_policy.json"])
+        )
     if improvement_defaults["supported_modes"] != improvement_policy["modes"]:
-        checks.append(("improvement latitude policy parity", ["defaults payload supported_modes drifted from improvement_latitude_policy.json"]))
+        checks.append(
+            ("improvement latitude policy parity", ["defaults payload supported_modes drifted from improvement_latitude_policy.json"])
+        )
     if improvement_defaults["mode_interpretation"] != improvement_policy["mode_interpretation"]:
-        checks.append(("improvement latitude policy parity", ["defaults payload mode_interpretation drifted from improvement_latitude_policy.json"]))
+        checks.append(
+            ("improvement latitude policy parity", ["defaults payload mode_interpretation drifted from improvement_latitude_policy.json"])
+        )
     if improvement_defaults["examples"] != improvement_policy["examples"]:
         checks.append(("improvement latitude policy parity", ["defaults payload examples drifted from improvement_latitude_policy.json"]))
     if improvement_defaults["evidence_source"] != improvement_policy["evidence_source"]:
-        checks.append(("improvement latitude policy parity", ["defaults payload evidence_source drifted from improvement_latitude_policy.json"]))
+        checks.append(
+            ("improvement latitude policy parity", ["defaults payload evidence_source drifted from improvement_latitude_policy.json"])
+        )
     if improvement_defaults["evidence_classes"] != improvement_policy["evidence_classes"]:
-        checks.append(("improvement latitude policy parity", ["defaults payload evidence_classes drifted from improvement_latitude_policy.json"]))
+        checks.append(
+            ("improvement latitude policy parity", ["defaults payload evidence_classes drifted from improvement_latitude_policy.json"])
+        )
     optimization_policy = optimization_bias_policy_manifest()
     if optimization_policy["default_mode"] != cli.DEFAULT_OPTIMIZATION_BIAS:
         checks.append(("optimization bias policy parity", ["default optimization bias drifted from optimization_bias_policy.json"]))
-    if [item["mode"] for item in optimization_policy["modes"]] != list(cli.SUPPORTED_OPTIMIZATION_BIASES):
+    if [item["mode"] for item in optimization_policy["modes"]] != list(runtime_core.config_lib.SUPPORTED_OPTIMIZATION_BIASES):
         checks.append(("optimization bias policy parity", ["supported optimization bias modes drifted from optimization_bias_policy.json"]))
-    if optimization_policy["modes"] != [cli._optimization_bias_payload(name) for name in cli.SUPPORTED_OPTIMIZATION_BIASES]:  # type: ignore[attr-defined]
+    if optimization_policy["modes"] != [
+        cli._optimization_bias_payload(name) for name in runtime_core.config_lib.SUPPORTED_OPTIMIZATION_BIASES
+    ]:  # type: ignore[attr-defined]
         checks.append(("optimization bias policy parity", ["optimization bias payloads drifted from optimization_bias_policy.json"]))
     optimization_defaults = defaults_payload["optimization_bias"]
     if optimization_defaults["default_mode"] != optimization_policy["default_mode"]:
@@ -3288,13 +3206,17 @@ def main(argv: list[str] | None = None) -> int:
     if cli._improvement_boundary_test_payload() != repo_friction_policy["improvement_boundary_test"]:  # type: ignore[attr-defined]
         checks.append(("repo friction policy parity", ["improvement boundary test drifted from repo_friction_policy.json"]))
     if improvement_defaults["workspace_self_adaptation"] != repo_friction_policy["workspace_self_adaptation"]:
-        checks.append(("repo friction policy parity", ["defaults payload workspace_self_adaptation drifted from repo_friction_policy.json"]))
+        checks.append(
+            ("repo friction policy parity", ["defaults payload workspace_self_adaptation drifted from repo_friction_policy.json"])
+        )
     if improvement_defaults["friction_response_order"] != repo_friction_policy["friction_response_order"]:
         checks.append(("repo friction policy parity", ["defaults payload friction_response_order drifted from repo_friction_policy.json"]))
     if improvement_defaults["guardrail_test"] != repo_friction_policy["workspace_self_adaptation_guardrail"]:
         checks.append(("repo friction policy parity", ["defaults payload guardrail_test drifted from repo_friction_policy.json"]))
     if improvement_defaults["repo_directed_improvement_threshold"] != repo_friction_policy["repo_directed_improvement_threshold"]:
-        checks.append(("repo friction policy parity", ["defaults payload repo_directed_improvement_threshold drifted from repo_friction_policy.json"]))
+        checks.append(
+            ("repo friction policy parity", ["defaults payload repo_directed_improvement_threshold drifted from repo_friction_policy.json"])
+        )
     if improvement_defaults["validation_friction"] != repo_friction_policy["validation_friction"]:
         checks.append(("repo friction policy parity", ["defaults payload validation_friction drifted from repo_friction_policy.json"]))
     if improvement_defaults["decision_test"] != repo_friction_policy["improvement_boundary_test"]:
@@ -3364,14 +3286,17 @@ def main(argv: list[str] | None = None) -> int:
         ]
         if parser_snapshot != expected_parser_snapshot:
             checks.append(
-                ("cli command manifest parity", ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"])
+                (
+                    "cli command manifest parity",
+                    ["argparse command/options/defaults drifted from cli_commands.json or cli_option_groups.json"],
+                )
             )
         if [item["name"] for item in parser_snapshot] != [item["name"] for item in expected_parser_snapshot]:
             checks.append(("cli command manifest parity", ["resolved handwritten command ordering drifted from cli_commands.json"]))
     if "modules" not in cli._command_suggestions("moduls"):  # type: ignore[attr-defined]
         checks.append(("cli command manifest parity", ["command suggestions no longer derive the expected known commands"]))
-    workspace_config_schema = contract_schema("workspace_config_former.schema.json")
-    local_override_schema = contract_schema("workspace_local_override_former.schema.json")
+    workspace_config_schema = contract_schema("workspace_config.schema.json")
+    local_override_schema = contract_schema("workspace_local_override.schema.json")
     agent_instructions_schema = workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]
     if agent_instructions_schema.get("type") != "string" or agent_instructions_schema.get("minLength") != 1:
         checks.append(("workspace config schema parity", ["agent_instructions_file must accept any non-empty string path"]))
@@ -3380,44 +3305,14 @@ def main(argv: list[str] | None = None) -> int:
     ):
         checks.append(("workspace config schema parity", ["workflow_artifact_profile enum drifted from cli supported profiles"]))
     if workspace_config_schema["properties"]["workspace"]["properties"]["improvement_latitude"]["enum"] != list(
-        cli.SUPPORTED_IMPROVEMENT_LATITUDES
+        runtime_core.config_lib.SUPPORTED_IMPROVEMENT_LATITUDES
     ):
         checks.append(("workspace config schema parity", ["improvement_latitude enum drifted from cli supported modes"]))
-    if workspace_config_schema["properties"]["workspace"]["properties"]["optimization_bias"]["enum"] != list(
-        cli.SUPPORTED_OPTIMIZATION_BIASES
-    ):
-        checks.append(("workspace config schema parity", ["optimization_bias enum drifted from cli supported modes"]))
-    workflow_obligation_schema = workspace_config_schema["$defs"][
-        workspace_config_schema["properties"]["workflow_obligations"]["patternProperties"]["^.+$"]["$ref"].split("/")[-1]
-    ]
-    if workflow_obligation_schema["properties"]["stage"]["enum"] != list(cli.SUPPORTED_WORKFLOW_OBLIGATION_STAGES):
-        checks.append(("workspace config schema parity", ["workflow obligation stages drifted from cli supported values"]))
-    local_runtime_properties = local_override_schema["properties"]["runtime"]["properties"]
-    expected_runtime = {
-        "supports_internal_delegation",
-        "strong_planner_available",
-        "cheap_bounded_executor_available",
-    }
-    if set(local_runtime_properties) != expected_runtime:
-        checks.append(("workspace local override schema parity", ["runtime properties drifted from supported local override fields"]))
-    if set(local_override_schema["properties"]["handoff"]["properties"]) != {"prefer_internal_delegation_when_available"}:
-        checks.append(("workspace local override schema parity", ["handoff properties drifted from supported local override fields"]))
     if set(local_override_schema["properties"]["safety"]["properties"]) != {
         "safe_to_auto_run_commands",
         "requires_human_verification_on_pr",
     }:
         checks.append(("workspace local override schema parity", ["safety properties drifted from supported local override fields"]))
-    delegation_target_schema = local_override_schema["properties"]["delegation_targets"]["patternProperties"]["^.+$"]
-    if delegation_target_schema["properties"]["strength"]["enum"] != list(cli.SUPPORTED_DELEGATION_TARGET_STRENGTHS):
-        checks.append(
-            ("workspace local override schema parity", ["delegation target strengths drifted from supported local override fields"])
-        )
-    if delegation_target_schema["properties"]["execution_methods"]["items"]["enum"] != list(
-        cli.SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS
-    ):
-        checks.append(
-            ("workspace local override schema parity", ["delegation target execution methods drifted from supported local override fields"])
-        )
     delegation_outcome_schema = contract_schema("delegation_outcomes.schema.json")
     record_schema = delegation_outcome_schema["properties"]["records"]["items"]
     if record_schema["properties"]["outcome"]["enum"] != list(cli.SUPPORTED_DELEGATION_OUTCOMES):

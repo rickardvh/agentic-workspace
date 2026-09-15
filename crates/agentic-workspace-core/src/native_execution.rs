@@ -205,25 +205,6 @@ pub(crate) fn view(
     let mut manual_targets = Vec::new();
     let mut observed_paths = std::collections::BTreeMap::new();
     for (name, profile) in targets.into_iter().flatten() {
-        // Repo posture replaces target-local task classification. Preserve old
-        // sources for migration, but never run both eligibility models together.
-        if requirements["execution_posture"].is_object()
-            && [
-                "strength",
-                "reasoning_profile",
-                "capability_classes",
-                "safe_task_classes",
-                "escalation_target",
-                "human_control_modes",
-            ]
-            .iter()
-            .any(|field| profile.get(field).is_some())
-        {
-            unavailable.push(
-                json!({"target":name,"gap":"repo-posture-requires-canonical-capability-profile"}),
-            );
-            continue;
-        }
         let transports = match crate::transport_source::decode(profile) {
             Ok(value) => value,
             Err(error) => {
@@ -232,7 +213,7 @@ pub(crate) fn view(
             }
         };
         if serde_json::to_vec(profile).is_ok_and(|bytes| bytes.len() <= 8192) {
-            target_context.push(json!({"target":name,"profile":profile,"revision":digest(profile)?,"human_prior":{"confidence":profile["confidence"],"provenance":profile["confidence_source"],"cost_class":profile["cost_class"],"latency_class":profile["latency_class"]},"former_observations":{"status":"not-admitted-by-configuration","current_economic_evidence":profile["current_economic_evidence"],"last_evaluation":profile["last_evaluation"]},"claim_boundary":"Configured human priors and restrictions, not learned proof or capability grants."}));
+            target_context.push(json!({"target":name,"profile":profile,"revision":digest(profile)?,"human_prior":{"confidence":profile["confidence"],"provenance":profile["confidence_source"],"cost_class":profile["cost_class"],"latency_class":profile["latency_class"]},"claim_boundary":"Configured human priors and restrictions, not learned proof or capability grants."}));
         } else {
             unavailable.push(json!({"target":name,"gap":"target-context-exceeds-bound"}));
         }

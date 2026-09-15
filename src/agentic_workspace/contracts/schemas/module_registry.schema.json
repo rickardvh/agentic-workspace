@@ -230,7 +230,6 @@
         "recommended_loop",
         "module_can_contribute",
         "task_posture_model",
-        "workflow_obligation_model",
         "conflict_model",
         "projection_boundaries",
         "dynamic_instruction_projection",
@@ -351,39 +350,6 @@
           },
           "additionalProperties": false,
           "description": "Task-specific posture packet model for dynamic instruction routing."
-        },
-        "workflow_obligation_model": {
-          "type": "object",
-          "required": [
-            "owner_surface",
-            "role",
-            "stages",
-            "composition_rule"
-          ],
-          "properties": {
-            "owner_surface": {
-              "type": "string",
-              "description": "Config or contract surface that owns workflow obligation declarations."
-            },
-            "role": {
-              "type": "string",
-              "description": "How workflow obligations compose with the recommended loop."
-            },
-            "stages": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "string"
-              },
-              "description": "Workflow stages where obligations can apply."
-            },
-            "composition_rule": {
-              "type": "string",
-              "description": "How matched and unmatched obligations affect the operating loop."
-            }
-          },
-          "additionalProperties": false,
-          "description": "How repo-configured workflow obligations compose with the recommended operating loop."
         },
         "conflict_model": {
           "type": "object",
@@ -790,14 +756,32 @@
               "result_semantics"
             ],
             "properties": {
-              "schema_version": {"const": "agentic-workspace/module-capability/v2"},
-              "name": {"type": "string", "minLength": 1},
-              "description": {"type": "string", "minLength": 1},
-              "compatibility": {"type": "object"},
-              "ownership": {"type": "object"},
-              "relevance": {"type": "object"},
-              "capabilities": {"type": "object"},
-              "result_semantics": {"type": "object"}
+              "schema_version": {
+                "const": "agentic-workspace/module-capability/v2"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1
+              },
+              "compatibility": {
+                "type": "object"
+              },
+              "ownership": {
+                "type": "object"
+              },
+              "relevance": {
+                "type": "object"
+              },
+              "capabilities": {
+                "type": "object"
+              },
+              "result_semantics": {
+                "type": "object"
+              }
             },
             "additionalProperties": true,
             "description": "Capability-first public seam; broader participation metadata remains internal compatibility data."

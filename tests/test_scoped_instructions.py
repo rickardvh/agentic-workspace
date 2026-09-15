@@ -495,7 +495,6 @@ blocking_claims = ["claim-work-complete"]
 requirement_class = "invariant"
 source_intent_ref = "SYSTEM_INTENT.md#trust"
 source_intent_revision = "r1"
-source_intent_current = true
 evidence_owner = "verification:typed-exit"
 detail_route = "agentic-workspace proof --select typed-exit"
 """,

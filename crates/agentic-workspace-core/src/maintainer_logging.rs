@@ -36,14 +36,7 @@ pub fn policy(input: Value) -> Result<Value, CoreError> {
         .validate(&input["local"])
         .map_err(|e| CoreError::new(e.to_string()))?;
     let settings = &input["local"]["session_logging"];
-    let mode =
-        settings["path_mode"]
-            .as_str()
-            .unwrap_or(if settings["redact_local_paths"] == true {
-                "redacted"
-            } else {
-                "absolute"
-            });
+    let mode = settings["path_mode"].as_str().unwrap_or("absolute");
     Ok(
         json!({"enabled":settings["enabled"] == true && input["disable_override"] != "1", "path_mode":mode}),
     )
@@ -533,7 +526,7 @@ mod tests {
             std::fs::create_dir(repo.as_path().join(".agentic-workspace")).unwrap();
             std::fs::write(
                 repo.as_path().join(".agentic-workspace/config.local.toml"),
-                "schema_version=1\n[session_logging]\nenabled=true\npath_mode=\"redacted\"\n",
+                "[session_logging]\nenabled=true\npath_mode=\"redacted\"\n",
             )
             .unwrap();
             let run = |crash: &str, identity: &str| {

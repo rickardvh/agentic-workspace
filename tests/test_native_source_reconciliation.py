@@ -28,7 +28,7 @@ def repository(root: Path) -> dict:
     ):
         subprocess.run(["git", "-C", str(root), *args], check=True, capture_output=True)
     pin = subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
-    (root / ".agentic-workspace/config.toml").write_text(f'schema_version=1\n[assurance]\ninstruction_revision="{pin}"\n')
+    (root / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
     return {"target": str(root), "task": "Complete the feature change", "changed": ["src/feature.txt"]}
 
 
@@ -205,7 +205,7 @@ def test_non_document_source_and_duplicate_instruction(tmp_path, shared_core_bin
         check=True,
     )
     pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(f'schema_version=1\n[assurance]\ninstruction_revision="{pin}"\n')
+    (tmp_path / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
 
     def call(extra=None):
         return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
@@ -257,7 +257,7 @@ def test_protected_receipt_destination_never_publishes(tmp_path, shared_core_bin
         check=True,
     )
     pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(f'schema_version=1\n[assurance]\ninstruction_revision="{pin}"\n')
+    (tmp_path / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
 
     def call(extra=None):
         return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
@@ -279,7 +279,7 @@ def test_global_reconciliation_observes_opaque_new_work(tmp_path, shared_core_bi
         check=True,
     )
     pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(f'schema_version=1\n[assurance]\ninstruction_revision="{pin}"\n')
+    (tmp_path / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
 
     def call(extra=None):
         return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
@@ -349,7 +349,7 @@ def test_escaped_receipt_budget_rejects_before_admission(tmp_path, shared_core_b
         check=True,
     )
     pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(f'schema_version=1\n[assurance]\ninstruction_revision="{pin}"\n')
+    (tmp_path / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
 
     def call(extra=None):
         return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})

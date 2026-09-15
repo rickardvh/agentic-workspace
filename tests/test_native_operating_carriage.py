@@ -178,7 +178,7 @@ def test_carriage_fails_closed_and_exact_detail_is_inspectable(tmp_path, shared_
     assert not (tmp_path / ".agentic-workspace/config.toml").exists()
     source = tmp_path / ".agentic-workspace/config.toml"
     source.parent.mkdir(exist_ok=True)
-    source.write_text('schema_version=1\n[workspace]\ncli_invoke="changed"\n')
+    source.write_text('[workspace]\ncli_invoke="changed"\n')
     with pytest.raises(AssertionError):
         consume(surface, shared_core_binary, native_cli, call)
     assert "changed" in source.read_text()
@@ -217,7 +217,7 @@ def test_rehashed_forged_and_stale_action_carriage_cannot_write(tmp_path, shared
     source = tmp_path / ".agentic-workspace/config.toml"
     assert not source.exists()
     source.parent.mkdir(exist_ok=True)
-    source.write_text('schema_version=1\n[workspace]\ncli_invoke="preserve-current"\n')
+    source.write_text('[workspace]\ncli_invoke="preserve-current"\n')
     with pytest.raises(AssertionError):
         consume(surface, shared_core_binary, native_cli, {"invocation": answered["carriage"], "reference": original})
     assert "preserve-current" in source.read_text()
@@ -313,7 +313,7 @@ def test_delivery_is_not_satisfaction_and_opaque_sources_redeliver(tmp_path, sha
     directory.mkdir(parents=True)
     source = directory / "policy.md"
     source.write_text("---\nreconcile: [guide.md]\n---\n" + "Preserve policy.\n" * 40)
-    (tmp_path / ".agentic-workspace/config.toml").write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
     (tmp_path / "guide.md").write_text("Canonical guide")
     context = {"target": str(tmp_path), "task": "Inspect current work", "projection": "compact"}
 

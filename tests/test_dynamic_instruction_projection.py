@@ -8,8 +8,6 @@ from typing import Any
 import pytest
 from tests.workspace_cli_support import cli
 
-from agentic_workspace.runtime_compatibility import READER_CONTRACT_EPOCH
-
 FIXTURE = Path(__file__).parent / "fixtures" / "dynamic_instruction_scenarios.json"
 
 
@@ -73,43 +71,6 @@ def _scenario_payload(scenario: dict[str, Any], tmp_path: Path, capsys) -> tuple
             "source_guidance": selected["values"]["source_guidance"],
             "memory_effectiveness": {"projected_contributions": selected["values"]["memory_decision_packet"]["use"]["contributions"]},
         }, 2
-    if runner == "incompatible-runtime":
-        target = _public_target(tmp_path, capsys)
-        config = target / ".agentic-workspace" / "config.toml"
-        config.write_text(
-            config.read_text(encoding="utf-8")
-            + "\n[cli_compatibility]\n"
-            + f"minimum_reader_epoch = {READER_CONTRACT_EPOCH + int(inputs['minimum_reader_epoch_delta'])}\n",
-            encoding="utf-8",
-        )
-        assert (
-            cli.main(
-                [
-                    "start",
-                    "--target",
-                    str(target),
-                    "--task",
-                    "inspect runtime compatibility",
-                    "--select",
-                    "installed_state_drift_triage,action_signals",
-                    "--format",
-                    "json",
-                ]
-            )
-            == 0
-        )
-        return json.loads(capsys.readouterr().out)["values"], 2
-    if runner == "causal-block":
-        target = _public_target(tmp_path, capsys)
-        config = target / ".agentic-workspace" / "config.toml"
-        config.write_text(
-            config.read_text(encoding="utf-8") + "\n[cli_compatibility]\n" + f"minimum_reader_epoch = {READER_CONTRACT_EPOCH + 1}\n",
-            encoding="utf-8",
-        )
-        assert (
-            cli.main(["implement", "--target", str(target), "--task", "implement runtime contract", "--verbose", "--format", "json"]) == 0
-        )
-        return json.loads(capsys.readouterr().out), 2
     if runner == "coherence":
         target = _public_target(tmp_path, capsys)
         assert (
@@ -191,15 +152,6 @@ def _assert_expected(scenario: dict[str, Any], payload: dict[str, Any]) -> None:
     elif runner == "operating-decision":
         assert len(payload["source_guidance"]["contributions"]) == expected["source_guidance_count"]
         assert len(payload["memory_effectiveness"]["projected_contributions"]) == expected["memory_contribution_count"]
-    elif runner == "incompatible-runtime":
-        triage = payload["installed_state_drift_triage"]
-        assert triage["installed_state_status"] == expected["status"]
-        assert triage["status"] == expected["triage_status"]
-        assert expected["changed_signal"] in payload["action_signals"]["changed_signals"]
-    elif runner == "causal-block":
-        effect = _find_claim_effect_boundary(payload)
-        assert effect["installed_payload_dependency"] == expected["installed_payload_dependency"]
-        assert expected["claim_class"] in effect["claim_classes"]
     elif runner == "coherence":
         assert (payload["first"]["selected_owner_identity"] == payload["second"]["selected_owner_identity"]) is expected[
             "same_revision_same_identity"
@@ -231,18 +183,6 @@ def _first_line_projection(scenario: dict[str, Any], payload: dict[str, Any]) ->
             "external_blocker": payload.get("external_blocker"),
             "source_guidance": payload.get("source_guidance"),
             "memory_contributions": payload.get("memory_effectiveness", {}).get("projected_contributions", []),
-        }
-    if runner == "causal-block":
-        effect = _find_claim_effect_boundary(payload)
-        return {
-            "claim_effect_boundary": effect,
-        }
-    if runner == "incompatible-runtime":
-        triage = payload.get("installed_state_drift_triage", {})
-        return {
-            "cli_compatibility": {"status": triage.get("installed_state_status")},
-            "installed_state_drift_triage": triage,
-            "changed_signals": payload.get("action_signals", {}).get("changed_signals"),
         }
     if runner == "memory-boundary":
         return {

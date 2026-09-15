@@ -518,9 +518,7 @@ fn receipt_view(
         "proof_subject":subject["id"],"gaps":gaps})
 }
 
-/// Verification owns operational route/profile declarations. A former config
-/// section is a recognized source only until transferred; competing sections
-/// fail closed rather than merging or choosing stronger-looking bytes.
+/// Verification owns operational route/profile declarations in its manifest.
 fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError> {
     let Some(owned) = manifest.get("assurance") else {
         return Ok(config.clone());
@@ -538,11 +536,6 @@ fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError
         })?;
     let mut result = config.clone();
     for (field, value) in owned.as_object().unwrap() {
-        if config["assurance"].get(field).is_some() {
-            return Err(CoreError::new(format!(
-                "competing Verification {field} sources: .agentic-workspace/config.toml and {MANIFEST}; preserve both and resolve ownership"
-            )));
-        }
         result["assurance"][field] = value.clone();
     }
     Ok(result)
@@ -590,7 +583,6 @@ fn subsystem_requirements(
                         | "requirement_refs"
                         | "required_evidence"
                         | "proof_profile"
-                        | "workflow_obligation_refs"
                         | "review_owner"
                         | "force"
                         | "blocked_without_evidence"

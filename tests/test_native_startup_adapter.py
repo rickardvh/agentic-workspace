@@ -47,7 +47,7 @@ def test_source_repository_configured_native_route_is_stateful(tmp_path: Path, s
         check=True,
     )
     assert invocation == "./target/debug/agentic-workspace"
-    assert f"configured invocation is `{invocation}`" in (ROOT / "AGENTS.md").read_text()
+    assert "workspace-startup/SKILL.md" in (ROOT / "AGENTS.md").read_text()
     context = {"target": str(tmp_path), "task": "Maintain the selected former owner", "changed": ["src/example.rs"]}
     command = [
         *shlex.split(invocation),
@@ -94,7 +94,7 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
 ) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    config.write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
     source = tmp_path / "AGENTS.md"
     source.write_bytes((ROOT / "AGENTS.md").read_bytes() + b"\nHuman-owned outside-fence instruction.\n" + b"large context\n" * 800)
     original = source.read_bytes()
@@ -104,7 +104,6 @@ def test_configured_startup_text_is_exact_lazy_and_not_custody(
     assert owner["status"] == "source-context-required"
     assert "Human-owned" not in json.dumps(owner)
     assert len(json.dumps(owner)) < 6500
-    assert not any(r["field"] == "workspace.agent_instructions_file" for r in result["configuration"]["residuals"])
     assert {"effect:implementation", "claim:complete"} <= set(startup_blockers(result)[0]["affects"])
     request = owner["requests"][0]
     for projection in ("compact", "carried"):
@@ -156,7 +155,7 @@ def test_missing_configured_source_is_scoped_and_absent_selection_quiet(
     assert quiet["decision_packet"]["status"] == "direct"
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="docs/agent.md"\n')
+    config.write_text('[workspace]\nagent_instructions_file="docs/agent.md"\n')
     missing_packet = consume(surface, shared_core_binary, native_cli, context)
     missing = missing_packet["startup_adapter"]
     assert missing["source"]["status"] == "missing"
@@ -189,7 +188,7 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
             requests = [request]
             if index:
                 direct = current["decision_packet"]["decision_request"]["response_request"]
-                direct["arguments"]["answer"] = "unrelated-direct"
+                direct["arguments"] = {"answer": "independent", "task_posture": "planned"}
                 requests.insert(0, direct)
             created = setup({**context, "invocation": setup({**context, "request": requests})["decision_packet"]["primary_action"]})
             context = created["value"]["selection_context"]
@@ -213,7 +212,7 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
         context = {"target": str(tmp_path), "task": "Continue bounded current work"}
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir(exist_ok=True)
-    config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    config.write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
     source = tmp_path / "AGENTS.md"
     source.write_text("Read current source before executing. Keep independent proof separate.")
 
@@ -278,7 +277,7 @@ def test_startup_delivery_is_carried_into_fresh_effect_admission(
 def test_small_required_source_arrives_without_read_ceremony(tmp_path, shared_core_binary, native_cli, surface):
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    config.write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
     source = tmp_path / "AGENTS.md"
     original = b"Preserve human work. Stop before publication without exact authority.\n"
     source.write_bytes(original)
@@ -319,7 +318,7 @@ def test_small_required_source_arrives_without_read_ceremony(tmp_path, shared_co
 def test_required_delivery_bound_and_invalid_source_remain_fail_closed(tmp_path, shared_core_binary, native_cli):
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[workspace]\nagent_instructions_file="AGENTS.md"\n')
+    config.write_text('[workspace]\nagent_instructions_file="AGENTS.md"\n')
     source = tmp_path / "AGENTS.md"
     context = {"target": str(tmp_path), "task": "Inspect source", "projection": "compact"}
     source.write_bytes(b"a" * 8192)

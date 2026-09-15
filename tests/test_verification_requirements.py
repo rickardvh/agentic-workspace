@@ -167,21 +167,20 @@ def test_public_assignment_preview_resolves_current_selected_obligation(current,
     from agentic_workspace.generated_operations import assignment_export
 
     _, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="obligation")
-    (tmp_path / ".agentic-workspace/config.local.toml").write_text("""schema_version = 1
-[delegation]
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text("""[delegation]
 assignment_policy = "required-best-fit"
 current_target = "orchestrator"
 transport_authority = "manual"
 [delegation_targets.orchestrator]
 target_id = "host:orchestrator"
 target_revision = "1"
-strength = "strong"
+
 location = "local"
 transports = [{kind="internal"}]
 [delegation_targets.worker]
 target_id = "host:worker"
 target_revision = "1"
-strength = "strong"
+
 location = "external"
 transports = [{kind="manual"}]
 """)
@@ -208,7 +207,7 @@ def test_native_start_composes_selected_verification_request_with_assignment(cur
 
     target = Path(current["target"])
     (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
+        '[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
         'strength="strong"\nlocation="external"\ntransports=[{kind="manual"}]\n'
     )
     context = {"target": str(target), "task": current["task"], "changed": current["changed_paths"]}

@@ -87,7 +87,6 @@ and the responsible owner's live admission.
 - [Python extraction map](python-extraction-map.md): Python-owned extraction map.
 - [Python runtime boundary](python-runtime-boundary.md): Python runtime boundary.
 - [Workflow artifact profiles](workflow-artifact-profiles.md): workflow artifact profiles.
-- [Specialized workflow-obligation compatibility](workflow-definition-format.md): stage-bound compatibility metadata; ordinary repo guidance uses scoped Markdown.
 - [Context templates](context-templates.md): context template contract.
 
 ## Reference maintenance

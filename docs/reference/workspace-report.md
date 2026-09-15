@@ -35,24 +35,6 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | Allowed target relation value for routing or validation. |  |  |
 | `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | Fixed compatibility value required by this contract. |  |  |
 | `invoked_cli_identity.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
-| `cli_compatibility` | ref `#/$defs/cli_compatibility` | yes |  | Cli compatibility referenced contract shape used by this contract. |  |  |
-| `cli_compatibility.kind` | const `"agentic-workspace/cli-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
-| `cli_compatibility.status` | enum `"no-expectation"`, `"satisfied"`, `"advisory-drift"`, `"blocking-drift"` | yes |  | Current lifecycle, readiness, or health state. |  |  |
-| `cli_compatibility.configured` | boolean | yes |  | Configured true/false policy flag used by this contract. |  |  |
-| `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | yes |  | Allowed enforcement value for routing or validation. |  |  |
-| `cli_compatibility.enforcement_source` | string | no |  | Enforcement source text value used by this contract. |  |  |
-| `cli_compatibility.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
-| `cli_compatibility.expected_command` | string \| null | no |  | Expected command contract value used by this contract. |  |  |
-| `cli_compatibility.invocation_resolution` | object | no |  | Non-mutating classification of the configured environment-manager invocation. |  |  |
-| `cli_compatibility.contract_expectation` | object | no |  | Durable schema, capability, and package-resource expectation owned by repo config. |  |  |
-| `cli_compatibility.package_resources` | array of object | no |  | Availability results for required package resources. |  |  |
-| `cli_compatibility.pre_state_admission` | object | no |  | Compact root-reader admission provenance established before managed state interpretation. |  |  |
-| `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed invocation confidence value for routing or validation. |  |  |
-| `cli_compatibility.drift_findings` | array of object | no |  | Ordered drift findings entries used by this contract. |  |  |
-| `cli_compatibility.remediation` | object | no |  | Remediation details used by this contract. |  |  |
-| `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
-| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"`, `"resolution_posture"`, `"contract_schema"`, `"required_capabilities"`, `"required_resources"`, `"minimum_reader_epoch"`, `"required_reader_capabilities"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
-| `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
 | `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | yes |  | Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts. |  |  |
 | `installed_state_compatibility.kind` | const `"agentic-workspace/installed-state-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `installed_state_compatibility.status` | enum `"compatible"`, `"upgrade-recommended"`, `"payload-upgrade-required"`, `"blocking-drift"` | yes |  | Current installed-state compatibility classification. |  |  |
@@ -132,8 +114,6 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional report-visible dynamic instruction packet with selected posture, module contributions, and provenance. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
 | `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
-| `task_posture_packet.workflow_obligations` | array of object | yes |  | Matched workflow obligations with stage, force, scope, and provenance. |  |  |
-| `task_posture_packet.workflow_obligation_effects` | array of object | no |  | Evaluated behavior and closeout effects for configured workflow obligations. |  |  |
 | `task_posture_packet.improvement_pressure_evaluation` | object | no |  | Session and repository improvement-pressure evaluation compiled into task posture. |  |  |
 | `task_posture_packet.dogfooding_signal_status` | object | no |  | Session dogfooding signal disposition and capture routing status. |  |  |
 | `task_posture_packet.dogfooding_obligations` | array of object | no |  | Dogfooding obligations that affect closeout and improvement capture. |  |  |
@@ -213,8 +193,6 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `local_footprint` | object | yes |  | Tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing. |  |  |
 | `bootstrap_footprint` | object | no |  | Legacy checked-in AW payload migration plan with preserve/remove/write actions, durable state preservation, and explicit mirror-intent guard. |  |  |
 | `stale_cleanup` | object | no |  | Cleanup routing for stale local and checked-in planning surfaces. |  |  |
-| `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
-| `workflow_obligation_effects` | array of object | no |  | Evaluated behavior and closeout effects for configured workflow obligations. |  |  |
 | `improvement_pressure_evaluation` | object | no |  | Session and repository improvement-pressure evaluation compiled into report posture. |  |  |
 | `dogfooding_signal_status` | object | no |  | Session dogfooding signal disposition and capture routing status. |  |  |
 | `dogfooding_obligations` | array of object | no |  | Dogfooding obligations that affect closeout and improvement capture. |  |  |

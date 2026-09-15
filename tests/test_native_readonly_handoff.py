@@ -15,7 +15,7 @@ from tests.test_native_npm_routes import packed as packed
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
-BASE = 'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nstrength="strong"\ntransports=[{kind="manual"}]\n'
+BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="manual"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\ntransports=[{kind="manual"}]\n'
 
 
 @pytest.mark.parametrize(
@@ -218,7 +218,8 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         export = held["reentry"]["request"]
         assert call(export)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] == before_retention
     dispatch = call(export)["task_requirements"]["delegation"]["requests"][0]
-    action = call(dispatch)["decision_packet"]["primary_action"]
+    dispatch_view = call(dispatch)
+    action = next(action for action in dispatch_view["decision_packet"]["ready_actions"] if action["operation_id"] == "delegation.dispatch")
     assert action["operation_id"] == "delegation.dispatch"
     assert not (tmp_path / "launches.txt").exists()
     result = call(invocation=action)
@@ -302,7 +303,11 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         preserved = call(prior)["task_requirements"]["delegation"]["prior_result"]
         assert preserved["outcome"] == result["value"] or preserved["outcome"]["returned"] == result["value"]["returned"]
         replacement_dispatch = call(prior)["task_requirements"]["delegation"]["requests"][0]
-        replacement_action = call(replacement_dispatch)["decision_packet"]["primary_action"]
+        replacement_action = next(
+            action
+            for action in call(replacement_dispatch)["decision_packet"]["ready_actions"]
+            if action["operation_id"] == "delegation.dispatch"
+        )
         assert call(invocation=replacement_action)["value"]["status"] == "returned-unproven"
         prior[-1]["arguments"]["disposition"] = "reuse-readonly"
         late = call(prior)["task_requirements"]["delegation"]["observation"]
@@ -375,7 +380,7 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
             return call(request, task="A different independent Planning task", **updates)
 
         unrelated_request = other_call()["planning"]["requests"][0]
-        unrelated_request["arguments"]["answer"] = "unrelated-direct"
+        unrelated_request["arguments"].update(answer="independent", task_posture="planned")
         creation = other_call(unrelated_request)["planning"]["creation_requests"][0]
         creation["arguments"] = {"material": new_material()}
         creation["arguments"]["material"]["title"] = "A different selected Planning owner"

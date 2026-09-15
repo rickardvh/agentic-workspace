@@ -956,7 +956,7 @@ def test_configured_orchestration_fixture_preparation_is_copy_local(tmp_path: Pa
     module = _load_configured_fixture_module()
     config = tmp_path / ".agentic-workspace" / "config.local.toml"
     config.parent.mkdir(parents=True)
-    config.write_text('schema_version = 1\n\n[delegation]\nmode = "auto"\n', encoding="utf-8")
+    config.write_text('\n[delegation]\nmode = "auto"\n', encoding="utf-8")
 
     module.configure(tmp_path, task="Make a bounded mechanical documentation edit to add one compact README troubleshooting example.")
 
@@ -1140,7 +1140,7 @@ def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path:
     scenario = scenarios["setup-jumpstart-discovery"]
     assert "uv run agentic-workspace setup" in scenario["required_executed_commands"]
     assert "workspace-setup-jumpstart" in scenario["required_command_mentions"]
-    assert "config-policy" in scenario["required_command_mentions"]
+    assert "configuration" in scenario["required_command_mentions"]
     assert scenario["forbidden_write_patterns"] == ["**/*"]
     assert any("pre-write and pre-seed discovery" in note for note in scenario["expected_signals"])
     assert any("structured configuration concerns" in note for note in scenario["expected_signals"])

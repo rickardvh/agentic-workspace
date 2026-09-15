@@ -1,18 +1,6 @@
 {
   "entries": [
     {
-      "checked_in_justification": "Bounded former-source preservation fixture used by the native configuration owner tests.",
-      "editable_by_agents": true,
-      "format": "toml",
-      "generated": false,
-      "notes": "Historical excerpt, not current repository policy.",
-      "owner": "workspace-config",
-      "pattern": "tests/fixtures/former-recommended-control.toml",
-      "schema_or_validator": "validator: tests/test_native_advisory_config.py",
-      "status": "typed-validator-backed",
-      "storage_class": "source-of-truth"
-    },
-    {
       "checked_in_justification": "Verification-owned policy definitions shared with bounded former recognition.",
       "editable_by_agents": true,
       "format": "json",
@@ -44,7 +32,10 @@
       "notes": "Generated from OWNERSHIP.toml; profile identity grants no runtime or effect authority.",
       "owner": "workspace-agent-interface",
       "pattern": ".agentic-workspace/READING.json",
-      "reconstructable_from": [".agentic-workspace/OWNERSHIP.toml", "scripts/generate/generate_agent_interface.py"],
+      "reconstructable_from": [
+        ".agentic-workspace/OWNERSHIP.toml",
+        "scripts/generate/generate_agent_interface.py"
+      ],
       "schema_or_validator": "validator: python scripts/generate/generate_agent_interface.py --check",
       "status": "typed-validator-backed",
       "storage_class": "generated-required-adapter"
@@ -57,7 +48,10 @@
       "notes": "The agent-interface generator maintains parity with the installed profile.",
       "owner": "workspace-agent-interface",
       "pattern": "src/agentic_workspace/_payload/.agentic-workspace/READING.json",
-      "reconstructable_from": [".agentic-workspace/OWNERSHIP.toml", "scripts/generate/generate_agent_interface.py"],
+      "reconstructable_from": [
+        ".agentic-workspace/OWNERSHIP.toml",
+        "scripts/generate/generate_agent_interface.py"
+      ],
       "schema_or_validator": "validator: python scripts/generate/generate_agent_interface.py --check",
       "status": "typed-validator-backed",
       "storage_class": "generated-required-adapter"
@@ -351,7 +345,10 @@
       "notes": "Generated package copy of the canonical compatibility pointer; no runtime or module discovery authority.",
       "owner": "workspace-payload",
       "pattern": "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json",
-      "reconstructable_from": [".agentic-workspace/fallback/no-cli-policy.json", "scripts/generate/generate_agent_interface.py"],
+      "reconstructable_from": [
+        ".agentic-workspace/fallback/no-cli-policy.json",
+        "scripts/generate/generate_agent_interface.py"
+      ],
       "schema_or_validator": "scripts/check/check_source_payload_operational_install.py",
       "status": "typed-validator-backed",
       "storage_class": "generated-required-adapter"
@@ -393,7 +390,6 @@
       "generated": false,
       "notes": "Repo ownership metadata is a lifecycle surface; optional [[subsystems]] entries provide host-repo boundary and proof hints.",
       "owner": "workspace-lifecycle",
-      "pattern": ".agentic-workspace/OWNERSHIP.toml",
       "schema_or_validator": "src/agentic_workspace/contracts/schemas/ownership_ledger.schema.json",
       "status": "schema-backed",
       "storage_class": "source-of-truth"
@@ -870,7 +866,12 @@
       "generated": false,
       "guardrails": {
         "max_items": 100,
-        "preferred_refs": ["receipt_id", "revision", "target_identity_ref", "context_key"]
+        "preferred_refs": [
+          "receipt_id",
+          "revision",
+          "target_identity_ref",
+          "context_key"
+        ]
       },
       "notes": "Evaluation authority refresh writes indexed, compact owner receipts that report and disposition artifacts can resolve without retaining session transcripts.",
       "owner": "planning",
@@ -887,7 +888,12 @@
       "generated": false,
       "guardrails": {
         "max_items": 100,
-        "preferred_refs": ["assignment_id", "current_revision", "target_name", "status"]
+        "preferred_refs": [
+          "assignment_id",
+          "current_revision",
+          "target_name",
+          "status"
+        ]
       },
       "notes": "Assignment lifecycle commands validate and update these records; they remain Planning-owned authority rather than transcript or provider-specific evidence.",
       "owner": "planning-orchestration",
@@ -903,7 +909,12 @@
       "generated": false,
       "guardrails": {
         "max_items": 100,
-        "preferred_refs": ["command", "result", "recorded_at", "repository"],
+        "preferred_refs": [
+          "command",
+          "result",
+          "recorded_at",
+          "repository"
+        ],
         "routed_to": "#2448"
       },
       "notes": "Content-addressed proof receipts are admitted by the proof receipt validator before reuse.",
@@ -1631,7 +1642,10 @@
       "notes": "Standalone package fallback mirror of the canonical ownership ledger.",
       "owner": "package-lifecycle",
       "pattern": "packages/*/src/**/_ownership.toml",
-      "reconstructable_from": [".agentic-workspace/OWNERSHIP.toml", "scripts/generate/generate_agent_interface.py"],
+      "reconstructable_from": [
+        ".agentic-workspace/OWNERSHIP.toml",
+        "scripts/generate/generate_agent_interface.py"
+      ],
       "schema_or_validator": "validator: python scripts/generate/generate_agent_interface.py --check",
       "status": "typed-validator-backed",
       "storage_class": "generated-required-adapter"

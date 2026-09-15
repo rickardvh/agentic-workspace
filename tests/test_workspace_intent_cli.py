@@ -50,7 +50,7 @@ def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical
 def test_system_intent_rejects_invalid_subsystem_intent_lifecycle(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace/system-intent").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     (tmp_path / ".agentic-workspace/system-intent/subsystems.toml").write_text(
         'schema_version = 1\nkind = "agentic-workspace/subsystem-intent-set/v1"\n\n'
         '[[subsystems]]\nid = "ux"\nscope = "frontend"\nstatus = "done"\n',

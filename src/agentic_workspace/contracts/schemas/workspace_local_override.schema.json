@@ -2,17 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-local-override.schema.json",
   "title": "Agentic Workspace Local Mixed-Agent Override",
-  "description": "Current human configuration authoring, version 2. Version 1 sources are read separately; never use former syntax for new settings.",
+  "description": "Human configuration. Unknown fields are rejected; absence uses owner defaults.",
   "type": "object",
-  "required": [
-    "schema_version"
-  ],
   "properties": {
-    "schema_version": {
-      "const": 2,
-      "default": 2,
-      "description": "Current authoring contract version."
-    },
     "workspace": {
       "type": "object",
       "properties": {

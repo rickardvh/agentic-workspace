@@ -162,11 +162,7 @@ def test_independent_owner_reobserves_and_rejects_changed_authority(tmp_path, in
     else:
         config = tmp_path / ".agentic-workspace/config.toml"
         raw = config.read_text()
-        config.write_text(
-            raw.replace('revision = "fixture-v1"', 'revision = "different"')
-            if fault == "version"
-            else "schema_version=1\n[modules]\nenabled=[]\n"
-        )
+        config.write_text(raw.replace('binding = "sha256:', 'binding = "sha256:0') if fault == "version" else "[modules]\nenabled=[]\n")
     with pytest.raises(AssertionError):
         call(**extra)
     assert not (tmp_path / ".agentic-workspace/modules").exists()
@@ -324,7 +320,7 @@ def test_many_irrelevant_admissions_do_not_load_owner_detail(tmp_path, independe
     quiet = consume("json", independent_binary, independent_cli, context)
     config = tmp_path / ".agentic-workspace/config.toml"
     extra = "".join(
-        f'\n[modules.independent.unused-{i}]\nrevision="absent"\ncontract_revision="sha256:{"0" * 64}"\nsettings={{}}\nscope=["irrelevant-{i}"]\nreads=["missing-{i}.txt"]\neffects=[]\nclaims=[]\nrestrictions=[]\n'
+        f'\n[modules.independent.unused-{i}]\nbinding="sha256:{"0" * 64}"\nsettings={{}}\nscope=["irrelevant-{i}"]\nreads=["missing-{i}.txt"]\neffects=[]\nclaims=[]\nrestrictions=[]\n'
         for i in range(80)
     )
     config.write_text(config.read_text() + extra)
@@ -342,7 +338,7 @@ def test_selected_module_preparation_never_fills_refused_grants(tmp_path, indepe
     context = setup(tmp_path, independent_binary, "fixture-notebook")
     context["changed"] = []
     config = tmp_path / ".agentic-workspace/config.toml"
-    config.write_text("schema_version=2\n[modules]\nenabled=[]\n")
+    config.write_text("[modules]\nenabled=[]\n")
 
     def call(request=None):
         return consume("json", independent_binary, native_cli, {**context, **({"request": request} if request else {})})

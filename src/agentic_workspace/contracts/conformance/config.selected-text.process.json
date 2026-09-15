@@ -10,7 +10,7 @@
       "--target",
       ".",
       "--select",
-      "workspace.optimization_bias",
+      "workspace.improvement_latitude",
       "--format",
       "text"
     ],
@@ -18,11 +18,11 @@
   },
   "fixtures": [
     {
-      "id": "agent-efficiency-config",
+      "id": "proactive-config",
       "files": {
         ".git/.keep": "",
         "README.md": "# Fixture\n",
-        ".agentic-workspace/config.toml": "schema_version = 1\n\n[workspace]\noptimization_bias = \"agent-efficiency\"\n"
+        ".agentic-workspace/config.toml": "[workspace]\nimprovement_latitude = \"proactive\"\n"
       }
     }
   ],
@@ -36,7 +36,7 @@
       "contains": [
         "Kind: agentic-workspace/selected-output/v1",
         "Source command: config",
-        "\"workspace.optimization_bias\": \"agent-efficiency\""
+        "\"workspace.improvement_latitude\": \"proactive\""
       ]
     },
     "stderr": {

@@ -765,7 +765,7 @@ def test_closeout_report_section_reads_installed_state_residue(
 def test_report_local_aw_state_classifies_ignored_policy_and_cache(tmp_path: Path, capsys) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n.agentic-workspace/verification/\n")
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "")
     _write(tmp_path / ".agentic-workspace" / "local" / "cache" / "proof.json", "{}\n")
     _write(
         tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
@@ -827,7 +827,7 @@ def test_report_local_aw_state_degrades_without_git(tmp_path: Path, capsys) -> N
 def test_report_local_footprint_splits_managed_and_legacy_scratch(tmp_path: Path, capsys) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     _write(tmp_path / ".gitignore", ".agentic-workspace/local/\nscratch/\n")
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "")
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "schema_version = 1\n\n[local_scratch_retention]\nmax_age_hours = 1\nwarn_total_bytes = 1\nlocal_aw_warn_bytes = 1\n",

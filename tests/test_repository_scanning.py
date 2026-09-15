@@ -51,7 +51,7 @@ def test_repository_scan_fallback_prunes_dependency_caches(tmp_path: Path) -> No
     _write(tmp_path / "src" / "app.py", "APP = True\n")
     _write(tmp_path / ".venv" / "Lib" / "site-packages" / "dependency.py", "DEP = True\n")
     _write(tmp_path / "node_modules" / "dependency" / "index.py", "DEP = True\n")
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "")
 
     paths = _relatives(tmp_path, repository_scan_files(tmp_path, suffixes={".py", ".toml"}))
 

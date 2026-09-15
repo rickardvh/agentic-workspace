@@ -23,7 +23,6 @@ from agentic_workspace.assurance_authority import (
     query_external_evidence_operation,
     submit_external_evidence_operation,
 )
-from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
 from agentic_workspace.operating_decision import compile_operating_decision
 from agentic_workspace.proof_subject import PROOF_SUBJECT_KIND
 
@@ -281,47 +280,6 @@ def test_authenticated_failed_result_is_admitted_without_becoming_success() -> N
     assert result["claim_authority"] == "none"
 
 
-def test_workspace_config_loads_bounded_disposition_applicability(tmp_path: Path) -> None:
-    config_dir = tmp_path / ".agentic-workspace"
-    config_dir.mkdir()
-    (config_dir / "config.toml").write_text(
-        """
-schema_version = 1
-[assurance.requirements.safety]
-level = "high"
-force = "blocking"
-applies_to_paths = ["src/**"]
-[assurance.requirements.safety.waiver]
-reason = "accepted for this application"
-owner = "security"
-[assurance.requirements.safety.waiver.applicability]
-application_id = "assurance-application:123"
-source_revision = "sha256:abc"
-review_after = "2027-01-01T00:00:00Z"
-""".strip(),
-        encoding="utf-8",
-    )
-    config = load_workspace_config(target_root=tmp_path)
-    assert config.assurance.requirements[0].waiver is not None
-    assert config.assurance.requirements[0].waiver.applicability["source_revision"] == "sha256:abc"
-
-
-def test_workspace_config_requires_one_explicit_repository_classifier_source(tmp_path: Path) -> None:
-    config_dir = tmp_path / ".agentic-workspace"
-    config_dir.mkdir()
-    config_path = config_dir / "config.toml"
-    config_path.write_text('schema_version = 1\n[assurance]\nclassification_owner = "repository-owned"\n', encoding="utf-8")
-    with pytest.raises(WorkspaceUsageError, match="classification_source is required"):
-        load_workspace_config(target_root=tmp_path)
-    config_path.write_text(
-        'schema_version = 1\n[assurance]\nclassification_owner = "repository-owned"\nclassification_source = "tools/classify.py"\n',
-        encoding="utf-8",
-    )
-    config = load_workspace_config(target_root=tmp_path)
-    assert config.assurance.classification_owner == "repository-owned"
-    assert config.assurance.classification_source == "tools/classify.py"
-
-
 def test_verification_manifest_projects_queryable_evidence_authority(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)
@@ -358,7 +316,7 @@ def _write_public_operation_fixture(tmp_path: Path) -> tuple[dict[str, object], 
     source.write_bytes(b"print('ok')\n")
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)
-    (tmp_path / ".agentic-workspace" / "config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace" / "config.toml").write_text("", encoding="utf-8")
     manifest.write_text(
         """
 schema_version = "agentic-workspace/verification-manifest/v1"

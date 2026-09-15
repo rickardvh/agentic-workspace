@@ -49,11 +49,6 @@ Registry of Agentic Workspace core modules and current orchestration metadata.
 | `participation_model.task_posture_model.composition_rule` | string | yes |  | How config posture, workflow obligations, task facts, and module declarations compose. |  |  |
 | `participation_model.task_posture_model.module_rule` | string | yes |  | How modules declare posture fragments and when startup may include them. |  |  |
 | `participation_model.task_posture_model.must_not` | array of string | yes |  | Posture projection boundaries that must be preserved. |  |  |
-| `participation_model.workflow_obligation_model` | object | yes |  | How repo-configured workflow obligations compose with the recommended operating loop. |  |  |
-| `participation_model.workflow_obligation_model.owner_surface` | string | yes |  | Config or contract surface that owns workflow obligation declarations. |  |  |
-| `participation_model.workflow_obligation_model.role` | string | yes |  | How workflow obligations compose with the recommended loop. |  |  |
-| `participation_model.workflow_obligation_model.stages` | array of string | yes |  | Workflow stages where obligations can apply. |  |  |
-| `participation_model.workflow_obligation_model.composition_rule` | string | yes |  | How matched and unmatched obligations affect the operating loop. |  |  |
 | `participation_model.conflict_model` | object | yes |  | Conflict classes and resolution ownership for open module participation. |  |  |
 | `participation_model.conflict_model.rule` | string | yes |  | How conflicts are surfaced. |  |  |
 | `participation_model.conflict_model.conflict_classes` | array of string | yes |  | Conflict classes the participation model expects reports or lifecycle checks to surface. |  |  |

@@ -4,6 +4,29 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+@pytest.fixture
+def owner_storage(monkeypatch):
+    from dataclasses import replace
+
+    from agentic_workspace import agent_guidance
+
+    locations = {}
+    load = agent_guidance.load_workspace_config
+
+    def observed(*, target_root, **kwargs):
+        config = load(target_root=target_root, **kwargs)
+        return replace(
+            config,
+            local_override=replace(
+                config.local_override,
+                user_guidance_root=str(locations[target_root.resolve()]) if locations.get(target_root.resolve()) else None,
+            ),
+        )
+
+    monkeypatch.setattr(agent_guidance, "load_workspace_config", observed)
+    return locations
+
+
 def test_assurance_semantic_route_is_applicability_only_and_does_not_replace_path_authority() -> None:
     route_requirement = {"id": "route", "applies_to_semantic_routes": ["github/issues/**"]}
     matched, reasons, facts = workspace_runtime_core._assurance_requirement_match(
@@ -72,59 +95,6 @@ def test_repo_config_orthogonality_requirement_is_hard_and_current() -> None:
     assert record["status"] == "satisfied"
 
 
-@pytest.mark.parametrize("assignment_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
-@pytest.mark.parametrize("transport_authority", ["manual", "automatic"])
-@pytest.mark.parametrize("human_override_policy", ["explicit-only", "allowed-with-recorded-reason", "disallowed"])
-def test_canonical_delegation_policy_dimensions_compose_freely(
-    tmp_path: Path,
-    assignment_policy: str,
-    transport_authority: str,
-    human_override_policy: str,
-) -> None:
-    target = tmp_path / f"repo-{assignment_policy}-{transport_authority}-{human_override_policy}"
-    target.mkdir()
-    _init_git_repo(target)
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        f"""
-schema_version = 1
-
-[runtime]
-supports_internal_delegation = true
-
-[safety]
-safe_to_auto_run_commands = true
-
-[delegation]
-assignment_policy = "{assignment_policy}"
-transport_authority = "{transport_authority}"
-human_override_policy = "{human_override_policy}"
-current_target = "current"
-
-[delegation_targets.current]
-target_id = "target:current"
-strength = "strong"
-execution_methods = ["internal"]
-capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanical-follow-through"]
-""",
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    mixed = workspace_runtime_core._mixed_agent_payload(config=config)
-    policy = mixed["assignment_policy"]
-    posture = mixed["effective_orchestration"]
-
-    assert policy["assignment_policy"]["value"] == assignment_policy
-    assert policy["execution_role"]["value"] == ("ordinary-executor" if assignment_policy == "local-preferred" else "orchestrator")
-    assert policy["human_override_policy"]["value"] == human_override_policy
-    assert posture["assignment"]["policy"] == assignment_policy
-    assert posture["transport"]["authority"] == transport_authority
-    assert not posture["status"].startswith("binding-blocked-execution-role")
-    assert posture["assignment"]["authority"] == (
-        "binding" if assignment_policy == "required-best-fit" else "advisory" if assignment_policy == "best-fit-advisory" else "local"
-    )
-
-
 def test_repo_without_machine_local_delegation_policy_stays_quiet_and_canonical(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     _init_git_repo(tmp_path)
@@ -139,107 +109,6 @@ def test_repo_without_machine_local_delegation_policy_stays_quiet_and_canonical(
         "automatic_methods": [],
     }
     assert mixed["assignment_policy"]["status"] == "default-quiet"
-    assert mixed["assignment_policy"]["migration"]["canonical_fields"] == [
-        "delegation.assignment_policy",
-        "delegation.transport_authority",
-        "delegation.human_override_policy",
-        "delegation.current_target",
-        "delegation_targets.<target>.transports",
-    ]
-
-
-def test_target_eligibility_and_reasoning_are_derived_from_capability_and_strength(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        """
-schema_version = 1
-
-[delegation_targets.worker]
-strength = "medium"
-execution_methods = ["manual"]
-capability_classes = ["mixed", "mechanical-follow-through"]
-safe_task_classes = ["boundary-shaping"]
-forbidden_task_classes = ["mixed"]
-human_control_modes = ["off"]
-""",
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    profile = config.local_override.delegation_targets[0]
-    assert profile.reasoning_profile == "balanced"
-    assert profile.safe_task_classes == ("mechanical-follow-through",)
-    assert profile.forbidden_task_classes == ("mixed",)
-    assert profile.human_control_modes == ()
-
-
-def test_canonical_target_transports_are_constructible_and_override_legacy_siblings(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        """
-schema_version = 1
-
-[runtime]
-supports_internal_delegation = true
-
-[safety]
-safe_to_auto_run_commands = true
-
-[delegation]
-assignment_policy = "required-best-fit"
-transport_authority = "automatic"
-current_target = "worker"
-
-[delegation_targets.worker]
-strength = "strong"
-execution_methods = ["manual"]
-dispatch_adapter_kind = "host-native"
-escalation_target = "fallback-worker"
-transports = [
-  { kind = "internal" },
-  { kind = "process", command = ["worker-cli", "--output", "{output_file}"], output_mode = "json-file" },
-  { kind = "api", command = ["worker-api", "--schema", "{output_schema}"] },
-  { kind = "manual" },
-]
-""",
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    profile = config.local_override.delegation_targets[0]
-    assert profile.execution_methods == ("internal", "cli", "api", "manual")
-    assert [item["source"] for item in profile.transports] == ["canonical-transports"] * 4
-    assert profile.transports[1]["command"] == ["worker-cli", "--output", "{output_file}"]
-    assert profile.transports[2]["command"] == ["worker-api", "--schema", "{output_schema}"]
-    assert profile.escalation_target is None
-    assert any("canonical transports override legacy" in warning for warning in config.warnings)
-    assert any("escalation_target is an ignored compatibility alias" in warning for warning in config.warnings)
-    lifecycle_warnings = [warning for warning in config.warnings if warning.startswith("delegation-target-legacy-authoring/v1:")]
-    assert len(lifecycle_warnings) == 1
-    assert "scheduled for removal by 1.0.0" in lifecycle_warnings[0]
-
-    mixed = workspace_runtime_core._mixed_agent_payload(config=config)
-    projected = mixed["delegation_targets"]["profiles"][0]
-    assert [item["readiness"] for item in projected["transports"]] == [
-        "configured",
-        "configured",
-        "configured",
-        "configured",
-    ]
-    assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == ["api", "cli", "internal"]
-    assert "escalation_target" not in projected
-    assert mixed["assignment_policy"]["migration"]["lifecycle"] == {
-        "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
-        "status": "deprecated-removal-scheduled",
-        "policy": "remove-on-or-before-declared-major",
-        "removal_version": "1.0.0",
-        "legacy_authoring_permitted_until_removal": True,
-        "canonical_precedence": "canonical fields win without pairwise reconciliation",
-    }
 
 
 def test_canonical_process_transport_requires_its_own_payload(tmp_path: Path) -> None:
@@ -249,427 +118,10 @@ def test_canonical_process_transport_requires_its_own_payload(tmp_path: Path) ->
     target.mkdir()
     _write(
         target / ".agentic-workspace/config.local.toml",
-        'schema_version = 1\n\n[delegation_targets.worker]\nstrength = "strong"\ntransports = [{ kind = "process" }]\n',
+        '\n[delegation_targets.worker]\ntransports = [{ kind = "process" }]\n',
     )
-    with pytest.raises(WorkspaceUsageError, match="command is required for process transport"):
+    with pytest.raises(WorkspaceUsageError, match="Invalid configuration"):
         cli._load_workspace_config(target_root=target)
-
-
-def test_legacy_unconfigured_transport_is_factual_but_not_automatic(tmp_path: Path) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        """
-schema_version = 1
-[safety]
-safe_to_auto_run_commands = true
-[delegation]
-assignment_policy = "required-best-fit"
-transport_authority = "automatic"
-current_target = "worker"
-[delegation_targets.worker]
-strength = "strong"
-execution_methods = ["cli"]
-""",
-    )
-    config = cli._load_workspace_config(target_root=target)
-    profile = config.local_override.delegation_targets[0]
-    assert profile.execution_methods == ("cli",)
-    assert profile.transports[0]["readiness"] == "declared-unconfigured"
-    mixed = workspace_runtime_core._mixed_agent_payload(config=config)
-    assert mixed["effective_orchestration"]["status"] == "binding-active-transport-unavailable"
-    assert mixed["effective_orchestration"]["current_target"]["automatic_methods"] == []
-    assert mixed["effective_orchestration"]["repair"] == {
-        "status": "required",
-        "owner": ".agentic-workspace/config.local.toml",
-        "field": "delegation_targets.worker.transports",
-        "action": "configure one constructible internal, process, API, or manual transport variant",
-    }
-    lifecycle_warnings = [warning for warning in config.warnings if warning.startswith("delegation-target-legacy-authoring/v1:")]
-    assert len(lifecycle_warnings) == 1
-    assert "execution_methods" in lifecycle_warnings[0]
-
-
-@pytest.mark.parametrize(
-    ("assignment_policy", "transport_authority", "human_override_policy", "transport_kind", "expected_status"),
-    [
-        ("local-preferred", "manual", "explicit-only", "manual", "direct-local"),
-        ("best-fit-advisory", "manual", "explicit-only", "manual", "advisory-best-fit"),
-        ("required-best-fit", "automatic", "explicit-only", "internal", "binding-active"),
-        ("required-best-fit", "manual", "explicit-only", "manual", "binding-active-transport-unavailable"),
-        ("required-best-fit", "automatic", "explicit-only", "manual", "binding-active-transport-unavailable"),
-        ("required-best-fit", "automatic", "allowed-with-recorded-reason", "internal", "binding-active"),
-    ],
-)
-def test_public_effective_orchestration_matrix_exposes_only_canonical_acting_state(
-    tmp_path: Path,
-    assignment_policy: str,
-    transport_authority: str,
-    human_override_policy: str,
-    transport_kind: str,
-    expected_status: str,
-) -> None:
-    from agentic_workspace.workspace_runtime_startup import _compact_start_effective_orchestration
-
-    target = tmp_path / f"repo-{assignment_policy}-{transport_authority}-{human_override_policy}-{transport_kind}"
-    target.mkdir()
-    _init_git_repo(target)
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        f"""
-schema_version = 1
-
-[runtime]
-supports_internal_delegation = true
-
-[safety]
-safe_to_auto_run_commands = true
-
-[delegation]
-assignment_policy = "{assignment_policy}"
-transport_authority = "{transport_authority}"
-human_override_policy = "{human_override_policy}"
-current_target = "worker"
-
-[delegation_targets.worker]
-strength = "strong"
-capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanical-follow-through"]
-transports = [{{ kind = "{transport_kind}" }}]
-""",
-    )
-
-    mixed = workspace_runtime_core._mixed_agent_payload(config=cli._load_workspace_config(target_root=target))
-    posture = mixed["effective_orchestration"]
-    startup = _compact_start_effective_orchestration(posture)
-    assert posture["status"] == expected_status
-    assert startup["assignment"]["policy"] == assignment_policy
-    assert startup["transport"]["authority"] == transport_authority
-    assert startup["human_override"]["policy"] == human_override_policy
-    assert startup["provenance"]["execution_role"] == "derived:delegation.assignment_policy"
-    assert startup["repair"] == posture["repair"]
-    assert "underfit_behavior" not in json.dumps(startup)
-    assert "down_routing_behavior" not in json.dumps(startup)
-    assert "execution_methods" not in json.dumps(startup)
-    assert "escalation_target" not in json.dumps(startup)
-
-
-def test_fresh_process_start_reconstructs_binding_automatic_canonical_policy_without_second_permission(tmp_path: Path) -> None:
-    import os
-    import subprocess
-    import sys
-
-    target = tmp_path / "fresh-session-repo"
-    target.mkdir()
-    _init_git_repo(target)
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        """
-schema_version = 1
-
-[runtime]
-supports_internal_delegation = true
-
-[safety]
-safe_to_auto_run_commands = true
-
-[delegation]
-assignment_policy = "required-best-fit"
-transport_authority = "automatic"
-human_override_policy = "explicit-only"
-current_target = "worker"
-
-[delegation_targets.worker]
-strength = "strong"
-capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed", "mechanical-follow-through"]
-transports = [{ kind = "internal" }]
-""",
-    )
-    source_root = Path(__file__).resolve().parents[1] / "src"
-    environment = os.environ.copy()
-    environment["PYTHONPATH"] = os.pathsep.join([str(source_root), environment.get("PYTHONPATH", "")]).rstrip(os.pathsep)
-    code = (
-        "from agentic_workspace import cli; import sys; "
-        "raise SystemExit(cli.main(['start','--target',sys.argv[1],'--task','fresh canonical delegation','--format','json']))"
-    )
-    payloads = []
-    for _ in range(2):
-        completed = subprocess.run(
-            [sys.executable, "-c", code, str(target)],
-            check=True,
-            capture_output=True,
-            text=True,
-            env=environment,
-        )
-        payloads.append(json.loads(completed.stdout))
-    first = payloads[0]["effective_orchestration"]
-    second = payloads[1]["effective_orchestration"]
-    assert first == second
-    assert first["status"] == "binding-active"
-    assert first["assignment"] == {"execution_role": "orchestrator", "policy": "required-best-fit", "authority": "binding"}
-    assert first["transport"]["authority"] == "automatic"
-    assert first["transport"]["execution_permitted"] is True
-    assert first["current_target"]["automatic_methods"] == ["internal"]
-    assert first["repair"] == {"status": "not-required"}
-    assert all(payload["decision_packet"]["effects"]["implementation_allowed"] is False for payload in payloads)
-
-
-def test_config_rejects_overlapping_assurance_level_owners_with_structural_repair(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    _write(
-        target / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.subsystem_profiles.audit]
-assurance_level = "high"
-level = "low"
-force = "recommended"
-""",
-    )
-
-    with pytest.raises(WorkspaceUsageError, match="overlapping writable owners.*keep assurance_level.*compatibility-only level alias"):
-        cli._load_workspace_config(target_root=target)
-
-
-def test_config_orthogonality_rejects_session_path_mode_alias_beside_canonical_owner(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        'schema_version = 1\n\n[session_logging]\nredact_local_paths = true\npath_mode = "absolute"\n',
-    )
-
-    with pytest.raises(WorkspaceUsageError, match="two writable path-mode owners.*keep path_mode.*compatibility-only"):
-        cli._load_workspace_config(target_root=target)
-
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        'schema_version = 1\n\n[session_logging]\npath_mode = "redacted"\n',
-    )
-    config = cli._load_workspace_config(target_root=target)
-    assert config.local_override.session_logging.path_mode == "redacted"
-
-
-def test_config_orthogonality_keeps_assurance_classifier_owner_source_constructible(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    _write(
-        target / ".agentic-workspace/config.toml",
-        'schema_version = 1\n\n[assurance]\nclassification_owner = "config-native"\nclassification_source = "repo-policy"\n',
-    )
-    with pytest.raises(WorkspaceUsageError, match="classification_source conflicts with config-native"):
-        cli._load_workspace_config(target_root=target)
-
-    _write(
-        target / ".agentic-workspace/config.toml",
-        'schema_version = 1\n\n[assurance]\nclassification_owner = "repository-owned"\nclassification_source = "repo-policy"\n',
-    )
-    config = cli._load_workspace_config(target_root=target)
-    assert config.assurance.classification_owner == "repository-owned"
-    assert config.assurance.classification_source == "repo-policy"
-
-
-def test_config_orthogonality_rejects_multiple_roles_for_one_proof_command(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    command = "python -m pytest tests/test_audit.py -q"
-    _write(
-        target / ".agentic-workspace/config.toml",
-        f'schema_version = 1\n\n[assurance.proof_profiles.audit]\nrequired_commands = ["{command}"]\noptional_commands = ["{command}"]\n',
-    )
-
-    with pytest.raises(WorkspaceUsageError, match="assigns multiple command roles.*exactly one"):
-        cli._load_workspace_config(target_root=target)
-
-    _write(
-        target / ".agentic-workspace/config.toml",
-        f'schema_version = 1\n\n[assurance.proof_profiles.audit]\nrequired_commands = ["{command}"]\n',
-    )
-    config = cli._load_workspace_config(target_root=target)
-    assert config.assurance.proof_profiles[0].required_commands == (command,)
-    assert config.assurance.proof_profiles[0].optional_commands == ()
-
-
-def test_config_orthogonality_rejects_duplicate_installed_capability_owners(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    _write(
-        target / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[cli_compatibility]
-required_capabilities = ["installed-state-sync-v2"]
-
-[payload]
-minimum_capabilities = ["installed-state-sync-v2"]
-""",
-    )
-
-    with pytest.raises(WorkspaceUsageError, match="duplicates installed-runtime capability ownership.*payload.minimum_capabilities"):
-        cli._load_workspace_config(target_root=target)
-
-    _write(
-        target / ".agentic-workspace/config.toml",
-        'schema_version = 1\n\n[payload]\nminimum_capabilities = ["installed-state-sync-v2"]\n',
-    )
-    config = cli._load_workspace_config(target_root=target)
-    assert config.payload_target.minimum_capabilities == ("installed-state-sync-v2",)
-    assert config.cli_compatibility.required_capabilities == ()
-
-
-def test_config_orthogonality_rejects_sibling_terminal_assurance_dispositions(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    _write(
-        target / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.audit]
-level = "high"
-applies_to_paths = ["src/audit/**"]
-force = "recommended"
-waiver = { reason = "waive", owner = "maintainer", applicability = {} }
-dismissal = { reason = "dismiss", owner = "maintainer", applicability = {} }
-""",
-    )
-
-    with pytest.raises(WorkspaceUsageError, match="contradictory sibling dispositions waiver and dismissal.*one owned terminal"):
-        cli._load_workspace_config(target_root=target)
-
-    _write(
-        target / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.audit]
-level = "high"
-applies_to_paths = ["src/audit/**"]
-force = "recommended"
-waiver = { reason = "waive", owner = "maintainer", applicability = {} }
-""",
-    )
-    config = cli._load_workspace_config(target_root=target)
-    assert config.assurance.requirements[0].waiver is not None
-    assert config.assurance.requirements[0].dismissal is None
-
-
-def test_config_orthogonality_requires_one_cli_version_constraint(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    _write(
-        target / ".agentic-workspace/config.toml",
-        'schema_version = 1\n\n[cli_compatibility]\nminimum_version = "0.40.0"\nexact_version = "0.41.0"\n',
-    )
-
-    with pytest.raises(WorkspaceUsageError, match="must choose one version constraint"):
-        cli._load_workspace_config(target_root=target)
-
-
-def test_config_orthogonality_requires_one_payload_release_constraint(tmp_path: Path) -> None:
-    from agentic_workspace.config import WorkspaceUsageError
-
-    target = tmp_path / "repo"
-    target.mkdir()
-    _write(
-        target / ".agentic-workspace/config.toml",
-        'schema_version = 1\n\n[payload]\ntarget_release = "source-current"\ndogfood_latest = false\n',
-    )
-
-    with pytest.raises(WorkspaceUsageError, match="canonical release constraint.*compatibility shorthand"):
-        cli._load_workspace_config(target_root=target)
-
-
-@pytest.mark.parametrize("shared_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
-@pytest.mark.parametrize("local_policy", ["local-preferred", "best-fit-advisory", "required-best-fit"])
-def test_shared_local_assignment_policy_layers_compose_for_every_legal_value(tmp_path: Path, shared_policy: str, local_policy: str) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    shared = tmp_path / "aw.config.shared.toml"
-    _write(shared, f'schema_version = 1\n\n[delegation]\nassignment_policy = "{shared_policy}"\n')
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[workspace]",
-                f'shared_config_path = "{shared.as_posix()}"',
-                "",
-                "[delegation]",
-                f'assignment_policy = "{local_policy}"',
-            ]
-        ),
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    policy = cli._config_payload(config=config)["mixed_agent"]["assignment_policy"]
-    assert policy["assignment_policy"] == {"value": local_policy, "source": "local-override"}
-
-
-@pytest.mark.parametrize(
-    ("role", "policy", "target_status", "mode", "permitted", "expected"),
-    [
-        ("ordinary-executor", "local-preferred", "known-profile", "auto", True, "transport-auto-local-assignment"),
-        ("orchestrator", "required-best-fit", "known-profile", "auto", True, "binding-active"),
-        ("orchestrator", "best-fit-advisory", "known-profile", "suggest", False, "advisory-best-fit"),
-        ("orchestrator", "required-best-fit", "unknown", "auto", True, "binding-blocked-unresolved-target"),
-        ("orchestrator", "required-best-fit", "known-profile", "suggest", False, "binding-active-transport-unavailable"),
-    ],
-)
-def test_effective_orchestration_posture_separates_assignment_from_transport(
-    role: str, policy: str, target_status: str, mode: str, permitted: bool, expected: str
-) -> None:
-    assignment_policy = {
-        "execution_role": {"value": role, "source": "local-override"},
-        "assignment_policy": {"value": policy, "source": "local-override"},
-        "current_target": {"value": "worker", "source": "local-override"},
-        "current_target_status": target_status,
-        "human_override_policy": {"value": "explicit-only", "source": "default"},
-    }
-    delegation_control = {
-        "configured_mode": mode,
-        "effective_mode": mode,
-        "execution_permitted": permitted,
-        "source": "local-override",
-    }
-    posture = workspace_runtime_core._effective_orchestration_posture_payload(
-        assignment_policy=assignment_policy,
-        delegation_control=delegation_control,
-        profile_payloads=[
-            {
-                "name": "worker",
-                "target_id": "worker",
-                "execution_methods": ["internal"],
-                "dispatch_command": ["worker-bridge"],
-            }
-        ],
-        cli_invoke="uv run agentic-workspace",
-    )
-
-    assert posture["status"] == expected
-    assert posture["assignment"]["policy"] == policy
-    assert posture["transport"]["configured_mode"] == mode
-    assert posture["change_route"]["owner"] == ".agentic-workspace/config.local.toml"
-    assert "mixed_agent.effective_orchestration" in posture["change_route"]["detail_command"]
 
 
 def _guidance_host_signature(payload: dict[str, object]) -> dict[str, object]:
@@ -915,1624 +367,6 @@ def _trusted_guidance_host_event(
     }
 
 
-def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    _assert_invoked_cli_identity(payload, target_relation="outside-target")
-    _assert_cli_compatibility(payload, status="satisfied")
-    assert payload["exists"] is False
-    assert payload["edit_reference"]["reference_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
-    assert payload["edit_reference"]["generated_reference_doc"] == "docs/reference/workspace-config.md"
-    assert payload["edit_reference"]["source_schema"] == "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
-    assert "# Agentic Workspace managed config." in payload["edit_reference"]["managed_header"]
-    assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --format json"
-    assert payload["workspace"]["enabled"] is True
-    assert payload["workspace"]["enabled_source"] == "product-default"
-    assert payload["workspace"]["enabled_modules"] == ["planning", "memory"]
-    assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
-    assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
-    assert payload["workspace"]["workflow_artifact_profile"] == "repo-owned"
-    assert payload["workspace"]["workflow_artifact_profile_source"] == "product-default"
-    assert payload["workspace"]["improvement_latitude"] == "conservative"
-    assert payload["workspace"]["improvement_latitude_source"] == "product-default"
-    assert payload["workspace"]["optimization_bias"] == "balanced"
-    assert payload["workspace"]["optimization_bias_source"] == "product-default"
-    assert payload["workspace"]["advanced_features"] == []
-    assert payload["workspace"]["advanced_features_source"] == "product-default"
-    assert payload["workspace"]["maintainer_mode"] is False
-    assert payload["workspace"]["maintainer_mode_source"] == "product-default"
-    assert payload["workspace"]["maintainer_mode_detail"]["status"] == "disabled"
-    assert payload["workspace"]["supported_advanced_features"] == ["review_artifacts", "external_adapters"]
-    assert payload["workspace"]["workflow_artifact_adapter"]["canonical_surfaces"] == [
-        ".agentic-workspace/planning/execplans/",
-        ".agentic-workspace/planning/lanes/",
-        ".agentic-workspace/planning/decompositions/",
-        ".agentic-workspace/planning/issue-relations/",
-    ]
-    assert payload["workspace"]["agent_configuration_substrate"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
-    assert payload["workspace"]["agent_configuration_substrate"]["owner_surface"] == ".agentic-workspace/config.toml"
-    assert payload["workspace"]["workflow_obligations"] == []
-    assert payload["config_enforcement"]["field_count_by_class"]["hard"] >= 1
-    assert any(field["field"] == "workspace.improvement_latitude" for field in payload["config_enforcement"]["fields"])
-    assert payload["config_effect_audit"]["status"] == "present"
-    assert payload["config_effect_audit"]["field_count_by_effect"]["operational"] >= 1
-    assert payload["config_effect_audit"]["field_count_by_effect"]["unused"] == 0
-    assert payload["config_effect_audit"]["detail_command"].endswith(
-        "agentic-workspace report --target ./repo --section config_effect_audit --format json"
-    )
-    projection = payload["configuration_projection"]
-    assert projection["kind"] == "agentic-workspace/configuration-projection/v1"
-    assert projection["projection_status_counts"]["active"] >= 1
-    assert projection["projection_status_counts"]["latent"] >= 1
-    assert projection["projection_status_counts"]["unprojected"] == 0
-    assert projection["unprojected_fields"] == []
-    projection_sources = {field["id"] for field in projection["facts"]}
-    assert {
-        "ownership:authority-ledger",
-        "system-intent:durable-intent",
-        "verification:manifest",
-        "memory:routing-metadata",
-        "planning:active-state-obligations",
-    } <= projection_sources
-    obligation_projection = next(field for field in projection["facts"] if field["field"] == "workflow_obligations.<name>.*")
-    assert obligation_projection["projection_status"] == "active"
-    assert obligation_projection["source_surface"] == ".agentic-workspace/config.toml"
-    assert obligation_projection["ordinary_path_routes"]
-    assert obligation_projection["trigger"]
-    assert "scope_tags" in obligation_projection["applicability_signal"]
-    assert "hide obligation detail" in obligation_projection["suppression_rule"]
-    assert obligation_projection["owner_boundary"] == "human-owned"
-    local_projection = next(field for field in projection["facts"] if field["field"] == "runtime|handoff|safety|delegation_targets")
-    assert local_projection["owner_boundary"] == "local-human-owned"
-    assert "cannot create shared repo obligations" in local_projection["authority_exception"]
-    assert projection["verification"]["positive_surfacing"][0]["id"] == "startup-config-task-routes-to-config"
-    assert projection["verification"]["non_applicable_suppression"][0]["id"] == "ordinary-report-keeps-detail-sectioned"
-    assert projection["detail_command"].endswith(
-        "agentic-workspace report --target ./repo --section configuration_projection --format json"
-    )
-    surfacing_eval = projection["selective_surfacing_evaluation"]
-    assert surfacing_eval["status"] == "pass"
-    assert {check["id"]: check["result"] for check in surfacing_eval["checks"]} == {
-        "required-guidance-present": "pass",
-        "positive-and-suppression-scenarios-present": "pass",
-        "irrelevant-guidance-suppressed-from-compact-output": "pass",
-        "compact-output-size-bounded": "pass",
-        "typed-relevance-basis-present": "pass",
-    }
-    assert surfacing_eval["metrics"]["projection_row_count"] == len(projection["facts"])
-    relevance = {item["id"]: item for item in surfacing_eval["relevance_scenarios"]}
-    assert {
-        "changed-path-ownership",
-        "active-planning-task-switch",
-        "configured-proof-closeout",
-    } <= set(relevance)
-    assert {item["basis_source_type"] for item in relevance.values()} == {"explicit-state-and-contract"}
-    assert relevance["changed-path-ownership"]["shown_because"] == ["state.changed_paths=present", "contract.owner_boundary"]
-    assert relevance["active-planning-task-switch"]["not_based_on"] == "broad planning vocabulary"
-    assert relevance["configured-proof-closeout"]["not_based_on"] == "bug/fix/test keyword matching"
-    assert payload["update"]["wrapper_rule"] == "normal update execution stays behind agentic-workspace"
-    assert {item["module"] for item in payload["update"]["modules"]} == {"planning", "memory"}
-    assert {item["freshness"]["status"] for item in payload["update"]["modules"]} == {"unknown"}
-    assert payload["assurance"]["default_level"] == "low"
-    assert payload["assurance"]["default_level_source"] == "product-default"
-    assert payload["assurance"]["onboarding"]["status"] == "absent"
-    assert payload["assurance"]["onboarding"]["configured_profile_count"] == 0
-    assert payload["mixed_agent"]["status"] == "reporting-only"
-    assert payload["mixed_agent"]["repo_policy"]["source"] == "product-defaults"
-    assert payload["mixed_agent"]["repo_policy"]["path"] == ".agentic-workspace/config.toml"
-    assert payload["mixed_agent"]["repo_policy"]["authoritative"] is False
-    assert "workspace.maintainer_mode" in payload["mixed_agent"]["repo_policy"]["supported_fields"]
-    assert payload["mixed_agent"]["local_override"]["path"] == ".agentic-workspace/config.local.toml"
-    assert payload["mixed_agent"]["local_override"]["supported"] is True
-    assert payload["mixed_agent"]["local_override"]["exists"] is False
-    assert payload["mixed_agent"]["local_override"]["applied"] is False
-    assert payload["mixed_agent"]["local_integration_area"] == {
-        "root": ".agentic-workspace/local/integrations",
-        "subfolder_convention": "<vendor-or-runtime>/",
-        "example_subfolder": ".agentic-workspace/local/integrations/codex",
-        "scratch": {
-            "root": ".agentic-workspace/local/scratch",
-            "status": "ready-local-only",
-            "exists": False,
-            "git_ignored": True,
-            "authoritative": False,
-            "safe_to_delete": True,
-            "sign": "Go ahead and use this for whatever temporary working files you need.",
-            "retention": {
-                "status": "bounded",
-                "run_root": ".agentic-workspace/local/scratch/runs",
-                "manifest_name": ".aw-scratch.toml",
-                "report_section": "local_footprint",
-            },
-        },
-        "status": "available-local-only",
-        "exists": False,
-        "authoritative": False,
-        "git_ignored": True,
-        "canonical_doc": ".agentic-workspace/docs/local-integration-area.md",
-        "runtime_artifact_shim_pattern": {
-            "kind": "agentic-workspace/local-runtime-artifact-shim/v1",
-            "root": ".agentic-workspace/local/integrations",
-            "status": "local-only-pattern",
-            "authoritative": False,
-            "git_ignored": True,
-            "use_for": [
-                "internal agent plans that need compact checked-in planning updates",
-                "runtime check bundles that need compact pass/fail plus inspectable logs",
-                "handoff or resume state that needs a bounded workspace continuation record",
-                "runtime-native planning systems that the agent is already optimized or hardwired to use",
-            ],
-            "bridge_rule": (
-                "Use runtime-native plans as private working memory when they help, but bridge decisions, scope, proof, "
-                "and continuation into checked-in Agentic Workspace Planning before implementation handoff or closeout."
-            ),
-            "preferred_bridge_steps": [
-                "capture the runtime-native plan or todo list under the local integration area when it is useful evidence",
-                "summarize only durable intent, scope, proof, and next action into checked-in planning state",
-                "run agentic-workspace summary --format json after the bridge and resolve warnings before implementation",
-            ],
-            "artifact_classes": ["internal-plan", "check-bundle", "handoff-state", "runtime-export"],
-            "metadata_required": [
-                "kind",
-                "source_runtime",
-                "artifact_class",
-                "input_owner",
-                "output_target",
-                "authority",
-                "promotion_target",
-                "proof_command",
-                "created_at",
-            ],
-            "compact_output": "short agent-facing status, next action, and proof pointer",
-            "full_evidence": "inspectable local artifact, manifest, command log, or exported source file",
-            "promotion_boundary": [
-                "local shims never become shared authority by existing locally",
-                "promote only through checked-in planning, memory, agent-aid, docs, or repo-native review surfaces",
-                "record proof before treating shim output as repo-shared state",
-                "a runtime-native plan or todo list does not satisfy required Agentic Workspace Planning until bridged",
-            ],
-            "discovery": [
-                "agentic-workspace defaults --section agent_aid_storage --format json",
-                "agentic-workspace config --target ./repo --format json",
-                "agentic-workspace report --target ./repo --section agent_aids --format json",
-            ],
-        },
-        "allowed_aid_kinds": [
-            "prompt helpers",
-            "export/import shims",
-            "local wrappers",
-            "native-workflow adapters",
-            "resumable handoff helpers",
-            "runtime scratch files",
-        ],
-        "boundary_rules": [
-            "local-only and ignored by git",
-            "optional for ordinary workspace commands",
-            "non-authoritative for planning, memory, startup, review, and workflow state",
-            "safe to delete without changing repo-owned shared behavior",
-            "not a plugin registry or shared compatibility framework",
-        ],
-        "rule": "local-only vendor/runtime aids; may reduce local operating cost, but must not become shared workflow authority",
-    }
-    assert payload["mixed_agent"]["local_scratch"] == {
-        "root": ".agentic-workspace/local/scratch",
-        "status": "ready-local-only",
-        "exists": False,
-        "git_ignored": True,
-        "authoritative": False,
-        "safe_to_delete": True,
-        "sign": "Go ahead and use this for whatever temporary working files you need.",
-        "retention": {
-            "status": "bounded",
-            "run_root": ".agentic-workspace/local/scratch/runs",
-            "manifest_name": ".aw-scratch.toml",
-            "report_section": "local_footprint",
-        },
-    }
-    agent_aids = payload["mixed_agent"]["agent_aid_storage"]
-    assert agent_aids["canonical_doc"] == ".agentic-workspace/docs/agent-aids-storage.md"
-    assert agent_aids["candidate_root"] == ".agentic-workspace/agent-aids"
-    assert agent_aids["candidate_subdirs"] == [
-        "scripts",
-        "skills",
-        "runbooks",
-        "prompts",
-        "checks",
-        "templates",
-        "module-components",
-    ]
-    assert [entry["class"] for entry in agent_aids["storage_classes"][:3]] == [
-        "local-only",
-        "checked-in-candidate",
-        "promoted-repo-native",
-    ]
-    assert payload["mixed_agent"]["local_memory"]["status"] == "disabled"
-    assert payload["mixed_agent"]["local_memory"]["path"] == ".agentic-workspace/local/memory.toml"
-    assert payload["mixed_agent"]["local_memory"]["authoritative"] is False
-    assert payload["mixed_agent"]["runtime_inference"]["tool_owned"] is True
-    assert payload["mixed_agent"]["runtime_inference"]["reported_here"] is False
-    assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {"value": None, "source": "unset"}
-    assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {"value": None, "source": "unset"}
-    assert payload["mixed_agent"]["delegated_run_guardrail"]["status"] == "present"
-    assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_profiles"] == []
-    assert payload["mixed_agent"]["success_measures"] == [
-        "lower long-run token cost",
-        "lower restart and handoff cost",
-        "cheap switching across agents and subscriptions",
-        "persisted shared knowledge beats rediscovery",
-    ]
-
-
-def test_configuration_projection_reports_selector_backed_and_stale_sources(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[modules]
-enabled = ["planning", "memory", "verification"]
-""".strip(),
-    )
-    verification_manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    if verification_manifest.exists():
-        verification_manifest.unlink()
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    projection = payload["configuration_projection"]
-    facts = {field["id"]: field for field in projection["facts"]}
-    assert facts["ownership:authority-ledger"]["projection_status"] == "selector-backed"
-    assert facts["memory:routing-metadata"]["projection_status"] == "selector-backed"
-    assert facts["verification:manifest"]["projection_status"] == "stale"
-    assert projection["projection_status_counts"]["selector-backed"] >= 2
-    assert projection["projection_status_counts"]["stale"] >= 1
-    assert facts["verification:manifest"]["ordinary_path_routes"]
-    assert "missing enabled manifest" in facts["verification:manifest"]["suppression_rule"]
-    scenarios = {scenario["id"]: scenario["covered"] for scenario in projection["selective_surfacing_evaluation"]["scenarios"]}
-    assert scenarios["selector-backed-owner-memory-intent"] is True
-    assert scenarios["stale-or-unprojected-gap"] is True
-
-
-def test_config_command_reports_selected_fields_for_agent_startup(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[workspace]
-improvement_latitude = "proactive"
-optimization_bias = "agent-efficiency"
-
-[workflow_obligations.closeout_proof]
-summary = "Run closeout proof before reporting done."
-stage = "closeout"
-scope_tags = ["closeout"]
-commands = ["make check"]
-""".strip(),
-        encoding="utf-8",
-    )
-    _write(
-        tmp_path / ".agentic-workspace/config.local.toml",
-        """
-schema_version = 1
-
-[delegation]
-mode = "suggest"
-
-[clarification]
-mode = "ask-first"
-
-[safety]
-safe_to_auto_run_commands = false
-""".strip(),
-        encoding="utf-8",
-    )
-
-    assert (
-        cli.main(
-            [
-                "config",
-                "--target",
-                str(tmp_path),
-                "--select",
-                "workspace.improvement_latitude,workspace.optimization_bias,workspace.workflow_obligations,warnings,target,config_path",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    output = capsys.readouterr().out
-    payload = json.loads(output)
-    values = payload["values"]
-    assert values["warnings"] == [
-        "delegation-legacy-authoring/v1: compatibility-only field(s) mode are deprecated and scheduled for removal by 1.0.0; "
-        "migrate to canonical assignment/transport/override fields."
-    ]
-    assert Path(values["target"]).name == tmp_path.name
-    assert Path(values["config_path"]).as_posix().endswith(".agentic-workspace/config.toml")
-    assert values["workspace.improvement_latitude"] == "proactive"
-    assert values["workspace.optimization_bias"] == "agent-efficiency"
-    assert values["workspace.workflow_obligations"][0]["id"] == "closeout_proof"
-
-
-def test_config_command_reports_tiny_profile_for_config_posture(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[workspace]
-improvement_latitude = "reporting"
-optimization_bias = "agent-efficiency"
-cli_invoke = "uv run agentic-workspace"
-
-[workflow_obligations.closeout_proof]
-summary = "Run closeout proof before reporting done."
-stage = "closeout"
-scope_tags = ["closeout"]
-commands = ["make check"]
-""".strip(),
-        encoding="utf-8",
-    )
-    _write(
-        tmp_path / ".agentic-workspace/config.local.toml",
-        """
-schema_version = 1
-
-[delegation]
-mode = "suggest"
-
-[clarification]
-mode = "ask-first"
-
-[safety]
-safe_to_auto_run_commands = false
-requires_human_verification_on_pr = true
-""".strip(),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    output = capsys.readouterr().out
-    payload = json.loads(output)
-    assert payload["kind"] == "agentic-workspace/config-tiny/v1"
-    assert payload["profile"] == "tiny"
-    assert not any("clarification" in warning for warning in payload["warnings"])
-    assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
-    assert payload["workspace"]["improvement_latitude"] == "reporting"
-    assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
-    assert payload["workspace"]["workflow_obligation_ids"] == ["closeout_proof"]
-    assert payload["local_runtime"]["delegation_mode"] == {"value": "suggest", "source": "local-override"}
-    assert payload["local_runtime"]["clarification_mode"] == {"value": "ask-first", "source": "local-override"}
-    assert payload["local_runtime"]["safe_to_auto_run_commands"] == {"value": False, "source": "local-override"}
-    assert payload["local_runtime"]["requires_human_verification_on_pr"] == {"value": True, "source": "local-override"}
-    assert payload["next_detail"]["select"].endswith("agentic-workspace config --target . --select <field.path> --format json")
-    assert payload["next_detail"]["verbose"].endswith("agentic-workspace config --target . --verbose --format json")
-    assert "config_effect_audit" not in payload
-    assert "configuration_projection" not in payload
-    assert payload["local_runtime"]["effective_orchestration"] == {
-        "status": "direct-local",
-        "assignment_policy": "local-preferred",
-        "delegation_mode": "suggest",
-        "transport_permitted": False,
-        "detail_selector": "mixed_agent.effective_orchestration",
-    }
-    assert len(output) < 3400
-
-
-def test_config_command_compact_reports_projection_summary_without_fact_detail(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-
-    full_payload = cli._config_payload(config=cli._load_workspace_config(target_root=tmp_path))
-    payload = cli._compact_config_payload(full_payload)
-    projection = payload["configuration_projection"]
-    assert projection["status"] == "present"
-    assert projection["projection_status_counts"]["active"] >= 1
-    assert projection["unprojected_field_count"] == 0
-    assert projection["detail_command"].endswith(
-        "agentic-workspace report --target ./repo --section configuration_projection --format json"
-    )
-    assert "facts" not in projection
-
-
-def test_config_command_accepts_reporting_improvement_latitude_mode(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        (tmp_path / ".agentic-workspace/config.toml"),
-        'schema_version = 1\n\n[workspace]\nimprovement_latitude = "reporting"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["improvement_latitude"] == "reporting"
-    assert payload["workspace"]["improvement_latitude_source"] == "repo-config"
-
-
-def test_config_command_accepts_agent_efficiency_optimization_bias(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n\n[workspace]\noptimization_bias = "agent-efficiency"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["optimization_bias"] == "agent-efficiency"
-    assert payload["workspace"]["optimization_bias_source"] == "repo-config"
-
-
-def test_config_local_maintainer_mode_overrides_host_repo_policy(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.local.toml",
-        """
-schema_version = 1
-
-[workspace]
-maintainer_mode = true
-""".strip(),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    workspace = payload["workspace"]
-    assert workspace["maintainer_mode"] is True
-    assert workspace["maintainer_mode_source"] == "local-override"
-    assert workspace["maintainer_mode_detail"]["status"] == "enabled"
-    assert workspace["maintainer_mode_detail"]["dogfooding_reports"][0]["section"] == "improvement_intake"
-    assert payload["mixed_agent"]["local_override"]["maintainer_mode"] == {
-        "value": True,
-        "source": "local-override",
-    }
-
-
-def test_config_command_reports_assurance_onboarding_states(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance]
-default_level = "medium"
-""",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    partial = json.loads(capsys.readouterr().out)
-    assert partial["assurance"]["onboarding"]["status"] == "absent"
-    assert partial["assurance"]["onboarding"]["configured_profile_count"] == 0
-    assert partial["assurance"]["onboarding"]["configured_subsystem_profile_count"] == 0
-
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance]
-default_level = "medium"
-
-[assurance.proof_profiles.security]
-required_commands = ["uv run pytest tests/security -q"]
-optional_commands = []
-review_aids = []
-
-[assurance.subsystem_profiles.audit-log]
-assurance_level = "high"
-requirement_refs = ["docs/requirements.md#auditability"]
-required_evidence = ["requirement_grounding"]
-force = "required-before-closeout"
-""",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    usable = json.loads(capsys.readouterr().out)
-    assert usable["assurance"]["onboarding"]["status"] == "usable"
-    assert usable["assurance"]["onboarding"]["configured_profile_count"] == 1
-    assert usable["assurance"]["onboarding"]["configured_subsystem_profile_count"] == 1
-    assert usable["assurance"]["onboarding"]["host_ref_count"] == 1
-    assert ".agentic-workspace/config.toml [assurance.subsystem_profiles]" in usable["assurance"]["onboarding"]["candidate_seed_surfaces"]
-
-
-def test_config_command_reports_assurance_requirements(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.privacy_data]
-level = "high"
-applies_to_paths = ["db/migrations/**"]
-applies_to_task_markers = ["privacy"]
-authority_refs = ["docs/compliance/privacy.md"]
-required_evidence = ["authority_consulted", "risk_assessment"]
-proof_profile = "privacy"
-workflow_obligation_refs = ["privacy_review"]
-review_owner = "privacy-review"
-force = "required-before-closeout"
-blocking_claims = ["claim-work-complete", "close-parent-lane"]
-
-[assurance.requirements.privacy_data.waiver]
-reason = "Covered by existing privacy review for this migration class."
-owner = "privacy-review"
-""",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    requirement = payload["assurance"]["requirements"][0]
-    assert requirement["id"] == "privacy_data"
-    assert requirement["level"] == "high"
-    assert requirement["applies_to_paths"] == ["db/migrations/**"]
-    assert requirement["required_evidence"] == ["authority_consulted", "risk_assessment"]
-    assert requirement["force"] == "required-before-closeout"
-    assert requirement["blocking_claims"] == ["claim-work-complete", "close-parent-lane"]
-    assert requirement["waiver"]["status"] == "recorded"
-    assert requirement["waiver"]["owner"] == "privacy-review"
-
-
-def test_config_command_rejects_assurance_requirement_without_activation_signal(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.no_signal]
-level = "high"
-force = "required-before-closeout"
-required_evidence = ["authority_consulted"]
-""",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
-    assert "requires at least one activation signal" in capsys.readouterr().err
-
-
-def test_config_command_requires_assurance_requirement_level_and_force(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.missing_level]
-applies_to_paths = ["docs/**"]
-force = "required-before-closeout"
-
-[assurance.requirements.missing_force]
-level = "high"
-applies_to_paths = ["src/**"]
-""",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
-    assert "missing_force force is required" in capsys.readouterr().err
-
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.missing_level]
-applies_to_paths = ["docs/**"]
-force = "required-before-closeout"
-""",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
-    assert "missing_level level is required" in capsys.readouterr().err
-
-
-def test_config_command_rejects_invalid_assurance_requirement_claim(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.bad_claim]
-level = "high"
-applies_to_paths = ["docs/**"]
-force = "required-before-closeout"
-blocking_claims = ["certify-compliant"]
-""",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
-    assert "blocking_claims entries must be one of" in capsys.readouterr().err
-
-
-def test_config_command_accepts_source_bound_named_repo_requirement_and_rejects_enforcing_guideline(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.typed_exit]
-level = "high"
-applies_to_paths = ["src/**"]
-required_evidence = ["typed_exit_fixture"]
-force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
-requirement_class = "invariant"
-source_intent_ref = "SYSTEM_INTENT.md#trust"
-source_intent_revision = "r1"
-source_intent_current = true
-evidence_owner = "verification:typed-exit"
-detail_route = "agentic-workspace proof --select typed-exit"
-""",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-    requirement = json.loads(capsys.readouterr().out)["assurance"]["requirements"][0]
-    assert requirement["requirement_class"] == "invariant"
-    assert requirement["source_intent_ref"] == "SYSTEM_INTENT.md#trust"
-    assert requirement["evidence_owner"] == "verification:typed-exit"
-
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.cheaper]
-level = "low"
-applies_to_task_markers = ["assignment"]
-force = "blocking"
-blocking_claims = ["claim-work-complete"]
-requirement_class = "guideline"
-source_intent_ref = "SYSTEM_INTENT.md#cost"
-source_intent_revision = "r1"
-source_intent_current = true
-preference_target = "operation:assignment.best-fit"
-""",
-    )
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
-    assert "guideline cannot block claims" in capsys.readouterr().err
-
-
-def test_config_rejects_conflicting_owners_for_normalized_repo_requirement_identity(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.typed_exit]
-level = "high"
-applies_to_paths = ["src/**"]
-required_evidence = ["typed_exit_fixture"]
-force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
-requirement_class = "invariant"
-source_intent_ref = "SYSTEM_INTENT.md#trust"
-source_intent_revision = "r1"
-source_intent_current = true
-evidence_owner = "verification:typed-exit"
-detail_route = "agentic-workspace proof --select typed-exit"
-
-[assurance.requirements." typed_exit "]
-level = "high"
-applies_to_paths = ["src/**"]
-required_evidence = ["typed_exit_fixture"]
-force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
-requirement_class = "invariant"
-source_intent_ref = "docs/other-policy.md#exit"
-source_intent_revision = "r2"
-source_intent_current = true
-evidence_owner = "proof:other-exit"
-detail_route = "agentic-workspace proof --select other-exit"
-""",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
-    error = capsys.readouterr().err
-    assert "conflicting owner declarations" in error
-    assert "SYSTEM_INTENT.md#trust" in error
-    assert "docs/other-policy.md#exit" in error
-
-
-def test_config_deduplicates_same_owner_same_repo_requirement_identity(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    declaration = """
-level = "high"
-applies_to_paths = ["src/**"]
-required_evidence = ["typed_exit_fixture"]
-force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
-requirement_class = "invariant"
-source_intent_ref = "SYSTEM_INTENT.md#trust"
-source_intent_revision = "r1"
-source_intent_current = true
-evidence_owner = "verification:typed-exit"
-detail_route = "agentic-workspace proof --select typed-exit"
-"""
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        "schema_version = 1\n\n[assurance.requirements.typed_exit]\n"
-        + declaration
-        + '\n[assurance.requirements." typed_exit "]\n'
-        + declaration,
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-    requirements = json.loads(capsys.readouterr().out)["assurance"]["requirements"]
-    assert [item["id"] for item in requirements].count("typed_exit") == 1
-
-
-def test_config_command_validates_source_owned_measurement_requirements(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    config_path = tmp_path / ".agentic-workspace/config.toml"
-    _write(
-        config_path,
-        """
-schema_version = 1
-
-[assurance.requirements.scaling]
-level = "high"
-applies_to_paths = ["src/**"]
-required_evidence = ["history_scaling"]
-force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
-requirement_class = "current-evidence"
-source_intent_ref = "docs/requirements.md#scaling"
-source_intent_revision = "policy-r1"
-source_intent_current = true
-evidence_owner = "verification:history-scaling"
-detail_route = "agentic-workspace proof --select history-scaling"
-
-[assurance.requirements.scaling.measurement]
-kind = "agentic-workspace/measurement-requirement/v1"
-evidence_label = "history_scaling"
-metric = "selected-read-latency"
-unit = "seconds"
-comparator = "ratio-lte"
-threshold = 1.2
-aggregation = "ratio"
-minimum_samples = 5
-subject = "history-1000"
-subject_revision = "loaded-r1"
-control_subject = "history-empty"
-control_revision = "control-r1"
-environment = "maintained-ci"
-source_revision = "fixture-r1"
-producer_command = "python scripts/measure_scaling.py --compact"
-excluded_costs = ["environment bootstrap"]
-""",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-    measurement = json.loads(capsys.readouterr().out)["assurance"]["requirements"][0]["measurement"]
-    assert measurement["comparator"] == "ratio-lte"
-    assert measurement["threshold"] == 1.2
-    assert measurement["control_subject"] == "history-empty"
-
-    _write(config_path, config_path.read_text(encoding="utf-8").replace('evidence_label = "history_scaling"', 'evidence_label = "other"'))
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"])
-    assert "measurement evidence_label must appear in required_evidence" in capsys.readouterr().err
-
-
-def test_config_command_reports_enabled_advanced_features(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n\n[workspace]\nadvanced_features = ["review_artifacts", "external_adapters"]\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["advanced_features"] == ["review_artifacts", "external_adapters"]
-    assert payload["workspace"]["advanced_features_source"] == "repo-config"
-
-
-def test_config_command_reports_workflow_obligations_from_repo_config(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        "schema_version = 1\n\n"
-        "[workflow_obligations.adapter_surface_refresh]\n"
-        'summary = "Refresh adapter surfaces."\n'
-        'stage = "before-claiming-completion"\n'
-        'scope_tags = ["workspace", "adapter-surfaces"]\n'
-        'commands = ["make maintainer-surfaces"]\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["workflow_obligations"][0]["id"] == "adapter_surface_refresh"
-    assert payload["workspace"]["workflow_obligations"][0]["stage"] == "before-claiming-completion"
-    assert payload["workspace"]["workflow_obligations"][0]["force"] == "required-before-closeout"
-    assert payload["workspace"]["workflow_obligations"][0]["commands"] == ["make maintainer-surfaces"]
-
-
-def test_config_command_accepts_explicit_workflow_obligation_force(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        "schema_version = 1\n\n"
-        "[workflow_obligations.inspect_before_review]\n"
-        'summary = "Inspect config effect before review."\n'
-        'stage = "review"\n'
-        'force = "blocking"\n'
-        'scope_tags = ["workspace"]\n'
-        'commands = ["agentic-workspace report --target . --section config_effect_audit --format json"]\n',
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    obligation = payload["workspace"]["workflow_obligations"][0]
-    assert obligation["id"] == "inspect_before_review"
-    assert obligation["force"] == "blocking"
-
-
-def test_config_command_reports_system_intent_source_declaration(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        "schema_version = 1\n\n"
-        "[system_intent]\n"
-        'sources = ["SYSTEM_INTENT.md", "docs/product-direction.md"]\n'
-        'preferred_source = "docs/product-direction.md"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["system_intent"]["sources"] == ["SYSTEM_INTENT.md", "docs/product-direction.md"]
-    assert payload["workspace"]["system_intent"]["preferred_source"] == "docs/product-direction.md"
-    assert payload["workspace"]["system_intent"]["mirror_path"] == ".agentic-workspace/system-intent/intent.toml"
-
-
-def test_config_command_warns_about_unsupported_top_level_repo_config_fields(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        "schema_version = 1\nunsupported_top_level = true\n",
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["warnings"] == [".agentic-workspace/config.toml contains unsupported top-level field(s): unsupported_top_level."]
-
-
-def test_config_command_autodetects_conservative_system_intent_sources_when_no_explicit_source_declared(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / "README.md").write_text("# README\n", encoding="utf-8")
-    (tmp_path / "AGENTS.md").write_text("# Repo Instructions\n", encoding="utf-8")
-    (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "product-direction.md").write_text("Repo direction hint\n", encoding="utf-8")
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["system_intent"]["sources"] == ["README.md", "AGENTS.md", "docs/product-direction.md"]
-    assert payload["workspace"]["system_intent"]["sources_source"] == "autodetected-existing"
-    assert payload["workspace"]["system_intent"]["preferred_source"] == "README.md"
-
-
-def test_config_command_autodetects_existing_supported_agent_instructions_file(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / "GEMINI.md").write_text("# Gemini\n")
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
-    assert payload["workspace"]["agent_instructions_file_source"] == "autodetected-existing"
-    assert payload["workspace"]["detected_agent_instructions_files"] == ["GEMINI.md"]
-
-
-def test_config_command_autodetects_claude_agent_instructions_file(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / "CLAUDE.md").write_text("# Claude\n", encoding="utf-8")
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["agent_instructions_file"] == "CLAUDE.md"
-    assert payload["workspace"]["agent_instructions_file_source"] == "autodetected-existing"
-    assert payload["workspace"]["detected_agent_instructions_files"] == ["CLAUDE.md"]
-
-
-def test_config_command_autodetects_legacy_cursor_rules_file(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / ".cursorrules").write_text("Use repo conventions.\n", encoding="utf-8")
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["agent_instructions_file"] == ".cursorrules"
-    assert payload["workspace"]["agent_instructions_file_source"] == "autodetected-existing"
-    assert payload["workspace"]["detected_agent_instructions_files"] == [".cursorrules"]
-
-
-def test_config_command_accepts_custom_agent_instructions_file(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "docs/agent-instructions.md"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["agent_instructions_file"] == "docs/agent-instructions.md"
-    assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
-
-
-def test_config_command_discovers_workspace_root_from_subdirectory(tmp_path: Path, monkeypatch, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        (tmp_path / ".agentic-workspace/config.toml"),
-        'schema_version = 1\n\n[workspace]\nimprovement_latitude = "balanced"\n',
-        encoding="utf-8",
-    )
-    nested = tmp_path / "src" / "agentic_workspace"
-    nested.mkdir(parents=True)
-    previous_cwd = Path.cwd()
-    monkeypatch.chdir(nested)
-    try:
-        assert cli.main(["config", "--verbose", "--format", "json"]) == 0
-    finally:
-        monkeypatch.chdir(previous_cwd)
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["target"] == tmp_path.as_posix()
-    assert payload["config_path"] == (tmp_path / ".agentic-workspace/config.toml").as_posix()
-    assert payload["workspace"]["improvement_latitude"] == "balanced"
-    assert payload["workspace"]["improvement_latitude_source"] == "repo-config"
-
-
-def test_config_command_surfaces_unknown_local_override_fields_as_warnings(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            (
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "supports_internal_delegation = true",
-                "mystery_flag = true",
-                "",
-                "[delegation_targets.gpt_5_4_mini]",
-                'strength = "weak"',
-                'location = "either"',
-                'execution_methods = ["internal"]',
-                'unexpected = "note"',
-            )
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["mixed_agent"]["local_override"]["exists"] is True
-    assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {
-        "value": True,
-        "source": "local-override",
-    }
-    assert payload["warnings"] == [
-        ".agentic-workspace/config.local.toml [runtime] contains unsupported field(s): mystery_flag.",
-        ".agentic-workspace/config.local.toml delegation_targets.gpt_5_4_mini contains unsupported field(s): unexpected.",
-        "delegation-target-legacy-authoring/v1: .agentic-workspace/config.local.toml delegation_targets.gpt_5_4_mini "
-        "compatibility-only field(s) execution_methods are deprecated and scheduled for removal by 1.0.0; "
-        "migrate to transports and canonical target facts.",
-    ]
-
-
-def test_config_command_reports_repo_owned_overrides(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.toml").write_text(
-        "schema_version = 1\n\n"
-        "[workspace]\n"
-        'agent_instructions_file = "GEMINI.md"\n'
-        'workflow_artifact_profile = "gemini"\n'
-        'improvement_latitude = "balanced"\n\n'
-        "[modules]\n"
-        'enabled = ["planning"]\n\n'
-        "[update.modules.planning]\n"
-        'source_type = "git"\n'
-        'source_ref = "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"\n'
-        'source_label = "planning feature ref"\n'
-        "recommended_upgrade_after_days = 14\n",
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["exists"] is True
-    assert payload["workspace"]["enabled_modules"] == ["planning"]
-    assert payload["workspace"]["agent_instructions_file"] == "GEMINI.md"
-    assert payload["workspace"]["agent_instructions_file_source"] == "repo-config"
-    assert payload["workspace"]["workflow_artifact_profile"] == "gemini"
-    assert payload["workspace"]["workflow_artifact_profile_source"] == "repo-config"
-    assert payload["workspace"]["improvement_latitude"] == "balanced"
-    assert payload["workspace"]["improvement_latitude_source"] == "repo-config"
-    assert payload["workspace"]["workflow_artifact_adapter"]["native_artifacts"] == [
-        "implementation_plan.md",
-        "task.md",
-        "walkthrough.md",
-    ]
-    planning_policy = next(item for item in payload["update"]["modules"] if item["module"] == "planning")
-    assert planning_policy["source"] == "repo-config"
-    assert planning_policy["source_ref"] == "git+https://example.com/agentic-workspace@feature#subdirectory=packages/planning"
-    assert planning_policy["source_label"] == "planning feature ref"
-    assert planning_policy["recommended_upgrade_after_days"] == 14
-    assert payload["mixed_agent"]["repo_policy"]["source"] == "repo-config"
-    assert payload["mixed_agent"]["repo_policy"]["authoritative"] is True
-
-
-def test_config_command_reports_reserved_local_override_presence_without_applying_it(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n[runtime]\nsupports_internal_delegation = true\n",
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["mixed_agent"]["local_override"]["exists"] is True
-    assert payload["mixed_agent"]["local_override"]["applied"] is True
-    assert payload["mixed_agent"]["local_override"]["status"] == "applied"
-    assert payload["mixed_agent"]["effective_posture"]["supports_internal_delegation"] == {
-        "value": True,
-        "source": "local-override",
-    }
-
-
-def test_config_command_layers_shared_local_config_below_repo_local_override(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    shared = tmp_path / "agentic-workspace.local.toml"
-    shared.write_text(
-        "schema_version = 1\n\n"
-        "[workspace]\n"
-        'cli_invoke = "python -c \\"import sys; from agentic_workspace.cli import main; '
-        'raise SystemExit(main(sys.argv[1:]))\\""\n\n'
-        "[runtime]\n"
-        "strong_planner_available = true\n"
-        "cheap_bounded_executor_available = false\n\n"
-        "[delegation]\n"
-        'mode = "manual"\n\n'
-        "[local_memory]\n"
-        "enabled = true\n",
-        encoding="utf-8",
-    )
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n"
-        "[workspace]\n"
-        f'shared_config_path = "{shared.as_posix()}"\n\n'
-        "[runtime]\n"
-        "cheap_bounded_executor_available = true\n",
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["workspace"]["cli_invoke"] == (
-        'python -c "import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))"'
-    )
-    assert payload["workspace"]["cli_invoke_source"] == "shared-local-config"
-    local_override = payload["mixed_agent"]["local_override"]
-    assert local_override["shared_config"] == {
-        "path": shared.as_posix(),
-        "exists": True,
-        "applied": True,
-        "status": "applied",
-    }
-    assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {
-        "value": True,
-        "source": "shared-local-config",
-    }
-    assert payload["mixed_agent"]["effective_posture"]["cheap_bounded_executor_available"] == {
-        "value": True,
-        "source": "local-override",
-    }
-    assert payload["mixed_agent"]["effective_posture"]["delegation_mode"] == {
-        "value": "manual",
-        "source": "shared-local-config",
-    }
-    assert payload["mixed_agent"]["local_memory"]["source"] == "shared-local-config"
-    assert payload["warnings"] == [
-        "delegation-legacy-authoring/v1: compatibility-only field(s) mode, runtime.cheap_bounded_executor_available are "
-        "deprecated and scheduled for removal by 1.0.0; migrate to canonical assignment/transport/override fields."
-    ]
-
-
-def test_config_command_warns_when_shared_local_config_is_missing(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[workspace]\nshared_config_path = "../missing.local.toml"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["mixed_agent"]["local_override"]["shared_config"]["status"] == "missing"
-    assert payload["warnings"] == [
-        f".agentic-workspace/config.local.toml workspace.shared_config_path points to missing file: {(tmp_path / 'missing.local.toml').as_posix()}."
-    ]
-
-
-def test_config_command_resolves_relative_shared_local_config_from_repo_root(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    shared = tmp_path / "aw.config.shared.toml"
-    shared.write_text('schema_version = 1\n\n[delegation]\nmode = "manual"\n', encoding="utf-8")
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[workspace]\nshared_config_path = "../aw.config.shared.toml"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["mixed_agent"]["local_override"]["shared_config"] == {
-        "path": shared.as_posix(),
-        "exists": True,
-        "applied": True,
-        "status": "applied",
-    }
-    assert payload["mixed_agent"]["effective_posture"]["delegation_mode"] == {
-        "value": "manual",
-        "source": "shared-local-config",
-    }
-    assert payload["warnings"] == [
-        "delegation-legacy-authoring/v1: compatibility-only field(s) mode are deprecated and scheduled for removal by 1.0.0; "
-        "migrate to canonical assignment/transport/override fields."
-    ]
-
-
-def test_config_command_reports_local_only_memory_override(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[local_memory]\nenabled = true\npath = ".agentic-workspace/local/memory.toml"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    local_memory = payload["mixed_agent"]["local_memory"]
-    assert local_memory["status"] == "enabled"
-    assert local_memory["enabled"] is True
-    assert local_memory["configured"] is True
-    assert local_memory["path"] == ".agentic-workspace/local/memory.toml"
-    assert local_memory["controlled_by"] == ".agentic-workspace/config.local.toml"
-    assert local_memory["authoritative"] is False
-    assert local_memory["advisory_only"] is True
-    assert "not a secret store" in local_memory["boundary_rules"]
-
-
-def test_config_command_reports_narrow_local_override_fields_with_source_attribution(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n"
-        "[runtime]\n"
-        "supports_internal_delegation = true\n"
-        "strong_planner_available = true\n"
-        "cheap_bounded_executor_available = true\n\n"
-        "[handoff]\n"
-        "prefer_internal_delegation_when_available = true\n",
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["mixed_agent"]["effective_posture"]["strong_planner_available"] == {
-        "value": True,
-        "source": "local-override",
-    }
-    assert payload["mixed_agent"]["effective_posture"]["cheap_bounded_executor_available"] == {
-        "value": True,
-        "source": "local-override",
-    }
-    assert payload["mixed_agent"]["effective_posture"]["prefer_internal_delegation_when_available"] == {
-        "value": True,
-        "source": "local-override",
-    }
-    assert payload["mixed_agent"]["derived_mode"]["planner_executor_pattern"] == "strong-planner-cheap-executor-available"
-    assert payload["mixed_agent"]["derived_mode"]["handoff_preference"] == "prefer-internal-when-safe"
-
-
-def test_config_command_reports_local_delegation_target_profiles(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n"
-        "[delegation_targets.fast_docs]\n"
-        'strength = "weak"\n'
-        'location = "external"\n'
-        "confidence = 0.58\n"
-        'task_fit = ["bounded-docs", "narrow-tests"]\n'
-        'capability_classes = ["mechanical-follow-through"]\n'
-        'execution_methods = ["cli"]\n\n'
-        "[delegation_targets.primary_planner]\n"
-        'strength = "strong"\n'
-        'location = "local"\n'
-        "confidence = 0.92\n"
-        'model_family = "gpt-5.5"\n'
-        'provider = "openai"\n'
-        'dispatch_adapter_kind = "host-native"\n'
-        'dispatch_command = ["host-worker", "--schema", "{output_schema}", "--output", "{output_file}"]\n'
-        'dispatch_output_mode = "json-file"\n'
-        "dispatch_timeout_seconds = 90\n"
-        'context_capacity = "large"\n'
-        'reasoning_profile = "strong"\n'
-        'cost_class = "premium"\n'
-        'latency_class = "slow"\n'
-        'capability_classes = ["boundary-shaping", "reasoning-heavy"]\n'
-        'safe_task_classes = ["boundary-shaping", "reasoning-heavy"]\n'
-        'forbidden_task_classes = ["mechanical-follow-through"]\n'
-        'escalation_target = "human"\n'
-        'confidence_source = "local-evaluation"\n'
-        'last_evaluation = "2026-05-04"\n'
-        'human_control_modes = ["manual", "suggest"]\n'
-        'execution_methods = ["internal", "api"]\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    targets = payload["mixed_agent"]["delegation_targets"]
-    assert targets["status"] == "configured"
-    fast_docs = next(item for item in targets["profiles"] if item["name"] == "fast_docs")
-    assert fast_docs["strength"] == "weak"
-    assert fast_docs["location"] == "external"
-    assert fast_docs["confidence"] == 0.58
-    assert fast_docs["task_fit"] == ["bounded-docs", "narrow-tests"]
-    assert fast_docs["capability_classes"] == ["mechanical-follow-through"]
-    assert fast_docs["execution_methods"] == ["cli"]
-    assert fast_docs["advisory"] == {
-        "handoff_detail": "high",
-        "review_burden": "high",
-    }
-    assert fast_docs["closeout_gate"]["trust"] == "lower-trust"
-    assert "target strength is weak" in fast_docs["closeout_gate"]["reasons"]
-    planner = next(item for item in targets["profiles"] if item["name"] == "primary_planner")
-    assert planner["location"] == "local"
-    assert planner["model_family"] == "gpt-5.5"
-    assert planner["provider"] == "openai"
-    assert planner["dispatch_adapter_kind"] == "host-native"
-    assert planner["dispatch_command"] == [
-        "host-worker",
-        "--schema",
-        "{output_schema}",
-        "--output",
-        "{output_file}",
-    ]
-    assert planner["dispatch_output_mode"] == "json-file"
-    assert planner["dispatch_timeout_seconds"] == 90
-    assert planner["context_capacity"] == "large"
-    assert planner["reasoning_profile"] == "strong"
-    assert planner["cost_class"] == "premium"
-    assert planner["latency_class"] == "slow"
-    assert planner["capability_classes"] == ["boundary-shaping", "reasoning-heavy"]
-    assert planner["safe_task_classes"] == ["boundary-shaping", "reasoning-heavy"]
-    assert planner["forbidden_task_classes"] == ["mechanical-follow-through"]
-    assert "escalation_target" not in planner
-    assert planner["confidence_source"] == "local-evaluation"
-    assert planner["last_evaluation"] == "2026-05-04"
-    assert planner["human_control_modes"] == []
-    assert planner["execution_methods"] == ["internal", "api"]
-    assert planner["advisory"] == {
-        "handoff_detail": "compact",
-        "review_burden": "light",
-    }
-    assert planner["closeout_gate"]["trust"] == "normal"
-    assert payload["mixed_agent"]["delegated_run_guardrail"]["closeout_gate"]["lower_trust_profiles"] == ["fast_docs"]
-    posture_effect = payload["mixed_agent"]["delegated_run_guardrail"]["local_posture_effect"]
-    assert posture_effect["status"] == "configured"
-    assert posture_effect["configured_profiles"] == ["fast_docs", "primary_planner"]
-    assert posture_effect["proof_burden"].startswith("lower-trust profiles require")
-
-
-def test_config_command_rejects_invalid_local_target_reasoning_profile(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation_targets.worker]",
-                'strength = "weak"',
-                'execution_methods = ["cli"]',
-                'reasoning_profile = "omniscient"',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
-    assert "reasoning_profile must be one of" in capsys.readouterr().err
-
-
-def test_config_command_reports_local_delegation_control_mode(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[safety]",
-                "safe_to_auto_run_commands = false",
-                "",
-                "[delegation]",
-                'mode = "auto"',
-                "",
-                "[delegation_targets.local_worker]",
-                'strength = "medium"',
-                'execution_methods = ["internal"]',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    control = payload["mixed_agent"]["delegation_control"]
-    assert control["configured_mode"] == "auto"
-    assert control["effective_mode"] == "suggest"
-    assert control["execution_permitted"] is False
-    assert control["disabled_reason"] == "delegation.mode is auto, but safety.safe_to_auto_run_commands is not true"
-    assert payload["mixed_agent"]["effective_posture"]["delegation_mode"] == {
-        "value": "auto",
-        "source": "local-override",
-    }
-
-
-def test_config_command_reports_assignment_policy_separate_from_delegation_mode(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation]",
-                'mode = "suggest"',
-                'execution_role = "orchestrator"',
-                'assignment_policy = "required-best-fit"',
-                'selection_objective = "minimize successful completion cost after quality and proof"',
-                'current_target = "user-local:codex-current"',
-                'underfit_behavior = "require-delegation"',
-                'down_routing_behavior = "bounded-mechanical-work"',
-                'human_override_policy = "allowed-with-recorded-reason"',
-                'manual_transport_policy = "required-when-no-automatic-method"',
-                "",
-                "[delegation_targets.codex_current]",
-                'target_id = "user-local:codex-current"',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    policy = payload["local_runtime"]["assignment_policy"]
-    assert policy["status"] == "configured"
-    assert policy["execution_role"] == {"value": "orchestrator", "source": "derived:delegation.assignment_policy"}
-    assert policy["assignment_policy"] == {"value": "required-best-fit", "source": "local-override"}
-    assert policy["current_target"] == {"value": "user-local:codex-current", "source": "local-override"}
-    assert policy["current_target_status"] == "known-profile"
-    assert policy["binding"] == {
-        "required_best_fit_requested": True,
-        "enforceable": True,
-        "claim_boundary": "assignment policy resolved",
-    }
-
-
-def test_config_command_blocks_required_best_fit_when_current_target_is_unknown(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation]",
-                'execution_role = "orchestrator"',
-                'assignment_policy = "required-best-fit"',
-                'current_target = "missing_profile"',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    policy = payload["local_runtime"]["assignment_policy"]
-    assert policy["status"] == "blocked-unknown-current-target"
-    assert policy["current_target_status"] == "unknown"
-    assert policy["binding"]["enforceable"] is False
-    assert "cannot be claimed" in policy["binding"]["claim_boundary"]
-
-
-def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation]",
-                'current_target = "user-local:codex-current"',
-                "",
-                "[local_memory]",
-                "target_guidance_enabled = true",
-                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
-                'target_guidance_overlay_path = ".agentic-workspace/local/target-guidance-overlay.json"',
-                'correction_events_path = ".agentic-workspace/local/correction-events.json"',
-                "",
-                "[delegation_targets.codex_current]",
-                'target_id = "user-local:codex-current"',
-                'target_revision = "2026-07-runtime"',
-                'aliases = ["codex", "current-codex"]',
-                'revision_policy = "revalidate"',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
-                'model_family = "codex"',
-                'provider = "openai"',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    local_memory = payload["mixed_agent"]["local_memory"]
-    assert local_memory["target_guidance"]["enabled"] is True
-    assert local_memory["target_guidance"]["repo_overlay_path"] == ".agentic-workspace/local/target-guidance-overlay.json"
-    profile = payload["mixed_agent"]["delegation_targets"]["profiles"][0]
-    assert profile["target_id"] == "user-local:codex-current"
-    assert profile["aliases"] == ["codex", "current-codex"]
-    identity = payload["mixed_agent"]["target_identity"]
-    assert identity["current_target_identity"]["status"] == "known"
-    assert identity["current_target_identity"]["subject"]["stable_target_id"] == "user-local:codex-current"
-    assert identity["current_target_identity"]["provenance"]["matched_by"] == "target_id"
-    assert identity["current_target_identity"]["provenance"]["canonical_join_key"] == "stable_target_id"
-    assert identity["storage"]["status"] == "available"
-    assert "repo-local target overlay under .agentic-workspace/local/" in identity["precedence"]
-    correction = payload["mixed_agent"]["correction_feedback"]
-    assert correction["status"] == "ready"
-    assert "explicit-user-correction" in correction["event_schema"]["source_types"]
-    assert "rejected-secret-bearing" in correction["event_schema"]["admission_states"]
-    assert "correction-event.submit" in {item["operation_id"] for item in correction["operations"]}
-    assert "agent-guidance.promote" in {item["operation_id"] for item in correction["operations"]}
-    assert "agent-guidance.split" in {item["operation_id"] for item in correction["operations"]}
-    correction_operations = [item for item in correction["operations"] if item["operation_id"].startswith("correction-event.")]
-    guidance_operations = [item for item in correction["operations"] if item["operation_id"].startswith("agent-guidance.")]
-    assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction_operations)
-    assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in guidance_operations)
-    decision_contracts = {item["contract"] for item in correction["decision_surfaces"]}
-    assert {
-        "agentic-workspace/correction-capture-decision/v1",
-        "agentic-workspace/agent-guidance-route/v1",
-        "agentic-workspace/guidance-compliance-result/v1",
-        "agentic-workspace/guidance-consequence-decision/v1",
-    } <= decision_contracts
-    assert correction["storage"]["retention_cap"] == 20
-    assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
-    assert identity["storage"]["layers"][0]["id"] == "user-local-target-guidance"
-    assert identity["storage"]["conflict_resolution"]["ambiguous_identity"].startswith("fail-closed")
-
-
-def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation]",
-                'current_target = "codex"',
-                "",
-                "[local_memory]",
-                "target_guidance_enabled = true",
-                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
-                "",
-                "[delegation_targets.codex_a]",
-                'target_id = "user-local:codex-a"',
-                'aliases = ["codex"]',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
-                "",
-                "[delegation_targets.codex_b]",
-                'target_id = "user-local:codex-b"',
-                'aliases = ["codex"]',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    identity = payload["mixed_agent"]["target_identity"]
-    assert identity["current_target_identity"]["status"] == "ambiguous"
-    assert identity["current_target_identity"]["fail_closed"] is True
-    assert "stable target_id" in identity["current_target_identity"]["recovery"]
-    assert identity["current_target_identity"]["identity_repair"]["status"] == "unavailable"
-    assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
-
-
 def test_identity_init_preserves_explicit_noncurrent_target_profile_option(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -2542,18 +376,15 @@ def test_identity_init_preserves_explicit_noncurrent_target_profile_option(tmp_p
     local_config.write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'current_target = "codex_sol"',
                 "",
                 "[delegation_targets.codex_sol]",
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
                 "",
                 "[delegation_targets.codex_luna]",
-                'strength = "weak"',
-                'execution_methods = ["cli"]',
+                'transports = [{kind="manual"}]',
                 "",
             ]
         ),
@@ -2593,16 +424,12 @@ def test_current_profile_without_id_exposes_and_applies_exact_local_identity_rep
     local_config.write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'current_target = "codex_sol"',
                 "",
                 "[delegation_targets.codex_sol]",
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
-                'model_family = "gpt-5.6-sol"',
-                'provider = "codex"',
+                'transports = [{kind="internal"}]',
                 "",
             ]
         ),
@@ -2611,7 +438,10 @@ def test_current_profile_without_id_exposes_and_applies_exact_local_identity_rep
     before = local_config.read_text(encoding="utf-8")
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-    posture = json.loads(capsys.readouterr().out)["mixed_agent"]["target_identity"]["current_target_identity"]
+    capsys.readouterr()
+    posture = workspace_runtime_core._mixed_agent_payload(config=cli._load_workspace_config(target_root=target))["target_identity"][
+        "current_target_identity"
+    ]
     assert posture["status"] == "ambiguous"
     assert posture["capability_posture"] == {
         "assignment": "available",
@@ -2659,7 +489,10 @@ def test_current_profile_without_id_exposes_and_applies_exact_local_identity_rep
     assert replay["mutation_applied"] is False
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-    current = json.loads(capsys.readouterr().out)["mixed_agent"]["target_identity"]["current_target_identity"]
+    capsys.readouterr()
+    current = workspace_runtime_core._mixed_agent_payload(config=cli._load_workspace_config(target_root=target))["target_identity"][
+        "current_target_identity"
+    ]
     assert current["status"] == "known"
     assert current["subject"]["stable_target_id"] == applied["target_id"]
 
@@ -2719,26 +552,18 @@ def _correction_event(**overrides: object) -> dict[str, object]:
     return event
 
 
-def _write_guidance_lifecycle_fixture(target: Path, *, user_root: Path | None) -> None:
-    local_memory = ["[local_memory]", "target_guidance_enabled = true"]
-    if user_root is not None:
-        local_memory.append(f'user_guidance_root = "{user_root.as_posix()}"')
+def _write_guidance_lifecycle_fixture(target: Path, *, user_root: Path | None, owner_storage: dict) -> None:
+    owner_storage[target.resolve()] = user_root
     (target / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
-                *local_memory,
                 "",
                 "[delegation_targets.fast_worker]",
                 'target_id = "user-local:fast-worker"',
                 'target_revision = "rev-b"',
                 'aliases = ["fast"]',
-                'revision_policy = "revalidate"',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
-                'model_family = "codex"',
-                'provider = "openai"',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -3068,7 +893,6 @@ def test_guidance_promotion_reads_only_the_canonical_correction_store(tmp_path: 
     (target / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'current_target = "user-local:fast-worker"',
@@ -3077,10 +901,7 @@ def test_guidance_promotion_reads_only_the_canonical_correction_store(tmp_path: 
                 'target_id = "user-local:fast-worker"',
                 'target_revision = "rev-b"',
                 'aliases = ["fast"]',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
-                'model_family = "codex"',
-                'provider = "openai"',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -3119,7 +940,7 @@ def test_guidance_promotion_supports_authorized_immediate_remember_from_store(tm
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        '\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\ntransports = [{kind="internal"}]\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
@@ -3179,7 +1000,7 @@ def test_guidance_promotion_rejects_hand_authored_remember_receipt_path(tmp_path
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        '\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\ntransports = [{kind="internal"}]\n',
         encoding="utf-8",
     )
     forged_ref = ".agentic-workspace/local/correction-event-receipts/remember-1.json"
@@ -3586,7 +1407,7 @@ def test_guidance_promotion_ignores_caller_immediate_remember_without_receipt(tm
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        '\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\ntransports = [{kind="internal"}]\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
@@ -3615,7 +1436,7 @@ def test_guidance_promotion_rejects_correlated_broad_sensitive_or_conflicting_ev
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        '\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\ntransports = [{kind="internal"}]\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
@@ -3685,7 +1506,7 @@ def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_pa
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        '\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\ntransports = [{kind="internal"}]\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
@@ -3717,14 +1538,14 @@ def test_guidance_promotion_persists_provenance_and_reversible_transition(tmp_pa
     assert transitioned["record"]["transitions"][-1]["reason"] == "conflicts with current policy"
 
 
-def test_guidance_lifecycle_supports_external_user_store_and_detects_user_to_overlay_conflict(tmp_path: Path) -> None:
+def test_guidance_lifecycle_supports_external_user_store_and_detects_user_to_overlay_conflict(tmp_path: Path, owner_storage) -> None:
     from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store, transition_guidance
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
     user_root = tmp_path / "user-guidance"
-    _write_guidance_lifecycle_fixture(target, user_root=user_root)
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=user_root)
 
     decision = guidance_promotion_from_store(target_root=target)
     guidance_id = decision["guidance"][0]["guidance_id"]
@@ -3749,27 +1570,27 @@ def test_guidance_lifecycle_supports_external_user_store_and_detects_user_to_ove
     assert transitioned["record"]["status"] == "suppressed"
     assert transitioned["store_location"]["store_ref"] == expected_store.resolve().as_posix()
 
-    _write_guidance_lifecycle_fixture(target, user_root=None)
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=None)
     conflict = apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
     assert conflict["status"] == "promotion-owner-conflict"
     assert conflict["migration"]["status"] == "required"
     assert conflict["canonical_store_scan"]["active_stores"][0]["scope"] == "user-local-external"
 
 
-def test_guidance_promotion_detects_overlay_to_user_store_conflict(tmp_path: Path) -> None:
+def test_guidance_promotion_detects_overlay_to_user_store_conflict(tmp_path: Path, owner_storage) -> None:
     from agentic_workspace.agent_guidance import apply_guidance_promotion, guidance_promotion_from_store
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write_guidance_lifecycle_fixture(target, user_root=None)
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=None)
     decision = guidance_promotion_from_store(target_root=target)
     guidance_id = decision["guidance"][0]["guidance_id"]
     promoted = apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
     assert promoted["status"] == "promoted"
     assert promoted["store_location"]["scope"] == "repository-local"
 
-    _write_guidance_lifecycle_fixture(target, user_root=tmp_path / "user-guidance")
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=tmp_path / "user-guidance")
     conflict = apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
     assert conflict["status"] == "promotion-owner-conflict"
     assert conflict["canonical_store_scan"]["active_match_count"] == 1
@@ -3783,7 +1604,7 @@ def test_guidance_lifecycle_requires_revision_and_operation_specific_inputs(tmp_
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\nstrength = "strong"\nexecution_methods = ["internal"]\nmodel_family = "codex"\nprovider = "openai"\n',
+        '\n[delegation_targets.fast_worker]\ntarget_id = "user-local:fast-worker"\ntarget_revision = "rev-b"\ntransports = [{kind="internal"}]\n',
         encoding="utf-8",
     )
     store = target / ".agentic-workspace/local/correction-events.json"
@@ -3953,14 +1774,17 @@ def test_guidance_lifecycle_multi_file_transaction_rolls_back_prior_write(tmp_pa
 
 @pytest.mark.parametrize("failure_boundary", ["after-write:1", "after-write:2"])
 def test_guidance_promotion_recovers_interrupted_store_registry_receipt_transaction(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_boundary: str
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_boundary: str,
+    owner_storage,
 ) -> None:
     import agentic_workspace.agent_guidance as guidance_runtime
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write_guidance_lifecycle_fixture(target, user_root=None)
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=None)
     decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
     guidance_id = decision["guidance"][0]["guidance_id"]
 
@@ -4008,6 +1832,7 @@ def test_user_local_guidance_transaction_recovers_from_another_repository(
     monkeypatch: pytest.MonkeyPatch,
     failure_boundary: str,
     remove_origin: bool,
+    owner_storage,
 ) -> None:
     import shutil
 
@@ -4019,7 +1844,7 @@ def test_user_local_guidance_transaction_recovers_from_another_repository(
     for target in (origin, successor):
         target.mkdir()
         _init_git_repo(target)
-        _write_guidance_lifecycle_fixture(target, user_root=user_root)
+        _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=user_root)
 
     decision = guidance_runtime.guidance_promotion_from_store(target_root=origin)
     guidance_id = decision["guidance"][0]["guidance_id"]
@@ -4068,6 +1893,7 @@ def test_user_local_guidance_transition_recovers_after_origin_repository_disappe
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     failure_boundary: str,
+    owner_storage,
 ) -> None:
     import shutil
 
@@ -4079,7 +1905,7 @@ def test_user_local_guidance_transition_recovers_after_origin_repository_disappe
     for target in (origin, successor):
         target.mkdir()
         _init_git_repo(target)
-        _write_guidance_lifecycle_fixture(target, user_root=user_root)
+        _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=user_root)
 
     decision = guidance_runtime.guidance_promotion_from_store(target_root=origin)
     promoted = guidance_runtime.apply_guidance_promotion(
@@ -4133,6 +1959,7 @@ def test_user_local_guidance_transition_recovers_after_origin_repository_disappe
 def test_cross_repository_guidance_recovery_does_not_delete_an_unknown_external_lock(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    owner_storage,
 ) -> None:
     import agentic_workspace.agent_guidance as guidance_runtime
     from agentic_workspace.config import WorkspaceUsageError
@@ -4143,7 +1970,7 @@ def test_cross_repository_guidance_recovery_does_not_delete_an_unknown_external_
     for target in (origin, successor):
         target.mkdir()
         _init_git_repo(target)
-        _write_guidance_lifecycle_fixture(target, user_root=user_root)
+        _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=user_root)
     decision = guidance_runtime.guidance_promotion_from_store(target_root=origin)
     guidance_id = decision["guidance"][0]["guidance_id"]
 
@@ -4172,6 +1999,7 @@ def test_cross_repository_guidance_recovery_does_not_delete_an_unknown_external_
 def test_cross_repository_guidance_recovery_rejects_external_store_divergence(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    owner_storage,
 ) -> None:
     import agentic_workspace.agent_guidance as guidance_runtime
     from agentic_workspace.config import WorkspaceUsageError
@@ -4182,7 +2010,7 @@ def test_cross_repository_guidance_recovery_rejects_external_store_divergence(
     for target in (origin, successor):
         target.mkdir()
         _init_git_repo(target)
-        _write_guidance_lifecycle_fixture(target, user_root=user_root)
+        _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=user_root)
     decision = guidance_runtime.guidance_promotion_from_store(target_root=origin)
     guidance_id = decision["guidance"][0]["guidance_id"]
 
@@ -4214,13 +2042,15 @@ def test_cross_repository_guidance_recovery_rejects_external_store_divergence(
     assert external_journal.exists()
 
 
-def test_guidance_promotion_retry_repairs_stale_registry_and_missing_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_guidance_promotion_retry_repairs_stale_registry_and_missing_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, owner_storage
+) -> None:
     import agentic_workspace.agent_guidance as guidance_runtime
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write_guidance_lifecycle_fixture(target, user_root=None)
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=None)
     decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
     guidance_id = decision["guidance"][0]["guidance_id"]
     promoted = guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
@@ -4249,14 +2079,16 @@ def test_guidance_promotion_retry_repairs_stale_registry_and_missing_receipt(tmp
     assert repaired_receipts[-1]["operation"] == "promote-recovery"
 
 
-def test_guidance_transaction_recovery_rejects_concurrent_registry_writer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_guidance_transaction_recovery_rejects_concurrent_registry_writer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, owner_storage
+) -> None:
     import agentic_workspace.agent_guidance as guidance_runtime
     from agentic_workspace.config import WorkspaceUsageError
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write_guidance_lifecycle_fixture(target, user_root=None)
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=None)
     decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
     guidance_id = decision["guidance"][0]["guidance_id"]
 
@@ -4289,13 +2121,15 @@ def test_guidance_transaction_recovery_rejects_concurrent_registry_writer(tmp_pa
         guidance_runtime.apply_guidance_promotion(target_root=target, guidance_id=guidance_id)
 
 
-def test_guidance_transition_retry_completes_interrupted_custody_transaction(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_guidance_transition_retry_completes_interrupted_custody_transaction(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, owner_storage
+) -> None:
     import agentic_workspace.agent_guidance as guidance_runtime
 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write_guidance_lifecycle_fixture(target, user_root=None)
+    _write_guidance_lifecycle_fixture(target, owner_storage=owner_storage, user_root=None)
     decision = guidance_runtime.guidance_promotion_from_store(target_root=target)
     promoted = guidance_runtime.apply_guidance_promotion(
         target_root=target,
@@ -4488,408 +2322,6 @@ def test_correction_event_lifecycle_applies_revision_policies_and_rejects_unknow
     }
 
 
-def test_config_command_layers_assignment_policy_from_shared_local_config(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    shared = tmp_path / "aw.config.shared.toml"
-    shared.write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation]",
-                'execution_role = "orchestrator"',
-                'assignment_policy = "best-fit-advisory"',
-                'current_target = "shared_current"',
-                'underfit_behavior = "prepare-manual-escalation"',
-                "",
-                "[delegation_targets.shared_current]",
-                'strength = "strong"',
-                'execution_methods = ["manual"]',
-            ]
-        ),
-        encoding="utf-8",
-    )
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[workspace]",
-                f'shared_config_path = "{shared.as_posix()}"',
-                "",
-                "[delegation]",
-                'assignment_policy = "required-best-fit"',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    policy = payload["mixed_agent"]["assignment_policy"]
-    assert policy["execution_role"] == {"value": "orchestrator", "source": "derived:delegation.assignment_policy"}
-    assert policy["assignment_policy"] == {"value": "required-best-fit", "source": "local-override"}
-    assert policy["current_target"] == {"value": "shared_current", "source": "shared-local-config"}
-    assert policy["underfit_behavior"] == {"value": "require-delegation", "source": "derived:delegation.assignment_policy"}
-    assert policy["binding"]["enforceable"] is True
-
-
-def test_config_command_rejects_invalid_local_delegation_control_mode(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation]\nmode = "delegate-everything"\n',
-        encoding="utf-8",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
-    assert "delegation.mode must be one of" in capsys.readouterr().err
-
-
-def test_config_command_rejects_invalid_assignment_policy_value(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation]\nassignment_policy = "self-confidence"\n',
-        encoding="utf-8",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
-    assert "assignment_policy must be one of" in capsys.readouterr().err
-
-
-def test_config_command_reports_runtime_resolution_for_no_posture(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    rr = payload["mixed_agent"]["runtime_resolution"]
-    assert rr["recommendation"] in ("stay-local", "stronger-reasoning", "external-delegation", "manual-handoff")
-    assert rr["posture_source"] == "none"
-    assert rr["confidence"] in ("high", "medium", "low")
-    assert "guidance" in rr
-    assert rr["resolution_categories"] == [
-        "stay-local",
-        "stronger-reasoning",
-        "external-delegation",
-        "manual-handoff",
-    ]
-
-
-def test_config_command_runtime_resolution_recommends_external_delegation_when_strong_external_preferred(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation_targets.chatgpt]",
-                'strength = "strong"',
-                'location = "external"',
-                "confidence = 0.9",
-                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
-                'execution_methods = ["cli"]',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    # Without posture the default resolution is generated; just confirm structure is valid
-    rr = payload["mixed_agent"]["runtime_resolution"]
-    assert rr["recommendation"] in ("stay-local", "stronger-reasoning", "external-delegation", "manual-handoff")
-    assert rr["profile_recommendations"][0]["name"] == "chatgpt"
-    assert rr["profile_recommendations"][0]["recommendation"] in ("recommended", "acceptable", "poor-fit")
-    assert "strong_handoff_packet" in payload["mixed_agent"]
-
-
-def test_config_command_runtime_resolution_recommends_stronger_reasoning_for_boundary_shaping_with_strong_planner(
-    tmp_path: Path, capsys
-) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "strong_planner_available = true",
-                "cheap_bounded_executor_available = true",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    rr = cli._runtime_resolution_payload(
-        config=config,
-        capability_posture={"execution class": "boundary-shaping", "recommended strength": "strong"},
-    )
-    assert rr["recommendation"] == "stronger-reasoning"
-    assert rr["confidence"] == "high"
-    assert any("boundary-shaping" in r for r in rr["reasons"])
-    assert rr["posture_source"] == "provided"
-
-
-def test_config_command_runtime_resolution_recommends_stay_local_for_mechanical_work(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-
-    config = cli._load_workspace_config(target_root=target)
-    rr = cli._runtime_resolution_payload(
-        config=config,
-        capability_posture={"execution class": "mechanical-follow-through", "recommended strength": "weak"},
-    )
-    assert rr["recommendation"] == "stay-local"
-    assert rr["confidence"] == "high"
-    assert any("mechanical-follow-through" in r for r in rr["reasons"])
-    assert rr["weak_target_guardrail"]["status"] == "inactive"
-    assert rr["downrouting_guardrail"]["status"] == "inactive"
-
-
-def test_runtime_resolution_keeps_scope_independent_from_task_class(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-
-    config = cli._load_workspace_config(target_root=target)
-    rr = cli._runtime_resolution_payload(
-        config=config,
-        capability_posture={
-            "execution class": "mechanical-follow-through",
-            "scope class": "narrow-code-change",
-            "recommended strength": "weak",
-        },
-    )
-
-    assert rr["capability_context"]["task_class"] == "mechanical-follow-through"
-    assert rr["capability_context"]["scope_class"] == "narrow-code-change"
-
-
-def test_runtime_resolution_marks_weak_target_escalation_for_boundary_work(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation]",
-                'mode = "suggest"',
-                "",
-                "[delegation_targets.haiku]",
-                'strength = "weak"',
-                'location = "external"',
-                "confidence = 0.7",
-                'task_fit = ["bounded docs edits"]',
-                'capability_classes = ["mechanical-follow-through"]',
-                'execution_methods = ["cli"]',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    rr = cli._runtime_resolution_payload(
-        config=config,
-        capability_posture={"execution class": "boundary-shaping", "recommended strength": "strong"},
-    )
-
-    haiku = rr["profile_recommendations"][0]
-    assert haiku["name"] == "haiku"
-    assert haiku["recommendation"] == "poor-fit"
-    assert haiku["capability_mismatch"] is True
-    assert haiku["required_action"] == "escalate-before-execution"
-    assert rr["weak_target_guardrail"]["status"] == "active"
-    assert rr["weak_target_guardrail"]["effective_mode"] == "suggest"
-    assert "do not execute the weak target automatically" in rr["weak_target_guardrail"]["mode_action"]
-    assert rr["weak_target_guardrail"]["mismatched_targets"][0]["name"] == "haiku"
-    assert rr["self_assessment"]["authority"] == "advisory-only"
-    assert "capability_mismatch" in rr["self_assessment"]["cannot_override"]
-
-
-def test_runtime_resolution_marks_strong_target_downrouting_for_mechanical_work(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation]",
-                'mode = "suggest"',
-                "",
-                "[delegation_targets.haiku]",
-                'strength = "weak"',
-                'location = "external"',
-                "confidence = 0.7",
-                'task_fit = ["bounded docs edits"]',
-                'capability_classes = ["mechanical-follow-through"]',
-                'execution_methods = ["cli"]',
-                "",
-                "[delegation_targets.strong_planner]",
-                'strength = "strong"',
-                'location = "local"',
-                "confidence = 0.9",
-                'task_fit = ["architecture", "review"]',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mechanical-follow-through"]',
-                'execution_methods = ["internal"]',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    rr = cli._runtime_resolution_payload(
-        config=config,
-        capability_posture={"execution class": "mechanical-follow-through", "recommended strength": "weak"},
-    )
-
-    strong = next(item for item in rr["profile_recommendations"] if item["name"] == "strong_planner")
-    assert strong["required_action"] == "delegate-down-when-safe"
-    assert strong["overqualified_for_task"] is True
-    assert rr["downrouting_guardrail"]["status"] == "active"
-    assert rr["downrouting_guardrail"]["cheaper_fit_targets"][0]["name"] == "haiku"
-    assert "cheaper bounded executor" in rr["downrouting_guardrail"]["mode_action"]
-
-
-def test_runtime_resolution_respects_forbidden_task_classes(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation_targets.fast_worker]",
-                'strength = "strong"',
-                'execution_methods = ["cli"]',
-                'capability_classes = ["mechanical-follow-through"]',
-                'forbidden_task_classes = ["mechanical-follow-through"]',
-                'reasoning_profile = "strong"',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    config = cli._load_workspace_config(target_root=target)
-    rr = cli._runtime_resolution_payload(
-        config=config,
-        capability_posture={"execution class": "mechanical-follow-through", "recommended strength": "weak"},
-    )
-
-    worker = rr["profile_recommendations"][0]
-    assert worker["recommendation"] == "poor-fit"
-    assert worker["capability_mismatch"] is True
-    assert worker["required_action"] == "escalate-before-execution"
-    assert "target forbids this execution class" in worker["reasons"]
-
-
-def test_config_command_runtime_resolution_recommends_manual_handoff_when_strong_external_preferred_and_no_external_targets(
-    tmp_path: Path, capsys
-) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-
-    config = cli._load_workspace_config(target_root=target)
-    rr = cli._runtime_resolution_payload(
-        config=config,
-        capability_posture={"strong external reasoning": "preferred"},
-    )
-    assert rr["recommendation"] == "manual-handoff"
-    assert rr["confidence"] == "high"
-    assert any("no automated external path" in r for r in rr["reasons"])
-
-
-def test_config_command_accepts_manual_external_delegation_target(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / "AGENTS.md").write_text("repo instructions\n", encoding="utf-8")
-    (target / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[delegation_targets.chatgpt]",
-                'strength = "strong"',
-                'location = "external"',
-                "confidence = 0.88",
-                'task_fit = ["general-purpose-planning", "cross-cutting-review"]',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
-                'execution_methods = ["manual"]',
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    targets = payload["mixed_agent"]["delegation_targets"]["profiles"]
-    chatgpt = next(profile for profile in targets if profile["name"] == "chatgpt")
-    assert chatgpt["strength"] == "strong"
-    assert chatgpt["location"] == "external"
-    assert chatgpt["capability_classes"] == ["boundary-shaping", "reasoning-heavy", "mixed"]
-    assert chatgpt["execution_methods"] == ["manual"]
-    assert chatgpt["advisory"] == {
-        "handoff_detail": "compact",
-        "review_burden": "light",
-    }
-
-
-def test_config_command_rejects_invalid_local_delegation_target_strength(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.bad_target]\nstrength = "expert"\nexecution_methods = ["cli"]\n',
-        encoding="utf-8",
-    )
-
-    with pytest.raises(SystemExit):
-        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
-    assert "strength must be one of" in capsys.readouterr().err
-
-
-def test_config_command_accepts_utf8_bom_local_override(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version = 1\n\n[delegation_targets.fast_docs]\nstrength = "weak"\nexecution_methods = ["cli"]\n',
-        encoding="utf-8-sig",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["mixed_agent"]["delegation_targets"]["profiles"][0]["name"] == "fast_docs"
-
-
 def test_note_delegation_outcome_command_writes_local_artifact(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -4967,143 +2399,12 @@ def test_note_delegation_outcome_rejects_duplicate_without_lifecycle_transition(
     assert "duplicate evidence for target/task/scope/provenance" in payload["message"]
 
 
-def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n"
-        "[delegation_targets.gpt_5_4_mini]\n"
-        'strength = "weak"\n'
-        'location = "external"\n'
-        "confidence = 0.62\n"
-        'task_fit = ["bounded-docs"]\n'
-        'capability_classes = ["mechanical-follow-through"]\n'
-        'execution_methods = ["cli"]\n',
-        encoding="utf-8",
-    )
-    (target / ".agentic-workspace/delegation-outcomes.json").write_text(
-        json.dumps(
-            {
-                "kind": "agentic-workspace/delegation-outcomes/v1",
-                "records": [
-                    {
-                        "recorded_at": "2026-04-17",
-                        "delegation_target": "gpt_5_4_mini",
-                        "task_class": "bounded-docs",
-                        "outcome": "success",
-                        "handoff_sufficiency": "sufficient",
-                        "review_burden": "light",
-                        "escalation_required": False,
-                    },
-                    {
-                        "recorded_at": "2026-04-17",
-                        "delegation_target": "gpt_5_4_mini",
-                        "task_class": "narrow-tests",
-                        "outcome": "success",
-                        "handoff_sufficiency": "sufficient",
-                        "review_burden": "normal",
-                        "escalation_required": False,
-                    },
-                    {
-                        "recorded_at": "2026-04-17",
-                        "delegation_target": "gpt_5_4_mini",
-                        "task_class": "narrow-tests",
-                        "outcome": "success",
-                        "handoff_sufficiency": "sufficient",
-                        "review_burden": "light",
-                        "escalation_required": False,
-                    },
-                ],
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    targets = payload["mixed_agent"]["delegation_targets"]
-    assert targets["outcome_artifact"] == {
-        "path": ".agentic-workspace/delegation-outcomes.json",
-        "status": "configured",
-        "record_count": 3,
-    }
-    mini = targets["profiles"][0]
-    assert mini["location"] == "external"
-    assert mini["capability_classes"] == ["mechanical-follow-through"]
-    assert mini["outcome_evidence"]["record_count"] == 3
-    assert mini["outcome_evidence"]["confidence"]["action"] == "raise"
-    assert mini["outcome_evidence"]["task_fit"]["suggest_add"] == ["narrow-tests"]
-    evidence = payload["mixed_agent"]["target_evidence"]
-    assert evidence["status"] == "present"
-    assert evidence["storage"] == {
-        "path": ".agentic-workspace/delegation-outcomes.json",
-        "location": "local-only",
-        "checked_in": False,
-        "exists": True,
-        "safe_to_remove": True,
-        "raw_transcripts_stored": False,
-        "retention_rule": (
-            "bounded by lifecycle transitions; prune-or-compact records replace raw predecessors with "
-            "provenance-preserving calibration summaries"
-        ),
-    }
-    assert evidence["record_count"] == 3
-    assert evidence["normalized_records"][0]["target"] == "gpt_5_4_mini"
-    assert evidence["normalized_records"][0]["admission_state"] == "accepted-normalized"
-    assert evidence["normalized_records"][0]["admission"] == {
-        "routable": True,
-        "authority": "local-outcome-ledger",
-        "confidence": "medium",
-        "state": "accepted-normalized",
-    }
-    assert evidence["normalized_records"][0]["routing_relevance"] == "task-and-scope-bound"
-    bounded, narrow = evidence["suitability"]
-    assert bounded["target"] == "gpt_5_4_mini"
-    assert bounded["target_identity_ref"] is None
-    assert bounded["revision_policy"] == "revalidate"
-    assert bounded["context_key"] == "bounded-docs::bounded-docs"
-    assert bounded["record_count"] == 1
-    assert bounded["average_signal"] == 1.5
-    assert bounded["route_effect"] == "preferred-for-matching-task-class"
-    assert bounded["supporting_record_ids"] == ["gpt_5_4_mini:bounded-docs:bounded-docs:2026-04-17:0"]
-    assert bounded["retention"]["status"] == "bounded-current-calibration"
-    assert narrow["context_key"] == "narrow-tests::narrow-tests"
-    assert narrow["record_count"] == 2
-    assert narrow["average_signal"] == 1.38
-    assert narrow["route_effect"] == "preferred-for-matching-task-class"
-    assert narrow["supporting_record_ids"] == [
-        "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:1",
-        "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:2",
-    ]
-    assert narrow["target_identity_ref"] is None
-    assert narrow["revision_policy"] == "revalidate"
-    assert narrow["retention"]["status"] == "bounded-current-calibration"
-    assert evidence["lifecycle"]["public_operations"][0]["operation"] == "submit"
-    assert evidence["lifecycle"]["routing_rule"] == (
-        "Assignment may consume only current, admitted, non-contradicted evidence matching the requested target/task/scope context."
-    )
-    decision = payload["mixed_agent"]["assignment_decision"]
-    assert decision["kind"] == "agentic-workspace/assignment-decision/v1"
-    assert decision["assignment_policy"] == "local-preferred"
-    assert decision["decision"] == "shape-before-assignment"
-    assert decision["canonical_outcome"] == "read-only-exploration"
-    assert decision["selection_basis"]["context_authority"]["status"] == "missing"
-    assert decision["record_count"] == 3
-
-
 def test_target_evidence_suitability_is_context_isolated(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
     (target / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n"
-        "[delegation_targets.fast_worker]\n"
-        'strength = "weak"\n'
-        'capability_classes = ["mechanical-follow-through"]\n'
-        'execution_methods = ["cli"]\n',
+        '\n[delegation_targets.fast_worker]\ntransports = [{kind="manual"}]\n',
         encoding="utf-8",
     )
     (target / ".agentic-workspace/delegation-outcomes.json").write_text(
@@ -5139,8 +2440,10 @@ def test_target_evidence_suitability_is_context_isolated(tmp_path: Path, capsys)
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
 
-    payload = json.loads(capsys.readouterr().out)
-    suitability = payload["mixed_agent"]["target_evidence"]["suitability"]
+    capsys.readouterr()
+    suitability = workspace_runtime_core._mixed_agent_payload(config=cli._load_workspace_config(target_root=target))["target_evidence"][
+        "suitability"
+    ]
     narrow = next(item for item in suitability if item["context_key"] == "mechanical-follow-through::narrow-code-change")
     broad = next(item for item in suitability if item["context_key"] == "mechanical-follow-through::broad-design-change")
     assert narrow["route_effect"] == "preferred-for-matching-task-class"
@@ -5863,33 +3166,6 @@ def test_assignment_equivalent_current_economics_preserves_an_explicit_tie() -> 
     assert decision["selected_target"] is None
 
 
-def test_delegation_target_current_economics_is_validated_and_projected() -> None:
-    from agentic_workspace.config import WorkspaceUsageError, load_delegation_target_profiles
-
-    profile = {
-        "strength": "weak",
-        "location": "local",
-        "transports": [{"kind": "internal"}],
-        "capability_classes": ["mechanical-follow-through"],
-        "cost_class": "cheap",
-        "current_economic_evidence": {
-            "status": "available",
-            "marginal_cost": "near-zero",
-            "resource_domain": "separate-credit-pool",
-            "source": "runtime-adapter",
-            "observed_at": "2026-09-02T00:00:00Z",
-            "expires_at": "2026-09-09T00:00:00Z",
-        },
-    }
-    loaded, warnings = load_delegation_target_profiles(raw_targets={"spark": profile}, config_path=Path("config.local.toml"))
-    assert warnings == []
-    assert loaded[0].current_economic_evidence == profile["current_economic_evidence"]
-
-    invalid = {**profile, "current_economic_evidence": {"status": "available", "marginal_cost": "near-zero"}}
-    with pytest.raises(WorkspaceUsageError, match="requires source, observed_at, and expires_at"):
-        load_delegation_target_profiles(raw_targets={"spark": invalid}, config_path=Path("config.local.toml"))
-
-
 def test_assignment_retains_equal_fit_current_target_when_delegation_inflates_observed_context() -> None:
     from agentic_workspace.target_evidence import assignment_decision_from_policy
 
@@ -6425,8 +3701,8 @@ def test_note_delegation_outcome_admits_low_authority_as_non_routing_uncertainty
     assert payload["recorded"]["source_ref"] == "local://agent/self-observation/1"
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-    config_payload = json.loads(capsys.readouterr().out)
-    evidence = config_payload["mixed_agent"]["target_evidence"]
+    capsys.readouterr()
+    evidence = workspace_runtime_core._mixed_agent_payload(config=cli._load_workspace_config(target_root=target))["target_evidence"]
     assert evidence["suitability"] == []
     assert evidence["uncertainty_accounts"][0]["routing_effect"] == "visible-uncertainty-only"
     assert "low-authority:model-self-report" in evidence["uncertainty_accounts"][0]["uncertainty_reasons"]
@@ -6476,8 +3752,8 @@ def test_note_delegation_outcome_downgrades_forged_public_high_authority(tmp_pat
     assert payload["recorded"]["proof_observation"] == "forged-or-unverified-proof-authority"
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-    config_payload = json.loads(capsys.readouterr().out)
-    evidence = config_payload["mixed_agent"]["target_evidence"]
+    capsys.readouterr()
+    evidence = workspace_runtime_core._mixed_agent_payload(config=cli._load_workspace_config(target_root=target))["target_evidence"]
     assert evidence["suitability"] == []
     assert evidence["uncertainty_accounts"][0]["routing_effect"] == "visible-uncertainty-only"
     assert "low-authority:model-self-report" in evidence["uncertainty_accounts"][0]["uncertainty_reasons"]
@@ -6556,6 +3832,7 @@ def test_proof_receipt_writer_publishes_report_without_execution_authority(tmp_p
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
+    _write(target / ".agentic-workspace/config.toml", '[modules]\nenabled=["verification"]\n')
     (target / "src").mkdir()
     (target / "src" / "example.py").write_text("print('ok')\n", encoding="utf-8")
 
@@ -6593,6 +3870,7 @@ def test_proof_receipt_alone_cannot_calibrate_target_or_invent_burden(tmp_path: 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
+    _write(target / ".agentic-workspace/config.toml", '[modules]\nenabled=["verification"]\n')
     (target / "src").mkdir()
     (target / "src" / "example.py").write_text("print('ok')\n", encoding="utf-8")
     assignment_context = target / ".agentic-workspace" / "local" / "assignment-context.json"
@@ -6634,6 +3912,7 @@ def test_proof_receipt_writer_leaves_stale_assignment_context_non_calibrating(tm
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
+    _write(target / ".agentic-workspace/config.toml", '[modules]\nenabled=["verification"]\n')
     (target / "src").mkdir()
     (target / "src" / "example.py").write_text("print('ok')\n", encoding="utf-8")
     assignment_context = target / ".agentic-workspace" / "local" / "assignment-context.json"
@@ -7076,7 +4355,7 @@ def test_repo_config_cli_invoke_sets_repo_owned_invocation_policy(tmp_path: Path
     _init_git_repo(target)
     _write(
         target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+        '\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
@@ -7093,11 +4372,11 @@ def test_local_config_cli_invoke_overrides_repo_owned_invocation_policy(tmp_path
     _init_git_repo(target)
     _write(
         target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+        '\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "python -c \\"import sys; '
+        '\n[workspace]\ncli_invoke = "python -c \\"import sys; '
         "from agentic_workspace.cli import main; "
         'raise SystemExit(main(sys.argv[1:]))\\""\n',
     )
@@ -7116,10 +4395,10 @@ def test_local_config_can_disable_workspace_operation(tmp_path: Path, capsys) ->
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(target / ".agentic-workspace" / "config.toml", "")
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[workspace]\nenabled = false\n",
+        "\n[workspace]\nenabled = false\n",
     )
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
@@ -7134,10 +4413,10 @@ def test_local_config_can_reenable_repo_disabled_workspace_operation(tmp_path: P
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n\n[workspace]\nenabled = false\n")
+    _write(target / ".agentic-workspace" / "config.toml", "\n[workspace]\nenabled = false\n")
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[workspace]\nenabled = true\n",
+        "\n[workspace]\nenabled = true\n",
     )
 
     assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
@@ -7146,35 +4425,6 @@ def test_local_config_can_reenable_repo_disabled_workspace_operation(tmp_path: P
     assert payload["workspace"]["enabled"] is True
     assert payload["workspace"]["enabled_source"] == "local-override"
     assert payload["warnings"] == []
-
-
-def test_config_reports_satisfied_repo_owned_cli_compatibility_expectation(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    _write(
-        target / ".agentic-workspace" / "config.toml",
-        "schema_version = 1\n\n"
-        "[cli_compatibility]\n"
-        'enforcement = "blocking"\n'
-        'minimum_version = "0.0.0"\n'
-        'source_classes = ["source-checkout"]\n'
-        'target_relations = ["outside-target"]\n'
-        'command = "uv run agentic-workspace"\n',
-    )
-
-    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    compatibility = _assert_cli_compatibility(payload, status="satisfied")
-    assert compatibility["configured"] is True
-    assert compatibility["enforcement"] == "blocking"
-    assert compatibility["expected_command"] == "uv run agentic-workspace"
-    assert compatibility["failed_checks"] == []
-    checks = {check["name"]: check for check in compatibility["checks"]}
-    assert checks["minimum_version"]["satisfied"] is True
-    assert checks["source_class"]["satisfied"] is True
-    assert checks["target_relation"]["satisfied"] is True
 
 
 @pytest.mark.parametrize(
@@ -7284,7 +4534,7 @@ def test_current_native_execution_proof_does_not_supply_target_responsibility(tm
     from agentic_workspace.decision import invoke, start
     from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
 
-    context = fixture(tmp_path)
+    context = {**fixture(tmp_path), "projection": "full"}
     request = start(context)["verification"]["execution_requests"][0]
     action = start({**context, "request": request})["decision_packet"]["primary_action"]
     result = invoke({**context, "invocation": action})
@@ -7309,3 +4559,23 @@ def test_current_native_execution_proof_does_not_supply_target_responsibility(tm
     assert load_delegation_outcomes(target_root=tmp_path)[2] == ()
     assert invoke({**context, "invocation": action})["value"] == result["value"]
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+
+
+def test_current_configuration_reader_and_report_share_the_closed_grammar(tmp_path):
+    from agentic_workspace.config import load_workspace_config
+
+    _write(
+        tmp_path / ".agentic-workspace/config.toml", '[workspace]\nimprovement_latitude="proactive"\n[modules]\nenabled=["verification"]\n'
+    )
+    _write(
+        tmp_path / ".agentic-workspace/config.local.toml",
+        '[session_logging]\npath_mode="redacted"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n',
+    )
+    config = load_workspace_config(target_root=tmp_path)
+    report = workspace_runtime_core._config_payload(config=config)
+    assert report["workspace"]["improvement_latitude"] == "proactive"
+    assert report["local"]["session_logging"] == {"enabled": None, "path_mode": "redacted"}
+    assert report["local"]["delegation_targets"]["local"]["transports"][0]["kind"] == "internal"
+    assert "schema_version" not in report
+    assert "cli_compatibility" not in report
+    assert not (tmp_path / ".agentic-workspace/local").exists()

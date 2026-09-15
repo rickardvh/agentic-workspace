@@ -13,10 +13,10 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 
 def config(root: Path, command: str, extra: str = "") -> Path:
-    source = root / ".agentic-workspace/config.toml"
+    source = root / ".agentic-workspace/verification/manifest.toml"
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text(
-        'schema_version=1\n[assurance.domain_proof_lanes.current]\npurpose="Current bounded check"\napplies_to_paths=["a.txt"]\ncommands=['
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.domain_proof_lanes.current]\npurpose="Current bounded check"\napplies_to_paths=["a.txt"]\ncommands=['
         + json.dumps(command)
         + ']\nmanual_evidence=["domain-review"]\nclaim_boundary="Command success is not domain acceptance"\n'
         + extra
@@ -26,22 +26,11 @@ def config(root: Path, command: str, extra: str = "") -> Path:
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-@pytest.mark.parametrize("destination", [False, True])
 def test_domain_source_executes_without_claim_and_rejects_drift(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, destination: bool
+    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
     command = "Add-Content count.txt executed" if os.name == "nt" else "echo executed >> count.txt"
     source = config(tmp_path, command, 'authority_refs=["rules.md"]\n')
-    if destination:
-        former = source
-        source = tmp_path / ".agentic-workspace/verification/manifest.toml"
-        source.parent.mkdir()
-        source.write_text(
-            'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols]\n[proof_routes]\n'
-            + former.read_text().split("\n", 1)[1]
-        )
-        former.write_text("schema_version=1\n")
-
     (tmp_path / "rules.md").write_text("current rule")
     context = {"target": str(tmp_path), "task": "Check the current source", "changed": ["a.txt"]}
 
@@ -73,17 +62,13 @@ def test_domain_source_executes_without_claim_and_rejects_drift(
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": invocation})
     source.write_text(source.read_text().replace("domain-review", "stronger-domain-review"))
-    if destination:
-        stale = call({**context, "request": request})
-        assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
-        assert not any(row["owner"] == "verification" for row in stale["decision_packet"]["pending_consequences"]["actions"])
-    else:
-        with pytest.raises(AssertionError, match="stale"):
-            call({**context, "request": request})
+    stale = call({**context, "request": request})
+    assert "verification-request-stale" in stale["verification"]["evidence_gaps"]
+    assert not any(row["owner"] == "verification" for row in stale["decision_packet"]["pending_consequences"]["actions"])
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": invocation})
     assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
-    (tmp_path / ".agentic-workspace/config.local.toml").write_text("schema_version=1\n[safety]\nsafe_to_auto_run_commands=false\n")
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text("[safety]\nsafe_to_auto_run_commands=false\n")
     current_request = call(context)["verification"]["execution_requests"][0]
     blocked = call({**context, "request": current_request})
     assert blocked["decision_packet"]["status"] != "ready"
@@ -94,13 +79,13 @@ def test_domain_source_executes_without_claim_and_rejects_drift(
 def test_real_domain_lane_and_semantic_only_scope_stay_source_owned(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
-    source = tmp_path / ".agentic-workspace/config.toml"
-    source.parent.mkdir()
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    source.parent.mkdir(parents=True)
     # Preserve the exact real lane declaration without unrelated repo-local ADR pins.
     text = (ROOT / ".agentic-workspace/verification/manifest.toml").read_text()
     start = text.index("[assurance.domain_proof_lanes.proof_subject_owner]")
     end = text.index("\n[", start + 1)
-    source.write_text("schema_version=1\n" + text[start:end])
+    source.write_text('schema_version="agentic-workspace/verification-manifest/v1"\n' + text[start:end])
     current = tomllib.loads(source.read_text())["assurance"]["domain_proof_lanes"]["proof_subject_owner"]
     result = consume(
         surface,
@@ -113,7 +98,7 @@ def test_real_domain_lane_and_semantic_only_scope_stay_source_owned(
     assert any(row["route_id"] == "domain:proof_subject_owner" and row["command_count"] == len(current["commands"]) for row in candidates)
     assert not (tmp_path / ".agentic-workspace/local").exists()
     source.write_text(
-        'schema_version=1\n[assurance.domain_proof_lanes.semantic]\npurpose="Semantic scope"\napplies_to_task_markers=["proof"]\ncommands=["echo candidate"]\n'
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.domain_proof_lanes.semantic]\npurpose="Semantic scope"\napplies_to_task_markers=["proof"]\ncommands=["echo candidate"]\n'
     )
     unrelated = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "proof", "changed": ["other.txt"]})
     assert unrelated["verification"]["execution_requests"] == []

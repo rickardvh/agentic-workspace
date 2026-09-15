@@ -730,7 +730,7 @@ mod tests {
         target.write(".agentic-workspace/skills/REGISTRY.json", registry);
         target.write(
             ".agentic-workspace/config.toml",
-            "schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=999999\n",
+            "[cli_compatibility]\nminimum_reader_epoch=999999\n",
         );
         assert_eq!(
             procedure(&target.0, "workspace-resources").unwrap()["procedures"][0]["executable"]["status"],

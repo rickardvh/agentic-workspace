@@ -13,11 +13,14 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 def setup(root: Path, *, binding: bool = False) -> dict:
     (root / "a.txt").write_text("current")
-    source = root / ".agentic-workspace/config.toml"
+    source = root / ".agentic-workspace/verification/manifest.toml"
     source.parent.mkdir(parents=True)
+    (root / ".agentic-workspace/config.toml").write_text(
+        '[assurance]\ndefault_level="medium"\nagent_may_escalate=true\nagent_may_deescalate=false\n'
+    )
     command = "Add-Content -Path marker.txt -Value executed" if os.name == "nt" else "echo executed >> marker.txt"
     source.write_text(
-        'schema_version=1\n[assurance]\ndefault_level="medium"\nagent_may_escalate=true\nagent_may_deescalate=false\n[assurance.proof_profiles.required]\nrequired_commands=['
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.proof_profiles.required]\nrequired_commands=['
         + json.dumps(command)
         + ']\noptional_commands=["echo optional"]\ndisallowed_commands=["echo forbidden"]\n[assurance.proof_profiles.unrelated]\nrequired_commands=["echo unrelated"]\n'
     )
@@ -34,7 +37,7 @@ def test_exact_native_command_evidence_discharges_only_its_profile_obligation(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
     context = setup(tmp_path, binding=True)
-    source = tmp_path / ".agentic-workspace/config.toml"
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
     command = "Add-Content -Path marker.txt -Value executed" if os.name == "nt" else "echo executed >> marker.txt"
     text = source.read_text().replace(
         f"required_commands=[{json.dumps(command)}]", f'required_commands=[{json.dumps(command)},"echo second"]'
@@ -91,7 +94,7 @@ def test_exact_native_command_evidence_discharges_only_its_profile_obligation(
 
 def test_failed_native_command_cannot_discharge_profile(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
     context = setup(tmp_path, binding=True)
-    source = tmp_path / ".agentic-workspace/config.toml"
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
     text = source.read_text()
     begin = text.index("required_commands=")
     end = text.index("\n", begin)
@@ -123,11 +126,6 @@ def test_level_permissions_and_profiles_require_current_judgment(
     assert policy["effective_level"] == "medium"
     assert policy["selected_profiles"] == []
     assert first["verification"]["execution_requests"] == []
-    assert not any(
-        row["field"]
-        in ["assurance.default_level", "assurance.agent_may_escalate", "assurance.agent_may_deescalate", "assurance.proof_profiles"]
-        for row in first["configuration"]["residuals"]
-    )
     request = first["verification"]["strategy_request"]
     request["arguments"] = {"level": "low", "profile_ids": ["required"], "reason": "A bounded assessment"}
     denied = call({**context, "request": request})["verification"]
@@ -159,15 +157,16 @@ def test_binding_profiles_and_cross_route_disallowed_commands(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
     context = setup(tmp_path, binding=True)
-    source = tmp_path / ".agentic-workspace/config.toml"
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
     with source.open("a") as stream:
         stream.write(
             '[assurance.domain_proof_lanes.denied]\npurpose="Declared candidate"\napplies_to_paths=["a.txt"]\ncommands=["echo forbidden"]\n'
         )
     manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    manifest.parent.mkdir(parents=True)
+    manifest.parent.mkdir(parents=True, exist_ok=True)
     manifest.write_text(
-        'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols.denied]\napplies_to_paths=["a.txt"]\n[proof_routes.manifest_denied]\nprotocol_refs=["denied"]\ncommands=["echo forbidden"]\n'
+        manifest.read_text()
+        + '[protocols.denied]\napplies_to_paths=["a.txt"]\n[proof_routes.manifest_denied]\nprotocol_refs=["denied"]\ncommands=["echo forbidden"]\n'
     )
 
     def call(value):
@@ -194,13 +193,14 @@ def test_binding_profiles_and_cross_route_disallowed_commands(
 
 def test_current_scope_judgment_travels_with_profile_execution(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
     context = setup(tmp_path)
-    source = tmp_path / ".agentic-workspace/config.toml"
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
     with source.open("a") as stream:
         stream.write(
-            '[workspace]\nagent_instructions_file="AGENTS.md"\n'
             '[assurance.requirements.semantic]\nlevel="high"\nforce="required-before-closeout"\napplies_to_task_markers=["semantic scope"]\nproof_profile="required"\n'
         )
 
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text(config.read_text() + '[workspace]\nagent_instructions_file="AGENTS.md"\n')
     startup = tmp_path / "AGENTS.md"
     startup.write_text("Keep current profile scope and evidence separate.", encoding="utf-8")
 
@@ -236,9 +236,10 @@ def test_current_scope_judgment_travels_with_profile_execution(tmp_path: Path, s
 
 def test_current_level_permission_change_and_profile_conflict(tmp_path: Path, shared_core_binary: Path, native_cli: Path) -> None:
     context = setup(tmp_path)
-    source = tmp_path / ".agentic-workspace/config.toml"
-    source.write_text(
-        source.read_text()
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text(
+        config.read_text()
         .replace("agent_may_escalate=true", "agent_may_escalate=false")
         .replace("agent_may_deescalate=false", "agent_may_deescalate=true")
     )
@@ -256,8 +257,8 @@ def test_current_level_permission_change_and_profile_conflict(tmp_path: Path, sh
     assert "selected-proof-profile-unavailable:missing" in invalid["gaps"]
     assert invalid["execution_blocked"] is True
     source.write_text(source.read_text().replace('optional_commands=["echo optional"]', 'optional_commands=["echo forbidden"]'))
-    with pytest.raises(AssertionError, match="stale"):
-        call({**context, "request": request})
+    stale = call({**context, "request": request})["verification"]
+    assert "verification-request-stale" in stale["evidence_gaps"]
     current = call(context)["verification"]["strategy_request"]
     current["arguments"]["profile_ids"] = ["required"]
     invalid = call({**context, "request": current})["verification"]["strategy_control"]
@@ -297,107 +298,23 @@ def test_planning_profile_source_gap_and_subject_reentry_are_explicit(
     assert result["strategy_control"]["selected_profiles"] == []
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_profile_and_requirement_transfer_preserves_obligation_and_rejects_competing_sources(
-    tmp_path, shared_core_binary, native_cli, surface
-):
-    context = setup(tmp_path, binding=True)
-    config = tmp_path / ".agentic-workspace/config.toml"
-    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    manifest.parent.mkdir()
-    original = config.read_text()
-    profile_start = original.index("[assurance.proof_profiles.required]")
-    destination = 'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols]\n[proof_routes]\n' + original[profile_start:]
-
-    def call(request=None):
-        return consume(surface, shared_core_binary, native_cli, {**context, **({"request": request} if request else {})})
-
-    old = call()
-    request = old["verification"]["execution_requests"][0]
-    manifest.write_text(destination)
-    with pytest.raises(AssertionError, match="competing"):
-        call()
-    config.write_text(original[:profile_start])
-    current = call()
-    control = current["verification"]["strategy_control"]
-    assert control["baseline_level"] == "medium"
-    assert control["effective_level"] == "high" and control["required_level"] == "high"
-    assert control["obligations"][0]["required_commands"] == old["verification"]["strategy_control"]["obligations"][0]["required_commands"]
-    assert control["selected_profiles"][0]["source_ref"].startswith(".agentic-workspace/verification/manifest.toml#")
-    assert current["decision_packet"]["claim_boundary"]["allowed"] == []
-    with pytest.raises(AssertionError, match="stale|changed"):
-        call(request)
-    # Agent de-escalation permission cannot waive a binding source requirement.
-    config.write_text(
-        config.read_text()
-        .replace("agent_may_deescalate=false", "agent_may_deescalate=true")
-        .replace("agent_may_escalate=true", "agent_may_escalate=false")
-    )
-    required = call()["verification"]
-    judgment = required["strategy_request"]
-    judgment["arguments"] = {"level": "low", "profile_ids": [], "reason": "Prefer a smaller check"}
-    denied = call(judgment)["verification"]["strategy_control"]
-    assert denied["effective_level"] == "high" and denied["execution_blocked"]
-    assert "assurance-below-binding-requirement" in denied["gaps"]
-    judgment["arguments"]["level"] = "high"
-    assert not call(judgment)["verification"]["strategy_control"]["execution_blocked"]
-    before = config.read_bytes()
-    # The manifest cannot replace irreducible shared policy or accept malformed commands.
-    manifest.write_text(destination + "[assurance]\nagent_may_deescalate=true\n")
-    with pytest.raises(AssertionError, match="unsupported"):
-        call()
-    manifest.write_text(destination.replace('optional_commands=["echo optional"]', "optional_commands=17"))
-    with pytest.raises(AssertionError, match="invalid"):
-        call()
-    # A named former closeout posture has no native destination. Preserve it,
-    # expose the unresolved obligation, and refuse a false manifest migration.
-    manifest.write_text(destination)
-    posture = '[assurance.closeout_postures.release]\npurpose="Independent release judgment"\nrequired_evidence=["review"]\n'
-    config.write_text(config.read_text() + posture)
-    preserved = config.read_bytes()
-    unresolved = call()
-    assert any(row["field"] == "assurance.closeout_postures" for row in unresolved["configuration"]["residuals"])
-    assert unresolved["decision_packet"]["claim_boundary"]["allowed"] == []
-    manifest.write_text(destination + posture)
-    with pytest.raises(AssertionError, match="unsupported"):
-        call()
-    assert config.read_bytes() == preserved
-    config.write_bytes(before)
-    manifest.write_text(destination)
-    assert call()["verification"]["strategy_control"]["required_level"] == "high"
-    assert config.read_bytes() == before
-    assert not (tmp_path / ".agentic-workspace/local").exists()
-
-
-def test_retained_reader_loads_manifest_without_config_and_rejects_competing_source(tmp_path):
-    from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
+def test_reader_loads_current_verification_manifest_without_shared_config(tmp_path):
+    from agentic_workspace.config import load_workspace_config
 
     setup(tmp_path, binding=True)
-    source = tmp_path / ".agentic-workspace/config.toml"
-    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    manifest.parent.mkdir()
-    original = source.read_text()
-    manifest.write_text(
-        'schema_version="agentic-workspace/verification-manifest/v1"\n' + original[original.index("[assurance.proof_profiles.required]") :]
-    )
-    source.unlink()
+    (tmp_path / ".agentic-workspace/config.toml").unlink()
     result = load_workspace_config(target_root=tmp_path)
     assert not result.exists
     assert "required" in {profile.id for profile in result.assurance.proof_profiles}
-    source.write_text(original)
-    with pytest.raises(WorkspaceUsageError, match="Competing"):
-        load_workspace_config(target_root=tmp_path)
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_subsystem_profile_uses_current_ownership_without_granting_review(tmp_path, shared_core_binary, native_cli, surface):
     context = setup(tmp_path)
-    source = tmp_path / ".agentic-workspace/config.toml"
     manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    manifest.parent.mkdir()
+    manifest.parent.mkdir(exist_ok=True)
     declaration = (
-        'schema_version="agentic-workspace/verification-manifest/v1"\n'
-        '[assurance.subsystem_profiles.runtime]\nassurance_level="high"\nforce="required-before-closeout"\n'
+        manifest.read_text() + '[assurance.subsystem_profiles.runtime]\nassurance_level="high"\nforce="required-before-closeout"\n'
         'scope_refs=["ownership.subsystems.runtime"]\nproof_profile="required"\n'
         'required_evidence=["runtime-check","independent-review"]\nreview_owner="maintainer"\n'
         'blocked_without_evidence=["claim-work-complete"]\n'
@@ -448,36 +365,30 @@ def test_subsystem_profile_uses_current_ownership_without_granting_review(tmp_pa
     with pytest.raises(AssertionError, match="scope requires owner"):
         call()
     manifest.write_text(declaration + 'level="low"\n')
-    with pytest.raises(AssertionError, match="unsupported semantics"):
+    with pytest.raises(AssertionError, match="unsupported"):
         call()
-    manifest.unlink()
-    original_config = source.read_text()
-    source.write_text(original_config + declaration[declaration.index("[assurance.subsystem_profiles.runtime]") :])
-    former = call()
-    assert former["verification"]["strategy_control"]["effective_level"] == "high"
-    assert not any(row["field"] == "assurance.subsystem_profiles" for row in former["configuration"]["residuals"])
-    source.write_text(original_config)
+    manifest.write_text('schema_version="agentic-workspace/verification-manifest/v1"\n')
     ownership.write_text("Malformed unrelated ownership source")
     assert call()["verification"]["strategy_control"]["effective_level"] == "medium"
-    assert source.exists() and (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
+    assert (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
 
 
 # These owner semantics have no adapter-specific encoding. Exercise the core JSON
 # ingress once; existing cross-surface conformance/transfer cases own adapter parity.
 def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp_path, shared_core_binary, native_cli):
     setup(tmp_path)
+    (tmp_path / ".agentic-workspace/verification/manifest.toml").unlink()
     source = tmp_path / ".agentic-workspace/config.toml"
     context = {"target": str(tmp_path), "task": "Check resulting work", "changed": ["a.txt"]}
 
     def call(**extra):
         return consume("json", shared_core_binary, native_cli, {**context, **extra})
 
-    source.write_text("schema_version=2\n[assurance]\nstrict_closeout=false\n")
+    source.write_text("[assurance]\nstrict_closeout=false\n")
     assert call()["verification"]["judgment_request"] is None
-    source.write_text("schema_version=2\n[assurance]\nstrict_closeout=true\n")
+    source.write_text("[assurance]\nstrict_closeout=true\n")
     before = source.read_bytes()
     current = call()
-    assert current["configuration"]["residuals"] == []
     assert current["verification"]["judgment_request"] is not None
     assert any(b["code"] == "strict-closeout-judgment-required" for b in current["decision_packet"]["blockers"])
     request = current["verification"]["claim_review"]["request"]
@@ -494,48 +405,3 @@ def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp
     (tmp_path / "a.txt").write_text("Different work")
     with pytest.raises(AssertionError, match="stale"):
         call(request=answer)
-
-
-def test_current_requirement_rejects_recorded_outcomes_but_former_preserves_them(tmp_path, shared_core_binary, native_cli):
-    from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
-
-    context = setup(tmp_path)
-    source = tmp_path / ".agentic-workspace/config.toml"
-    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
-    manifest.parent.mkdir()
-    header = 'schema_version="agentic-workspace/verification-manifest/v1"\n'
-    policy = (
-        '[assurance.requirements.current]\nlevel="high"\nforce="required-before-closeout"\n'
-        'applies_to_paths=["a.txt"]\nrequirement_class="invariant"\n'
-        'source_intent_ref="a.txt"\nsource_intent_revision="declared-source"\n'
-        'required_evidence=["review"]\nblocking_claims=["claim-work-complete"]\n'
-        'evidence_owner="verification:current"\ndetail_route="verification"\n'
-    )
-
-    def call():
-        return consume("json", shared_core_binary, native_cli, context)
-
-    original = source.read_text()
-    manifest.write_text(header + policy)
-    assert call()["verification"]["assurance_applicability"]["requirements"][0]["status"] == "applicable"
-    assert load_workspace_config(target_root=tmp_path).assurance.requirements[0].source_intent_current is None
-    for record in (
-        'waiver={reason="Already accepted",owner="maintainer"}\n',
-        'dismissal={reason="Already accepted",owner="maintainer"}\n',
-        "source_intent_current=true\n",
-    ):
-        manifest.write_text(header + policy + record)
-        with pytest.raises(AssertionError, match="unsupported"):
-            call()
-        with pytest.raises(WorkspaceUsageError, match="recorded outcomes"):
-            load_workspace_config(target_root=tmp_path)
-        manifest.write_text(header)
-        former_record = record if record.startswith("source_intent_current") else "source_intent_current=true\n" + record
-        source.write_text(original + policy + former_record)
-        before = source.read_bytes()
-        result = call()
-        gap = result["verification"]["assurance_owner_gaps"][0]
-        assert gap["status"] == "owner-evidence-not-admitted"
-        assert any(b["code"].startswith("assurance:current:") for b in result["decision_packet"]["blockers"])
-        assert source.read_bytes() == before
-        source.write_text(original)

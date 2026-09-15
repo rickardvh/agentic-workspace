@@ -117,7 +117,7 @@ def test_real_former_owner_can_evolve_after_native_custody(
     assert action["operation_id"] == "planning.reconcile"
     if selector_mode == "legacy-local":
         policy = tmp_path / ".agentic-workspace/config.local.toml"
-        policy.write_text("schema_version=1\n[workspace]\nenabled=false\n")
+        policy.write_text("[workspace]\nenabled=false\n")
         restricted = call(context)
         current_answer = restricted["planning"]["selector_transfer"]["request"]
         current_answer["arguments"]["answer"] = "authorize-selector-transfer"
@@ -671,7 +671,7 @@ def test_disabled_planning_does_not_read_or_execute_creation(
     action = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["decision_packet"]["primary_action"]
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir(parents=True)
-    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    config.write_text("[modules]\nenabled=[]\n")
     occupied = tmp_path / action["arguments"]["owner_path"]
     occupied.parent.mkdir(parents=True)
     occupied.write_text("Not Planning-owned JSON")

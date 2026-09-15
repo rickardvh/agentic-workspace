@@ -12,10 +12,10 @@ from tests.test_native_public_cli import consume, native_cli  # noqa: F401
 def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
     quiet = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Read a document", "changed": []})
     assert quiet["verification"]["assurance_request"] is None
-    source = tmp_path / ".agentic-workspace/config.toml"
-    source.parent.mkdir()
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    source.parent.mkdir(parents=True)
     source.write_text(
-        'schema_version=1\n[assurance.requirements.review]\nlevel="high"\nforce="blocking"\napplies_to_paths=["src/**"]\napplies_to_task_markers=["proof"]\nblocking_claims=["claim-work-complete"]\nrequired_evidence=["domain-review"]\n',
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.requirements.review]\nlevel="high"\nforce="blocking"\napplies_to_paths=["src/**"]\napplies_to_task_markers=["proof"]\nblocking_claims=["claim-work-complete"]\nrequired_evidence=["domain-review"]\n',
         encoding="utf-8",
     )
     context = {"target": str(tmp_path), "task": "Read a description of proof terminology", "changed": ["docs/terms.md"]}
@@ -34,7 +34,6 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
     owner = next(owner for owner in result["capability_contract"]["owners"] if owner["owner"] == "verification")
     assert any(request["kind"] == "verification/assurance-applicability/v1" and request["input_schema"] for request in owner["requests"])
     assert not row["applies_because"]
-    assert not any(r["field"] == "assurance.requirements" for r in result["configuration"]["residuals"])
     assert any(b["affects"] == ["claim:claim-work-complete"] for b in result["decision_packet"]["blockers"])
     request = result["verification"]["assurance_request"]
     request["arguments"]["decisions"] = {"review": "not-applicable"}
@@ -66,9 +65,9 @@ def test_current_assurance_scope_requires_bound_judgment(tmp_path: Path, shared_
     forged["arguments"]["decisions"]["unknown"] = "not-applicable"
     with pytest.raises(AssertionError, match="unknown requirement"):
         consume(surface, shared_core_binary, native_cli, {**context, "request": forged})
-    source.write_text(source.read_text() + "# current source changes\n", encoding="utf-8")
-    with pytest.raises(AssertionError, match="stale for the current capability contract revision"):
-        consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    source.write_text(source.read_text().replace("domain-review", "changed-domain-review"), encoding="utf-8")
+    stale_source = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
+    assert stale_source["verification"]["assurance_applicability"]["requirements"][0]["status"] == "unresolved"
     fresh = consume(surface, shared_core_binary, native_cli, context)
     assert fresh["verification"]["assurance_applicability"]["requirements"][0]["status"] == "unresolved"
     assert not (tmp_path / ".agentic-workspace/local").exists()
@@ -144,8 +143,9 @@ def test_unreconciled_planning_owner_is_not_known_absence(tmp_path: Path, shared
         f'[todo]\nactive_items = [{{id="delegation-lane-sweep",status="in-progress",surface="{plan_ref.as_posix()}"}}]\nqueued_items=[]\n',
         encoding="utf-8",
     )
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version=1\n[assurance.requirements.risk_review]\nlevel="high"\nforce="blocking"\napplies_to_risk_refs=["risk:material"]\n',
+    (tmp_path / ".agentic-workspace/verification").mkdir(exist_ok=True)
+    (tmp_path / ".agentic-workspace/verification/manifest.toml").write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[assurance.requirements.risk_review]\nlevel="high"\nforce="blocking"\napplies_to_risk_refs=["risk:material"]\n',
         encoding="utf-8",
     )
     context = {"target": str(tmp_path), "task": "Continue the selected work", "changed": []}

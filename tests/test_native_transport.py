@@ -487,7 +487,6 @@ def test_configured_process_and_native_remain_distinct_peer_options(tmp_path):
     profiles, _ = load_delegation_target_profiles(
         raw_targets={
             "worker": {
-                "strength": "strong",
                 "location": "external",
                 "transports": [
                     {"kind": "process", "command": ["fixture"]},
@@ -572,8 +571,7 @@ def test_configuration_authority_tracks_relevant_source_and_executable(tmp_path,
 
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    original = """schema_version = 1
-[safety]
+    original = """[safety]
 safe_to_auto_run_commands = true
 [delegation]
 transport_authority = "automatic"
@@ -581,7 +579,6 @@ assignment_policy = "required-best-fit"
 [delegation_targets.worker]
 target_id = "host:worker"
 target_revision = "1"
-strength = "strong"
 location = "external"
 transports = [{kind = "process", command = [EXE]}]
 """.replace("EXE", json.dumps(sys.executable))

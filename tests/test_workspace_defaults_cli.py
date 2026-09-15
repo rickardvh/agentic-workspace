@@ -310,8 +310,9 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     ]
     assert ".agentic-workspace/bootstrap-handoff.md" in payload["recovery"]["handoff_surfaces"]
     assert ".agentic-workspace/bootstrap-handoff.json" in payload["recovery"]["handoff_surfaces"]
-    assert payload["recovery"]["effective_output_posture"]["command"] == "agentic-workspace config --target ./repo --format json"
-    assert payload["recovery"]["effective_output_posture"]["field"] == "workspace.optimization_bias"
+    assert (
+        payload["recovery"]["effective_output_posture"]["command"] == "agentic-workspace defaults --section optimization_bias --format json"
+    )
     assert payload["completion"]["rule"] == (
         "When a completed slice came from state.toml, clear the matched queue residue in the same pass."
     )
@@ -339,102 +340,51 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_override"]["path"] == ".agentic-workspace/config.local.toml"
     assert payload["mixed_agent"]["local_override"]["supported"] is True
     assert payload["mixed_agent"]["local_override"]["supported_fields"] == [
+        "workspace.enabled",
         "workspace.cli_invoke",
         "workspace.shared_config_path",
-        "workspace.maintainer_mode",
-        "runtime.supports_internal_delegation",
-        "runtime.strong_planner_available",
-        "runtime.cheap_bounded_executor_available",
-        "handoff.prefer_internal_delegation_when_available",
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
-        "delegation.mode",
-        "delegation.execution_role",
         "delegation.assignment_policy",
         "delegation.transport_authority",
-        "delegation.selection_objective",
         "delegation.current_target",
-        "delegation.underfit_behavior",
-        "delegation.down_routing_behavior",
         "delegation.human_override_policy",
-        "delegation.manual_transport_policy",
+        "delegation.required_execution_guarantees",
         "clarification.mode",
-        "local_memory.enabled",
-        "local_memory.path",
-        "delegation_targets.<target>.strength",
+        "session_logging.enabled",
+        "session_logging.path_mode",
+        "delegation_targets.<target>.target_id",
+        "delegation_targets.<target>.target_revision",
+        "delegation_targets.<target>.aliases",
+        "delegation_targets.<target>.identity_status",
+        "delegation_targets.<target>.execution_guarantees",
         "delegation_targets.<target>.location",
         "delegation_targets.<target>.confidence",
-        "delegation_targets.<target>.task_fit",
-        "delegation_targets.<target>.capability_classes",
         "delegation_targets.<target>.transports",
-        "delegation_targets.<target>.model_family",
-        "delegation_targets.<target>.provider",
-        "delegation_targets.<target>.context_capacity",
         "delegation_targets.<target>.cost_class",
         "delegation_targets.<target>.latency_class",
         "delegation_targets.<target>.forbidden_task_classes",
         "delegation_targets.<target>.confidence_source",
-        "delegation_targets.<target>.last_evaluation",
     ]
-    assert payload["mixed_agent"]["local_override"]["supported_target_strengths"] == ["strong", "medium", "weak"]
     assert payload["mixed_agent"]["local_override"]["supported_target_locations"] == ["local", "external", "either"]
-    assert payload["mixed_agent"]["local_override"]["supported_capability_classes"] == [
-        "boundary-shaping",
-        "reasoning-heavy",
-        "mixed",
-        "mechanical-follow-through",
-    ]
-    assert payload["mixed_agent"]["local_override"]["supported_target_execution_methods"] == [
-        "internal",
-        "cli",
-        "api",
-        "manual",
-    ]
     assert payload["mixed_agent"]["local_override"]["supported_target_transport_kinds"] == [
         "internal",
         "process",
         "api",
         "manual",
-    ]
-    assert payload["mixed_agent"]["local_override"]["supported_target_context_capacities"] == ["small", "medium", "large", "unknown"]
-    assert payload["mixed_agent"]["local_override"]["supported_target_reasoning_profiles"] == [
-        "weak",
-        "balanced",
-        "strong",
-        "unknown",
+        "native",
     ]
     assert payload["mixed_agent"]["local_override"]["supported_target_cost_classes"] == ["cheap", "standard", "premium", "unknown"]
     assert payload["mixed_agent"]["local_override"]["supported_target_latency_classes"] == ["fast", "standard", "slow", "unknown"]
-    assert payload["mixed_agent"]["local_override"]["supported_delegation_modes"] == ["off", "manual", "suggest", "auto"]
     assert payload["mixed_agent"]["local_override"]["supported_assignment_policies"] == [
         "local-preferred",
         "best-fit-advisory",
         "required-best-fit",
     ]
-    assert payload["mixed_agent"]["local_override"]["supported_orchestration_execution_roles"] == [
-        "ordinary-executor",
-        "orchestrator",
-        "bounded-worker",
-    ]
-    assert payload["mixed_agent"]["local_override"]["supported_underfit_behaviors"] == [
-        "stay-when-safe",
-        "prepare-manual-escalation",
-        "require-delegation",
-    ]
-    assert payload["mixed_agent"]["local_override"]["supported_down_routing_behaviors"] == [
-        "never",
-        "bounded-mechanical-work",
-        "when-cheaper-safe-target-exists",
-    ]
     assert payload["mixed_agent"]["local_override"]["supported_human_override_policies"] == [
         "explicit-only",
         "allowed-with-recorded-reason",
         "disallowed",
-    ]
-    assert payload["mixed_agent"]["local_override"]["supported_manual_transport_policies"] == [
-        "disabled",
-        "allowed",
-        "required-when-no-automatic-method",
     ]
     assert payload["mixed_agent"]["local_override"]["supported_transport_authorities"] == ["manual", "automatic"]
     assert payload["mixed_agent"]["local_override"]["canonical_delegation_policy_fields"] == [
@@ -448,7 +398,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert delegation_control["field"] == "delegation.transport_authority"
     assert delegation_control["default"] == "manual"
     assert "quality" in delegation_control["quality_first_rule"]
-    assert delegation_control["mode_semantics"]["auto"].startswith("permit automatic delegation")
+    assert delegation_control["mode_semantics"]["automatic"].startswith("permit automatic delegation")
     clarification_control = payload["mixed_agent"]["clarification_control"]
     assert clarification_control["field"] == "clarification.mode"
     assert clarification_control["default"] == "suggest"
@@ -537,12 +487,10 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "no-safe-route",
     ]
     assert payload["delegation_posture"]["config_controls"] == [
-        ".agentic-workspace/config.local.toml runtime.supports_internal_delegation",
-        ".agentic-workspace/config.local.toml runtime.strong_planner_available",
-        ".agentic-workspace/config.local.toml runtime.cheap_bounded_executor_available",
-        ".agentic-workspace/config.local.toml handoff.prefer_internal_delegation_when_available",
-        ".agentic-workspace/config.local.toml delegation_targets.<target>.*",
-        ".agentic-workspace/delegation-outcomes.json",
+        ".agentic-workspace/config.local.toml delegation.assignment_policy",
+        ".agentic-workspace/config.local.toml delegation.transport_authority",
+        ".agentic-workspace/config.local.toml delegation_targets.<target>.transports",
+        ".agentic-workspace/config.local.toml safety.safe_to_auto_run_commands",
     ]
     assert payload["delegation_posture"]["secondary"] == [
         "Do not treat config as a scheduler.",
@@ -578,10 +526,8 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["config"]["command"] == "agentic-workspace config --target ./repo --format json"
     assert "modules.enabled" in payload["config"]["supported_fields"]
     assert "workspace.improvement_latitude" in payload["config"]["supported_fields"]
-    assert "workspace.optimization_bias" in payload["config"]["supported_fields"]
     assert "workspace.workflow_artifact_profile" in payload["config"]["supported_fields"]
     assert "system_intent.sources" in payload["config"]["supported_fields"]
-    assert "workflow_obligations.<name>.summary" in payload["config"]["supported_fields"]
     assert payload["agent_configuration_system"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert (
         payload["agent_configuration_system"]["command"] == "agentic-workspace defaults --section agent_configuration_system --format json"
@@ -636,7 +582,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     )
     assert payload["optimization_bias"]["canonical_doc"] == ".agentic-workspace/docs/workspace-config-contract.md"
     assert payload["optimization_bias"]["command"] == "agentic-workspace defaults --section optimization_bias --format json"
-    assert payload["optimization_bias"]["owner_surface"] == "workspace"
+    assert payload["optimization_bias"]["owner_surface"] == "product rendering policy"
     assert payload["optimization_bias"]["default_mode"] == "balanced"
     assert payload["optimization_bias"]["supported_modes"][0]["mode"] == "agent-efficiency"
     assert payload["optimization_bias"]["supported_modes"][2]["mode"] == "human-legibility"
@@ -730,7 +676,7 @@ def test_defaults_command_text_emphasises_primary_and_secondary_routes(capsys) -
     assert "Combined install:" in text
     assert "Recovery:" in text
     assert "docs/environment-recovery-contract.md" in text
-    assert ("effective output posture: agentic-workspace config --target ./repo --format json -> workspace.optimization_bias") in text
+    assert "agentic-workspace defaults --section optimization_bias --format json" in text
     assert "Completion:" in text
     assert "Config:" in text
     assert "Workflow artifact adapters:" in text
@@ -1162,17 +1108,9 @@ def test_defaults_section_selector_returns_agent_configuration_workflow_extensio
     assert payload["surface"] == "defaults"
     assert payload["selector"] == {"section": "agent_configuration_workflow_extensions"}
     assert payload["matched"] is True
-    assert payload["answer"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
-    assert payload["answer"]["ordinary_authoring_surface"] == ".agentic-workspace/instructions/*.md"
-    assert payload["answer"]["status"] == "specialized-compatibility-only"
-    assert payload["answer"]["definition_format"]["schema_version"] == "agentic-workspace/workflow-definition-format/v1"
-    assert payload["answer"]["definition_format"]["specialized_compatibility_family"]["id"] == "workflow_obligation"
-    assert (
-        payload["answer"]["definition_format"]["flexibility_boundary"]["leave_flexible"][0]
-        == "local implementation steps inside the bounded component"
-    )
-    assert payload["answer"]["supported_stages"][0] == "pre-work"
-    assert payload["answer"]["consumption_rule"][0].startswith("scoped Markdown owns ordinary")
+    assert payload["answer"]["owner_surface"] == ".agentic-workspace/instructions/*.md"
+    assert payload["answer"]["fields"] == ["paths", "read", "use", "checks", "protect"]
+    assert "definition_format" not in payload["answer"]
 
 
 def test_defaults_setup_findings_promotion_section_selector_returns_compact_contract_answer(capsys) -> None:

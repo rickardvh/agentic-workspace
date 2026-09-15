@@ -1,242 +1,171 @@
-# Configuration authoring contraction
+# Configuration baseline
 
-Implementation lane: #3297 under #3277. Independent acceptance and parent closure
-remain separate from implementation and focused validation.
+Shared and local configuration each use one closed schema. Neither accepts a
+version selector or unknown fields. Native admission validates these sources
+before interpreting managed state; the Python maintenance reader uses the same
+schemas. Missing configuration remains quiet and uses existing owner defaults.
 
-## Contracts and source/key inventory
+## Source disposition audit for #3312
 
-Version 2 is the current shared/local authoring contract. Version 1 is bounded
-former recognition. The build-time projection generates strict current schemas
-from single-owned source definitions; invalid v2 never retries the v1 reader.
-Removed/deprecated/read-only values cannot be created through the native writer,
-even in a v1 file. Exact edits preserve unrelated former fields, comments, and
-version bytes. A version transition is a separately scoped source-owner edit.
+The baseline was ec242fc71666bded79837217710d6957a755f0e7. This is a
+one-time implementation audit, not a product migration procedure or registry.
+Private target identities and values are deliberately omitted.
 
-| Family | Current authoring / consumer | Exact editing and transition |
+| Populated source / removed field | Disposition | Destination and verification |
 | --- | --- | --- |
-| workspace.enabled, cli_invoke | Shared default, effective shared-local then checkout-local preference | Native writer; local true may override shared false availability, but never source trust, proof, module grants, or safety |
-| workspace.agent_instructions_file, improvement_latitude | Repository selection/initiative policy | Native writer; no implicit instruction approval |
-| workspace.workflow_artifact_profile | Repository artifact-source selection | Repository source authoring; native reader preserves unsupported-profile uncertainty |
-| workspace.optimization_bias, advanced_features, maintainer_mode | Former recognition only | Preserve source; no current write/choice |
-| modules.enabled | Real owner availability | Native writer; disabling never deletes state |
-| system_intent.sources, preferred_source | Ordered repository source/preference | Native writer; explicit non-default ordering remains |
-| assurance.instruction_revision, decision_record_revision/fallback/target | Exact repository trust and source selection | Existing source-owner admission; never derived from HEAD or routine edits |
-| assurance.decision_delegations | Standing repository grant | Existing progressive native choice; never synthesized by setup |
-| workspace.shared_config_path (local) | One existing shared-local source, then checkout-local precedence | Read dependency only; canonical writer cannot edit user-file paths or create include graphs |
-| safety.* | Local command/review ceilings | Native writer; false/absence stay distinct |
-| session_logging.enabled, path_mode | Opt-in local capture and path privacy | Native writer; deprecated redact_local_paths is former transition input only |
-| clarification.mode | Advisory procedure preference | Native writer/read result; no waiver of required judgments |
-| setup.* | Former continuation, not policy | Existing configuration defer/recovery owner; no current authoring |
-| Verification domain families | #3301 | Domain schema/consumer contraction |
-| modules.independent.* | #3302 | Exact descriptor preparation with separately approved grants |
-| execution_posture.*, delegation*, runtime/handoff | #3303 | Provider-neutral requirement/transport/prior contraction |
-| workflow_obligations, local_overlay.* | #3304 | Scoped instruction/Verification sources and lifetime disposition |
-| local_memory.* | #3305 | Supported source selection or explicit preserved unavailability |
-| update.*, payload.*, cli_compatibility.* | #3306 | Deliberate floors and artifact-derived facts |
+| Verification manifest: workflow_obligation_refs=commit_after_proof / adapter_surface_refresh | already represented | Both requirements already live in AGENTS.md. Existing Verification requirements now cite AGENTS.md through authority_refs; evidence labels, force and claim boundaries are unchanged. |
+| Repository config: schema_version | obsolete | Single closed grammar; actual source validated without a marker. |
+| Present machine-local config: schema_version | obsolete | Local source validated against the same current local grammar. |
+| Machine-local runtime.supports_internal_delegation, runtime.strong_planner_available | already represented | Existing canonical transports retain declared constructibility; native Assignment observes actual host availability. Old observations grant no availability. |
+| Machine-local targets: strength, task_fit, capability_classes, context_capacity | migrate | Ignored local scoped target-selection instruction. Fresh instruction-owner resolution observed the source before the config fields were removed. These are human preferences, not execution guarantees. |
+| Machine-local targets: model_family, provider | migrate | Identity metadata in the same ignored local instruction; canonical target IDs and revisions remain unchanged. |
+| Machine-local target current_economic_evidence | obsolete | Its recorded observation was expired and explicitly unknown. No current economic evidence was established; guidance preserves that boundary without an evidence claim. |
+| Harness shared config: schema_version | obsolete | Validated current shared fixture. |
+| Harness workspace.optimization_bias | migrate | Scoped configuration-behavior instruction requests concise agent-readable output. |
+| Harness workflow_obligations.config_closeout: summary, stage, scope_tags, commands, review_hint | migrate | Scoped instruction requires effective-config inspection and reporting before completion when relevant. Current owner inspection replaces the unavailable command recipe. |
+| Harness local config: schema_version | obsolete | Validated current local fixture. |
+| Harness runtime capability booleans | obsolete | Synthetic observations are not runtime facts. Scoped guidance requires current observation. |
+| Harness handoff.prefer_internal_delegation_when_available=false | already represented | Both targets use explicit handoff transports; no internal dispatch preference is inferred. |
+| Harness delegation.mode=auto | migrate | delegation.transport_authority=automatic; independent safety=false still prevents automatic execution. |
+| Harness targets: strength, task_fit, capability_classes | migrate | Scoped target-selection preferences; hard prohibitions remain in config. |
+| Harness targets: execution_methods | migrate | Canonical manual transports. The docs worker had no executable command, so no executable was invented; the instruction records manual handoff. |
+| Harness escalation_target, human_control_modes | obsolete | Current Assignment judgment selects targets; canonical transport authority and independent human review remain. |
+| Test-only recommended-control source excerpt | obsolete | Deleted acceptance/preservation fixture. Current repository commit-after-proof guidance already lives in AGENTS.md and scoped instructions. |
+| Native independent-owner fixture: schema_version, revision, contract_revision | migrate | No config marker; one exact implementation/contract binding with identical grants, scope, reads and settings. |
+| Embedded operation-conformance config: version markers | obsolete | The same generated operations use unversioned sources. |
+| Selected-output conformance: workspace.optimization_bias | obsolete | The case tests field selection, now with the current improvement_latitude field. It establishes no repository style policy. |
+| Guidance conformance: target revision_policy, strength, model_family, provider | obsolete | Synthetic identity/lifecycle cases retain stable IDs, revisions and aliases; no target-quality or model claim is needed. |
+| Guidance conformance: execution_methods=internal | migrate | Canonical internal transport; peer process/provider and identity tests retain their own current declarations. |
+| Guidance conformance: local_memory flags/root/path | obsolete / already represented | Synthetic enablement and external-root hints are retired. The current repository-local correction store already supplies the named path. Owner-internal cross-store transaction tests inject storage observations directly; they do not accept old human config. |
+| Inline configuration test sources | migrate / obsolete | Current safety, proof, trust, invocation and transport tests use current syntax. Verification definitions live in its manifest. Acceptance/preservation-only journeys are deleted. |
 
-The matrix separates recognized input, current authoring and native writability.
-For a current field outside the exact writer, read-choice returns its schema and
-source-owner route without an edit request. Former-only fields return a preserved
-source-disposition route, not a supported current setting. No universal editor is
-introduced. Shared/local TOML remain the only general authoring files.
+All other populated repository and machine-local keys retain their current
+owners: module enablement, instruction/artifact selection, initiative, invocation,
+shared assurance floors, exact instruction/decision admission pins, payload target
+and capability floor, system-intent selection, local safety, Assignment policy,
+canonical transports, hard prohibitions, confidence provenance and cost/latency
+human preferences. No trust revision is advanced to HEAD by this cleanup.
 
-The first boundary reduces inline fixed-property occurrences (excluding reusable
-`$defs`) from 179 to 84 in shared authoring and 110 to 68 in local authoring.
-This is a reproducible structural count, not a count of independent human choices:
-dynamic keys and owner-validated extension schemas still require their assigned
-child dispositions. Recognized former input remains broader by design. Native
-editing covers 16 source/key pairs plus artifact-owned payload refresh; additional
-current fields expose a read-only source route.
+No populated cli_compatibility requirement was found in the actual repository or
+machine-local sources. Its human-config negotiation and repair machinery is
+removed. Independently current payload target/capability requirements remain with
+Payload; configured invocation remains with Workspace. Installed artifact identity
+and byte/provenance checks retain their existing owner.
 
-## Evidence and limits
+## Deleted machinery
 
-Extend existing source-policy, exact-write and recovery cases. Retain one owner
-case for the new current/former validation boundary; extend existing adapter
-choreography for mixed-source byte preservation and current creation. Reuse
-existing trust, diagnostic, source-drift and interrupted-publication evidence.
-Generated schema/reference checks prove projection parity, not human approval.
-Stop each PR at its assigned owner boundaries and leave aggregate acceptance to
-independent review. Configuration byte reduction does not measure total operating
-cost or satisfy the release lane.
+The two source-recognition schemas, their generated reference pages, and the
+schema projection generator are deleted. The separate workflow-definition
+compatibility schema, manifest, loader and generated reference are also deleted.
+Its unused Python report, clause-adapter, closeout, and task-posture consumers are
+deleted, together with the module registry model and report/schema fields.
+The current schemas are canonical.
+Native version dispatch, source residual bookkeeping, Assignment discharge of
+residuals, local-source metadata migration views, root-local source derivation,
+transport aliases, independent admission pin fallback and payload shorthand are
+removed. The writer validates whole current postimages and preserves current
+human comments, without a version upgrade path.
 
-## Verification ownership (#3301)
+Python source readers no longer accept the removed configuration bags, target
+aliases/observations, setup state, local overlays, workflow maps or merge-conflict
+fallback defaults. Configuration reports and setup guidance describe current
+sources and owners. The prerelease config-policy operation and its Python and
+TypeScript writers, conformance cases, and generated adapters are deleted.
+TypeScript config reads and identity writes use the authoritative host reader. Proof definitions are read from Verification's manifest;
+recorded waivers and currentness are not policy input.
 
-The four supported `manifest.toml#assurance` families (`proof_profiles`,
-`domain_proof_lanes`, `requirements`, `subsystem_profiles`) are defined by
-`packages/verification/src/repo_verification_bootstrap/contracts/assurance.schema.json`.
-The native owner validates this table directly. The generator bundles these same
-owner definitions into former recognition for offline reads; they do not reappear
-in current shared authoring. Equal competing source values are still a conflict.
-Transfer one family only after its destination is validated and its former source
-is explicitly retired. Reading or generating schemas never changes source bytes.
+## Boundaries and validation
 
-`strict_closeout`, `default_level`, `agent_may_escalate` and `agent_may_deescalate` remain deliberate
-repository proof floors. Binding requirements survive an attempted de-escalation.
-`strict_closeout = true` requires a current task-bound Verification claim judgment
-before completion, including work with no matching protocol. False does not waive
-independently binding requirements. The existing claim-review request and exact
-human answer or admitted delegation discharge this floor; config is never proof.
-Proof results, currentness, review and waivers remain separate owner judgments.
-Current manifest requirements reject `waiver`, `dismissal` and
-`source_intent_current`. The former reader preserves these recorded fields without
-admitting their claimed outcome; applicability never satisfies evidence or waivers.
-Currentness must be established against the actual source and evidence owners.
-The repository manifest removes its twelve static `source_intent_current = true`
-assertions; source refs/revisions, evidence owners, selectors and blocking claims
-remain unchanged. This retires the policy assertions, not the required outcomes
-or their unresolved source/evidence admissions.
+Current proof policy with a disabled Verification owner remains a completion
+restriction. Local safety and human-review constraints remain independent.
+Configuration grants neither proof nor source trust. Package payload refresh
+continues to require exact artifact bytes and an authorized file proposal.
 
-`closeout_postures` has no supported native destination: keep existing entries and
-their unresolved claim boundary until a source owner judges each actual outcome.
-The manifest rejects these entries rather than pretending a schema annotation
-implements them. `classification_owner` and
-`classification_source` likewise remain recognized former inputs, not supported
-current knobs. Do not silently replace a repository classifier or required gate
-with the native path matcher. Existing native requirements can express explicit
-proof/review obligations after an owner validates the intended scope; this is not
-an automatic prose or classifier translation.
+Validation must cover creation/read/edit, old-input rejection before state,
+configured proof and safety, exact independent grants, payload currentness,
+generated references and package consistency. Independent review is separate
+from implementation validation and remains externally initiated.
 
-Decision format/template/status conventions belong to scoped decision-authoring
-instructions, not runtime trust. Invariant/risk registry references and test-data
-policy belong to their maintained repository sources and applicable instructions
-or explicit Verification requirements. Their former settings remain preserved,
-with unsupported intent surfaced until an owner confirms a destination or
-retirement. This implementation does not bulk-transfer them. Exact instruction
-and decision revision consent, fallback selection and standing delegations remain
-unchanged. No trust revision is refreshed from HEAD.
+## Search exceptions
 
-Evidence extends the existing transfer/collision test with an unsupported
-closeout-posture preservation case; existing strategy tests cover proof floors,
-source currentness and scope. This proves the bounded implemented destination,
-not completion of all former-source migration or independent acceptance.
+Version fields in Planning, Memory, Verification manifests, operation envelopes,
+Ownership and payload provenance identify current non-configuration contracts.
+Their identity/admission semantics are unchanged. Semantic-route and Planning
+source custody transitions are current non-configuration owners. Historical
+release fragments, decision records and review reports retain their provenance.
+Runtime admission wire names identify the executing artifact and pre-state
+boundary; they no longer negotiate human-config reader requirements. Generic
+operation/adapter compatibility fingerprints concern executable contracts, not
+prerelease human configuration.
 
-## Independent admissions and Assignment targets (#3302, #3303)
+### Retained matches by owner
 
-Select `modules.independent` through `configuration/read-choice/v1`, then set
-`selected_owner` to the known linked owner. Only that descriptor is loaded. The
-returned preparation supplies one exact `binding` over implementation and contract,
-its requested capability/read footprint, and its settings schema. The proposal
-preserves all existing grants, scope and settings, removes former duplicate pins,
-and omits empty grant lists. New admissions start with no grants. The existing
-explicit authorize-write decision approves the exact postimage; a binding hash
-alone never grants an effect, read, claim or restriction. Both former pins remain
-recognized until an authorized exact transition. Descriptor expansion or changed
-implementation cannot inherit approval. Missing scope means explicit requests
-only; missing settings means an empty object validated by the selected owner.
+- `runtime_compatibility.rs`, its input schema, and native ingress retain the
+  pre-state wire identity. They validate the current schema and report executing
+  artifact facts; no configured epochs, version negotiations, or capability bags
+  are read. Installed-state compatibility validates current artifact provenance
+  and the Payload-owned floor.
+- `native_routes.rs`, `native_planning.rs`, and corresponding `former` tests
+  preserve source custody for current route/Planning records. They do not decode
+  another human config grammar.
+- `assurance_applicability.rs` labels unresolved semantic scope as `legacy_scope`;
+  this is current task judgment over Verification-owned declarations, not a
+  former configuration reader. Requirement `level` remains canonical;
+  subsystem profile's `level` alias is removed in favor of `assurance_level`.
+- `config.py`'s legacy delegation-outcome path and `session_logging.py`'s event
+  recovery concern recorded evidence/logs. Neither supplies human configuration.
+- `client.py` operation compatibility fingerprints and TypeScript package payload
+  version-path handling concern executable/package contracts and installed
+  payload custody. They do not accept prerelease human config.
+- Internal Python target descriptors still carry observation/evidence attributes
+  used by the current Assignment and guidance algorithms. Removed human knobs
+  are never parsed into them; unknown observations remain unknown. They are not
+  listed as supported configuration fields.
+- `docs/reviews/`, archived Planning material, existing release fragments, and
+  the current implementation audit record historical evidence. They are not
+  setup or authoring instructions. The active delegation migration guide is
+  deleted.
 
-Effects and reads permit specific actions/sources; claims grant claim authority;
-restrictions grant the ability to block specified scopes. None is derived from
-installation. Scope and settings are repository choices. A refused subset may
-make a module incompatible; preparation never fills it in to make execution work.
-Unrelated admissions are preserved and their descriptors are not loaded. Invalid
-settings or a stale proposed binding fail before source publication.
+## Implementation validation
 
-Current target authoring requires canonical `transports` and removes strength,
-task_fit, capability_classes, context_capacity, model/provider labels and target
-revision migration policy. The remaining target dimensions each have a purpose:
-identity/revision/aliases bind a configured target; identity_status is a human
-eligibility prohibition, not an observed availability fact; location is a boundary
-hint; execution_guarantees advertise capabilities without proving host readiness;
-forbidden_task_classes retain hard prohibitions with current scope judgment.
-Confidence and provenance remain a human prior; cost/latency remain rough durable
-preferences. No prior becomes admitted evidence. Former economics/evaluation data
-is explicitly reported as unadmitted and cannot clear its configuration residual.
+- Actual shared and ignored local sources load through the closed Python reader;
+  native `start` reports both sources through the current configuration view.
+  A parsed comparison against the baseline confirms that removing the shared
+  version marker changed no shared policy value.
+- Rust core library: 124 passed, 3 existing ignored interruption helpers. Native
+  CLI: 6 passed, including direct operation without Python or Node.
+- Native admission, startup, logging and assurance applicability: 196 passed.
+- Native configuration/write, instruction, transport and handoff group: 150
+  passed, 2 platform skips; the one unknown-strength failure was corrected and
+  its focused regression passed. Unknown strength does not become a claimed
+  capability.
+- Final native Verification, Assignment, execution and rejected-input group:
+  64 passed, 1 platform skip.
+- Native proof producer and independent owner: 71 passed. Current configuration,
+  defaults and pre-state reader group: 151 passed. Root guidance proof selection:
+  2 passed. Current assurance projection: 11 passed.
+- Adapter/module/instruction/decision checks: 177 passed in the bounded run;
+  the current-schema rejection assertion was corrected and passed separately.
+- Generated command packages, contract tooling, structured inventory, repository
+  lint and type checks passed. Generated references and package mirrors were
+  refreshed after removing the schemas, operations and report fields.
 
-The existing transport decoder derives equivalent former methods and exact command
-parameters. Missing/ambiguous transport payload remains unavailable; it does not
-create a launch method. Former/shared-local/checkout-local omission and precedence
-remain unchanged. Required Assignment, transport authority, human override, safety
-and guarantee requirements remain separate. Repository requirements/preferences
-stay provider-neutral; hard target prohibitions can coexist with them. Removed
-ranking prose is not converted into capability guarantees.
+Broader exploratory checks are not reported as a full-suite pass. Remaining
+failures outside this configuration proof include the maintainer skill wording
+assertion, older session-log tests invoking retired public commands, the legacy
+session-improvement index expectation, and an evaluation-launcher test invoking
+retired `evaluation`. These are recorded validation limits, not substitutes for
+current owner proof. No release or independent acceptance is claimed here.
 
-Validation extends the selected-module settings journey with exact former-grant
-preservation and a new absent-grant/stale-binding control. The existing work-class
-journey now authors version 2 sources and continues to prove requirements before
-preferences and relational independence. Current-schema projection preserves
-conditional predicates instead of incorrectly closing partial `if` shapes.
+Implementation validation, independent acceptance, issue completion and parent
+release readiness are separate. This change is ready for independent review;
+source-trust pins and unresolved source admissions remain unchanged. The current
+Verification source-reconciliation owner returned no reconciliation obligations
+for the changed shared config, requirement manifest and configuration document.
+That observation does not grant independent review or completion authority.
 
-## Guidance, local sources and package policy (#3304–#3306)
-
-Current authoring has no workflow-obligation map, local guidance/high-risk maps,
-local_memory family, empty handoff bag, runtime capability observations or module
-update-source policy. There is no replacement generic policy bag. The existing
-native owners remain responsible for applicability, source admission and proof.
-A config residual names the required entry-level disposition; writing a candidate
-instruction destination does not retire its source or admit completion.
-
-| Former meaning | Destination / disposition |
-| --- | --- |
-| Shared advisory method | Applicable repository instruction/procedure, retaining advisory strength |
-| Binding proof/check or review requirement | Supported Verification requirement or instruction check, retaining scope, force and its separate admission |
-| Local guidance/privacy constraint | Existing local scoped instruction; retain protection and local provenance |
-| Template fields/headings, source/runbook content | Original repository-owned file; instruction references it instead of copying a second definition |
-| Unavailable CI, validation/drift state | Reobserve through current owner; never convert into standing guidance |
-| Local substitute command | Local optional method only; cannot discharge stronger shared proof without its owner's authorization |
-| Unresolved question | Existing responsible decision/continuation if still useful; explicit no-retention for obsolete observations is valid |
-
-The mixed transition proof creates the candidate shared/local instructions through
-the normal exact authorization path while old bytes remain. The source owner then
-confirms each meaning and retires the old entries. Fresh relevant work consumes
-both destinations, shared proof stays required, private policy stays local, the
-original template stays intact and unrelated task words do not activate paths.
-A second pass creates no old configuration. Unknown mandatory meaning remains a
-blocker until supported and admitted; this is not a general prose translator.
-
-All six local_memory fields are unsupported as native local topology controls:
-`enabled`/`path` do not select repository Memory; `target_guidance_enabled` and
-`user_guidance_root` concern scoped guidance/target owners;
-`target_guidance_overlay_path` and `correction_events_path` concern operational
-owner material. Each is former recognition only. Explicit source metadata reports
-missing, empty, inaccessible/unconfined or present-unclassified material without
-reading content or inferring a home directory. Repository Memory's manifest is a
-distinct supported source, never a fallback. Source owner judgment is required for
-meaningfulness, transfer, retention or retirement. No local content is copied,
-deleted, moved or recreated, and existing uninstall controls are unchanged.
-
-Current package policy has three fields: `payload.target_release` chooses an exact
-artifact or source-current, `minimum_capabilities` supplies a floor, and `policy`
-chooses advisory/before-work/before-claim enforcement. Former dogfood_latest=true
-without an explicit target has the same artifact-following meaning as source-current;
-an explicit target and capability floor always survive. Former update.modules
-provenance remains unresolved at the package owner; it is not silently switched
-to the coordinated artifact. Payload refresh writes only artifact-declared paths.
-
-Current reader policy retains `minimum_reader_epoch` and
-`required_reader_capabilities`. Contract identity and available capabilities are
-derived from the actual reader. Former contract_schema still checks its explicit
-pin, including rejecting an unsupported contract. Former minimum/exact versions,
-source classes, target relations, command, capabilities/resources, enforcement and
-resolution_policy retain their prior advisory or unresolved binding disposition;
-no retired launcher is restored. A mismatch cannot become admitted by hiding the
-old source. The invocation preference stays in workspace.cli_invoke.
-
-The actual checkout audit found no workflow_obligations, local_overlay,
-local_memory, update or cli_compatibility material to transfer. Its existing
-payload target, floor and enforcement remain unchanged. Private target/policy
-choices and all source-trust pins remain untouched. Existing unsupported assurance
-intent remains visible; no aggregate acceptance or trust refresh is inferred.
-
-## Aggregate implementation evidence and cost
-
-Against baseline 5e35307320ed380b1a0fac093168fc08bfd933a0, fixed-property occurrences
-outside reusable definitions contract from 179 to 45 shared and 110 to 41 local.
-The metric is structural, not independent human decisions. The meaningful
-subtractions are the parallel policy frameworks, stale observations and copied
-module metadata; the remaining choices have distinct authority or preference
-roles documented above. Ordinary unconfigured work still creates no setup state
-or external probe. Detailed module discovery loads only one selected descriptor;
-former local-source inspection touches only explicitly configured metadata.
-Unconfigured local topology contributes no public Configuration/Memory detail.
-Explicit former sources still expose observations and unresolved boundaries;
-internal source binding is retained. Memory capture requests/results remain
-public, while their internal contributions appear only through the composed
-decision. The existing full-projection size bound remains unchanged.
-
-Retain bounded tests with the current configuration, independent-admission,
-Assignment, Verification, instruction and payload owners. Do not retain a test per
-former field, migration transcript, personal-source inventory or a new CI lane.
-Validation proves the implemented contracts and representative convergence; issue
-acceptance, parent closure and total operating cost are separate judgments. This
-stack includes no release publication and no self-review. Ready for independent
-review after its focused checks; source-specific unresolved consent stays visible.
+Operating cost: this is one subtraction PR and adds no runtime migration scan,
+registry or setup ceremony. Exploratory runs included retries and an interrupted
+broad run; their counts are not additive proof. Total task wall time and token
+cost were not instrumented, so test timings are not presented as total operating
+cost.

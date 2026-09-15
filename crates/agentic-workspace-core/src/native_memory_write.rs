@@ -678,7 +678,7 @@ mod tests {
                     if stage == "drift" && point == "prepared" {
                         std::fs::write(
                             target.join(".agentic-workspace/config.local.toml"),
-                            "schema_version=1\n# Changed human source\n",
+                            "# Changed human source\n",
                         )
                         .unwrap();
                     } else if point == stage {

@@ -1421,7 +1421,6 @@ def _validate_typescript_runtime_handoff_thinness(
 
 
 TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
-    "config.policy.apply",
     "typescript.domain.execute",
     "path.target_root.resolve",
     "workspace.target-root.resolve",
@@ -3885,7 +3884,9 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             # The accepted sealed transport has a stdin/stdout bridge, not a
             # generated CLI or fallback runtime. Admit only its exact wrapper;
             # parser/executor markers elsewhere in the module remain errors.
-            expected = ast.parse("def main() -> None:\n    packet = json.load(sys.stdin)\n    print(json.dumps(dispatch(Path.cwd(), packet)))\n").body[0]
+            expected = ast.parse(
+                "def main() -> None:\n    packet = json.load(sys.stdin)\n    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
+            ).body[0]
             entries = [node for node in ast.walk(ast.parse(text)) if isinstance(node, ast.FunctionDef) and node.name == "main"]
             if len(entries) == 1 and ast.dump(entries[0]) == ast.dump(expected):
                 matched_categories.remove("console entrypoint")

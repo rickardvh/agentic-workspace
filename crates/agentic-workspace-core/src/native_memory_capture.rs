@@ -1464,7 +1464,7 @@ mod tests {
             }
             let proposed = start(Some(request.clone()));
             let policy = target.join(".agentic-workspace/config.toml");
-            let policy_bytes = "schema_version=1\n[assurance]\ndecision_delegations=[{owner=\"memory\",scope=[\"path:src/a.rs\"]}]\n";
+            let policy_bytes = "[assurance]\ndecision_delegations=[{owner=\"memory\",scope=[\"path:src/a.rs\"]}]\n";
             let answer = if agent {
                 std::fs::create_dir_all(policy.parent().unwrap()).unwrap();
                 std::fs::write(&policy, policy_bytes).unwrap();
@@ -1533,7 +1533,7 @@ mod tests {
             let mut invoke = input.clone();
             invoke["invocation"] = next;
             if agent {
-                std::fs::write(&policy, "schema_version=1\n").unwrap();
+                std::fs::write(&policy, "").unwrap();
                 assert!(crate::native_public::invoke_checked(invoke.clone()).is_err());
                 std::fs::write(&policy, policy_bytes).unwrap();
             }

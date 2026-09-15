@@ -13,7 +13,7 @@
       "additionalProperties": {
         "type": "object",
         "description": "Reusable command and review-aid set for a named proof profile.",
-        "x-agentic-workspace-unknown-properties": "warn",
+        "x-agentic-workspace-unknown-properties": "error",
         "properties": {
           "required_commands": {
             "description": "Commands that must pass for this proof profile. A command may occupy only one of the required, optional, or disallowed roles.",
@@ -60,7 +60,7 @@
             "default": []
           }
         },
-        "additionalProperties": true
+        "additionalProperties": false
       }
     },
     "domain_proof_lanes": {
@@ -70,7 +70,7 @@
       "additionalProperties": {
         "type": "object",
         "description": "One host-defined domain proof lane. Domain meaning stays in repo-owned authority refs and evidence concepts.",
-        "x-agentic-workspace-unknown-properties": "warn",
+        "x-agentic-workspace-unknown-properties": "error",
         "required": [
           "purpose"
         ],
@@ -226,7 +226,7 @@
             "minLength": 1
           }
         },
-        "additionalProperties": true
+        "additionalProperties": false
       }
     },
     "requirements": {
@@ -345,16 +345,6 @@
             "description": "Optional assurance.proof_profiles id to add when this requirement is active.",
             "type": "string",
             "minLength": 1
-          },
-          "workflow_obligation_refs": {
-            "description": "Workflow obligation ids related to this requirement.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "uniqueItems": true,
-            "default": []
           },
           "review_owner": {
             "description": "Repo-local owner label for review or waiver decisions.",
@@ -701,7 +691,7 @@
       "additionalProperties": {
         "type": "object",
         "description": "One host-owned assurance profile for an ownership subsystem.",
-        "x-agentic-workspace-unknown-properties": "warn",
+        "x-agentic-workspace-unknown-properties": "error",
         "required": [
           "assurance_level",
           "force"
@@ -709,15 +699,6 @@
         "properties": {
           "assurance_level": {
             "description": "Repo-interpreted assurance level for the matched subsystem.",
-            "enum": [
-              "low",
-              "medium",
-              "high",
-              "critical"
-            ]
-          },
-          "level": {
-            "description": "Compatibility alias for assurance_level. It cannot be declared beside assurance_level; new configuration should use assurance_level.",
             "enum": [
               "low",
               "medium",
@@ -760,16 +741,6 @@
             "type": "string",
             "minLength": 1
           },
-          "workflow_obligation_refs": {
-            "description": "Workflow obligation ids related to this subsystem profile.",
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "uniqueItems": true,
-            "default": []
-          },
           "review_owner": {
             "description": "Repo-local owner label for review or waiver decisions.",
             "type": "string",
@@ -805,7 +776,7 @@
             "minLength": 1
           }
         },
-        "additionalProperties": true
+        "additionalProperties": false
       }
     }
   }

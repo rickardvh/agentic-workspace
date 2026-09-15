@@ -157,7 +157,7 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+        '\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
     (target / ".agentic-workspace" / "WORKFLOW.md").unlink()
 
@@ -981,61 +981,6 @@ def test_doctor_real_init_reports_stale_planning_generated_residue(tmp_path: Pat
     assert not any(".agentic-workspace/planning/agent-manifest.json" in item for item in payload["needs_review"])
 
 
-def test_status_reports_advisory_cli_compatibility_drift(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
-    capsys.readouterr()
-    _write(
-        target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "advisory"\nexact_version = "999.0.0"\n',
-    )
-
-    assert cli.main(["status", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    compatibility = _assert_cli_compatibility(payload, status="advisory-drift")
-    assert compatibility["enforcement"] == "advisory"
-    assert compatibility["failed_checks"] == ["exact_version"]
-    assert payload["health"] == "attention-needed"
-    assert payload["executable_drift_warnings"][0].startswith("executable compatibility advisory-drift")
-    assert compatibility["drift_findings"][0]["class"] == "executable-version-drift"
-    assert compatibility["remediation"]["payload_drift_separate"] is True
-
-
-def test_status_and_doctor_advisory_outputs_are_coherent_and_do_not_self_loop(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
-    capsys.readouterr()
-    _write(
-        target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "advisory"\nexact_version = "999.0.0"\n',
-    )
-
-    assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
-    status_payload = json.loads(capsys.readouterr().out)
-    assert status_payload["health"] == "attention-needed"
-    assert status_payload["action_required"] is False
-    assert status_payload["next_action"]["action"] == "no-immediate-action"
-    assert status_payload["actionability"]["status"] == "advisory-only"
-    assert status_payload["actionability"]["findings"][0]["class"] == "optional-advisory"
-
-    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
-    doctor_payload = json.loads(capsys.readouterr().out)
-    assert doctor_payload["health"] == "attention-needed"
-    assert doctor_payload["action_required"] is False
-    assert doctor_payload["next_action"]["action"] == "no-immediate-action"
-    progress = doctor_payload["actionability"]["progress_check"]
-    assert progress["proposed_operation"] == "run-payload-closure-proof"
-    assert progress["same_operation"] is False
-    assert progress["result"] == "progress-making"
-    assert progress["live_revision_checked"] is True
-    assert progress["current_input_revision"] == progress["expected_input_revision"]
-
-
 def test_actionability_allows_same_operation_only_as_explicit_external_condition_watch() -> None:
     from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 
@@ -1261,31 +1206,6 @@ def test_status_select_reports_available_fields_for_missing_selector(tmp_path: P
     assert payload["selector_inventory"]["discovery_command"].endswith("--select selector_inventory --format json")
 
 
-def test_doctor_reports_cli_executable_drift_with_concrete_next_action(tmp_path: Path, capsys) -> None:
-    target = tmp_path / "repo"
-    target.mkdir()
-    _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
-    capsys.readouterr()
-    _write(
-        target / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nexact_version = "999.0.0"\n',
-    )
-
-    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    compatibility = _assert_cli_compatibility(payload, status="blocking-drift")
-    assert payload["health"] == "attention-needed"
-    assert compatibility["failed_checks"] == ["exact_version"]
-    assert compatibility["remediation"]["action"] == "upgrade-or-select-cli"
-    action = payload["manual_review_actions"][0]
-    assert action["id"] == "resolve-cli-executable-drift"
-    assert action["severity"] == "error"
-    assert action["cli_compatibility"]["payload_drift_separate"] is True
-    assert "wrong CLI" in action["current_fault_summary"] or action["run"] == "agentic-workspace"
-
-
 def test_doctor_json_does_not_report_dry_run_actions_as_mutations(monkeypatch, tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     monkeypatch.setattr(cli, "_module_operations", lambda: _descriptors_with_mixed_actions(tmp_path))
@@ -1305,7 +1225,7 @@ def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config
     assert cli.main(["init", "--modules", "planning", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
     (target / ".agentic-workspace/config.toml").write_text(
-        "schema_version = 1\n\n"
+        "\n"
         "[modules]\n"
         'enabled = ["planning"]\n\n'
         "[update.modules.planning]\n"

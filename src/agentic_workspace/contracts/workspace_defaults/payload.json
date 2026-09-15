@@ -391,137 +391,18 @@
   "agent_configuration_workflow_extensions": {
     "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
     "command": "agentic-workspace defaults --section agent_configuration_workflow_extensions --format json",
-    "consumption_rule": [
-      "scoped Markdown owns ordinary repo guidance, checks, procedures, and protections",
-      "workspace reports surviving stage-bound compatibility obligations to their specialized lifecycle consumers",
-      "planning consumes only relevant compatibility obligations and does not treat them as a generic instruction language"
-    ],
-    "definition_format": {
-      "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
-      "composition": {
-        "conflict_rule": "Do not merge ownership; workspace reports applicable components and the owning module keeps domain behavior.",
-        "module_attachment_rule": "Components may mention planning, memory, workspace, startup, routing, adapter-surfaces, or system-intent tags, but they must not move module-owned state into workspace config.",
-        "selector": "compatibility-only stage plus intersection of scope_tags with current work tags"
-      },
-      "flexibility_boundary": {
-        "formalize": [
-          "component id and owner surface",
-          "activation stage",
-          "scope tags",
-          "declared commands or proof hooks",
-          "review or closure hint"
-        ],
-        "leave_flexible": [
-          "local implementation steps inside the bounded component",
-          "task-specific validation beyond declared minimum hooks",
-          "agent judgment about whether the component is sufficient for the current slice",
-          "module-owned domain rules"
-        ],
-        "must_not": [
-          "become a scheduler",
-          "replace active planning state",
-          "serve as a peer generic repo-guidance language",
-          "turn ordinary guidance, checks, or procedures into a durable component",
-          "move planning or memory domain ownership into workspace config"
-        ]
-      },
-      "migration_posture": {
-        "compatibility_rule": "Existing obligations remain readable and reportable while specialized consumers exist; defaults and public docs must identify this format as compatibility-only.",
-        "markdown_role": "Scoped Markdown is the primary ordinary authoring surface for repo guidance, procedures, checks, and protections.",
-        "promotion_rule": "Do not promote generic guidance into this format. Retain an obligation only when a concrete stage-bound lifecycle gate cannot be represented by scoped Markdown or typed proof/evidence authority."
-      },
-      "ordinary_authoring_surface": {
-        "fields": "paths plus optional read, use, checks, and protect",
-        "migration_rule": "Move generic guidance, checks, and procedures to scoped Markdown; do not promote them into workflow obligations.",
-        "owner": ".agentic-workspace/instructions/*.md"
-      },
-      "specialized_compatibility_family": {
-        "attachment_points": [
-          "legacy stage-bound lifecycle compatibility",
-          "module-relevant proof or review hooks",
-          "startup, config, planning, memory, or adapter-surface scope tags"
-        ],
-        "fields": [
-          {
-            "field": "summary",
-            "purpose": "specialized lifecycle expectation that cannot be expressed as ordinary scoped guidance",
-            "required": true
-          },
-          {
-            "field": "stage",
-            "purpose": "lifecycle position where the component applies",
-            "required": true
-          },
-          {
-            "field": "scope_tags",
-            "purpose": "module, surface, or work-scope tags that activate the component",
-            "required": true
-          },
-          {
-            "field": "commands",
-            "purpose": "bounded proof, refresh, or inspection commands expected at that stage",
-            "required": true
-          },
-          {
-            "field": "review_hint",
-            "purpose": "compact reminder for review, handoff, or closure surfaces",
-            "required": false
-          }
-        ],
-        "id": "workflow_obligation",
-        "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]"
-      },
-      "rule": "Scoped Markdown is the ordinary repo-guidance surface. This contract is compatibility-only metadata for genuinely stage-bound lifecycle obligations that still need selective reporting or closeout gates.",
-      "schema_version": "agentic-workspace/workflow-definition-format/v1"
-    },
-    "fields": [
-      {
-        "field": "summary",
-        "purpose": "bounded repo-local expectation worth surfacing into active work"
-      },
-      {
-        "field": "stage",
-        "purpose": "when the obligation matters"
-      },
-      {
-        "field": "force",
-        "purpose": "whether the matched obligation is informational, recommended, required, or blocking"
-      },
-      {
-        "field": "scope_tags",
-        "purpose": "which slices or surfaces should consider the obligation relevant"
-      },
-      {
-        "field": "commands",
-        "purpose": "bounded commands or checks the repo expects before the stage completes"
-      },
-      {
-        "field": "review_hint",
-        "purpose": "compact reminder for review or closure surfaces"
-      }
-    ],
-    "must_not": [
-      "turn workflow obligations into a general scheduler",
-      "present stage plus scope_tags plus commands as a peer ordinary authoring model",
-      "move planning ownership into workspace config",
-      "encode every minor preference as a workflow obligation"
-    ],
-    "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
+    "rule": "Author reusable repository guidance, checks, procedures and protections in scoped Markdown.",
+    "owner_surface": ".agentic-workspace/instructions/*.md",
     "ordinary_authoring_surface": ".agentic-workspace/instructions/*.md",
-    "rule": "Author ordinary repo guidance in `.agentic-workspace/instructions/*.md`. Use workflow obligations only as compatibility metadata for a concrete stage-bound lifecycle consumer.",
-    "status": "specialized-compatibility-only",
-    "supported_forces": [
-      "informational",
-      "recommended",
-      "required-before-closeout",
-      "blocking"
+    "fields": [
+      "paths",
+      "read",
+      "use",
+      "checks",
+      "protect"
     ],
-    "supported_stages": [
-      "pre-work",
-      "before-claiming-completion",
-      "before-commit",
-      "review",
-      "closeout"
+    "consumption_rule": [
+      "Current instruction applicability selects relevant guidance; proof remains with Verification."
     ]
   },
   "assurance_onboarding": {
@@ -966,30 +847,32 @@
     "command": "agentic-workspace config --target ./repo --format json",
     "path": ".agentic-workspace/config.toml",
     "rules": [
-      "Missing fields use product defaults.",
-      "Normal update execution stays behind agentic-workspace.",
-      "Repo config may change module update intent without creating separate public module upgrade entrypoints."
+      "Shared and local configuration use one closed grammar without a version marker.",
+      "Missing choices use their current owner defaults.",
+      "Proof definitions belong in the Verification manifest; runtime observations and owner outcomes are not human configuration."
     ],
     "supported_fields": [
+      "modules.independent",
       "modules.enabled",
+      "workspace.enabled",
       "workspace.agent_instructions_file",
       "workspace.workflow_artifact_profile",
       "workspace.improvement_latitude",
-      "workspace.optimization_bias",
-      "workspace.advanced_features",
       "workspace.cli_invoke",
       "system_intent.sources",
       "system_intent.preferred_source",
-      "workflow_obligations.<name>.summary",
-      "workflow_obligations.<name>.stage",
-      "workflow_obligations.<name>.force",
-      "workflow_obligations.<name>.scope_tags",
-      "workflow_obligations.<name>.commands",
-      "workflow_obligations.<name>.review_hint",
-      "update.modules.<module>.source_type",
-      "update.modules.<module>.source_ref",
-      "update.modules.<module>.source_label",
-      "update.modules.<module>.recommended_upgrade_after_days"
+      "assurance.default_level",
+      "assurance.agent_may_escalate",
+      "assurance.agent_may_deescalate",
+      "assurance.strict_closeout",
+      "assurance.decision_record_target",
+      "assurance.decision_record_fallback",
+      "assurance.decision_delegations",
+      "assurance.instruction_revision",
+      "assurance.decision_record_revision",
+      "payload.target_release",
+      "payload.minimum_capabilities",
+      "payload.policy"
     ]
   },
   "continuation_state": {
@@ -1058,12 +941,10 @@
     ],
     "command": "agentic-workspace defaults --section delegation_posture --format json",
     "config_controls": [
-      ".agentic-workspace/config.local.toml runtime.supports_internal_delegation",
-      ".agentic-workspace/config.local.toml runtime.strong_planner_available",
-      ".agentic-workspace/config.local.toml runtime.cheap_bounded_executor_available",
-      ".agentic-workspace/config.local.toml handoff.prefer_internal_delegation_when_available",
-      ".agentic-workspace/config.local.toml delegation_targets.<target>.*",
-      ".agentic-workspace/delegation-outcomes.json"
+      ".agentic-workspace/config.local.toml delegation.assignment_policy",
+      ".agentic-workspace/config.local.toml delegation.transport_authority",
+      ".agentic-workspace/config.local.toml delegation_targets.<target>.transports",
+      ".agentic-workspace/config.local.toml safety.safe_to_auto_run_commands"
     ],
     "outcome_feedback_fields": [
       "route chosen",
@@ -2417,17 +2298,15 @@
           "suggest": "recommend a stronger planner or handoff packet; do not execute the weak target automatically"
         },
         "quality_over_cost": "Cost saving is valid only after capability fit and proof expectations remain safe.",
-        "rule": "A weak target may save tokens only for work inside its advertised fit. When runtime_resolution marks a weak target below the recommended strength for boundary-shaping or reasoning-heavy work, the target must not execute directly; it must escalate, request a stronger planner, or return a compact manual handoff depending on delegation.mode."
+        "rule": "A weak target may save tokens only for work inside its advertised fit. When runtime_resolution marks a weak target below the recommended strength for boundary-shaping or reasoning-heavy work, the target must not execute directly; it must escalate, request a stronger planner, or return a compact manual handoff within canonical transport authority and the independent safety ceiling."
       }
     },
     "delegation_control": {
       "default": "manual",
       "field": "delegation.transport_authority",
       "mode_semantics": {
-        "auto": "permit automatic delegation only when local safety and target rules allow it",
-        "manual": "prepare handoff packets or prompts only",
-        "off": "do not recommend local delegation targets",
-        "suggest": "recommend a target and rationale, but do not execute"
+        "automatic": "permit automatic delegation only when local safety and target rules allow it",
+        "manual": "prepare handoff packets or prompts only"
       },
       "quality_first_rule": "Delegation should improve quality where it matters and is worth the overhead; token saving is valid only when safe and not quality-compromising.",
       "supported_modes": [
@@ -2553,52 +2432,20 @@
       "path": ".agentic-workspace/config.local.toml",
       "status": "supported-local-only",
       "supported": true,
-      "supported_capability_classes": [
-        "boundary-shaping",
-        "reasoning-heavy",
-        "mixed",
-        "mechanical-follow-through"
-      ],
       "supported_clarification_modes": [
         "ask-first",
         "suggest",
         "auto-continue"
-      ],
-      "supported_delegation_modes": [
-        "off",
-        "manual",
-        "suggest",
-        "auto"
       ],
       "supported_assignment_policies": [
         "local-preferred",
         "best-fit-advisory",
         "required-best-fit"
       ],
-      "supported_orchestration_execution_roles": [
-        "ordinary-executor",
-        "orchestrator",
-        "bounded-worker"
-      ],
-      "supported_underfit_behaviors": [
-        "stay-when-safe",
-        "prepare-manual-escalation",
-        "require-delegation"
-      ],
-      "supported_down_routing_behaviors": [
-        "never",
-        "bounded-mechanical-work",
-        "when-cheaper-safe-target-exists"
-      ],
       "supported_human_override_policies": [
         "explicit-only",
         "allowed-with-recorded-reason",
         "disallowed"
-      ],
-      "supported_manual_transport_policies": [
-        "disabled",
-        "allowed",
-        "required-when-no-automatic-method"
       ],
       "supported_transport_authorities": [
         "manual",
@@ -2611,48 +2458,31 @@
         "delegation.current_target"
       ],
       "supported_fields": [
+        "workspace.enabled",
         "workspace.cli_invoke",
         "workspace.shared_config_path",
-        "workspace.maintainer_mode",
-        "runtime.supports_internal_delegation",
-        "runtime.strong_planner_available",
-        "runtime.cheap_bounded_executor_available",
-        "handoff.prefer_internal_delegation_when_available",
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
-        "delegation.mode",
-        "delegation.execution_role",
         "delegation.assignment_policy",
         "delegation.transport_authority",
-        "delegation.selection_objective",
         "delegation.current_target",
-        "delegation.underfit_behavior",
-        "delegation.down_routing_behavior",
         "delegation.human_override_policy",
-        "delegation.manual_transport_policy",
+        "delegation.required_execution_guarantees",
         "clarification.mode",
-        "local_memory.enabled",
-        "local_memory.path",
-        "delegation_targets.<target>.strength",
+        "session_logging.enabled",
+        "session_logging.path_mode",
+        "delegation_targets.<target>.target_id",
+        "delegation_targets.<target>.target_revision",
+        "delegation_targets.<target>.aliases",
+        "delegation_targets.<target>.identity_status",
+        "delegation_targets.<target>.execution_guarantees",
         "delegation_targets.<target>.location",
         "delegation_targets.<target>.confidence",
-        "delegation_targets.<target>.task_fit",
-        "delegation_targets.<target>.capability_classes",
         "delegation_targets.<target>.transports",
-        "delegation_targets.<target>.model_family",
-        "delegation_targets.<target>.provider",
-        "delegation_targets.<target>.context_capacity",
         "delegation_targets.<target>.cost_class",
         "delegation_targets.<target>.latency_class",
         "delegation_targets.<target>.forbidden_task_classes",
-        "delegation_targets.<target>.confidence_source",
-        "delegation_targets.<target>.last_evaluation"
-      ],
-      "supported_target_context_capacities": [
-        "small",
-        "medium",
-        "large",
-        "unknown"
+        "delegation_targets.<target>.confidence_source"
       ],
       "supported_target_cost_classes": [
         "cheap",
@@ -2660,17 +2490,12 @@
         "premium",
         "unknown"
       ],
-      "supported_target_execution_methods": [
-        "internal",
-        "cli",
-        "api",
-        "manual"
-      ],
       "supported_target_transport_kinds": [
         "internal",
         "process",
         "api",
-        "manual"
+        "manual",
+        "native"
       ],
       "supported_target_latency_classes": [
         "fast",
@@ -2682,17 +2507,6 @@
         "local",
         "external",
         "either"
-      ],
-      "supported_target_reasoning_profiles": [
-        "weak",
-        "balanced",
-        "strong",
-        "unknown"
-      ],
-      "supported_target_strengths": [
-        "strong",
-        "medium",
-        "weak"
       ]
     },
     "local_scratch": {
@@ -2763,7 +2577,7 @@
           "capability_mismatch",
           "proof_burden=high",
           "required_action=escalate-before-execution",
-          "delegation.mode human control"
+          "delegation.transport_authority human control"
         ],
         "may_influence": [
           "handoff detail",
@@ -2978,7 +2792,7 @@
       "proof requirements",
       "canonical state semantics"
     ],
-    "owner_surface": "workspace",
+    "owner_surface": "product rendering policy",
     "rule": "Repo-owned optimization bias may change output density and residue style, but it must not change execution method or canonical state semantics.",
     "supported_modes": [
       {
@@ -3261,9 +3075,8 @@
   "recovery": {
     "canonical_doc": "docs/environment-recovery-contract.md",
     "effective_output_posture": {
-      "command": "agentic-workspace config --target ./repo --format json",
-      "field": "workspace.optimization_bias",
-      "rule": "When startup or recovery needs the effective repo output posture, inspect it through config instead of inferring it from rendered report density alone."
+      "command": "agentic-workspace defaults --section optimization_bias --format json",
+      "rule": "Output rendering follows the current product policy; reusable style preferences belong in scoped instructions."
     },
     "handoff_surfaces": [
       ".agentic-workspace/bootstrap-handoff.md",

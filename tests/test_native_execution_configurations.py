@@ -19,7 +19,7 @@ def fixture(root: Path):
     source = root / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
     source.write_text(
-        'schema_version=1\n[safety]\nsafe_to_auto_run_commands=true\n[delegation]\ntransport_authority="automatic"\ncurrent_target="local"\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n[delegation_targets.worker]\nstrength="strong"\ntransports=[{kind="process",command=['
+        '[safety]\nsafe_to_auto_run_commands=true\n[delegation]\nassignment_policy="required-best-fit"\ntransport_authority="automatic"\ncurrent_target="local"\n[delegation_targets.local]\ntransports=[{kind="internal"}]\n[delegation_targets.worker]\nconfidence=0.4\nconfidence_source="human estimate"\ntransports=[{kind="process",command=['
         + json.dumps(str(executable))
         + "]}]\n"
     )
@@ -33,12 +33,6 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     def call(value):
         return consume(surface, shared_core_binary, native_cli, value)
 
-    source.write_text(
-        source.read_text()
-        .replace("schema_version=1", "schema_version=2")
-        .replace('strength="weak"\n', "")
-        .replace('strength="strong"\n', 'confidence=0.4\nconfidence_source="human estimate"\n')
-    )
     first = call(context)
     judgment = first["task_requirements"]["requests"][0]
     judgment["arguments"]["required_result_classes"] = ["read-only"]
@@ -46,7 +40,6 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     rows = {r["configuration"]["id"]: r for r in offered["configurations"]["candidates"]}
     human = next(row for row in offered["target_context"] if row["target"] == "worker")
     assert human["human_prior"]["confidence"] == 0.4
-    assert human["former_observations"]["status"] == "not-admitted-by-configuration"
     assert rows["local:internal"]["eligible"] is True
     assert rows["worker:cli"]["eligible"] is True
     assert rows["worker:cli"]["configuration"]["result_classes"] == ["read-only", "unapplied-patch"]
@@ -98,7 +91,7 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_missing_capability_safety_manual_and_former_source_preserved(tmp_path, shared_core_binary, native_cli, surface):
+def test_missing_capability_and_safety_keep_execution_unavailable(tmp_path, shared_core_binary, native_cli, surface):
     source, executable, context = fixture(tmp_path)
     executable.unlink()
 
@@ -114,25 +107,10 @@ def test_missing_capability_safety_manual_and_former_source_preserved(tmp_path, 
     assert "execution-return-unconstructible" in rows["worker:cli"]["reasons"]
     assert rows["worker:manual"]["eligible"] is False
     assert "execution-return-unconstructible" in rows["worker:manual"]["reasons"]
-    source.write_text(
-        source.read_text()
-        .replace('transport_authority="automatic"', 'manual_transport_policy="disabled"')
-        .replace("safe_to_auto_run_commands=true", "safe_to_auto_run_commands=false")
-    )
+    source.write_text(source.read_text().replace("safe_to_auto_run_commands=true", "safe_to_auto_run_commands=false"))
     rows = {r["configuration"]["id"]: r for r in preview()["configurations"]["candidates"]}
-    assert "worker:manual" not in rows
+    assert rows["worker:manual"]["eligible"] is False
     assert "independent-safety-ceiling" in rows["worker:cli"]["reasons"]
-    former = tmp_path / ".agentic-workspace/config.toml"
-    former.write_text('schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\n')
-    before = former.read_bytes()
-    preview()
-    observed = consume(surface, shared_core_binary, native_cli, context)
-    assert any(
-        row["field"] == "delegation.assignment_policy" and row["source"] == ".agentic-workspace/config.toml"
-        for row in observed["configuration"]["residuals"]
-    )
-    assert any("effect:implementation" in row["affects"] for row in observed["decision_packet"]["blockers"])
-    assert former.read_bytes() == before
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -140,7 +118,7 @@ def test_native_adapter_and_unknown_transport_do_not_become_capabilities(tmp_pat
     source, _, context = fixture(tmp_path)
     with source.open("a") as stream:
         stream.write(
-            '[delegation_targets.native]\nstrength="strong"\ntransports=[{kind="native",adapter="provider-owned",parameters={}}]\n'
+            '[delegation_targets.native]\nconfidence=0.4\nconfidence_source="human estimate"\ntransports=[{kind="native",adapter="provider-owned",parameters={}}]\n'
         )
     before = source.read_bytes()
     first = consume(surface, shared_core_binary, native_cli, context)
@@ -169,11 +147,11 @@ def test_native_adapter_and_unknown_transport_do_not_become_capabilities(tmp_pat
     source.write_bytes(before)
 
     with source.open("a") as stream:
-        stream.write('[delegation_targets.invalid]\nstrength="weak"\ntransports=[{kind="process",command=["ignored"],invented=true}]\n')
+        stream.write('[delegation_targets.invalid]\ntransports=[{kind="process",command=["ignored"],invented=true}]\n')
     invalid_bytes = source.read_bytes()
     invalid = consume(surface, shared_core_binary, native_cli, context)
-    assert invalid["task_requirements"]["requests"] == []
-    assert any(row["code"].startswith("invalid-config:") for row in invalid["decision_packet"]["blockers"])
+    assert invalid["status"] == "blocked"
+    assert invalid["managed_state_interpreted"] is False
     assert source.read_bytes() == invalid_bytes
 
 

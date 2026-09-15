@@ -2,17 +2,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workspace-config.schema.json",
   "title": "Agentic Workspace Repo Config",
-  "description": "Current human configuration authoring, version 2. Version 1 sources are read separately; never use former syntax for new settings.",
+  "description": "Human configuration. Unknown fields are rejected; absence uses owner defaults.",
   "type": "object",
-  "required": [
-    "schema_version"
-  ],
   "properties": {
-    "schema_version": {
-      "const": 2,
-      "default": 2,
-      "description": "Current authoring contract version."
-    },
     "execution_posture": {
       "type": "object",
       "maxProperties": 256,
@@ -392,7 +384,7 @@
           ]
         },
         "minimum_capabilities": {
-          "description": "Payload-owned install-target capabilities that must be present in checked-in payload provenance before the target is satisfied. The same capability cannot also appear in cli_compatibility.required_capabilities.",
+          "description": "Payload-owned install-target capabilities that must be present in checked-in payload provenance before the target is satisfied.",
           "type": "array",
           "items": {
             "type": "string",
@@ -415,37 +407,6 @@
             "required-before-work"
           ],
           "default": "advisory"
-        }
-      },
-      "additionalProperties": false
-    },
-    "cli_compatibility": {
-      "description": "Expected CLI identity and posture for commands executed in this repo.",
-      "type": "object",
-      "default": {},
-      "x-agentic-workspace-doc-role": "maintainer",
-      "x-agentic-workspace-unknown-properties": "warn",
-      "not": {
-        "required": [
-          "minimum_version",
-          "exact_version"
-        ]
-      },
-      "properties": {
-        "minimum_reader_epoch": {
-          "description": "Minimum pre-state compatibility reader epoch required before this repository's managed state may be interpreted.",
-          "type": "integer",
-          "minimum": 1
-        },
-        "required_reader_capabilities": {
-          "description": "Root-reader capabilities required before generated handlers or managed repository state may be loaded.",
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          },
-          "uniqueItems": true,
-          "default": []
         }
       },
       "additionalProperties": false

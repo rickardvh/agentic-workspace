@@ -73,15 +73,11 @@ If no applicable concern remains, finish without creating configuration or state
    Byte convergence does not settle unresolved semantic source dispositions or
    establish proof, review acceptance or completion of broader adoption intent.
 
-## Current authoring and former sources
+## Configuration grammar
 
-New sources use `schema_version = 2`. Version 1 is bounded source recognition,
-not an alternative current authoring mode. The exact writer checks the selected
-new value against the current schema while preserving unrelated former material,
-comments and the existing version. Do not upgrade or retire a whole source as a
-side effect of one setting change. Deprecated/read-only fields are not current
-choices. A read-choice result without an edit request names the responsible
-repository/local source authoring route; it grants no edit or trust approval.
+Shared and local sources use their single closed schemas, with no version marker.
+Unknown fields are rejected. Exact edits preserve unrelated current choices and
+comments. An unavailable edit request grants no source or trust authority.
 
 Local enabled/cli_invoke override shared availability/invocation defaults, including
 shared-local then checkout-local precedence. Independent proof, source admission,
@@ -100,22 +96,13 @@ preparation. `scripts/run_agentic_workspace.py` selects that checkout's paired
 pair. An unavailable runtime supplies no Assignment or configuration permission.
 Installed bindings continue to use their artifact-verified native distribution.
 
-When a smaller canonical local source coexists with `agentic-workspace.local.toml`,
-explicit canonical fields take precedence, while omitted choices remain derived
-from the former source and visible as current dependencies. Preserve that source.
-Do not claim retirement from a new filename or successful startup. Once its
-meaning is represented in the current source, fresh resolution must work without
-the former representation. Deprecated fields do not acquire new semantics from
-this derivation; unresolved meaning remains with its current owner.
-
 For a relevant independent module, use its returned `configuration_request` and
 `configuration_schema`. Supply only the missing owner-specific settings through
 the resulting Configuration edit; retain unrelated module admissions. Do not add
 module-name branches or a fixed module questionnaire to this procedure.
 
 Read Assignment's execution configurations for actual constructibility and its
-named gaps. Configured internal-delegation support is a preference/declaration,
-not evidence that the host session permits dispatch. Report visibility,
+named gaps. A declared internal transport is not evidence that the host session permits dispatch. Report visibility,
 persistence, resumability and cleanup as unknown unless the current adapter
 guarantees them. Discovery must not create provider work. Any real probe uses
 the existing bounded Assignment/transport operation and its cleanup owner.
@@ -126,8 +113,7 @@ should need no writes for settled choices. Deferred optional choices stay with
 their existing owner and do not force unrelated direct work through this skill.
 
 Shared policy stays stronger than local preference. Preserve unrelated keys,
-comments and files. Former source intent must be represented, explicitly
-resolved, or remain an affected-behavior blocker before its source is retired.
+comments and files.
 
 Keep task answers with Assignment, learned outcomes with target evidence, and
 proof strategy/evidence with Verification. Shared/local config holds durable
@@ -139,11 +125,8 @@ is not evidence that broader configure-once, proof or completion intent is met.
 
 Verification policy definitions are authored in the existing Verification manifest,
 using its package-owned assurance schema. Only proof_profiles, domain_proof_lanes,
-requirements and subsystem_profiles have supported native destinations. Reject
-competing former/shared and manifest sources even when equal. Preserve unsupported
-closeout_postures, classifier and decision/registry/test-data
-conventions until their source owner confirms each destination or retirement;
-never translate them wholesale or infer a trust revision from HEAD.
+requirements and subsystem_profiles belong there. Task-bound waivers and source
+currentness are owner judgments, never configuration fields.
 
 Author and preserve `assurance.strict_closeout` as current shared configuration
 policy. When true, it requires a current task-bound Verification claim judgment
@@ -163,38 +146,9 @@ For Assignment, author canonical transports with the selected adapter's validate
 parameters. Keep repository requirements/preferences separate from local identity,
 capability declarations and hard prohibitions. Keep confidence/provenance as human
 priors and cost/latency as rough preferences. Observed outcomes/economics belong
-to their evidence owner. Former aliases may be derived only where equivalent;
-omitted former/shared-local intent survives until represented or explicitly
-retired. Do not replace removed ranking hints with invented guarantees.
+to their evidence owner. Do not replace human ranking preferences with invented
+guarantees. Durable selection guidance belongs to scoped instructions.
 
-## Retiring former guidance and local/package controls
-
-Current authoring has no workflow_obligations, local_overlay, local_memory,
-runtime observation/handoff bags or independently updated module policy. For each
-former entry, separate durable guidance/constraints, proof, original source or
-template references, current observations and useful unanswered questions. Use
-existing scoped instructions and Verification with the original strength, scope
-and shared/local authority. Reobserve stale facts; retain questions only through
-the responsible continuation owner when useful. Never bulk-translate prose or
-promote local material into shared evidence.
-
-A candidate instruction destination can be written through its exact independent
-authorization while former guidance remains blocking for other work. Confirm its
-meaning and admission before the source owner retires the old entry. The write
-neither retires config nor refreshes trust pins. Reenter with relevant and unrelated
-scope and confirm no old form is recreated. Unknown mandatory meaning remains an
-owner blocker, not a successful migration.
-
-All six former local_memory controls are unsupported native topology selections.
-Use the reported explicit-source metadata to distinguish missing, empty,
-inaccessible/unconfined and present-unclassified material. Do not read an empty
-default instead, infer a user-home location, copy private content or retire useful
-material from its mere absence in a review. Repository Memory is a distinct source;
-target guidance and corrections retain their own owners and lifetimes.
-
-Keep payload target_release/minimum_capabilities/policy and reader
-minimum_reader_epoch/required_reader_capabilities as deliberate floors. Derive
-artifact contents/identity and reader contract facts. Former dogfood_latest can
-be represented by source-current only while preserving any explicit target and
-floor. Former module update provenance or incompatible reader pins require their
-source owner's disposition. Payload choices still name only artifact-owned files.
+Keep payload target_release/minimum_capabilities/policy as deliberate requirements.
+Artifact contents, identity and reader facts come from the executing artifact.
+Payload choices name only artifact-owned files; private state stays with its owner.

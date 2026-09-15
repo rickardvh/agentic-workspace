@@ -23,7 +23,7 @@ def test_advisory_capture_keeps_decision_authority_separate(tmp_path, shared_cor
     (archive / "README.md").write_text("Repository owns material decisions.")
     subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
     revision = _commit_native(tmp_path)
-    config.write_text(f'schema_version=1\n[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n')
+    config.write_text(f'[assurance]\ndecision_record_target="docs/decisions"\ndecision_record_revision="{revision}"\n')
     context = {"target": str(tmp_path), "task": "Retain a useful advisory observation", "changed": ["src/core.rs"]}
 
     def call(**extra):
@@ -167,7 +167,7 @@ def test_bounded_decision_capture_recall_and_currentness(tmp_path: Path, shared_
     assert [row["id"] for row in reconciled["consequences"]] == ["fixture:reconciled-decision"]
     assert source.read_bytes() == original
     config = tmp_path / ".agentic-workspace/config.toml"
-    config.write_text('schema_version=1\n[assurance]\ndecision_record_target="docs/decisions"\n')
+    config.write_text('[assurance]\ndecision_record_target="docs/decisions"\n')
     promoted_owner = call()
     assert promoted_owner["memory"]["capture"]["status"] == "stronger-owner-required"
     assert not promoted_owner["decision_packet"]["decision_context"]["consequences"]
@@ -178,7 +178,7 @@ def test_bounded_decision_capture_recall_and_currentness(tmp_path: Path, shared_
 def test_fallback_defers_to_configured_repository_owner(tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[assurance]\ndecision_record_target="docs/decisions"\n')
+    config.write_text('[assurance]\ndecision_record_target="docs/decisions"\n')
     result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Fixture", "changed": ["a.rs"]})
     assert result["memory"]["capture"]["status"] == "stronger-owner-required"
     assert result["memory"]["capture"]["requests"] == []
@@ -260,7 +260,7 @@ def test_native_supersession_retains_git_admitted_ancestor_locator(
     original = former.read_bytes()
     revision = _commit_native(tmp_path)
     (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version=1\n[modules]\nenabled=["memory"]\n[assurance]\n'
+        '[modules]\nenabled=["memory"]\n[assurance]\n'
         f'decision_record_fallback={{archive=".agentic-workspace/memory/repo/decisions",admitted_revision="{revision}"}}\n'
     )
     context = {"target": str(tmp_path), "task": "Fixture mixed-source supersession", "changed": ["src/core.rs", "src/new.rs"]}

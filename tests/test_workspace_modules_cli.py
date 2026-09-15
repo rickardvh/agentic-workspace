@@ -65,14 +65,12 @@ def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) ->
     assert "configurable AGENTS.md" in posture_model["purpose"]
     assert "optimization_bias" in " ".join(posture_model["inputs"])
     assert "authority_boundaries" in posture_model["fields"]
-    assert "workflow obligations" in posture_model["composition_rule"]
     dynamic_projection = participation_model["dynamic_instruction_projection"]
     assert "AGENTS.md remains" in dynamic_projection["static_adapter_role"]
     assert "forbidden actions" in dynamic_projection["projection_outputs"]
     posture_visibility = participation_model["posture_visibility_model"]
     assert "closeout" in posture_visibility["closeout_visibility"].lower()
     assert "source_surface" in posture_visibility["provenance_fields"]
-    assert participation_model["workflow_obligation_model"]["owner_surface"] == ".agentic-workspace/config.toml [workflow_obligations]"
     assert "force all modules into fixed loop slots" in participation_model["projection_boundaries"]["must_not"]
     assert {entry["module"] for entry in participation_model["first_party_examples"]} == {
         "planning",
@@ -517,16 +515,12 @@ def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypo
     assert "Read `signals.md` when the signals module is installed." not in rendered
     assert "Signal routing: `signals.md`" not in rendered
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in rendered
-    assert '<configured AW invocation> start --target . --task "<task>" --format json' in rendered
+    assert ".agentic-workspace/skills/workspace-startup/SKILL.md" in rendered
     assert "## Module Notes" not in rendered
 
 
-def test_workspace_agents_template_renders_resolved_cli_invocation() -> None:
+def test_workspace_agents_template_defers_invocation_to_current_config() -> None:
     rendered = cli._workspace_agents_template(selected_modules=[], descriptors={}, cli_invoke="uv run agentic-workspace")
-
-    assert "- canonical_source: `.agentic-workspace/config.toml` and `uv run agentic-workspace start --target . --format json`" in rendered
-    assert 'Run exactly `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers' in rendered
-    assert 'Use `start --target . --changed <path> --task "<task>" --format json`' in rendered
-    assert "Do not bake machine-local AW invocation paths into checked-in generic guidance" in rendered
-    assert "When implementing an issue, satisfy the intended end state in the ordinary path" in rendered
-    assert "use the effective CLI invocation from `agentic-workspace start" not in rendered
+    assert "canonical_source: `.agentic-workspace/config.toml`" in rendered
+    assert ".agentic-workspace/skills/workspace-startup/SKILL.md" in rendered
+    assert "uv run agentic-workspace" not in rendered

@@ -37,7 +37,7 @@ def _write(path: Path, text: str) -> None:
 
 def _prepare_summary_target(target: Path, *, closeout_count: int) -> None:
     install_bootstrap(target=target)
-    _write(target / ".agentic-workspace/config.toml", "schema_version = 1\n\n[workspace]\nenabled = true")
+    _write(target / ".agentic-workspace/config.toml", "\n[workspace]\nenabled = true")
     _write(
         target / ".agentic-workspace/planning/state.toml",
         """

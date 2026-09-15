@@ -1,4 +1,4 @@
-//! Actual existing local/shared source selection, no migration store or writes.
+//! Canonical local and explicitly selected shared-local sources.
 use crate::{CoreError, digest};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
@@ -16,28 +16,8 @@ pub(crate) fn load(target: &Path) -> Result<Source, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     let current = ".agentic-workspace/config.local.toml";
-    let former = "agentic-workspace.local.toml";
-    let mut selected = current;
-    let mut local = crate::native_config::load(&root, current, SCHEMA).map_err(CoreError::new)?;
+    let local = crate::native_config::load(&root, current, SCHEMA).map_err(CoreError::new)?;
     let mut sources = Vec::new();
-    if let Some((canonical, _)) = local.as_mut() {
-        if let Some((prior, revision)) =
-            crate::native_config::load(&root, former, SCHEMA).map_err(CoreError::new)?
-        {
-            // A smaller representation is not evidence that omitted human intent
-            // was retired. Derive missing choices from the same source owner; exact
-            // canonical fields still win. No source is rewritten or deleted.
-            let derived = crate::assignment_policy::merge(&prior, canonical);
-            let represented = derived == *canonical;
-            *canonical = derived;
-            sources.push(json!({"reference":former,"revision":revision,
-            "status":if represented {"represented-by-current-local-source"} else {"current-local-source-derivation"},
-            "rule":"Explicit canonical fields take precedence; omitted former intent remains a current dependency until represented or explicitly retired by its source owner. No source bytes modified."}));
-        }
-    } else {
-        selected = former;
-        local = crate::native_config::load(&root, former, SCHEMA).map_err(CoreError::new)?;
-    }
     let mut effective = json!({});
     if let Some((value, revision)) = local {
         if let Some(reference) = value["workspace"]["shared_config_path"].as_str() {
@@ -59,9 +39,8 @@ pub(crate) fn load(target: &Path) -> Result<Source, CoreError> {
             sources.push(json!({"reference":reference,"revision":revision,"status":"current-shared-local-source"}));
         }
         effective = crate::assignment_policy::merge(&effective, &value);
-        sources.push(
-            json!({"reference":selected,"revision":revision,"status":"current-local-source"}),
-        );
+        sources
+            .push(json!({"reference":current,"revision":revision,"status":"current-local-source"}));
     }
     let profiles: Vec<Value> = effective["delegation_targets"]
         .as_object()
