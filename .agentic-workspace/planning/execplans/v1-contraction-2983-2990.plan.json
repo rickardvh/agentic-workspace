@@ -12,9 +12,9 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "Addressed the external #3281 finding: returned-unadmitted now restricts implementation and completion even after local Assignment acceptance. #3282 includes the upstream fix. The changed heads await independent re-review and hosted checks; Candidate A remains Alpha and unpublished.",
+    "frontier": "Merged #3280/#3281/#3282 have external acceptance. #3274 and #2767 are administratively closed from accepted owner evidence. Immutable preview artifact ce0eef8cc89bbecdbda39fbe0051118dd9492eae passed hosted run 34946934597, public install/start and separate downloaded-byte/manifest-attestation verification. Candidate A retains Alpha; no stable or broader provider claim is made.",
     "owner": "#3275",
-    "residual_intent": "Independent acceptance of #2767/#3274, coherent maturity disposition, then exact immutable preview publication and verification. #2985 remains open."
+    "residual_intent": "Candidate B/C and final #2985 support-bearing admission remain open. Alpha-to-Beta promotion still needs representative evidence that compatibility change is mostly additive/refining. Publication reconciliation documentation needs independent review."
   },
   "execution_bounds": {
     "allowed paths": "Tracked product source, first-party packages, generated/released resources, tests, docs, workflows, release metadata, and canonical Planning records required by #2983-#2990.",
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Ready for independent re-review of corrected #3281 and updated dependent #3282. #3280 has external no-blocker review at d0578b7e3; do not infer stack acceptance, issue closure or preview publication from the implementation fix.",
+  "next_action": "Candidate A preview-v0.55.0 is published and verified from accepted master b5a7748a493a6ea257ec4ad5a9696336a66bfdf2. Independently review the publication/maturity documentation reconciliation. #2985 remains open; later feature candidates and final support-bearing admission are separate work.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -72,7 +72,10 @@
       "Candidate A #3275 implementation proof: source launcher 30 cases; configuration/source-policy/advisory 73 passed and one Windows file-symlink skip, plus 39 independent-module/repository-decision cases; Assignment/claim/execution 41 passed and all eight real process patch lifecycle cases; complete Rust workspace 129 passed/three helpers ignored; release/security 32 passed. Paired build, lint/clippy, generated-contract and strict payload checks passed. The first CI lane passed merge sufficiency/security but required missing release changesets, now supplied. Exact final hosted checks remain external observations, not independent acceptance.",
       "Dogfood reconciliation: prepared source launcher availability is repaired in #3280; smaller canonical local configuration no longer hides omitted current former-source intent. First managed generic completion claims now retain required Assignment non-admission in #3281. Obsolete member dependency locks are removed in release preparation; hosted alert closure awaits default-branch scan. Alpha is retained with unresolved representative-evidence and release inputs. No source-assurance trust revision is advanced.",
       "Operating-cost boundary: useful existing owner/transport proof lanes were reused; no new worker or review agent was launched. Configuration and process proof includes explicit fixture limitations. Total comparative agent cost remains unknown; the 8-case process lane took 309.80 seconds and 32-case release/security lane 11.85 seconds. Initial stale generated/payload/test fixture failures and missing changesets were corrected, not counted as successful first-pass proof.",
-      "2026-09-15 review fix: the external review correctly found implementation_admission was only descriptive. The Assignment owner now contributes a restriction after result-owner resolution; local acceptance does not clear unadmitted materialized/observed work. The native owner control covers later-local combinations; public ingress already rejects already-materialized transport, and the shared claim test verifies restriction/recovery. 28 public claim/Assignment cases, the focused Rust control, and eight real process lifecycle cases passed (326.60 seconds). Paired build, Clippy/Ruff and generated contracts pass. Windows temporarily prevented rebuilding a running binary; rebuild passed after tests completed. Total comparative agent cost remains unknown. This fixes implementation, not independent acceptance or issue completion."
+      "2026-09-15 review fix: the external review correctly found implementation_admission was only descriptive. The Assignment owner now contributes a restriction after result-owner resolution; local acceptance does not clear unadmitted materialized/observed work. The native owner control covers later-local combinations; public ingress already rejects already-materialized transport, and the shared claim test verifies restriction/recovery. 28 public claim/Assignment cases, the focused Rust control, and eight real process lifecycle cases passed (326.60 seconds). Paired build, Clippy/Ruff and generated contracts pass. Windows temporarily prevented rebuilding a running binary; rebuild passed after tests completed. Total comparative agent cost remains unknown. This fixes implementation, not independent acceptance or issue completion.",
+      "Candidate A publication 2026-09-15: accepted master b5a7748a493a6ea257ec4ad5a9696336a66bfdf2 is the exact single parent of immutable preview-v0.55.0 artifact ce0eef8cc89bbecdbda39fbe0051118dd9492eae. Hosted run 34946934597 passed three runtime jobs, artifact/install/redistribution/security/provenance/checksum/public-byte checks; public smoke returned runtime 0.55.0. Separate trusted Git-object admission and download verification returned complete:true for 13 assets; downloaded manifest attestation verified successfully. Exact manifest SHA-256 bf04966bff10f1fb16889d52098b8f5f5acef5a74126c1f581fdefa395f5930d. Maturity remains Alpha.",
+      "Closure reconciliation reuses independent #3281 corrected-head acceptance for #3274 and #3280 plus accepted #3178/#3185/#3230/#3241/#3252/#3254 owner evidence for #2767; both are now closed. The user had already closed #3275 administratively before release; closure alone was not used as proof. #2985 remains open. No source-assurance trust revision is advanced. Historical source admissions remain unchanged.",
+      "Operating cost/recovery: source launcher succeeds after paired build without an explicit core environment override. The release resource owner refused cleanup of hook-created unleased caches/output. Those exact new paths were preserved in task scratch, uv removed its 2360 cache files (88.5 MiB), and native worktree removal committed; unrelated worktrees remain untouched. Direct coordinated verification from the development checkout correctly rejected the version mismatch; exact-tag admission verified Git objects instead. Hosted Dependabot alerts 1-3 still report removed member locks open; current source/security passed but hosted alert closure is not claimed. Total comparative cost remains unknown."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -144,7 +147,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 48,
+  "revision": 49,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -196,18 +199,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/3c97f2c06176c9d6273307c722075ad5f56c89f7e123cea6cd6fd0bceba81544.attempt.json",
-        "revision": "sha256:e7f7efeb0fb508edebcd854bae074967283d136092834ac614466bc00942c0f1",
+        "path": ".agentic-workspace/local/effects/7c72005301bc251069695ef3c11ec87087ab113680c71a2f1e398e1ea16b6e47.attempt.json",
+        "revision": "sha256:2fcf3dcd71944c7eade965c36500f5c6ed654113fc17d0f553a7043bd6ef3201",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/3c97f2c06176c9d6273307c722075ad5f56c89f7e123cea6cd6fd0bceba81544.result.json",
-        "revision": "sha256:f67b4365c54dfbc0ea4d918140df5b7b66cbd48053430f0a28894eb39d52513e",
+        "path": ".agentic-workspace/local/effects/7c72005301bc251069695ef3c11ec87087ab113680c71a2f1e398e1ea16b6e47.result.json",
+        "revision": "sha256:0123bdd706a04b9960b0a7de5001fdec50c853034602e0cf7ee2f616c336795b",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:aba270b041317abfa698e51c894b4aafc0ac53a42f5f6b4055b69ba35a2157b2",
+    "invocation_revision": "sha256:a6b35c29dedcd74e15e17860a31d624889123cb277b5d60b5403d76f31dc661e",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -215,7 +218,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:0e00a035690ef001db145db3792900bf35c500d49c4d6581231cc6168a9fc990",
+        "document_revision": "sha256:d0631f5426ba05e6445981a76506d674a3bf02155b946abf5602d9cc6668e09f",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }

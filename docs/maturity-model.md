@@ -37,17 +37,14 @@ This table describes public support maturity, not feature count. A capability ca
 
 ### Candidate A disposition (#3275)
 
-Candidate A retains **Alpha**. The configuration convergence (#2767) and required
-Assignment admission (#3274) changes need independent acceptance and representative
-ordinary-agent evidence at the accepted source revision. Passing implementation
-tests does not settle whether remaining compatibility changes are mostly additive.
-The exact Candidate A preview's installed-runtime, security and published-byte
-evidence is also still required. These are unresolved promotion inputs, so no
-classifier or separate informal Beta label is advanced by the implementation stack.
-
-After independent acceptance, reconcile this disposition against the rule below
-using the exact accepted source and release evidence. A preview publication alone
-does not promote maturity or complete the broader #2985 intent.
+Candidate A retains **Alpha**. Configuration convergence (#2767) and required
+Assignment admission (#3274) are independently accepted and merged. The
+[published preview evidence](maintainer/native-release-topology.md#candidate-a-publication-record)
+establishes the exact artifact's runtime, security and public-install behavior.
+It does not establish that expected compatibility changes are now mostly additive
+or refining. Representative ordinary-agent evidence supporting that maturity claim
+remains unresolved; no classifier or informal Beta label is advanced by correctness
+acceptance or preview publication. The broader #2985 intent remains open.
 
 ### Required agreement
 
