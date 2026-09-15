@@ -101,3 +101,103 @@ form-structure fidelity without a new CI lane or adapter matrix. All 34 focused
 issue-body/agent-aid cases pass. The earlier measurement remains a pre-correction
 trace; it is not relabeled as a measurement of the corrected helper. Independent
 recheck is still required.
+
+## Trusted review preparation (#3261)
+
+The ordinary independent-review skill now names one standard-library helper,
+loaded from exact selected trusted Git bytes with Python isolated imports. The
+review subject never selects or supplies executable tooling. Eligibility is an
+external custody judgment; the helper's assertion is not proof of independence.
+No review or approval of the implementation was performed by its implementer.
+
+The existing GitHub GET transport is sufficient for collection: PR, all file
+pages, reviews, inline comments, issue comments, head checks/statuses and linked
+issue observations. Exact Git object reads supply trusted helper/procedure and
+ancestor guidance identities. Current AW route/procedure references already
+select the review skill; no new operating-decision, why/detail API or review
+runtime is needed. Exact external pagination and comparison were the missing
+deterministic mechanics.
+
+The fixture has 101 files and one linked issue. First preparation and recheck each
+perform nine logical GETs (pagination adds physical requests when required), one
+Git tree listing and five exact Git blob reads (four guidance files plus helper).
+Both reobserve external state; none of those reads is cached across an authority
+barrier. The first compact-serialized packet is 29215 bytes and unchanged recheck
+15384 bytes. Seven unchanged evidence bodies are replaced by exact prior identity
+references. Obligations are retained unchanged. A lost comparison returns full
+preparation. Source IDs/digests are carried; they are not semantic acknowledgment.
+
+Manual collection requires those nine logical requests plus guidance reads and
+model assembly/comparison. The executable path exposes one caller invocation for
+first review or recheck. This is procedure/transport accounting, not an experiment
+measuring inference calls. A pre-final fixture sample spent 1.839 ms collecting
+and 1.552 ms rechecking after imports, excluding real network and process latency.
+It establishes no live latency or total-agent-cost improvement. Fixture calls
+have zero retries; the implementation corrected one fixture's moved-head counter
+and restored explicit creation-skill closure terms exposed by the existing
+workflow checks. Real network, credential and provider costs remain unknown.
+
+Permanent proof adds one repo-helper owner suite for complete pagination, exact
+subject/unknown evidence, review-only delta/obligation preservation and trusted
+loader rejection of worktree replacement. It extends existing workflow skill
+checks, not semantic verdict tests or a new CI constituent. #3262's formatter
+tests remain the separate semantic-input preservation owner.
+
+**Delta disposition: REVIEW_ONLY.** No second materially different delta consumer
+has demonstrated a generic need. Review observations must not be memoised as
+current authority; no cache, event ledger or session owner is added. The shared
+#3263 need is only selected executable material identity/availability, not review
+collection, comparison semantics or an executor.
+
+## Predecessor reconciliation before deriving #3263
+
+Baseline: accepted master `7cfca6a17`, which includes Candidate A and #3285/#3286.
+#3059, #2981 and #2661 were already administratively closed when reobserved.
+Their latest comments ask for this reconciliation; closure itself is not used as
+proof. The table numbers refer to the ordered acceptance checkboxes in each
+issue's current body. Grouped rows disposition every criterion without converting
+these closed reconstruction owners into future optimization backlogs.
+
+Current source/evidence anchors:
+
+- `docs/maintainer/operating-carriage.md`, native operating/carriage and invoke
+  owners, and `tests/test_native_operating_carriage.py` /
+  `tests/test_native_invoke_continuation.py`: exact compact/full carriage, bounded
+  answers, work/source rejection, post-effect truth, fresh recovery and source
+  delivery without satisfaction.
+- `tests/test_native_former_routes.py`: negative selection reuse across fresh
+  entry, unrelated changes and opaque discovery-set additions with no residue;
+  native route admission owns source membership, not caller change history.
+- Native Planning lifetime and source-reconciliation owners/tests preserve
+  semantic subject lifetime, source-set changes, bounded semantic judgment and
+  current repair; `native_instructions.rs` and `native_config.rs` remain policy
+  owners. No helper result replaces their authority.
+- `docs/maintainer/operating-carriage.md` records the accepted within-operation
+  removal of duplicate source-view/schema construction (3 to 2 parses per start,
+  12 to 8 per invoke) while reopening governing sources across barriers.
+- Candidate A's recorded accepted delegation/Assignment and release-conformance
+  evidence remains historical accepted evidence, not a new claim about hidden
+  provider context or fresh independent review.
+
+| Owner / criteria | Disposition | Current meaning and evidence |
+| --- | --- | --- |
+| #3059: 1–6, 8–9, 11, 13–14 | satisfied on current master | Compact/carried exact references and material; changed-work rejection; truthful continuation; selective source delivery and fresh reconstruction. Existing carriage/invoke/source owners and tests above. |
+| #3059: 7 | satisfied on current master | Bounded answer plus already-authorized action is machine-carried; no generic action loop. Resource composition in #3265 is an additional consumer, not a prerequisite retroactively reopening this outcome. |
+| #3059: 10 | satisfied on current master | Duplicate immutable derivation was eliminated with measured parse reduction; fresh barrier observations remain. |
+| #3059: 12 | satisfied on current master | Accepted Assignment self-sufficient entry/return boundary remains; unobservable host context is explicitly unknown rather than a false savings claim. |
+| #3059: 15 | obsolete/superseded | Reconstruction's exact first-cutover #2909 gate was consumed by accepted cutover/Candidate A. Candidate B has its own current preview admission; it cannot reuse old release acceptance. |
+| #2981: 1, 3–6, 9–12, 14–17, 19–20 | satisfied on current master | Current producer/contracts/source sets and semantic subjects own reuse; native owner checks and exact carried references preserve barriers/partial invalidation. Stable eligibility remains separate from attempts; this does not assert that every owner is cached. |
+| #2981: 2, 18 | satisfied on current master | Existing derivation elimination and explicit do-not-memoise source observations; no new cache is needed for either pilot. |
+| #2981: 7–8 | satisfied on current master | Positive current selections and negative route posture are revalidated through existing native route/source identity; opaque registry membership invalidates negative selection. No durable helper result cache is inferred. |
+| #2981: 13 | obsolete/superseded | A mandatory new cross-call economic demonstration is superseded by the latest profile-first gate: introduce a retained case only when cheaper validation is demonstrated. The pilots justify no new retained semantic cache. |
+| #2981: 21 | obsolete/superseded | Historical reconstruction aggregation is superseded by Candidate B's exact integrated evidence and later publication, without another cache layer. |
+| #2661: 1–14, 16 | satisfied on current master | Existing source/currentness, negative-route/source-set, semantic admission and carried-context controls reconstruct from current owners without event history. Drift affects dependent material, not an unrelated delivered source. |
+| #2661: 15 | satisfied on current master | Direct entry has bounded current-source checks and no mandatory local residue. Cost is not proportional to unseen history; this does not promise constant runtime across arbitrary active owner/source counts. |
+| #2661: 17 | obsolete/superseded | The old first-stable reconstruction gate is consumed; Candidate B retains its own public currentness/conformance and preview gates. |
+
+No new bounded residual is supported by the two pilot traces. The later #3263
+availability and #3265 resource composition leaves are already the smallest
+explicit Candidate B owners; neither calls for broad reconstruction, a generic
+why API or cross-domain delta. No new issue is created merely to obtain #2929
+creation dogfood. Its real-creation replay remains bounded-inapplicable unless
+subsequent integration exposes a legitimate new issue need.

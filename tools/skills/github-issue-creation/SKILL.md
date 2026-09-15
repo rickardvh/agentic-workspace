@@ -64,9 +64,10 @@ not a shipped product runtime requirement.
 
 ## Closure-Shape Examples
 
-- A broad delegation outcome may be a parent while worker-entry and one supported
+- A broad delegation parent outcome permits administrative closure from accepted
+  children and aggregate proof, while worker-entry and one supported
   launch/return path are separate PR-closeable implementation leaves; real-provider
-  economic burden can remain a no-code later-evidence issue.
+  economic burden can remain a later-evidence issue requiring no product-code PR.
 - A bounded adaptation implementation issue may close from current authority,
   mutation/no-retention, and fresh-resolution proof even while a separate evidence
   issue continues observing long-run payoff.
