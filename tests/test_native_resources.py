@@ -94,6 +94,85 @@ def repository(root):
     git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm", "baseline")
 
 
+def resource_skill(root):
+    for reference in [".agentic-workspace/skills/REGISTRY.json", ".agentic-workspace/skills/workspace-resources/SKILL.md"]:
+        path = root / reference
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes((ROOT / reference).read_bytes())
+
+
+def test_resource_procedure_direct_scratch_and_fresh_recovery(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Scratch composition"}
+
+    def call(operation, **extra):
+        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": operation, "compose": True, **extra}})
+
+    direct = call("direct")
+    assert direct["status"] == "direct" and direct["owner_calls"] == 0
+    assert list(tmp_path.iterdir()) == []
+    assert call("scratch-create")["status"] == "unavailable"
+    resource_skill(tmp_path)
+    created = call("scratch-create")
+    assert created["effect_outcome"] == "committed" and created["composition"]["owner_calls"] == 2
+    path = Path(created["path"])
+    (path / "temporary.txt").write_text("Recover me after response loss")
+    # Every call is a new process. Repeating intent reobserves the same container.
+    recovered = call("scratch-create")
+    assert recovered["path"] == created["path"] and (path / "temporary.txt").exists()
+    relative = created["resource_context"]["path"]
+    retained = call("scratch-retain", path=relative, reason="Unfinished evidence")
+    assert retained["effect_outcome"] == "committed"
+    blocked = call("scratch-remove", path=relative)
+    assert blocked["blockers"] and path.exists() and "action" not in blocked
+    call("scratch-release", path=relative, reason="Evidence disposition settled")
+    removed = call("scratch-remove", path=relative)
+    assert removed["effect_outcome"] == "committed" and not path.exists()
+    with pytest.raises(AssertionError, match="fresh intent"):
+        call("scratch-create", expected_revision="old-effect")
+    print("resource procedure: direct owner calls=0; scratch public calls 2->1, native owner calls 2->2; cleanup public calls 2->1")
+
+
+def test_resource_procedure_yields_isolation_judgment_and_preserves_dirty_work(tmp_path, shared_core_binary, native_cli):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    repository(repo)
+    resource_skill(repo)
+    path = tmp_path / "isolated"
+    context = {"target": str(repo), "task": "Isolated destructive validation"}
+
+    def call(operation, **extra):
+        return resource(
+            "json",
+            shared_core_binary,
+            native_cli,
+            {**context, "request": {"operation": operation, "compose": True, "path": str(path), **extra}},
+        )
+
+    proposal = call("worktree-create")
+    assert proposal["blockers"] and not path.exists()
+    judgment = {
+        "need": "destructive-validation",
+        "reason": "Validation changes tracked fixtures",
+        "policy_revision": proposal["policy_revision"],
+        "policy_answer": "permits-isolation",
+    }
+    policy = repo / ".agentic-workspace/instructions/isolation.md"
+    policy.parent.mkdir(parents=True)
+    policy.write_text("Preserve the ordinary checkout; only necessary isolation is permitted.")
+    stale = call("worktree-create", **judgment)
+    assert stale["blockers"] and not path.exists()
+    judgment["policy_revision"] = stale["policy_revision"]
+    created = call("worktree-create", **judgment, disposable_outputs=["target"])
+    assert created["effect_outcome"] == "committed"
+    assert created["build_environment"]
+    (path / "untracked.txt").write_text("Must preserve")
+    blocked = call("worktree-remove")
+    assert blocked["blockers"] and (path / "untracked.txt").exists()
+    (path / "untracked.txt").unlink()
+    assert call("worktree-remove")["effect_outcome"] == "committed"
+    assert not path.exists()
+
+
 def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared_core_binary, native_cli):
     repo = tmp_path / "repo"
     repo.mkdir()

@@ -71,7 +71,8 @@
   "x-runtime-reader": {
     "reader_epoch": 1,
     "reader_capabilities": [
-      "pre-state-runtime-compatibility-v1"
+      "pre-state-runtime-compatibility-v1",
+      "resource-procedure-v1"
     ],
     "contract_schema": "agentic-workspace/installed-state-compatibility/v1"
   },

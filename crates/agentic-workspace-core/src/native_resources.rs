@@ -36,6 +36,8 @@ struct Input {
 #[serde(deny_unknown_fields)]
 struct Request {
     operation: String,
+    #[serde(default, skip_serializing_if = "is_false")]
+    compose: bool,
     path: Option<String>,
     need: Option<String>,
     base: Option<String>,
@@ -45,6 +47,66 @@ struct Request {
     expected_revision: Option<String>,
     #[serde(default)]
     disposable_outputs: Vec<String>,
+}
+fn is_false(value: &bool) -> bool {
+    !value
+}
+
+/// One fixed proposal -> exact action composition, never a workflow/action loop.
+fn compose(mut value: Value, input: &Input) -> Result<Value, CoreError> {
+    if input.request.expected_revision.is_some() {
+        return Err(err(
+            "resource composition accepts fresh intent, not a retained effect; reobserve the same exact path",
+        ));
+    }
+    if input.request.operation == "direct" {
+        return Ok(
+            json!({"kind":"agentic-workspace/resource-procedure-result/v1","status":"direct",
+            "effect_outcome":"not-required","owner_calls":0,"authority_effect":"none"}),
+        );
+    }
+    let available =
+        crate::native_routes::procedure(Path::new(&input.target), "workspace-resources")?;
+    let executable = &available["procedures"][0]["executable"];
+    if available["status"] != "current"
+        || executable["status"] != "current"
+        || executable["entrypoint"]["kind"] != "native"
+        || executable["entrypoint"]["command"] != "resources"
+    {
+        return Ok(
+            json!({"kind":"agentic-workspace/resource-procedure-result/v1","status":"unavailable",
+            "effect_outcome":"not-invoked","availability":available,"owner_calls":0,
+            "recovery":"Restore the declared native resource skill/runtime, or use the existing explicit resource-owner procedure."}),
+        );
+    }
+    value["request"].as_object_mut().unwrap().remove("compose");
+    let mut proposal = view(value)?;
+    let Some(action) = proposal.get("action").cloned() else {
+        proposal["composition"] = json!({"status":"yielded","owner_calls":1,"executable_revision":executable["revision"]});
+        return Ok(proposal);
+    };
+    // Reobserve executable material immediately before crossing the effect
+    // boundary. The resource owner independently revalidates policy/resource
+    // identity and retains all its preservation/recovery checks.
+    let current = crate::native_routes::procedure(Path::new(&input.target), "workspace-resources")?;
+    if current != available {
+        proposal.as_object_mut().unwrap().remove("action");
+        proposal["composition"] = json!({"status":"stale","owner_calls":1,"recovery":"Reobserve current skill material and the same exact resource before continuing."});
+        return Ok(proposal);
+    }
+    let resource_context = json!({"target":action["target"],"task":action["task"],"changed":action["changed"],"path":action["request"]["path"]});
+    match view(action) {
+        Ok(mut result) => {
+            result["resource_context"] = resource_context;
+            result["composition"] = json!({"status":"returned-owner-result","owner_calls":2,"executable_revision":executable["revision"]});
+            Ok(result)
+        }
+        Err(problem) => Ok(
+            json!({"kind":"agentic-workspace/resource-procedure-result/v1","status":"reentry-required",
+            "effect_outcome":"unknown","path":proposal["path"],"operation":input.request.operation,"owner_calls":2,
+            "resource_context":resource_context,"owner_error":problem.to_string(),"recovery":"Preserve the exact resource and reobserve its path from a fresh process. Do not infer effect absence or create a replacement."}),
+        ),
+    }
 }
 fn linked(meta: &fs::Metadata) -> bool {
     if meta.file_type().is_symlink() {
@@ -429,7 +491,10 @@ fn build_environment(path: &Path, outputs: &[String]) -> Value {
 /// Read-only proposal first; effects require the exact freshly rederived revision.
 /// No generic cache, session or resource registry is created.
 pub fn view(value: Value) -> Result<Value, CoreError> {
-    let input: Input = serde_json::from_value(value).map_err(err)?;
+    let input: Input = serde_json::from_value(value.clone()).map_err(err)?;
+    if input.request.compose {
+        return compose(value, &input);
+    }
     let target = fs::canonicalize(&input.target).map_err(err)?;
     let request = &input.request;
     let requested_outputs = output_roots(&json!(request.disposable_outputs))?;

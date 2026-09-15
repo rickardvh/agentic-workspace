@@ -281,3 +281,91 @@ compatibility/removal. Existing four-surface known-leaf tests cover unchanged
 projection carriage rather than duplicating the new semantics across adapters.
 One existing aid-checker case covers static dangling material and passive helper
 bytes. No new CI constituent, broad scan or runtime probe is introduced.
+
+## Native resource procedure (#3265)
+
+The shipped resource skill now uses `compose: true` on the existing resource
+request. Direct/no-resource work needs no call; an explicit direct request
+returns without source/resource-owner reads or residue. Every effectful sequence
+has a fixed shape: selected executable availability, native proposal, fresh
+material check, exact native action admission. There is no action loop. Missing
+isolation need/policy returns the native proposal. Composition never fills
+`permits-isolation` or changes native preservation policy.
+
+A composed result carries `resource_context` (exact target/task/changed/path)
+and the native build environment. A fresh process reobserves the same resource;
+it cannot submit an old effect revision in composition mode. Native owner errors
+return unknown effect outcome and the exact context for reentry, never automatic
+retry or replacement creation. Native proposal/result fields retain their own
+effect semantics even when process execution succeeds.
+
+The first installed consumer exposed one additional exact compatibility need:
+knowing the native command exists does not establish support for composition.
+Its declaration therefore names the existing reader capability
+`resource-procedure-v1`. The existing runtime capability observation owns that
+fact; unsupported capabilities fail closed. No separate version store or runtime
+probe is introduced. Older readers reject the new optional declaration rather
+than advertising the new callable mode.
+
+### Matched scratch lifecycle observation
+
+A Windows fresh-process fixture used the same target/task/current skill bytes,
+created temporary material, and cleaned up the exact container. Both paths used
+the current native resource semantics and left zero containers.
+
+| Observation | Explicit proposal/action | Composed |
+| --- | ---: | ---: |
+| Public calls, create + cleanup | 4 | 2 |
+| Native resource-owner resolutions | 4 | 4 |
+| Additional selected availability checks | 0 | 4 |
+| Serialized result bytes, all calls | 7450 | 4869 |
+| Elapsed including processes | 175.39 ms | 148.52 ms |
+| Residual resource containers | 0 | 0 |
+
+This is one fixture sample, not a statistical latency or provider-cost claim.
+The reduction removes deterministic action-envelope copying and process calls;
+it does not remove required owner currentness checks. Selected availability
+checks add registry/procedure/schema/runtime work; source-read/parse/digest
+microcounts were not instrumented. No extra whole-workspace `start` or model
+detail fetch is introduced by the composer itself. Native cleanup retains its
+existing owner-reference observation. No repair/retry occurred in this final
+trace; development corrected the result's exact cleanup-context carriage.
+
+For worktrees, the deterministic public-call sequence contracts from proposal,
+judgment-proposal, action (3) to proposal, judgment-plus-action (2), retaining the
+one semantic necessity/policy judgment. Cleanup contracts from 2 calls to 1.
+Fresh recovery similarly reobserves the same path and composes only the currently
+available action. Direct use remains zero calls (or zero owner calls for an
+explicit direct result). Those are procedure counts, not measured model inference.
+
+### Proof and subtraction
+
+The existing resource owner suite is reused for dirty/untracked/ignored material,
+unique commits, interrupted registration/output cleanup, source/policy drift and
+owner references. Two composition cases add only direct/scratch/reentry and
+isolation-judgment handoff boundaries. Existing minimal/mirrored install lifecycle
+cases now create/clean a composed resource and reject it after uninstall; they
+do not duplicate the preservation matrix in every adapter. The combined resource
+and skills-first suite passes 30 cases in 35.37 seconds.
+
+The shipped procedure replaces manual action-envelope carriage with the native
+mode and keeps the explicit proposal/action path as a bounded fallback. All
+filesystem/Git effects remain in the original native owner. No wrapper script,
+session state, scheduler, cache, research executor or arbitrary command runner is
+retained.
+
+## Candidate B implementation closeout boundary
+
+#3262 is merged. The remaining review-preparation, availability and resource
+implementation is supplied as a small dependent PR stack. Independent review
+and merging remain external; no implementing agent has reviewed or approved the
+stack. Candidate B itself is **not release-complete** until these leaves are
+independently accepted/closed and the exact integrated preview is published and
+verified. Candidate A's `preview-v0.55.0` remains the accepted release baseline.
+No preview-v0.56.0 tag is created from unaccepted implementation heads.
+
+No legitimate new issue was necessary during this tranche, so #2929 real creation
+replay has the bounded inapplicability recorded above; no fixture issue or new
+product defect was hidden in the coordination owner. #3260, Candidate C and
+#2985 support-bearing admission remain separate and open. Total comparative
+agent cost remains unknown despite the bounded procedure reductions.

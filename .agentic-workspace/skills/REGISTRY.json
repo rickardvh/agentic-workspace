@@ -171,7 +171,8 @@
       "executable": {
         "entrypoint": {
           "kind": "native",
-          "command": "resources"
+          "command": "resources",
+          "required_capability": "resource-procedure-v1"
         }
       },
       "scope": "specialized-subskill",

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Compose task resource proposals and exact native actions with fresh recovery and preserved isolation judgment."

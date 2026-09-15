@@ -11,9 +11,34 @@ Use this procedure for implementation, review, delegation or maintenance when te
 
 1. Use the existing checkout for ordinary work. Determine a concrete conflicting-checkout, destructive-validation or transport-requires-isolation need before proposing isolation. Parallel convenience alone is insufficient. Prefer exact Git object reads for read-only inspection of another revision. Never clone merely to evade worktree policy.
 2. Put arbitrary task JSON, packet dumps, temporary notes and experiments in one task container below `.agentic-workspace/local/scratch/`. Do not put loose files at the local root or mix temporary material into structured owner directories. Build caches and build outputs stay in their existing build-tool locations; repositories stay outside AW state.
-3. Use the configured Rust-backed `resources` operation. Query `scratch-create` for a task container or `worktree-create` for necessary isolation. These are read-only proposals. Supply the current task and known changed paths. Native, JSON, Python and TypeScript projections call the same owner.
-4. For isolation, read the proposal's current instruction sources and consequences. Supply the concrete `need` and `reason`, its exact `policy_revision`, and `policy_answer: permits-isolation` only if those sources permit the need. Do not invent consent or require the user to repeat an already available policy. A changed policy requires fresh judgment. If isolation is not necessary or permitted, continue in the existing checkout.
-5. Execute only the returned exact `action` through `resources`. It is bound to current source/policy/resource identity and confined to the declared operation/path. Missing binaries or a rejected current proposal are explicit gaps, not permission for an alternate cleanup script. An effect result is separate from continuation or whole-task completion.
+3. Use the configured Rust-backed `resources` operation with `compose: true` in the request. `scratch-create` prepares and carries its exact native action automatically. `worktree-create` returns the current policy/necessity question when judgment is missing. Supply the current task and known changed paths. Native, JSON, Python and TypeScript projections call the same owner.
+4. For isolation, read the returned current instruction sources and consequences. Supply the concrete `need` and `reason`, its exact `policy_revision`, and `policy_answer: permits-isolation` only if those sources permit the need, retaining `compose: true`. Do not invent consent or require the user to repeat an already available policy. A changed policy requires fresh judgment. If isolation is not necessary or permitted, continue in the existing checkout.
+5. The bounded composition checks the selected skill's exact executable availability, then carries only the returned native `action` through a fresh resource-owner admission. It stops at missing judgment, changed material, blockers or uncertainty; it never loops over actions or runs work commands. Inspect `effect_outcome`, the owner result, and `resource_context`/`build_environment`. Process success is not proof of effect commitment or whole-task completion.
+
+## Callable path and fallback
+
+For scratch, pass `{"operation":"scratch-create","compose":true}` to the
+configured `resources --target <repo> --task <task> --input <request.json>` command.
+The existing Python/TypeScript `resources(context)` and JSON resource transport
+accept the same request. The package skill's selected executable declaration
+requires the existing native reader capability `resource-procedure-v1`; missing
+material or incompatible runtime returns unavailable detail before resource work.
+No Python or shell resource implementation is introduced.
+
+Keep the returned `resource_context` in caller context. To clean up, carry its
+target/task/changed fields with a request containing the same exact `path`,
+`operation: scratch-remove` (or `worktree-remove`) and `compose: true`. Reentry
+uses fresh observations, never an old `expected_revision`. `resource_context` is
+ordinary disposable carriage, not a session record or authority grant.
+
+Direct work normally needs no call. If a caller needs an explicit no-resource
+result, `{"operation":"direct","compose":true}` performs zero resource-owner
+calls and creates no resource state. `audit` remains a read-only report.
+
+If composition is unavailable but the existing native resource operation is
+available, omit `compose`: obtain a read-only proposal and execute only its exact
+returned `action` after the same policy judgment. Missing native execution itself
+requires the no-runtime preservation boundary, not an alternate cleanup script.
 
 ## Reproducible build output
 
@@ -25,7 +50,7 @@ Terminal cleanup removes only these creation-leased reproducible roots before re
 
 Record the returned exact resource path in the current task context. Keep needed evidence under its responsible durable owner before disposing of temporary copies. Use `scratch-retain` with an explicit reason while interrupted material is needed, and `scratch-release` only after its disposition is settled. Owner references and retained material block scratch cleanup; reconcile through that owner instead of removing references to make cleanup pass.
 
-At successful completion, failure, cancellation or resumed interrupted work, query `scratch-remove` or `worktree-remove` for the **same exact path**, then execute its freshly returned action when available. Do this as part of the task; do not wait for a later user cleanup request. Clean disposable resources are removed together with the exact Git registration. Dirty, untracked, ignored, unique-commit or owner-referenced material is preserved with current blockers and an exact recovery path. Report the preserved path and the disposition needed; do not force deletion. Preserve main-checkout HEAD/index and Git configuration.
+At successful completion, failure, cancellation or resumed interrupted work, request `scratch-remove` or `worktree-remove` with `compose: true` for the **same exact path**. The procedure prepares and carries the freshly returned action when available. Do this as part of the task; do not wait for a later user cleanup request. Clean disposable resources are removed together with the exact Git registration. Dirty, untracked, ignored, unique-commit or owner-referenced material is preserved with current blockers and an exact recovery path. Report the preserved path and the disposition needed; do not force deletion. Preserve main-checkout HEAD/index and Git configuration.
 
 If execution or response delivery is interrupted, reobserve the same path in a fresh process. Do not retry the old effect or create another checkout merely to recover. Git owns worktree registrations; resource-local custody supports recovery after interrupted unlock. A missing worktree directory can have its exact owned registration removed only after unique-commit checks. Unrelated registrations are preserved. Scratch cleanup is bounded to one recognized task container and retains its marker until its files are removed; unknown or changed bytes stop cleanup.
 

@@ -99,8 +99,13 @@ fn executable(target: &Path, root: &Dir, declaration: &Value, procedure: &Value)
     #[derive(serde::Deserialize)]
     #[serde(deny_unknown_fields, rename_all = "kebab-case", tag = "kind")]
     enum Entry {
-        File { path: String },
-        Native { command: String },
+        File {
+            path: String,
+        },
+        Native {
+            command: String,
+            required_capability: Option<String>,
+        },
     }
     let resolve = || -> Result<Value, CoreError> {
         let schema: Value = serde_json::from_slice(include_bytes!(
@@ -118,13 +123,24 @@ fn executable(target: &Path, root: &Dir, declaration: &Value, procedure: &Value)
             Entry::File { path } => {
                 dependencies.insert(path);
             }
-            Entry::Native { command } => {
+            Entry::Native {
+                command,
+                required_capability,
+            } => {
                 // This pilot references the existing native resource command, not
                 // arbitrary command discovery or a package dependency resolver.
                 if command != "resources" {
                     return Err(error("unsupported native executable command"));
                 }
                 runtime = crate::runtime_compatibility::native(target)?;
+                if let Some(required) = required_capability
+                    && !runtime["observed_runtime"]["reader_capabilities"]
+                        .as_array()
+                        .is_some_and(|values| values.iter().any(|v| v == &required))
+                {
+                    runtime["status"] = json!("blocked");
+                    runtime["missing_reader_capabilities"] = json!([required]);
+                }
                 packaged = json!({"command":"resources",
                     "implementation_revision":hash(include_bytes!("native_resources.rs")),
                     "contract_revision":hash(include_bytes!("../../../src/agentic_workspace/contracts/source_decision_contract.json"))});
@@ -702,6 +718,16 @@ mod tests {
         assert_eq!(executable["dependencies"], json!([]));
         // No product sources or binaries must be copied into the host repository.
         assert!(!target.0.join("crates").exists());
+        let registry = include_str!("../../../.agentic-workspace/skills/REGISTRY.json");
+        target.write(
+            ".agentic-workspace/skills/REGISTRY.json",
+            &registry.replace("resource-procedure-v1", "future-resource-procedure"),
+        );
+        assert_eq!(
+            procedure(&target.0, "workspace-resources").unwrap()["procedures"][0]["executable"]["status"],
+            "incompatible"
+        );
+        target.write(".agentic-workspace/skills/REGISTRY.json", registry);
         target.write(
             ".agentic-workspace/config.toml",
             "schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=999999\n",

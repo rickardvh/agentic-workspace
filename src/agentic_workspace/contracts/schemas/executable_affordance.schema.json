@@ -15,7 +15,8 @@
           "kind": {"const": "file"}, "path": {"type": "string", "minLength": 1}
         }},
         {"type": "object", "additionalProperties": false, "required": ["kind", "command"], "properties": {
-          "kind": {"const": "native"}, "command": {"const": "resources"}
+          "kind": {"const": "native"}, "command": {"const": "resources"},
+          "required_capability": {"type": "string", "minLength": 1, "description": "Required capability from the existing native runtime reader contract."}
         }}
       ]
     },

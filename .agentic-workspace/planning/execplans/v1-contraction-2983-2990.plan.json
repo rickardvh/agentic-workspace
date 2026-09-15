@@ -12,9 +12,9 @@
     "Deliver coherent owner-aligned changes in a small set of consolidated pull requests. No fixed historical PR count overrides current scope. No master promotion without exact #2990 admission and explicit human cutover approval."
   ],
   "continuation": {
-    "frontier": "#3263 selected optional executable material is implemented in existing native route/procedure detail, with the two repo pilots and packaged resource command as consumers. External runtime remains explicitly unknown; native compatibility uses its current owner. Source/payload registry and generated schema reference are current.",
+    "frontier": "All remaining Candidate B implementation leaves are supplied in a dependent PR stack. #3265 composes exactly one native resource proposal/action, yields isolation judgment, preserves owner recovery and carries exact cleanup context. #2929 has an explicit no-legitimate-new-issue inapplicability; old-owner reconciliation is recorded. #3287/#3288 hosted checks are green.",
     "owner": "#3276",
-    "residual_intent": "All Candidate B leaves and broad-owner reconciliation remain open. Candidate C and final #2985 support-bearing admission are separate work."
+    "residual_intent": "Independent final-head acceptance/merges, exact Candidate B preview publication/provenance/public-byte admission, and parent administrative closure remain. Candidate C, #3260 and #2985 support-bearing admission stay separate."
   },
   "execution_bounds": {
     "allowed paths": "Tracked product source, first-party packages, generated/released resources, tests, docs, workflows, release metadata, and canonical Planning records required by #2983-#2990.",
@@ -40,7 +40,7 @@
   },
   "kind": "planning-execplan/v1",
   "lifecycle": "live",
-  "next_action": "Implement #3265 as thin native resource composition using the selected executable material boundary. #3287 and the stacked #3263 PR require independent review; no Candidate B preview may publish before accepted leaf completion.",
+  "next_action": "Obtain independent review of the remaining Candidate B stack (#3287 trusted preparation, #3288 selected availability, and the resource-procedure PR). After accepted merges close #3261/#3263/#3265, prepare/publish/verify exact preview-v0.56.0 from accepted master. Do not infer independent acceptance or parent completion from local implementation/CI.",
   "non_goals": [
     "Promote research-only #2821/autopilot concepts without evidence.",
     "Preserve pre-v1 compatibility solely for historical callers.",
@@ -79,7 +79,8 @@
       "Candidate B #3262 bounded proof: 33 issue-body/agent-aid tests pass; source/payload strict and aid manifests pass. Existing Planning conversion/default synthesis is subtracted. One fresh-process preparation trace takes 4.78 ms versus 4.12 ms baseline and emits 2221 versus 1501 compact packet bytes. Procedure-step accounting removes separate model form inspection for complete shaped input; no controlled inference or lower-total-cost claim. See docs/reviews/candidate-b-preparation-evidence.md. #2929 creation replay is bounded-inapplicable to this leaf because no legitimate new issue is needed. All other Candidate B leaves/reconciliation and independent acceptance remain open.",
       "PR #3285 review correction: current-form render attributes now determine textarea code blocks. Existing bug-form expectation plus one owner case cover embedded fences, changed language/currentness and unsupported syntax. 34 issue-body/agent-aid cases passed in 0.60 seconds. Earlier operating-cost measurements remain pre-correction evidence. Independent acceptance and all remaining Candidate B work remain open.",
       "Candidate B #3261: 23 review/issue/workflow cases pass; 43 existing carriage/invoke/Planning lifetime cases pass in 110.77 seconds. Strict source/payload check passes. Review fixture: 101 complete files, nine logical GETs per first/recheck, 29215 versus 15384 serialized bytes; no live network latency/model inference/total cost claim. No review was performed by the implementation lineage. Shared availability/resource implementation and external acceptance/publication remain open.",
-      "Candidate B #3263: native route owner nine cases pass; Rust library 122 passed/three intentionally ignored; four existing public known-leaf cases and 20 aid checks pass. Generated schema/catalogue and strict payload checks pass. The material control adds 100 irrelevant executable declarations without reading their missing helpers or enlarging roots beyond 1500 bytes. No helper executes during discovery. #2257 reuse/adapt/retire and #2822 evidence-only dispositions are recorded. Resource composition, independent acceptance and publication remain open."
+      "Candidate B #3263: native route owner nine cases pass; Rust library 122 passed/three intentionally ignored; four existing public known-leaf cases and 20 aid checks pass. Generated schema/catalogue and strict payload checks pass. The material control adds 100 irrelevant executable declarations without reading their missing helpers or enlarging roots beyond 1500 bytes. No helper executes during discovery. #2257 reuse/adapt/retire and #2822 evidence-only dispositions are recorded. Resource composition, independent acceptance and publication remain open.",
+      "Candidate B resource proof: 30 resource/skills-first cases pass (35.37 s), including minimal/mirrored install/use/uninstall; Rust library 122 pass/three ignored. Native capability mismatch is rejected; generated/static/payload checks pass. Matched scratch lifecycle: public calls 4->2, native owner calls 4->4, extra selected availability checks 0->4, serialized result bytes 7450->4869, one sample elapsed 175.39->148.52 ms, zero containers both paths. Real current-task scratch reentry also returned committed with the same exact resource context through composed native admission. No statistical/provider/total-cost or independent acceptance claim."
     ],
     "refs": [
       "https://github.com/rickardvh/agentic-workspace/pull/3165#issuecomment-5587158480",
@@ -151,7 +152,7 @@
       "state": "selected-local"
     }
   },
-  "revision": 54,
+  "revision": 55,
   "scope": {
     "effects": [
       "Bounded implementation and proof under existing P0/P1 issue owners; native Planning maintains this owner. No completion, release admission or master promotion is inferred."
@@ -203,18 +204,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e2b4fe3e94fca1aa69a8e369b9f9658ba2ca220be860c9165fddce46c466f54b.attempt.json",
-        "revision": "sha256:8f382165a350eee86a9843ad4352edbfdbb7ed4360f94693122436973ce3665d",
+        "path": ".agentic-workspace/local/effects/74c1564470e1c8c0a6ccb20fca1801617c762998ebd56d0ad5fbb61c5a6b1bd6.attempt.json",
+        "revision": "sha256:e61744f6dcb1ff9f890e3a64e9821a36443d5e9ff74647d13e4d1d34ba6a6be6",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/e2b4fe3e94fca1aa69a8e369b9f9658ba2ca220be860c9165fddce46c466f54b.result.json",
-        "revision": "sha256:b7b6cb4cd1973fab690a3627a7247e7236fc0e2fea9840251a991731d6475427",
+        "path": ".agentic-workspace/local/effects/74c1564470e1c8c0a6ccb20fca1801617c762998ebd56d0ad5fbb61c5a6b1bd6.result.json",
+        "revision": "sha256:59386d4d9bba4cf62a713b5dca4fda81f8c97eb37d640ebd760eb15062157cdc",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:6f8e9b19d7ba0aeb8d09302f717f3f63adae77e167902e1520719159a7908d30",
+    "invocation_revision": "sha256:3c5a1e65a36ab5b36408e12b5a24c4ed62110786622090a18cb5f16af5acd99d",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -222,7 +223,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:878122fe2b964778dab550b45429259457c47f8529a4d2c21b4bf6e2b9162dfd",
+        "document_revision": "sha256:8c691f35178c40375c4fa7b646bc14c0e3337a218cd1cfb22d451d9d9a621de2",
         "owner_id": "v1-contraction-2983-2990",
         "owner_path": ".agentic-workspace/planning/execplans/v1-contraction-2983-2990.plan.json"
       }
