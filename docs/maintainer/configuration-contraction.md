@@ -220,7 +220,7 @@ intent remains visible; no aggregate acceptance or trust refresh is inferred.
 ## Aggregate implementation evidence and cost
 
 Against baseline 5e35307320ed380b1a0fac093168fc08bfd933a0, fixed-property occurrences
-outside reusable definitions contract from 179 to 44 shared and 110 to 41 local.
+outside reusable definitions contract from 179 to 45 shared and 110 to 41 local.
 The metric is structural, not independent human decisions. The meaningful
 subtractions are the parallel policy frameworks, stale observations and copied
 module metadata; the remaining choices have distinct authority or preference
