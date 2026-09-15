@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Bind exhaustive owner and runtime conformance to one installed native, Python and npm artifact set."
-issues = [2909, 2990]

@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Pass the absolute preview artifact directory to package smoke tests that run outside the checkout."
-issues = [3207]

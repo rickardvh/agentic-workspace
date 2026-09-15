@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Carry exact current task and role judgment through ordinary assignment selection, sealed handoffs, and repair; expose unresolved requirements without silent unconstrained fallback."
-issues = [2210, 2767]
