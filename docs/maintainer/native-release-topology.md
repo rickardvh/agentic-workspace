@@ -102,8 +102,11 @@ temporary release checkout and cleanup; a dirty failure must retain its evidence
 Require successful exact-source CI/security, installed native runtime proof,
 provenance, manifest and checksum checks from the existing preview workflow. Then
 run `scripts/release/preview_release.py --check-published preview-v0.55.0 --repo
-rickardvh/agentic-workspace` and the existing public install smoke against the
-published assets. Local tests cannot substitute for those exact published bytes.
+rickardvh/agentic-workspace` from the exact artifact checkout, and the existing
+public install smoke on its supported host against the published assets. The
+source checkout can instead use `--admit-tag` with the exact `--artifact-commit`
+to verify Git objects without substituting its development version. Local tests
+cannot substitute for those exact published bytes.
 Do not overwrite a tag or asset to recover a failed publication; reuse the existing
 immutable-subject recovery. Keep #3275 and #2985 open until their respective
 independent acceptance and intent conditions are actually satisfied.
@@ -113,3 +116,42 @@ its retained module fixtures. Obsolete module-local locks are removed, and the
 existing security readiness control rejects their reintroduction. Dependency alert
 closure must be checked after the accepted default branch is scanned; removal in
 an unmerged PR does not establish closure of a hosted alert.
+
+## Candidate A publication record
+
+[preview-v0.55.0](https://github.com/rickardvh/agentic-workspace/releases/tag/preview-v0.55.0)
+was published on 2026-09-15 as an immutable, non-support-bearing Alpha preview.
+
+| Identity | Exact value |
+| --- | --- |
+| Accepted master source | `b5a7748a493a6ea257ec4ad5a9696336a66bfdf2` |
+| Release-only artifact commit | `ce0eef8cc89bbecdbda39fbe0051118dd9492eae` |
+| Manifest SHA-256 | `bf04966bff10f1fb16889d52098b8f5f5acef5a74126c1f581fdefa395f5930d` |
+| Root Linux x64 wheel SHA-256 | `4d26fa2057bdaa36469093333e1d9bc4d6c80099ab53a3dfbecc9c232d7a8474` |
+
+The [publication run](https://github.com/rickardvh/agentic-workspace/actions/runs/34946934597)
+passed exact source/tag/parent admission, all three hosted runtime jobs, native
+artifact conformance, install/redistribution/security readiness, provenance,
+manifest/checksums and public-byte installation/start. The public smoke reports
+runtime `0.55.0`. A separate downloaded-asset verification returned `complete: true`
+for all 13 release assets. `gh attestation verify` on the downloaded manifest
+succeeded for this repository and identified the master preview workflow and that
+publication run. These checks do not extend the Linux x64 support boundary.
+
+#3274 closed after the corrected-head independent acceptance in #3281 and its
+accepted-base merge. #2767 closed by reconciling #3280's final source-runtime and
+former-local-intent correction with accepted #3178 source writes, #3185 independent
+settings ingress, #3230 configuration decisions/progressive discovery, #3241 lazy
+owner schemas, and #3252/#3254 lived-in and composed-upgrade convergence. Their
+existing owner evidence is reused; closure does not assert new provider guarantees.
+#3275 was administratively closed before publication; the run and byte evidence
+above establish the subsequent publication outcome. #2985 remains open for final
+support-bearing admission, and the maturity promotion reason remains explicit.
+
+The release helper preserved its temporary checkout when commit hooks created
+unleased Ruff/uv caches and validation output. Only these known new outputs were
+relocated to task scratch; uv cleaned its cache, then native resource removal
+succeeded. Do not broaden cleanup to unrelated ignored files or worktrees. Hosted
+Dependabot alerts 1–3 still reported open for removed member locks when checked;
+the active workspace lock and exact preview security checks passed. No hosted
+alert dismissal or closure is inferred from source removal.
