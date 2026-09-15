@@ -6,7 +6,8 @@
 is the advisory local thread cursor (or `default` storage slot). Old selector
 files named that cursor `current_work_id`; the native reader treats it only as a
 legacy scope alias and rejects conflicting aliases. Newly acquired selectors
-write `selection_scope`. No task wording, thread name, or default-slot match
+write `selection_scope` and mechanically derive the legacy cursor alias from it.
+No task wording, thread name, or default-slot match
 admits a current owner.
 
 Fresh entry exposes `incumbent_owner` as remembered context and leaves

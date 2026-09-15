@@ -143,11 +143,11 @@
     },
     "continuation_request": {
       "type": "object",
-      "description": "Current-task continuation or an explicit human answer authorizing one exact selector custody transfer. Neither grants Planning material, proof or completion authority.",
+      "description": "Current relation and independent posture; no mutation or completion authority.",
       "properties": {
         "owner_ref": {
           "type": "string",
-          "description": "Explicit destination choice; replacement requires independently admitted current native selector custody."
+          "description": "Destination choice; replacement requires native selector custody."
         },
         "answer": {
           "type": "string",
@@ -157,12 +157,12 @@
             "unrelated-direct",
             "authorize-selector-transfer"
           ],
-          "description": "Relation to the remembered incumbent. unrelated-direct is a deprecated shorthand for independent plus task_posture=direct; it cannot accompany creation."
+          "description": "Incumbent relation; legacy unrelated-direct derives independent/direct."
         },
         "transfer_revision": {
           "type": "string",
           "minLength": 1,
-          "description": "Owner-derived exact selector/source/work/target/destination binding. The human supplies only the bounded answer."
+          "description": "Owner-bound selector/source/work/target/destination revision."
         },
         "task_posture": {
           "type": "string",
@@ -170,7 +170,7 @@
             "direct",
             "planned"
           ],
-          "description": "Independent task posture, separate from its relation to the incumbent. Omission leaves posture undecided; planned work uses existing creation/selection requests."
+          "description": "Independent posture; absent means undecided."
         }
       },
       "required": [
@@ -528,7 +528,7 @@
       "additionalProperties": false
     },
     "selection_transition": {
-      "description": "One exact native-custody release or explicitly human-authorized legacy selector custody transfer. Never generic legacy state adoption.",
+      "description": "Exact native release or human-authorized legacy transfer only.",
       "oneOf": [
         {
           "$ref": "#/$defs/native_selection_transition"
@@ -540,7 +540,7 @@
     },
     "native_selection_transition": {
       "type": "object",
-      "description": "One current native Planning selector release and destination, retained inside its existing effect invocation.",
+      "description": "Exact native selector release and destination.",
       "properties": {
         "prior_sha256": {
           "type": "string",
@@ -552,7 +552,7 @@
           "properties": {
             "committed": {
               "$ref": "#/$defs/evidence",
-              "description": "Exact completed prior native owner admission; an uncertain attempt cannot release selection."
+              "description": "Committed prior admission; uncertain attempts cannot release."
             }
           },
           "required": [
@@ -562,7 +562,7 @@
         },
         "selection": {
           "type": "object",
-          "description": "Exact destination selector fields; reconciliation custody is retained separately in this same carrier.",
+          "description": "Destination fields; custody is retained separately.",
           "properties": {
             "kind": {
               "const": "agentic-planning/owner-selection/v1",
@@ -575,7 +575,7 @@
             "current_work_id": {
               "type": "string",
               "minLength": 1,
-              "description": "Legacy alias for selection_scope; advisory local cursor only."
+              "description": "Derived legacy selection_scope alias."
             },
             "selected_owner": {
               "type": "object",
@@ -601,27 +601,16 @@
             "selection_scope": {
               "type": "string",
               "minLength": 1,
-              "description": "Advisory actor-local selection scope; never the public current-work identity."
+              "description": "Advisory local cursor, never task identity."
             }
           },
           "required": [
             "kind",
             "mode",
-            "selected_owner"
+            "selected_owner",
+            "current_work_id"
           ],
-          "additionalProperties": false,
-          "anyOf": [
-            {
-              "required": [
-                "current_work_id"
-              ]
-            },
-            {
-              "required": [
-                "selection_scope"
-              ]
-            }
-          ]
+          "additionalProperties": false
         }
       },
       "required": [
@@ -633,7 +622,7 @@
     },
     "human_selection_transfer": {
       "type": "object",
-      "description": "Historical evidence of a one-shot human-authorized transition from absent native custody. Native producer custody governs subsequent mutations.",
+      "description": "One-shot human transfer from absent native custody.",
       "properties": {
         "prior_sha256": {
           "type": "string",
@@ -642,7 +631,7 @@
         },
         "human_authorization": {
           "type": "object",
-          "description": "Exact owner-generated public request with the explicit human bounded answer; revalidated before transfer.",
+          "description": "Owner request with human answer; revalidated before transfer.",
           "properties": {
             "arguments": {
               "$ref": "#/$defs/continuation_request",
@@ -663,7 +652,7 @@
         },
         "selection": {
           "type": "object",
-          "description": "Unmodified parsed legacy selector. All unrelated fields are preserved; only retained native custody is added."
+          "description": "Legacy selector preserved verbatim except added custody."
         }
       },
       "required": [

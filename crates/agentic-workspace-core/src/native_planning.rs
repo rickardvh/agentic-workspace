@@ -1035,6 +1035,8 @@ fn execute_checked(
     let initial_selection = json!({
         "kind":"agentic-planning/owner-selection/v1", "mode":"local",
         "selection_scope":view["selection_scope"],
+        // Mechanically derived compatibility cursor, never the public work ID.
+        "current_work_id":view["selection_scope"],
         "selected_owner":{"id":view["incumbent_owner"]["id"],"ref":view["incumbent_owner"]["ref"]}
     });
     let source = view["incumbent_owner"]["source"].clone();
@@ -1626,6 +1628,8 @@ mod tests {
             selection["selected_owner"],
             json!({"id":"delegation-lane-sweep","ref":PLAN})
         );
+        assert_eq!(selection["current_work_id"], selection["selection_scope"]);
+        assert_ne!(selection["current_work_id"], work()["id"]);
         assert_eq!(selection[RETAINED]["custody"], result["custody"]);
     }
     #[test]
