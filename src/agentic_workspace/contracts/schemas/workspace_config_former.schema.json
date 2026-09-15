@@ -66,30 +66,22 @@
             "description": "Exact repository grant for one separately linked native owner.",
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "revision",
-              "contract_revision",
-              "effects",
-              "claims",
-              "restrictions",
-              "reads",
-              "scope",
-              "settings"
-            ],
             "properties": {
               "revision": {
                 "description": "Exact admitted native implementation revision.",
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 256
+                "maxLength": 256,
+                "x-current-authoring": false
               },
               "contract_revision": {
                 "description": "Digest of the admitted capability and configuration descriptor.",
                 "type": "string",
-                "pattern": "^sha256:[0-9a-f]{64}$"
+                "pattern": "^sha256:[0-9a-f]{64}$",
+                "x-current-authoring": false
               },
               "effects": {
-                "description": "Effect identifiers granted only within this owner domain.",
+                "description": "Effect identifiers granted only within this owner domain. Omission grants nothing; an empty list may be omitted.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -100,7 +92,7 @@
                 "uniqueItems": true
               },
               "claims": {
-                "description": "Exclusive claim identifiers separately granted to this owner.",
+                "description": "Exclusive claim identifiers separately granted to this owner. Omission grants nothing; an empty list may be omitted.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -111,7 +103,7 @@
                 "uniqueItems": true
               },
               "restrictions": {
-                "description": "Exact task, effect or claim scopes this owner may restrict.",
+                "description": "Exact task, effect or claim scopes this owner may restrict. Omission grants nothing; an empty list may be omitted.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -122,7 +114,7 @@
                 "uniqueItems": true
               },
               "reads": {
-                "description": "Bounded exact repository-relative sources the owner may observe.",
+                "description": "Bounded exact repository-relative sources the owner may observe. Omission grants nothing; an empty list may be omitted.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -133,7 +125,7 @@
                 "uniqueItems": true
               },
               "scope": {
-                "description": "Repository path prefixes that select this owner for current changed work.",
+                "description": "Repository path prefixes that select this owner for current changed work. Omission grants nothing; an empty list may be omitted.",
                 "type": "array",
                 "items": {
                   "type": "string",
@@ -146,8 +138,26 @@
               "settings": {
                 "description": "Durable owner settings validated against its declared configuration schema.",
                 "type": "object"
+              },
+              "binding": {
+                "description": "Exact repository-approved implementation and descriptor binding prepared by the selected linked owner. Never auto-follows a descriptor update.",
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
               }
-            }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "binding"
+                ]
+              },
+              {
+                "required": [
+                  "revision",
+                  "contract_revision"
+                ]
+              }
+            ]
           }
         },
         "enabled": {

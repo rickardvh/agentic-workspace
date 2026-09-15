@@ -22,10 +22,10 @@ def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_bin
     root.mkdir()
     shared = root / "config.toml"
     shared.write_text(
-        'schema_version=1\n[execution_posture."custom/design"]\nrequired_execution_guarantees=["reasoning.general"]\npreferred_execution_guarantees=["cost.bounded"]\n[execution_posture."custom/edit"]\npreferred_execution_guarantees=["cost.bounded"]\n'
+        'schema_version=2\n[execution_posture."custom/design"]\nrequired_execution_guarantees=["reasoning.general"]\npreferred_execution_guarantees=["cost.bounded"]\n[execution_posture."custom/edit"]\npreferred_execution_guarantees=["cost.bounded"]\n'
     )
     (root / "config.local.toml").write_text(
-        'schema_version=1\n[delegation]\ncurrent_target="local"\nassignment_policy="required-best-fit"\n[delegation_targets.local]\nexecution_guarantees=["cost.bounded"]\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nexecution_guarantees=["reasoning.general"]\ntransports=[{kind="manual"}]\n'.replace(
+        'schema_version=2\n[delegation]\ncurrent_target="local"\nassignment_policy="required-best-fit"\n[delegation_targets.local]\nexecution_guarantees=["cost.bounded"]\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nexecution_guarantees=["reasoning.general"]\ntransports=[{kind="manual"}]\n'.replace(
             "delegation_targets.expert", f"delegation_targets.{external}"
         )
     )
@@ -88,7 +88,11 @@ def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_bin
     candidates = resolve([route, task])["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
     assert not any(row["eligible"] for row in candidates)
     local_source = root / "config.local.toml"
-    local_source.write_text(local_source.read_text().replace('execution_guarantees=["cost.bounded"]', 'strength="weak"'))
+    local_source.write_text(
+        local_source.read_text()
+        .replace("schema_version=2", "schema_version=1")
+        .replace('execution_guarantees=["cost.bounded"]', 'strength="weak"')
+    )
     task = resolve(route)["task_requirements"]["requests"][0]
     task["arguments"]["required_result_classes"] = ["read-only"]
     execution = resolve([route, task])["task_requirements"]["execution_configurations"]

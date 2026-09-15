@@ -75,6 +75,16 @@ def render(name: str) -> str:
         "Current human configuration authoring, version 2. Version 1 sources are read separately; never use former syntax for new settings."
     )
     schema["properties"]["schema_version"] = {"const": 2, "default": 2, "description": "Current authoring contract version."}
+    if name == "workspace_config":
+        admission = schema["properties"]["modules"]["properties"]["independent"]["additionalProperties"]
+        admission.pop("anyOf")
+        admission["required"] = ["binding"]
+    else:
+        target = schema["properties"]["delegation_targets"]["patternProperties"]["^.+$"]
+        target.pop("anyOf")
+        target.pop("allOf")
+        target["required"] = ["transports"]
+
     # Retain only reachable local definitions, including transitive references.
     definitions = schema.pop("$defs", {})
     retained: dict = {}

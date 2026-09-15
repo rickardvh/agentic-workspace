@@ -109,3 +109,49 @@ Evidence extends the existing transfer/collision test with an unsupported
 closeout-posture preservation case; existing strategy tests cover proof floors,
 source currentness and scope. This proves the bounded implemented destination,
 not completion of all former-source migration or independent acceptance.
+
+## Independent admissions and Assignment targets (#3302, #3303)
+
+Select `modules.independent` through `configuration/read-choice/v1`, then set
+`selected_owner` to the known linked owner. Only that descriptor is loaded. The
+returned preparation supplies one exact `binding` over implementation and contract,
+its requested capability/read footprint, and its settings schema. The proposal
+preserves all existing grants, scope and settings, removes former duplicate pins,
+and omits empty grant lists. New admissions start with no grants. The existing
+explicit authorize-write decision approves the exact postimage; a binding hash
+alone never grants an effect, read, claim or restriction. Both former pins remain
+recognized until an authorized exact transition. Descriptor expansion or changed
+implementation cannot inherit approval. Missing scope means explicit requests
+only; missing settings means an empty object validated by the selected owner.
+
+Effects and reads permit specific actions/sources; claims grant claim authority;
+restrictions grant the ability to block specified scopes. None is derived from
+installation. Scope and settings are repository choices. A refused subset may
+make a module incompatible; preparation never fills it in to make execution work.
+Unrelated admissions are preserved and their descriptors are not loaded. Invalid
+settings or a stale proposed binding fail before source publication.
+
+Current target authoring requires canonical `transports` and removes strength,
+task_fit, capability_classes, context_capacity, model/provider labels and target
+revision migration policy. The remaining target dimensions each have a purpose:
+identity/revision/aliases bind a configured target; identity_status is a human
+eligibility prohibition, not an observed availability fact; location is a boundary
+hint; execution_guarantees advertise capabilities without proving host readiness;
+forbidden_task_classes retain hard prohibitions with current scope judgment.
+Confidence and provenance remain a human prior; cost/latency remain rough durable
+preferences. No prior becomes admitted evidence. Former economics/evaluation data
+is explicitly reported as unadmitted and cannot clear its configuration residual.
+
+The existing transport decoder derives equivalent former methods and exact command
+parameters. Missing/ambiguous transport payload remains unavailable; it does not
+create a launch method. Former/shared-local/checkout-local omission and precedence
+remain unchanged. Required Assignment, transport authority, human override, safety
+and guarantee requirements remain separate. Repository requirements/preferences
+stay provider-neutral; hard target prohibitions can coexist with them. Removed
+ranking prose is not converted into capability guarantees.
+
+Validation extends the selected-module settings journey with exact former-grant
+preservation and a new absent-grant/stale-binding control. The existing work-class
+journey now authors version 2 sources and continues to prove requirements before
+preferences and relational independence. Current-schema projection preserves
+conditional predicates instead of incorrectly closing partial `if` shapes.

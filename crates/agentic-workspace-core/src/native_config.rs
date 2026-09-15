@@ -256,8 +256,12 @@ pub(crate) fn assignment_consumption(
                                         | "cost_class"
                                         | "latency_class"
                                         | "confidence_source"
-                                        | "current_economic_evidence"
                                         | "identity_status"
+                                        | "aliases"
+                                        | "execution_methods"
+                                        | "dispatch_command"
+                                        | "dispatch_output_mode"
+                                        | "dispatch_timeout_seconds"
                                 )
                             })
                         })

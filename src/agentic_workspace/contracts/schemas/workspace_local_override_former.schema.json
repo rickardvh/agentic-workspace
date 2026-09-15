@@ -54,7 +54,8 @@
         },
         "strong_planner_available": {
           "type": "boolean",
-          "description": "Whether this local environment has a stronger planning or reasoning path available for quality-sensitive work."
+          "description": "Whether this local environment has a stronger planning or reasoning path available for quality-sensitive work.",
+          "x-current-authoring": false
         },
         "cheap_bounded_executor_available": {
           "type": "boolean",
@@ -480,11 +481,6 @@
                     },
                     {
                       "required": [
-                        "forbidden_task_classes"
-                      ]
-                    },
-                    {
-                      "required": [
                         "escalation_target"
                       ]
                     },
@@ -527,7 +523,7 @@
                 "unavailable"
               ],
               "default": "active",
-              "description": "Lifecycle status for this local target identity."
+              "description": "Human-owned target eligibility/lifecycle control. Any non-active value prohibits execution; it does not report observed runtime availability."
             },
             "revision_policy": {
               "type": "string",
@@ -538,7 +534,8 @@
                 "retire"
               ],
               "default": "revalidate",
-              "description": "How existing target guidance behaves when the model/runtime revision changes."
+              "description": "How existing target guidance behaves when the model/runtime revision changes.",
+              "x-current-authoring": false
             },
             "execution_guarantees": {
               "description": "Current provider-neutral local execution capability facts; replaces overlapping target task/strength routing fields.",
@@ -558,7 +555,8 @@
                 "medium",
                 "weak"
               ],
-              "description": "Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work."
+              "description": "Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work.",
+              "x-current-authoring": false
             },
             "location": {
               "type": "string",
@@ -582,7 +580,8 @@
                 "minLength": 1,
                 "description": "One kind of task this target has proven or is expected to handle well."
               },
-              "description": "Advisory task-fit labels used to explain when this target is appropriate."
+              "description": "Advisory task-fit labels used to explain when this target is appropriate.",
+              "x-current-authoring": false
             },
             "capability_classes": {
               "type": "array",
@@ -596,7 +595,8 @@
                 ],
                 "description": "One capability class this target may be suitable for."
               },
-              "description": "Advisory capability classes for routing quality-sensitive or mechanical work. These are estimates, not guarantees."
+              "description": "Advisory capability classes for routing quality-sensitive or mechanical work. These are estimates, not guarantees.",
+              "x-current-authoring": false
             },
             "execution_methods": {
               "type": "array",
@@ -745,12 +745,14 @@
             "model_family": {
               "type": "string",
               "minLength": 1,
-              "description": "Optional opaque model or family identifier for this local target. This is local descriptive metadata, not package-owned vendor policy."
+              "description": "Optional opaque model or family identifier for this local target. This is local descriptive metadata, not package-owned vendor policy.",
+              "x-current-authoring": false
             },
             "provider": {
               "type": "string",
               "minLength": 1,
-              "description": "Optional provider or runtime name for this local target."
+              "description": "Optional provider or runtime name for this local target.",
+              "x-current-authoring": false
             },
             "dispatch_adapter_kind": {
               "type": "string",
@@ -801,7 +803,8 @@
                 "unknown"
               ],
               "default": "unknown",
-              "description": "Advisory context capacity class. Use this to avoid handing broad or context-heavy tasks to constrained targets."
+              "description": "Advisory context capacity class. Use this to avoid handing broad or context-heavy tasks to constrained targets.",
+              "x-current-authoring": false
             },
             "reasoning_profile": {
               "type": "string",

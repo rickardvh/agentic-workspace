@@ -116,9 +116,30 @@ fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec
         bound_sources(target, Some(source))?;
         return Ok(bytes);
     }
-    crate::schema_validator(&choice_schema(source, key)?, "configuration choice")?
-        .validate(value)
-        .map_err(err)?;
+    if key == "modules.independent" {
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+        let before = crate::native_config::load(&root, source, source_schema(source)?)
+            .map_err(err)?
+            .map(|v| v.0)
+            .unwrap_or(json!({}));
+        let entries = value
+            .as_object()
+            .ok_or_else(|| err("Independent admissions must be an object"))?;
+        let schema = choice_schema(source, key)?;
+        for (owner, admission) in entries {
+            if before["modules"]["independent"][owner] == *admission {
+                continue;
+            }
+            crate::schema_validator(&schema, "selected independent admission")?
+                .validate(&json!({owner:admission}))
+                .map_err(err)?;
+            crate::native_independent::validate_choice(owner, admission)?;
+        }
+    } else {
+        crate::schema_validator(&choice_schema(source, key)?, "configuration choice")?
+            .validate(value)
+            .map_err(err)?;
+    }
     let (section, field) = key.split_once('.').unwrap();
     let replacement = toml_edit::ser::to_document(&json!({"value":value})).map_err(err)?["value"]
         .as_value()
@@ -223,7 +244,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     let mut owner = json!({"owner":"configuration","revision":"pending","domains":["configuration"],"effects":[{"id":EFFECT,"domain":"configuration"}],"requests":[{"kind":EDIT,"result_kind":"agentic-workspace/configuration-write-proposal/v1","input_schema":args},{"kind":RECOVER,"result_kind":"agentic-workspace/configuration-write-result/v1","input_schema":recovery}],"operations":[operation("configuration.write"),operation("configuration.recover-write"), operation(DEFER)]});
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_PAYLOAD,"result_kind":"agentic-workspace/configuration-payload-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
-    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"}}}}));
+    owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"selected_owner":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,63}$"}}}}));
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
@@ -512,7 +533,7 @@ pub(crate) fn view(
         let schema = choice_schema(source, key)?;
         let current =
             crate::native_config::load(&root, source, source_schema(source)?).map_err(err)?;
-        let value = current
+        let mut value = current
             .map(|(source, _)| source[section][field].clone())
             .filter(|value| !value.is_null())
             .unwrap_or_else(|| {
@@ -528,6 +549,32 @@ pub(crate) fn view(
                     json!("<explicit-source-choice>")
                 }
             });
+        if key == "modules.independent" {
+            let selected = args["selected_owner"]
+                .as_str()
+                .map(str::to_owned)
+                .or_else(|| {
+                    let values = value.as_object()?;
+                    if values.len() == 1 {
+                        values.keys().next().cloned()
+                    } else {
+                        None
+                    }
+                });
+            if let Some(owner) = selected {
+                let detail = crate::native_independent::prepare(&owner, &value[&owner])?;
+                if !value.is_object() {
+                    value = json!({});
+                }
+                value[&owner] = detail["value"].clone();
+                result["independent_preparation"] = detail;
+            } else {
+                result["selected_owner_request"] = template(
+                    READ,
+                    json!({"source":source,"key":key,"selected_owner":"selected-linked-owner"}),
+                );
+            }
+        }
         result["status"] = json!("choice-delivered");
         result["selected_choice"] = json!({"source":source,"key":key,"value":value,"schema":schema,"edit_request":template(EDIT,json!({"source":source,"key":key,"value":value}))});
         return Ok(result);

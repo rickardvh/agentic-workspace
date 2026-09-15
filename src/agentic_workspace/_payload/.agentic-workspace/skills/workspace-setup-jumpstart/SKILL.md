@@ -151,3 +151,18 @@ before completion, including work with no matching protocol. False does not waiv
 independently binding proof or review requirements. Local config cannot override
 this floor; disabling Verification leaves it unresolved. Use the existing
 Verification claim-review owner to establish judgment, never config as evidence.
+
+For an independent module, read the modules.independent choice and name
+selected_owner. Inspect the exact prepared binding, requested footprint and
+owner settings schema. Preserve existing grants/scope/settings; omitted grants
+are refused. Add only independently authorized grants and approve the exact
+proposal through Configuration. Installation and a descriptor update grant
+nothing. Never fill missing grants merely to make a module executable.
+
+For Assignment, author canonical transports with the selected adapter's validated
+parameters. Keep repository requirements/preferences separate from local identity,
+capability declarations and hard prohibitions. Keep confidence/provenance as human
+priors and cost/latency as rough preferences. Observed outcomes/economics belong
+to their evidence owner. Former aliases may be derived only where equivalent;
+omitted former/shared-local intent survives until represented or explicitly
+retired. Do not replace removed ranking hints with invented guarantees.

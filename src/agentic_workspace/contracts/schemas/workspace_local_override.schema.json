@@ -40,10 +40,6 @@
         "supports_internal_delegation": {
           "type": "boolean",
           "description": "Whether the current runtime can hand work to an internal subagent or equivalent in-session worker."
-        },
-        "strong_planner_available": {
-          "type": "boolean",
-          "description": "Whether this local environment has a stronger planning or reasoning path available for quality-sensitive work."
         }
       },
       "additionalProperties": false,
@@ -242,68 +238,6 @@
       "patternProperties": {
         "^.+$": {
           "type": "object",
-          "anyOf": [
-            {
-              "required": [
-                "transports"
-              ]
-            },
-            {
-              "required": [
-                "execution_methods"
-              ]
-            }
-          ],
-          "allOf": [
-            {
-              "if": {
-                "required": [
-                  "execution_guarantees"
-                ]
-              },
-              "then": {
-                "not": {
-                  "anyOf": [
-                    {
-                      "required": [
-                        "strength"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "reasoning_profile"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "capability_classes"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "safe_task_classes"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "forbidden_task_classes"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "escalation_target"
-                      ]
-                    },
-                    {
-                      "required": [
-                        "human_control_modes"
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          ],
           "properties": {
             "target_id": {
               "type": "string",
@@ -333,18 +267,7 @@
                 "unavailable"
               ],
               "default": "active",
-              "description": "Lifecycle status for this local target identity."
-            },
-            "revision_policy": {
-              "type": "string",
-              "enum": [
-                "preserve",
-                "revalidate",
-                "migrate",
-                "retire"
-              ],
-              "default": "revalidate",
-              "description": "How existing target guidance behaves when the model/runtime revision changes."
+              "description": "Human-owned target eligibility/lifecycle control. Any non-active value prohibits execution; it does not report observed runtime availability."
             },
             "execution_guarantees": {
               "description": "Current provider-neutral local execution capability facts; replaces overlapping target task/strength routing fields.",
@@ -356,15 +279,6 @@
                 "minLength": 1,
                 "maxLength": 128
               }
-            },
-            "strength": {
-              "type": "string",
-              "enum": [
-                "strong",
-                "medium",
-                "weak"
-              ],
-              "description": "Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work."
             },
             "location": {
               "type": "string",
@@ -380,29 +294,6 @@
               "minimum": 0,
               "maximum": 1,
               "description": "Human-authored advisory prior for this target profile from 0 to 1. Admitted lifecycle outcomes belong to the target-evidence owner and must not rewrite this configuration. This prior grants no execution or completion authority."
-            },
-            "task_fit": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1,
-                "description": "One kind of task this target has proven or is expected to handle well."
-              },
-              "description": "Advisory task-fit labels used to explain when this target is appropriate."
-            },
-            "capability_classes": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "boundary-shaping",
-                  "reasoning-heavy",
-                  "mixed",
-                  "mechanical-follow-through"
-                ],
-                "description": "One capability class this target may be suitable for."
-              },
-              "description": "Advisory capability classes for routing quality-sensitive or mechanical work. These are estimates, not guarantees."
             },
             "transports": {
               "type": "array",
@@ -531,27 +422,6 @@
               },
               "description": "Canonical constructible transport variants. Process/API payload is inseparable from its method; internal readiness is resolved against runtime support."
             },
-            "model_family": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Optional opaque model or family identifier for this local target. This is local descriptive metadata, not package-owned vendor policy."
-            },
-            "provider": {
-              "type": "string",
-              "minLength": 1,
-              "description": "Optional provider or runtime name for this local target."
-            },
-            "context_capacity": {
-              "type": "string",
-              "enum": [
-                "small",
-                "medium",
-                "large",
-                "unknown"
-              ],
-              "default": "unknown",
-              "description": "Advisory context capacity class. Use this to avoid handing broad or context-heavy tasks to constrained targets."
-            },
             "cost_class": {
               "type": "string",
               "enum": [
@@ -594,7 +464,10 @@
             }
           },
           "additionalProperties": false,
-          "description": "One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates."
+          "description": "One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates.",
+          "required": [
+            "transports"
+          ]
         }
       },
       "additionalProperties": false,

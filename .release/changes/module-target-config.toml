@@ -1,0 +1,3 @@
+bump = "minor"
+summary = "Prepare exact independent module admissions and contract Assignment target authoring"
+issues = [3302, 3303, 3297]

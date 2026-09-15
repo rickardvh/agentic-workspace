@@ -298,7 +298,7 @@ Bounded version-1 source recognition only. Not a current authoring or permission
 | `delegation_targets.<^.+$>.target_id` | string | no |  | Stable user-local target identity used by orchestration and target guidance. Display names and aliases alone are not sufficient identity. |  |  |
 | `delegation_targets.<^.+$>.target_revision` | string | no |  | Optional model, runtime, or target generation/revision identifier for continuity decisions. |  |  |
 | `delegation_targets.<^.+$>.aliases` | array of string | no |  | Previous or alternate local profile names. Ambiguous aliases fail closed. |  |  |
-| `delegation_targets.<^.+$>.identity_status` | enum `"active"`, `"retired"`, `"superseded"`, `"ambiguous"`, `"unavailable"` | no | `"active"` | Lifecycle status for this local target identity. |  |  |
+| `delegation_targets.<^.+$>.identity_status` | enum `"active"`, `"retired"`, `"superseded"`, `"ambiguous"`, `"unavailable"` | no | `"active"` | Human-owned target eligibility/lifecycle control. Any non-active value prohibits execution; it does not report observed runtime availability. |  |  |
 | `delegation_targets.<^.+$>.revision_policy` | enum `"preserve"`, `"revalidate"`, `"migrate"`, `"retire"` | no | `"revalidate"` | How existing target guidance behaves when the model/runtime revision changes. |  |  |
 | `delegation_targets.<^.+$>.execution_guarantees` | array of string | no |  | Current provider-neutral local execution capability facts; replaces overlapping target task/strength routing fields. |  |  |
 | `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | no |  | Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work. |  |  |

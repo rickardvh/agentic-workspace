@@ -18,7 +18,6 @@ Current human configuration authoring, version 2. Version 1 sources are read sep
 | `workspace.shared_config_path` | string | no |  | Optional path to another machine-local Agentic Workspace local config file. Relative paths resolve from the repository root; repo-local local config values override shared values. |  |  |
 | `runtime` | object | no |  | Capabilities of the current agent/runtime on this machine. |  |  |
 | `runtime.supports_internal_delegation` | boolean | no |  | Whether the current runtime can hand work to an internal subagent or equivalent in-session worker. |  |  |
-| `runtime.strong_planner_available` | boolean | no |  | Whether this local environment has a stronger planning or reasoning path available for quality-sensitive work. |  |  |
 | `handoff` | object | no |  | Local preferences for internal or external delegation handoff. |  |  |
 | `safety` | object | no |  | Local safety limits for command execution and verification. |  |  |
 | `safety.safe_to_auto_run_commands` | boolean | no |  | Whether this local environment may automatically run configured commands when another local policy explicitly permits automation. |  |  |
@@ -273,18 +272,11 @@ Current human configuration authoring, version 2. Version 1 sources are read sep
 | `delegation_targets.<^.+$>.target_id` | string | no |  | Stable user-local target identity used by orchestration and target guidance. Display names and aliases alone are not sufficient identity. |  |  |
 | `delegation_targets.<^.+$>.target_revision` | string | no |  | Optional model, runtime, or target generation/revision identifier for continuity decisions. |  |  |
 | `delegation_targets.<^.+$>.aliases` | array of string | no |  | Previous or alternate local profile names. Ambiguous aliases fail closed. |  |  |
-| `delegation_targets.<^.+$>.identity_status` | enum `"active"`, `"retired"`, `"superseded"`, `"ambiguous"`, `"unavailable"` | no | `"active"` | Lifecycle status for this local target identity. |  |  |
-| `delegation_targets.<^.+$>.revision_policy` | enum `"preserve"`, `"revalidate"`, `"migrate"`, `"retire"` | no | `"revalidate"` | How existing target guidance behaves when the model/runtime revision changes. |  |  |
+| `delegation_targets.<^.+$>.identity_status` | enum `"active"`, `"retired"`, `"superseded"`, `"ambiguous"`, `"unavailable"` | no | `"active"` | Human-owned target eligibility/lifecycle control. Any non-active value prohibits execution; it does not report observed runtime availability. |  |  |
 | `delegation_targets.<^.+$>.execution_guarantees` | array of string | no |  | Current provider-neutral local execution capability facts; replaces overlapping target task/strength routing fields. |  |  |
-| `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | no |  | Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work. |  |  |
 | `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | Where this target runs from the current machine's perspective: local, external, or either. This is a local availability and boundary hint. |  |  |
 | `delegation_targets.<^.+$>.confidence` | number | no |  | Human-authored advisory prior for this target profile from 0 to 1. Admitted lifecycle outcomes belong to the target-evidence owner and must not rewrite this configuration. This prior grants no execution or completion authority. |  |  |
-| `delegation_targets.<^.+$>.task_fit` | array of string | no |  | Advisory task-fit labels used to explain when this target is appropriate. |  |  |
-| `delegation_targets.<^.+$>.capability_classes` | array of enum `"boundary-shaping"`, `"reasoning-heavy"`, `"mixed"`, `"mechanical-follow-through"` | no |  | Advisory capability classes for routing quality-sensitive or mechanical work. These are estimates, not guarantees. |  |  |
-| `delegation_targets.<^.+$>.transports` | array of object | no |  | Canonical constructible transport variants. Process/API payload is inseparable from its method; internal readiness is resolved against runtime support. |  |  |
-| `delegation_targets.<^.+$>.model_family` | string | no |  | Optional opaque model or family identifier for this local target. This is local descriptive metadata, not package-owned vendor policy. |  |  |
-| `delegation_targets.<^.+$>.provider` | string | no |  | Optional provider or runtime name for this local target. |  |  |
-| `delegation_targets.<^.+$>.context_capacity` | enum `"small"`, `"medium"`, `"large"`, `"unknown"` | no | `"unknown"` | Advisory context capacity class. Use this to avoid handing broad or context-heavy tasks to constrained targets. |  |  |
+| `delegation_targets.<^.+$>.transports` | array of object | yes |  | Canonical constructible transport variants. Process/API payload is inseparable from its method; internal readiness is resolved against runtime support. |  |  |
 | `delegation_targets.<^.+$>.cost_class` | enum `"cheap"`, `"standard"`, `"premium"`, `"unknown"` | no | `"unknown"` | Advisory relative cost class used for down-routing only when quality and proof remain safe. |  |  |
 | `delegation_targets.<^.+$>.latency_class` | enum `"fast"`, `"standard"`, `"slow"`, `"unknown"` | no | `"unknown"` | Advisory relative latency class for local routing tradeoffs. |  |  |
 | `delegation_targets.<^.+$>.forbidden_task_classes` | array of enum `"boundary-shaping"`, `"reasoning-heavy"`, `"mixed"`, `"mechanical-follow-through"` | no |  | Capability classes this target must not execute directly, regardless of model confidence. |  |  |
