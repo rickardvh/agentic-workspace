@@ -37,11 +37,13 @@ def prepare(current: dict, *, procedure: str, judgment: str, scope: str) -> dict
             remaining_judgment="Choose the bounded question/interpretation and determine which progress is safe; never answer a required owner decision.",
         )
     elif procedure == "improvement":
-        latitude = config.get("improvement_latitude") or "conservative"
-        result["preference"] = latitude
-        if judgment == "clear" or latitude == "none":
+        improvement_mode = {value: value for value in ("none", "reporting", "conservative", "proactive")}[
+            config.get("improvement_latitude") or "conservative"
+        ]
+        result["preference"] = improvement_mode
+        if judgment == "clear" or improvement_mode == "none":
             posture = "no-action"
-        elif latitude == "reporting" or (scope == "proactive" and latitude != "proactive"):
+        elif improvement_mode == "reporting" or (scope == "proactive" and improvement_mode != "proactive"):
             posture = "report"
         else:
             posture = "prepare-current-owner-proposal"
