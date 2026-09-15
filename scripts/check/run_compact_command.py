@@ -15,8 +15,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LOG_ROOT = REPO_ROOT / "scratch" / "command-logs"
-RESULT_ROOT = REPO_ROOT / "scratch" / "validation-results"
+# A resource-owning caller may place disposable hook output in its leased tree.
+OUTPUT_ROOT = REPO_ROOT / os.environ.get("AW_VALIDATION_OUTPUT_ROOT", "scratch")
+LOG_ROOT = OUTPUT_ROOT / "command-logs"
+RESULT_ROOT = OUTPUT_ROOT / "validation-results"
 PLAN_PATH = REPO_ROOT / "docs" / "maintainer" / "validation-runtime-2435" / "validation-plan.json"
 DEFAULT_FAILURE_TAIL_LINES = 80
 DEFAULT_PROGRESS_INTERVAL_SECONDS = 30.0
@@ -601,29 +603,41 @@ def _run_command(
         if cancel_path is not None and cancel_path.is_file():
             _terminate_process_tree(process)
             stdout, stderr = process.communicate()
-            return None, stdout or "", stderr or "", False, {
-                "kind": "agentic-workspace/validation-heartbeat/v1",
-                "count": len(heartbeat_elapsed_seconds),
-                "elapsed_seconds": heartbeat_elapsed_seconds,
-                "threshold_seconds": progress_threshold_seconds,
-                "interval_seconds": progress_interval_seconds,
-                "claim": "process-liveness-only",
-                "cancelled": True,
-                "cancel_path": _repo_relative(cancel_path),
-            }
+            return (
+                None,
+                stdout or "",
+                stderr or "",
+                False,
+                {
+                    "kind": "agentic-workspace/validation-heartbeat/v1",
+                    "count": len(heartbeat_elapsed_seconds),
+                    "elapsed_seconds": heartbeat_elapsed_seconds,
+                    "threshold_seconds": progress_threshold_seconds,
+                    "interval_seconds": progress_interval_seconds,
+                    "claim": "process-liveness-only",
+                    "cancelled": True,
+                    "cancel_path": _repo_relative(cancel_path),
+                },
+            )
         now = monotonic()
         wait_until = next_progress if deadline is None else min(next_progress, deadline)
         wait_seconds = max(0.001, wait_until - now)
         try:
             stdout, stderr = process.communicate(timeout=wait_seconds)
-            return process.returncode, stdout or "", stderr or "", False, {
-                "kind": "agentic-workspace/validation-heartbeat/v1",
-                "count": len(heartbeat_elapsed_seconds),
-                "elapsed_seconds": heartbeat_elapsed_seconds,
-                "threshold_seconds": progress_threshold_seconds,
-                "interval_seconds": progress_interval_seconds,
-                "claim": "process-liveness-only",
-            }
+            return (
+                process.returncode,
+                stdout or "",
+                stderr or "",
+                False,
+                {
+                    "kind": "agentic-workspace/validation-heartbeat/v1",
+                    "count": len(heartbeat_elapsed_seconds),
+                    "elapsed_seconds": heartbeat_elapsed_seconds,
+                    "threshold_seconds": progress_threshold_seconds,
+                    "interval_seconds": progress_interval_seconds,
+                    "claim": "process-liveness-only",
+                },
+            )
         except subprocess.TimeoutExpired as exc:
             now = monotonic()
             if deadline is not None and now >= deadline:
@@ -631,14 +645,20 @@ def _run_command(
                 stdout, stderr = process.communicate()
                 combined_stdout = _combine_output(exc.stdout, stdout)
                 combined_stderr = _combine_output(exc.stderr, stderr)
-                return None, combined_stdout, combined_stderr, True, {
-                    "kind": "agentic-workspace/validation-heartbeat/v1",
-                    "count": len(heartbeat_elapsed_seconds),
-                    "elapsed_seconds": heartbeat_elapsed_seconds,
-                    "threshold_seconds": progress_threshold_seconds,
-                    "interval_seconds": progress_interval_seconds,
-                    "claim": "process-liveness-only",
-                }
+                return (
+                    None,
+                    combined_stdout,
+                    combined_stderr,
+                    True,
+                    {
+                        "kind": "agentic-workspace/validation-heartbeat/v1",
+                        "count": len(heartbeat_elapsed_seconds),
+                        "elapsed_seconds": heartbeat_elapsed_seconds,
+                        "threshold_seconds": progress_threshold_seconds,
+                        "interval_seconds": progress_interval_seconds,
+                        "claim": "process-liveness-only",
+                    },
+                )
             elapsed = now - started
             heartbeat_elapsed_seconds.append(round(elapsed, 6))
             heartbeat_writer(

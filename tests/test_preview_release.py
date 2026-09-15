@@ -591,11 +591,18 @@ def test_preview_version_reservation_survives_package_topology_changes(tmp_path,
 
 
 def test_preview_creation_consumer_reuses_native_terminal_lifecycle(tmp_path, shared_core_binary, native_cli, monkeypatch):
+    import os
+
     import pytest
     from tests.test_native_resources import git, repository, resource
 
     helper = _load_helper()
     repository(tmp_path)
+    runner_ref = Path("scripts/check/run_compact_command.py")
+    (tmp_path / runner_ref).parent.mkdir(parents=True)
+    (tmp_path / runner_ref).write_bytes((ROOT / runner_ref).read_bytes())
+    git(tmp_path, "add", ".")
+    git(tmp_path, "commit", "-m", "validation runner")
     monkeypatch.setattr(helper, "ROOT", tmp_path)
     monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(shared_core_binary))
     commit = git(tmp_path, "rev-parse", "HEAD")
@@ -609,14 +616,51 @@ def test_preview_creation_consumer_reuses_native_terminal_lifecycle(tmp_path, sh
     )
     action = helper._preview_isolation("preview-v1.2.3", commit, proposal["policy_revision"])
     path = Path(action["request"]["path"])
+    environment = {**os.environ, **action["build_environment"]}
+    # Exercise the actual hook runner in a fresh process, including retained
+    # failure diagnostics, under the consumer's creation-leased output lifetime.
+    for exit_code in (0, 1):
+        executed = helper._run(
+            [
+                sys.executable,
+                str(path / runner_ref),
+                "--label",
+                "preview hook",
+                "--run-id",
+                f"preview-{exit_code}",
+                "--",
+                sys.executable,
+                "-c",
+                f"print('hook evidence'); raise SystemExit({exit_code})",
+            ],
+            cwd=path,
+            environment=environment,
+            check=False,
+        )
+        assert executed.returncode == exit_code, executed.stdout + executed.stderr
+    output = Path(environment["AW_VALIDATION_OUTPUT_ROOT"])
+    assert output.is_relative_to(path / "target")
+    assert list((output / "command-logs").glob("*.log"))
+    assert list((output / "validation-results").rglob("*.json"))
+    assert not (path / "scratch").exists()
+    for variable in ("UV_CACHE_DIR", "RUFF_CACHE_DIR"):
+        cache = Path(environment[variable])
+        assert cache.is_relative_to(path / "target")
+        cache.mkdir(parents=True, exist_ok=True)
+        (cache / "disposable-cache").write_text("tool output")
+    original_head = git(tmp_path, "rev-parse", "HEAD")
+    original_status = git(tmp_path, "status", "--porcelain")
     (path / "untracked-result.txt").write_text("failed normalization evidence")
     with pytest.raises(SystemExit, match="work preserved"):
         helper._finish_preview_isolation(action)
     assert path.exists()
+    assert list((output / "command-logs").glob("*.log")), "blocked cleanup preserves diagnostics"
     (path / "untracked-result.txt").unlink()
     helper._finish_preview_isolation(action)
     assert not path.exists()
     assert "aw-resource" not in git(tmp_path, "worktree", "list", "--porcelain")
+    assert git(tmp_path, "rev-parse", "HEAD") == original_head
+    assert git(tmp_path, "status", "--porcelain") == original_status
 
 
 def test_preview_creation_preserves_primary_failure_and_reports_cleanup(tmp_path, monkeypatch, capsys):
@@ -627,7 +671,17 @@ def test_preview_creation_preserves_primary_failure_and_reports_cleanup(tmp_path
     monkeypatch.setattr(helper, "_tag_commit", lambda tag: None)
     monkeypatch.setattr(helper, "_resolve_commit", lambda *a, **kw: "a" * 40)
     monkeypatch.setattr(helper, "_assert_source_is_reconstruction_candidate", lambda *a, **kw: None)
-    monkeypatch.setattr(helper, "_preview_isolation", lambda *a: {"request": {"path": str(tmp_path)}, "build_environment": {}})
+    monkeypatch.setattr(
+        helper,
+        "_preview_isolation",
+        lambda *a: {
+            "target": str(tmp_path),
+            "task": "preview",
+            "changed": [],
+            "request": {"path": str(tmp_path)},
+            "build_environment": {},
+        },
+    )
     monkeypatch.setattr(helper, "_load_ownership", lambda *a: {})
     monkeypatch.setattr(helper, "_verify_release_only_paths", lambda *a: ["pyproject.toml"])
     monkeypatch.setattr(helper, "_git", lambda *a, **kw: subprocess.CompletedProcess(a, 0, "pyproject.toml\n", ""))
@@ -639,8 +693,8 @@ def test_preview_creation_preserves_primary_failure_and_reports_cleanup(tmp_path
 
     monkeypatch.setattr(helper, "_finish_preview_isolation", cleanup)
     # Admission exits and subprocess failures must both survive a blocked
-    # cleanup. Cleanup alone must still fail an otherwise successful creation.
-    for primary in (SystemExit("non-release-only paths"), subprocess.CalledProcessError(1, ["generator"]), None):
+    # cleanup. A successful publication must retain its result despite cleanup.
+    for primary in (SystemExit("non-release-only paths"), subprocess.CalledProcessError(1, ["generator"])):
 
         def run(*a, **kw):
             if primary is not None:
@@ -648,11 +702,25 @@ def test_preview_creation_preserves_primary_failure_and_reports_cleanup(tmp_path
             return subprocess.CompletedProcess(a, 0, "{}", "")
 
         monkeypatch.setattr(helper, "_run", run)
-        with pytest.raises(type(primary) if primary is not None else SystemExit) as raised:
+        with pytest.raises(type(primary)) as raised:
             helper.create_preview_subject(version="0.53.0", source_ref="a" * 40, remote="origin", reconstruction_ref="master", push=False)
-        if primary is not None:
-            assert raised.value is primary
-            assert "work preserved: exact resource path" in capsys.readouterr().err
-        else:
-            assert "work preserved: exact resource path" in str(raised.value)
-    assert len(cleanup_calls) == 3
+        assert raised.value is primary
+        assert "work preserved: exact resource path" in capsys.readouterr().err
+
+    verified = {"tag": "preview-v0.53.0", "artifact_commit": "b" * 40, "reconstruction_source_commit": "a" * 40}
+    monkeypatch.setattr(helper, "_run", lambda *a, **kw: subprocess.CompletedProcess(a, 0, json.dumps(verified), ""))
+    monkeypatch.setattr(helper, "_recover_publisher", lambda **kw: {"publication_status": "publisher-dispatch-requested"})
+    for push in (False, True):
+        code = helper.main(["--version", "0.53.0", "--source-commit", "a" * 40, *(["--push"] if push else [])])
+        result = json.loads(capsys.readouterr().out)
+        assert code == 2
+        assert result["artifact_commit"] == verified["artifact_commit"]
+        assert result["tag"] == verified["tag"] and result["pushed"] is push
+        assert result["cleanup"]["status"] == "reentry-required"
+        assert result["cleanup"]["resource_context"] == {"target": str(tmp_path), "task": "preview", "changed": [], "path": str(tmp_path)}
+        if push:
+            assert result["publication_status"] == "publisher-dispatch-requested"
+    assert len(cleanup_calls) == 4
+    monkeypatch.setattr(helper, "_finish_preview_isolation", lambda context: None)
+    assert helper.main(["--version", "0.53.0", "--source-commit", "a" * 40]) == 0
+    assert json.loads(capsys.readouterr().out)["cleanup"] == {"status": "removed"}

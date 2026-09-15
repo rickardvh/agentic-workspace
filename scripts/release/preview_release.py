@@ -272,7 +272,17 @@ def _preview_isolation(tag: str, source_commit: str, policy_revision: str | None
     result = _resource(proposal["action"])
     if result.get("effect_outcome") != "committed":
         raise SystemExit("Preview isolation was not created: " + json.dumps(result))
-    return {**proposal["action"], "build_environment": result["build_environment"]}
+    environment = result["build_environment"]
+    output_root = Path(environment["CARGO_TARGET_DIR"]) / "preview-tools"
+    # Keep every known hook output inside the creation-leased target root.
+    # Make and subprocess hooks inherit these; no cleanup ownership is inferred
+    # from ignored files created elsewhere.
+    environment.update(
+        UV_CACHE_DIR=str(output_root / "uv-cache"),
+        RUFF_CACHE_DIR=str(output_root / "ruff-cache"),
+        AW_VALIDATION_OUTPUT_ROOT=str(output_root / "validation"),
+    )
+    return {**proposal["action"], "build_environment": environment}
 
 
 def _finish_preview_isolation(context: dict[str, Any]) -> None:
@@ -328,6 +338,7 @@ def create_preview_subject(
     worktree = Path(isolation["request"]["path"])
     environment = {**os.environ, **isolation["build_environment"]}
     tag_created = False
+    result = None
     try:
         ownership = _load_ownership(worktree)
         _run(
@@ -385,7 +396,7 @@ def create_preview_subject(
         if push:
             _git("push", remote, f"refs/tags/{tag}")
             recovery = _recover_publisher(remote=remote, verified=verified)
-        return {
+        result = {
             "kind": "agentic-workspace/preview-publication-subject/v1",
             "status": "created",
             **verified,
@@ -393,6 +404,7 @@ def create_preview_subject(
             "release_only_paths": changed,
             "pushed": push,
         }
+        return result
     except Exception:
         if tag_created and not push:
             _git("tag", "-d", tag, check=False)
@@ -405,13 +417,32 @@ def create_preview_subject(
         try:
             _finish_preview_isolation(isolation)
         except (Exception, SystemExit) as cleanup_error:
-            if original_error is None:
+            if original_error is None and result is None:
                 raise
-            print(f"Preview cleanup: {cleanup_error}", file=sys.stderr)
+            if result is not None:
+                result["cleanup"] = {
+                    "status": "reentry-required",
+                    "resource_context": {
+                        "target": isolation["target"],
+                        "task": isolation["task"],
+                        "changed": isolation["changed"],
+                        "path": str(worktree),
+                    },
+                    "reason": str(cleanup_error),
+                    "recovery": "Reobserve and clean up this exact resource through the native owner. Publication identity and outcome above remain valid; do not recreate the tag or infer push failure from cleanup failure.",
+                }
+            else:
+                print(f"Preview cleanup: {cleanup_error}", file=sys.stderr)
+        else:
+            if result is not None:
+                result["cleanup"] = {"status": "removed"}
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Create an immutable release-only preview subject without modifying the source branch.")
+    parser = argparse.ArgumentParser(
+        description="Create an immutable release-only preview subject without modifying the source branch.",
+        epilog="Cleanup requiring reentry returns exit 2 with the publication result and exact resource context in JSON. A nonzero exit does not mean the tag was not published; inspect the result before recovery.",
+    )
     parser.add_argument(
         "--isolation-policy-revision", help="Exact current native resource policy read and judged to permit preview normalization isolation"
     )
@@ -460,7 +491,7 @@ def main(argv: list[str] | None = None) -> int:
         isolation_policy_revision=args.isolation_policy_revision,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
-    return 0
+    return 2 if result.get("cleanup", {}).get("status") == "reentry-required" else 0
 
 
 if __name__ == "__main__":
