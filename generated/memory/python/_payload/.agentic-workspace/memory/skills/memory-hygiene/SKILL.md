@@ -18,3 +18,13 @@ The write changes only the selected entry's disposition metadata in the existing
 Retirement and promotion suppress advisory selection only while current source and admitted attempt evidence support the disposition. Promotion also needs a current receiver. Source, policy, capability or receiving-authority drift can expose the retained lesson again. Unrelated manifest edits conservatively require renewed disposition evidence. Reconcile that result; do not delete the former note to hide it.
 
 No matching Memory means no corpus sweep or write. Creating notes, rewriting their prose, changing routing, resolving ambiguous historical provenance, and admitting a receiving decision remain separate owner work when no current operation offers them. Report that gap instead of using retired module commands or editing stale source bytes directly.
+
+## Selected declaration hygiene
+
+Run `python .agentic-workspace/memory/skills/memory-hygiene/prepare.py --target . --task "<task>" --native-cli <native-executable>` when Python and the current native executable are available. Missing tools return unexecuted; there is no source-only checking fallback. The helper performs the following settled steps.
+
+Select the current `memory/hygiene` semantic route through the native owner's returned route-selection request, then read `memory.hygiene` from fresh `start` output. The shared native owner checks at most 128 declared notes against `rules.canonical_dirs` and `rules.task_board_globs`. Findings name the source and the remaining owner judgment. This does not scan the repository or grant source-write/proof authority. An absent, malformed or unavailable source means unexecuted/unknown hygiene, never clean hygiene.
+
+Routing/compactness derives from per-note `note_type = "routing"`; there is no global mandatory-read list. Core-document governance belongs to repository instructions and selected Verification, not Memory. Ordinary work does not select this maintenance route.
+
+At selected consultation/disposition, use `summary` and fact `review_context` to assess future value and a possible receiving owner. Dates are advisory reminders, not freshness proof. Exact dependencies, stale triggers and contradictions can require reconciliation. Only current native custody admits disposition; a manifest status or authority label cannot suppress a lesson or authorize promotion. Unsupported declaration keys require source-owner repair, not a compatibility interpretation.

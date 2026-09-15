@@ -22,7 +22,7 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
     note.parent.mkdir(parents=True)
     note.write_text("A faithful former-source lesson.\n", encoding="utf-8")
     manifest = note.parent.parent / "manifest.toml"
-    before = f'version=1\n# Human corpus comment\n[notes."{reference}"]\nroutes_from=["src/**"] # retain\n\n[unrelated]\nvalue="preserve"\n'
+    before = f'version=1\n# Human corpus comment\n[notes."{reference}"]\nroutes_from=["src/**"] # retain\n\n# Unrelated human comment preserved\n'
     manifest.write_text(before, encoding="utf-8", newline="")
     context = {"target": str(tmp_path), "task": "Assess one former note", "changed": ["src/core.rs"]}
     continuation = None
@@ -84,7 +84,7 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
     assert result["value"]["continuing_custody"] is False
     assert "# Human corpus comment\n" in manifest.read_text()
     assert 'routes_from=["src/**"] # retain' in manifest.read_text()
-    assert '[unrelated]\nvalue="preserve"\n' in manifest.read_text()
+    assert "# Unrelated human comment preserved\n" in manifest.read_text()
     assert note.read_text() == "A faithful former-source lesson.\n"
     resolved = call()
     if disposition == "retire":
@@ -113,8 +113,8 @@ def test_memory_exact_disposition_preserves_sources_and_rejects_drift(
         call({**context, "invocation": action})
     manifest.write_text(before.replace("version=1", "version=2"), encoding="utf-8")
     unsupported = call()
-    assert unsupported["memory"]["disposition"]["requests"] == []
-    assert len(unsupported["memory"]["selected_notes"]) == 1
+    assert unsupported["memory"].get("disposition", {}).get("requests", []) == []
+    assert unsupported["memory"]["selected_notes"] == []
 
 
 @pytest.mark.parametrize("parent", ["local", "local/effects"])

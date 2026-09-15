@@ -598,15 +598,10 @@ def _always_read_creep_items(manifest_notes: dict[str, dict[str, Any]], manifest
     data = _load_manifest_data(manifest_path)
     if not data:
         return []
-    raw_rules = data.get("rules", {})
-    rules: dict[str, Any] = {str(k): v for k, v in raw_rules.items()} if isinstance(raw_rules, dict) else {}
     items: list[str] = []
-    routing_only = rules.get("routing_only", [])
-    high_level = rules.get("high_level", [])
-    if routing_only and routing_only != [".agentic-workspace/memory/repo/index.md"]:
-        items.append("rules.routing_only should stay limited to .agentic-workspace/memory/repo/index.md")
-    if len(high_level) > 2:
-        items.append("rules.high_level is expanding beyond the intended compact always-read surface")
+    routing = [path for path, row in manifest_notes.items() if row.get("note_type") == "routing"]
+    if routing and routing != [".agentic-workspace/memory/repo/index.md"]:
+        items.append("Routing notes should stay limited to the compact Memory index")
     for note_path, raw in manifest_notes.items():
         if not isinstance(raw, dict):
             continue

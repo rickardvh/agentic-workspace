@@ -205,6 +205,17 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
         ],
         &mut paths,
     )?;
+    // Explicit built-in Memory skill owner; no discovery by directory scanning.
+    admit_registry(
+        &root,
+        &[
+            ".agentic-workspace",
+            ".agentic-workspace/memory",
+            ".agentic-workspace/memory/skills",
+            ".agentic-workspace/memory/skills/REGISTRY.json",
+        ],
+        &mut paths,
+    )?;
     let mut declarations = BTreeMap::<String, Value>::new();
     let mut material = BTreeMap::new();
     let mut pending = paths.clone();

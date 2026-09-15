@@ -87,7 +87,7 @@ class RoutingFeedbackCase:
 
 
 def _load_memory_manifest(path: Path) -> MemoryManifest | None:
-    if not path.exists():
+    if not path.exists() or _memory_manifest_typed_validator_findings(path):
         return None
 
     try:
@@ -133,8 +133,8 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
                 contradicted_by=tuple(_string_list(raw.get("contradicted_by"))),
                 evidence=tuple(_string_list(raw.get("evidence"))),
                 related_validations=tuple(_string_list(raw.get("related_validations"))),
-                routing_only=bool(raw.get("routing_only", False)),
-                high_level=bool(raw.get("high_level", False)),
+                routing_only=raw.get("note_type") == "routing",
+                high_level=raw.get("note_type") == "routing",
                 memory_role=str(raw.get("memory_role", "") or "").strip(),
                 symptom_of=str(raw.get("symptom_of", "") or "").strip(),
                 preferred_remediation=str(raw.get("preferred_remediation", "") or "").strip(),
@@ -181,13 +181,13 @@ def _load_memory_manifest(path: Path) -> MemoryManifest | None:
         version=version,
         notes=tuple(notes),
         durable_facts=tuple(durable_facts),
-        routing_only=tuple(Path(value) for value in _string_list(rules_table.get("routing_only"))),
-        high_level=tuple(Path(value) for value in _string_list(rules_table.get("high_level"))),
+        routing_only=tuple(note.path for note in notes if note.note_type == "routing"),
+        high_level=tuple(note.path for note in notes if note.note_type == "routing"),
         canonical_dirs=tuple(Path(value) for value in _string_list(rules_table.get("canonical_dirs"))),
         task_board_globs=tuple(_string_list(rules_table.get("task_board_globs"))),
-        core_doc_globs=tuple(_string_list(rules_table.get("core_doc_globs")) or list(DEFAULT_CORE_DOC_GLOBS)),
-        core_doc_exclude_globs=tuple(_string_list(rules_table.get("core_doc_exclude_globs")) or list(DEFAULT_CORE_DOC_EXCLUDE_GLOBS)),
-        forbid_core_docs_depend_on_memory=bool(rules_table.get("forbid_core_docs_depend_on_memory", False)),
+        core_doc_globs=DEFAULT_CORE_DOC_GLOBS,
+        core_doc_exclude_globs=DEFAULT_CORE_DOC_EXCLUDE_GLOBS,
+        forbid_core_docs_depend_on_memory=False,
     )
 
 
@@ -201,82 +201,26 @@ def _memory_manifest_typed_validator_findings(path: Path) -> list[str]:
     except tomllib.TOMLDecodeError as exc:
         return [f"manifest TOML parse error: {exc}"]
 
+    import json
+
+    schema = json.loads((Path(__file__).parent / "contracts/manifest.schema.json").read_text(encoding="utf-8"))
     findings: list[str] = []
-    raw_version = data.get("version", 1)
-    if not isinstance(raw_version, int) or isinstance(raw_version, bool):
-        findings.append("manifest version must be an integer")
-
-    for table_name in ("rules", "notes", "durable_facts"):
-        raw_table = data.get(table_name, {})
-        if raw_table is not None and not isinstance(raw_table, dict):
-            findings.append(f"manifest [{table_name}] must be a table")
-
-    rules_table = data.get("rules", {})
-    if isinstance(rules_table, dict):
-        for field in (
-            "routing_only",
-            "high_level",
-            "canonical_dirs",
-            "task_board_globs",
-            "core_doc_globs",
-            "core_doc_exclude_globs",
-        ):
-            if field in rules_table and not _is_string_array(rules_table[field]):
-                findings.append(f"manifest rules.{field} must be an array of strings")
-        if "forbid_core_docs_depend_on_memory" in rules_table and not isinstance(rules_table["forbid_core_docs_depend_on_memory"], bool):
-            findings.append("manifest rules.forbid_core_docs_depend_on_memory must be a boolean")
-
-    notes_table = data.get("notes", {})
-    if isinstance(notes_table, dict):
-        for note_path, raw in notes_table.items():
-            if not isinstance(raw, dict):
-                findings.append(f"manifest notes.{note_path} must be a table")
-                continue
-            for field in ("note_type", "canonical_home", "authority", "audience", "canonicality", "task_relevance"):
-                if field not in raw or not isinstance(raw[field], str) or not raw[field].strip():
-                    findings.append(f"manifest notes.{note_path}.{field} must be a non-empty string")
-            for field in (
-                "subsystems",
-                "surfaces",
-                "applies_to",
-                "use_when",
-                "semantic_routes",
-                "routes_from",
-                "stale_when",
-                "superseded_by",
-                "contradicted_by",
-                "evidence",
-                "related_validations",
-            ):
-                if field in raw and not _is_string_array(raw[field]):
-                    findings.append(f"manifest notes.{note_path}.{field} must be an array of strings")
-            for field in ("summary", "last_confirmed", "valid_until", "promotion_target", "promotion_trigger", "retention_after_promotion"):
-                if field in raw and (not isinstance(raw[field], str) or not raw[field].strip()):
-                    findings.append(f"manifest notes.{note_path}.{field} must be a non-empty string when present")
-            for field in ("routing_only", "high_level", "improvement_candidate"):
-                if field in raw and not isinstance(raw[field], bool):
-                    findings.append(f"manifest notes.{note_path}.{field} must be a boolean")
-
-    durable_facts_table = data.get("durable_facts", {})
-    if isinstance(durable_facts_table, dict):
-        for fact_id, raw in durable_facts_table.items():
-            if not isinstance(raw, dict):
-                findings.append(f"manifest durable_facts.{fact_id} must be a table")
-                continue
-            for field in ("route_keys", "touched_surfaces", "evidence", "affected_decisions"):
-                if field in raw and not _is_string_array(raw[field]):
-                    findings.append(f"manifest durable_facts.{fact_id}.{field} must be an array of strings")
-            for field in (
-                "note_ref",
-                "promotion_target",
-                "promotion_trigger",
-                "preferred_remediation",
-                "elimination_target",
-                "retention_after_promotion",
-            ):
-                if field in raw and (not isinstance(raw[field], str) or not raw[field].strip()):
-                    findings.append(f"manifest durable_facts.{fact_id}.{field} must be a non-empty string when present")
-
+    for table in ("rules", "notes", "durable_facts"):
+        value = data.get(table, {})
+        if not isinstance(value, dict):
+            findings.append(f"manifest {table} must be a table")
+            continue
+        declarations = {table: value} if table == "rules" else value
+        shape = schema["properties"][table] if table == "rules" else schema["properties"][table]["additionalProperties"]
+        for name, row in declarations.items():
+            if not isinstance(row, dict):
+                findings.append(f"manifest {table}.{name} must be a table")
+            else:
+                findings.extend(
+                    f"unsupported manifest {table}.{name}.{key}; use current native Memory admission"
+                    for key in row.keys() - shape["properties"].keys()
+                )
+    findings.extend(f"unsupported manifest section {key}" for key in data.keys() - schema["properties"].keys())
     return findings
 
 

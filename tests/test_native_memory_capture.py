@@ -56,6 +56,13 @@ def test_advisory_capture_keeps_decision_authority_separate(tmp_path, shared_cor
     read = fresh["memory"]["requests"][0]
     detail = call(task="Fresh affected consumer", request=read)
     assert "Inspect the fixture constraint" in str(detail["memory"]["response"])
+    disposition = fresh["memory"]["disposition"]["requests"][0]
+    disposition["arguments"]["reason"] = "The newly captured fixture lesson remains useful as advice."
+    proposed_disposition = call(task="Fresh affected consumer", request=disposition)
+    answer_disposition = proposed_disposition["decision_packet"]["decision_request"]["response_request"]
+    answer_disposition["arguments"]["answer"] = "authorize-disposition"
+    disposition_action = call(task="Fresh affected consumer", request=answer_disposition)["decision_packet"]["primary_action"]
+    assert call(task="Fresh affected consumer", invocation=disposition_action)["value"]["disposition"] == "retain"
     assert not call(changed=["unrelated.rs"])["memory"]["selected_notes"]
     dependency.write_text("Changed fact")
     stale = call()
@@ -69,7 +76,7 @@ def test_bounded_decision_capture_recall_and_currentness(tmp_path: Path, shared_
     dependency.write_text("Fixture source constraint, not a delegated authority grant.\n")
     manifest = tmp_path / ".agentic-workspace/memory/repo/manifest.toml"
     manifest.parent.mkdir(parents=True)
-    before = 'version=1\n# External author comment\n[unrelated]\nvalue="preserved"\n'
+    before = "version=1\n# External author comment\n# Other human text preserved\n"
     manifest.write_text(before)
     context = {"target": str(tmp_path), "task": "Deliberate fixture decision", "changed": ["src/core.rs"]}
 
@@ -117,7 +124,7 @@ def test_bounded_decision_capture_recall_and_currentness(tmp_path: Path, shared_
     published = call(invocation=action)
     assert published["value"]["authority_effect"] == "publication-only"
     assert source.read_bytes() == proposal["postimage"].encode()
-    assert manifest.read_text().startswith(before)
+    assert "# External author comment\n# Other human text preserved\n" in manifest.read_text()
     fresh = call(task="Fresh session, relevant source")
     states = fresh["decision_packet"]["decision_context"]["states"]
     assert len(states) == 1

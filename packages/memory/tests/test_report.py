@@ -513,14 +513,13 @@ def test_create_memory_note_writes_note_and_manifest_entry(tmp_path: Path) -> No
     assert manifest is not None
     note = next(record for record in manifest.notes if record.path.as_posix().endswith("api-routing.md"))
     assert note.summary == "Route API implementation reminders."
-    assert note.applies_to == ("src/api/**",)
-    assert note.use_when == ("touching API routing",)
     assert note.routes_from == ("src/api/**",)
     assert note.stale_when == ("src/api/**",)
-    assert note.evidence == ("tests/test_api.py",)
-    assert note.promotion_target == "docs/api-routing.md"
-    assert note.promotion_trigger == "guidance stabilises"
-    assert note.retention_after_promotion == "stub"
+    body = note_path.read_text(encoding="utf-8")
+    assert "tests/test_api.py" in body
+    assert "docs/api-routing.md" in body
+    assert "guidance stabilises" in body
+    assert "stub" in body
     assert installer._memory_manifest_typed_validator_findings(manifest_path) == []
 
 

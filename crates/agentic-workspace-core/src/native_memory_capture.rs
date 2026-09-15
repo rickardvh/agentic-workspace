@@ -262,6 +262,10 @@ fn manifest_postimage(
         ));
     }
     let normalized = text.replace("\r\n", "\n");
+    crate::native_memory::validate_manifest(
+        &serde_json::to_value(toml::from_str::<toml::Value>(&normalized).map_err(err)?)
+            .map_err(err)?,
+    )?;
     let mut document = normalized.parse::<toml_edit::DocumentMut>().map_err(err)?;
     if document
         .get("version")
