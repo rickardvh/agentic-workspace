@@ -211,18 +211,36 @@ pub fn run_stdio() {
     } else {
         crate::compile_value(request.clone())
     };
-    crate::maintainer_logging::capture(&request, &result, started.elapsed());
+    let capture = crate::maintainer_logging::capture(&request, &result, started.elapsed());
     match result {
-        Ok(decision) => println!(
-            "{}",
-            serde_json::to_string(&decision).expect("decision is JSON serializable")
-        ),
-        Err(error) => fail("invalid-source-decision", &error.to_string()),
+        Ok(mut decision) => {
+            if let Some(capture) = capture {
+                // Carried consumers show only the view; never place diagnostics
+                // in the immutable carriage used for reentry/admission.
+                if let Some(view) = decision.get_mut("view").filter(|v| v.is_object()) {
+                    view["session_capture"] = capture;
+                } else {
+                    decision["session_capture"] = capture;
+                }
+            }
+            println!(
+                "{}",
+                serde_json::to_string(&decision).expect("decision is JSON serializable")
+            );
+        }
+        Err(error) => fail_with_capture("invalid-source-decision", &error.to_string(), capture),
     }
 }
 
 fn fail(code: &str, message: &str) -> ! {
-    let payload = serde_json::json!({"error": {"code": code, "message": message}});
+    fail_with_capture(code, message, None)
+}
+
+fn fail_with_capture(code: &str, message: &str, capture: Option<serde_json::Value>) -> ! {
+    let mut payload = serde_json::json!({"error": {"code": code, "message": message}});
+    if let Some(capture) = capture {
+        payload["session_capture"] = capture;
+    }
     eprintln!(
         "{}",
         serde_json::to_string(&payload).expect("error is JSON serializable")

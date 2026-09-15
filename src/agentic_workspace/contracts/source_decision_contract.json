@@ -37,6 +37,7 @@
     "full": "Original current owner views and capability/detail contracts.",
     "compact": "Decision-bearing material and exact selected executable envelope; no required action-detail fetch.",
     "carried": "Separate model-facing view and disposable host carriage; only the view belongs in model context.",
+    "session_capture": "Opted-in native transport observation: capturing, identity-unavailable (requirement: AW_SESSION_LOGICAL_IDENTITY), or capture-failed, with authoritative: false. Absent when disabled. Attached after capture to the result or carried model-facing view, never semantic inputs or immutable carriage. Replaces the previous observation without warnings or history; recovery is prospective.",
     "reference_identity": ["exact immutable envelope", "selector", "original work context"],
     "admission": "Digest is identity, not authority. Rust reobserves questions/detail and executes exact actions through current native admission.",
     "bounded_answer": "Fill only the absent answer slot of the exact current selected decision; preserve every supplied owner argument.",

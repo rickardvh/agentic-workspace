@@ -16,7 +16,7 @@ Older Markdown/index-only sessions remain readable. Existing physical JSONL stre
 
 ## Native transport capture
 
-Native `start` and `invoke` capture completion metadata when the current local `[session_logging]` source enables it and `AW_SESSION_LOGICAL_IDENTITY` supplies a stable explicit identity. `AW_SESSION_LOGGING_DISABLE=1` wins. Missing identity or disabled capture produces no diagnostic files or decision fields. Native capture uses the shared Rust policy for `enabled`, `path_mode`, and the `redact_local_paths` compatibility alias; malformed configuration or diagnostic state cannot change the command result.
+Native `start` and `invoke` capture completion metadata when the current local `[session_logging]` source enables it and `AW_SESSION_LOGICAL_IDENTITY` supplies a stable explicit identity. `AW_SESSION_LOGGING_DISABLE=1` wins. Disabled capture produces no diagnostic files or status field. Opted-in capture returns a compact `session_capture` transport advisory; missing identity creates no diagnostic files. Native capture uses the shared Rust policy for `enabled`, `path_mode`, and the `redact_local_paths` compatibility alias; malformed configuration or diagnostic state cannot change the command result.
 
 Native events contain timing, command identity, transport outcome, request/result byte counts and hashes, and explicit omissions. They omit raw tasks, arguments, result bodies and stdout/stderr. Paths follow the configured mode. Parent/correlation identities use the existing salted identity format at initial registration. Capture is limited to 8 KiB per event and a 1 MiB existing stream/registry read; reaching a bound, lock contention or interruption omits diagnostics. No rotation or interrupted-command recovery is claimed. Transport success is not task success or proof.
 
@@ -27,3 +27,27 @@ A stable OS owner lock serializes admitted native registration writers, and the 
 This closes the bounded new-identity registration gap for newly custody-created native registries. Historical transfer, interrupted-command capture/rotation, and separate release-artifact acceptance under #2990 remain unresolved; #2995 is not declared complete.
 
 The existing public `session-log analyze --origin all --format json` and `session-log export --no-artifacts --format json` discover registered native streams through the current logical identity. Native caller origin is explicitly unknown. Native capture does not introduce a separate analysis command or log store.
+
+### Ordinary capture posture
+
+The native transport attaches `session_capture` after resolution and capture,
+including compact results, the model-facing view of carried results, and error envelopes. Python, TypeScript and
+JSON clients receive the same native result field; they do not implement logging
+policy. The advisory has `authoritative: false` and one status:
+
+- `capturing`: this invocation was appended to its identified event stream.
+- `identity-unavailable`: capture was requested but portable identity is missing,
+  blank or oversized. `requirement: AW_SESSION_LOGICAL_IDENTITY` names the host's
+  recovery boundary. Provider-specific identity discovery stays in host adapters.
+- `capture-failed`: capture was requested with identity but the diagnostic path
+  could not record the invocation. Existing files are preserved; the underlying
+  operation's result and exit status are unchanged.
+
+This is a replaceable per-invocation observation, not an accumulating warning or
+an episode registry. Repeated degradation has the same bounded field (under 160
+bytes), no repeated prose and no status-history writes. A fresh successful
+observation clears degradation immediately. Supplying identity later records only
+subsequent invocations; it does not backfill earlier work. Capture failure details
+and raw identities are excluded from the advisory. Disabled/default results stay
+quiet. The field is outside decision carriage and all semantic owner inputs;
+it grants no task, mutation, proof, claim or completion authority.
