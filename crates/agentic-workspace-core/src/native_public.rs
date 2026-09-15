@@ -1089,7 +1089,6 @@ fn resolve_with_baseline(
         ]))?);
     }
     requirements["patch_integration"] = integration;
-    contributions.push(assignment_contribution);
     let adopted = crate::native_planning_update::adopt_return(
         target, &work, &contract, &planning, &admission, &requests,
     )?;
@@ -1135,8 +1134,12 @@ fn resolve_with_baseline(
     requirements["handoff"] = handoff;
     if requirements["assignment"]["result"]["binding"] == true {
         requirements["implementation_admission"] =
-            crate::native_assignment::implementation_admission(&requirements);
+            crate::native_assignment::implementation_admission(
+                &requirements,
+                &mut assignment_contribution,
+            )?;
     }
+    contributions.push(assignment_contribution);
     contributions.push(system_intent["contribution"].clone());
     contributions.push(memory["contribution"].clone());
     contributions.extend(independent_contributions);

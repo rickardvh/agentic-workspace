@@ -58,6 +58,10 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
         assert "claim:pr-complete" in blocker["affects"]
         assert "effect:implementation" in blocker["affects"]
         assert any(r["owner"] == "assignment" for r in reviewed["consequence_recovery"])
+        blocker = next(b for b in reviewed["decision_packet"]["blockers"] if b["code"] == "implementation-result-unadmitted")
+        assert {"effect:implementation", "claim:complete", "claim:pr-complete"} <= set(blocker["affects"])
+        # No current transport claims it can produce already-materialized work.
+        assert reviewed["task_requirements"]["assignment"]["requests"] == []
     (tmp_path / "a.txt").write_text("Changed resulting work")
     with pytest.raises(AssertionError, match="stale"):
         call(request=reentry)

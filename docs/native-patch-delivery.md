@@ -56,7 +56,7 @@ the current owner state:
 | `assessment-required` | Current comparison/admission is missing or unresolved. Follow the Assignment recovery requests. |
 | `admitted-local` | Current retained-local continuation is valid; no worker dispatch is required. |
 | `admitted-nonlocal` | Follow only the selected Assignment's exact handoff/transport envelope; this is not local implementation permission. |
-| `returned-unadmitted` | A returned result or declared `already-materialized` work has no admitted result use. Existing bytes and proof cannot establish admission. |
+| `returned-unadmitted` | A returned result or declared `already-materialized` work has no admitted result use. Assignment restricts implementation and completion claims even after a later local choice. Existing bytes and proof cannot establish admission. |
 | `returned-admitted` | The result owner admits the exact observed result. Patch integration and Verification retain their separate requirements. |
 
 This status creates no new session history or Assignment ledger. A current local
