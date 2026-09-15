@@ -193,7 +193,6 @@
             "none",
             "reporting",
             "conservative",
-            "balanced",
             "proactive"
           ],
           "default": "conservative"
