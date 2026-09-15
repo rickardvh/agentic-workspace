@@ -155,3 +155,15 @@ succeeded. Do not broaden cleanup to unrelated ignored files or worktrees. Hoste
 Dependabot alerts 1–3 still reported open for removed member locks when checked;
 the active workspace lock and exact preview security checks passed. No hosted
 alert dismissal or closure is inferred from source removal.
+## Candidate B publication record
+
+The accepted executable-skill stack is published as non-support-bearing
+[`preview-v0.56.0`](https://github.com/rickardvh/agentic-workspace/releases/tag/preview-v0.56.0).
+Source `3fd508feba856354e30fd4afc82930f2e6012c87` is the single parent of release-only
+artifact `87cf9ea4b2b0e1d6d59152ef707c3900b5b90595`.
+[Run 34962615722](https://github.com/rickardvh/agentic-workspace/actions/runs/34962615722)
+passed runtime/package/security/provenance and public-byte installation/start proof.
+The [Candidate B reconciliation](../reviews/candidate-b-publication.md) records
+independent leaf acceptance, downloaded-asset verification, real issue-creation
+dogfood, exact cleanup recovery and residual ownership. Public maturity remains
+Alpha; Candidate C and support-bearing v1 admission remain separate.
