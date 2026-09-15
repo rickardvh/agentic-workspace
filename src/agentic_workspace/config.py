@@ -96,7 +96,6 @@ SUPPORTED_IMPROVEMENT_LATITUDES = (
     "none",
     "reporting",
     "conservative",
-    "balanced",
     "proactive",
 )
 DEFAULT_OPTIMIZATION_BIAS = "balanced"

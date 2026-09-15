@@ -27,11 +27,8 @@ SCHEMA_PATH = REPO_ROOT / SCHEMA_RELATIVE_PATH
 STRUCTURED_SUFFIXES = frozenset({".json", ".toml", ".yaml", ".yml"})
 GENERATED_MIRROR_REQUIRED_PATHS = frozenset(
     {
-        "tools/agent-manifest.json",
         "tools/AGENT_QUICKSTART.md",
         "tools/AGENT_ROUTING.md",
-        ".agentic-workspace/planning/agent-manifest.json",
-        "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
     }
 )
 RECONSTRUCTABLE_CLASSES = frozenset(

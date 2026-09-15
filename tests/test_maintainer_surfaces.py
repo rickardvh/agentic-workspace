@@ -107,8 +107,8 @@ def _write_generated_agent_surfaces(tmp_path: Path) -> None:
         json.dumps(manifest, ensure_ascii=False, indent=2),
     )
     _write(tmp_path / "tools" / "agent-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
-    _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", render_module.render_quickstart(manifest))
-    _write(tmp_path / "tools" / "AGENT_ROUTING.md", render_module.render_routing(manifest))
+    _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", render_module.render_quickstart())
+    _write(tmp_path / "tools" / "AGENT_ROUTING.md", render_module.render_routing())
 
 
 def _write_planning_surfaces(tmp_path: Path) -> None:
@@ -369,7 +369,7 @@ def test_maintainer_surface_role_guidance_warns_when_readme_docs_map_drifts(tmp_
 
     warnings = mod.gather_maintainer_warnings(repo_root=tmp_path)
 
-    assert any(warning.warning_class == "startup_policy_drift" and str(warning.path).endswith("README.md") for warning in warnings)
+    assert not any(warning.warning_class == "startup_policy_drift" for warning in warnings)
 
 
 def test_maintainer_surface_checker_includes_boundary_warnings(tmp_path: Path) -> None:
@@ -448,18 +448,11 @@ def test_render_wrapper_keeps_backward_compatible_entrypoint_alias() -> None:
 
 def test_rendered_routing_adapter_stays_secondary_and_compact() -> None:
     mod = _load_module(_render_script_path(), "maintainer_render_compact")
-    text = mod.render_routing(_baseline_manifest())
-
-    assert "Secondary generated adapter" in text
-    assert "Prefer `AGENTS.md`, then `tools/AGENT_QUICKSTART.md`." in text
-    assert 'uv run agentic-workspace start --task "<task>" --format json' in text
-    assert "uv run agentic-workspace summary --format json" in text
-    assert "uv run agentic-workspace preflight --format json" not in text
-    assert "uv run agentic-workspace report --target . --format json" not in text
-    assert "tools/skills/github-issue-shaping/SKILL.md" in text
-    assert "tools/skills/pr-review-recheck/SKILL.md" in text
-    assert "only independent external PR review" in text
-    assert "implementation agents addressing feedback must not load it" in text
+    text = mod.render_routing()
+    assert "Use `AGENTS.md` and the canonical workspace startup skill" in text
+    assert "current native Planning relation/posture" in text
+    assert "No helper supplies mutation or completion authority" in text
+    assert "agent-manifest" not in text
     assert len(text.splitlines()) <= 22
 
 
@@ -480,16 +473,13 @@ def test_issue_and_review_skills_audit_architectural_assumptions() -> None:
     assert "does not authorize implementation-agent self-review" in review_skill
 
 
-def test_rendered_quickstart_routes_issue_and_review_work_without_copying_doctrine() -> None:
+def test_rendered_quickstart_routes_to_current_procedure_without_copying_doctrine() -> None:
     mod = _load_module(_render_script_path(), "maintainer_render_issue_review_routes")
-    text = mod.render_quickstart(_baseline_manifest())
-
-    assert "tools/skills/github-issue-shaping/SKILL.md" in text
-    assert "tools/skills/github-issue-creation/SKILL.md" in text
-    assert "tools/skills/pr-review-recheck/SKILL.md" in text
-    assert "independent external PR review by an agent that did not implement the patch" in text
-    assert "implementation agents addressing feedback must not load it" in text
-    assert "directly observed evidence" not in text
+    text = mod.render_quickstart()
+    assert "skills/workspace-startup/SKILL.md" in text
+    assert "Follow selected owner requests and skills" in text
+    assert "Verification owns proof and claims" in text
+    assert "agent-manifest" not in text
     assert len(text.splitlines()) <= 28
 
 

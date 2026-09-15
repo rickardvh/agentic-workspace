@@ -56,7 +56,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert external_evidence_schema_path.exists()
     assert finished_evidence_schema_path.exists()
     assert closeout_evidence_schema_path.exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "scripts").exists()
     assert skill_readme_path.exists()
     assert skill_registry_path.exists()
@@ -270,15 +270,11 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     assert execplan_readme_path.read_text(encoding="utf-8") == "# Existing execution docs\n"
     assert contributor_playbook_path.read_text(encoding="utf-8") == "# Existing contributor playbook\n"
     assert maintainer_commands_path.read_text(encoding="utf-8") == "# Existing commands\n"
-    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "skipped" and action.path == execplan_readme_path for action in result.actions)
-    assert any(
-        action.kind in {"copied", "created", "updated"}
-        and action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
-        for action in result.actions
-    )
+    assert not any(action.path.name == "agent-manifest.json" for action in result.actions)
     assert not (tmp_path / "tools").exists()
 
 
@@ -307,7 +303,7 @@ def test_adopt_bootstrap_preserves_existing_manifest_in_partial_managed_state(tm
     result = adopt_bootstrap(target=tmp_path)
 
     assert manifest_path.read_text(encoding="utf-8") == manifest_text
-    assert any(action.kind == "skipped" and action.path == manifest_path for action in result.actions)
+    assert not any(action.path == manifest_path for action in result.actions)
     assert not (tmp_path / "tools").exists()
 
 
@@ -319,7 +315,7 @@ def test_adopt_bootstrap_leaves_memory_owned_surfaces_untouched(tmp_path: Path) 
 
     assert memory_index_path.read_text(encoding="utf-8") == "# Existing memory index\n"
     assert not any(action.path == memory_index_path for action in result.actions)
-    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
 
 
 def test_status_reports_missing_and_present_files(tmp_path: Path) -> None:
@@ -373,33 +369,31 @@ def test_payload_filters_generated_artifacts(tmp_path: Path, monkeypatch) -> Non
     assert any(action.path == tmp_path / "target" / "AGENTS.md" for action in result.actions)
 
 
-def test_verify_payload_generated_docs_match_manifest() -> None:
-    result = verify_payload()
-    manifest_actions = [action for action in result.actions if action.path.name == "agent-manifest.json"]
-    assert manifest_actions
-    assert any(action.kind == "current" for action in manifest_actions)
+def test_verify_payload_does_not_restore_retired_manifest() -> None:
+    assert not any("agent-manifest.json" in path for path in installer_mod.list_payload_files())
+    assert not any(action.path.name == "agent-manifest.json" for action in verify_payload().actions)
 
 
 def test_verify_payload_reports_contract_surface_shortlists() -> None:
     result = verify_payload()
 
     assert any(
-        action.path.name == "agent-manifest.json"
+        action.path.name == "planning"
         and action.kind == "current"
         and "default compatibility contract files:" in action.detail
         and "AGENTS.md" in action.detail
-        and ".agentic-workspace/planning/agent-manifest.json" in action.detail
+        and ".agentic-workspace/planning/execplans/TEMPLATE.plan.json" in action.detail
         for action in result.actions
     )
     assert any(
-        action.path.name == "agent-manifest.json"
+        action.path.name == "planning"
         and action.kind == "current"
         and "default lower-stability helper files:" in action.detail
         and ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in action.detail
         for action in result.actions
     )
     assert any(
-        action.path.name == "agent-manifest.json"
+        action.path.name == "planning"
         and action.kind == "current"
         and "optional packaged payload files:" in action.detail
         and ".agentic-workspace/docs/capability-contract.json" in action.detail
@@ -506,7 +500,7 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
     result = doctor_bootstrap(target=tmp_path)
 
     assert any(
-        action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+        action.path == tmp_path / ".agentic-workspace" / "planning"
         and action.kind == "current"
         and "default compatibility contract files:" in action.detail
         and "AGENTS.md" in action.detail
@@ -514,14 +508,14 @@ def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
         for action in result.actions
     )
     assert any(
-        action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+        action.path == tmp_path / ".agentic-workspace" / "planning"
         and action.kind == "current"
         and "default lower-stability helper files:" in action.detail
         and ".agentic-workspace/planning/UPGRADE-SOURCE.toml" in action.detail
         for action in result.actions
     )
     assert any(
-        action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
+        action.path == tmp_path / ".agentic-workspace" / "planning"
         and action.kind == "current"
         and "optional packaged payload files:" in action.detail
         and ".agentic-workspace/docs/capability-contract.json" in action.detail
@@ -792,14 +786,11 @@ def test_upgrade_bootstrap_legacy_standalone_install_adds_managed_helpers_withou
 
     result = upgrade_bootstrap(target=tmp_path)
 
-    assert (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
     assert not (tmp_path / "tools").exists()
     assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == "legacy repo-owned agents\n"
     assert any(action.kind == "skipped" and action.path == tmp_path / "AGENTS.md" for action in result.actions)
-    assert any(
-        action.kind == "copied" and action.path == tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json"
-        for action in result.actions
-    )
+    assert not any(action.path.name == "agent-manifest.json" for action in result.actions)
 
 
 def test_upgrade_bootstrap_recovers_partial_managed_state_without_overwriting_root_surfaces(tmp_path: Path) -> None:
@@ -809,15 +800,14 @@ def test_upgrade_bootstrap_recovers_partial_managed_state_without_overwriting_ro
     routing_path = tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
-    manifest_path.unlink()
     routing_path.unlink()
 
     result = upgrade_bootstrap(target=tmp_path)
 
-    assert manifest_path.exists()
+    assert not manifest_path.exists()
     assert routing_path.exists()
     assert agents_path.read_text(encoding="utf-8") == "repo-owned agents\n"
-    assert any(action.kind == "copied" and action.path == manifest_path for action in result.actions)
+    assert not any(action.path == manifest_path for action in result.actions)
     assert any(action.kind == "copied" and action.path == routing_path for action in result.actions)
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
 
@@ -872,7 +862,7 @@ def test_doctor_reports_stale_generated_routing_residue_for_partial_managed_stat
 
     result = doctor_bootstrap(target=tmp_path)
 
-    assert not any(action.path == routing_path for action in result.actions)
+    assert any(action.path == routing_path and action.kind == "warning" for action in result.actions)
 
 
 def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(tmp_path: Path) -> None:

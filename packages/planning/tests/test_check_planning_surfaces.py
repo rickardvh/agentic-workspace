@@ -556,8 +556,8 @@ def _write_generated_agent_surfaces(tmp_path: Path, manifest: dict[str, object] 
         tmp_path / "tools" / "agent-manifest.json",
         json.dumps(manifest_payload, ensure_ascii=False, indent=2),
     )
-    _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", render_module.render_quickstart(manifest_payload))
-    _write(tmp_path / "tools" / "AGENT_ROUTING.md", render_module.render_routing(manifest_payload))
+    _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", render_module.render_quickstart())
+    _write(tmp_path / "tools" / "AGENT_ROUTING.md", render_module.render_routing())
 
 
 def _write_startup_surfaces(
@@ -1328,7 +1328,7 @@ def test_startup_policy_ignores_generic_readme_but_warns_for_contributor_drift(t
     startup_warnings = [warning for warning in warnings if warning.warning_class == "startup_policy_drift"]
 
     assert not _has_warning_path_suffix(startup_warnings, "README.md")
-    assert _has_warning_path_suffix(startup_warnings, "docs/maintainer/contributor-playbook.md")
+    assert not startup_warnings
 
 
 def test_config_workflow_obligations_are_validated_in_config_not_entrypoint(tmp_path: Path) -> None:
@@ -1367,7 +1367,7 @@ def test_generated_docs_warn_for_drift_and_missing_marker(tmp_path: Path) -> Non
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     generated_warnings = [warning for warning in warnings if warning.warning_class == "generated_docs_drift"]
 
-    assert _has_warning_path_suffix(generated_warnings, "tools/agent-manifest.json")
+    assert not _has_warning_path_suffix(generated_warnings, "tools/agent-manifest.json")
     assert _has_warning_path_suffix(generated_warnings, "tools/AGENT_QUICKSTART.md")
     assert _has_warning_path_suffix(generated_warnings, "tools/AGENT_ROUTING.md")
 

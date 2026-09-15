@@ -67,7 +67,7 @@ pub(crate) fn disposition(
             .unwrap_or("conservative");
         if nomination["concern"] == "package" {
             Some("report-to-package-owner")
-        } else if !matches!(latitude, "conservative" | "balanced" | "proactive")
+        } else if !matches!(latitude, "conservative" | "proactive")
             || (nomination["scope"] == "proactive" && latitude != "proactive")
         {
             Some("report")

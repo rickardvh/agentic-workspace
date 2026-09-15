@@ -296,10 +296,6 @@
       {
         "role": "public external install/adopt instructions",
         "surface": "docs/agentic-workspace-install.md"
-      },
-      {
-        "role": "planning package-owned generation source over structured substrate",
-        "surface": ".agentic-workspace/planning/agent-manifest.json"
       }
     ],
     "authority_map": [
@@ -1595,26 +1591,6 @@
         ],
         "reporting_rule": "Use reporting to justify or defer bounded follow-on; do not treat one hotspot as permission for standalone cleanup.",
         "summary": "Only reduce repo friction opportunistically inside already-touched scope; do not create standalone cleanup work from one hotspot alone."
-      },
-      {
-        "allows": [
-          "simplifying a touched hotspot during the current slice",
-          "small repo-friction reductions when repeated shared evidence is present and proof stays narrow",
-          "turning repeated friction into a bounded follow-on candidate"
-        ],
-        "forbids": [
-          "rewriting requested ends in the name of cleanup",
-          "treating one-off agent discomfort or local taste as enough evidence for repo-directed change",
-          "broad cross-owner refactors without promotion"
-        ],
-        "initiative_posture": "bounded-evidence-backed-action",
-        "mode": "balanced",
-        "reporting_destinations": [
-          "agentic-workspace report --target ./repo --format json",
-          "the bounded owner execplan when friction should become bounded follow-on work"
-        ],
-        "reporting_rule": "Use reporting to preserve evidence and deferred cleanup residue whenever the current slice intentionally stops short.",
-        "summary": "Allow bounded friction reduction when evidence is clear and the extra work stays inside the current proof and ownership boundary."
       },
       {
         "allows": [
@@ -3770,13 +3746,6 @@
         "owner": "repo",
         "role": "public external install/adopt instructions",
         "surface": "docs/agentic-workspace-install.md"
-      },
-      {
-        "edit_rule": "update through the common CLI and package-managed installers",
-        "kind": "managed",
-        "owner": "planning package",
-        "role": "planning package-owned generation source",
-        "surface": ".agentic-workspace/planning/agent-manifest.json"
       }
     ],
     "tiny_safe_model": {

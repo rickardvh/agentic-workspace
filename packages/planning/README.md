@@ -47,7 +47,6 @@ The package ships these payload files:
 - `.agentic-workspace/docs/system-intent-contract.md`
 - `.agentic-workspace/docs/workspace-config-contract.md`
 - `.agentic-workspace/planning/UPGRADE-SOURCE.toml`
-- `.agentic-workspace/planning/agent-manifest.json`
 - `.agentic-workspace/planning/decompositions/README.md`
 - `.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json`
 - `.agentic-workspace/planning/execplans/README.md`

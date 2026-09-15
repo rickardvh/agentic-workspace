@@ -22,7 +22,6 @@
       "packages/planning/bootstrap/.agentic-workspace/docs/system-intent-contract.md",
       "packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md",
       "packages/planning/bootstrap/.agentic-workspace/planning/UPGRADE-SOURCE.toml",
-      "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/README.md",
       "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/execplans/README.md",
@@ -51,7 +50,6 @@
       ".agentic-workspace/docs/system-intent-contract.md",
       ".agentic-workspace/docs/workspace-config-contract.md",
       ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
-      ".agentic-workspace/planning/agent-manifest.json",
       ".agentic-workspace/planning/decompositions/README.md",
       ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
       ".agentic-workspace/planning/execplans/README.md",
@@ -434,13 +432,6 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Records the managed source needed for safe upgrades and recovery."
-    },
-    {
-      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
-      "installed_path": ".agentic-workspace/planning/agent-manifest.json",
-      "classification": "core daily-operation planning",
-      "owner": "planning package payload",
-      "rationale": "Machine-readable routing manifest used to render thin compatibility adapters."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/decompositions/README.md",
