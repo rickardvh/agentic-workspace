@@ -3032,6 +3032,16 @@ def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywor
         (bridge, wrapper.replace("dispatch(Path.cwd(), packet)", "runtime_main(packet)"), True),
         (bridge, wrapper + "parser = argparse.ArgumentParser()\n", True),
         ("src/agentic_workspace/cli.py", wrapper, True),
+        (
+            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+            "def main():\n    parser = argparse.ArgumentParser()\n    parser.parse_args()\n",
+            False,
+        ),
+        (
+            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+            "def run_operation_ir():\n    pass\n",
+            True,
+        ),
     ]
     monkeypatch.setattr(checker, "REPO_ROOT", tmp_path)
     for relative, source, rejected in cases:
