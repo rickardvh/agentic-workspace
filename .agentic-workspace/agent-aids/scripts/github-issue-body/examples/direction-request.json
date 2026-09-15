@@ -22,6 +22,26 @@
     "acceptance": {
       "kind": "markdown",
       "value": "The rendered body preserves the repository issue template headings."
+    },
+    "issue_kind": {
+      "kind": "markdown",
+      "value": "Child slice / bounded follow-on"
+    },
+    "non_solutions": {
+      "kind": "markdown",
+      "value": "A body scaffold that invents completion criteria does not satisfy this example."
+    },
+    "final_satisfaction": {
+      "kind": "markdown",
+      "value": "The supplied semantic fields appear unchanged in a body using the current form."
+    },
+    "evidence_required_for_final_completion": {
+      "kind": "markdown",
+      "value": "Compare the example input fields to the prepared body and current form."
+    },
+    "completion_rule": {
+      "kind": "markdown",
+      "value": "One bounded formatter change plus immediate deterministic proof can close this implementation leaf."
     }
   },
   "source_refs": [

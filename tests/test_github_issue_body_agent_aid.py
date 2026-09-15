@@ -1,8 +1,11 @@
+import copy
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 _MODULE_PATH = (
@@ -14,11 +17,6 @@ assert _SPEC is not None and _SPEC.loader is not None
 issue_body = importlib.util.module_from_spec(_SPEC)
 sys.modules[_SPEC.name] = issue_body
 _SPEC.loader.exec_module(issue_body)
-
-
-def _write_json(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def test_issue_templates_include_completion_boundary_fields() -> None:
@@ -41,71 +39,13 @@ def test_issue_templates_include_completion_boundary_fields() -> None:
         assert required_fields.issubset(field_ids), template_path
 
 
-def test_direction_issue_body_uses_repo_template_fields() -> None:
-    rendered = issue_body.render_issue(
-        kind="direction",
-        title="Example",
-        fields={
-            "problem_intent": "Make the right issue shape cheap.",
-            "intended_outcome": "Agents use the repo template fields.",
-            "larger_picture": "Issue intake remains reviewable.",
-            "scope": "In scope: body generation.",
-            "acceptance": "Generated body has template headings.",
-        },
-    )
+def test_pull_request_template_prompts_completion_audit() -> None:
+    template = (_REPO_ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
 
-    assert rendered["title"] == "[Workspace]: Example"
-    assert rendered["labels"] == ["planning"]
-    assert "## Problem / intent\nMake the right issue shape cheap." in rendered["body"]
-    assert "## Acceptance criteria\nGenerated body has template headings." in rendered["body"]
-    assert "## Final satisfaction\nFinal completion requires satisfying: Agents use the repo template fields." in rendered["body"]
-    assert "## Evidence required for final completion\nFinal completion evidence must prove the final intended state" in rendered["body"]
-    assert (
-        "## Non-solutions\nThe following do not close this issue unless explicitly listed in the acceptance criteria:" in rendered["body"]
-    )
-    assert "## Completion rule\nA PR may close this issue only if the intended outcome is true in the ordinary path" in rendered["body"]
-
-
-def test_direction_issue_body_preserves_final_completion_fields() -> None:
-    rendered = issue_body.render_issue(
-        kind="direction",
-        title="Completion boundary",
-        fields={
-            "problem_intent": "Partial progress was confused with final closure.",
-            "intended_outcome": "Issues preserve final satisfaction separately from useful slices.",
-            "larger_picture": "Closeout remains honest across PR slices.",
-            "scope": "In scope: issue authoring.",
-            "acceptance": "Generated body has final and partial closure fields.",
-            "final_satisfaction": "The parent issue closes only when closeout and issue authoring both preserve the boundary.",
-            "evidence_required_for_final_completion": "Issue body helper output and closeout_trust example.",
-        },
-    )
-
-    assert (
-        "## Final satisfaction\nThe parent issue closes only when closeout and issue authoring both preserve the boundary."
-        in rendered["body"]
-    )
-    assert "## Evidence required for final completion\nIssue body helper output and closeout_trust example." in rendered["body"]
-
-
-def test_review_issue_body_defaults_dropdowns_and_labels() -> None:
-    rendered = issue_body.render_issue(
-        kind="review",
-        title="Template friction",
-        fields={
-            "observed_problem": "Issue creation bypassed templates.",
-            "evidence": "#822 #823 #824",
-            "desired_signal": "A cheap body scaffold.",
-            "intended_outcome": "Agents preserve form fields.",
-        },
-    )
-
-    assert rendered["title"] == "[Review]: Template friction"
-    assert rendered["labels"] == ["review"]
-    assert "## Issue kind\nReview / trust gap" in rendered["body"]
-    assert "## Should the product absorb this first?\nYes" in rendered["body"]
-    assert "## Final satisfaction\nFinal completion requires satisfying: Agents preserve form fields." in rendered["body"]
-    assert "## Acceptance criteria\nTODO:" in rendered["body"]
+    assert "## Completion audit" in template
+    assert "This PR makes the issue's intended outcome true in the ordinary path." in template
+    assert "Any remaining old behavior is explicitly allowed by the issue acceptance criteria." in template
+    assert "documentation, inventory, reclassification, or a follow-up plan" in template
 
 
 def test_issue_creation_semantic_route_resolves_canonical_skills_and_current_template() -> None:
@@ -122,241 +62,174 @@ def test_issue_creation_semantic_route_resolves_canonical_skills_and_current_tem
     assert "github-issue-shaping" in instruction
     assert "github-issue-creation" in instruction
 
-    rendered = issue_body.render_issue(
-        kind="review",
-        title="Semantic-route replay",
-        fields={
-            "issue_kind": "Dogfooding friction",
-            "observed_problem": "The issue procedure was previously bypassed.",
-            "evidence": ".github/ISSUE_TEMPLATE/03-review-friction.yml",
-            "desired_signal": "Route to the repository-owned issue procedure.",
-            "intended_outcome": "The current form and labels are preserved.",
-            "acceptance": "- [ ] The current form headings and labels are emitted.",
-        },
-    )
-    assert rendered["template"] == "03-review-friction.yml"
-    assert rendered["labels"] == ["review"]
-    for heading in (
-        "## Issue kind",
-        "## Observed problem",
-        "## Evidence",
-        "## Intended outcome",
-        "## Acceptance criteria",
-        "## Final satisfaction",
-        "## Evidence required for final completion",
-        "## Completion rule",
-    ):
-        assert heading in rendered["body"]
+
+def _request(kind="direction"):
+    template = yaml.safe_load((_REPO_ROOT / ".github/ISSUE_TEMPLATE" / issue_body.TEMPLATE_BY_KIND[kind]).read_text(encoding="utf-8"))
+    fields = {}
+    for item in template["body"]:
+        if item.get("type") == "markdown":
+            continue
+        attributes = item["attributes"]
+        value = attributes["options"][0] if item["type"] == "dropdown" else f"Explicit shaped {item['id']}."
+        if item["type"] == "checkboxes":
+            value = "\n".join(f"- [x] {option['label']}" for option in attributes["options"])
+        fields[item["id"]] = {"kind": "markdown", "value": value}
+    return {"kind": "agentic-workspace/issue-body-request/v1", "template": kind, "title": "Prepared issue", "fields": fields}
 
 
-def test_bug_issue_body_defaults_final_completion_fields() -> None:
-    rendered = issue_body.render_issue(
-        kind="bug",
-        title="Regression",
-        fields={
-            "current_behavior": "The command claims final closure after a partial fix.",
-            "expected_behavior": "The command preserves the remaining bug-fix intent.",
-            "intended_outcome": "The command preserves the remaining bug-fix intent.",
-            "reproduction": "1. Run the closeout command.",
-            "product_reasoning": "The package owns this guidance.",
-        },
-    )
-
-    assert rendered["title"] == "[Bug]: Regression"
-    assert rendered["labels"] == ["bug"]
-    assert (
-        "## Final satisfaction\nFinal completion requires satisfying: The command preserves the remaining bug-fix intent."
-        in rendered["body"]
-    )
-    assert "## Evidence required for final completion\nFinal completion evidence must prove the final intended state" in rendered["body"]
-
-
-def test_pull_request_template_prompts_completion_audit() -> None:
-    template = (_REPO_ROOT / ".github" / "PULL_REQUEST_TEMPLATE.md").read_text(encoding="utf-8")
-
-    assert "## Completion audit" in template
-    assert "This PR makes the issue's intended outcome true in the ordinary path." in template
-    assert "Any remaining old behavior is explicitly allowed by the issue acceptance criteria." in template
-    assert "documentation, inventory, reclassification, or a follow-up plan" in template
-
-
-def test_issue_body_normalizes_duplicate_template_title_prefix() -> None:
-    rendered = issue_body.render_issue(kind="review", title="[Review]: Template friction", fields={})
-
-    assert rendered["title"] == "[Review]: Template friction"
-    assert rendered["title_prefix"] == "[Review]:"
-    assert rendered["normalized_title"] == "Template friction"
-    assert rendered["duplicate_prefix_normalized"] is True
-
-
-def test_issue_body_renders_typed_structured_request() -> None:
-    rendered = issue_body.render_issue_request(
-        {
-            "kind": "agentic-workspace/issue-body-request/v1",
-            "template": "direction",
-            "title": "Structured lane body",
-            "fields": {
-                "problem_intent": {
-                    "kind": "markdown",
-                    "value": "Create issue bodies from typed request data instead of shell-composed strings.",
-                },
-                "intended_outcome": {
-                    "kind": "markdown",
-                    "value": "Planning-derived issue bodies render from structured data.",
-                },
-                "acceptance": {
-                    "kind": "markdown",
-                    "value": "The generated body carries template headings and source refs.",
-                },
-            },
-            "source_refs": [
-                {
-                    "kind": "planning-lane",
-                    "id": "lane-example",
-                    "path": ".agentic-workspace/planning/lanes/lane-example.lane.json",
-                }
-            ],
-        }
-    )
-
-    assert rendered["request_kind"] == "agentic-workspace/issue-body-request/v1"
-    assert rendered["title"] == "[Workspace]: Structured lane body"
-    assert rendered["source_refs"][0]["id"] == "lane-example"
-    assert "## Problem / intent\nCreate issue bodies from typed request data" in rendered["body"]
-    assert "## Final satisfaction\nFinal completion requires satisfying: Planning-derived issue bodies" in rendered["body"]
-
-
-def test_issue_body_request_rejects_untyped_fields() -> None:
-    try:
-        issue_body.render_issue_request(
-            {
-                "kind": "agentic-workspace/issue-body-request/v1",
-                "template": "direction",
-                "title": "Untyped body",
-                "fields": {"problem_intent": "shell-composed scalar"},
-            }
-        )
-    except ValueError as exc:
-        assert "schema error" in str(exc)
-        assert "problem_intent" in str(exc)
-    else:
-        raise AssertionError("render_issue_request should require typed field objects")
-
-
-def test_issue_body_renders_from_archived_lane_record(tmp_path: Path) -> None:
-    lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "archive" / "lane-example.lane.json"
-    _write_json(
-        lane_path,
-        {
-            "kind": "planning-lane/v1",
-            "id": "lane-example",
-            "title": "Example Lane",
-            "lane_outcome": "The lane issue body is rendered from structured lane data.",
-            "purpose_for_parent": "Avoid shell property extraction from lane objects.",
-            "proof_strategy": "Issue-body tests prove source loading.",
-            "residual_lane_work": "Remaining lane work stays routed to Planning.",
-            "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/example.decomposition.json",
-        },
-    )
-
-    rendered = issue_body.render_issue_request(issue_body.request_from_lane(target_root=tmp_path, lane_id="lane-example"))
-
-    assert rendered["title"] == "[Workspace]: Example Lane"
-    assert rendered["source_refs"] == [
-        {
-            "kind": "planning-lane",
-            "id": "lane-example",
-            "path": ".agentic-workspace/planning/lanes/archive/lane-example.lane.json",
-        },
-        {
-            "kind": "planning-decomposition",
-            "path": ".agentic-workspace/planning/decompositions/example.decomposition.json",
-        },
+@pytest.mark.parametrize(
+    "kind,prefix,labels", [("direction", "[Workspace]:", ["planning"]), ("bug", "[Bug]:", ["bug"]), ("review", "[Review]:", ["review"])]
+)
+def test_preparation_preserves_current_form_and_supplied_semantics(kind, prefix, labels):
+    request = _request(kind)
+    request["title"] = prefix + " Prepared issue"
+    request["fields"]["intended_outcome"]["value"] = "  Preserve Unicode ÃƒÂ¥ and Markdown.\n\n- [ ] Concrete outcome\n"
+    rendered = issue_body.render_issue_request(request)
+    form = yaml.safe_load((_REPO_ROOT / ".github/ISSUE_TEMPLATE" / rendered["template"]).read_text(encoding="utf-8"))
+    expected = [
+        f"## {item['attributes']['label']}\n{request['fields'][item['id']]['value']}" for item in form["body"] if item["type"] != "markdown"
     ]
-    assert "## Problem / intent\nAvoid shell property extraction from lane objects." in rendered["body"]
-    assert "## Acceptance criteria\nIssue-body tests prove source loading." in rendered["body"]
+    assert rendered["status"] == "prepared"
+    assert rendered["body"] == "\n\n".join(expected) + "\n"
+    assert rendered["title"] == prefix + " Prepared issue"
+    assert rendered["duplicate_prefix_normalized"]
+    assert rendered["labels"] == labels
+    assert rendered["identities"]["template"]["revision"].startswith("sha256:")
 
 
-def test_issue_body_renders_from_decomposition_candidate_lane(tmp_path: Path) -> None:
-    decomposition_path = tmp_path / ".agentic-workspace" / "planning" / "decompositions" / "example.decomposition.json"
-    _write_json(
-        decomposition_path,
-        {
-            "kind": "planning-decomposition/v1",
-            "larger_intended_outcome": "Create GitHub issues from Planning decomposition data.",
-            "parent_acceptance": {"parent_proof_required": "All candidate lane issue bodies render from structured fields."},
-            "candidate_lanes": [
-                {
-                    "id": "lane-one",
-                    "title": "Lane One",
-                    "outcome": "Wrong lane.",
-                    "owner_surface": "wrong",
-                    "proof": "wrong",
-                },
-                {
-                    "id": "lane-two",
-                    "title": "Lane Two",
-                    "outcome": "The selected decomposition lane renders an issue body.",
-                    "owner_surface": ".agentic-workspace/planning/lanes/lane-two.lane.json",
-                    "proof": "The source-loading test selects lane-two.",
-                    "slice_contribution_to_parent": "Directly addresses Planning-derived issue generation.",
-                    "residual_parent_intent": "Further lanes remain in the decomposition.",
-                },
-            ],
-        },
-    )
+@pytest.mark.parametrize(
+    "rule",
+    [
+        "Parent closes administratively after accepted bounded children/dispositions and aggregate proof.",
+        "One bounded PR and immediate integration proof establish this leaf's whole outcome.",
+        "Later evidence closes without product-code PRs; implementation findings route to bounded owners.",
+    ],
+)
+def test_preparation_does_not_rewrite_closure_shape(rule):
+    request = _request()
+    request["fields"]["completion_rule"]["value"] = rule
+    request["fields"]["parent_issue"]["value"] = "#3276"
+    rendered = issue_body.render_issue_request(request)
+    assert rule in rendered["body"]
+    assert "#3276" in rendered["body"]
 
-    rendered = issue_body.render_issue_request(
-        issue_body.request_from_decomposition(
-            target_root=tmp_path,
-            decomposition=".agentic-workspace/planning/decompositions/example.decomposition.json",
-            lane_id="lane-two",
-        )
-    )
 
-    assert rendered["title"] == "[Workspace]: Lane Two"
-    assert rendered["source_refs"] == [
-        {
-            "kind": "planning-decomposition",
-            "id": "lane-two",
-            "path": ".agentic-workspace/planning/decompositions/example.decomposition.json",
-        }
+def test_missing_ambiguous_and_placeholder_input_produces_no_publishable_body():
+    request = _request("review")
+    for key in ["issue_kind", "final_satisfaction", "completion_rule", "non_solutions"]:
+        del request["fields"][key]
+    request["fields"]["product_should_absorb"]["value"] = "Undecided"
+    request["fields"]["acceptance"]["value"] = "TODO: decide acceptance"
+    request["fields"]["invented"] = {"kind": "text", "value": "Do not silently drop this."}
+    rendered = issue_body.render_issue_request(request)
+    assert rendered["status"] == "needs-input"
+    assert rendered["body"] is None
+    assert {p["field"] for p in rendered["problems"]} == {
+        "issue_kind",
+        "final_satisfaction",
+        "completion_rule",
+        "non_solutions",
+        "product_should_absorb",
+        "acceptance",
+        "invented",
+    }
+    assert next(f for f in rendered["form_fields"] if f["id"] == "product_should_absorb")["attributes"]["options"] == [
+        "Yes",
+        "Maybe",
+        "No",
     ]
-    assert "## Problem / intent\nDirectly addresses Planning-derived issue generation." in rendered["body"]
-    assert "## Evidence required for final completion\nThe source-loading test selects lane-two." in rendered["body"]
+    assert issue_body.render_issue(kind="direction", title="", fields={})["body"] is None
 
 
-def test_issue_body_cli_rejects_mixed_structured_and_field_modes(tmp_path: Path) -> None:
-    request_path = tmp_path / "request.json"
-    _write_json(
-        request_path,
-        {
-            "kind": "agentic-workspace/issue-body-request/v1",
-            "template": "direction",
-            "fields": {"problem_intent": {"kind": "markdown", "value": "Example"}},
-        },
-    )
+def test_exact_preparation_inputs_invalidate_without_unrelated_source_churn(tmp_path, monkeypatch):
+    forms = tmp_path / ".github/ISSUE_TEMPLATE"
+    shutil.copytree(_REPO_ROOT / ".github/ISSUE_TEMPLATE", forms)
+    helper = tmp_path / "helper.py"
+    helper.write_bytes(_MODULE_PATH.read_bytes())
+    source = tmp_path / "shaped-source.md"
+    source.write_text("Current shaped source.")
+    monkeypatch.setattr(issue_body, "__file__", str(helper))
+    monkeypatch.setattr(issue_body, "REPO_ROOT", tmp_path)
+    request = _request()
+    request["source_refs"] = [{"kind": "shaped-source", "path": source.name}, {"kind": "issue", "url": "https://example.test/1"}]
+    before = issue_body.render_issue_request(request, target_root=tmp_path)
+    assert before["identities"]["sources"][1]["status"] == "external-currentness-unobserved"
+    (tmp_path / "unrelated.md").write_text("unrelated")
+    assert issue_body.render_issue_request(request, target_root=tmp_path, previous=before)["comparison"]["status"] == "current"
+    for path, content, expected in [
+        (forms / before["template"], "\n# changed form", "template"),
+        (helper, "\n# changed helper", "helper"),
+        (source, "\nChanged source", "sources"),
+    ]:
+        prior = issue_body.render_issue_request(request, target_root=tmp_path)
+        with path.open("a") as stream:
+            stream.write(content)
+        result = issue_body.render_issue_request(request, target_root=tmp_path, previous=prior)
+        assert result["comparison"]["status"] == "stale"
+        assert result["comparison"]["changed"] == [expected]
+    prior = issue_body.render_issue_request(request, target_root=tmp_path)
+    request["fields"]["completion_rule"]["value"] = "Changed explicit closure."
+    result = issue_body.render_issue_request(request, target_root=tmp_path, previous=prior)
+    assert result["comparison"]["changed"] == ["shaped_input"]
+    assert "Changed explicit closure." in result["body"]
+    assert issue_body.render_issue_request(request, target_root=tmp_path, previous={})["comparison"]["status"] == "unavailable"
 
-    try:
-        issue_body.main(["--input-json", str(request_path), "--kind", "direction"])
-    except SystemExit as exc:
-        assert "--input-json" in str(exc) or "structured source modes" in str(exc)
-    else:
-        raise AssertionError("input-json must be mutually exclusive with --kind")
 
-    try:
-        issue_body.main(["--from-decomposition", "example.json", "--field", "problem_intent=Example"])
-    except SystemExit as exc:
-        assert "structured source modes" in str(exc)
-    else:
-        raise AssertionError("source loading must be mutually exclusive with raw --field")
+def test_current_form_changes_are_used_and_missing_sources_are_unavailable(tmp_path):
+    shutil.copytree(_REPO_ROOT / ".github/ISSUE_TEMPLATE", tmp_path / ".github/ISSUE_TEMPLATE")
+    request = _request()
+    path = tmp_path / ".github/ISSUE_TEMPLATE" / issue_body.TEMPLATE_BY_KIND["direction"]
+    form = yaml.safe_load(path.read_text(encoding="utf-8"))
+    form["title"] = "[Current]:"
+    form["labels"] = ["new-label"]
+    form["body"].append({"type": "input", "id": "new_required", "attributes": {"label": "New required"}, "validations": {"required": True}})
+    path.write_text(yaml.safe_dump(form))
+    result = issue_body.render_issue_request(request, target_root=tmp_path)
+    assert result["title"] == "[Current]: Prepared issue"
+    assert result["labels"] == ["new-label"]
+    assert result["problems"] == [{"field": "new_required", "reason": "required shaped value missing"}]
+    request["fields"]["new_required"] = {"kind": "text", "value": "Supplied"}
+    assert "## New required\nSupplied" in issue_body.render_issue_request(request, target_root=tmp_path)["body"]
+    request["source_refs"] = [{"kind": "source", "path": "missing.md"}]
+    with pytest.raises(OSError):
+        issue_body.render_issue_request(request, target_root=tmp_path)
+    request["source_refs"][0]["path"] = "../outside.md"
+    with pytest.raises(ValueError, match="inside the repository"):
+        issue_body.render_issue_request(request, target_root=tmp_path)
 
 
-def test_issue_body_aid_validation_uses_structured_input_not_semantic_shell_fields() -> None:
-    payload = json.loads(
-        (_REPO_ROOT / ".agentic-workspace" / "agent-aids" / "scripts" / "github-issue-body" / "manifest.json").read_text(encoding="utf-8")
-    )
-    commands = payload["validation"]["commands"]
+def test_cli_reports_incomplete_and_unavailable_without_writing(tmp_path, capsys):
+    request = _request()
+    path = tmp_path / "request.json"
+    path.write_text(json.dumps(request))
+    assert issue_body.main(["--input-json", str(path)]) == 0
+    assert json.loads(capsys.readouterr().out)["status"] == "prepared"
+    assert issue_body.main(["--kind", "review", "--format", "body"]) == 2
+    result = capsys.readouterr()
+    assert result.out == ""
+    assert json.loads(result.err)["status"] == "needs-input"
+    assert issue_body.main(["--input-json", str(path), "--kind", "direction"]) == 2
+    assert "--input-json" in capsys.readouterr().err
+    assert issue_body.main(["--kind", "direction", "--field", "x=one", "--field", "x=two"]) == 2
+    assert "ambiguous" in capsys.readouterr().err
+    assert issue_body.main(["--input-json", str(tmp_path / "absent")]) == 2
+    assert json.loads(capsys.readouterr().err)["status"] == "unavailable"
+    assert list(tmp_path.iterdir()) == [path]
+    for flag in ["--from-lane", "--from-decomposition"]:
+        with pytest.raises(SystemExit):
+            issue_body.main([flag, "example"])
+    invalid = copy.deepcopy(request)
+    invalid["fields"]["acceptance"] = "untyped"
+    with pytest.raises(ValueError, match="schema error"):
+        issue_body.render_issue_request(invalid)
 
-    assert any("--input-json" in command or "--from-lane" in command or "--from-decomposition" in command for command in commands)
-    assert not any("--field" in command for command in commands)
+
+def test_checkbox_assertions_are_supplied_not_inferred():
+    request = _request("bug")
+    del request["fields"]["existing_issue"]
+    result = issue_body.render_issue_request(request)
+    assert {"field": "existing_issue", "reason": "required shaped value missing"} in result["problems"]
+    request["fields"]["existing_issue"] = {"kind": "markdown", "value": "- [ ] I searched the existing issues first"}
+    assert issue_body.render_issue_request(request)["status"] == "needs-input"
+    request["fields"]["existing_issue"]["value"] = "- [x] I searched the existing issues first"
+    assert issue_body.render_issue_request(request)["status"] == "prepared"
