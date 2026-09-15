@@ -58,3 +58,42 @@ Generated schema/reference checks prove projection parity, not human approval.
 Stop each PR at its assigned owner boundaries and leave aggregate acceptance to
 independent review. Configuration byte reduction does not measure total operating
 cost or satisfy the release lane.
+
+## Verification ownership (#3301)
+
+The four supported `manifest.toml#assurance` families (`proof_profiles`,
+`domain_proof_lanes`, `requirements`, `subsystem_profiles`) are defined by
+`packages/verification/src/repo_verification_bootstrap/contracts/assurance.schema.json`.
+The native owner validates this table directly. The generator bundles these same
+owner definitions into former recognition for offline reads; they do not reappear
+in current shared authoring. Equal competing source values are still a conflict.
+Transfer one family only after its destination is validated and its former source
+is explicitly retired. Reading or generating schemas never changes source bytes.
+
+`default_level`, `agent_may_escalate` and `agent_may_deescalate` remain deliberate
+repository proof floors. Binding requirements survive an attempted de-escalation.
+Proof results, currentness, review and waivers remain separate owner judgments.
+
+`closeout_postures` has no supported native destination: keep existing entries and
+their unresolved claim boundary until a source owner judges each actual outcome.
+The manifest rejects these entries rather than pretending a schema annotation
+implements them. `strict_closeout`, `classification_owner` and
+`classification_source` likewise remain recognized former inputs, not supported
+current knobs. Do not silently replace a repository classifier or required gate
+with the native path matcher. Existing native requirements can express explicit
+proof/review obligations after an owner validates the intended scope; this is not
+an automatic prose or classifier translation.
+
+Decision format/template/status conventions belong to scoped decision-authoring
+instructions, not runtime trust. Invariant/risk registry references and test-data
+policy belong to their maintained repository sources and applicable instructions
+or explicit Verification requirements. Their former settings remain preserved,
+with unsupported intent surfaced until an owner confirms a destination or
+retirement. This implementation does not bulk-transfer them. Exact instruction
+and decision revision consent, fallback selection and standing delegations remain
+unchanged. No trust revision is refreshed from HEAD.
+
+Evidence extends the existing transfer/collision test with an unsupported
+closeout-posture preservation case; existing strategy tests cover proof floors,
+source currentness and scope. This proves the bounded implemented destination,
+not completion of all former-source migration or independent acceptance.

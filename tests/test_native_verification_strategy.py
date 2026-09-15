@@ -349,6 +349,22 @@ def test_profile_and_requirement_transfer_preserves_obligation_and_rejects_compe
     manifest.write_text(destination.replace('optional_commands=["echo optional"]', "optional_commands=17"))
     with pytest.raises(AssertionError, match="invalid"):
         call()
+    # A named former closeout posture has no native destination. Preserve it,
+    # expose the unresolved obligation, and refuse a false manifest migration.
+    manifest.write_text(destination)
+    posture = '[assurance.closeout_postures.release]\npurpose="Independent release judgment"\nrequired_evidence=["review"]\n'
+    config.write_text(config.read_text() + posture)
+    preserved = config.read_bytes()
+    unresolved = call()
+    assert any(row["field"] == "assurance.closeout_postures" for row in unresolved["configuration"]["residuals"])
+    assert unresolved["decision_packet"]["claim_boundary"]["allowed"] == []
+    manifest.write_text(destination + posture)
+    with pytest.raises(AssertionError, match="unsupported"):
+        call()
+    assert config.read_bytes() == preserved
+    config.write_bytes(before)
+    manifest.write_text(destination)
+    assert call()["verification"]["strategy_control"]["required_level"] == "high"
     assert config.read_bytes() == before
     assert not (tmp_path / ".agentic-workspace/local").exists()
 

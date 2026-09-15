@@ -380,7 +380,8 @@
         "strict_closeout": {
           "description": "Whether closeout should block when required proof references or gates are missing.",
           "type": "boolean",
-          "default": false
+          "default": false,
+          "x-current-authoring": false
         },
         "classification_owner": {
           "description": "Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source.",
@@ -388,12 +389,14 @@
             "config-native",
             "repository-owned"
           ],
-          "default": "config-native"
+          "default": "config-native",
+          "x-current-authoring": false
         },
         "classification_source": {
           "description": "Repo-relative source or operation ref for the repository-owned classifier; forbidden for config-native ownership.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "x-current-authoring": false
         },
         "decision_record_target": {
           "description": "Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset.",
@@ -478,7 +481,8 @@
           "minLength": 1,
           "examples": [
             "markdown"
-          ]
+          ],
+          "x-current-authoring": false
         },
         "decision_record_template": {
           "description": "Optional host template id or repo-relative template path for decision scaffolds.",
@@ -486,7 +490,8 @@
           "minLength": 1,
           "examples": [
             "adr-lite"
-          ]
+          ],
+          "x-current-authoring": false
         },
         "decision_record_statuses": {
           "description": "Optional accepted status values for decision records.",
@@ -501,7 +506,8 @@
               "accepted",
               "dismissed"
             ]
-          ]
+          ],
+          "x-current-authoring": false
         },
         "invariant_registry": {
           "description": "Path to the repo invariant registry used during higher-assurance work.",
@@ -509,7 +515,8 @@
           "minLength": 1,
           "examples": [
             "docs/invariants.md"
-          ]
+          ],
+          "x-current-authoring": false
         },
         "risk_registry": {
           "description": "Path to the repo risk registry used during higher-assurance work.",
@@ -517,7 +524,8 @@
           "minLength": 1,
           "examples": [
             "docs/risks.md"
-          ]
+          ],
+          "x-current-authoring": false
         },
         "proof_profiles": {
           "deprecated": true,
@@ -1450,14 +1458,16 @@
               }
             },
             "additionalProperties": true
-          }
+          },
+          "x-current-authoring": false
         },
         "test_data_policy": {
           "description": "Repo-specific policy for test data, privacy, fixtures, or generated samples.",
           "type": "object",
           "default": {},
           "x-agentic-workspace-unknown-properties": "warn",
-          "additionalProperties": true
+          "additionalProperties": true,
+          "x-current-authoring": false
         }
       },
       "additionalProperties": true

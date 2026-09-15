@@ -68,9 +68,6 @@ Current human configuration authoring, version 2. Version 1 sources are read sep
 | `assurance.default_level` | enum `"low"`, `"medium"`, `"high"`, `"critical"` | no | `"low"` | Baseline assurance level for proof and trust guidance. |  |  |
 | `assurance.agent_may_escalate` | boolean | no | `true` | Whether agents may raise assurance level when risk or scope warrants it. |  |  |
 | `assurance.agent_may_deescalate` | boolean | no | `false` | Whether agents may lower assurance level below the configured default. |  |  |
-| `assurance.strict_closeout` | boolean | no | `false` | Whether closeout should block when required proof references or gates are missing. |  |  |
-| `assurance.classification_owner` | enum `"config-native"`, `"repository-owned"` | no | `"config-native"` | Exclusive owner of assurance applicability classification: config-native forbids classification_source, while repository-owned requires exactly one classification_source. |  |  |
-| `assurance.classification_source` | string | no |  | Repo-relative source or operation ref for the repository-owned classifier; forbidden for config-native ownership. |  |  |
 | `assurance.decision_record_target` | string | no |  | Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset. | `"docs/decisions/"` |  |
 | `assurance.decision_record_fallback` | object | no |  | Independent Memory source-owner admission of a bounded decision archive snapshot and its semantic provenance; never a public request argument. |  |  |
 | `assurance.decision_record_fallback.archive` | string | yes |  | Exact repository-relative Memory source archive admitted by its host owner. |  |  |
@@ -78,27 +75,6 @@ Current human configuration authoring, version 2. Version 1 sources are read sep
 | `assurance.decision_delegations` | array of object | no |  | Standing repository policy delegating future semantic decisions to the acting agent only for an exact durable owner and path set. Each decision separately binds current material, work, dependencies and destination. Shared policy only; no actor identity, execution/proof/claim authority or local override is granted. |  |  |
 | `assurance.instruction_revision` | string | no |  | Trusted repository-owner admission of binding checks/protect in the exact scoped Markdown snapshot. Never inferred from HEAD, tracking, or instruction contents. |  |  |
 | `assurance.decision_record_revision` | string | no |  | Trusted source-owner admission of this exact archive Git commit, including semantic provenance. Never infer from HEAD, tracking or record actor strings. |  |  |
-| `assurance.decision_record_format` | string | no |  | Host-declared file format for durable decision records. | `"markdown"` |  |
-| `assurance.decision_record_template` | string | no |  | Optional host template id or repo-relative template path for decision scaffolds. | `"adr-lite"` |  |
-| `assurance.decision_record_statuses` | array of string | no |  | Optional accepted status values for decision records. | `["proposed", "accepted", "dismissed"]` |  |
-| `assurance.invariant_registry` | string | no |  | Path to the repo invariant registry used during higher-assurance work. | `"docs/invariants.md"` |  |
-| `assurance.risk_registry` | string | no |  | Path to the repo risk registry used during higher-assurance work. | `"docs/risks.md"` |  |
-| `assurance.closeout_postures` | object | no | `{}` | Host-declared high-assurance closeout postures that project evidence, waiver, uncertainty, and claim boundaries. |  |  |
-| `assurance.closeout_postures.<name>` | object | no |  | One host-defined closeout posture. It declares claim boundaries; it does not certify domain correctness. |  | x-agentic-workspace-unknown-properties: "warn" |
-| `assurance.closeout_postures.<name>.purpose` | string | yes |  | Human-readable reason this posture exists. |  |  |
-| `assurance.closeout_postures.<name>.applies_to_paths` | array of string | no | `[]` | Path globs that activate this posture when changed paths match. |  |  |
-| `assurance.closeout_postures.<name>.applies_to_task_markers` | array of string | no | `[]` | Task-text markers that activate this posture. |  |  |
-| `assurance.closeout_postures.<name>.assurance_requirement_refs` | array of string | no | `[]` | Active assurance requirement ids that activate this posture. |  |  |
-| `assurance.closeout_postures.<name>.proof_profiles` | array of string | no | `[]` | Selected proof profile ids that activate this posture. |  |  |
-| `assurance.closeout_postures.<name>.required_evidence` | array of string | no | `[]` | Evidence labels expected before the posture supports a completion claim. |  |  |
-| `assurance.closeout_postures.<name>.review_owner` | string | no |  | Repo-local owner label for review or waiver decisions. |  |  |
-| `assurance.closeout_postures.<name>.authority_refs` | array of string | no | `[]` | Repo-owned authority refs for interpreting the posture. |  |  |
-| `assurance.closeout_postures.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this posture. |  |  |
-| `assurance.closeout_postures.<name>.uncertainty` | string | no |  | Uncertainty statement that must remain explicit at closeout. |  |  |
-| `assurance.closeout_postures.<name>.human_waiver_refs` | array of string | no | `[]` | Human-owned waiver refs required for this posture. |  |  |
-| `assurance.closeout_postures.<name>.certification_limits` | array of string | no | `[]` | Domain certification limits that final claims must not exceed. |  |  |
-| `assurance.closeout_postures.<name>.notes` | string | no |  | Optional repo-local note about this posture. |  |  |
-| `assurance.test_data_policy` | object | no | `{}` | Repo-specific policy for test data, privacy, fixtures, or generated samples. |  | x-agentic-workspace-unknown-properties: "warn" |
 | `payload` | object | no | `{}` | Repo-owned installed payload target policy. Use this when the checked-in payload must be kept aligned with a release or source-checkout capability target independent of the CLI install location. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `payload.target_release` | string | no |  | Desired checked-in Agentic Workspace payload release. Use source-current for source-checkout dogfooding. | `"0.24.0"`<br>`"source-current"` |  |
 | `payload.minimum_capabilities` | array of string | no | `[]` | Payload-owned install-target capabilities that must be present in checked-in payload provenance before the target is satisfied. The same capability cannot also appear in cli_compatibility.required_capabilities. | `["installed-state-sync-v2"]` |  |

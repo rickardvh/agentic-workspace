@@ -13,6 +13,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "src/agentic_workspace/contracts/schemas"
+VERIFICATION = ROOT / "packages/verification/src/repo_verification_bootstrap/contracts/assurance.schema.json"
+
+
+def verification_former() -> str:
+    """Bundle the owner definitions for the bounded, offline former reader."""
+    schema = json.loads((SCHEMAS / "workspace_config_former.schema.json").read_text(encoding="utf-8"))
+    owner = json.loads(VERIFICATION.read_text(encoding="utf-8"))
+    for key, definition in owner["properties"].items():
+        schema["properties"]["assurance"]["properties"][key] = {
+            "deprecated": True,
+            "readOnly": True,
+            "x-agentic-workspace-source-owner": f".agentic-workspace/verification/manifest.toml#assurance.{key}",
+            **definition,
+        }
+    schema["$defs"].update(owner.get("$defs", {}))
+    return json.dumps(schema, indent=2, ensure_ascii=False) + "\n"
 
 
 def current(node: object) -> object:
@@ -69,6 +85,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
+    former_path = SCHEMAS / "workspace_config_former.schema.json"
+    former = verification_former()
+    if args.check:
+        if former_path.read_text(encoding="utf-8") != former:
+            print("[error] stale bundled Verification former definitions")
+            return 1
+    else:
+        former_path.write_text(former, encoding="utf-8")
     for name in ("workspace_config", "workspace_local_override"):
         path = SCHEMAS / f"{name}.schema.json"
         expected = render(name)

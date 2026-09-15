@@ -464,6 +464,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 | "assurance.agent_may_escalate"
                                 | "assurance.agent_may_deescalate"
                                 | "assurance.proof_profiles"
+                                | "assurance.domain_proof_lanes"
                                 | "assurance.subsystem_profiles"
                         )
                         && shared["modules"]["enabled"]

@@ -525,26 +525,16 @@ fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError
     let Some(owned) = manifest.get("assurance") else {
         return Ok(config.clone());
     };
-    if !owned.as_object().is_some_and(|fields| {
-        fields.keys().all(|key| {
-            matches!(
-                key.as_str(),
-                "proof_profiles" | "domain_proof_lanes" | "requirements" | "subsystem_profiles"
-            )
-        })
-    }) {
-        return Err(CoreError::new(
-            "Verification assurance contains unsupported owner fields",
-        ));
-    }
     let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/workspace_config_former.schema.json"
+        "../../../packages/verification/src/repo_verification_bootstrap/contracts/assurance.schema.json"
     ))
-    .expect("checked schema");
+    .expect("checked Verification owner schema");
     crate::schema_validator(&schema, "Verification strategy source")?
-        .validate(&json!({"schema_version":1,"assurance":owned}))
+        .validate(owned)
         .map_err(|error| {
-            CoreError::new(format!("invalid Verification strategy source: {error}"))
+            CoreError::new(format!(
+                "invalid Verification strategy source; preserve unsupported owner fields: {error}"
+            ))
         })?;
     let mut result = config.clone();
     for (field, value) in owned.as_object().unwrap() {

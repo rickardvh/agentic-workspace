@@ -136,3 +136,11 @@ obligations, copy package-repository policy, or tune human priors from outcomes.
 
 Report the exact configuration effect and remaining concern. A successful edit
 is not evidence that broader configure-once, proof or completion intent is met.
+
+Verification policy definitions are authored in the existing Verification manifest,
+using its package-owned assurance schema. Only proof_profiles, domain_proof_lanes,
+requirements and subsystem_profiles have supported native destinations. Reject
+competing former/shared and manifest sources even when equal. Preserve unsupported
+closeout_postures, strict_closeout, classifier and decision/registry/test-data
+conventions until their source owner confirms each destination or retirement;
+never translate them wholesale or infer a trust revision from HEAD.

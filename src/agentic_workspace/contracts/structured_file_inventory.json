@@ -1,6 +1,30 @@
 {
   "entries": [
     {
+      "checked_in_justification": "Bounded former-source preservation fixture used by the native configuration owner tests.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Historical excerpt, not current repository policy.",
+      "owner": "workspace-config",
+      "pattern": "tests/fixtures/former-recommended-control.toml",
+      "schema_or_validator": "validator: tests/test_native_advisory_config.py",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Verification-owned policy definitions shared with bounded former recognition.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Validated directly by the native Verification source reader.",
+      "owner": "verification",
+      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/*.schema.json",
+      "schema_or_validator": "JSON Schema draft 2020-12",
+      "status": "schema-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Pinned compiler and components are the shared source-build and artifact provenance authority.",
       "editable_by_agents": true,
       "format": "toml",
