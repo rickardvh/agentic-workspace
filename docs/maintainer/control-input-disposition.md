@@ -6,7 +6,6 @@ The public operating model is one resolved contract, not a collection of peer po
 | --- | --- | --- | --- |
 | `.agentic-workspace/instructions/*.md` | repository instruction owner | preferred generic authoring surface; compile when global or path-matched | guidance, canonical context, procedure route, completion check, or write restriction |
 | `.agentic-workspace/config.toml [workspace]` | repository / runtime contract | retain only real CLI/runtime/installation choices | runtime capability and target selection; not ordinary guidance |
-| `.agentic-workspace/config.toml [workflow_obligations]` | repository / compatibility sugar | migrate generic guidance and checks to scoped Markdown; retain only specialized stage semantics until its consumer is removed | bounded requirement or procedure through the clause IR |
 | `.agentic-workspace/config.local.toml` | current machine/runtime | retain at weaker authority | narrows executable capability or local preference; cannot create repo policy |
 | module selection and module-owned config/state | repository plus module compatibility owner | retain capability selection and domain facts; keep module-local controls behind the module | capability selection, relevant action, or procedure only |
 | module posture fragments | module | remove as a global dimension; derive bounded contribution | action candidate, procedure, or capability selection only |
@@ -22,9 +21,7 @@ The public operating model is one resolved contract, not a collection of peer po
 
 Authority precedence does not silently merge classes. Repo-shared policy, local runtime facts, module-domain inputs, and task-derived facts retain provenance. Competing authoritative effects on the same dimension fail closed with the repository as resolution owner. Modules may add actions, procedures, and capability selection; they cannot create global proof, claim, or policy dimensions.
 
-Migration is subtractive: ordinary guidance moves to scoped Markdown, skills keep
-reusable procedure, config keeps Workspace/capability/runtime choices, and
-specialized formats keep only useful domain semantics. Consumers read the
-compiled operating decision; broad task-posture, workflow-obligation, and config
-packets remain diagnostic compatibility projections only while their remaining
-consumers are migrated. They are not parallel permission or claim authorities.
+Ordinary guidance belongs in scoped Markdown, skills keep reusable procedure,
+configuration keeps Workspace and local execution choices, and specialized
+formats retain domain semantics. Consumers use the compiled operating decision;
+diagnostic projections grant no permission or claim authority.

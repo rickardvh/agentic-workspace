@@ -528,7 +528,7 @@ const WORKSPACE_SELECTOR_LIMITS = {
   max_error_items: 8,
 };
 
-// Generated TypeScript command output replaces this compatibility template
+// Generated TypeScript command output projects these selector descriptors
 // from the canonical Python metadata in workspace_selector_validation.py.
 const WORKSPACE_SELECTOR_DESCRIPTORS = {
   config: [
@@ -537,21 +537,19 @@ const WORKSPACE_SELECTOR_DESCRIPTORS = {
     'workspace.enabled_source',
     'workspace.enabled_modules',
     'workspace.improvement_latitude',
-    'workspace.optimization_bias',
-    'workspace.optimization_bias_source',
-    'workspace.workflow_obligations',
+    'workspace.agent_instructions_file',
+    'workspace.workflow_artifact_profile',
+    'workspace.cli_invoke',
+    'workspace.cli_invoke_source',
     'warnings',
     'target',
     'config_path',
-    'modules',
-    'mixed_agent',
-    'mixed_agent.effective_orchestration',
-    'mixed_agent.assignment_policy',
-    'mixed_agent.runtime_resolution',
     'assurance',
+    'payload',
+    'system_intent',
+    'local',
     'config_enforcement',
     'config_effect_audit',
-    'cli_compatibility',
     'selector_inventory',
   ],
   defaults: [
@@ -916,60 +914,7 @@ function selectFields(value, values) {
 }
 
 function workspaceConfig(values) {
-  const targetRoot = resolve(String(values.target ?? '.'));
-  const configPath = join(targetRoot, '.agentic-workspace/config.toml');
-  const config = existsSync(configPath) ? parseTomlTables(readText(configPath), 'workspace') : {};
-  const modulesConfig = existsSync(configPath) ? parseTomlTables(readText(configPath), 'modules') : {};
-  const enabledModules = Array.isArray(modulesConfig.enabled) ? modulesConfig.enabled.map(String) : ['planning', 'memory'];
-  const unavailable = (selector) => ({
-    kind: 'agentic-workspace/config-projection-unavailable/v1',
-    status: 'unavailable-in-generated-typescript-host',
-    selector,
-    continuation: `agentic-workspace config --target . --select ${selector} --format json`,
-    rule: 'The selector is valid and executable; this generated host reports typed unavailability when it cannot reproduce Python host-owned runtime evidence.',
-  });
-  return {
-    kind: 'agentic-workspace/config/v1',
-    profile: 'tiny',
-    exists: false,
-    target_root: targetRoot,
-    config_path: configPath.replace(/\\/g, '/'),
-    local_config_path: join(targetRoot, '.agentic-workspace/config.local.toml').replace(/\\/g, '/'),
-    config_present: existsSync(configPath),
-    local_config_present: existsSync(join(targetRoot, '.agentic-workspace/config.local.toml')),
-    target: targetRoot,
-    warnings: [],
-    modules: enabledModules,
-    workspace: {
-      enabled: true,
-      enabled_source: 'generated-typescript-default',
-      cli_invoke: String(config.cli_invoke ?? 'uv run agentic-workspace'),
-      enabled_modules: enabledModules,
-      agent_instructions_file: String(config.agent_instructions_file ?? 'AGENTS.md'),
-      workflow_obligation_ids: [],
-      workflow_obligations: [],
-      improvement_latitude: String(config.improvement_latitude ?? 'report_only'),
-      optimization_bias: String(config.optimization_bias ?? 'balanced'),
-      optimization_bias_source: 'resolved-config',
-    },
-    mixed_agent: {
-      runtime_resolution: unavailable('mixed_agent.runtime_resolution'),
-      effective_orchestration: unavailable('mixed_agent.effective_orchestration'),
-      assignment_policy: unavailable('mixed_agent.assignment_policy'),
-      target_identity: unavailable('mixed_agent.target_identity'),
-      correction_feedback: unavailable('mixed_agent.correction_feedback'),
-      target_evidence: unavailable('mixed_agent.target_evidence'),
-      assignment_decision: unavailable('mixed_agent.assignment_decision'),
-    },
-    local_runtime: {
-      status: 'unavailable-in-generated-typescript-host',
-      assignment_policy: unavailable('local_runtime.assignment_policy'),
-    },
-    assurance: unavailable('assurance'),
-    config_enforcement: unavailable('config_enforcement'),
-    config_effect_audit: unavailable('config_effect_audit'),
-    cli_compatibility: unavailable('cli_compatibility'),
-  };
+  return workspaceAuthoritativeOwnerOperation('config.report', { ...values, verbose: true, select: null });
 }
 
 function reportPlanning(values, operationId) {
@@ -1885,7 +1830,6 @@ function domainPrimitive(primitive, values, args, operationId) {
       escalation_required: Boolean(values.escalation_required ?? false),
     },
   };
-  if (primitive === 'config.policy.apply') return applyWorkspaceConfigPolicy(values);
   if (primitive === 'system_intent.config.resolve') return { target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'system_intent.source_metadata.refresh' || primitive === 'system_intent.mirror.read_or_create') {
     return systemIntentMutationResult(values);
@@ -2767,110 +2711,7 @@ function assignmentLifecycleApply(values, operationId) {
 }
 
 function correctionIdentityInit(values, targetRoot, operationId) {
-  const configRef = '.agentic-workspace/config.local.toml';
-  const configPath = resolveInside(targetRoot, configRef);
-  const before = existsSync(configPath) ? readText(configPath) : 'schema_version = 1\n';
-  const beforeDigest = `sha256:${createHash('sha256').update(before).digest('hex')}`;
-  const targets = parseTomlTables(before, 'delegation_targets');
-  const delegation = parseTomlTables(before, 'delegation');
-  const profileName = String(values.target_profile ?? delegation.current_target ?? '').trim();
-  const matches = Object.entries(targets).filter(([name, profile]) => {
-    if (!isObject(profile)) return false;
-    return name === profileName || (Array.isArray(profile.aliases) && profile.aliases.includes(profileName));
-  });
-  const known = matches.filter(([, profile]) => String(profile.target_id ?? '').trim());
-  if (known.length === 1) {
-    return {
-      kind: 'agentic-workspace/target-identity-initialization/v1',
-      operation_id: operationId,
-      status: 'already-initialized',
-      mutation_applied: false,
-      target_profile: profileName,
-      target_id: String(known[0][1].target_id),
-      reason: 'idempotent-replay',
-      checked_in_repo_effect: 'none',
-    };
-  }
-  if (matches.length !== 1) {
-    return {
-      kind: 'agentic-workspace/target-identity-initialization/v1',
-      operation_id: operationId,
-      status: 'blocked',
-      mutation_applied: false,
-      repair: {
-        status: 'unavailable',
-        reason: 'target-profile-not-uniquely-resolvable',
-        operation: 'correction-event identity-init',
-      },
-    };
-  }
-  const [resolvedName, profile] = matches[0];
-  const slug = resolvedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'target';
-  const seed = stableJson({
-    model_family: profile.model_family ?? null,
-    profile_name: resolvedName,
-    provider: profile.provider ?? null,
-    role_identity: resolvedName,
-  });
-  const proposedId = `user-local:${slug}-${createHash('sha256').update(seed).digest('hex').slice(0, 10)}`;
-  const targetId = String(values.target_id ?? proposedId).trim();
-  const owner = Object.entries(targets).find(([name, candidate]) => name !== resolvedName && isObject(candidate) && candidate.target_id === targetId);
-  if (owner) {
-    return {
-      kind: 'agentic-workspace/target-identity-initialization/v1',
-      operation_id: operationId,
-      status: 'blocked',
-      mutation_applied: false,
-      reason: 'target-id-already-owned-by-another-profile',
-      target_id: targetId,
-    };
-  }
-  const expectedDigest = String(values.expected_config_digest ?? '').trim();
-  if (expectedDigest && expectedDigest !== beforeDigest) {
-    return {
-      kind: 'agentic-workspace/target-identity-initialization/v1',
-      operation_id: operationId,
-      status: 'blocked',
-      mutation_applied: false,
-      reason: 'local-config-revision-mismatch',
-      expected_config_digest: expectedDigest,
-      current_config_digest: beforeDigest,
-      recovery: 'Rerun identity-init --dry-run and apply the refreshed operation.',
-    };
-  }
-  const header = `[delegation_targets.${resolvedName}]`;
-  const lines = before.split(/\r?\n/);
-  const tableIndex = lines.findIndex((line) => line.trim() === header);
-  if (tableIndex < 0) {
-    return {
-      kind: 'agentic-workspace/target-identity-initialization/v1',
-      operation_id: operationId,
-      status: 'blocked',
-      mutation_applied: false,
-      reason: 'target-profile-config-table-not-found',
-    };
-  }
-  lines.splice(tableIndex + 1, 0, `target_id = "${targetId.replaceAll('"', '\\"')}"`);
-  const after = `${lines.join('\n').trimEnd()}\n`;
-  const afterDigest = `sha256:${createHash('sha256').update(after).digest('hex')}`;
-  if (!Boolean(values.dry_run)) {
-    mkdirSync(dirname(configPath), { recursive: true });
-    writeFileSync(configPath, after, 'utf8');
-  }
-  return {
-    kind: 'agentic-workspace/target-identity-initialization/v1',
-    operation_id: operationId,
-    status: Boolean(values.dry_run) ? 'planned' : 'initialized',
-    mutation_applied: !Boolean(values.dry_run),
-    target_profile: resolvedName,
-    target_id: targetId,
-    config_path: configRef,
-    checked_in_repo_effect: 'none',
-    config_digest_before: beforeDigest,
-    config_digest_after: afterDigest,
-    recheck_command: 'agentic-workspace config --target . --select mixed_agent.target_identity --format json',
-    continuity_rule: 'The persisted stable target id survives profile rename; aliases remain migration hints only.',
-  };
+  return workspaceAuthoritativeOwnerOperation(operationId, { ...values, target: targetRoot });
 }
 
 function correctionEventApply(values, operationId) {
@@ -3182,146 +3023,6 @@ function reportMemory(values) {
   return { kind: 'memory-module-report/v1', profile: 'tiny', module: 'memory', target_root: targetRoot, health: active.status === 'present' ? 'healthy' : 'attention-needed', status: { note_count: active.note_count, manifest_status: active.status }, active, next_action: { summary: active.status === 'present' ? 'No immediate memory action.' : 'Run full memory report for remediation detail.' }, detail_commands: { full: 'agentic-memory report --target . --verbose --format json', route: 'agentic-memory route --target . --files <paths> --format json' } };
 }
 
-const configPolicyFields = {
-  shared: {
-    'workspace.improvement_latitude': ['none', 'reporting', 'conservative', 'balanced', 'proactive'],
-    'workspace.optimization_bias': ['agent-efficiency', 'balanced', 'human-legibility'],
-    'assurance.default_level': ['low', 'medium', 'high', 'critical'],
-    'assurance.strict_closeout': [true, false],
-  },
-  local: {
-    'workspace.cli_invoke': null,
-    'delegation.mode': ['off', 'manual', 'suggest', 'auto'],
-    'delegation.execution_role': ['ordinary-executor', 'orchestrator', 'bounded-worker'],
-    'delegation.assignment_policy': ['local-preferred', 'best-fit-advisory', 'required-best-fit'],
-    'delegation.underfit_behavior': ['stay-when-safe', 'prepare-manual-escalation', 'require-delegation'],
-    'delegation.down_routing_behavior': ['never', 'bounded-mechanical-work', 'when-cheaper-safe-target-exists'],
-    'delegation.human_override_policy': ['explicit-only', 'allowed-with-recorded-reason', 'disallowed'],
-    'delegation.manual_transport_policy': ['disabled', 'allowed', 'required'],
-    'setup.prompt_disposition': ['active', 'deferred', 'optional-suppressed'],
-    'setup.setup_identity': null,
-    'setup.context_revision': null,
-    'setup.unresolved_concerns': { type: 'string-list' },
-    'setup.required_concerns': { type: 'string-list' },
-  },
-};
-
-function configPolicyRevision(text) {
-  return `sha256:${createHash('sha256').update(text).digest('hex')}`;
-}
-
-function replaceTomlScalar(source, field, value) {
-  const [section, key] = field.split('.', 2);
-  const rendered = typeof value === 'boolean' ? String(value) : JSON.stringify(value);
-  const lines = source.split(/(?<=\n)/);
-  let sectionIndex = -1;
-  let nextSection = lines.length;
-  const matches = [];
-  for (let index = 0; index < lines.length; index += 1) {
-    const stripped = lines[index].trim();
-    if (stripped === `[${section}]`) {
-      if (sectionIndex >= 0) throw new RuntimeError(`config policy apply found duplicate [${section}] tables`);
-      sectionIndex = index;
-      continue;
-    }
-    if (sectionIndex >= 0 && index > sectionIndex && /^\s*\[.*\]\s*$/.test(stripped)) { nextSection = index; break; }
-    if (sectionIndex >= 0 && index > sectionIndex && new RegExp(`^\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=`).test(lines[index])) matches.push(index);
-  }
-  if (matches.length > 1) throw new RuntimeError(`config policy apply found duplicate ${field} assignments`);
-  if (matches.length === 1) {
-    const index = matches[0];
-    const newline = lines[index].endsWith('\r\n') ? '\r\n' : lines[index].endsWith('\n') ? '\n' : '';
-    const content = newline ? lines[index].slice(0, -newline.length) : lines[index];
-    const equals = content.indexOf('=');
-    const hash = content.indexOf('#', equals + 1);
-    const suffix = hash >= 0 ? ` ${content.slice(hash).trimStart()}` : '';
-    lines[index] = `${content.slice(0, equals + 1)} ${rendered}${suffix}${newline}`;
-    return lines.join('');
-  }
-  if (sectionIndex < 0) return `${source}${source.endsWith('\n\n') || source === '' ? '' : source.endsWith('\n') ? '\n' : '\n\n'}[${section}]\n${key} = ${rendered}\n`;
-  lines.splice(nextSection, 0, `${key} = ${rendered}\n`);
-  return lines.join('');
-}
-
-function withoutTomlTable(source, table) {
-  const lines = source.match(/[^\n]*(?:\n|$)/g)?.filter((line) => line !== '') ?? [];
-  const kept = [];
-  let removing = false;
-  let found = false;
-  for (const line of lines) {
-    const content = line.endsWith('\n') ? line.slice(0, -1).replace(/\r$/, '') : line.replace(/\r$/, '');
-    const heading = content.match(/^\s*\[([^\]]+)\]\s*(?:#.*)?$/);
-    if (heading) {
-      removing = heading[1].trim() === table;
-      found = found || removing;
-    }
-    if (!removing) kept.push(line);
-  }
-  return found ? kept.join('') : source;
-}
-
-function applyWorkspaceConfigPolicy(values) {
-  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
-  let decision;
-  try { decision = JSON.parse(String(values.decision_json ?? '')); } catch (error) { throw new RuntimeError(`config-policy --decision-json is invalid JSON: ${error.message}`); }
-  if (!isObject(decision) || decision.kind !== 'agentic-workspace/config-policy-decision/v1') throw new RuntimeError('config-policy decision kind must be agentic-workspace/config-policy-decision/v1');
-  const scope = String(decision.scope ?? '');
-  const allowed = configPolicyFields[scope];
-  if (!allowed) throw new RuntimeError('config-policy decision scope must be shared or local');
-  if (!['strong-repo-evidence', 'human-answer'].includes(decision.authority)) throw new RuntimeError('config-policy decision authority must be strong-repo-evidence or human-answer');
-  const expectedSetupIdentity = String(values.expect_setup_identity ?? '');
-  if (!decision.setup_identity || decision.setup_identity !== expectedSetupIdentity) throw new RuntimeError('config-policy decision setup_identity must match --expect-setup-identity');
-  const receiptPath = join(targetRoot, '.agentic-workspace/adoption-receipt.json');
-  const observedSetupIdentity = existsSync(receiptPath) ? String(readJson(receiptPath)?.configuration_readiness?.identity ?? 'legacy-compatible') : 'legacy-compatible';
-  const decisionSetupIdentity = isObject(decision.readiness_basis) ? createHash('sha256').update(stableJson(decision.readiness_basis)).digest('hex').slice(0, 24) : '';
-  if (observedSetupIdentity !== expectedSetupIdentity && !(decision.complete_readiness === true && decisionSetupIdentity === expectedSetupIdentity)) throw new RuntimeError(`config-policy setup identity is stale: expected ${expectedSetupIdentity}, observed ${observedSetupIdentity}`);
-  const changes = decision.changes ?? {};
-  if (!isObject(changes) || (Object.keys(changes).length === 0 && decision.complete_readiness !== true && decision.clear_setup_disposition !== true)) throw new RuntimeError('config-policy decision requires changes, complete_readiness=true, or clear_setup_disposition=true');
-  if (decision.complete_readiness !== undefined && typeof decision.complete_readiness !== 'boolean') throw new RuntimeError('config-policy complete_readiness must be a boolean');
-  if (decision.clear_setup_disposition !== undefined && typeof decision.clear_setup_disposition !== 'boolean') throw new RuntimeError('config-policy clear_setup_disposition must be a boolean');
-  if (decision.clear_setup_disposition === true && scope !== 'local') throw new RuntimeError('config-policy can clear setup disposition only through local scope');
-  if (decision.complete_readiness === true && Object.keys(changes).length !== 0) throw new RuntimeError('config-policy readiness completion must be a separate no-change reconciliation decision');
-  const relativePath = scope === 'shared' ? '.agentic-workspace/config.toml' : '.agentic-workspace/config.local.toml';
-  const configPath = join(targetRoot, relativePath);
-  const configExists = existsSync(configPath);
-  const source = configExists ? readText(configPath) : 'schema_version = 1\n';
-  const observedRevision = configPolicyRevision(configExists ? source : '');
-  if (String(values.expect_config_revision ?? '') !== observedRevision) throw new RuntimeError(`config-policy revision is stale for ${relativePath}: expected ${values.expect_config_revision}, observed ${observedRevision}`);
-  let rendered = source;
-  const effects = [];
-  for (const [field, value] of Object.entries(changes)) {
-    if (!Object.prototype.hasOwnProperty.call(allowed, field)) throw new RuntimeError(`config-policy field ${JSON.stringify(field)} is not owned by the ${scope} policy operation`);
-    const choices = allowed[field];
-    const stringList = isObject(choices) && choices.type === 'string-list';
-    if ((Array.isArray(choices) && !choices.includes(value)) || (stringList && (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.length === 0) || new Set(value).size !== value.length)) || (!choices && typeof value !== 'string')) throw new RuntimeError(`config-policy value for ${field} is invalid`);
-    if (/(password|secret|credential|private_key|access_token)/i.test(`${field} ${value}`)) throw new RuntimeError('config-policy refuses credential or secret material');
-    if (scope === 'shared' && typeof value === 'string' && (isAbsolute(value) || /^[A-Za-z]:[\\/]/.test(value))) throw new RuntimeError('config-policy refuses absolute machine paths in shared configuration');
-    rendered = replaceTomlScalar(rendered, field, value);
-    effects.push({ owner: `config.${scope}`, field, value });
-  }
-  if (decision.clear_setup_disposition === true) {
-    const cleared = withoutTomlTable(rendered, 'setup');
-    if (cleared !== rendered) effects.push({ owner: 'config.local', field: 'setup', value: 'removed' });
-    rendered = cleared;
-  }
-  let readinessReceipt = null;
-  if (decision.complete_readiness === true) {
-    if (!existsSync(receiptPath)) throw new RuntimeError('config-policy cannot complete readiness without a valid adoption receipt');
-    readinessReceipt = readJson(receiptPath);
-    const readiness = readinessReceipt?.configuration_readiness;
-    if (!isObject(readiness) || readiness.kind !== 'agentic-workspace/configuration-readiness/v1') throw new RuntimeError('config-policy cannot complete missing or unsupported readiness metadata');
-    if (!isObject(decision.readiness_basis) || !isObject(decision.concern_receipts)) throw new RuntimeError('config-policy readiness completion requires exact readiness_basis and concern_receipts from setup');
-    const unresolvedSources = Object.values(decision.concern_receipts).filter((receipt) => isObject(receipt) && receipt.materiality !== 'recommended' && typeof receipt.source_obligation_status === 'string' && receipt.source_obligation_status.length > 0 && receipt.source_obligation_status !== 'satisfied');
-    if (unresolvedSources.length > 0) throw new RuntimeError('config-policy readiness cannot be completed while required repo-source obligations remain unresolved');
-    effects.push({ owner: 'setup.guidance', field: 'configuration_readiness.status', value: 'current' });
-  }
-  if (values.dry_run !== true && rendered !== source) { mkdirSync(dirname(configPath), { recursive: true }); writeFileSync(configPath, rendered, 'utf8'); }
-  if (values.dry_run !== true && readinessReceipt) { readinessReceipt.configuration_readiness.status = 'current'; readinessReceipt.configuration_readiness.identity = expectedSetupIdentity; readinessReceipt.configuration_readiness.basis = decision.readiness_basis; readinessReceipt.configuration_readiness.concern_receipts = decision.concern_receipts; readinessReceipt.configuration_readiness.completed_by = 'config.policy-apply'; writeFileSync(receiptPath, `${JSON.stringify(readinessReceipt, null, 2)}\n`, 'utf8'); }
-  const mutationApplied = values.dry_run !== true && (rendered !== source || Boolean(readinessReceipt));
-  return { kind: 'agentic-workspace/config-policy-result/v1', status: values.dry_run === true ? 'preview' : rendered !== source ? 'applied' : 'current', scope, authority: decision.authority, concern_id: String(decision.concern_id ?? ''), setup_identity: decision.setup_identity, path: relativePath, previous_revision: observedRevision, revision: configPolicyRevision(rendered), effects, readiness_status: values.dry_run === true && readinessReceipt ? 'preview-current' : readinessReceipt ? 'current' : 'unchanged', outcome: mutationApplied ? 'applied' : 'noop', mutation_applied: mutationApplied, reason_code: values.dry_run === true ? 'dry-run' : mutationApplied ? 'authorised-policy-applied' : 'already-current', conflict_owner: '', recovery_command: 'agentic-workspace setup --target . --format json', re_resolve_command: 'agentic-workspace setup --target . --format json', claim_boundary: 'Only the explicitly authorised bounded policy fields were applied; other setup owners remain independent.' };
-}
-
-
 export function executeHostPrimitive(primitive, values, args, operationId) {
   if (primitive === 'workspace.target-root.resolve') {
     const targetRoot = resolve(String(values.target ?? '.'));
@@ -3353,7 +3054,6 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
     const config = workspaceConfig(values);
     return args?.include_payload ? { config, result: config } : config;
   }
-  if (primitive === 'config.policy.apply') return applyWorkspaceConfigPolicy(values);
   if (primitive === 'output.fields.select') return selectFields(values.config, values);
   return domainPrimitive(primitive, values, args, operationId);
 }
@@ -3361,7 +3061,7 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
 function workspaceAuthoritativeOwnerOperation(operationId, values) {
   // Restrict this transport to ordinary ingress and proof/claim owners. Serialize only the
   // generated public interface: source host retains mutation and authority gates.
-  const allowed = new Set(['proof.report', 'report.combined', 'final-response.admit', 'start.context', 'implement.context']);
+  const allowed = new Set(['proof.report', 'report.combined', 'final-response.admit', 'start.context', 'implement.context', 'config.report', 'correction-event.identity-init']);
   if (!allowed.has(operationId)) throw new RuntimeError('unsupported proof-owner operation');
   const findInterface = (iface, inheritedId, path = [], options = []) => {
     const currentPath = [...path, iface.name];

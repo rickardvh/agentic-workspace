@@ -21,11 +21,11 @@
     },
     "repo_config": {
       "type": "object",
-      "description": "Decoded shared configuration observed at the canonical source; only compatibility and invocation fields affect this admission."
+      "description": "Decoded shared configuration observed at the canonical source; validated against the single current grammar before owner state is read."
     },
     "local_config": {
       "type": "object",
-      "description": "Decoded local configuration used solely to identify the established recovery invocation."
+      "description": "Decoded local configuration validated against the single current grammar."
     },
     "source_errors": {
       "type": "array",
@@ -62,7 +62,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Reader features implemented by this executing artifact, compared with current repository requirements."
+          "description": "Reader features implemented by this executing artifact, reported as executing-artifact facts."
         }
       },
       "description": "Identity and supported reader capabilities observed from the executing package, never supplied by ordinary start callers."

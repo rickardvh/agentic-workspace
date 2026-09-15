@@ -91,7 +91,7 @@ fn sources(target: &Path) -> Result<Value, CoreError> {
                 None => Value::Null,
             };
     }
-    // Shared-local and former files are read dependencies, never write targets.
+    // Shared-local files are read dependencies, never write targets.
     for source in crate::native_assignment_policy::load(target)?.sources {
         values[source["reference"].as_str().unwrap()] = source["revision"].clone();
     }
@@ -147,8 +147,7 @@ fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec
         .clone();
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
     sources(target)?;
-    let raw = crate::native_planning::read(&root, source)?
-        .unwrap_or_else(|| b"schema_version=2\n".to_vec());
+    let raw = crate::native_planning::read(&root, source)?.unwrap_or_default();
     let text = std::str::from_utf8(&raw).map_err(err)?;
     if text.starts_with('\u{feff}') {
         return Err(err(
@@ -526,7 +525,7 @@ pub(crate) fn view(
             result["status"] = json!("source-owner-route");
             result["selected_choice"] = json!({"source":source,"key":key,
                 "authorable":!shape.is_null(),"schema":shape,"edit_request":null,
-                "route":if shape.is_null(){"former-source disposition; preserve unresolved meaning"}else{"repository/local source authoring; preserve independently admitted trust and authority"},
+                "route":if shape.is_null(){"unknown configuration key; use the current source grammar"}else{"repository/local source authoring; preserve independently admitted trust and authority"},
                 "authority":"Read-only route; no write, migration or trust admission."});
             return Ok(result);
         }
@@ -618,8 +617,7 @@ pub(crate) fn view(
         }
         let bytes = proposed(target, source, key, value)?;
         post = crate::native_intent::hash(&bytes);
-        let before = crate::native_planning::read(&root, source)?
-            .unwrap_or_else(|| b"schema_version=2\n".to_vec());
+        let before = crate::native_planning::read(&root, source)?.unwrap_or_default();
         let before_value = if key == PAYLOAD_KEY {
             if args["nomination"].is_object() {
                 return Err(err(
@@ -1092,7 +1090,7 @@ mod tests {
             std::fs::create_dir_all(target.join(".agentic-workspace")).unwrap();
             std::fs::write(
                 target.join(SHARED),
-                "schema_version=1\n[workspace]\ncli_invoke='before' # human comment\n",
+                "[workspace]\ncli_invoke='before' # human comment\n",
             )
             .unwrap();
             let mut request = resolve(&target, None)["configuration_write"]["requests"][0].clone();
@@ -1111,11 +1109,7 @@ mod tests {
                 &mut || Ok(()),
                 &mut |s| {
                     if stage == "drift" && s == "prepared" {
-                        std::fs::write(
-                            target.join(LOCAL),
-                            "schema_version=1\n# new policy source\n",
-                        )
-                        .unwrap();
+                        std::fs::write(target.join(LOCAL), "# new policy source\n").unwrap();
                         Ok(())
                     } else if s == stage {
                         Err(err("simulated interruption"))

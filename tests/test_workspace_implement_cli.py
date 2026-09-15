@@ -630,93 +630,6 @@ def test_authority_effect_resolver_intersects_delegated_authority(tmp_path: Path
     assert delegation["rejected_effects"] == ["write-outside-scope"]
 
 
-def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-schema_version = 1
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.high_risk.validation_profiles.migration]
-category = "migration"
-applies_to_paths = ["db/migrations/**"]
-required_commands = ["python -c \\"print('migration validation')\\""]
-manual_checks = ["Confirm rollback note exists."]
-impact = "blocking"
-""",
-    )
-    _write(tmp_path / "db" / "migrations" / "001_init.sql", "select 1;\n")
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "db/migrations/001_init.sql",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    decision = payload["decision_packet"]
-    assert "python -c \"print('migration validation')\"" in decision["proof"]["required_commands"]
-    overlay = next(item for item in decision["attention"] if item["signal"] == "high-risk proof overlay")
-    assert overlay["active_count"] == 1
-    assert overlay["detail_selector"] == "proof.high_risk_overlay"
-
-
-def test_implement_tiny_surfaces_ordinary_local_overlay_without_high_risk(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-schema_version = 1
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.guidance.local_cli]
-signal = "local-tool-availability"
-category = "tooling"
-applies_to_paths = ["tools/**"]
-guidance = "Local CLI is available in this checkout."
-required_commands = ["python -c \\"print('tool ok')\\""]
-impact = "advisory"
-""",
-    )
-    _write(tmp_path / "tools" / "run.py", "print('ok')\n")
-
-    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "tools/run.py", "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    decision = payload["decision_packet"]
-    overlay = next(item for item in decision["attention"] if item["signal"] == "local proof overlay")
-    assert overlay["active_count"] == 1
-    assert not any(item["signal"] == "high-risk proof overlay" for item in decision["attention"])
-
-
 def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -1636,13 +1549,9 @@ def test_implement_compact_keeps_delegation_when_route_changes_next_action(tmp_p
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "strong_planner_available = true",
                 "",
                 "[delegation]",
-                'mode = "manual"',
+                'transport_authority = "manual"',
             ]
         ),
     )
@@ -1893,9 +1802,9 @@ def test_implement_selects_active_assurance_requirements_from_changed_paths(tmp_
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.privacy_data]
 level = "high"
@@ -1952,9 +1861,9 @@ owns = ["documentation rendering"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.subsystem_profiles.audit-log]
 assurance_level = "high"
@@ -2023,9 +1932,9 @@ paths = ["docs/**"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.subsystem_profiles.audit-log]
 assurance_level = "high"
@@ -2078,9 +1987,9 @@ owns = ["workspace command routing", "workspace runtime source boundaries"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.subsystem_profiles.workspace-cli-runtime]
 assurance_level = "high"
@@ -2136,9 +2045,9 @@ def test_assurance_reads_compact_evidence_records(tmp_path: Path, capsys) -> Non
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.runtime]
 level = "high"
@@ -2191,100 +2100,6 @@ blocking_claims = ["claim-work-complete"]
     assert assurance["evidence_status"][0]["evidence_present"] == ["workspace_runtime_proof"]
     assert assurance["evidence_records"]["status"] == "recorded"
     assert assurance["evidence_records"]["records"][0]["command"] == "make test-workspace"
-
-
-def test_measurable_assurance_evidence_is_source_bound_reusable_and_claim_ready(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[assurance.requirements.selected_latency]
-level = "high"
-applies_to_paths = ["src/runtime.py"]
-required_evidence = ["cold_median"]
-force = "required-before-closeout"
-blocking_claims = ["claim-work-complete"]
-requirement_class = "current-evidence"
-source_intent_ref = "docs/requirements.md#selected-latency"
-source_intent_revision = "policy-r1"
-source_intent_current = true
-evidence_owner = "verification:selected-latency"
-detail_route = "agentic-workspace proof --select selected-latency"
-
-[assurance.requirements.selected_latency.measurement]
-kind = "agentic-workspace/measurement-requirement/v1"
-evidence_label = "cold_median"
-metric = "selected-read-latency"
-unit = "seconds"
-comparator = "lte"
-threshold = 2.0
-tolerance = 0.1
-aggregation = "median"
-minimum_samples = 3
-subject = "planning-record-selected-read"
-subject_revision = "fixture-r1"
-environment = "windows-ci-python-3.13"
-source_revision = "benchmark-r1"
-producer_command = "python scripts/measure_selected_latency.py --compact"
-excluded_costs = ["uv environment bootstrap"]
-""",
-    )
-    _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")
-    evidence_path = tmp_path / ".agentic-workspace" / "verification" / "assurance-evidence-records.json"
-    result = {
-        "kind": "agentic-workspace/measurement-evidence/v1",
-        "metric": "selected-read-latency",
-        "unit": "seconds",
-        "observed_value": 1.82,
-        "comparator": "lte",
-        "threshold": 2.0,
-        "aggregation": "median",
-        "sample_count": 5,
-        "subject": "planning-record-selected-read",
-        "subject_revision": "fixture-r1",
-        "environment": "windows-ci-python-3.13",
-        "source_revision": "benchmark-r1",
-        "requirement_revision": "policy-r1",
-        "status": "passed",
-        "detail_ref": "scratch/measurements/selected-latency.json",
-    }
-    _write_json(
-        evidence_path,
-        {
-            "kind": "agentic-workspace/assurance-evidence-records/v1",
-            "records": [
-                {
-                    "requirement_id": "selected_latency",
-                    "evidence_label": "cold_median",
-                    "status": "passed",
-                    "measurement": result,
-                }
-            ],
-        },
-    )
-
-    argv = [
-        "implement",
-        "--target",
-        str(tmp_path),
-        "--changed",
-        "src/runtime.py",
-        "--select",
-        "assurance_requirements",
-        "--format",
-        "json",
-    ]
-    assert cli.main(argv) == 0
-    assurance = json.loads(capsys.readouterr().out)["values"]["assurance_requirements"]
-    status = assurance["evidence_status"][0]
-    assert status["state"] == "satisfied"
-    assert status["measurement"]["observed_value"] == 1.82
-    assert status["measurement"]["threshold"] == 2.0
-    assert status["measurement"]["detail_ref"] == "scratch/measurements/selected-latency.json"
-    assert status["next_action"]["id"] == "none"
 
 
 def test_measurement_evidence_supports_ratio_count_and_distinct_freshness_states() -> None:
@@ -2418,9 +2233,9 @@ def test_assurance_reports_activation_kinds_for_changed_paths(tmp_path: Path, ca
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.mixed]
 level = "medium"
@@ -2484,9 +2299,9 @@ paths = ["src/audit/**"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.subsystem_profiles.audit-log]
 assurance_level = "high"
@@ -2541,9 +2356,9 @@ paths = ["src/shared/**"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.subsystem_profiles.audit-log]
 assurance_level = "critical"
@@ -2593,7 +2408,7 @@ id = "ordinary"
 paths = ["src/ordinary/**"]
 """,
     )
-    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "")
 
     assert (
         cli.main(
@@ -2621,9 +2436,9 @@ def test_implement_keeps_unmatched_assurance_requirements_out_of_tiny_output(tmp
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.privacy_data]
 level = "high"
@@ -2813,9 +2628,9 @@ def test_implement_matches_non_code_assurance_requirement(tmp_path: Path, capsys
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.runbook_change]
 level = "medium"
@@ -3072,149 +2887,6 @@ def test_implement_selector_surfaces_changed_path_impact_map(tmp_path: Path, cap
     assert impact["proof_impact"]["required_commands"]
 
 
-def test_implement_change_impact_routes_optimization_posture_by_audience_boundary(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[workspace]
-improvement_latitude = "proactive"
-optimization_bias = "agent-efficiency"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
-        """
-[[authority_surfaces]]
-concern = "human-authored-plan"
-surface = "strategy/human-plan.md"
-owner = "human"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Human-owned strategy surface."
-
-[[authority_surfaces]]
-concern = "agent-runbook"
-surface = "agent/runbook.md"
-owner = "agent"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Agent-owned runbook surface."
-
-[[authority_surfaces]]
-concern = "machine-contract"
-surface = "contracts/schema.json"
-owner = "machine"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Machine-consumed contract surface."
-
-[[authority_surfaces]]
-concern = "mixed-runbook"
-surface = "docs/mixed.md"
-owner = "human+agent"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Mixed-audience documentation surface."
-
-[[authority_surfaces]]
-concern = "human-owned-agent-aid"
-surface = "aids/agent.md"
-owner = "human"
-audience = "agent"
-ownership = "repo_owned"
-authority = "primary"
-summary = "Human-owned surface intended for agent consumption."
-""",
-    )
-    _write(tmp_path / "src" / "feature.py", "VALUE = 1\n")
-    _write(tmp_path / "strategy" / "human-plan.md", "# Strategy\n")
-    _write(tmp_path / "agent" / "runbook.md", "# Runbook\n")
-    _write(tmp_path / "contracts" / "schema.json", "{}\n")
-    _write(tmp_path / "docs" / "mixed.md", "# Mixed\n")
-    _write(tmp_path / "aids" / "agent.md", "# Agent aid\n")
-
-    assert (
-        cli.main(
-            [
-                "implement",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/feature.py",
-                "strategy/human-plan.md",
-                "agent/runbook.md",
-                "contracts/schema.json",
-                "docs/mixed.md",
-                "aids/agent.md",
-                "--select",
-                "change_impact",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    impact = json.loads(capsys.readouterr().out)["values"]["change_impact"]
-    assert impact["optimization_posture"]["status"] == "review-required"
-    assert impact["optimization_posture"]["active_path_count"] == 5
-    assert impact["optimization_posture"]["owner_boundary_path_count"] == 0
-    assert impact["optimization_posture"]["review_required_path_count"] == 1
-    assert impact["optimization_posture"]["audience_override_count"] == 5
-    assert impact["optimization_posture"]["effective_target"] == "mixed"
-    assert impact["optimization_posture"]["review_required"] is True
-    by_path = {item["path"]: item for item in impact["paths"]}
-    source_posture = by_path["src/feature.py"]["optimization_posture"]
-    assert source_posture["status"] == "active"
-    assert source_posture["improvement_latitude"] == "proactive"
-    assert source_posture["optimization_bias"] == "agent-efficiency"
-    assert source_posture["effective_optimization_bias"] == "agent-efficiency"
-    assert source_posture["audience"] == "unknown"
-    assert source_posture["effective_target"] == "agent-efficiency"
-    assert "agent-efficiency" in source_posture["signals"]
-    human_posture = by_path["strategy/human-plan.md"]["optimization_posture"]
-    assert human_posture["status"] == "active"
-    assert human_posture["exempt_from_optimization_pressure"] is False
-    assert human_posture["owner"] == "human"
-    assert human_posture["audience"] == "human"
-    assert human_posture["audience_source"] == "owner-inferred"
-    assert human_posture["effective_target"] == "human-readability-control-review"
-    assert human_posture["effective_optimization_bias"] == "human-readability-control-review"
-    assert "human-readability" in human_posture["signals"]
-    agent_posture = by_path["agent/runbook.md"]["optimization_posture"]
-    assert agent_posture["status"] == "active"
-    assert agent_posture["exempt_from_optimization_pressure"] is False
-    assert agent_posture["owner"] == "agent"
-    assert agent_posture["audience"] == "agent"
-    assert agent_posture["audience_source"] == "owner-inferred"
-    assert agent_posture["effective_target"] == "agent-efficiency"
-    assert agent_posture["effective_optimization_bias"] == "agent-efficiency"
-    assert "machine-readable-structure" in agent_posture["signals"]
-    machine_posture = by_path["contracts/schema.json"]["optimization_posture"]
-    assert machine_posture["status"] == "active"
-    assert machine_posture["audience"] == "machine"
-    assert machine_posture["audience_source"] == "owner-inferred"
-    assert machine_posture["effective_target"] == "stable-contract-validation"
-    assert "stable-contract" in machine_posture["signals"]
-    mixed_posture = by_path["docs/mixed.md"]["optimization_posture"]
-    assert mixed_posture["status"] == "review-required"
-    assert mixed_posture["audience"] == "mixed"
-    assert mixed_posture["audience_source"] == "owner-inferred"
-    assert mixed_posture["effective_target"] == "mixed-audience-review"
-    assert "tradeoff-review" in mixed_posture["signals"]
-    explicit_agent_posture = by_path["aids/agent.md"]["optimization_posture"]
-    assert explicit_agent_posture["status"] == "active"
-    assert explicit_agent_posture["owner"] == "human"
-    assert explicit_agent_posture["audience"] == "agent"
-    assert explicit_agent_posture["audience_source"] == "explicit"
-    assert explicit_agent_posture["effective_target"] == "agent-efficiency"
-    assert "agent-efficiency" in explicit_agent_posture["signals"]
-
-
 def test_implement_selector_surfaces_generated_surface_trust(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
@@ -3378,9 +3050,9 @@ def test_implement_selector_surfaces_routine_work_context(tmp_path: Path, capsys
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.docs_review]
 level = "medium"
@@ -3542,9 +3214,9 @@ def test_implement_tiny_profile_does_not_compute_deferred_diagnostics(tmp_path: 
         _write_empty_planning_state(repo)
         if field == "assurance_requirements":
             _write(
-                repo / ".agentic-workspace/config.toml",
+                repo / ".agentic-workspace/verification/manifest.toml",
                 """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.docs_review]
 level = "high"
@@ -3852,22 +3524,15 @@ def test_broad_deferred_implement_preserves_selected_current_action(tmp_path: Pa
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "strong_planner_available = true",
                 "",
                 "[delegation]",
                 'assignment_policy = "required-best-fit"',
                 'current_target = "planner"',
-                'mode = "manual"',
-                'manual_transport_policy = "allowed"',
+                'transport_authority = "manual"',
                 "",
                 "[delegation_targets.planner]",
-                'strength = "strong"',
                 'location = "local"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
-                'execution_methods = ["manual"]',
+                'transports = [{kind="manual"}]',
             ]
         ),
     )
@@ -4533,7 +4198,7 @@ def test_implement_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsy
     _write(tmp_path / "Makefile", "test-workspace:\n\tpytest tests\n\nlint-workspace:\n\truff check src tests\n")
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+        '\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
 
     assert (
@@ -6694,20 +6359,17 @@ def test_start_surfaces_lane_shaping_prompt_for_broad_unshaped_work(tmp_path: Pa
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
-                'mode = "auto"',
+                'transport_authority = "automatic"',
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
                 "[delegation_targets.chatgpt]",
-                'strength = "strong"',
                 'location = "external"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
                 'safe_task_classes = ["boundary-shaping", "reasoning-heavy"]',
-                'execution_methods = ["manual"]',
+                'transports = [{kind="manual"}]',
             ]
         ),
     )
@@ -7741,9 +7403,9 @@ owns = ["audit trail semantics"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.subsystem_profiles.audit-log]
 assurance_level = "high"
@@ -7833,9 +7495,9 @@ paths = ["src/ordinary/**"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.subsystem_profiles.audit-log]
 assurance_level = "high"
@@ -8167,7 +7829,6 @@ def _write_python_test_evidence_config(tmp_path: Path) -> None:
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
-schema_version = 1
 
 [workspace]
 cli_invoke = "uv run python scripts/run_agentic_workspace.py"
@@ -8306,7 +7967,6 @@ def test_implement_classifies_declared_non_python_evidence_path(tmp_path: Path, 
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
-schema_version = 1
 
 [workspace]
 cli_invoke = "uv run python scripts/run_agentic_workspace.py"
@@ -8544,7 +8204,6 @@ def test_test_strategy_check_marks_package_local_budget_context(tmp_path: Path, 
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
-schema_version = 1
 
 [workspace]
 cli_invoke = "uv run python scripts/run_agentic_workspace.py"
@@ -9112,20 +8771,13 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "strong_planner_available = true",
-                "cheap_bounded_executor_available = true",
                 "",
                 "[delegation]",
-                'mode = "manual"',
+                'transport_authority = "manual"',
                 "",
                 "[delegation_targets.planner]",
-                'strength = "strong"',
                 'location = "local"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
     )
@@ -9199,11 +8851,10 @@ def test_implement_required_best_fit_blocks_unknown_current_target(tmp_path: Pat
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'assignment_policy = "required-best-fit"',
-                'mode = "manual"',
+                'transport_authority = "manual"',
             ]
         ),
     )
@@ -9292,29 +8943,19 @@ candidates = []
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "strong_planner_available = true",
                 "",
                 "[delegation]",
-                'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
                 'current_target = "orchestrator"',
-                'mode = "manual"',
-                'manual_transport_policy = "allowed"',
+                'transport_authority = "manual"',
                 "",
                 "[delegation_targets.orchestrator]",
-                'strength = "medium"',
                 'location = "local"',
-                'capability_classes = ["mechanical-follow-through"]',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
                 "",
                 "[delegation_targets.planner]",
-                'strength = "strong"',
                 'location = "local"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
-                'execution_methods = ["manual"]',
+                'transports = [{kind="manual"}]',
             ]
         ),
     )
@@ -9453,34 +9094,21 @@ def test_implement_required_best_fit_compiles_authorized_automatic_dispatch(tmp_
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "strong_planner_available = true",
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
                 "[delegation]",
-                'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
                 'current_target = "orchestrator"',
-                'mode = "auto"',
                 'transport_authority = "automatic"',
-                'manual_transport_policy = "disabled"',
                 "",
                 "[delegation_targets.orchestrator]",
-                'strength = "medium"',
                 'location = "local"',
-                'capability_classes = ["mechanical-follow-through"]',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
                 "",
                 "[delegation_targets.planner]",
-                'strength = "strong"',
                 'location = "local"',
-                'provider = "codex"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
-                'execution_methods = ["cli"]',
                 f'transports = [{{kind="process", command={json.dumps([__import__("sys").executable, "-c", "pass"])}}}]',
             ]
         ),
@@ -10438,29 +10066,20 @@ def test_implement_required_best_fit_manual_transport_policy_states(
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
-                "",
-                "[runtime]",
-                "strong_planner_available = true",
                 "",
                 "[delegation]",
-                'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
                 'current_target = "orchestrator"',
-                'mode = "manual"',
+                'transport_authority = "manual"',
                 f'manual_transport_policy = "{manual_transport_policy}"',
                 "",
                 "[delegation_targets.orchestrator]",
-                'strength = "medium"',
                 'location = "local"',
-                'capability_classes = ["mechanical-follow-through"]',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
                 "",
                 "[delegation_targets.planner]",
-                'strength = "strong"',
                 'location = "local"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
-                'execution_methods = ["manual"]',
+                'transports = [{kind="manual"}]',
             ]
         ),
     )
@@ -11041,26 +10660,16 @@ def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path,
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
-                'mode = "auto"',
                 'transport_authority = "automatic"',
-                "",
-                "[runtime]",
-                "supports_internal_delegation = true",
-                "cheap_bounded_executor_available = true",
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
                 "[delegation_targets.mini]",
-                'strength = "medium"',
                 'location = "local"',
                 "confidence = 0.8",
-                'task_fit = ["bounded implementation", "validation"]',
-                'capability_classes = ["mixed", "mechanical-follow-through"]',
-                'execution_methods = ["cli"]',
                 f'transports = [{{kind="process", command={json.dumps([__import__("sys").executable, "-c", "pass"])}}}]',
             ]
         ),
@@ -11113,32 +10722,23 @@ def test_implement_epic_decomposition_prefers_reusable_worker_over_manual_relay(
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
-                'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
                 'current_target = "orchestrator"',
-                'mode = "auto"',
-                "",
-                "[runtime]",
-                "supports_internal_delegation = true",
+                'transport_authority = "automatic"',
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
                 "[delegation_targets.orchestrator]",
-                'strength = "strong"',
                 'location = "local"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
                 'cost_class = "premium"',
                 'latency_class = "slow"',
                 'transports = [{ kind = "internal" }]',
                 "",
                 "[delegation_targets.worker]",
-                'strength = "medium"',
                 'location = "local"',
-                'capability_classes = ["boundary-shaping"]',
                 'cost_class = "cheap"',
                 'latency_class = "fast"',
                 'transports = [{ kind = "internal" }]',
@@ -11296,19 +10896,16 @@ def test_implement_suppresses_manual_external_relay_for_code_local_changed_paths
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
-                'mode = "auto"',
+                'transport_authority = "automatic"',
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
                 "[delegation_targets.chatgpt]",
-                'strength = "strong"',
                 'location = "external"',
-                'capability_classes = ["boundary-shaping", "reasoning-heavy", "mixed"]',
-                'execution_methods = ["manual"]',
+                'transports = [{kind="manual"}]',
             ]
         ),
     )
@@ -11345,20 +10942,15 @@ def test_implement_supports_selector_drilldown(tmp_path: Path, capsys) -> None:
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
-                'mode = "auto"',
+                'transport_authority = "automatic"',
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
                 "[delegation_targets.mini]",
-                'strength = "medium"',
                 'location = "local"',
-                'task_fit = ["bounded implementation"]',
-                'capability_classes = ["mechanical-follow-through"]',
-                'execution_methods = ["cli"]',
             ]
         ),
     )
@@ -11723,25 +11315,18 @@ def test_implement_reuse_pressure_keeps_small_direct_task_unblocked(tmp_path: Pa
         tmp_path / ".agentic-workspace" / "config.local.toml",
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
-                'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
                 'current_target = "orchestrator"',
-                'mode = "auto"',
-                "",
-                "[runtime]",
-                "supports_internal_delegation = true",
+                'transport_authority = "automatic"',
                 "",
                 "[safety]",
                 "safe_to_auto_run_commands = true",
                 "",
                 "[delegation_targets.orchestrator]",
-                'strength = "strong"',
                 'location = "local"',
-                'capability_classes = ["mixed", "mechanical-follow-through"]',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
     )

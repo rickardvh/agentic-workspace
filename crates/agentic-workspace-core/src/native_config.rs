@@ -10,21 +10,8 @@ const SHARED: &str = ".agentic-workspace/config.toml";
 const LOCAL: &str = ".agentic-workspace/config.local.toml";
 pub(crate) const MAX_SOURCE_BYTES: usize = 1_048_576;
 
-/// Version dispatch is exact: malformed current input never retries a former schema.
-pub(crate) fn validate_source(value: &Value, current: &str) -> Result<(), String> {
-    let schema = match value["schema_version"].as_u64() {
-        Some(2) => current,
-        Some(1) if current.contains("workspace-local-override") => include_str!(
-            "../../../src/agentic_workspace/contracts/schemas/workspace_local_override_former.schema.json"
-        ),
-        Some(1) => include_str!(
-            "../../../src/agentic_workspace/contracts/schemas/workspace_config_former.schema.json"
-        ),
-        _ => return Err(
-            "configuration requires explicit supported schema_version 1 (former) or 2 (current)"
-                .into(),
-        ),
-    };
+/// Every present source uses the same closed current grammar.
+pub(crate) fn validate_source(value: &Value, schema: &str) -> Result<(), String> {
     let schema: Value = serde_json::from_str(schema).map_err(|e| e.to_string())?;
     crate::schema_validator(&schema, "native configuration")
         .map_err(|e| e.to_string())?
@@ -75,248 +62,6 @@ pub(crate) fn load(
     Ok(Some((value, revision)))
 }
 
-fn present(value: &Value) -> bool {
-    match value {
-        Value::Null => false,
-        Value::Object(values) => values.values().any(present),
-        Value::Array(values) => !values.is_empty(),
-        _ => true,
-    }
-}
-
-fn residual(source: &str, field: &str, value: &Value, config: &Value) -> Value {
-    // These existing controls describe rendering or replaceable methods. Keep
-    // their current source meaning without turning persistence into authority.
-    let advisory = if field == "workspace.optimization_bias" {
-        Some("advisory-rendering-preference")
-    } else if field == "workspace.advanced_features" {
-        Some("optional-diagnostic-preference")
-    } else if field.starts_with("workflow_obligations.")
-        && value["force"] == "recommended"
-        && value.as_object().is_some_and(|fields| {
-            fields.keys().all(|key| {
-                matches!(
-                    key.as_str(),
-                    "summary" | "stage" | "force" | "scope_tags" | "commands" | "review_hint"
-                )
-            })
-        })
-    {
-        Some("recommended-stage-method")
-    } else if matches!(
-        field,
-        "cli_compatibility.enforcement"
-            | "cli_compatibility.source_classes"
-            | "cli_compatibility.target_relations"
-            | "cli_compatibility.minimum_version"
-            | "cli_compatibility.exact_version"
-            | "cli_compatibility.command"
-            | "cli_compatibility.required_resources"
-            | "cli_compatibility.required_capabilities"
-            | "cli_compatibility.resolution_policy"
-    ) && matches!(
-        config["cli_compatibility"]["enforcement"]
-            .as_str()
-            .unwrap_or("off"),
-        "off" | "advisory"
-    ) {
-        Some("nonblocking-runtime-expectation")
-    } else {
-        None
-    };
-    if let Some(disposition) = advisory {
-        return json!({"source":source,"field":field,"owner":"workspace-config",
-            "value_revision":digest(value).expect("JSON value hashes"),"value":value,
-            "affects":[],"reason":disposition,"authority":"advisory",
-            "applicability":"agent-judgment-required","satisfaction":"not-evidence"});
-    }
-    let owner = match field.split('.').next().unwrap_or("") {
-        "assurance" => "verification",
-        "delegation" | "delegation_targets" | "handoff" => "assignment-delegation",
-        "local_memory" => "memory",
-        "session_logging" => "maintainer-diagnostics",
-        _ => "workspace-config",
-    };
-    let affects = if field.starts_with("workflow_obligations.")
-        && value["force"] == "required-before-closeout"
-        && matches!(
-            value["stage"].as_str(),
-            Some("closeout" | "before-claiming-completion")
-        )
-        && value.as_object().is_some_and(|fields| {
-            fields.keys().all(|key| {
-                matches!(
-                    key.as_str(),
-                    "summary" | "stage" | "force" | "scope_tags" | "commands" | "review_hint"
-                )
-            })
-        }) {
-        vec![
-            "claim:complete",
-            "claim:claim-slice-complete",
-            "claim:claim-work-complete",
-            "claim:pr-complete",
-        ]
-    } else if field == "workspace.improvement_latitude" {
-        // Preserve the still-current initiative choice for #2648. It neither
-        // grants an initiative action nor blocks independently requested work.
-        vec!["effect:initiative"]
-    } else if matches!(
-        field,
-        "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
-    ) {
-        // Availability summaries are not proof of supported target execution.
-        vec![
-            "effect:delegation",
-            "effect:implementation",
-            "claim:complete",
-        ]
-    } else if field == "update.modules" {
-        vec!["effect:package-update"]
-    } else {
-        match owner {
-            "verification" => vec!["claim:complete"],
-            "assignment-delegation" => vec![
-                "effect:implementation",
-                "effect:delegation",
-                "claim:complete",
-            ],
-            "maintainer-diagnostics" => vec!["effect:session-logging"],
-            _ => vec!["task"],
-        }
-    };
-    let mut result = json!({"source":source, "field":field, "owner":owner,
-        "value_revision":digest(value).expect("JSON value hashes"),
-        "affects":affects, "reason":"current-control-requires-native-owner"});
-    if field.starts_with("local_overlay.") || field.starts_with("workflow_obligations.") {
-        result["transition"] = json!({"status":"entry-level-owner-disposition-required",
-            "authority":if source == LOCAL {"local; never promote into shared policy"} else {"repository"},
-            "durable_guidance":"applicable scoped instructions; preserve advisory versus binding strength",
-            "proof":"supported Verification requirement/check with its existing admission",
-            "template_and_source":"reference the actual repository owner, do not copy its schema",
-            "observations":"reobserve with current owner, not timeless instructions",
-            "questions":"existing responsible decision/continuation only if useful; no retention is valid",
-            "retirement":"preserve former bytes until destination meaning and admission are confirmed; reads never retire"});
-    }
-    if field == "delegation.replacement" {
-        result["work_identity"] = json!({"id":value["work_id"],"revision":value["work_revision"]});
-    }
-    if field == "workspace.improvement_latitude"
-        || field.starts_with("workflow_obligations.")
-        || matches!(
-            field,
-            "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
-        )
-    {
-        result["value"] = value.clone();
-    }
-    result
-}
-
-/// A retained-local Assignment or typed admitted patch return consumes only its
-/// exact target source context. Other lifecycle/control and claim gaps survive.
-pub(crate) fn assignment_consumption(
-    configuration: &Value,
-    assignment: &Value,
-    execution: &Value,
-    admitted_return: Option<&Value>,
-) -> Value {
-    let mut contribution = configuration["contribution"].clone();
-    let consumed_return = admitted_return.is_some_and(|r| {
-        r["result_use_allowed"] == true
-            && r["assignment_identity"] == assignment["assignment_identity"]
-            && r["context"]["scope_class"] == "unapplied-patch"
-            && r["execution_custody"].is_object()
-    });
-    if (assignment["local_assignment_satisfied"] != true && !consumed_return)
-        || assignment["assignment_identity"].is_null()
-    {
-        return contribution;
-    }
-    for residual in configuration["residuals"].as_array().into_iter().flatten() {
-        if residual["source"] != LOCAL {
-            continue;
-        }
-        let field = residual["field"].as_str().unwrap_or("");
-        let consumed = if let Some(name) = field.strip_prefix("delegation_targets.") {
-            execution["target_context"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .any(|context| {
-                    context["target"] == name
-                        && context["revision"] == residual["value_revision"]
-                        && context["profile"].as_object().is_some_and(|fields| {
-                            fields.keys().all(|key| {
-                                matches!(
-                                    key.as_str(),
-                                    "target_id"
-                                        | "target_revision"
-                                        | "strength"
-                                        | "execution_guarantees"
-                                        | "location"
-                                        | "confidence"
-                                        | "task_fit"
-                                        | "capability_classes"
-                                        | "forbidden_task_classes"
-                                        | "transports"
-                                        | "model_family"
-                                        | "provider"
-                                        | "context_capacity"
-                                        | "cost_class"
-                                        | "latency_class"
-                                        | "confidence_source"
-                                        | "identity_status"
-                                        | "aliases"
-                                        | "execution_methods"
-                                        | "dispatch_command"
-                                        | "dispatch_output_mode"
-                                        | "dispatch_timeout_seconds"
-                                )
-                            })
-                        })
-                })
-        } else if field == "delegation.replacement" {
-            let disposition = &assignment["former_replacement"];
-            disposition["status"] == "outside-current-work"
-                && disposition["source"] == residual["source"]
-                && disposition["value_revision"] == residual["value_revision"]
-        } else {
-            // Availability of a different worker/planner is not needed for the
-            // exact admitted retained-local executor. No worker availability is granted.
-            !consumed_return
-                && matches!(
-                    field,
-                    "runtime.supports_internal_delegation" | "runtime.strong_planner_available"
-                )
-        };
-        if consumed {
-            let code = format!("native-config-owner:{LOCAL}:{field}");
-            for blocker in contribution["blockers"]
-                .as_array_mut()
-                .into_iter()
-                .flatten()
-            {
-                if blocker["code"] == code {
-                    blocker["affects"]
-                        .as_array_mut()
-                        .unwrap()
-                        .retain(|effect| effect != "effect:implementation");
-                    // Local Assignment has discharged only implementation.
-                    // Do not send remaining lifecycle/claim restrictions back
-                    // through an already satisfied executor comparison.
-                    blocker["recovery"] = json!(if residual["owner"] == "assignment-delegation" {
-                        "public-owner:delegation"
-                    } else {
-                        "public-owner:workspace-config"
-                    });
-                }
-            }
-        }
-    }
-    contribution
-}
-
 /// Explicit repo enablement gates availability, never task relevance.
 pub(crate) fn module_enabled(configuration: &Value, owner: &str) -> bool {
     configuration["modules"]
@@ -360,14 +105,11 @@ pub(crate) fn disabled_owner(
     )
 }
 
-/// Fields here are existing owner contracts, not a new authoring surface.
-/// The native facade consumes admission selectors and constraints; it must retain
-/// `contribution` until the named residual owners genuinely supply their effects.
+/// Read current owner selectors and independent safety constraints.
 pub fn view(target: &Path) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     let mut sources = vec![];
-    let mut residuals = vec![];
     let mut blockers = vec![];
     let mut shared = json!({});
     let mut local = json!({});
@@ -389,7 +131,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     ] {
         match load(&root, path, schema) {
             Ok(Some((value, revision))) => {
-                sources.push(json!({"reference":path,"revision":revision,"status":"current","authoring_contract":if value["schema_version"]==2 {"current-v2"} else {"former-v1"}}));
+                sources.push(json!({"reference":path,"revision":revision,"status":"current"}));
                 *destination = value;
             }
             Ok(None) => (),
@@ -421,121 +163,21 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         },
         Err(error)=>blockers.push(json!({"code":"assignment-policy-source-unresolved","message":error.to_string(),"affects":["effect:implementation"]})),
     }
-    let local_sources = crate::native_memory::former_sources(target, &local["local_memory"])?;
-    for (source, value) in [(SHARED, &shared), (LOCAL, &local)] {
-        for (section, content) in value.as_object().into_iter().flatten() {
-            if section == "schema_version" {
-                continue;
-            }
-            let entries = content
-                .as_object()
-                .map(|v| {
-                    v.iter()
-                        .map(|(key, value)| (format!("{section}.{key}"), value))
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_else(|| vec![(section.clone(), content)]);
-            for (field, value) in entries {
-                let consumed =
-                    matches!(field.as_str(), "workspace.enabled" | "workspace.cli_invoke")
-                        || (source == SHARED
-                            && matches!(
-                                field.as_str(),
-                                "workspace.improvement_latitude"
-                                    | "workspace.workflow_artifact_profile"
-                                    | "workspace.agent_instructions_file"
-                                    | "execution_posture"
-                                    | "system_intent.sources"
-                                    | "system_intent.preferred_source"
-                                    | "modules.enabled"
-                                    | "modules.independent"
-                                    | "cli_compatibility.contract_schema"
-                                    | "cli_compatibility.minimum_reader_epoch"
-                                    | "cli_compatibility.required_reader_capabilities"
-                                    | "assurance.decision_record_target"
-                                    | "assurance.decision_record_revision"
-                                    | "assurance.decision_record_fallback"
-                                    | "assurance.decision_delegations"
-                                    | "assurance.instruction_revision"
-                            ))
-                        || (source == LOCAL
-                            && matches!(
-                                field.as_str(),
-                                "safety.safe_to_auto_run_commands"
-                                    | "safety.requires_human_verification_on_pr"
-                                    | "session_logging.enabled"
-                                    | "clarification.mode"
-                                    | "session_logging.path_mode"
-                                    | "session_logging.redact_local_paths"
-                            ));
-                let consumed =
-                    consumed || (source == SHARED && field.starts_with("execution_posture."));
-                let consumed = consumed
-                    || (source == SHARED
-                        && matches!(
-                            field.as_str(),
-                            "assurance.requirements"
-                                | "assurance.default_level"
-                                | "assurance.strict_closeout"
-                                | "assurance.agent_may_escalate"
-                                | "assurance.agent_may_deescalate"
-                                | "assurance.proof_profiles"
-                                | "assurance.domain_proof_lanes"
-                                | "assurance.subsystem_profiles"
-                        )
-                        && shared["modules"]["enabled"]
-                            .as_array()
-                            .is_none_or(|modules| modules.iter().any(|m| m == "verification")));
-                let consumed = consumed
-                    || (source == LOCAL
-                        && !assignment_policy.is_null()
-                        && matches!(
-                            field.as_str(),
-                            "workspace.shared_config_path"
-                                | "delegation.assignment_policy"
-                                | "delegation.transport_authority"
-                                | "delegation.current_target"
-                                | "delegation.human_override_policy"
-                                | "delegation.mode"
-                                | "delegation.execution_role"
-                                | "delegation.selection_objective"
-                                | "delegation.underfit_behavior"
-                                | "delegation.down_routing_behavior"
-                                | "delegation.manual_transport_policy"
-                        ));
-                if !consumed && present(value) {
-                    if source == SHARED
-                        && matches!(
-                            field.as_str(),
-                            "payload.policy"
-                                | "payload.target_release"
-                                | "payload.minimum_capabilities"
-                                | "payload.dogfood_latest"
-                        )
-                    {
-                        continue;
-                    }
-                    residuals.push(residual(
-                        source,
-                        &field,
-                        value,
-                        if source == SHARED { &shared } else { &local },
-                    ));
-                }
-            }
-        }
-    }
-    for item in &residuals {
-        if item["affects"].as_array().is_some_and(Vec::is_empty) {
-            continue;
-        }
-        blockers.push(json!({"code":format!("native-config-owner:{}:{}", item["source"].as_str().unwrap(),item["field"].as_str().unwrap()),
-            "message":format!("{} [{}] remains owned by {}; consume that current owner before the affected behavior.",item["source"],item["field"],item["owner"]),
-            "recovery": if item["owner"] == "assignment-delegation"
-                || (item["source"] == LOCAL && matches!(item["field"].as_str(), Some("runtime.strong_planner_available" | "runtime.supports_internal_delegation")))
-                { "public-owner:assignment".to_owned() }
-                else { format!("public-owner:{}", item["owner"].as_str().unwrap()) },
-            "affects":item["affects"]}));
+    if shared["modules"]["enabled"]
+        .as_array()
+        .is_some_and(|modules| !modules.iter().any(|m| m == "verification"))
+        && [
+            "default_level",
+            "strict_closeout",
+            "agent_may_escalate",
+            "agent_may_deescalate",
+        ]
+        .iter()
+        .any(|key| !shared["assurance"][*key].is_null())
+    {
+        blockers.push(json!({"code":"verification-policy-owner-disabled",
+            "message":"Shared proof policy requires its Verification owner. Enable that owner before claiming completion.",
+            "affects":["claim:complete"]}));
     }
     let enabled = local["workspace"]["enabled"]
         .as_bool()
@@ -581,7 +223,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         }
     }
     let revision = digest(
-        &json!({"sources":configuration_sources,"local_sources":local_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
+        &json!({"sources":configuration_sources,"artifact_profile":artifact_profile,"payload":payload}),
     )?;
     // Restriction targets come only from the owner mappings above, never from
     // config-authored effect names. A ceiling grants no operation, effect or claim.
@@ -601,7 +243,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     capability_contract["revision"] = json!(digest(&capability_contract)?);
     Ok(
         json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
-        "sources":sources,"local_sources":local_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
+        "sources":sources,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
         "clarification":local["clarification"],"agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
         "improvement_latitude":shared["workspace"]["improvement_latitude"],"execution_posture":shared["execution_posture"],"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
@@ -661,10 +303,9 @@ mod tests {
                 .is_empty()
         );
         repo.write(".agentic-workspace/unrelated.txt", "unrelated history");
-        repo.write(SHARED, "schema_version = 1\n[modules]\nenabled = []\n");
-        repo.write(LOCAL, "schema_version = 1\n");
+        repo.write(SHARED, "[modules]\nenabled = []\n");
+        repo.write(LOCAL, "");
         let result = view(&repo.0).unwrap();
-        assert!(result["residuals"].as_array().unwrap().is_empty());
         assert!(
             result["contribution"]["blockers"]
                 .as_array()
@@ -679,14 +320,11 @@ mod tests {
         let revision = "a".repeat(40);
         repo.write(
             SHARED,
-            &format!("schema_version=1\n[assurance]\ninstruction_revision='{revision}'\n"),
+            &format!("[assurance]\ninstruction_revision='{revision}'\n"),
         );
         repo.write(
             LOCAL,
-            &format!(
-                "schema_version=1\n[assurance]\ninstruction_revision='{}'\n",
-                "b".repeat(40)
-            ),
+            &format!("[assurance]\ninstruction_revision='{}'\n", "b".repeat(40)),
         );
         let result = view(&repo.0).unwrap();
         assert_eq!(result["admissions"]["instruction_revision"], revision);
@@ -703,22 +341,20 @@ mod tests {
     fn native_source_admission_selectors_are_consumed() {
         let repo = Repo::new();
         let revision = "a".repeat(40);
-        repo.write(SHARED, &format!("schema_version=1\n[assurance]\ndecision_record_target='docs/decisions'\ndecision_record_revision='{revision}'\ninstruction_revision='{revision}'\n"));
+        repo.write(SHARED, &format!("[assurance]\ndecision_record_target='docs/decisions'\ndecision_record_revision='{revision}'\ninstruction_revision='{revision}'\n"));
         let result = view(&repo.0).unwrap();
         assert_eq!(
             result["admissions"]["decision_record_target"],
             "docs/decisions"
         );
         assert_eq!(result["admissions"]["decision_record_revision"], revision);
-        let residuals = result["residuals"].as_array().unwrap();
-        assert!(residuals.is_empty());
         assert_eq!(result["admissions"]["instruction_revision"], revision);
     }
 
     #[test]
     fn local_automation_does_not_widen_independent_safety() {
         let repo = Repo::new();
-        repo.write(LOCAL, "schema_version=1\n[safety]\nsafe_to_auto_run_commands=false\n[delegation]\ntransport_authority='automatic'\n");
+        repo.write(LOCAL, "[safety]\nsafe_to_auto_run_commands=false\n[delegation]\ntransport_authority='automatic'\n");
         let result = view(&repo.0).unwrap();
         assert_eq!(result["safety"]["safe_to_auto_run_commands"], false);
         assert_eq!(result["safety"]["automatic_execution_permitted"], false);
@@ -735,13 +371,6 @@ mod tests {
         );
         assert_eq!(result["assignment_policy"]["execution_permitted"], false);
         assert_eq!(result["assignment_policy"]["effective_mode"], "suggest");
-        assert!(
-            !result["residuals"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|v| v["field"] == "delegation.transport_authority")
-        );
     }
 
     #[test]
@@ -762,19 +391,18 @@ mod tests {
     }
 
     #[test]
-    fn current_authoring_and_former_recognition_are_distinct() {
+    fn old_and_unknown_configuration_is_rejected_without_fallback() {
         let repo = Repo::new();
-        for (version, field, admitted) in [
-            (1, "maintainer_mode=true", true),
-            (2, "maintainer_mode=true", false),
-            (2, "unknown_policy=true", false),
-            (2, "enabled=false", true),
-            (3, "enabled=false", false),
+        for text in [
+            "schema_version=1",
+            "schema_version=2",
+            "[workspace]\nmaintainer_mode=true",
+            "[cli_compatibility]\nminimum_reader_epoch=1",
+            "unknown_policy=true",
         ] {
-            let text = format!("schema_version={version}\n[workspace]\n{field}\n");
-            repo.write(SHARED, &text);
+            repo.write(SHARED, text);
             let result = view(&repo.0).unwrap();
-            assert_eq!(result["sources"][0]["status"] == "current", admitted);
+            assert_eq!(result["sources"][0]["status"], "invalid");
             assert_eq!(fs::read_to_string(repo.0.join(SHARED)).unwrap(), text);
         }
     }
@@ -798,7 +426,7 @@ mod tests {
                 false,
             ),
         ] {
-            let value = json!({"schema_version":2,"delegation_targets":{"worker":{"transports":[transport]}}});
+            let value = json!({"delegation_targets":{"worker":{"transports":[transport]}}});
             assert_eq!(validate_source(&value, schema).is_ok(), valid, "{value}");
         }
     }
@@ -808,18 +436,18 @@ mod tests {
         let repo = Repo::new();
         repo.write(
             SHARED,
-            "schema_version=1\n[workspace]\nenabled=false\ncli_invoke='shared-command'\n",
+            "[workspace]\nenabled=false\ncli_invoke='shared-command'\n",
         );
         repo.write(
             LOCAL,
-            "schema_version=1\n[workspace]\nenabled=true\ncli_invoke='local-command'\n",
+            "[workspace]\nenabled=true\ncli_invoke='local-command'\n",
         );
         let first = view(&repo.0).unwrap();
         assert_eq!(first["enabled"], true);
         assert_eq!(first["cli_invoke"], "local-command");
         repo.write(
             LOCAL,
-            "schema_version=1\n[workspace]\nenabled=false\ncli_invoke='local-command'\n",
+            "[workspace]\nenabled=false\ncli_invoke='local-command'\n",
         );
         let second = view(&repo.0).unwrap();
         assert_eq!(second["enabled"], false);
@@ -836,34 +464,19 @@ mod tests {
     #[test]
     fn strict_closeout_remains_unresolved_without_verification() {
         let repo = Repo::new();
-        repo.write(SHARED, "schema_version=2\n[assurance]\nstrict_closeout=true\n[modules]\nenabled=[\"memory\"]\n");
+        repo.write(
+            SHARED,
+            "[assurance]\nstrict_closeout=true\n[modules]\nenabled=[\"memory\"]\n",
+        );
         let result = view(&repo.0).unwrap();
         assert!(
-            result["residuals"]
+            result["contribution"]["blockers"]
                 .as_array()
                 .unwrap()
                 .iter()
-                .any(|row| row["field"] == "assurance.strict_closeout")
+                .any(|row| row["code"] == "verification-policy-owner-disabled")
         );
-        assert!(validate_source(&json!({"schema_version":2,"assurance":{"strict_closeout":false}}), include_str!("../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json")).is_err());
-    }
-
-    #[test]
-    fn unsupported_shared_proof_remains_binding_despite_local_preferences() {
-        let repo = Repo::new();
-        repo.write(
-            SHARED,
-            "schema_version=1\n[assurance]\nclassification_owner=\"config-native\"\n",
-        );
-        repo.write(
-            LOCAL,
-            "schema_version=1\n[safety]\nrequires_human_verification_on_pr=false\n",
-        );
-        let result = view(&repo.0).unwrap();
-        let residual = &result["residuals"][0];
-        assert_eq!(residual["source"], SHARED);
-        assert_eq!(residual["field"], "assurance.classification_owner");
-        assert_eq!(residual["affects"], json!(["claim:complete"]));
+        assert!(validate_source(&json!({"assurance":{"strict_closeout":false}}), include_str!("../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json")).is_err());
     }
 
     #[test]
@@ -871,12 +484,9 @@ mod tests {
         let repo = Repo::new();
         repo.write(
             SHARED,
-            "schema_version=1\n[assurance]\nclassification_owner=\"config-native\"\n",
+            "[assurance]\nclassification_owner=\"config-native\"\n",
         );
-        repo.write(
-            LOCAL,
-            "schema_version=1\n[safety]\nsafe_to_auto_run_commands=false\n",
-        );
+        repo.write(LOCAL, "[safety]\nsafe_to_auto_run_commands=false\n");
         let result = view(&repo.0).unwrap();
         let contract = &result["capability_contract"];
         assert!(contract["claim_authorities"].is_null());

@@ -58,13 +58,8 @@ matches `stale_when` becomes freshness pressure. A note marked
 becomes owner-shaped promotion pressure. Deprecated or canonical-elsewhere notes
 become supersession pressure.
 
-For workflow obligations, the review uses the existing
-`workflow_obligations.match_evidence.match_count` shape, with fallback for
-compact projections that already expose `match_count`.
-
-The review suggests existing owner actions only, such as Memory freshness review,
-Memory promotion reporting, or workflow-obligation inspection. It does not create
-a generic knowledge queue.
+The review suggests existing Memory freshness and promotion actions. Scoped
+instructions and Verification retain their own procedure and proof requirements.
 
 ## Workflow Placement
 

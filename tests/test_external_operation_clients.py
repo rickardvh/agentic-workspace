@@ -162,21 +162,20 @@ def test_ordinary_configuration_choice_persists_and_source_change_blocks(
 
     _, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="unrelated")
     source = tmp_path / ".agentic-workspace/config.local.toml"
-    source.write_text("""schema_version = 1
-[delegation]
+    source.write_text("""[delegation]
 assignment_policy = "required-best-fit"
 current_target = "orchestrator"
 transport_authority = "manual"
 [delegation_targets.orchestrator]
 target_id = "host:orchestrator"
 target_revision = "1"
-strength = "strong"
+
 location = "local"
 transports = [{kind = "internal"}]
 [delegation_targets.worker]
 target_id = "host:worker"
 target_revision = "1"
-strength = "strong"
+
 location = "external"
 transports = [{kind = "manual"}]
 """)
@@ -1849,12 +1848,12 @@ def test_generated_python_client_resolves_config_local_cli_invoke(tmp_path: Path
     config_dir = tmp_path / ".agentic-workspace"
     config_dir.mkdir()
     (config_dir / "config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        '[workspace]\ncli_invoke = "agentic-workspace"\n',
         encoding="utf-8",
     )
     local_command = f"{Path(sys.executable).as_posix()} {(ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
     (config_dir / "config.local.toml").write_text(
-        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
+        "[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
         encoding="utf-8",
     )
 
@@ -2019,12 +2018,12 @@ def test_typescript_client_resolves_config_local_cli_invoke(tmp_path: Path) -> N
     config_dir = tmp_path / ".agentic-workspace"
     config_dir.mkdir()
     (config_dir / "config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        '[workspace]\ncli_invoke = "agentic-workspace"\n',
         encoding="utf-8",
     )
     local_command = f"{Path(sys.executable).as_posix()} {(ROOT / 'scripts/run_agentic_workspace.py').as_posix()}"
     (config_dir / "config.local.toml").write_text(
-        "schema_version = 1\n[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
+        "[workspace]\ncli_invoke = " + json.dumps(local_command) + "\n",
         encoding="utf-8",
     )
     script = f"""
@@ -2058,26 +2057,6 @@ def test_public_python_client_detects_and_resolves_workspace(tmp_path: Path) -> 
     config.write_text('[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
     assert detect_workspace(tmp_path)["status"] == "enabled"
     assert resolve_invocation(tmp_path) == ["uv", "run", "agentic-workspace"]
-
-
-def test_public_clients_detect_exact_version_incompatibility(tmp_path: Path) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text('[workspace]\nenabled = true\n\n[cli_compatibility]\nexact_version = "999.0.0"\n', encoding="utf-8")
-
-    python_state = detect_workspace(tmp_path)
-    assert python_state["status"] == "incompatible"
-    assert python_state["reason"] == "exact-client-version-mismatch"
-
-    script = f"""
-import {{ detectWorkspace }} from './generated/workspace/typescript/src/client.mjs';
-console.log(JSON.stringify(detectWorkspace({json.dumps(str(tmp_path))})));
-"""
-    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
-    assert completed.returncode == 0, completed.stderr
-    typescript_state = json.loads(completed.stdout)
-    assert typescript_state["status"] == "incompatible"
-    assert typescript_state["reason"] == "exact-client-version-mismatch"
 
 
 def test_public_requirement_negotiation_rejects_unknown_status() -> None:
@@ -2132,9 +2111,7 @@ def test_assignment_lifecycle_operations_are_declared_but_not_ready_without_rece
 
 def test_assignment_dispatch_public_operation_rejects_missing_current_authority(tmp_path: Path) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
-    )
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
 
     result = assignment_dispatch(
         {
@@ -2168,9 +2145,7 @@ def _prepare_shared_worktree_assignment(
 
     (target / ".agentic-workspace/planning/assignments").mkdir(parents=True)
     (target / ".agentic-workspace/proof/receipts").mkdir(parents=True)
-    (target / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
-    )
+    (target / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
     feature = target / "src/feature.py"
     feature.parent.mkdir(parents=True)
     feature.write_text("old\n", encoding="utf-8")
@@ -2749,7 +2724,7 @@ def test_assignment_import_large_return_file_through_session_logged_cli(tmp_path
     run_id = "run-large-file"
     identity, _invocation, host_execution = _prepare_shared_worktree_assignment(tmp_path, run_id=run_id)
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
-        "schema_version = 1\n\n[session_logging]\nenabled = true\n",
+        "\n[session_logging]\nenabled = true\n",
         encoding="utf-8",
     )
     patch = (
@@ -2811,9 +2786,7 @@ def test_assignment_import_large_return_file_through_session_logged_cli(tmp_path
 
 def test_assignment_lifecycle_public_admit_rejects_caller_authority_strings(tmp_path: Path) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
-    )
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
     invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
     with pytest.raises(AWClientError) as excinfo:
         assignment_admit(
@@ -2942,29 +2915,19 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
-    )
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'current_target = "user-local:fast-worker"',
-                "",
-                "[local_memory]",
-                "target_guidance_enabled = true",
-                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
-                'correction_events_path = ".agentic-workspace/local/correction-events.json"',
                 "",
                 "[delegation_targets.fast_worker]",
                 'target_id = "user-local:fast-worker"',
                 'target_revision = "rev-1"',
                 'aliases = ["fast"]',
-                'revision_policy = "preserve"',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -3047,18 +3010,16 @@ def test_correction_event_generated_operations_store_query_and_preserve_low_auth
 
 def test_correction_event_query_filters_full_low_authority_context(tmp_path: Path) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation_targets.fast_worker]",
                 'target_id = "user-local:fast-worker"',
                 'target_revision = "rev-1"',
                 'aliases = ["fast"]',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -3103,18 +3064,16 @@ def test_signed_host_observation_survives_without_agent_normalization_and_routes
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation_targets.fast_worker]",
                 'target_id = "user-local:fast-worker"',
                 'target_revision = "rev-1"',
                 'aliases = ["fast"]',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -3222,18 +3181,16 @@ def test_explicit_correction_can_resolve_to_existing_canonical_owner_without_dup
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation_targets.implementer]",
                 'target_id = "user-local:implementer"',
                 'target_revision = "rev-1"',
                 'aliases = ["implementer"]',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -3327,7 +3284,7 @@ def test_generated_python_operation_carries_signed_host_observation_without_priv
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     host = _trusted_guidance_host_event(
         tmp_path,
         authority="explicit-user-correction",
@@ -3355,7 +3312,7 @@ def test_generated_python_operation_carries_signed_host_observation_without_priv
 
 def test_caller_labels_cannot_mint_trusted_host_observation(tmp_path: Path) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     from agentic_workspace.agent_guidance import apply_correction_event_operation
 
     forged = {
@@ -3459,28 +3416,21 @@ def test_agent_guidance_generated_lifecycle_operations_are_external_runtime_back
 
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        '[workspace]\ncli_invoke = "agentic-workspace"\n',
         encoding="utf-8",
     )
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'current_target = "user-local:fast-worker"',
-                "",
-                "[local_memory]",
-                "target_guidance_enabled = true",
-                'target_guidance_overlay_path = ".agentic-workspace/local/guidance-lifecycle.json"',
                 "",
                 "[delegation_targets.fast_worker]",
                 'target_id = "user-local:fast-worker"',
                 'target_revision = "rev-1"',
                 'aliases = ["fast"]',
-                'revision_policy = "preserve"',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -3683,29 +3633,19 @@ def test_agent_guidance_generated_lifecycle_operations_are_external_runtime_back
 
 def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
-    )
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
                 'current_target = "user-local:fast-worker"',
-                "",
-                "[local_memory]",
-                "target_guidance_enabled = true",
-                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
-                'correction_events_path = ".agentic-workspace/local/correction-events.json"',
                 "",
                 "[delegation_targets.fast_worker]",
                 'target_id = "user-local:fast-worker"',
                 'target_revision = "rev-1"',
                 'aliases = ["fast"]',
-                'revision_policy = "preserve"',
-                'strength = "strong"',
-                'execution_methods = ["internal"]',
+                'transports = [{kind="internal"}]',
             ]
         ),
         encoding="utf-8",
@@ -4020,114 +3960,6 @@ console.log(JSON.stringify(payload));
     typescript_payload = json.loads(completed.stdout)
     assert python_payload["kind"] == typescript_payload["kind"] == "agentic-workspace/delegation-outcomes/v1"
     assert python_payload["recorded"]["outcome"] == typescript_payload["recorded"]["outcome"] == "success"
-
-
-def test_config_policy_generated_python_and_typescript_preview_parity(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.syspath_prepend(str(ROOT))
-    from generated.workspace.python.commands.config_policy_apply import invoke as invoke_python_config_policy
-
-    targets = {name: tmp_path / name for name in ("python-policy", "typescript-policy")}
-    contexts: dict[str, dict[str, object]] = {}
-    for name, target in targets.items():
-        subprocess.run(["git", "init", "-q", str(target)], check=True)
-        assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--format", "json"]) == 0
-        capsys.readouterr()
-        assert cli.main(["setup", "--target", str(target), "--format", "json"]) == 0
-        contexts[name] = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
-
-    def values(name: str) -> dict[str, object]:
-        context = contexts[name]
-        decision = {
-            "kind": "agentic-workspace/config-policy-decision/v1",
-            "concern_id": "orchestration-posture",
-            "authority": "human-answer",
-            "scope": "local",
-            "setup_identity": context["setup_identity"],
-            "changes": {
-                "setup.prompt_disposition": "deferred",
-                "setup.setup_identity": context["setup_identity"],
-                "setup.context_revision": "sha256:fixture-context",
-                "setup.unresolved_concerns": ["orchestration-posture"],
-                "setup.required_concerns": ["orchestration-posture"],
-            },
-        }
-        return {
-            "target": str(targets[name]),
-            "decision_json": json.dumps(decision),
-            "expect_config_revision": context["local_config_revision"],
-            "expect_setup_identity": context["setup_identity"],
-            "dry_run": True,
-            "format": "json",
-        }
-
-    python_payload = invoke_python_config_policy(values("python-policy"))
-    script = f"""
-import {{ invokeGeneratedOperation }} from './generated/workspace/typescript/src/runtime.mjs';
-const payload = invokeGeneratedOperation({{
-  operationId: 'config.policy-apply',
-  operationPath: 'operations/config.policy-apply.json',
-  values: {json.dumps(values("typescript-policy"))}
-}});
-console.log(JSON.stringify(payload));
-"""
-    completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
-    assert completed.returncode == 0, completed.stderr
-    typescript_payload = json.loads(completed.stdout)
-    for field in (
-        "kind",
-        "status",
-        "scope",
-        "authority",
-        "path",
-        "previous_revision",
-        "revision",
-        "readiness_status",
-        "outcome",
-        "mutation_applied",
-        "reason_code",
-        "effects",
-    ):
-        assert python_payload[field] == typescript_payload[field]
-
-    def completion_values(name: str) -> dict[str, object]:
-        context = contexts[name]
-        return {
-            "target": str(targets[name]),
-            "decision_json": json.dumps(context["reconciliation_completion"]["decision"]),
-            "expect_config_revision": context["local_config_revision"],
-            "expect_setup_identity": context["setup_identity"],
-            "dry_run": True,
-            "format": "json",
-        }
-
-    python_completion = invoke_python_config_policy(completion_values("python-policy"))
-    completion_script = f"""
-import {{ invokeGeneratedOperation }} from './generated/workspace/typescript/src/runtime.mjs';
-const payload = invokeGeneratedOperation({{
-  operationId: 'config.policy-apply',
-  operationPath: 'operations/config.policy-apply.json',
-  values: {json.dumps(completion_values("typescript-policy"))}
-}});
-console.log(JSON.stringify(payload));
-"""
-    completion_run = subprocess.run(["node", "--input-type=module", "--eval", completion_script], cwd=ROOT, text=True, capture_output=True)
-    assert completion_run.returncode == 0, completion_run.stderr
-    typescript_completion = json.loads(completion_run.stdout)
-    for field in (
-        "kind",
-        "status",
-        "scope",
-        "authority",
-        "path",
-        "previous_revision",
-        "revision",
-        "readiness_status",
-        "outcome",
-        "mutation_applied",
-        "reason_code",
-        "effects",
-    ):
-        assert python_completion[field] == typescript_completion[field]
 
 
 @pytest.mark.parametrize(

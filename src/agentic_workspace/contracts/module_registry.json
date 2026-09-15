@@ -74,7 +74,6 @@
         "agentic-workspace summary when active planning owns continuation"
       ],
       "inputs": [
-        ".agentic-workspace/config.toml workflow_obligations",
         "resolved optimization_bias",
         "resolved artifact posture",
         "resolved initiative posture",
@@ -87,7 +86,6 @@
       "fields": [
         "task_intent",
         "operating_posture",
-        "workflow_obligations",
         "skill_routes",
         "allowed_actions",
         "forbidden_actions",
@@ -99,33 +97,20 @@
         "review_rubrics",
         "module_contributions"
       ],
-      "composition_rule": "Workspace computes the packet from repo config, task facts, and selected module participation declarations. Optimization bias changes density and routing emphasis, artifact posture constrains generated or persisted outputs, initiative posture limits unsolicited work, assurance posture raises review/proof/delegation requirements, read budget gates raw context exposure, and workflow obligations add stage-specific requirements.",
+      "composition_rule": "Workspace computes the packet from repo config, task facts, and selected module participation declarations. Optimization bias changes density and routing emphasis, artifact posture constrains generated or persisted outputs, initiative posture limits unsolicited work, assurance posture raises review/proof/delegation requirements, read budget gates raw context exposure.",
       "module_rule": "Modules may declare posture fragments, output requirements, review rubrics, authority boundaries, proof or closeout effects, and route triggers. Startup includes only fragments whose triggers match the task, changed paths, active state, or requested command.",
       "must_not": [
         "grow AGENTS.md with every possible module instruction",
         "emit all module posture fragments on ordinary startup",
-        "let optimization bias or output posture override hard workflow obligations",
+        "let optimization bias or output posture override current owner requirements",
         "let module-provided posture silently change authority or proof ownership"
       ]
-    },
-    "workflow_obligation_model": {
-      "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
-      "role": "Repo-configured obligations compose with the recommended loop by stage and scope tags. They are explicit, queryable, and reportable; they do not replace module ownership or make every obligation a new module.",
-      "stages": [
-        "pre-work",
-        "before-claiming-completion",
-        "before-commit",
-        "review",
-        "closeout"
-      ],
-      "composition_rule": "Matched obligations raise the force of an existing loop step or closeout gate; unmatched obligations stay quiet."
     },
     "conflict_model": {
       "rule": "Conflicts are surfaced as report or lifecycle facts, not resolved silently.",
       "conflict_classes": [
         "overlapping_owned_roots",
         "incompatible_module_selection",
-        "contradictory_workflow_obligations",
         "contradictory_task_posture_fragments",
         "authority_boundary_collision",
         "output_shape_collision",

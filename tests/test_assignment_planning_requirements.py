@@ -15,8 +15,8 @@ def test_assignment_consumes_only_current_owner_task_judgment(tmp_path: Path, mo
     root = tmp_path / ".agentic-workspace"
     root.mkdir()
     (root / "config.local.toml").write_text(
-        "schema_version = 1\n[delegation_targets.worker]\n"
-        'target_id = "host:worker"\ntarget_revision = "1"\nstrength = "weak"\n'
+        "[delegation_targets.worker]\n"
+        'target_id = "host:worker"\ntarget_revision = "1"\n\n'
         'location = "external"\ntransports = [{kind="manual"}]\n'
     )
     task = "Check the bounded policy document links."
@@ -84,21 +84,20 @@ def test_direct_assignment_public_export_ignores_unrelated_owner(tmp_path: Path,
     from agentic_workspace.generated_operations import assignment_export
 
     _, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="unrelated")
-    (tmp_path / ".agentic-workspace/config.local.toml").write_text("""schema_version = 1
-[delegation]
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text("""[delegation]
 assignment_policy = "required-best-fit"
 current_target = "orchestrator"
 transport_authority = "manual"
 [delegation_targets.orchestrator]
 target_id = "host:orchestrator"
 target_revision = "1"
-strength = "strong"
+
 location = "local"
 transports = [{kind="internal"}]
 [delegation_targets.worker]
 target_id = "host:worker"
 target_revision = "1"
-strength = "strong"
+
 location = "external"
 transports = [{kind="manual"}]
 """)

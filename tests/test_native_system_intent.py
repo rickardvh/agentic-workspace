@@ -18,7 +18,7 @@ def test_real_governing_sources_are_lazy_exact_and_not_alignment(
 ) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[system_intent]\nsources=["SYSTEM_INTENT.md","README.md"]\npreferred_source="SYSTEM_INTENT.md"\n')
+    config.write_text('[system_intent]\nsources=["SYSTEM_INTENT.md","README.md"]\npreferred_source="SYSTEM_INTENT.md"\n')
     for reference in ("SYSTEM_INTENT.md", "README.md", MIRROR):
         path = tmp_path / reference
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -31,7 +31,6 @@ def test_real_governing_sources_are_lazy_exact_and_not_alignment(
     assert owner["interpretation"]["alignment"] == "unresolved-owner-judgment"
     assert len(json.dumps(owner)) < 16000
     assert "governing_intents =" not in json.dumps(owner)
-    assert not any(r["field"].startswith("system_intent.") for r in result["configuration"]["residuals"])
     request = next(r for r in owner["requests"] if r["arguments"]["reference"] == MIRROR)
     read = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["system_intent"]["response"]
     assert read["text"] == (tmp_path / MIRROR).read_bytes().decode("utf-8")
@@ -73,7 +72,7 @@ def test_governing_source_absence_is_quiet_and_missing_declaration_is_not_waived
     assert quiet["decision_packet"]["status"] == "direct"
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[system_intent]\nsources=["missing.md"]\npreferred_source="missing.md"\n')
+    config.write_text('[system_intent]\nsources=["missing.md"]\npreferred_source="missing.md"\n')
     blocked = consume(surface, shared_core_binary, native_cli, context)
     assert blocked["system_intent"]["gaps"] == ["governing-source-unavailable:missing.md"]
     assert blocked["decision_packet"]["blockers"]

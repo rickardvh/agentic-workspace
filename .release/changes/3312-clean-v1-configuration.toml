@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Start v1 with one closed unversioned human configuration grammar and remove prerelease readers, aliases, and configuration compatibility machinery."
+issues = [3312]

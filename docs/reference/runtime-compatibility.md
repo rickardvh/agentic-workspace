@@ -13,11 +13,11 @@ Trusted pre-state configuration and reader observations; not public authority in
 | (root) | object | yes |  | Trusted pre-state configuration and reader observations; not public authority input. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `target` | string | yes |  | Canonical repository target observed by the host before any managed state is interpreted. |  |  |
 | `config_present` | boolean | yes |  | Whether the canonical shared configuration source exists; absence selects repository defaults. |  |  |
-| `repo_config` | object | yes |  | Decoded shared configuration observed at the canonical source; only compatibility and invocation fields affect this admission. |  |  |
-| `local_config` | object | yes |  | Decoded local configuration used solely to identify the established recovery invocation. |  |  |
+| `repo_config` | object | yes |  | Decoded shared configuration observed at the canonical source; validated against the single current grammar before owner state is read. |  |  |
+| `local_config` | object | yes |  | Decoded local configuration validated against the single current grammar. |  |  |
 | `source_errors` | array of string | yes |  | Host source-read failures that must prevent successful admission. |  |  |
 | `observed_runtime` | object | yes |  | Identity and supported reader capabilities observed from the executing package, never supplied by ordinary start callers. |  |  |
 | `observed_runtime.package` | const `"agentic-workspace"` | yes |  | Product package whose reader is being admitted. |  |  |
 | `observed_runtime.version` | string | yes |  | Product release identity observed from its package authority, distinct from the Rust crate version. |  |  |
 | `observed_runtime.reader_epoch` | integer | yes |  | Reader contract epoch implemented by this executing artifact. |  |  |
-| `observed_runtime.reader_capabilities` | array of string | yes |  | Reader features implemented by this executing artifact, compared with current repository requirements. |  |  |
+| `observed_runtime.reader_capabilities` | array of string | yes |  | Reader features implemented by this executing artifact, reported as executing-artifact facts. |  |  |

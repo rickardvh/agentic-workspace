@@ -405,7 +405,7 @@ def initialize_target_identity(*, target_root: Path, values: dict[str, Any]) -> 
                 "target_id": configured_id,
             }
     local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
-    before = local_path.read_text(encoding="utf-8") if local_path.exists() else "schema_version = 1\n"
+    before = local_path.read_text(encoding="utf-8") if local_path.exists() else ""
     before_digest = "sha256:" + hashlib.sha256(before.encode("utf-8")).hexdigest()
     expected_digest = str(values.get("expected_config_digest") or "").strip()
     if expected_digest and expected_digest != before_digest:
@@ -444,6 +444,11 @@ def initialize_target_identity(*, target_root: Path, values: dict[str, Any]) -> 
             }
         lines.insert(table_index + 1, f'target_id = "{target_id}"')
     after = "\n".join(lines).rstrip() + "\n"
+    import tomllib
+
+    from agentic_workspace.config import _validate_current_authoring
+
+    _validate_current_authoring(tomllib.loads(after), local=True)
     after_digest = "sha256:" + hashlib.sha256(after.encode("utf-8")).hexdigest()
     result = {
         "kind": "agentic-workspace/target-identity-initialization/v1",

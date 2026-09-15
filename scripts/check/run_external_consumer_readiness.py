@@ -263,7 +263,7 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     source = target / ".agentic-workspace/config.toml"
     source.parent.mkdir()
     # Explicit human-owned input, not a product installation or custody grant.
-    original = b"# retained human policy\r\nschema_version=1\r\n[workspace]\r\ncli_invoke='old-command' # retain comment\r\nagent_instructions_file='AGENTS.md'\r\n"
+    original = b"# retained human policy\r\n[workspace]\r\ncli_invoke='old-command' # retain comment\r\nagent_instructions_file='AGENTS.md'\r\n"
     source.write_bytes(original)
     guidance = "Preserve human work. Delivery grants no proof or publication authority.\n"
     (target / "AGENTS.md").write_text(guidance, encoding="utf-8", newline="\n")
@@ -291,8 +291,8 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
     assert _rejected(call(invoke))
     assert _snapshot(target) == before
     for body, check in [
-        ("schema_version=1\n[modules]\nenabled=[]\n", "disabled"),
-        ("schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=999\n", "incompatible"),
+        ("[modules]\nenabled=[]\n", "disabled"),
+        ("[unsupported_config_section]\nvalue=true\n", "unsupported"),
         ("[malformed", "malformed"),
     ]:
         source.write_text(body)
@@ -309,7 +309,7 @@ def _configuration_cases(call: Any, target: Path) -> dict[str, str]:
         "source_drift": "rejected",
         "replay": "rejected",
         "disabled_modules": "passed",
-        "incompatible_reader": "rejected",
+        "unsupported_configuration": "rejected",
         "malformed_source": "rejected",
     }
 
@@ -416,7 +416,7 @@ def _payload_cases(call: Any, target: Path, wheel: Path) -> dict[str, str]:
     assert absent["planning"] == present["planning"]
     assert _snapshot(target) == before
     config = target / ".agentic-workspace/config.toml"
-    config.write_text('schema_version=1\n[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n')
+    config.write_text('[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n')
     provenance = target / ".agentic-workspace/payload-provenance.json"
     provenance.write_text(
         json.dumps(

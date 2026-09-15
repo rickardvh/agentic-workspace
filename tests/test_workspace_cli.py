@@ -17,9 +17,7 @@ from repo_planning_bootstrap import installer as planning_installer
 from repo_verification_bootstrap import runtime_primitives as verification_runtime_primitives
 from tests.workspace_cli_support import *
 
-from agentic_workspace import module_contract as module_contract_runtime
 from agentic_workspace import session_logging
-from agentic_workspace.module_contract import DiscoveredModule, validate_module_contract
 
 
 def test_active_external_backed_owner_routes_refresh_then_reconciliation(tmp_path: Path) -> None:
@@ -481,7 +479,7 @@ def _write_completed_child_reconciliation_fixture(target_root: Path) -> None:
     ref = ".agentic-workspace/planning/execplans/merged-child.plan.json"
     _write(
         target_root / ".agentic-workspace/config.toml",
-        "schema_version = 1\n\n[workspace]\nenabled = true\n",
+        "\n[workspace]\nenabled = true\n",
     )
     _write(target_root / "README.md", "# Fixture\n")
     _write(
@@ -705,10 +703,10 @@ def test_refreshed_external_owner_reconciliation_applies_only_with_semantic_auth
 )
 def test_workspace_disabled_state_blocks_ordinary_commands(tmp_path: Path, capsys, argv: list[str], blocked_command: str) -> None:
     _init_git_repo(tmp_path)
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "")
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[workspace]\nenabled = false\n",
+        "\n[workspace]\nenabled = false\n",
     )
 
     assert cli.main([*argv, "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2299,685 +2297,6 @@ def test_setup_infers_mature_repo_configuration_without_human_questions(tmp_path
         "modules.reconcile",
     }
     assert all("verification" not in question["question"].lower() for question in concerns["human_questions"])
-
-
-def test_setup_asks_plain_language_question_for_unresolved_human_policy(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[delegation]\nexecution_role = 'orchestrator'\n",
-    )
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-
-    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    question = concerns["human_questions"][0]
-    assert concerns["status"] == "human-decision-required"
-    assert question["answer_owner"] == "config.policy-apply"
-    assert question["already_inferred"] == "Multi-agent orchestration is intended; the transfer policy is unresolved."
-    assert "automatically" in question["question"]
-    assert "assignment_policy" not in question["question"]
-    assert all(choice["consequence"] for choice in question["alternatives"])
-    assert all(choice["decision"]["scope"] == "local" for choice in question["alternatives"])
-    assert "--expect-config-revision sha256:" in question["apply_command"]
-
-
-def test_config_policy_apply_preserves_comments_unknown_fields_and_rejects_stale_revision(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-    config_path = tmp_path / ".agentic-workspace" / "config.toml"
-    config_path.write_text(
-        "schema_version = 1\n\n[modules]\nenabled = ['planning', 'memory']\n\n"
-        "[workspace]\nimprovement_latitude = 'conservative' # keep this comment\n"
-        "host_extension = 'preserve-me'\n",
-        encoding="utf-8",
-    )
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    context = concerns["mutation_context"]
-    decision = {
-        "kind": "agentic-workspace/config-policy-decision/v1",
-        "concern_id": "improvement-latitude",
-        "authority": "human-answer",
-        "scope": "shared",
-        "setup_identity": context["setup_identity"],
-        "changes": {"workspace.improvement_latitude": "balanced"},
-    }
-    argv = [
-        "config-policy",
-        "--target",
-        str(tmp_path),
-        "--decision-json",
-        json.dumps(decision),
-        "--expect-config-revision",
-        context["shared_config_revision"],
-        "--expect-setup-identity",
-        context["setup_identity"],
-        "--format",
-        "json",
-    ]
-    assert cli.main([*argv, "--dry-run"]) == 0
-    preview = json.loads(capsys.readouterr().out)
-    assert preview["status"] == "preview"
-    assert "improvement_latitude = 'conservative'" in config_path.read_text(encoding="utf-8")
-    assert cli.main(argv) == 0
-    applied = json.loads(capsys.readouterr().out)
-    text = config_path.read_text(encoding="utf-8")
-    assert applied["outcome"] == "applied"
-    assert 'improvement_latitude = "balanced" # keep this comment' in text
-    assert "host_extension = 'preserve-me'" in text
-    with pytest.raises(SystemExit) as stale_exit:
-        cli.main(argv)
-    assert stale_exit.value.code == 2
-    assert "revision is stale" in capsys.readouterr().err
-    assert config_path.read_text(encoding="utf-8") == text
-
-
-def test_config_policy_apply_keeps_local_authority_and_completes_matching_readiness(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    context = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
-    decision = {
-        "kind": "agentic-workspace/config-policy-decision/v1",
-        "concern_id": "orchestration-posture",
-        "authority": "human-answer",
-        "scope": "local",
-        "setup_identity": context["setup_identity"],
-        "changes": {"delegation.assignment_policy": "best-fit-advisory"},
-    }
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(decision),
-                "--expect-config-revision",
-                context["local_config_revision"],
-                "--expect-setup-identity",
-                context["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    result = json.loads(capsys.readouterr().out)
-    assert result["path"] == ".agentic-workspace/config.local.toml"
-    assert "assignment_policy" not in (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
-    assert 'assignment_policy = "best-fit-advisory"' in (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    context = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
-    completion = context["reconciliation_completion"]["decision"]
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(completion),
-                "--expect-config-revision",
-                context["local_config_revision"],
-                "--expect-setup-identity",
-                context["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    completed = json.loads(capsys.readouterr().out)
-    receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
-    assert completed["readiness_status"] == "current"
-    assert receipt["configuration_readiness"]["status"] == "current"
-
-
-def test_setup_defers_locally_resumes_without_transcript_and_re_elevates_required_work(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[delegation]\nexecution_role = 'orchestrator'\n",
-    )
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    continuation = concerns["continuation"]
-    assert continuation["configuration_freshness"] == "required-for-affected-action"
-    assert continuation["user_disposition"] == "active"
-    assert continuation["unresolved_concern_ids"] == ["orchestration-posture"]
-    assert continuation["required_concern_ids"] == ["orchestration-posture"]
-    defer_decision = continuation["actions"]["defer"]["decision"]
-    local_revision = concerns["mutation_context"]["local_config_revision"]
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(defer_decision),
-                "--expect-config-revision",
-                local_revision,
-                "--expect-setup-identity",
-                continuation["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-    local_text = (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
-    assert "[setup]" in local_text
-    assert 'prompt_disposition = "deferred"' in local_text
-    assert 'unresolved_concerns = ["orchestration-posture"]' in local_text
-
-    for _ in range(2):
-        assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-        deferred = json.loads(capsys.readouterr().out)["decision_packet"]
-        assert deferred["configuration_readiness"]["status"] == "follow-up-deferred"
-        assert deferred["configuration_readiness"]["unresolved_concern_ids"] == ["orchestration-posture"]
-        assert deferred["action"]["id"] != "reconcile-repository-configuration"
-
-    second_checkout = tmp_path.parent / f"{tmp_path.name}-second-local-context"
-    shutil.copytree(tmp_path, second_checkout)
-    second_local_path = second_checkout / ".agentic-workspace" / "config.local.toml"
-    second_local = re.sub(r"(?ms)^\[setup\]\s*\n.*?(?=^\[|\Z)", "", second_local_path.read_text(encoding="utf-8"))
-    _write(second_local_path, second_local)
-    assert cli.main(["start", "--target", str(second_checkout), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    independent = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert independent["configuration_readiness"]["status"] == "reconciliation-required"
-    assert independent["action"]["id"] == "reconcile-repository-configuration"
-
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Delegate this change to another agent.", "--format", "json"]) == 0
-    required = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert required["configuration_readiness"]["status"] == "action-required"
-    assert required["action"]["id"] == "reconcile-repository-configuration"
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    resumed_concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    assert resumed_concerns["continuation"]["user_disposition"] == "deferred"
-    assert resumed_concerns["continuation"]["unresolved_concern_ids"] == ["orchestration-posture"]
-    resume_decision = resumed_concerns["continuation"]["actions"]["resume"]["decision"]
-    assert resume_decision["clear_setup_disposition"] is True
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(resume_decision),
-                "--expect-config-revision",
-                resumed_concerns["mutation_context"]["local_config_revision"],
-                "--expect-setup-identity",
-                resumed_concerns["continuation"]["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-    assert "[setup]" not in (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    suppress_concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    suppress_decision = suppress_concerns["continuation"]["actions"]["suppress_optional"]["decision"]
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(suppress_decision),
-                "--expect-config-revision",
-                suppress_concerns["mutation_context"]["local_config_revision"],
-                "--expect-setup-identity",
-                suppress_concerns["continuation"]["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    suppressed = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert suppressed["configuration_readiness"]["status"] == "optional-prompts-suppressed"
-    assert suppressed["action"]["id"] != "reconcile-repository-configuration"
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Delegate this work.", "--format", "json"]) == 0
-    suppressed_required = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert suppressed_required["configuration_readiness"]["status"] == "action-required"
-
-
-def test_setup_deferral_is_revision_bound_and_completion_retires_local_residue(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(tmp_path / "pyproject.toml", "[project]\nname = 'multi'\nversion = '0.1.0'\n")
-    _write(tmp_path / "package.json", '{"name":"multi-web"}\n')
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    concerns = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    defer_decision = concerns["continuation"]["actions"]["defer"]["decision"]
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(defer_decision),
-                "--expect-config-revision",
-                concerns["mutation_context"]["local_config_revision"],
-                "--expect-setup-identity",
-                concerns["continuation"]["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-
-    _write(tmp_path / "README.md", "# New bounded source context\n")
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect the repository.", "--format", "json"]) == 0
-    stale = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
-    assert stale["status"] == "reconciliation-required"
-    assert stale["stale_local_disposition"]["status"] == "discard-and-re-resolve"
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    current = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    completion = current["mutation_context"]["reconciliation_completion"]["decision"]
-    assert completion["scope"] == "local"
-    assert completion["clear_setup_disposition"] is True
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(completion),
-                "--expect-config-revision",
-                current["mutation_context"]["local_config_revision"],
-                "--expect-setup-identity",
-                current["mutation_context"]["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-    assert "[setup]" not in (tmp_path / ".agentic-workspace" / "config.local.toml").read_text(encoding="utf-8")
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    quiet = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert "configuration_readiness" not in quiet
-
-
-def test_setup_reconciles_only_current_enabled_module_concern_delta(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-
-    def apply_completion(concerns: dict[str, Any]) -> None:
-        completion = concerns["mutation_context"]["reconciliation_completion"]["decision"]
-        assert (
-            cli.main(
-                [
-                    "config-policy",
-                    "--target",
-                    str(tmp_path),
-                    "--decision-json",
-                    json.dumps(completion),
-                    "--expect-config-revision",
-                    concerns["mutation_context"]["local_config_revision"],
-                    "--expect-setup-identity",
-                    concerns["mutation_context"]["setup_identity"],
-                    "--format",
-                    "json",
-                ]
-            )
-            == 0
-        )
-        capsys.readouterr()
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    initial = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    apply_completion(initial)
-
-    original_descriptors = workspace_runtime_core._module_operations()
-
-    def module_contract(*, semantic_revision: str, source_revision: str, status: str, description: str = "Signals") -> dict[str, Any]:
-        return validate_module_contract(
-            {
-                "schema_version": "agentic-workspace/module-capability/v2",
-                "name": "signals",
-                "description": description,
-                "compatibility": {
-                    "reader_epoch": 1,
-                    "required_capabilities": ["module-setup-concerns-v1"],
-                },
-                "ownership": {
-                    "roots": [],
-                    "effect_classes": [],
-                    "authority_exclusions": ["cannot grant mutation, proof, or completion authority"],
-                },
-                "relevance": {"task_terms": [], "path_prefixes": []},
-                "capabilities": {
-                    "resources": [],
-                    "skills": [],
-                    "operations": [],
-                    "setup_concerns": [
-                        {
-                            "id": "retention-policy",
-                            "semantic_revision": semantic_revision,
-                            "source_revision": source_revision,
-                            "status": status,
-                            "materiality": "recommended",
-                            "owner": "signals.retention-policy",
-                            "applicability": {"kind": "module-enabled"},
-                            "route": {"kind": "human-decision", "id": "signals.retention-policy"},
-                            "question": "How long should imported build signals be retained?",
-                            "source_obligation": {
-                                "semantic_need": "the repository-approved retention schedule",
-                                "source_class": "retention policy",
-                                "owner": "signals.retention-policy",
-                                "status": "missing" if status == "human-decision-required" else "satisfied",
-                                "candidates": [] if status == "human-decision-required" else ["docs/retention.md"],
-                                "current_source": "" if status == "human-decision-required" else "docs/retention.md",
-                                "auto_bind_safe": False,
-                                "affected_claims": ["signals-retention-ready"],
-                                "continuation": {"kind": "create-source", "id": "signals.retention-policy"},
-                            },
-                        }
-                    ],
-                },
-                "result_semantics": {
-                    "schema_version": "signals/result/v1",
-                    "guaranteed_fields": [],
-                    "effect_fields": [],
-                    "warning_fields": [],
-                },
-            }
-        )
-
-    current_contract = module_contract(semantic_revision="retention/v1", source_revision="source-r1", status="human-decision-required")
-
-    def install_contract(contract: dict[str, Any]) -> None:
-        discovered = DiscoveredModule(name="signals", entry_point="fixture:signals", contract=contract, operations={}, status="available")
-        descriptor = workspace_runtime_core._external_module_descriptor(discovered)
-
-        def descriptors() -> dict[str, Any]:
-            return {**original_descriptors, "signals": descriptor}
-
-        monkeypatch.setattr(workspace_runtime_core, "_module_operations", descriptors)
-        monkeypatch.setattr(workspace_runtime_startup, "_module_operations", descriptors)
-        monkeypatch.setattr(module_contract_runtime, "discover_module_contracts", lambda: [discovered])
-
-    install_contract(current_contract)
-    shared_path = tmp_path / ".agentic-workspace" / "config.toml"
-    shared_text = shared_path.read_text(encoding="utf-8")
-    shared_text = re.sub(r"enabled\s*=\s*\[[^\]]*\]", 'enabled = ["planning", "memory", "signals"]', shared_text)
-    _write(shared_path, shared_text)
-
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    enabled_start = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert enabled_start["action"]["id"] == "reconcile-repository-configuration"
-    assert enabled_start["configuration_readiness"]["status"] == "stale"
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    enabled = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    assert [question["concern_id"] for question in enabled["human_questions"]] == ["module:signals:retention-policy"]
-    assert enabled["source_obligations"][0]["source_class"] == "retention policy"
-    assert enabled["delta"]["counts"]["newly-applicable"] == 1
-    assert all(not concern["setup_pressure"] for concern in enabled["concerns"] if not concern["id"].startswith("module:"))
-
-    install_contract(module_contract(semantic_revision="retention/v1", source_revision="source-r2", status="satisfied"))
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    reconciled = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    assert reconciled["human_questions"] == []
-    apply_completion(reconciled)
-    recorded_concern = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))[
-        "configuration_readiness"
-    ]["concern_receipts"]["module:signals:retention-policy"]
-    current_concern = workspace_runtime_core._module_setup_concern_payloads(
-        selected_modules=["planning", "memory", "signals"], descriptors=workspace_runtime_core._module_operations()
-    )[0]
-    assert recorded_concern["semantic_revision"] == current_concern["semantic_revision"]
-    assert recorded_concern["source_revision"] == current_concern["source_revision"]
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    current_start = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert "configuration_readiness" not in current_start, current_start.get("configuration_readiness")
-
-    install_contract(
-        module_contract(
-            semantic_revision="retention/v1",
-            source_revision="source-r2",
-            status="satisfied",
-            description="Cosmetically revised module docs",
-        )
-    )
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    assert "configuration_readiness" not in json.loads(capsys.readouterr().out)["decision_packet"]
-
-    install_contract(module_contract(semantic_revision="retention/v3", source_revision="source-r7", status="human-decision-required"))
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    changed = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
-    assert changed["changed_concern_ids"] == ["module:signals:retention-policy"]
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    jumped = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    assert [question["concern_id"] for question in jumped["human_questions"]] == ["module:signals:retention-policy"]
-    assert jumped["delta"]["counts"]["semantics-changed"] == 1
-
-    shared_text = re.sub(r"enabled\s*=\s*\[[^\]]*\]", 'enabled = ["planning", "memory"]', shared_path.read_text(encoding="utf-8"))
-    _write(shared_path, shared_text)
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Inspect README.md.", "--format", "json"]) == 0
-    disabled = json.loads(capsys.readouterr().out)["decision_packet"]
-    assert "configuration_readiness" not in disabled
-
-
-def test_setup_surfaces_config_derived_repo_source_obligations_with_selective_consequences(tmp_path: Path, capsys) -> None:
-    scenario = json.loads((Path(__file__).parent / "fixtures" / "source_obligation_lifecycle_v1.json").read_text(encoding="utf-8"))
-    assert scenario["version"] == 1
-    assert [stage["id"] for stage in scenario["stages"]] == [
-        "config-creates-obligation",
-        "domain-wording-and-routing",
-        "defer",
-        "resolve",
-        "quiet-subsequent-startup",
-    ]
-
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(tmp_path / "docs" / "intent-a.md", "# Intent A\n")
-    _write(tmp_path / "docs" / "intent-b.md", "# Intent B\n")
-    _write(tmp_path / "scratch" / "classifier.md", "# Weak local note\n")
-    _write(tmp_path / "RISK_NOTES.md", "# Filename-only weak match\n")
-
-    config_path = tmp_path / ".agentic-workspace" / "config.toml"
-    config_text = config_path.read_text(encoding="utf-8")
-    config_text += (
-        '\n[assurance]\nclassification_owner = "repository-owned"\nclassification_source = "scratch/classifier.md"\n'
-        'invariant_registry = "docs/invariants.md"\n'
-        '\n[system_intent]\nsources = ["docs/intent-a.md"]\n'
-    )
-    _write(config_path, config_text)
-
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    auto_bind = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    auto_by_id = {item["id"]: item for item in auto_bind["concerns"]}
-    assert auto_by_id["source:system-intent"]["source_obligation"]["status"] == "candidate-existing"
-    assert auto_by_id["source:system-intent"]["source_obligation"]["auto_bind_safe"] is True
-    assert auto_by_id["source:assurance-classifier"]["source_obligation"]["status"] == "insufficient-authority"
-    assert auto_by_id["source:invariant-registry"]["source_obligation"]["status"] == "missing"
-    assert auto_by_id["source:invariant-registry"]["source_obligation"]["candidates"] == []
-    assert auto_by_id["source:invariant-registry"]["source_obligation"]["scaffold"] == {
-        "allowed": True,
-        "content_boundary": "Create headings and ownership metadata only; do not invent substantive policy or domain decisions.",
-    }
-    assert "RISK_NOTES.md" not in auto_bind["inspection_budget"]["inspected_sources"]
-
-    config_text = config_text.replace(
-        'sources = ["docs/intent-a.md"]',
-        'sources = ["docs/intent-a.md", "docs/intent-b.md"]',
-    )
-    _write(config_path, config_text)
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    unresolved = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    unresolved_by_id = {item["id"]: item for item in unresolved["concerns"]}
-    assert unresolved_by_id["source:system-intent"]["source_obligation"]["status"] == "ambiguous"
-    invariant_obligation = unresolved_by_id["source:invariant-registry"]["source_obligation"]
-    assert invariant_obligation["owner"] == "assurance.config"
-    assert invariant_obligation["continuation"]["kind"] == "create-source"
-    assert "repository-owned invariant registry" in unresolved_by_id["source:invariant-registry"]["human_decision"]["question"]
-    assert unresolved_by_id["source:invariant-registry"]["apply_route"]["status"] == "awaiting-human"
-    assert {item["concern_id"] for item in unresolved["human_questions"]} >= {
-        "source:system-intent",
-        "source:assurance-classifier",
-        "source:invariant-registry",
-    }
-
-    completion = unresolved["mutation_context"]["reconciliation_completion"]["decision"]
-    with pytest.raises(SystemExit) as incomplete_exit:
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(completion),
-                "--expect-config-revision",
-                unresolved["mutation_context"]["local_config_revision"],
-                "--expect-setup-identity",
-                unresolved["mutation_context"]["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-    assert incomplete_exit.value.code == 2
-    assert "required repo-source obligations" in capsys.readouterr().err
-
-    defer = unresolved["continuation"]["actions"]["defer"]["decision"]
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(defer),
-                "--expect-config-revision",
-                unresolved["mutation_context"]["local_config_revision"],
-                "--expect-setup-identity",
-                unresolved["mutation_context"]["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Update README wording.", "--format", "json"]) == 0
-    unrelated = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
-    assert unrelated["status"] == "follow-up-deferred"
-    assert (
-        cli.main(["start", "--target", str(tmp_path), "--task", "Complete the high assurance invariant review.", "--format", "json"]) == 0
-    )
-    affected = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
-    assert affected["status"] == "action-required"
-
-    _write(tmp_path / "tools" / "classify.py", "# Repository-owned classification rules.\n")
-    _write(tmp_path / "docs" / "invariants.md", "# Invariants\n\n- Domain owner supplies these invariants.\n")
-    config_text = config_text.replace('classification_source = "scratch/classifier.md"', 'classification_source = "tools/classify.py"')
-    config_text = config_text.replace(
-        'sources = ["docs/intent-a.md", "docs/intent-b.md"]',
-        'sources = ["docs/intent-a.md", "docs/intent-b.md"]\npreferred_source = "docs/intent-a.md"',
-    )
-    _write(config_path, config_text)
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    resolved = json.loads(capsys.readouterr().out)["configuration_concerns"]
-    resolved_sources = {item["id"]: item for item in resolved["concerns"] if item["id"].startswith("source:")}
-    assert {item["source_obligation"]["status"] for item in resolved_sources.values()} == {"satisfied"}
-    completion = resolved["mutation_context"]["reconciliation_completion"]["decision"]
-    assert (
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(completion),
-                "--expect-config-revision",
-                resolved["mutation_context"]["local_config_revision"],
-                "--expect-setup-identity",
-                resolved["mutation_context"]["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    capsys.readouterr()
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "Update README wording.", "--format", "json"]) == 0
-    assert "configuration_readiness" not in json.loads(capsys.readouterr().out)["decision_packet"]
-
-    (tmp_path / "docs" / "invariants.md").unlink()
-    assert (
-        cli.main(["start", "--target", str(tmp_path), "--task", "Complete the high assurance invariant review.", "--format", "json"]) == 0
-    )
-    stale = json.loads(capsys.readouterr().out)["decision_packet"]["configuration_readiness"]
-    assert "workspace:source:invariant-registry" in stale["changed_concern_ids"]
-
-
-def test_config_policy_apply_rejects_secret_material_without_writes(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
-    capsys.readouterr()
-    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
-    context = json.loads(capsys.readouterr().out)["configuration_concerns"]["mutation_context"]
-    decision = {
-        "kind": "agentic-workspace/config-policy-decision/v1",
-        "concern_id": "local-invocation",
-        "authority": "human-answer",
-        "scope": "local",
-        "setup_identity": context["setup_identity"],
-        "changes": {"workspace.cli_invoke": "tool --password secret-value"},
-    }
-    local_path = tmp_path / ".agentic-workspace" / "config.local.toml"
-    before = local_path.read_bytes() if local_path.exists() else None
-    with pytest.raises(SystemExit) as secret_exit:
-        cli.main(
-            [
-                "config-policy",
-                "--target",
-                str(tmp_path),
-                "--decision-json",
-                json.dumps(decision),
-                "--expect-config-revision",
-                context["local_config_revision"],
-                "--expect-setup-identity",
-                context["setup_identity"],
-                "--format",
-                "json",
-            ]
-        )
-    assert secret_exit.value.code == 2
-    assert "secret" in capsys.readouterr().err
-    assert (local_path.read_bytes() if local_path.exists() else None) == before
 
 
 def test_setup_rejects_weak_policy_signals_and_bounds_broad_repo_analysis(tmp_path: Path, capsys) -> None:
@@ -6057,7 +5376,6 @@ def test_closeout_trust_scopes_unrelated_active_plan_residue_to_repo_wide_closeo
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         """
-schema_version = 1
 
 [assurance]
 strict_closeout = true
@@ -7402,37 +6720,6 @@ def test_start_default_routes_memory_and_installed_state_detail_behind_selectors
     assert "memory_decision_packet" in selected["values"]
 
 
-def test_start_defers_local_footprint_scan_until_selector_requests_it(tmp_path: Path, capsys, monkeypatch) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[local_scratch_retention]\nwarn_total_bytes = 1\nlocal_aw_warn_bytes = 1\n",
-    )
-    _write(tmp_path / ".agentic-workspace" / "local" / "scratch" / "legacy" / "artifact.txt", "legacy\n")
-
-    original_local_footprint = cli._local_footprint_payload
-
-    def fail_default_scan(**_kwargs: object) -> dict[str, object]:
-        raise AssertionError("default startup must not scan local footprint")
-
-    monkeypatch.setattr(cli, "_local_footprint_payload", fail_default_scan)
-    assert cli.main(["start", "--target", str(tmp_path), "--task", "inspect repo", "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-
-    assert "local_footprint" not in payload
-
-    monkeypatch.setattr(cli, "_local_footprint_payload", original_local_footprint)
-    assert cli.main(["start", "--target", str(tmp_path), "--select", "local_footprint", "--format", "json"]) == 0
-    selected = json.loads(capsys.readouterr().out)["values"]["local_footprint"]
-    assert selected["status"] == "attention"
-    assert selected["scratch_retention"]["legacy_entry_count"] == 1
-    assert "--target ./repo" not in selected["detail_command"]
-    assert "report --target " in selected["detail_command"]
-    assert "--section local_footprint --format json" in selected["detail_command"]
-
-
 def test_start_exposes_communication_contract_through_selector(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -7746,9 +7033,9 @@ def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyw
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.test_evidence_change_decision]
 level = "high"
@@ -7955,7 +7242,7 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
+        "\n"
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
@@ -8055,7 +7342,7 @@ def test_payload_target_drift_keeps_unrelated_read_only_start_actionable(tmp_pat
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
+        "\n"
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
@@ -8105,7 +7392,7 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
+        "\n"
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
@@ -8433,7 +7720,7 @@ def test_payload_target_read_only_gate_consumes_compiled_drift_triage(tmp_path: 
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
+        "\n"
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
@@ -8887,7 +8174,7 @@ def test_direct_task_claim_does_not_reuse_unrelated_or_unbound_judgment(tmp_path
     assert manual["task_claim_judgment"]["unresolved_judgment"]["manual_verification"]["expected"] is True
     reject_claim(task)
     makefile.write_bytes(original_makefile)
-    configuration = tmp_path / ".agentic-workspace/config.toml"
+    configuration = tmp_path / ".agentic-workspace/verification/manifest.toml"
     original_configuration = configuration.read_bytes()
     configuration.write_bytes(
         original_configuration
@@ -9101,7 +8388,7 @@ def test_payload_target_required_before_claim_limits_claims_without_blocking_wor
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
+        "\n"
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
@@ -9141,7 +8428,7 @@ def test_payload_target_required_before_work_exposes_repair_subflow(tmp_path: Pa
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
+        "\n"
         "[payload]\n"
         'target_release = "source-current"\n'
         'minimum_capabilities = ["installed-state-sync-v2"]\n'
@@ -9191,7 +8478,7 @@ def test_payload_target_blocks_when_invoked_cli_cannot_satisfy_explicit_target(t
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
-        'schema_version = 1\n\n[payload]\ntarget_release = "999.0.0"\npolicy = "required-before-work"\n',
+        '\n[payload]\ntarget_release = "999.0.0"\npolicy = "required-before-work"\n',
         encoding="utf-8",
     )
 
@@ -9264,7 +8551,7 @@ def test_workspace_config_rejects_invalid_payload_target_policy(tmp_path: Path) 
     _init_git_repo(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
-        'schema_version = 1\n\n[payload]\ntarget_release = "source-current"\npolicy = "sometimes"\n',
+        '\n[payload]\ntarget_release = "source-current"\npolicy = "sometimes"\n',
     )
 
     with pytest.raises(cli.WorkspaceUsageError, match="policy must be one of"):
@@ -9379,180 +8666,6 @@ def test_payload_provenance_payload_uses_portable_path_identities(tmp_path: Path
     assert payload["installed_by"]["module_path"]
     assert payload["installed_by"]["python_executable"]
     assert payload["command_generation"]["source_identity"]
-
-
-def test_start_select_installed_state_blocking_drift_blocks_execution(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    (workspace / "config.toml").write_text(
-        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "blocking"\nexact_version = "999.0.0"\n',
-        encoding="utf-8",
-    )
-
-    assert (
-        cli.main(
-            [
-                "start",
-                "--target",
-                str(tmp_path),
-                "--task",
-                "Inspect installed state",
-                "--select",
-                "installed_state_compatibility",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
-
-    assert compatibility["status"] == "blocking-drift"
-    assert compatibility["action_state"]["state"] == "blocking_incompatible"
-    assert compatibility["repair_route"]["status"] == "blocking"
-    assert compatibility["executable"]["classification"] == "executable-too-old-or-wrong-version"
-    assert compatibility["action_effect"]["force"] == "required_before_execution"
-    assert compatibility["action_effect"]["allowed_now"] == "switch-to-compatible-invocation-before-running-workspace-actions"
-    assert compatibility["action_effect"]["blocked_until_reconciled"] == [
-        "run-workspace-action",
-        "claim-installed-state-compatible",
-    ]
-    assert (
-        compatibility["action_effect"]["claim_boundary"]
-        == "do-not-trust-workspace-action-output-until-the-effective-cli-invocation-is-compatible"
-    )
-
-
-def test_start_select_installed_state_advisory_drift_limits_currentness_claims(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    (workspace / "config.toml").write_text(
-        'schema_version = 1\n\n[cli_compatibility]\nenforcement = "advisory"\nexact_version = "999.0.0"\n',
-        encoding="utf-8",
-    )
-
-    assert (
-        cli.main(
-            [
-                "start",
-                "--target",
-                str(tmp_path),
-                "--task",
-                "Inspect installed state",
-                "--select",
-                "installed_state_compatibility",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
-
-    assert compatibility["status"] == "upgrade-recommended"
-    assert compatibility["action_state"]["state"] == "manual_review_required"
-    assert compatibility["repair_route"]["status"] == "manual-review-required"
-    assert compatibility["action_effect"]["force"] == "advisory"
-    assert compatibility["action_effect"]["allowed_now"] == "continue-bounded-work-with-compatible-claim-limits"
-    assert compatibility["action_effect"]["blocked_until_reconciled"] == [
-        "claim-installed-state-current",
-        "claim-cli-fully-current",
-    ]
-    assert (
-        compatibility["action_effect"]["claim_boundary"]
-        == "advisory-cli-drift-does-not-block-ordinary-work-but-limits-strong-compatibility-claims"
-    )
-
-
-def test_start_select_installed_contract_pair_uses_frozen_non_mutating_resolution(
-    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    original_run = workspace_runtime_core.subprocess.run
-
-    def clean_source_status(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
-        if command[:3] == ["git", "status", "--porcelain=v1"]:
-            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-        return original_run(command, **kwargs)
-
-    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", clean_source_status)
-    _init_git_repo(tmp_path)
-    workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
-        "[workspace]\n"
-        'cli_invoke = "uv run --frozen --active python scripts/run_agentic_workspace.py"\n\n'
-        "[cli_compatibility]\n"
-        'contract_schema = "agentic-workspace/installed-state-compatibility/v1"\n'
-        'required_capabilities = ["installed-state-sync-v2"]\n'
-        'required_resources = ["agentic_workspace:contracts/context_authority_registry.json"]\n'
-        'resolution_policy = "frozen"\n',
-        encoding="utf-8",
-    )
-    script = tmp_path / "scripts" / "run_agentic_workspace.py"
-    script.parent.mkdir()
-    script.write_text("from agentic_workspace.cli import main\nraise SystemExit(main())\n", encoding="utf-8")
-    (tmp_path / "uv.lock").write_text(
-        'version = 1\n\n[[package]]\nname = "agentic-workspace"\nversion = "' + cli.__version__ + '"\n',
-        encoding="utf-8",
-    )
-
-    assert (
-        cli.main(
-            [
-                "start",
-                "--target",
-                str(tmp_path),
-                "--task",
-                "Inspect installed state",
-                "--select",
-                "installed_state_compatibility",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
-    pair = compatibility["contract_pair"]
-    resolution = compatibility["invocation_resolution"]
-
-    assert pair["status"] == "compatible"
-    assert pair["mutation_gate"] == "allow"
-    assert pair["expected"]["provenance"] == "repo-config"
-    resource = pair["actual"]["resources"][0]
-    assert resource["resource"] == "agentic_workspace:contracts/context_authority_registry.json"
-    assert resource["available"] is True
-    assert resource["resolution"] == "package-resource"
-    assert resource["resolver"] == "installed-contract-pair.package-resource"
-    assert resource["receipt_id"].startswith("package-resource:")
-    assert resolution["environment_manager_adapter"] == "uv"
-    assert resolution["posture"] == "frozen"
-    assert resolution["preflight_mutates_dependency_state"] is False
-    assert resolution["resolution_status"] == "resolved"
-    assert resolution["lock_resolution"]["runtime_version_matches"] is True
-    assert resolution["selected_distribution"]["status"] == "resolved"
-    assert resolution["repair_command"] == ""
-    assert pair["transition_owner"]["operation_id"] == "workspace.install-upgrade-sync"
-    assert pair["transition_owner"]["operation_contract"].endswith("workspace.install-upgrade-sync.json")
-    assert pair["transition_owner"]["executor"].endswith("execute_workspace_install_upgrade_sync")
-    assert pair["transition_owner"]["before_identity_digest"].startswith("sha256:")
-    assert pair["transition_owner"]["ordinary_surfaces_mutate_dependency_state"] is False
-    matrix = pair["conformance_matrix"]
-    parity = next(item for item in matrix["scenarios"] if item["id"] == "consumer-identity-parity")
-    assert len(set(parity["consumers"].values())) == 1
-    assert set(parity["consumers"]) == {"startup", "skills", "doctor"}
-    source_checkout = pair["actual"]["source_checkout"]
-    assert source_checkout["classification"] == "local-source-non-release"
-    assert re.fullmatch(r"git:[0-9a-f]{12}", source_checkout["revision"])
-    assert source_checkout["dirty"] is False
-    assert source_checkout["generated_parity"] in {"current", "stale"}
-    assert not re.search(r"[A-Za-z]:/|/(?:Users|home|tmp)/", json.dumps(pair, sort_keys=True))
 
 
 def test_install_upgrade_sync_is_the_production_dependency_identity_transition_boundary(tmp_path: Path, capsys) -> None:
@@ -9780,137 +8893,10 @@ def test_ordinary_identity_consumers_cannot_execute_dependency_transition(tmp_pa
     capsys.readouterr()
 
 
-def test_start_select_installed_contract_pair_blocks_mutable_resolution(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    (workspace / "config.toml").write_text(
-        "schema_version = 1\n\n"
-        "[workspace]\n"
-        'cli_invoke = "uv run --active python scripts/run_agentic_workspace.py"\n\n'
-        "[cli_compatibility]\n"
-        'resolution_policy = "frozen"\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["start", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
-    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
-    resolution = compatibility["invocation_resolution"]
-
-    assert compatibility["status"] == "blocking-drift"
-    assert compatibility["contract_pair"]["status"] == "incompatible"
-    assert compatibility["contract_pair"]["mutation_gate"] == "block-managed-mutation"
-    assert resolution["posture"] == "mutable"
-    assert resolution["preflight_status"] == "unsafe-mutable-resolution"
-    assert resolution["preflight_mutates_dependency_state"] is True
-    assert "uv run --frozen" in resolution["repair_command"]
-
-
-def test_start_select_installed_contract_pair_blocks_missing_package_resource(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    (workspace / "config.toml").write_text(
-        'schema_version = 1\n\n[cli_compatibility]\nrequired_resources = ["agentic_workspace:contracts/missing-contract.json"]\n',
-        encoding="utf-8",
-    )
-
-    assert cli.main(["start", "--target", str(tmp_path), "--select", "installed_state_compatibility", "--format", "json"]) == 0
-    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
-    pair = compatibility["contract_pair"]
-
-    assert compatibility["status"] == "blocking-drift"
-    assert pair["status"] == "incompatible"
-    assert pair["mutation_gate"] == "block-managed-mutation"
-    assert pair["missing_resources"] == ["agentic_workspace:contracts/missing-contract.json"]
-
-
-@pytest.mark.parametrize(
-    ("recipe", "expected_posture", "expected_policy"),
-    [
-        ("pipx run agentic-workspace@git+https://example.test/agentic-workspace@abc123", "locked", True),
-        ("pipx run agentic-workspace", "mutable", False),
-    ],
-)
-def test_invocation_resolution_distinguishes_locked_and_mutable_pipx_vcs(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    recipe: str,
-    expected_posture: str,
-    expected_policy: bool,
-) -> None:
-    workspace = tmp_path / ".agentic-workspace"
-    workspace.mkdir()
-    (workspace / "config.toml").write_text(
-        f'schema_version = 1\n\n[workspace]\ncli_invoke = "{recipe}"\n\n[cli_compatibility]\nresolution_policy = "locked"\n',
-        encoding="utf-8",
-    )
-    pipx_list = {
-        "venvs": {
-            "agentic-workspace": {
-                "metadata": {
-                    "main_package": {
-                        "package": "agentic-workspace",
-                        "package_version": cli.__version__,
-                        "package_or_url": "git+https://example.test/agentic-workspace@abc123",
-                    }
-                }
-            }
-        }
-    }
-    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: "tools/pipx.exe")
-    monkeypatch.setattr(
-        workspace_runtime_core.subprocess,
-        "run",
-        lambda *_args, **_kwargs: subprocess.CompletedProcess([], 0, json.dumps(pipx_list), ""),
-    )
-
-    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
-    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
-
-    assert resolution["environment_manager_adapter"] == "pipx"
-    assert resolution["posture"] == expected_posture
-    assert resolution["policy_satisfied"] is expected_policy
-    assert resolution["manager_probe"]["selected_package"]["name"] == "agentic-workspace"
-
-
-def test_invocation_resolution_reads_poetry_environment_identity(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    workspace = tmp_path / ".agentic-workspace"
-    workspace.mkdir()
-    (workspace / "config.toml").write_text(
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "poetry run agentic-workspace"\n\n'
-        '[cli_compatibility]\nresolution_policy = "locked"\n',
-        encoding="utf-8",
-    )
-    (tmp_path / "poetry.lock").write_text(
-        '[[package]]\nname = "agentic-workspace"\nversion = "' + cli.__version__ + '"\n', encoding="utf-8"
-    )
-    calls: list[list[str]] = []
-
-    def fake_run(command: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
-        calls.append(command)
-        if command[1:4] == ["env", "info", "--executable"]:
-            return subprocess.CompletedProcess(command, 0, sys.executable + "\n", "")
-        identity = {"name": "agentic-workspace", "version": cli.__version__, "direct_url": {}}
-        return subprocess.CompletedProcess(command, 0, json.dumps(identity), "")
-
-    monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: "tools/poetry.exe")
-    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", fake_run)
-
-    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
-    resolution = workspace_runtime_core._invocation_resolution_payload(config=config)
-
-    assert resolution["policy_satisfied"] is True
-    assert resolution["selected_distribution"]["version"] == cli.__version__
-    assert len(calls) == 2
-
-
 def test_invocation_resolution_blocks_missing_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     workspace = tmp_path / ".agentic-workspace"
     workspace.mkdir()
-    (workspace / "config.toml").write_text('schema_version = 1\n\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    (workspace / "config.toml").write_text('\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
     monkeypatch.setattr(workspace_runtime_core.shutil, "which", lambda _name: None)
 
     config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
@@ -13365,103 +12351,6 @@ def test_start_compiles_session_improvement_pressure_into_task_posture(tmp_path:
     assert "claim improvement pressure resolved without owner, dismissal, or accepted-risk state" in packet["forbidden_actions"]
 
 
-def test_start_operational_effectiveness_matrix_covers_2046_lane_signals(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[workspace]
-optimization_bias = "agent-efficiency"
-
-[workflow_obligations.dogfood_closeout]
-summary = "Classify dogfooding pressure before closeout."
-stage = "before-claiming-completion"
-force = "required-before-closeout"
-scope_tags = ["dogfooding", "self-improvement", "planning"]
-commands = ["agentic-workspace report --section dogfooding_signal_status --format json"]
-""",
-    )
-
-    assert (
-        cli.main(
-            [
-                "start",
-                "--target",
-                str(tmp_path),
-                "--task",
-                "Implement the whole #2046 dogfooding self-improvement lane",
-                "--select",
-                "task_posture_packet",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    packet = json.loads(capsys.readouterr().out)["values"]["task_posture_packet"]
-    effectiveness = packet["operational_effectiveness"]
-    by_signal = {record["signal"]: record for record in effectiveness["records"]}
-
-    assert effectiveness["summary"]["behavior_changing_count"] >= 3
-    assert by_signal["session_dogfooding"]["status"] == "behavior-changing"
-    assert by_signal["workflow_obligations"]["status"] == "behavior-changing"
-    assert by_signal["workspace_optimization"]["status"] == "behavior-changing"
-    assert by_signal["planning"]["status"] == "behavior-changing"
-    assert by_signal["memory"]["status"] == "advisory"
-    assert by_signal["verification"]["status"] == "advisory"
-    assert packet["dogfooding_obligations"][0]["id"] == "session-dogfooding-disposition"
-    assert packet["workflow_obligation_effects"][0]["diagnostic_command_alone_satisfies"] is False
-    assert packet["optimization_effect"]["enforced_effects"][0]["id"] == "compact-router-first"
-    assert any("agent-efficiency: emit compact router state first" in item for item in packet["output_shape_requirements"])
-
-
-def test_start_enforcing_workflow_obligation_cannot_reallow_completion(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[workflow_obligations.closeout_review]
-summary = "Classify workflow pressure before closeout."
-stage = "before-claiming-completion"
-force = "required-before-closeout"
-scope_tags = ["workflow", "planning", "dogfooding"]
-commands = ["agentic-workspace report --section workflow_obligations --format json"]
-""",
-    )
-
-    assert (
-        cli.main(
-            [
-                "start",
-                "--target",
-                str(tmp_path),
-                "--task",
-                "Implement the whole workflow planning dogfooding self-improvement lane",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    packet = json.loads(capsys.readouterr().out)["decision_packet"]
-
-    assert packet["effects"]["completion_claim_allowed"] is False
-    assert "claim-work-complete" in packet["effects"]["blocked_claims"]
-    assert packet["claim_boundary"]["completion_claim"] == "blocked-until-proof-and-acceptance"
-    assert packet["claim_blockers"][0]["target"] == "claim:claim-work-complete"
-    assert packet["claim_blockers"][0]["owner"] == "workspace-config-workflow-obligations"
-    assert "workflow-obligation-disposition:closeout_review" in packet["claim_blockers"][0]["repair"]
-
-
 def test_start_report_meta_task_keeps_routine_context_selector_only_with_background_drift(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -15901,11 +14790,9 @@ def test_start_surfaces_transport_auto_without_binding_best_fit(tmp_path: Path, 
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
         "\n".join(
             [
-                "schema_version = 1",
                 "",
                 "[delegation]",
-                'mode = "auto"',
-                'execution_role = "ordinary-executor"',
+                'transport_authority = "automatic"',
                 'assignment_policy = "local-preferred"',
                 "",
                 "[safety]",
@@ -17388,7 +16275,7 @@ def test_proof_reuse_v2_reuses_unrelated_descendants_and_rejects_exact_identity_
     _write(tmp_path / "pyproject.toml", "[project]\nname='fixture'\nversion='0.1.0'\n")
     _write(tmp_path / "uv.lock", "version = 1\n")
     _write(tmp_path / "Makefile", "test:\n\t@echo ok\n")
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-m", "subject"], cwd=tmp_path, capture_output=True, check=True)
 
@@ -17910,7 +16797,7 @@ def test_session_improvement_intake_self_admits_material_index_as_pending_dispos
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
-    _write(tmp_path / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(tmp_path / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
     monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "session-improvement-intake-test")
     for _ in range(2):
@@ -18237,59 +17124,6 @@ def test_start_missing_selector_returns_bounded_inventory(tmp_path: Path, capsys
     assert "selector_schema" not in encoded
 
 
-def test_start_surfaces_recovery_for_obsolete_default_preset(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    workspace = tmp_path / ".agentic-workspace"
-    workspace.mkdir()
-    (workspace / "config.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[workspace]",
-                'default_preset = "planning"',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["start", "--target", str(tmp_path), "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-
-    assert payload["kind"] == "agentic-workspace/start-recovery/v1"
-    assert payload["status"] == "recovery-required"
-    assert payload["problem"]["obsolete_field"] == "workspace.default_preset"
-    assert payload["problem"]["replacement"] == "[modules] enabled = [...]"
-    assert payload["problem"]["config_valid"] is False
-    assert payload["automated_repair"]["safe"] is False
-    assert payload["next_safe_action"]["implementation_allowed"] is False
-    assert payload["recovery_packet"]["next_safe_command"] == "agentic-workspace config --target . --format json"
-
-
-def test_start_recovery_for_obsolete_default_preset_uses_configured_cli_invoke(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    workspace = tmp_path / ".agentic-workspace"
-    workspace.mkdir()
-    (workspace / "config.toml").write_text(
-        "\n".join(
-            [
-                "schema_version = 1",
-                "",
-                "[workspace]",
-                'cli_invoke = "uv run aw-dev"',
-                'default_preset = "planning"',
-            ]
-        ),
-        encoding="utf-8",
-    )
-
-    assert cli.main(["start", "--target", str(tmp_path), "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-
-    assert payload["kind"] == "agentic-workspace/start-recovery/v1"
-    assert payload["recovery_packet"]["next_safe_command"] == "uv run aw-dev config --target . --format json"
-
-
 def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -18507,123 +17341,6 @@ def test_report_exposes_configuration_projection_without_expanding_config_detail
     assert relevance["changed-path-ownership"]["basis_source_type"] == "explicit-state-and-contract"
     assert relevance["active-planning-task-switch"]["projection_fact_id"] == "planning:active-state-obligations"
     assert relevance["configured-proof-closeout"]["shown_because"] == ["contract.verification_manifest", "state.proof_route_selected"]
-
-
-def test_local_overlay_report_section_and_projection(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-schema_version = 1
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-
-    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_overlay", "--format", "json"]) == 0
-    absent = json.loads(capsys.readouterr().out)["answer"]
-    assert absent["status"] == "absent"
-
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.guidance.local_cli]
-signal = "local-tool-availability"
-category = "tooling"
-applies_to_paths = ["tools/**"]
-guidance = "Use the checkout-local CLI."
-required_commands = ["python -c \\"print('tool ok')\\""]
-impact = "advisory"
-
-[local_overlay.high_risk.guardrails.fixtures]
-applies_to_paths = ["tests/fixtures/**"]
-sensitive_data = ["real customer email"]
-synthetic_fixture_guidance = ["Use example.com addresses."]
-impact = "claim-limiting"
-unsupported_policy_override = true
-""",
-    )
-
-    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_overlay", "--format", "json"]) == 0
-    configured = json.loads(capsys.readouterr().out)["answer"]
-    assert configured["status"] == "configured"
-    assert configured["configured_count"] == 2
-    assert configured["ordinary_guidance_count"] == 1
-    assert configured["high_risk_profile_count"] == 1
-    assert configured["ordinary_guidance"][0]["source_layer"] == "repo-local-override"
-    assert configured["high_risk_profile"]["detail_selector"] == "local_high_risk_overlay"
-    assert "unsupported_policy_override" in configured["warnings"][0]
-    assert "checked-in host policy" in configured["authority_boundary"]["rule"]
-
-    assert cli.main(["report", "--target", str(tmp_path), "--section", "local_high_risk_overlay", "--format", "json"]) == 0
-    high_risk = json.loads(capsys.readouterr().out)["answer"]
-    assert high_risk["configured_count"] == 1
-    assert high_risk["sections"]["guardrails"][0]["source_layer"] == "repo-local-override"
-
-    assert cli.main(["report", "--target", str(tmp_path), "--section", "configuration_projection", "--format", "json"]) == 0
-    projection = json.loads(capsys.readouterr().out)["answer"]
-    overlay_row = next(row for row in projection["facts"] if row["field"] == "local_overlay.*")
-    assert overlay_row["projection_status"] in {"active", "selector-backed"}
-    assert "local_overlay" in overlay_row["ordinary_path_routes"][0]
-
-
-def test_local_overlay_ordinary_guidance_projects_without_high_risk(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-schema_version = 1
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.guidance.local_cli]
-signal = "local-tool-availability"
-category = "tooling"
-applies_to_paths = ["tools/**"]
-guidance = "Use the checkout-local CLI."
-required_commands = ["python -c \\"print('tool ok')\\""]
-impact = "advisory"
-
-[local_overlay.guidance.stack]
-signal = "branch-stack-convention"
-category = "workflow"
-applies_to_task_markers = ["stacked pr"]
-guidance = "Keep local stack order when preparing PRs."
-impact = "claim-limiting"
-""",
-    )
-    _write(tmp_path / "tools" / "run.py", "print('ok')\n")
-
-    assert (
-        cli.main(["proof", "--target", str(tmp_path), "--changed", "tools/run.py", "--task", "Validate the local tool", "--format", "json"])
-        == 0
-    )
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["identity"]["proof_subject"]["changed_paths"] == ["tools/run.py"]
-    local_guidance = payload["guidance"]["local_overlay"]
-    assert local_guidance["status"] == "active"
-    assert local_guidance["ordinary_guidance_count"] == 1
-    assert local_guidance["guidance"] == [
-        {
-            "id": "local_cli",
-            "signal": "local-tool-availability",
-            "category": "tooling",
-            "guidance": "Use the checkout-local CLI.",
-            "required_commands": ["python -c \"print('tool ok')\""],
-            "impact": "advisory",
-        }
-    ]
-    assert payload.get("high_risk_overlay") is None
 
 
 def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, capsys) -> None:
@@ -19136,9 +17853,9 @@ def test_adaptive_assurance_end_to_end_closeout_flow(tmp_path: Path, capsys) -> 
 
     _write(tmp_path / "tests" / "test_access_control.py", "def test_access_control_fixture():\n    assert True\n")
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance]
 default_level = "medium"

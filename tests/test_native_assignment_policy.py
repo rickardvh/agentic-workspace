@@ -8,7 +8,7 @@ import pytest
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
-BASE = 'schema_version=1\n[delegation_targets.local]\nstrength="weak"\ntransports=[{kind="internal"}]\n'
+BASE = '[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
 
 
 @pytest.mark.parametrize("external", ["expert", "alternate"])
@@ -22,10 +22,10 @@ def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_bin
     root.mkdir()
     shared = root / "config.toml"
     shared.write_text(
-        'schema_version=2\n[execution_posture."custom/design"]\nrequired_execution_guarantees=["reasoning.general"]\npreferred_execution_guarantees=["cost.bounded"]\n[execution_posture."custom/edit"]\npreferred_execution_guarantees=["cost.bounded"]\n'
+        '[execution_posture."custom/design"]\nrequired_execution_guarantees=["reasoning.general"]\npreferred_execution_guarantees=["cost.bounded"]\n[execution_posture."custom/edit"]\npreferred_execution_guarantees=["cost.bounded"]\n'
     )
     (root / "config.local.toml").write_text(
-        'schema_version=2\n[delegation]\ncurrent_target="local"\nassignment_policy="required-best-fit"\n[delegation_targets.local]\nexecution_guarantees=["cost.bounded"]\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nexecution_guarantees=["reasoning.general"]\ntransports=[{kind="manual"}]\n'.replace(
+        '[delegation]\ncurrent_target="local"\nassignment_policy="required-best-fit"\n[delegation_targets.local]\nexecution_guarantees=["cost.bounded"]\ntransports=[{kind="internal"}]\n[delegation_targets.expert]\nexecution_guarantees=["reasoning.general"]\ntransports=[{kind="manual"}]\n'.replace(
             "delegation_targets.expert", f"delegation_targets.{external}"
         )
     )
@@ -87,16 +87,6 @@ def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_bin
     task["arguments"]["required_result_classes"] = ["read-only"]
     candidates = resolve([route, task])["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
     assert not any(row["eligible"] for row in candidates)
-    local_source = root / "config.local.toml"
-    local_source.write_text(
-        local_source.read_text()
-        .replace("schema_version=2", "schema_version=1")
-        .replace('execution_guarantees=["cost.bounded"]', 'strength="weak"')
-    )
-    task = resolve(route)["task_requirements"]["requests"][0]
-    task["arguments"]["required_result_classes"] = ["read-only"]
-    execution = resolve([route, task])["task_requirements"]["execution_configurations"]
-    assert "repo-posture-requires-canonical-capability-profile" in str(execution)
 
 
 def call(surface, core, cli, root, request=None):
@@ -104,56 +94,6 @@ def call(surface, core, cli, root, request=None):
     if request is not None:
         context["request"] = request
     return consume(surface, core, cli, context)
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_legacy_source_and_canonical_alias_precedence_keep_binding(tmp_path, shared_core_binary, native_cli, surface):
-    former = tmp_path / "agentic-workspace.local.toml"
-    former.write_text(
-        BASE
-        + '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\ntransport_authority="automatic"\nmode="off"\nexecution_role="ordinary-executor"\n[safety]\nsafe_to_auto_run_commands=false\n'
-    )
-    before = former.read_bytes()
-    result = call(surface, shared_core_binary, native_cli, tmp_path)
-    policy = result["configuration"]["assignment_policy"]
-    assert policy["binding"] is True and policy["enforceable"] is True
-    assert policy["configured_mode"] == "auto" and policy["effective_mode"] == "suggest"
-    assert policy["execution_permitted"] is False
-    assert any(b["code"] == "current-binding-assignment-required" for b in result["decision_packet"]["blockers"])
-    assert not any(
-        r["field"] in ["delegation.mode", "delegation.execution_role", "delegation.assignment_policy"]
-        for r in result["configuration"]["residuals"]
-    )
-    request = result["task_requirements"]["requests"][0]
-    request["arguments"]["required_result_classes"] = ["read-only"]
-    offered = call(surface, shared_core_binary, native_cli, tmp_path, request)
-    assert offered["task_requirements"]["execution_configurations"]["gaps"] == []
-    assert former.read_bytes() == before
-    current = tmp_path / ".agentic-workspace/config.local.toml"
-    current.parent.mkdir()
-    current.write_text('schema_version=1\n[delegation]\nassignment_policy="local-preferred"\n')
-    fresh = call(surface, shared_core_binary, native_cli, tmp_path)
-    assert fresh["configuration"]["assignment_policy"]["binding"] is False
-    assert any(
-        s["reference"] == "agentic-workspace.local.toml" and s["status"] == "current-local-source-derivation"
-        for s in fresh["configuration"]["sources"]
-    )
-    assert fresh["configuration"]["assignment_policy"]["current_target"] == "local"
-    assert fresh["configuration"]["assignment_policy"]["execution_permitted"] is False
-    # A smaller canonical file has no authority to erase omitted binding intent.
-    current.write_text('schema_version=1\n[workspace]\ncli_invoke="agentic-workspace"\n')
-    preserved = call(surface, shared_core_binary, native_cli, tmp_path)
-    assert preserved["configuration"]["assignment_policy"]["binding"] is True
-    assert preserved["configuration"]["assignment_policy"]["execution_permitted"] is False
-    # Once represented by the source owner, the old representation is unnecessary.
-    current.write_bytes(before)
-    represented = call(surface, shared_core_binary, native_cli, tmp_path)
-    assert any(s["status"] == "represented-by-current-local-source" for s in represented["configuration"]["sources"])
-    assert former.read_bytes() == before
-    former.unlink()
-    independent = call(surface, shared_core_binary, native_cli, tmp_path)
-    assert independent["configuration"]["assignment_policy"]["binding"] is True
-    assert independent["configuration"]["assignment_policy"]["execution_permitted"] is False
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -167,9 +107,7 @@ def test_declared_shared_local_overlay_is_current_and_missing_never_absent(tmp_p
     )
     local = root / ".agentic-workspace/config.local.toml"
     local.parent.mkdir()
-    local.write_text(
-        'schema_version=1\n[workspace]\nshared_config_path="../shared.local.toml"\n[safety]\nsafe_to_auto_run_commands=false\n'
-    )
+    local.write_text('[workspace]\nshared_config_path="../shared.local.toml"\n[safety]\nsafe_to_auto_run_commands=false\n')
     first = call(surface, shared_core_binary, native_cli, root)
     policy = first["configuration"]["assignment_policy"]
     assert policy["binding"] is True and policy["execution_permitted"] is False
@@ -188,7 +126,7 @@ def test_declared_shared_local_overlay_is_current_and_missing_never_absent(tmp_p
     assert not (root / ".agentic-workspace/local").exists()
 
 
-def test_existing_manual_owner_consumes_current_authority_over_deprecated_alias(tmp_path, monkeypatch):
+def test_manual_owner_consumes_current_transport_authority(tmp_path, monkeypatch):
     from agentic_workspace import native_transport
     from agentic_workspace.assignment_source import current_route_configurations
     from agentic_workspace.config import load_workspace_config
@@ -196,9 +134,7 @@ def test_existing_manual_owner_consumes_current_authority_over_deprecated_alias(
     monkeypatch.setattr(native_transport, "discovered_transports", lambda *args: [])
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
-    source.write_text(
-        'schema_version=1\n[delegation]\ntransport_authority="manual"\nmanual_transport_policy="disabled"\n[delegation_targets.worker]\nstrength="strong"\ntransports=[{kind="manual"}]\n'
-    )
+    source.write_text('[delegation]\ntransport_authority="manual"\n[delegation_targets.worker]\ntransports=[{kind="manual"}]\n')
     config = load_workspace_config(target_root=tmp_path)
     profile = config.local_override.delegation_targets[0]
     result = current_route_configurations(

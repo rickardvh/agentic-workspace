@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -17,16 +16,12 @@ PYTHON_CLI = [sys.executable, "-c", "from agentic_workspace.cli import main; rai
 SOURCE_CLI = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
 
 
-@pytest.mark.parametrize("condition", ["current", "future-reader", "retired-command"])
+@pytest.mark.parametrize("condition", ["current", "retired-command"])
 def test_python_launchers_preserve_native_command_admission(tmp_path, shared_core_binary, native_cli, condition):
     target = tmp_path / "target with spaces"
     target.mkdir()
     retained = target / "unrelated.txt"
     retained.write_text("Preserve unrelated work.")
-    if condition == "future-reader":
-        config = target / ".agentic-workspace/config.toml"
-        config.parent.mkdir()
-        config.write_text("schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=999\n")
     command = "config" if condition == "retired-command" else "start"
     args = [command, "--target", str(target), "--task", "Inspect the bounded source", "--format", "json"]
     env = {**os.environ, "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)}
@@ -36,9 +31,6 @@ def test_python_launchers_preserve_native_command_admission(tmp_path, shared_cor
 
     expected = run([str(native_cli)])
     assert expected.returncode == (2 if condition == "retired-command" else 0)
-    if condition == "future-reader":
-        blocked = json.loads(expected.stdout)
-        assert blocked["status"] == "blocked" and blocked["managed_state_interpreted"] is False
     for launcher in [PYTHON_CLI, SOURCE_CLI]:
         actual = run(launcher)
         assert (actual.returncode, actual.stdout, actual.stderr) == (expected.returncode, expected.stdout, expected.stderr)

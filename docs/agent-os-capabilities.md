@@ -83,7 +83,7 @@ Update this page directly when any of the following happens:
 
 The composition layer is intentionally thin. It exists to centralize lifecycle entrypoints and cross-module reporting without absorbing module-owned domain logic.
 Its shared workspace report now gives a compact combined-state view for installed modules, mixed-agent posture, effective repo output posture, and next-action guidance so agents do not need to inspect raw module files first.
-That output posture is repo-owned through `workspace.optimization_bias`: it should be legible during ordinary recovery and reporting, but it must stay an output/residue preference rather than an execution-routing policy.
+Reusable repository output preferences belong in scoped instructions. Product rendering defaults remain visible through `defaults --section optimization_bias`; they grant no execution-routing authority.
 
 ## Current Planning Boundary Snapshot
 

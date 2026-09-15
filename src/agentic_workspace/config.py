@@ -1,16 +1,11 @@
-"""Source-maintenance parsing, including bounded former configuration recognition.
-
-Historical dataclass paths and overlay projections do not establish native owner
-support. Current version-2 authoring is validated separately; native Memory uses
-its repository manifest and explicitly preserves unsupported former local sources.
-"""
+"""Read the closed human configuration grammar and current owner manifests."""
 
 from __future__ import annotations
 
 import json
 import re
 import tomllib
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -18,22 +13,18 @@ from agentic_workspace.result_adapter import serialise_value
 
 
 def _validate_current_authoring(payload: dict[str, Any], *, local: bool) -> None:
-    # The retained source-maintenance reader must not accept malformed v2 as v1.
-    if payload.get("schema_version") == 2:
-        from jsonschema import Draft202012Validator
+    from jsonschema import Draft202012Validator
 
-        from agentic_workspace.contract_tooling import contract_schema
+    from agentic_workspace.contract_tooling import contract_schema
 
-        name = "workspace_local_override" if local else "workspace_config"
-        errors = list(Draft202012Validator(contract_schema(f"{name}.schema.json")).iter_errors(payload))
-        if errors:
-            raise WorkspaceUsageError(f"Invalid current configuration at {list(errors[0].absolute_path)}")
+    name = "workspace_local_override" if local else "workspace_config"
+    errors = list(Draft202012Validator(contract_schema(f"{name}.schema.json")).iter_errors(payload))
+    if errors:
+        raise WorkspaceUsageError(f"Invalid configuration at {list(errors[0].absolute_path)}")
 
 
 WORKSPACE_CONFIG_PATH = Path(".agentic-workspace/config.toml")
-LEGACY_WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
 WORKSPACE_LOCAL_CONFIG_PATH = Path(".agentic-workspace/config.local.toml")
-LEGACY_WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_DELEGATION_OUTCOMES_PATH = Path(".agentic-workspace/delegation-outcomes.json")
 LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-outcomes.json")
 WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH = Path(".agentic-workspace/local/memory.toml")
@@ -122,8 +113,6 @@ SUPPORTED_ADVANCED_FEATURES = (
 )
 DEFAULT_MAINTAINER_MODE = False
 DEFAULT_CLI_INVOKE = "agentic-workspace"
-DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION = "1.0.0"
-DELEGATION_LEGACY_COMPATIBILITY_POLICY = "remove-on-or-before-declared-major"
 DEFAULT_ASSURANCE_LEVEL = "low"
 SUPPORTED_ASSURANCE_LEVELS = ("low", "medium", "high", "critical")
 SUPPORTED_WORKFLOW_OBLIGATION_STAGES = (
@@ -432,7 +421,6 @@ class DelegationTargetProfile:
 @dataclass(frozen=True)
 class SessionLoggingConfig:
     enabled: bool | None
-    redact_local_paths: bool
     path_mode: str
     source: str
 
@@ -486,17 +474,6 @@ class MixedAgentLocalOverride:
 
 
 @dataclass(frozen=True)
-class WorkflowObligation:
-    name: str
-    summary: str
-    stage: str
-    force: str
-    scope_tags: tuple[str, ...]
-    commands: tuple[str, ...]
-    review_hint: str | None
-
-
-@dataclass(frozen=True)
 class SystemIntentDeclaration:
     sources: tuple[str, ...]
     sources_source: str
@@ -534,7 +511,6 @@ class AssuranceRequirement:
     authority_refs: tuple[str, ...]
     required_evidence: tuple[str, ...]
     proof_profile: str | None
-    workflow_obligation_refs: tuple[str, ...]
     review_owner: str | None
     force: str
     blocking_claims: tuple[str, ...]
@@ -549,6 +525,8 @@ class AssuranceRequirement:
     evidence_owner: str | None
     detail_route: str | None
     measurement: dict[str, Any] | None
+    requirement_refs: tuple[str, ...] = ()
+    claim_boundary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -559,7 +537,6 @@ class AssuranceSubsystemProfile:
     requirement_refs: tuple[str, ...]
     required_evidence: tuple[str, ...]
     proof_profile: str | None
-    workflow_obligation_refs: tuple[str, ...]
     review_owner: str | None
     force: str
     blocked_without_evidence: tuple[str, ...]
@@ -635,29 +612,10 @@ class AssuranceConfig:
 
 
 @dataclass(frozen=True)
-class CLICompatibilityExpectation:
-    enforcement: str
-    enforcement_source: str
-    minimum_version: str | None
-    exact_version: str | None
-    source_classes: tuple[str, ...]
-    target_relations: tuple[str, ...]
-    command: str | None
-    contract_schema: str
-    required_capabilities: tuple[str, ...]
-    required_resources: tuple[str, ...]
-    minimum_reader_epoch: int
-    required_reader_capabilities: tuple[str, ...]
-    resolution_policy: str
-    source: str
-
-
-@dataclass(frozen=True)
 class PayloadTargetConfig:
     target_release: str | None
     minimum_capabilities: tuple[str, ...]
     policy: str
-    dogfood_latest: bool
     source: str
 
 
@@ -666,7 +624,6 @@ class WorkspaceConfig:
     target_root: Path | None
     path: Path | None
     exists: bool
-    schema_version: int
     enabled: bool
     enabled_source: str
     enabled_modules: tuple[str, ...]
@@ -686,10 +643,8 @@ class WorkspaceConfig:
     cli_invoke_source: str
     detected_agent_instructions_files: tuple[str, ...]
     update_modules: dict[str, ModuleUpdatePolicy]
-    workflow_obligations: tuple[WorkflowObligation, ...]
     system_intent: SystemIntentDeclaration
     assurance: AssuranceConfig
-    cli_compatibility: CLICompatibilityExpectation
     payload_target: PayloadTargetConfig
     local_override: MixedAgentLocalOverride
     warnings: tuple[str, ...] = ()
@@ -735,7 +690,7 @@ def discover_workspace_root(start_path: Path | None = None) -> Path | None:
     """Search upwards for the workspace root containing the checked-in workspace config."""
     current = (start_path or Path.cwd()).resolve()
     while True:
-        if (current / WORKSPACE_CONFIG_PATH).exists() or (current / LEGACY_WORKSPACE_CONFIG_PATH).exists():
+        if (current / WORKSPACE_CONFIG_PATH).exists():
             return current
         if (current / ".git").exists() or current.parent == current:
             break
@@ -912,25 +867,6 @@ def validate_assurance_level(level: str) -> str:
     return normalized
 
 
-def validate_cli_compatibility_enforcement(enforcement: str) -> str:
-    normalized = enforcement.strip() or "off"
-    if normalized not in SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT:
-        supported = ", ".join(SUPPORTED_CLI_COMPATIBILITY_ENFORCEMENT)
-        raise WorkspaceUsageError(f"cli_compatibility.enforcement must be one of: {supported}.")
-    return normalized
-
-
-def _validate_version_string(*, value: Any, field: str, config_path: Path) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str) or not value.strip():
-        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.{field} must be a non-empty string.")
-    normalized = value.strip()
-    if not re.match(r"^\d+(?:\.\d+){0,3}(?:[-+][A-Za-z0-9.-]+)?$", normalized):
-        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.{field} must be a simple version string like 1.2.3.")
-    return normalized
-
-
 def _validate_payload_target_release(*, value: Any, config_path: Path) -> str | None:
     if value is None:
         return None
@@ -946,106 +882,6 @@ def _validate_payload_target_release(*, value: Any, config_path: Path) -> str | 
     return normalized
 
 
-def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_path: Path) -> tuple[CLICompatibilityExpectation, list[str]]:
-    warnings: list[str] = []
-    if raw_cli_compatibility is None:
-        raw_cli_compatibility = {}
-    if not isinstance(raw_cli_compatibility, dict):
-        raise WorkspaceUsageError(f"{config_path.as_posix()} [cli_compatibility] section must be a table.")
-    supported_fields = {
-        "enforcement",
-        "minimum_version",
-        "exact_version",
-        "source_classes",
-        "target_relations",
-        "command",
-        "contract_schema",
-        "required_capabilities",
-        "required_resources",
-        "minimum_reader_epoch",
-        "required_reader_capabilities",
-        "resolution_policy",
-    }
-    unknown = sorted(set(raw_cli_compatibility) - supported_fields)
-    if unknown:
-        warnings.append(f"{config_path.as_posix()} [cli_compatibility] contains unsupported field(s): {', '.join(unknown)}.")
-    if "minimum_version" in raw_cli_compatibility and "exact_version" in raw_cli_compatibility:
-        raise WorkspaceUsageError(
-            f"{config_path.as_posix()} [cli_compatibility] must choose one version constraint: minimum_version or exact_version, not both."
-        )
-    enforcement = validate_cli_compatibility_enforcement(str(raw_cli_compatibility.get("enforcement", "off")))
-    source_classes = require_optional_string_list(
-        payload=raw_cli_compatibility,
-        key="source_classes",
-        config_path=config_path,
-        allowed=SUPPORTED_CLI_SOURCE_CLASSES,
-    )
-    target_relations = require_optional_string_list(
-        payload=raw_cli_compatibility,
-        key="target_relations",
-        config_path=config_path,
-        allowed=SUPPORTED_CLI_TARGET_RELATIONS,
-    )
-    command = raw_cli_compatibility.get("command")
-    if command is not None and (not isinstance(command, str) or not command.strip()):
-        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.command must be a non-empty string when present.")
-    contract_schema = raw_cli_compatibility.get("contract_schema", "agentic-workspace/installed-state-compatibility/v1")
-    if not isinstance(contract_schema, str) or not contract_schema.strip():
-        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.contract_schema must be a non-empty string.")
-    raw_minimum_reader_epoch = raw_cli_compatibility.get("minimum_reader_epoch")
-    if raw_minimum_reader_epoch is None:
-        minimum_reader_epoch = 0
-    elif not isinstance(raw_minimum_reader_epoch, int) or isinstance(raw_minimum_reader_epoch, bool) or raw_minimum_reader_epoch < 1:
-        raise WorkspaceUsageError(f"{config_path.as_posix()} cli_compatibility.minimum_reader_epoch must be a positive integer.")
-    else:
-        minimum_reader_epoch = raw_minimum_reader_epoch
-    return (
-        CLICompatibilityExpectation(
-            enforcement=enforcement,
-            enforcement_source="repo-config" if "enforcement" in raw_cli_compatibility else "product-default",
-            minimum_version=_validate_version_string(
-                value=raw_cli_compatibility.get("minimum_version"),
-                field="minimum_version",
-                config_path=config_path,
-            ),
-            exact_version=_validate_version_string(
-                value=raw_cli_compatibility.get("exact_version"),
-                field="exact_version",
-                config_path=config_path,
-            ),
-            source_classes=source_classes,
-            target_relations=target_relations,
-            command=command.strip() if isinstance(command, str) else None,
-            contract_schema=contract_schema.strip(),
-            required_capabilities=require_optional_string_list(
-                payload=raw_cli_compatibility,
-                key="required_capabilities",
-                config_path=config_path,
-            ),
-            required_resources=require_optional_string_list(
-                payload=raw_cli_compatibility,
-                key="required_resources",
-                config_path=config_path,
-            ),
-            minimum_reader_epoch=minimum_reader_epoch,
-            required_reader_capabilities=require_optional_string_list(
-                payload=raw_cli_compatibility,
-                key="required_reader_capabilities",
-                config_path=config_path,
-            ),
-            resolution_policy=require_optional_enum(
-                payload=raw_cli_compatibility,
-                key="resolution_policy",
-                config_path=config_path,
-                allowed=SUPPORTED_CLI_RESOLUTION_POLICIES,
-                default="direct",
-            ),
-            source="repo-config" if raw_cli_compatibility else "product-default",
-        ),
-        warnings,
-    )
-
-
 def _load_payload_target_config(*, raw_payload: Any, config_path: Path) -> tuple[PayloadTargetConfig, list[str]]:
     warnings: list[str] = []
     if raw_payload is None:
@@ -1056,20 +892,11 @@ def _load_payload_target_config(*, raw_payload: Any, config_path: Path) -> tuple
         "target_release",
         "minimum_capabilities",
         "policy",
-        "dogfood_latest",
     }
     unknown = sorted(set(raw_payload) - supported_fields)
     if unknown:
         warnings.append(f"{config_path.as_posix()} [payload] contains unsupported field(s): {', '.join(unknown)}.")
-    dogfood_latest = _require_bool(payload=raw_payload, key="dogfood_latest", default=False, config_path=config_path)
     target_release = _validate_payload_target_release(value=raw_payload.get("target_release"), config_path=config_path)
-    if "dogfood_latest" in raw_payload and target_release is not None:
-        raise WorkspaceUsageError(
-            f"{config_path.as_posix()} [payload] must use target_release as the canonical release constraint or "
-            "dogfood_latest as its compatibility shorthand, not both."
-        )
-    if dogfood_latest and target_release is None:
-        target_release = "source-current"
     return (
         PayloadTargetConfig(
             target_release=target_release,
@@ -1085,24 +912,10 @@ def _load_payload_target_config(*, raw_payload: Any, config_path: Path) -> tuple
                 allowed=SUPPORTED_PAYLOAD_TARGET_POLICIES,
                 default="advisory",
             ),
-            dogfood_latest=dogfood_latest,
             source="repo-config" if raw_payload else "product-default",
         ),
         warnings,
     )
-
-
-def _validate_installed_capability_ownership(
-    *, cli_compatibility: CLICompatibilityExpectation, payload_target: PayloadTargetConfig, config_path: Path
-) -> None:
-    overlap = sorted(set(cli_compatibility.required_capabilities) & set(payload_target.minimum_capabilities))
-    if overlap:
-        raise WorkspaceUsageError(
-            f"{config_path.as_posix()} duplicates installed-runtime capability ownership across "
-            "cli_compatibility.required_capabilities and payload.minimum_capabilities for: "
-            f"{', '.join(overlap)}. Keep install-target requirements in payload.minimum_capabilities and reserve "
-            "cli_compatibility.required_capabilities for distinct reader/runtime compatibility requirements."
-        )
 
 
 def _require_bool(*, payload: dict[str, Any], key: str, default: bool, config_path: Path) -> bool:
@@ -1112,53 +925,6 @@ def _require_bool(*, payload: dict[str, Any], key: str, default: bool, config_pa
     if not isinstance(value, bool):
         raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be true or false.")
     return value
-
-
-def _require_disposition(
-    *,
-    payload: dict[str, Any],
-    key: str,
-    config_path: Path,
-) -> AssuranceRequirementDisposition | None:
-    if key not in payload:
-        return None
-    value = payload[key]
-    if not isinstance(value, dict):
-        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be a table with reason and owner.")
-    unknown = sorted(set(value) - {"reason", "owner", "applicability"})
-    if unknown:
-        allowed = ", ".join(("reason", "owner", "applicability"))
-        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} contains unsupported field(s): {', '.join(unknown)}; use {allowed}.")
-    reason = require_optional_string(payload=value, key="reason", config_path=Path(f"{config_path.as_posix()} {key}"))
-    owner = require_optional_string(payload=value, key="owner", config_path=Path(f"{config_path.as_posix()} {key}"))
-    if reason is None or owner is None:
-        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} requires non-empty reason and owner.")
-    applicability = value.get("applicability", {})
-    if not isinstance(applicability, dict):
-        raise WorkspaceUsageError(f"{config_path.as_posix()} {key}.applicability must be a table.")
-    supported_applicability = {
-        "application_id",
-        "source_revision",
-        "current_work_id",
-        "proof_subject_fingerprint",
-        "expires_at",
-        "review_after",
-    }
-    unknown_applicability = sorted(set(applicability) - supported_applicability)
-    if unknown_applicability:
-        raise WorkspaceUsageError(
-            f"{config_path.as_posix()} {key}.applicability contains unsupported field(s): {', '.join(unknown_applicability)}."
-        )
-    normalized_applicability: dict[str, Any] = {}
-    for field in supported_applicability:
-        field_value = require_optional_string(
-            payload=applicability,
-            key=field,
-            config_path=Path(f"{config_path.as_posix()} {key}.applicability"),
-        )
-        if field_value is not None:
-            normalized_applicability[field] = field_value
-    return AssuranceRequirementDisposition(reason=reason, owner=owner, applicability=normalized_applicability)
 
 
 def _require_measurement_requirement(*, payload: dict[str, Any], config_path: Path) -> dict[str, Any] | None:
@@ -1277,21 +1043,19 @@ def _load_assurance_requirements(
         "authority_refs",
         "required_evidence",
         "proof_profile",
-        "workflow_obligation_refs",
         "review_owner",
         "force",
         "blocking_claims",
-        "waiver",
-        "dismissal",
         "notes",
         "requirement_class",
         "source_intent_ref",
         "source_intent_revision",
-        "source_intent_current",
         "preference_target",
         "evidence_owner",
         "detail_route",
         "measurement",
+        "requirement_refs",
+        "claim_boundary",
     }
     activation_fields = {
         "applies_to_paths",
@@ -1306,14 +1070,9 @@ def _load_assurance_requirements(
         requirement_path = Path(f"{config_path.as_posix()} assurance.requirements.{requirement_id}")
         if not isinstance(raw_requirement, dict):
             raise WorkspaceUsageError(f"{requirement_path.as_posix()} must be a table.")
-        if "waiver" in raw_requirement and "dismissal" in raw_requirement:
-            raise WorkspaceUsageError(
-                f"{requirement_path.as_posix()} declares contradictory sibling dispositions waiver and dismissal; "
-                "record one owned terminal disposition and remove the other."
-            )
         unknown_requirement = sorted(set(raw_requirement) - supported_fields)
         if unknown_requirement:
-            warnings.append(f"{requirement_path.as_posix()} contains unsupported field(s): {', '.join(unknown_requirement)}.")
+            raise WorkspaceUsageError(f"{requirement_path.as_posix()} contains unsupported fields.")
         activation_values = {
             key: require_optional_string_list(payload=raw_requirement, key=key, config_path=requirement_path) for key in activation_fields
         }
@@ -1334,7 +1093,6 @@ def _load_assurance_requirements(
         source_intent_revision = require_optional_string(
             payload=raw_requirement, key="source_intent_revision", config_path=requirement_path
         )
-        source_intent_current = require_optional_bool(payload=raw_requirement, key="source_intent_current", config_path=requirement_path)
         preference_target = require_optional_string(payload=raw_requirement, key="preference_target", config_path=requirement_path)
         evidence_owner = require_optional_string(payload=raw_requirement, key="evidence_owner", config_path=requirement_path)
         detail_route = require_optional_string(payload=raw_requirement, key="detail_route", config_path=requirement_path)
@@ -1403,23 +1161,22 @@ def _load_assurance_requirements(
             authority_refs=require_optional_string_list(payload=raw_requirement, key="authority_refs", config_path=requirement_path),
             required_evidence=required_evidence,
             proof_profile=require_optional_string(payload=raw_requirement, key="proof_profile", config_path=requirement_path),
-            workflow_obligation_refs=require_optional_string_list(
-                payload=raw_requirement, key="workflow_obligation_refs", config_path=requirement_path
-            ),
             review_owner=require_optional_string(payload=raw_requirement, key="review_owner", config_path=requirement_path),
             force=force,
             blocking_claims=blocking_claims,
-            waiver=_require_disposition(payload=raw_requirement, key="waiver", config_path=requirement_path),
-            dismissal=_require_disposition(payload=raw_requirement, key="dismissal", config_path=requirement_path),
+            waiver=None,
+            dismissal=None,
             notes=require_optional_string(payload=raw_requirement, key="notes", config_path=requirement_path),
             requirement_class=requirement_class,
             source_intent_ref=source_intent_ref,
             source_intent_revision=source_intent_revision,
-            source_intent_current=source_intent_current,
+            source_intent_current=None,
             preference_target=preference_target,
             evidence_owner=evidence_owner,
             detail_route=detail_route,
             measurement=measurement,
+            requirement_refs=require_optional_string_list(payload=raw_requirement, key="requirement_refs", config_path=requirement_path),
+            claim_boundary=require_optional_string(payload=raw_requirement, key="claim_boundary", config_path=requirement_path),
         )
         prior_declaration = requirement_declarations.get(requirement.id)
         if prior_declaration is not None:
@@ -1474,12 +1231,10 @@ def _load_assurance_subsystem_profiles(
     profiles: list[AssuranceSubsystemProfile] = []
     supported_fields = {
         "assurance_level",
-        "level",
         "scope_refs",
         "requirement_refs",
         "required_evidence",
         "proof_profile",
-        "workflow_obligation_refs",
         "review_owner",
         "force",
         "blocked_without_evidence",
@@ -1490,16 +1245,10 @@ def _load_assurance_subsystem_profiles(
         profile_path = Path(f"{config_path.as_posix()} assurance.subsystem_profiles.{profile_id}")
         if not isinstance(raw_profile, dict):
             raise WorkspaceUsageError(f"{profile_path.as_posix()} must be a table.")
-        if "assurance_level" in raw_profile and "level" in raw_profile:
-            raise WorkspaceUsageError(
-                f"{profile_path.as_posix()} declares overlapping writable owners for assurance level: "
-                "keep assurance_level and remove the compatibility-only level alias; aliases must not silently neutralize "
-                "or override their canonical setting."
-            )
         unknown_profile = sorted(set(raw_profile) - supported_fields)
         if unknown_profile:
             warnings.append(f"{profile_path.as_posix()} contains unsupported field(s): {', '.join(unknown_profile)}.")
-        level_value = raw_profile.get("assurance_level", raw_profile.get("level"))
+        level_value = raw_profile.get("assurance_level")
         profiles.append(
             AssuranceSubsystemProfile(
                 id=str(profile_id).strip(),
@@ -1513,9 +1262,6 @@ def _load_assurance_subsystem_profiles(
                 requirement_refs=require_optional_string_list(payload=raw_profile, key="requirement_refs", config_path=profile_path),
                 required_evidence=require_optional_string_list(payload=raw_profile, key="required_evidence", config_path=profile_path),
                 proof_profile=require_optional_string(payload=raw_profile, key="proof_profile", config_path=profile_path),
-                workflow_obligation_refs=require_optional_string_list(
-                    payload=raw_profile, key="workflow_obligation_refs", config_path=profile_path
-                ),
                 review_owner=require_optional_string(payload=raw_profile, key="review_owner", config_path=profile_path),
                 force=require_required_enum(
                     payload=raw_profile,
@@ -1613,72 +1359,6 @@ def _load_assurance_domain_proof_lanes(
     return (tuple(lane for lane in lanes if lane.id), warnings)
 
 
-def _load_assurance_closeout_postures(
-    *,
-    raw_postures: Any,
-    config_path: Path,
-) -> tuple[tuple[AssuranceCloseoutPosture, ...], list[str]]:
-    warnings: list[str] = []
-    if raw_postures is None:
-        raw_postures = {}
-    if not isinstance(raw_postures, dict):
-        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.closeout_postures] section must be a table.")
-    supported_fields = {
-        "purpose",
-        "applies_to_paths",
-        "applies_to_task_markers",
-        "assurance_requirement_refs",
-        "proof_profiles",
-        "required_evidence",
-        "review_owner",
-        "authority_refs",
-        "claim_boundary",
-        "uncertainty",
-        "human_waiver_refs",
-        "certification_limits",
-        "notes",
-    }
-    activation_fields = {"applies_to_paths", "applies_to_task_markers", "assurance_requirement_refs", "proof_profiles"}
-    postures: list[AssuranceCloseoutPosture] = []
-    for posture_id, raw_posture in sorted(raw_postures.items()):
-        posture_path = Path(f"{config_path.as_posix()} assurance.closeout_postures.{posture_id}")
-        if not isinstance(raw_posture, dict):
-            raise WorkspaceUsageError(f"{posture_path.as_posix()} must be a table.")
-        unknown_posture = sorted(set(raw_posture) - supported_fields)
-        if unknown_posture:
-            warnings.append(f"{posture_path.as_posix()} contains unsupported field(s): {', '.join(unknown_posture)}.")
-        activation_values = {
-            key: require_optional_string_list(payload=raw_posture, key=key, config_path=posture_path) for key in activation_fields
-        }
-        if not any(activation_values.values()):
-            allowed = ", ".join(sorted(activation_fields))
-            raise WorkspaceUsageError(f"{posture_path.as_posix()} requires at least one activation signal: {allowed}.")
-        purpose = require_optional_string(payload=raw_posture, key="purpose", config_path=posture_path)
-        if purpose is None:
-            raise WorkspaceUsageError(f"{posture_path.as_posix()} purpose is required.")
-        postures.append(
-            AssuranceCloseoutPosture(
-                id=str(posture_id).strip(),
-                purpose=purpose,
-                applies_to_paths=activation_values["applies_to_paths"],
-                applies_to_task_markers=activation_values["applies_to_task_markers"],
-                assurance_requirement_refs=activation_values["assurance_requirement_refs"],
-                proof_profiles=activation_values["proof_profiles"],
-                required_evidence=require_optional_string_list(payload=raw_posture, key="required_evidence", config_path=posture_path),
-                review_owner=require_optional_string(payload=raw_posture, key="review_owner", config_path=posture_path),
-                authority_refs=require_optional_string_list(payload=raw_posture, key="authority_refs", config_path=posture_path),
-                claim_boundary=require_optional_string(payload=raw_posture, key="claim_boundary", config_path=posture_path),
-                uncertainty=require_optional_string(payload=raw_posture, key="uncertainty", config_path=posture_path),
-                human_waiver_refs=require_optional_string_list(payload=raw_posture, key="human_waiver_refs", config_path=posture_path),
-                certification_limits=require_optional_string_list(
-                    payload=raw_posture, key="certification_limits", config_path=posture_path
-                ),
-                notes=require_optional_string(payload=raw_posture, key="notes", config_path=posture_path),
-            )
-        )
-    return (tuple(posture for posture in postures if posture.id), warnings)
-
-
 def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[AssuranceConfig, list[str]]:
     warnings: list[str] = []
     if raw_assurance is None:
@@ -1690,41 +1370,20 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         "agent_may_escalate",
         "agent_may_deescalate",
         "strict_closeout",
-        "classification_owner",
-        "classification_source",
         "proof_profiles",
         "requirements",
         "subsystem_profiles",
         "domain_proof_lanes",
-        "closeout_postures",
-        "test_data_policy",
         "decision_record_target",
         "decision_record_revision",
         "instruction_revision",
         "decision_record_fallback",
-        "decision_record_format",
-        "decision_record_template",
-        "decision_record_statuses",
-        "invariant_registry",
-        "risk_registry",
     }
     unknown = sorted(set(raw_assurance) - supported_fields)
     if unknown:
-        warnings.append(f"{config_path.as_posix()} [assurance] contains unsupported field(s): {', '.join(unknown)}.")
+        raise WorkspaceUsageError(f"{config_path.as_posix()} assurance contains unsupported fields.")
     default_level_source = "repo-config" if "default_level" in raw_assurance else "product-default"
     default_level = validate_assurance_level(str(raw_assurance.get("default_level", DEFAULT_ASSURANCE_LEVEL)))
-    classification_owner = str(raw_assurance.get("classification_owner", "config-native")).strip()
-    if classification_owner not in {"config-native", "repository-owned"}:
-        raise WorkspaceUsageError(f"{config_path.as_posix()} assurance.classification_owner must be config-native or repository-owned.")
-    classification_source = require_optional_string(payload=raw_assurance, key="classification_source", config_path=config_path)
-    if classification_owner == "repository-owned" and classification_source is None:
-        raise WorkspaceUsageError(
-            f"{config_path.as_posix()} assurance.classification_source is required for repository-owned classification."
-        )
-    if classification_owner == "config-native" and classification_source is not None:
-        raise WorkspaceUsageError(
-            f"{config_path.as_posix()} assurance.classification_source conflicts with config-native classification ownership."
-        )
     raw_profiles = raw_assurance.get("proof_profiles", {})
     if raw_profiles is None:
         raw_profiles = {}
@@ -1761,19 +1420,10 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
                 disallowed_commands=disallowed_commands,
             )
         )
-    raw_test_data_policy = raw_assurance.get("test_data_policy", {})
-    if raw_test_data_policy is None:
-        raw_test_data_policy = {}
-    if not isinstance(raw_test_data_policy, dict):
-        raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.test_data_policy] section must be a table.")
     raw_decision_fallback = raw_assurance.get("decision_record_fallback")
     if raw_decision_fallback is not None and not isinstance(raw_decision_fallback, dict):
         raise WorkspaceUsageError(f"{config_path.as_posix()} [assurance.decision_record_fallback] must be a table.")
     decision_record_target = raw_assurance.get("decision_record_target")
-    decision_record_format = raw_assurance.get("decision_record_format")
-    decision_record_template = raw_assurance.get("decision_record_template")
-    invariant_registry = raw_assurance.get("invariant_registry")
-    risk_registry = raw_assurance.get("risk_registry")
     requirements, requirement_warnings = _load_assurance_requirements(
         raw_requirements=raw_assurance.get("requirements", {}),
         config_path=config_path,
@@ -1789,17 +1439,12 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
         config_path=config_path,
     )
     warnings.extend(domain_lane_warnings)
-    closeout_postures, closeout_posture_warnings = _load_assurance_closeout_postures(
-        raw_postures=raw_assurance.get("closeout_postures", {}),
-        config_path=config_path,
-    )
-    warnings.extend(closeout_posture_warnings)
     return (
         AssuranceConfig(
             default_level=default_level,
             default_level_source=default_level_source,
-            classification_owner=classification_owner,
-            classification_source=classification_source,
+            classification_owner="config-native",
+            classification_source=None,
             agent_may_escalate=_require_bool(payload=raw_assurance, key="agent_may_escalate", default=True, config_path=config_path),
             agent_may_deescalate=_require_bool(payload=raw_assurance, key="agent_may_deescalate", default=False, config_path=config_path),
             strict_closeout=_require_bool(payload=raw_assurance, key="strict_closeout", default=False, config_path=config_path),
@@ -1807,84 +1452,22 @@ def _load_assurance_config(*, raw_assurance: Any, config_path: Path) -> tuple[As
             requirements=requirements,
             subsystem_profiles=subsystem_profiles,
             domain_proof_lanes=domain_proof_lanes,
-            closeout_postures=closeout_postures,
-            test_data_policy={str(key): value for key, value in raw_test_data_policy.items()},
+            closeout_postures=(),
+            test_data_policy={},
             decision_record_fallback=dict(raw_decision_fallback) if raw_decision_fallback is not None else None,
             instruction_revision=str(raw_assurance["instruction_revision"]).strip() if raw_assurance.get("instruction_revision") else None,
             decision_record_revision=str(raw_assurance["decision_record_revision"]).strip()
             if raw_assurance.get("decision_record_revision")
             else None,
             decision_record_target=str(decision_record_target).strip() if decision_record_target is not None else None,
-            decision_record_format=str(decision_record_format).strip() if decision_record_format is not None else None,
-            decision_record_template=str(decision_record_template).strip() if decision_record_template is not None else None,
-            decision_record_statuses=require_optional_string_list(
-                payload=raw_assurance, key="decision_record_statuses", config_path=config_path
-            ),
-            invariant_registry=str(invariant_registry).strip() if invariant_registry is not None else None,
-            risk_registry=str(risk_registry).strip() if risk_registry is not None else None,
+            decision_record_format=None,
+            decision_record_template=None,
+            decision_record_statuses=(),
+            invariant_registry=None,
+            risk_registry=None,
         ),
         warnings,
     )
-
-
-def load_workflow_obligations(
-    *,
-    raw_obligations: dict[str, Any],
-    config_path: Path,
-) -> tuple[tuple[WorkflowObligation, ...], list[str]]:
-    obligations: list[WorkflowObligation] = []
-    warnings: list[str] = []
-    for obligation_name in sorted(raw_obligations):
-        raw_obligation = raw_obligations[obligation_name]
-        obligation_path = Path(f"{config_path.as_posix()} workflow_obligations.{obligation_name}")
-        if not isinstance(raw_obligation, dict):
-            raise WorkspaceUsageError(f"{obligation_path.as_posix()} must be a table.")
-        unknown_fields = sorted(set(raw_obligation) - {"summary", "stage", "force", "scope_tags", "commands", "review_hint"})
-        if unknown_fields:
-            unknown_text = ", ".join(unknown_fields)
-            warnings.append(f"{obligation_path.as_posix()} contains unsupported field(s): {unknown_text}.")
-        summary = raw_obligation.get("summary")
-        if not isinstance(summary, str) or not summary.strip():
-            raise WorkspaceUsageError(f"{obligation_path.as_posix()} summary must be a non-empty string.")
-        stage = raw_obligation.get("stage")
-        if not isinstance(stage, str) or stage not in SUPPORTED_WORKFLOW_OBLIGATION_STAGES:
-            allowed_text = ", ".join(SUPPORTED_WORKFLOW_OBLIGATION_STAGES)
-            raise WorkspaceUsageError(f"{obligation_path.as_posix()} stage must be one of: {allowed_text}.")
-        force = raw_obligation.get("force")
-        if force is None:
-            force = "required-before-closeout" if stage in {"before-claiming-completion", "closeout"} else "recommended"
-        if not isinstance(force, str) or force not in SUPPORTED_WORKFLOW_OBLIGATION_FORCES:
-            allowed_text = ", ".join(SUPPORTED_WORKFLOW_OBLIGATION_FORCES)
-            raise WorkspaceUsageError(f"{obligation_path.as_posix()} force must be one of: {allowed_text}.")
-        scope_tags = require_optional_string_list(
-            payload=raw_obligation,
-            key="scope_tags",
-            config_path=obligation_path,
-        )
-        if not scope_tags:
-            raise WorkspaceUsageError(f"{obligation_path.as_posix()} scope_tags must list at least one non-empty string.")
-        commands = require_optional_string_list(
-            payload=raw_obligation,
-            key="commands",
-            config_path=obligation_path,
-        )
-        if not commands:
-            raise WorkspaceUsageError(f"{obligation_path.as_posix()} commands must list at least one non-empty string.")
-        review_hint = raw_obligation.get("review_hint")
-        if review_hint is not None and (not isinstance(review_hint, str) or not review_hint.strip()):
-            raise WorkspaceUsageError(f"{obligation_path.as_posix()} review_hint must be a non-empty string when present.")
-        obligations.append(
-            WorkflowObligation(
-                name=obligation_name,
-                summary=summary.strip(),
-                stage=stage,
-                force=force,
-                scope_tags=scope_tags,
-                commands=commands,
-                review_hint=review_hint.strip() if isinstance(review_hint, str) else None,
-            )
-        )
-    return tuple(obligations), warnings
 
 
 def resolve_system_intent_declaration(
@@ -1993,230 +1576,53 @@ def normalize_current_economic_evidence(raw: Any, *, config_path: Path) -> dict[
 def load_delegation_target_profiles(
     *, raw_targets: dict[str, Any], config_path: Path
 ) -> tuple[tuple[DelegationTargetProfile, ...], list[str]]:
-    profiles: list[DelegationTargetProfile] = []
-    warnings: list[str] = []
     from agentic_workspace.decision import transport_sources
 
-    decoded_sources = transport_sources(raw_targets)["sources"] if raw_targets else {}
-    for target_name in sorted(raw_targets):
-        raw_profile = raw_targets[target_name]
-        target_path = Path(f"{config_path.as_posix()} delegation_targets.{target_name}")
-        if not isinstance(raw_profile, dict):
-            raise WorkspaceUsageError(f"{target_path.as_posix()} must be a table.")
-        supported_fields = {
-            "target_id",
-            "target_revision",
-            "aliases",
-            "identity_status",
-            "revision_policy",
-            "strength",
-            "location",
-            "confidence",
-            "task_fit",
-            "capability_classes",
-            "execution_methods",
-            "transports",
-            "model_family",
-            "provider",
-            "dispatch_adapter_kind",
-            "dispatch_command",
-            "dispatch_output_mode",
-            "dispatch_timeout_seconds",
-            "context_capacity",
-            "reasoning_profile",
-            "cost_class",
-            "current_economic_evidence",
-            "latency_class",
-            "safe_task_classes",
-            "forbidden_task_classes",
-            "escalation_target",
-            "confidence_source",
-            "last_evaluation",
-            "human_control_modes",
-            "execution_guarantees",
-        }
-        unknown_fields = sorted(set(raw_profile) - supported_fields)
-        if unknown_fields:
-            unknown_text = ", ".join(unknown_fields)
-            warnings.append(f"{target_path.as_posix()} contains unsupported field(s): {unknown_text}.")
-        if "escalation_target" in raw_profile:
-            warnings.append(
-                f"{target_path.as_posix()} escalation_target is an ignored compatibility alias; assignment_policy best-fit ranking owns target selection."
-            )
-        legacy_target_fields = sorted(
-            set(raw_profile)
-            & {
-                "execution_methods",
-                "dispatch_adapter_kind",
-                "dispatch_command",
-                "dispatch_output_mode",
-                "dispatch_timeout_seconds",
-                "escalation_target",
-                "reasoning_profile",
-                "safe_task_classes",
-                "human_control_modes",
-            }
-        )
-        if legacy_target_fields:
-            warnings.append(
-                "delegation-target-legacy-authoring/v1: "
-                f"{target_path.as_posix()} compatibility-only field(s) {', '.join(legacy_target_fields)} are deprecated and "
-                f"scheduled for removal by {DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION}; migrate to transports and canonical target facts."
-            )
-
-        strength = raw_profile.get("strength", "unknown")
-        if not isinstance(strength, str) or ("strength" in raw_profile and strength not in SUPPORTED_DELEGATION_TARGET_STRENGTHS):
-            allowed_text = ", ".join(SUPPORTED_DELEGATION_TARGET_STRENGTHS)
-            raise WorkspaceUsageError(f"{target_path.as_posix()} strength must be one of: {allowed_text}.")
-        raw_location = str(raw_profile.get("location", "either")).strip() or "either"
-        if raw_location not in SUPPORTED_CAPABILITY_LOCATIONS:
-            allowed_text = ", ".join(SUPPORTED_CAPABILITY_LOCATIONS)
-            raise WorkspaceUsageError(f"{target_path.as_posix()} location must be one of: {allowed_text}.")
-        legacy_execution_methods = require_optional_string_list(
-            payload=raw_profile,
-            key="execution_methods",
-            config_path=target_path,
-            allowed=SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS,
-        )
-        dispatch_command = require_optional_string_list(
-            payload=raw_profile,
-            key="dispatch_command",
-            config_path=target_path,
-        )
-        dispatch_adapter_kind = require_optional_enum_or_none(
-            payload=raw_profile,
-            key="dispatch_adapter_kind",
-            config_path=target_path,
-            allowed=SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS,
-        )
-        dispatch_output_mode = require_optional_enum(
-            payload=raw_profile,
-            key="dispatch_output_mode",
-            config_path=target_path,
-            allowed=SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES,
-            default="stdout",
-        )
-        raw_dispatch_timeout = raw_profile.get("dispatch_timeout_seconds", 1800)
-        if not isinstance(raw_dispatch_timeout, int) or isinstance(raw_dispatch_timeout, bool) or raw_dispatch_timeout <= 0:
-            raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_timeout_seconds must be a positive integer.")
-        raw_transports = raw_profile.get("transports")
-        if raw_transports is None and dispatch_command and dispatch_adapter_kind is None:
-            dispatch_adapter_kind = "process"
-        if raw_transports is None and dispatch_adapter_kind is not None and not dispatch_command:
-            raise WorkspaceUsageError(f"{target_path.as_posix()} dispatch_command is required when dispatch_adapter_kind is configured.")
-        if raw_transports is not None and (legacy_execution_methods or dispatch_command or dispatch_adapter_kind is not None):
-            warnings.append(f"{target_path.as_posix()} canonical transports override legacy execution_methods/dispatch_adapter_* fields.")
-        decoded = decoded_sources[target_name]
-        if "error" in decoded:
-            raise WorkspaceUsageError(f"{target_path.as_posix()} {decoded['error']}")
-        transports = decoded["transports"]
-        execution_methods = tuple(dict.fromkeys(str(item["method"]) for item in transports))
-        configured_adapter = next(
-            (item for item in transports if item["method"] in {"cli", "api"} and item["readiness"] == "configured"),
-            None,
-        )
-        if raw_transports is not None:
-            dispatch_adapter_kind = "process" if configured_adapter and configured_adapter["kind"] in {"process", "api"} else None
-            dispatch_command = tuple(configured_adapter["command"]) if configured_adapter else ()
-            dispatch_output_mode = str(configured_adapter["output_mode"]) if configured_adapter else "stdout"
-            raw_dispatch_timeout = int(configured_adapter["timeout_seconds"]) if configured_adapter else 1800
-        capability_classes = require_optional_string_list(
-            payload=raw_profile,
-            key="capability_classes",
-            config_path=target_path,
-            allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
-        )
-        forbidden_task_classes = require_optional_string_list(
-            payload=raw_profile,
-            key="forbidden_task_classes",
-            config_path=target_path,
-            allowed=SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
-        )
-        safe_task_classes = tuple(item for item in capability_classes if item not in forbidden_task_classes)
-        reasoning_profile = require_optional_enum(
-            payload=raw_profile,
-            key="reasoning_profile",
-            config_path=target_path,
-            allowed=SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
-            default={"strong": "strong", "medium": "balanced", "weak": "weak"}.get(strength, "unknown"),
-        )
+    _validate_current_authoring({"delegation_targets": raw_targets}, local=True)
+    decoded = transport_sources(raw_targets)["sources"] if raw_targets else {}
+    profiles = []
+    for name, raw in sorted(raw_targets.items()):
+        source = decoded[name]
+        if "error" in source:
+            raise WorkspaceUsageError(f"{config_path} target {name}: {source['error']}")
+        transports = tuple(source["transports"])
+        adapter = next((item for item in transports if item["method"] in {"cli", "api"} and item["readiness"] == "configured"), None)
         profiles.append(
             DelegationTargetProfile(
-                name=target_name,
-                target_id=require_optional_string(payload=raw_profile, key="target_id", config_path=target_path),
-                target_revision=require_optional_string(payload=raw_profile, key="target_revision", config_path=target_path),
-                aliases=require_optional_string_list(payload=raw_profile, key="aliases", config_path=target_path),
-                identity_status=require_optional_enum(
-                    payload=raw_profile,
-                    key="identity_status",
-                    config_path=target_path,
-                    allowed=SUPPORTED_TARGET_IDENTITY_STATUSES,
-                    default="active",
-                ),
-                revision_policy=require_optional_enum(
-                    payload=raw_profile,
-                    key="revision_policy",
-                    config_path=target_path,
-                    allowed=SUPPORTED_TARGET_REVISION_POLICIES,
-                    default="revalidate",
-                ),
-                strength=strength,
-                execution_guarantees=require_optional_string_list(payload=raw_profile, key="execution_guarantees", config_path=target_path),
-                location=raw_location,
-                execution_methods=execution_methods,
-                transports=tuple(transports),
-                confidence=require_optional_confidence(
-                    payload=raw_profile,
-                    key="confidence",
-                    config_path=target_path,
-                ),
-                task_fit=require_optional_string_list(
-                    payload=raw_profile,
-                    key="task_fit",
-                    config_path=target_path,
-                ),
-                capability_classes=capability_classes,
-                model_family=require_optional_string(payload=raw_profile, key="model_family", config_path=target_path),
-                provider=require_optional_string(payload=raw_profile, key="provider", config_path=target_path),
-                dispatch_adapter_kind=dispatch_adapter_kind,
-                dispatch_command=dispatch_command,
-                dispatch_output_mode=dispatch_output_mode,
-                dispatch_timeout_seconds=raw_dispatch_timeout,
-                context_capacity=require_optional_enum(
-                    payload=raw_profile,
-                    key="context_capacity",
-                    config_path=target_path,
-                    allowed=SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
-                    default="unknown",
-                ),
-                reasoning_profile=reasoning_profile,
-                cost_class=require_optional_enum(
-                    payload=raw_profile,
-                    key="cost_class",
-                    config_path=target_path,
-                    allowed=SUPPORTED_DELEGATION_TARGET_COST_CLASSES,
-                    default="unknown",
-                ),
-                current_economic_evidence=normalize_current_economic_evidence(
-                    raw_profile.get("current_economic_evidence"),
-                    config_path=Path(f"{target_path.as_posix()} current_economic_evidence"),
-                ),
-                latency_class=require_optional_enum(
-                    payload=raw_profile,
-                    key="latency_class",
-                    config_path=target_path,
-                    allowed=SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES,
-                    default="unknown",
-                ),
-                safe_task_classes=safe_task_classes,
-                forbidden_task_classes=forbidden_task_classes,
+                name=name,
+                target_id=raw.get("target_id"),
+                target_revision=raw.get("target_revision"),
+                aliases=tuple(raw.get("aliases", [])),
+                identity_status=raw.get("identity_status", "active"),
+                revision_policy="revalidate",
+                strength="unknown",
+                location=raw.get("location", "either"),
+                confidence=raw.get("confidence"),
+                transports=transports,
+                execution_methods=tuple(dict.fromkeys(item["method"] for item in transports)),
+                dispatch_adapter_kind="process" if adapter and adapter["kind"] in {"process", "api"} else None,
+                dispatch_command=tuple(adapter["command"]) if adapter else (),
+                dispatch_output_mode=adapter["output_mode"] if adapter else "stdout",
+                dispatch_timeout_seconds=adapter["timeout_seconds"] if adapter else 1800,
+                task_fit=(),
+                capability_classes=(),
+                model_family=None,
+                provider=None,
+                context_capacity="unknown",
+                reasoning_profile="unknown",
+                cost_class=raw.get("cost_class", "unknown"),
+                latency_class=raw.get("latency_class", "unknown"),
+                current_economic_evidence=None,
+                safe_task_classes=(),
+                forbidden_task_classes=tuple(raw.get("forbidden_task_classes", [])),
                 escalation_target=None,
-                confidence_source=require_optional_string(payload=raw_profile, key="confidence_source", config_path=target_path),
-                last_evaluation=require_optional_string(payload=raw_profile, key="last_evaluation", config_path=target_path),
+                confidence_source=raw.get("confidence_source"),
+                last_evaluation=None,
                 human_control_modes=(),
+                execution_guarantees=tuple(raw.get("execution_guarantees", [])),
             )
         )
-    return tuple(profiles), warnings
+    return tuple(profiles), []
 
 
 def normalize_delegation_context_cost(raw: Any, *, surface_name: str) -> dict[str, Any] | None:
@@ -2452,7 +1858,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         user_guidance_root=None,
         target_guidance_overlay_path=WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH,
         correction_events_path=WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH,
-        session_logging=SessionLoggingConfig(enabled=None, redact_local_paths=False, path_mode="absolute", source="unset"),
+        session_logging=SessionLoggingConfig(enabled=None, path_mode="absolute", source="unset"),
         delegation_targets=(),
         local_overlay={},
         high_risk_overlay={},
@@ -2491,486 +1897,6 @@ def _local_config_field_source(
     return "unset"
 
 
-def _local_config_nested_source(
-    *,
-    local_payload: dict[str, Any],
-    shared_payload: dict[str, Any] | None,
-    table: str,
-    section: str,
-    item_id: str,
-) -> str:
-    if item_id in _local_config_table(_local_config_table(local_payload, table), section):
-        return "repo-local-override"
-    if item_id in _local_config_table(_local_config_table(shared_payload, table), section):
-        return "shared-local-config"
-    return "merged-local-config"
-
-
-def _local_overlay_high_risk_source(
-    *, local_payload: dict[str, Any], shared_payload: dict[str, Any] | None, section: str, item_id: str
-) -> str:
-    local_overlay = _local_config_table(local_payload, "local_overlay")
-    shared_overlay = _local_config_table(shared_payload, "local_overlay")
-    if item_id in _local_config_table(_local_config_table(local_overlay, "high_risk"), section):
-        return "repo-local-override"
-    if item_id in _local_config_table(_local_config_table(shared_overlay, "high_risk"), section):
-        return "shared-local-config"
-    return "merged-local-config"
-
-
-def _optional_overlay_string_list(*, payload: dict[str, Any], key: str, item_path: Path, warnings: list[str]) -> tuple[str, ...]:
-    try:
-        return require_optional_string_list(payload=payload, key=key, config_path=item_path)
-    except WorkspaceUsageError as exc:
-        warnings.append(str(exc))
-        return ()
-
-
-def _optional_overlay_string(*, payload: dict[str, Any], key: str, item_path: Path, warnings: list[str]) -> str | None:
-    try:
-        return require_optional_string(payload=payload, key=key, config_path=item_path)
-    except WorkspaceUsageError as exc:
-        warnings.append(str(exc))
-        return None
-
-
-def _optional_overlay_enum(
-    *, payload: dict[str, Any], key: str, item_path: Path, allowed: tuple[str, ...], default: str, warnings: list[str]
-) -> str:
-    try:
-        return require_optional_enum(payload=payload, key=key, config_path=item_path, allowed=allowed, default=default)
-    except WorkspaceUsageError as exc:
-        warnings.append(str(exc))
-        return default
-
-
-def _normalize_local_guidance_overlay(
-    *,
-    raw_guidance: Any,
-    local_payload: dict[str, Any],
-    shared_payload: dict[str, Any] | None,
-    warnings: list[str],
-) -> dict[str, Any]:
-    allowed_fields = {
-        "applies_to_paths",
-        "applies_to_task_markers",
-        "signal",
-        "category",
-        "guidance",
-        "authority_refs",
-        "required_commands",
-        "optional_commands",
-        "unavailable_routes",
-        "review_owner",
-        "claim_boundary",
-        "impact",
-        "notes",
-    }
-    if raw_guidance in (None, {}):
-        return {"status": "absent", "items": [], "warnings": []}
-    if not isinstance(raw_guidance, dict):
-        message = f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} local_overlay.guidance must be a table of named items."
-        warnings.append(message)
-        return {"status": "invalid", "items": [], "warnings": [message]}
-    guidance_warnings: list[str] = []
-    items: list[dict[str, Any]] = []
-    for item_id, raw_item in sorted(raw_guidance.items()):
-        item_path = Path(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} local_overlay.guidance.{item_id}")
-        if not isinstance(raw_item, dict):
-            message = f"{item_path.as_posix()} must be a table."
-            warnings.append(message)
-            guidance_warnings.append(message)
-            continue
-        raw_item = dict(raw_item)
-        unknown_fields = sorted(set(raw_item) - allowed_fields)
-        if unknown_fields:
-            message = f"{item_path.as_posix()} contains unsupported field(s): {', '.join(unknown_fields)}."
-            warnings.append(message)
-            guidance_warnings.append(message)
-        items.append(
-            {
-                "id": str(item_id).strip(),
-                "section": "guidance",
-                "source_layer": _local_config_nested_source(
-                    local_payload=local_payload,
-                    shared_payload=shared_payload,
-                    table="local_overlay",
-                    section="guidance",
-                    item_id=str(item_id),
-                ),
-                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_overlay.guidance.{item_id}]",
-                "applies_to_paths": list(
-                    _optional_overlay_string_list(payload=raw_item, key="applies_to_paths", item_path=item_path, warnings=guidance_warnings)
-                ),
-                "applies_to_task_markers": list(
-                    _optional_overlay_string_list(
-                        payload=raw_item, key="applies_to_task_markers", item_path=item_path, warnings=guidance_warnings
-                    )
-                ),
-                "signal": _optional_overlay_string(payload=raw_item, key="signal", item_path=item_path, warnings=guidance_warnings),
-                "category": _optional_overlay_string(payload=raw_item, key="category", item_path=item_path, warnings=guidance_warnings),
-                "guidance": _optional_overlay_string(payload=raw_item, key="guidance", item_path=item_path, warnings=guidance_warnings),
-                "authority_refs": list(
-                    _optional_overlay_string_list(payload=raw_item, key="authority_refs", item_path=item_path, warnings=guidance_warnings)
-                ),
-                "required_commands": list(
-                    _optional_overlay_string_list(
-                        payload=raw_item, key="required_commands", item_path=item_path, warnings=guidance_warnings
-                    )
-                ),
-                "optional_commands": list(
-                    _optional_overlay_string_list(
-                        payload=raw_item, key="optional_commands", item_path=item_path, warnings=guidance_warnings
-                    )
-                ),
-                "unavailable_routes": list(
-                    _optional_overlay_string_list(
-                        payload=raw_item, key="unavailable_routes", item_path=item_path, warnings=guidance_warnings
-                    )
-                ),
-                "review_owner": _optional_overlay_string(
-                    payload=raw_item, key="review_owner", item_path=item_path, warnings=guidance_warnings
-                ),
-                "claim_boundary": _optional_overlay_string(
-                    payload=raw_item, key="claim_boundary", item_path=item_path, warnings=guidance_warnings
-                ),
-                "impact": _optional_overlay_enum(
-                    payload=raw_item,
-                    key="impact",
-                    item_path=item_path,
-                    allowed=SUPPORTED_LOCAL_HIGH_RISK_IMPACTS,
-                    default="advisory",
-                    warnings=guidance_warnings,
-                ),
-                "notes": _optional_overlay_string(payload=raw_item, key="notes", item_path=item_path, warnings=guidance_warnings),
-            }
-        )
-    return {"status": "configured" if items else "absent", "items": items, "warnings": guidance_warnings}
-
-
-def _normalize_local_high_risk_overlay(
-    *,
-    raw_overlay: Any,
-    local_payload: dict[str, Any],
-    shared_payload: dict[str, Any] | None,
-    warnings: list[str],
-    surface_prefix: str = "high_risk_overlay",
-) -> dict[str, Any]:
-    if raw_overlay in (None, {}):
-        return {
-            "kind": "agentic-workspace/local-high-risk-overlay-config/v1",
-            "status": "absent",
-            "sections": {},
-            "warnings": [],
-        }
-    if not isinstance(raw_overlay, dict):
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}] section must be a table.")
-        return {
-            "kind": "agentic-workspace/local-high-risk-overlay-config/v1",
-            "status": "invalid",
-            "sections": {},
-            "warnings": [f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}] section must be a table."],
-        }
-    section_fields = {
-        "source_maps": {
-            "applies_to_paths",
-            "applies_to_task_markers",
-            "authority_refs",
-            "required_sources",
-            "review_owner",
-            "review_aids",
-            "proof_profiles",
-            "required_commands",
-            "manual_evidence",
-            "claim_boundary",
-            "drift_state",
-            "impact",
-            "notes",
-        },
-        "validation_profiles": {
-            "category",
-            "applies_to_paths",
-            "applies_to_task_markers",
-            "required_commands",
-            "optional_commands",
-            "manual_checks",
-            "unavailable_routes",
-            "claim_boundary",
-            "proof_profiles",
-            "authority_refs",
-            "impact",
-            "notes",
-        },
-        "ci_validation": {
-            "applies_to_paths",
-            "applies_to_task_markers",
-            "validation_state",
-            "local_substitute_commands",
-            "local_substitute_policy",
-            "authority_refs",
-            "claim_boundary",
-            "impact",
-            "notes",
-        },
-        "templates": {
-            "applies_to_task_markers",
-            "host",
-            "kind",
-            "paths",
-            "headings",
-            "required_fields",
-            "state",
-            "impact",
-            "notes",
-        },
-        "guardrails": {
-            "applies_to_paths",
-            "applies_to_task_markers",
-            "sensitive_data",
-            "synthetic_fixture_guidance",
-            "safe_examples",
-            "authority_refs",
-            "claim_boundary",
-            "impact",
-            "notes",
-        },
-        "unresolved_questions": {
-            "applies_to_paths",
-            "applies_to_task_markers",
-            "category",
-            "question",
-            "owner",
-            "residue_route",
-            "reason",
-            "authority_refs",
-            "claim_boundary",
-            "impact",
-            "notes",
-        },
-    }
-    unknown_sections = sorted(set(raw_overlay) - set(section_fields))
-    if unknown_sections:
-        warnings.append(
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}] contains unsupported section(s): {', '.join(unknown_sections)}."
-        )
-    overlay_warnings: list[str] = []
-    sections: dict[str, list[dict[str, Any]]] = {}
-    for section, allowed_fields in section_fields.items():
-        raw_section = raw_overlay.get(section, {})
-        if raw_section in (None, {}):
-            sections[section] = []
-            continue
-        if not isinstance(raw_section, dict):
-            message = f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} {surface_prefix}.{section} must be a table of named items."
-            warnings.append(message)
-            overlay_warnings.append(message)
-            sections[section] = []
-            continue
-        items: list[dict[str, Any]] = []
-        for item_id, raw_item in sorted(raw_section.items()):
-            item_path = Path(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} {surface_prefix}.{section}.{item_id}")
-            if not isinstance(raw_item, dict):
-                message = f"{item_path.as_posix()} must be a table."
-                warnings.append(message)
-                overlay_warnings.append(message)
-                continue
-            raw_item = dict(raw_item)
-            unknown_fields = sorted(set(raw_item) - allowed_fields)
-            if unknown_fields:
-                message = f"{item_path.as_posix()} contains unsupported field(s): {', '.join(unknown_fields)}."
-                warnings.append(message)
-                overlay_warnings.append(message)
-            item: dict[str, Any] = {
-                "id": str(item_id).strip(),
-                "section": section,
-                "source_layer": _local_config_nested_source(
-                    local_payload=local_payload,
-                    shared_payload=shared_payload,
-                    table="high_risk_overlay",
-                    section=section,
-                    item_id=str(item_id),
-                )
-                if surface_prefix == "high_risk_overlay"
-                else _local_overlay_high_risk_source(
-                    local_payload=local_payload,
-                    shared_payload=shared_payload,
-                    section=section,
-                    item_id=str(item_id),
-                ),
-                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [{surface_prefix}.{section}.{item_id}]",
-                "applies_to_paths": list(
-                    _optional_overlay_string_list(payload=raw_item, key="applies_to_paths", item_path=item_path, warnings=overlay_warnings)
-                ),
-                "applies_to_task_markers": list(
-                    _optional_overlay_string_list(
-                        payload=raw_item, key="applies_to_task_markers", item_path=item_path, warnings=overlay_warnings
-                    )
-                ),
-                "authority_refs": list(
-                    _optional_overlay_string_list(payload=raw_item, key="authority_refs", item_path=item_path, warnings=overlay_warnings)
-                ),
-                "claim_boundary": _optional_overlay_string(
-                    payload=raw_item, key="claim_boundary", item_path=item_path, warnings=overlay_warnings
-                ),
-                "impact": _optional_overlay_enum(
-                    payload=raw_item,
-                    key="impact",
-                    item_path=item_path,
-                    allowed=SUPPORTED_LOCAL_HIGH_RISK_IMPACTS,
-                    default="advisory",
-                    warnings=overlay_warnings,
-                ),
-                "notes": _optional_overlay_string(payload=raw_item, key="notes", item_path=item_path, warnings=overlay_warnings),
-            }
-            for key in (
-                "required_sources",
-                "review_aids",
-                "proof_profiles",
-                "required_commands",
-                "manual_evidence",
-                "optional_commands",
-                "manual_checks",
-                "unavailable_routes",
-                "local_substitute_commands",
-                "paths",
-                "headings",
-                "required_fields",
-                "sensitive_data",
-                "synthetic_fixture_guidance",
-                "safe_examples",
-            ):
-                if key in allowed_fields:
-                    item[key] = list(
-                        _optional_overlay_string_list(payload=raw_item, key=key, item_path=item_path, warnings=overlay_warnings)
-                    )
-            for key in (
-                "review_owner",
-                "drift_state",
-                "category",
-                "validation_state",
-                "local_substitute_policy",
-                "host",
-                "kind",
-                "state",
-                "question",
-                "owner",
-                "residue_route",
-                "reason",
-            ):
-                if key in allowed_fields:
-                    item[key] = _optional_overlay_string(payload=raw_item, key=key, item_path=item_path, warnings=overlay_warnings)
-            if section == "ci_validation" and item.get("validation_state") not in (None, ""):
-                item["validation_state"] = _optional_overlay_enum(
-                    payload=raw_item,
-                    key="validation_state",
-                    item_path=item_path,
-                    allowed=SUPPORTED_LOCAL_HIGH_RISK_VALIDATION_STATES,
-                    default="ci_unavailable",
-                    warnings=overlay_warnings,
-                )
-            if section == "ci_validation" and item.get("local_substitute_policy") not in (None, ""):
-                item["local_substitute_policy"] = _optional_overlay_enum(
-                    payload=raw_item,
-                    key="local_substitute_policy",
-                    item_path=item_path,
-                    allowed=SUPPORTED_LOCAL_HIGH_RISK_SUBSTITUTE_POLICIES,
-                    default="insufficient",
-                    warnings=overlay_warnings,
-                )
-            if section == "unresolved_questions" and item.get("category") not in (None, ""):
-                item["category"] = _optional_overlay_enum(
-                    payload=raw_item,
-                    key="category",
-                    item_path=item_path,
-                    allowed=SUPPORTED_LOCAL_HIGH_RISK_UNRESOLVED_CLASSES,
-                    default="safe-follow-up",
-                    warnings=overlay_warnings,
-                )
-            items.append(item)
-        sections[section] = items
-    item_count = sum(len(items) for items in sections.values())
-    return {
-        "kind": "agentic-workspace/local-high-risk-overlay-config/v1",
-        "status": "configured" if item_count else "absent",
-        "item_count": item_count,
-        "sections": sections,
-        "warnings": overlay_warnings,
-        "authority_boundary": {
-            "source": "local-only-overlay",
-            "rule": "Local high-risk overlay guidance may shape the acting checkout workflow, but it is not checked-in host policy.",
-        },
-    }
-
-
-def _normalize_local_overlay(
-    *,
-    raw_overlay: Any,
-    legacy_high_risk_overlay: Any,
-    local_payload: dict[str, Any],
-    shared_payload: dict[str, Any] | None,
-    warnings: list[str],
-) -> dict[str, Any]:
-    overlay_warnings: list[str] = []
-    if raw_overlay in (None, {}):
-        raw_overlay = {}
-    if not isinstance(raw_overlay, dict):
-        message = f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_overlay] section must be a table."
-        warnings.append(message)
-        overlay_warnings.append(message)
-        raw_overlay = {}
-    unknown_sections = sorted(set(raw_overlay) - {"guidance", "high_risk"})
-    if unknown_sections:
-        message = (
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_overlay] contains unsupported section(s): {', '.join(unknown_sections)}."
-        )
-        warnings.append(message)
-        overlay_warnings.append(message)
-    if legacy_high_risk_overlay not in (None, {}):
-        message = (
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay] is deprecated; "
-            "preserve its former intent and use the responsible scoped instruction/Verification owner for current authoring."
-        )
-        warnings.append(message)
-        overlay_warnings.append(message)
-    guidance = _normalize_local_guidance_overlay(
-        raw_guidance=raw_overlay.get("guidance", {}),
-        local_payload=local_payload,
-        shared_payload=shared_payload,
-        warnings=warnings,
-    )
-    raw_high_risk = raw_overlay.get("high_risk", {})
-    if raw_high_risk in (None, {}) and legacy_high_risk_overlay not in (None, {}):
-        raw_high_risk = legacy_high_risk_overlay
-    high_risk = _normalize_local_high_risk_overlay(
-        raw_overlay=raw_high_risk,
-        local_payload=local_payload,
-        shared_payload=shared_payload,
-        warnings=warnings,
-        surface_prefix="local_overlay.high_risk",
-    )
-    overlay_warnings.extend(guidance.get("warnings", []))
-    overlay_warnings.extend(high_risk.get("warnings", []))
-    guidance_count = len(guidance.get("items", [])) if isinstance(guidance.get("items"), list) else 0
-    high_risk_count = int(high_risk.get("item_count", 0) or 0) if isinstance(high_risk, dict) else 0
-    return {
-        "kind": "agentic-workspace/local-overlay-config/v1",
-        "status": "configured" if guidance_count or high_risk_count else "absent",
-        "item_count": guidance_count + high_risk_count,
-        "ordinary_guidance_count": guidance_count,
-        "high_risk_profile_count": high_risk_count,
-        "sections": {
-            "guidance": guidance.get("items", []),
-            "high_risk": high_risk.get("sections", {}),
-        },
-        "high_risk_profile": high_risk,
-        "warnings": overlay_warnings,
-        "authority_boundary": {
-            "source": "local-overlay",
-            "rule": "Local overlay guidance may shape the acting checkout workflow, but it is not checked-in host policy.",
-        },
-    }
-
-
 def _local_config_display_path(*, path: Path, target_root: Path) -> str:
     try:
         return path.relative_to(target_root).as_posix()
@@ -2997,628 +1923,65 @@ def _resolve_shared_local_config_path(
 
 def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLocalOverride, list[str]]:
     local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
-    warnings: list[str] = []
     if not local_path.exists():
-        legacy_path = target_root / LEGACY_WORKSPACE_LOCAL_CONFIG_PATH
-        if legacy_path.exists():
-            local_path = legacy_path
-        else:
-            return empty_mixed_agent_local_override(path=local_path, exists=False), warnings
-
-    local_payload = load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
-
-    _validate_current_authoring(local_payload, local=True)
-    schema_version = local_payload.get("schema_version")
-    if schema_version not in (1, 2):
-        raise WorkspaceUsageError(
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 2 (current) or 1 (former) for the local mixed-agent override contract."
-        )
-    local_workspace_for_shared = _local_config_table(local_payload, "workspace")
-    shared_config_path = _resolve_shared_local_config_path(
-        raw_workspace=local_workspace_for_shared,
-        local_path=local_path,
-        target_root=target_root,
+        return empty_mixed_agent_local_override(path=local_path, exists=False), []
+    local = load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
+    _validate_current_authoring(local, local=True)
+    shared_path = _resolve_shared_local_config_path(
+        raw_workspace=local.get("workspace", {}), local_path=local_path, target_root=target_root
     )
-    shared_payload: dict[str, Any] | None = None
-    shared_config_exists = False
-    shared_config_applied = False
-    if shared_config_path is not None:
-        shared_config_exists = shared_config_path.exists()
-        shared_display = _local_config_display_path(path=shared_config_path, target_root=target_root)
-        if shared_config_exists:
-            shared_payload = load_toml_payload(path=shared_config_path, surface_name=shared_display)
-            _validate_current_authoring(shared_payload, local=True)
-            shared_schema_version = shared_payload.get("schema_version")
-            if shared_schema_version not in (1, 2):
-                raise WorkspaceUsageError(
-                    f"{shared_display} must set schema_version = 2 (current) or 1 (former) for the local mixed-agent override contract."
-                )
-            shared_config_applied = True
-        else:
-            warnings.append(
-                f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} workspace.shared_config_path points to missing file: {shared_display}."
-            )
-
-    payload = _merge_local_config_payloads(base=shared_payload or {}, override=local_payload)
-    field_sources: dict[str, str] = {}
-
-    unknown_top_level = sorted(
-        set(payload)
-        - {
-            "schema_version",
-            "workspace",
-            "runtime",
-            "handoff",
-            "safety",
-            "delegation",
-            "clarification",
-            "setup",
-            "local_scratch_retention",
-            "local_memory",
-            "session_logging",
-            "local_overlay",
-            "high_risk_overlay",
-            "delegation_targets",
-        }
-    )
-    if unknown_top_level:
-        unknown_text = ", ".join(unknown_top_level)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
-
-    raw_workspace = payload.get("workspace", {})
-    if raw_workspace is None:
-        raw_workspace = {}
-    if not isinstance(raw_workspace, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] section must be a table.")
-    unknown_workspace = sorted(set(raw_workspace) - {"enabled", "cli_invoke", "shared_config_path", "maintainer_mode"})
-    if unknown_workspace:
-        unknown_text = ", ".join(unknown_workspace)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] contains unsupported field(s): {unknown_text}.")
-    enabled = require_optional_bool(
-        payload=raw_workspace,
-        key="enabled",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    if enabled is not None:
-        field_sources["workspace.enabled"] = _local_config_field_source(
-            local_payload=local_payload,
-            shared_payload=shared_payload,
-            table="workspace",
-            key="enabled",
-        )
-    raw_cli_invoke = raw_workspace.get("cli_invoke")
-    cli_invoke = None
-    if raw_cli_invoke is not None:
-        if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
-            raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} workspace.cli_invoke must be a non-empty string.")
-        cli_invoke = raw_cli_invoke.strip()
-        field_sources["workspace.cli_invoke"] = _local_config_field_source(
-            local_payload=local_payload,
-            shared_payload=shared_payload,
-            table="workspace",
-            key="cli_invoke",
-        )
-    maintainer_mode = require_optional_bool(
-        payload=raw_workspace,
-        key="maintainer_mode",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    if maintainer_mode is not None:
-        field_sources["workspace.maintainer_mode"] = _local_config_field_source(
-            local_payload=local_payload,
-            shared_payload=shared_payload,
-            table="workspace",
-            key="maintainer_mode",
-        )
-
-    raw_runtime = payload.get("runtime", {})
-    if raw_runtime is None:
-        raw_runtime = {}
-    if not isinstance(raw_runtime, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [runtime] section must be a table.")
-    unknown_runtime = sorted(
-        set(raw_runtime) - {"supports_internal_delegation", "strong_planner_available", "cheap_bounded_executor_available"}
-    )
-    if unknown_runtime:
-        unknown_text = ", ".join(unknown_runtime)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [runtime] contains unsupported field(s): {unknown_text}.")
-
-    raw_handoff = payload.get("handoff", {})
-    if raw_handoff is None:
-        raw_handoff = {}
-    if not isinstance(raw_handoff, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [handoff] section must be a table.")
-    unknown_handoff = sorted(set(raw_handoff) - {"prefer_internal_delegation_when_available"})
-    if unknown_handoff:
-        unknown_text = ", ".join(unknown_handoff)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [handoff] contains unsupported field(s): {unknown_text}.")
-
-    raw_safety = payload.get("safety", {})
-    if raw_safety is None:
-        raw_safety = {}
-    if not isinstance(raw_safety, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] section must be a table.")
-    unknown_safety = sorted(set(raw_safety) - {"safe_to_auto_run_commands", "requires_human_verification_on_pr"})
-    if unknown_safety:
-        unknown_text = ", ".join(unknown_safety)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [safety] contains unsupported field(s): {unknown_text}.")
-
-    raw_delegation = payload.get("delegation", {})
-    if raw_delegation is None:
-        raw_delegation = {}
-    if not isinstance(raw_delegation, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation] section must be a table.")
-    legacy_delegation_fields = sorted(
-        field
-        for field in {
-            "mode",
-            "execution_role",
-            "selection_objective",
-            "underfit_behavior",
-            "down_routing_behavior",
-            "manual_transport_policy",
-        }
-        if field in raw_delegation
-    )
-    legacy_delegation_fields.extend(
-        field
-        for field, present in (
-            ("runtime.cheap_bounded_executor_available", "cheap_bounded_executor_available" in raw_runtime),
-            ("handoff.prefer_internal_delegation_when_available", "prefer_internal_delegation_when_available" in raw_handoff),
-        )
-        if present
-    )
-    if legacy_delegation_fields:
-        warnings.append(
-            "delegation-legacy-authoring/v1: compatibility-only field(s) "
-            f"{', '.join(legacy_delegation_fields)} are deprecated and scheduled for removal by "
-            f"{DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION}; migrate to canonical assignment/transport/override fields."
-        )
-    replacement = raw_delegation.get("replacement")
-    if replacement is not None:
-        fields = {
-            "assignment_id",
-            "assignment_revision",
-            "work_id",
-            "work_revision",
-            "target",
-            "transport",
-            "execution_revision",
-            "packet_integrity",
-        }
-        if (
-            not isinstance(replacement, dict)
-            or set(replacement) != fields
-            or any(not isinstance(v, str) or not v for v in replacement.values())
-            or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in replacement["assignment_id"])
-        ):
-            raise WorkspaceUsageError("delegation.replacement must be one exact revision-bound source-owner answer")
-    unknown_delegation = sorted(
-        set(raw_delegation)
-        - {
-            "mode",
-            "execution_role",
-            "assignment_policy",
-            "transport_authority",
-            "selection_objective",
-            "current_target",
-            "underfit_behavior",
-            "down_routing_behavior",
-            "human_override_policy",
-            "replacement",
-            "required_execution_guarantees",
-            "manual_transport_policy",
-        }
-    )
-    if unknown_delegation:
-        unknown_text = ", ".join(unknown_delegation)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation] contains unsupported field(s): {unknown_text}.")
-    delegation_mode = raw_delegation.get("mode")
-    if delegation_mode is not None:
-        if not isinstance(delegation_mode, str) or delegation_mode not in SUPPORTED_DELEGATION_CONTROL_MODES:
-            allowed_text = ", ".join(SUPPORTED_DELEGATION_CONTROL_MODES)
-            raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} delegation.mode must be one of: {allowed_text}.")
-        field_sources["delegation.mode"] = _local_config_field_source(
-            local_payload=local_payload,
-            shared_payload=shared_payload,
-            table="delegation",
-            key="mode",
-        )
-    execution_role = require_optional_enum_or_none(
-        payload=raw_delegation,
-        key="execution_role",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_ORCHESTRATION_EXECUTION_ROLES,
-    )
-    assignment_policy = require_optional_enum_or_none(
-        payload=raw_delegation,
-        key="assignment_policy",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_ASSIGNMENT_POLICIES,
-    )
-    transport_authority = require_optional_enum_or_none(
-        payload=raw_delegation,
-        key="transport_authority",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_TRANSPORT_AUTHORITIES,
-    )
-    selection_objective = require_optional_string(
-        payload=raw_delegation,
-        key="selection_objective",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    current_target = require_optional_string(
-        payload=raw_delegation,
-        key="current_target",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    underfit_behavior = require_optional_enum_or_none(
-        payload=raw_delegation,
-        key="underfit_behavior",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_UNDERFIT_BEHAVIORS,
-    )
-    down_routing_behavior = require_optional_enum_or_none(
-        payload=raw_delegation,
-        key="down_routing_behavior",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_DOWN_ROUTING_BEHAVIORS,
-    )
-    human_override_policy = require_optional_enum_or_none(
-        payload=raw_delegation,
-        key="human_override_policy",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_HUMAN_OVERRIDE_POLICIES,
-    )
-    manual_transport_policy = require_optional_enum_or_none(
-        payload=raw_delegation,
-        key="manual_transport_policy",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_MANUAL_TRANSPORT_POLICIES,
-    )
-
-    required_execution_guarantees = raw_delegation.get("required_execution_guarantees", [])
-    if (
-        not isinstance(required_execution_guarantees, list)
-        or len(required_execution_guarantees) > 32
-        or any(
-            not isinstance(value, str) or re.fullmatch(r"[a-z][a-z0-9._:-]{0,127}", value) is None
-            for value in required_execution_guarantees
-        )
-        or len(set(required_execution_guarantees)) != len(required_execution_guarantees)
-    ):
-        raise WorkspaceUsageError("delegation.required_execution_guarantees must be at most 32 unique bounded guarantee names")
-    if "required_execution_guarantees" in raw_delegation:
-        field_sources["delegation.required_execution_guarantees"] = _local_config_field_source(
-            local_payload=local_payload,
-            shared_payload=shared_payload,
-            table="delegation",
-            key="required_execution_guarantees",
-        )
-
-    raw_clarification = payload.get("clarification", {})
-    if raw_clarification is None:
-        raw_clarification = {}
-    if not isinstance(raw_clarification, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [clarification] section must be a table.")
-    unknown_clarification = sorted(set(raw_clarification) - {"mode"})
-    if unknown_clarification:
-        unknown_text = ", ".join(unknown_clarification)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [clarification] contains unsupported field(s): {unknown_text}.")
-    clarification_mode = raw_clarification.get("mode")
-    if clarification_mode is not None:
-        if not isinstance(clarification_mode, str) or clarification_mode not in SUPPORTED_CLARIFICATION_CONTROL_MODES:
-            allowed_text = ", ".join(SUPPORTED_CLARIFICATION_CONTROL_MODES)
-            raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} clarification.mode must be one of: {allowed_text}.")
-        field_sources["clarification.mode"] = _local_config_field_source(
-            local_payload=local_payload,
-            shared_payload=shared_payload,
-            table="clarification",
-            key="mode",
-        )
-
-    # Setup prompting disposition belongs to this checkout/user only. Do not
-    # inherit it from workspace.shared_config_path or promote it across agents.
-    raw_setup = local_payload.get("setup", {})
-    if raw_setup is None:
-        raw_setup = {}
-    if not isinstance(raw_setup, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [setup] section must be a table.")
-    unknown_setup = sorted(
-        set(raw_setup) - {"prompt_disposition", "setup_identity", "context_revision", "unresolved_concerns", "required_concerns"}
-    )
-    if unknown_setup:
-        unknown_text = ", ".join(unknown_setup)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [setup] contains unsupported field(s): {unknown_text}.")
-    setup_prompt_disposition = require_optional_enum_or_none(
-        payload=raw_setup,
-        key="prompt_disposition",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_SETUP_PROMPT_DISPOSITIONS,
-    )
-    setup_identity = require_optional_string(
-        payload=raw_setup,
-        key="setup_identity",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    setup_context_revision = require_optional_string(
-        payload=raw_setup,
-        key="context_revision",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    setup_unresolved_concerns = require_optional_string_list(
-        payload=raw_setup,
-        key="unresolved_concerns",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    setup_required_concerns = require_optional_string_list(
-        payload=raw_setup,
-        key="required_concerns",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-
-    raw_local_memory = payload.get("local_memory", {})
-    if raw_local_memory is None:
-        raw_local_memory = {}
-    if not isinstance(raw_local_memory, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_memory] section must be a table.")
-    unknown_local_memory = sorted(
-        set(raw_local_memory)
-        - {"enabled", "path", "target_guidance_enabled", "user_guidance_root", "target_guidance_overlay_path", "correction_events_path"}
-    )
-    if unknown_local_memory:
-        unknown_text = ", ".join(unknown_local_memory)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_memory] contains unsupported field(s): {unknown_text}.")
-
-    raw_session_logging = payload.get("session_logging", {})
-    if raw_session_logging is None:
-        raw_session_logging = {}
-    if not isinstance(raw_session_logging, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] section must be a table.")
-    unknown_session_logging = sorted(set(raw_session_logging) - {"enabled", "redact_local_paths", "path_mode"})
-    if unknown_session_logging:
-        unknown_text = ", ".join(unknown_session_logging)
-        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] contains unsupported field(s): {unknown_text}.")
-    if "redact_local_paths" in raw_session_logging and "path_mode" in raw_session_logging:
-        raise WorkspaceUsageError(
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} session_logging declares two writable path-mode owners: "
-            "keep path_mode and remove the compatibility-only redact_local_paths alias."
-        )
-    session_logging_enabled = require_optional_bool(
-        payload=raw_session_logging,
-        key="enabled",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    session_logging_redact_local_paths = require_optional_bool(
-        payload=raw_session_logging,
-        key="redact_local_paths",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    session_logging_path_mode = require_optional_enum(
-        payload=raw_session_logging,
-        key="path_mode",
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        allowed=SUPPORTED_SESSION_LOGGING_PATH_MODES,
-        default="redacted" if session_logging_redact_local_paths else "absolute",
-    )
-
-    raw_delegation_targets = payload.get("delegation_targets", {})
-    if raw_delegation_targets is None:
-        raw_delegation_targets = {}
-    if not isinstance(raw_delegation_targets, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation_targets] section must be a table.")
-    delegation_targets, delegation_target_warnings = load_delegation_target_profiles(
-        raw_targets=raw_delegation_targets,
-        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-    )
-    warnings.extend(delegation_target_warnings)
-    local_overlay = _normalize_local_overlay(
-        raw_overlay=payload.get("local_overlay", {}),
-        legacy_high_risk_overlay=payload.get("high_risk_overlay", {}),
-        local_payload=local_payload,
-        shared_payload=shared_payload,
-        warnings=warnings,
-    )
-    high_risk_overlay = local_overlay.get("high_risk_profile", {}) if isinstance(local_overlay, dict) else {}
-
-    return MixedAgentLocalOverride(
-        path=local_path,
-        exists=True,
-        applied=True,
-        shared_config_path=shared_config_path,
-        shared_config_exists=shared_config_exists,
-        shared_config_applied=shared_config_applied,
-        enabled=enabled,
-        cli_invoke=cli_invoke,
-        maintainer_mode=maintainer_mode,
-        supports_internal_delegation=require_optional_bool(
-            payload=raw_runtime,
-            key="supports_internal_delegation",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        strong_planner_available=require_optional_bool(
-            payload=raw_runtime,
-            key="strong_planner_available",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        cheap_bounded_executor_available=require_optional_bool(
-            payload=raw_runtime,
-            key="cheap_bounded_executor_available",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        prefer_internal_delegation_when_available=require_optional_bool(
-            payload=raw_handoff,
-            key="prefer_internal_delegation_when_available",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        safe_to_auto_run_commands=require_optional_bool(
-            payload=raw_safety,
-            key="safe_to_auto_run_commands",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        requires_human_verification_on_pr=require_optional_bool(
-            payload=raw_safety,
-            key="requires_human_verification_on_pr",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        delegation_mode=delegation_mode,
-        execution_role=execution_role,
-        assignment_policy=assignment_policy,
-        transport_authority=transport_authority,
-        selection_objective=selection_objective,
-        current_target=current_target,
-        underfit_behavior=underfit_behavior,
-        down_routing_behavior=down_routing_behavior,
-        human_override_policy=human_override_policy,
-        assignment_replacement=replacement,
-        required_execution_guarantees=tuple(sorted(required_execution_guarantees)),
-        manual_transport_policy=manual_transport_policy,
-        clarification_mode=clarification_mode,
-        setup_prompt_disposition=setup_prompt_disposition,
-        setup_identity=setup_identity,
-        setup_context_revision=setup_context_revision,
-        setup_unresolved_concerns=setup_unresolved_concerns,
-        setup_required_concerns=setup_required_concerns,
-        local_memory_enabled=require_optional_bool(
-            payload=raw_local_memory,
-            key="enabled",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        local_memory_path=require_optional_relative_path(
-            payload=raw_local_memory,
-            key="path",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-            default=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
-        ),
-        target_guidance_enabled=require_optional_bool(
-            payload=raw_local_memory,
-            key="target_guidance_enabled",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        user_guidance_root=require_optional_string(
-            payload=raw_local_memory,
-            key="user_guidance_root",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-        ),
-        target_guidance_overlay_path=require_optional_relative_path(
-            payload=raw_local_memory,
-            key="target_guidance_overlay_path",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-            default=WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH,
-        ),
-        correction_events_path=require_optional_relative_path(
-            payload=raw_local_memory,
-            key="correction_events_path",
-            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
-            default=WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH,
-        ),
-        session_logging=SessionLoggingConfig(
-            enabled=session_logging_enabled,
-            redact_local_paths=session_logging_path_mode == "redacted",
-            path_mode=session_logging_path_mode,
-            source=_local_config_field_source(
-                local_payload=local_payload,
-                shared_payload=shared_payload,
-                table="session_logging",
-                key="enabled",
-            )
-            if session_logging_enabled is not None
-            else "unset",
-        ),
-        delegation_targets=delegation_targets,
-        local_overlay=local_overlay,
-        high_risk_overlay=high_risk_overlay,
-        field_sources=field_sources
-        | {
-            field_path: _local_config_field_source(
-                local_payload=local_payload,
-                shared_payload=shared_payload,
-                table=table,
-                key=key,
-            )
-            for field_path, table, key, configured in (
-                (
-                    "runtime.supports_internal_delegation",
-                    "runtime",
-                    "supports_internal_delegation",
-                    raw_runtime.get("supports_internal_delegation"),
-                ),
-                (
-                    "runtime.strong_planner_available",
-                    "runtime",
-                    "strong_planner_available",
-                    raw_runtime.get("strong_planner_available"),
-                ),
-                (
-                    "runtime.cheap_bounded_executor_available",
-                    "runtime",
-                    "cheap_bounded_executor_available",
-                    raw_runtime.get("cheap_bounded_executor_available"),
-                ),
-                (
-                    "handoff.prefer_internal_delegation_when_available",
-                    "handoff",
-                    "prefer_internal_delegation_when_available",
-                    raw_handoff.get("prefer_internal_delegation_when_available"),
-                ),
-                (
-                    "safety.safe_to_auto_run_commands",
-                    "safety",
-                    "safe_to_auto_run_commands",
-                    raw_safety.get("safe_to_auto_run_commands"),
-                ),
-                (
-                    "safety.requires_human_verification_on_pr",
-                    "safety",
-                    "requires_human_verification_on_pr",
-                    raw_safety.get("requires_human_verification_on_pr"),
-                ),
-                ("delegation.execution_role", "delegation", "execution_role", raw_delegation.get("execution_role")),
-                ("delegation.assignment_policy", "delegation", "assignment_policy", raw_delegation.get("assignment_policy")),
-                ("delegation.transport_authority", "delegation", "transport_authority", raw_delegation.get("transport_authority")),
-                ("delegation.selection_objective", "delegation", "selection_objective", raw_delegation.get("selection_objective")),
-                ("delegation.current_target", "delegation", "current_target", raw_delegation.get("current_target")),
-                ("delegation.underfit_behavior", "delegation", "underfit_behavior", raw_delegation.get("underfit_behavior")),
-                ("delegation.down_routing_behavior", "delegation", "down_routing_behavior", raw_delegation.get("down_routing_behavior")),
-                ("delegation.human_override_policy", "delegation", "human_override_policy", raw_delegation.get("human_override_policy")),
-                (
-                    "delegation.manual_transport_policy",
-                    "delegation",
-                    "manual_transport_policy",
-                    raw_delegation.get("manual_transport_policy"),
-                ),
-                ("local_memory.enabled", "local_memory", "enabled", raw_local_memory.get("enabled")),
-                ("local_memory.path", "local_memory", "path", raw_local_memory.get("path")),
-                (
-                    "local_memory.target_guidance_enabled",
-                    "local_memory",
-                    "target_guidance_enabled",
-                    raw_local_memory.get("target_guidance_enabled"),
-                ),
-                ("local_memory.user_guidance_root", "local_memory", "user_guidance_root", raw_local_memory.get("user_guidance_root")),
-                (
-                    "local_memory.target_guidance_overlay_path",
-                    "local_memory",
-                    "target_guidance_overlay_path",
-                    raw_local_memory.get("target_guidance_overlay_path"),
-                ),
-                (
-                    "local_memory.correction_events_path",
-                    "local_memory",
-                    "correction_events_path",
-                    raw_local_memory.get("correction_events_path"),
-                ),
-                ("session_logging.enabled", "session_logging", "enabled", raw_session_logging.get("enabled")),
-                (
-                    "session_logging.redact_local_paths",
-                    "session_logging",
-                    "redact_local_paths",
-                    raw_session_logging.get("redact_local_paths"),
-                ),
-                ("session_logging.path_mode", "session_logging", "path_mode", raw_session_logging.get("path_mode")),
-            )
-            if configured is not None
+    shared: dict[str, Any] = {}
+    if shared_path is not None:
+        if not shared_path.is_file():
+            raise WorkspaceUsageError("Configured shared-local source is unavailable.")
+        shared = load_toml_payload(path=shared_path, surface_name="Shared-local configuration")
+        _validate_current_authoring(shared, local=True)
+    payload = _merge_local_config_payloads(base=shared, override=local)
+    _validate_current_authoring(payload, local=True)
+    values: dict[str, Any] = {}
+    sources: dict[str, str] = {}
+    for table, keys in {
+        "workspace": {"enabled": "enabled", "cli_invoke": "cli_invoke"},
+        "safety": {
+            "safe_to_auto_run_commands": "safe_to_auto_run_commands",
+            "requires_human_verification_on_pr": "requires_human_verification_on_pr",
         },
+        "delegation": {
+            key: key
+            for key in (
+                "assignment_policy",
+                "transport_authority",
+                "current_target",
+                "human_override_policy",
+                "required_execution_guarantees",
+            )
+        },
+        "clarification": {"mode": "clarification_mode"},
+    }.items():
+        for key, attribute in keys.items():
+            if key in payload.get(table, {}):
+                value = payload[table][key]
+                values[attribute] = tuple(value) if key == "required_execution_guarantees" else value
+                sources[f"{table}.{key}"] = _local_config_field_source(local_payload=local, shared_payload=shared, table=table, key=key)
+    logging = payload.get("session_logging", {})
+    mode = logging.get("path_mode", "absolute")
+    profiles, warnings = load_delegation_target_profiles(
+        raw_targets=payload.get("delegation_targets", {}), config_path=WORKSPACE_LOCAL_CONFIG_PATH
+    )
+    return replace(
+        empty_mixed_agent_local_override(path=local_path, exists=True),
+        applied=bool(payload),
+        shared_config_path=shared_path,
+        shared_config_exists=shared_path is not None,
+        shared_config_applied=bool(shared),
+        field_sources=sources,
+        delegation_targets=profiles,
+        session_logging=SessionLoggingConfig(
+            enabled=logging.get("enabled"),
+            path_mode=mode,
+            source=_local_config_field_source(local_payload=local, shared_payload=shared, table="session_logging", key="enabled"),
+        ),
+        **values,
     ), warnings
 
 
@@ -3689,408 +2052,76 @@ def _verification_assurance_source(effective_root: Path, raw_assurance: Any) -> 
             if strategy.get("schema_version") != "agentic-workspace/verification-manifest/v1":
                 raise WorkspaceUsageError("Invalid Verification strategy source version.")
             owned = strategy["assurance"]
-            if not isinstance(owned, dict) or set(owned) - {"proof_profiles", "domain_proof_lanes", "requirements", "subsystem_profiles"}:
-                raise WorkspaceUsageError("Verification assurance contains unsupported owner fields.")
-            requirements = owned.get("requirements", {})
-            if not isinstance(requirements, dict):
-                raise WorkspaceUsageError("Verification requirements must be a table.")
-            for requirement in requirements.values():
-                if isinstance(requirement, dict) and {"waiver", "dismissal", "source_intent_current"} & requirement.keys():
-                    raise WorkspaceUsageError("Verification policy cannot contain recorded outcomes or currentness.")
+            from importlib.resources import files
+
+            from jsonschema import Draft202012Validator
+
+            schema = json.loads(
+                files("repo_verification_bootstrap").joinpath("contracts/assurance.schema.json").read_text(encoding="utf-8")
+            )
+            if not Draft202012Validator(schema).is_valid(owned):
+                raise WorkspaceUsageError("Invalid Verification assurance source.")
             for field, value in owned.items():
-                if field in raw_assurance:
-                    raise WorkspaceUsageError(f"Competing Verification {field} sources: config and manifest; preserve both.")
                 raw_assurance[field] = value
     return raw_assurance
 
 
 def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None = None) -> WorkspaceConfig:
-    defaults = default_module_update_policies()
-    if valid_presets is None:
-        from agentic_workspace.module_contract import discover_module_contracts
-
-        valid_presets = set(SUPPORTED_CORE_MODULES)
-        valid_presets.update(module.name for module in discover_module_contracts() if module.contract)
-
-    # Discovery logic
-    discovered_root = discover_workspace_root(target_root)
-    effective_root = discovered_root or target_root
-
-    config_path = effective_root / WORKSPACE_CONFIG_PATH
-    if not config_path.exists():
-        legacy_config_path = effective_root / LEGACY_WORKSPACE_CONFIG_PATH
-        if legacy_config_path.exists():
-            config_path = legacy_config_path
-    local_override, local_warnings = load_mixed_agent_local_override(target_root=effective_root)
-    warnings = list(local_warnings)
-
-    enabled_modules = DEFAULT_ENABLED_MODULES
-    configured_agent_instructions_file: str | None = None
-    workflow_artifact_profile = DEFAULT_WORKFLOW_ARTIFACT_PROFILE
-    workflow_artifact_profile_source = "product-default"
-    enabled = True
-    enabled_source = "product-default"
-    improvement_latitude = DEFAULT_IMPROVEMENT_LATITUDE
-    improvement_latitude_source = "product-default"
-    optimization_bias = DEFAULT_OPTIMIZATION_BIAS
-    optimization_bias_source = "product-default"
-    advanced_features: tuple[str, ...] = ()
-    advanced_features_source = "product-default"
-    maintainer_mode = DEFAULT_MAINTAINER_MODE
-    maintainer_mode_source = "product-default"
-    cli_invoke = DEFAULT_CLI_INVOKE
-    cli_invoke_source = "product-default"
-    assurance, assurance_warnings = _load_assurance_config(raw_assurance={}, config_path=WORKSPACE_CONFIG_PATH)
-    warnings.extend(assurance_warnings)
-    cli_compatibility, cli_compatibility_warnings = _load_cli_compatibility_expectation(
-        raw_cli_compatibility={},
-        config_path=WORKSPACE_CONFIG_PATH,
-    )
-    warnings.extend(cli_compatibility_warnings)
-    payload_target, payload_target_warnings = _load_payload_target_config(
-        raw_payload={},
-        config_path=WORKSPACE_CONFIG_PATH,
-    )
-    warnings.extend(payload_target_warnings)
-    if local_override.enabled is not None:
-        enabled = local_override.enabled
-        enabled_source = local_override.field_sources.get("workspace.enabled", "local-override")
-    if local_override.cli_invoke is not None:
-        cli_invoke = local_override.cli_invoke
-        cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
-    if local_override.maintainer_mode is not None:
-        maintainer_mode = local_override.maintainer_mode
-        maintainer_mode_source = local_override.field_sources.get("workspace.maintainer_mode", "local-override")
-
-    if not config_path.exists():
-        assurance, assurance_warnings = _load_assurance_config(
-            raw_assurance=_verification_assurance_source(effective_root, {}), config_path=WORKSPACE_CONFIG_PATH
-        )
-        warnings.extend(assurance_warnings)
-        agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
-            target_root=effective_root,
-            configured=None,
-        )
-        return WorkspaceConfig(
-            target_root=effective_root,
-            path=config_path,
-            exists=False,
-            schema_version=1,
-            enabled=enabled,
-            enabled_source=enabled_source,
-            enabled_modules=enabled_modules,
-            agent_instructions_file=agent_instructions_file,
-            agent_instructions_source=agent_instructions_source,
-            workflow_artifact_profile=workflow_artifact_profile,
-            workflow_artifact_profile_source=workflow_artifact_profile_source,
-            improvement_latitude=improvement_latitude,
-            improvement_latitude_source=improvement_latitude_source,
-            optimization_bias=optimization_bias,
-            optimization_bias_source=optimization_bias_source,
-            advanced_features=advanced_features,
-            advanced_features_source=advanced_features_source,
-            maintainer_mode=maintainer_mode,
-            maintainer_mode_source=maintainer_mode_source,
-            cli_invoke=cli_invoke,
-            cli_invoke_source=cli_invoke_source,
-            detected_agent_instructions_files=detected_agent_instruction_files,
-            update_modules=defaults,
-            workflow_obligations=(),
-            system_intent=SystemIntentDeclaration(
-                sources=tuple(path.as_posix() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES if (effective_root / path).exists()),
-                sources_source=(
-                    "autodetected-existing"
-                    if any((effective_root / path).exists() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES)
-                    else "product-default"
-                ),
-                preferred_source=next(
-                    (path.as_posix() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES if (effective_root / path).exists()),
-                    None,
-                ),
-                preferred_source_source=(
-                    "autodetected-existing"
-                    if any((effective_root / path).exists() for path in SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES)
-                    else "product-default"
-                ),
-            ),
-            assurance=assurance,
-            cli_compatibility=cli_compatibility,
-            payload_target=payload_target,
-            local_override=local_override,
-            warnings=tuple(warnings),
-        )
-
-    try:
-        payload = load_toml_payload(path=config_path, surface_name=WORKSPACE_CONFIG_PATH.as_posix())
-    except WorkspaceUsageError:
-        text = config_path.read_text(encoding="utf-8-sig", errors="replace")
-        if not any(marker in text for marker in ("<<<<<<< ", "=======", ">>>>>>> ")):
-            raise
-        warnings.append(
-            f"{WORKSPACE_CONFIG_PATH.as_posix()} contains git merge conflict markers; "
-            "using product defaults only so doctor/report can route semantic recovery."
-        )
-        payload: dict[str, Any] = {"schema_version": 1}
-
+    effective_root = discover_workspace_root(target_root) or target_root
+    path = effective_root / WORKSPACE_CONFIG_PATH
+    payload = load_toml_payload(path=path, surface_name=WORKSPACE_CONFIG_PATH.as_posix()) if path.exists() else {}
     _validate_current_authoring(payload, local=False)
-    schema_version = payload.get("schema_version")
-    if schema_version not in (1, 2):
-        raise WorkspaceUsageError(
-            f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 2 (current) or 1 (former) for the workspace config contract."
-        )
+    local, warnings = load_mixed_agent_local_override(target_root=effective_root)
+    workspace = payload.get("workspace", {})
 
-    unknown_top_level = sorted(
-        set(payload)
-        - {
-            "schema_version",
-            "workspace",
-            "modules",
-            "update",
-            "workflow_obligations",
-            "system_intent",
-            "assurance",
-            "cli_compatibility",
-            "payload",
-        }
+    def selected(key: str, default: Any) -> tuple[Any, str]:
+        override = getattr(local, key, None)
+        if override is not None:
+            return override, local.field_sources.get(f"workspace.{key}", "local-override")
+        return workspace.get(key, default), "repo-config" if key in workspace else "product-default"
+
+    enabled, enabled_source = selected("enabled", True)
+    invoke, invoke_source = selected("cli_invoke", DEFAULT_CLI_INVOKE)
+    profile, profile_source = selected("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE)
+    latitude, latitude_source = selected("improvement_latitude", DEFAULT_IMPROVEMENT_LATITUDE)
+    instruction, instruction_source, detected = resolve_effective_agent_instructions_file(
+        target_root=effective_root, configured=workspace.get("agent_instructions_file")
     )
-    if unknown_top_level:
-        unknown_text = ", ".join(unknown_top_level)
-        warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} contains unsupported top-level field(s): {unknown_text}.")
-
-    raw_workspace = payload.get("workspace", {})
-    if raw_workspace is None:
-        raw_workspace = {}
-    if not isinstance(raw_workspace, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [workspace] section must be a table.")
-
-    # Relaxed: Warn about unknown workspace fields
-    unknown_workspace = sorted(
-        set(raw_workspace)
-        - {
-            "agent_instructions_file",
-            "enabled",
-            "workflow_artifact_profile",
-            "improvement_latitude",
-            "optimization_bias",
-            "advanced_features",
-            "maintainer_mode",
-            "cli_invoke",
-        }
+    intent, intent_warnings = resolve_system_intent_declaration(
+        target_root=effective_root, raw_system_intent=payload.get("system_intent", {}), config_path=WORKSPACE_CONFIG_PATH
     )
-    if unknown_workspace:
-        unknown_text = ", ".join(unknown_workspace)
-        warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} [workspace] contains unsupported field(s): {unknown_text}.")
-
-    if "default_preset" in raw_workspace:
-        raise WorkspaceUsageError(
-            f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.default_preset is no longer supported; use [modules] enabled = [...] instead."
-        )
-    raw_enabled_modules_section = payload.get("modules", {})
-    if raw_enabled_modules_section is None:
-        raw_enabled_modules_section = {}
-    if not isinstance(raw_enabled_modules_section, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [modules] section must be a table.")
-    unknown_enabled_module_fields = sorted(set(raw_enabled_modules_section) - {"enabled"})
-    if unknown_enabled_module_fields:
-        unknown_text = ", ".join(unknown_enabled_module_fields)
-        warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} [modules] contains unsupported field(s): {unknown_text}.")
-    if "enabled" in raw_enabled_modules_section:
-        enabled_modules = validate_enabled_modules(
-            raw_enabled_modules_section["enabled"],
-            config_path=WORKSPACE_CONFIG_PATH,
-            known_modules=tuple(sorted(valid_presets)) if valid_presets else SUPPORTED_CORE_MODULES,
-        )
-
-    raw_agent_instructions_file = raw_workspace.get("agent_instructions_file")
-    if raw_agent_instructions_file is not None:
-        configured_agent_instructions_file = validate_agent_instructions_filename(str(raw_agent_instructions_file))
-    raw_enabled = raw_workspace.get("enabled")
-    if raw_enabled is not None:
-        if not isinstance(raw_enabled, bool):
-            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.enabled must be true or false.")
-        enabled = raw_enabled
-        enabled_source = "repo-config"
-    raw_workflow_artifact_profile = raw_workspace.get("workflow_artifact_profile")
-    if raw_workflow_artifact_profile is not None:
-        workflow_artifact_profile = validate_workflow_artifact_profile(str(raw_workflow_artifact_profile))
-        workflow_artifact_profile_source = "repo-config"
-    raw_improvement_latitude = raw_workspace.get("improvement_latitude")
-    if raw_improvement_latitude is not None:
-        improvement_latitude = validate_improvement_latitude(str(raw_improvement_latitude))
-        improvement_latitude_source = "repo-config"
-    raw_optimization_bias = raw_workspace.get("optimization_bias")
-    if raw_optimization_bias is not None:
-        optimization_bias = validate_optimization_bias(str(raw_optimization_bias))
-        optimization_bias_source = "repo-config"
-    configured_advanced_features = require_optional_string_list(
-        payload=raw_workspace,
-        key="advanced_features",
-        config_path=WORKSPACE_CONFIG_PATH,
-        allowed=SUPPORTED_ADVANCED_FEATURES,
-    )
-    if configured_advanced_features:
-        advanced_features = configured_advanced_features
-        advanced_features_source = "repo-config"
-    raw_maintainer_mode = raw_workspace.get("maintainer_mode")
-    if raw_maintainer_mode is not None:
-        if not isinstance(raw_maintainer_mode, bool):
-            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.maintainer_mode must be true or false.")
-        maintainer_mode = raw_maintainer_mode
-        maintainer_mode_source = "repo-config"
-    raw_cli_invoke = raw_workspace.get("cli_invoke")
-    if raw_cli_invoke is not None:
-        if not isinstance(raw_cli_invoke, str) or not raw_cli_invoke.strip():
-            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.cli_invoke must be a non-empty string.")
-        cli_invoke = raw_cli_invoke.strip()
-        cli_invoke_source = "repo-config"
-    if local_override.cli_invoke is not None:
-        cli_invoke = local_override.cli_invoke
-        cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
-    if local_override.enabled is not None:
-        enabled = local_override.enabled
-        enabled_source = local_override.field_sources.get("workspace.enabled", "local-override")
-    if local_override.maintainer_mode is not None:
-        maintainer_mode = local_override.maintainer_mode
-        maintainer_mode_source = local_override.field_sources.get("workspace.maintainer_mode", "local-override")
-
-    update_modules = dict(defaults)
-    raw_update = payload.get("update", {})
-    if raw_update is None:
-        raw_update = {}
-    if not isinstance(raw_update, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [update] section must be a table.")
-
-    # Relaxed: Warn about unknown update fields
-    unknown_update = sorted(set(raw_update) - {"modules"})
-    if unknown_update:
-        unknown_text = ", ".join(unknown_update)
-        warnings.append(f"{WORKSPACE_CONFIG_PATH.as_posix()} [update] contains unsupported field(s): {unknown_text}.")
-
-    raw_modules = raw_update.get("modules", {})
-    if raw_modules is None:
-        raw_modules = {}
-    if not isinstance(raw_modules, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [update.modules] section must be a table.")
-
-    unknown_modules = [module_name for module_name in raw_modules if module_name not in defaults]
-    if unknown_modules:
-        supported = ", ".join(sorted(defaults))
-        unknown = ", ".join(sorted(unknown_modules))
-        raise WorkspaceUsageError(
-            f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules contains unknown module(s): {unknown}. Supported modules: {supported}."
-        )
-
-    for module_name, module_payload in raw_modules.items():
-        if not isinstance(module_payload, dict):
-            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [update.modules.{module_name}] must be a table.")
-
-        # Relaxed: Warn about unknown module update fields
-        unknown_module_fields = sorted(
-            set(module_payload) - {"source_type", "source_ref", "source_label", "recommended_upgrade_after_days"}
-        )
-        if unknown_module_fields:
-            unknown_text = ", ".join(unknown_module_fields)
-            warnings.append(
-                f"{WORKSPACE_CONFIG_PATH.as_posix()} [update.modules.{module_name}] contains unsupported field(s): {unknown_text}."
-            )
-
-        default_policy = defaults[module_name]
-        source_type = str(module_payload.get("source_type", default_policy.source_type)).strip() or default_policy.source_type
-        if source_type not in {"git", "local"}:
-            raise WorkspaceUsageError(
-                f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.source_type must be `git` or `local`."
-            )
-        source_ref = str(module_payload.get("source_ref", default_policy.source_ref)).strip()
-        if not source_ref:
-            raise WorkspaceUsageError(
-                f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.source_ref must be a non-empty string."
-            )
-        source_label = str(module_payload.get("source_label", default_policy.source_label)).strip() or default_policy.source_label
-        recommended_upgrade_after_days = module_payload.get("recommended_upgrade_after_days", default_policy.recommended_upgrade_after_days)
-        if not isinstance(recommended_upgrade_after_days, int):
-            raise WorkspaceUsageError(
-                f"{WORKSPACE_CONFIG_PATH.as_posix()} update.modules.{module_name}.recommended_upgrade_after_days must be an integer."
-            )
-        update_modules[module_name] = ModuleUpdatePolicy(
-            module=module_name,
-            source_type=source_type,
-            source_ref=source_ref,
-            source_label=source_label,
-            recommended_upgrade_after_days=recommended_upgrade_after_days,
-            source="repo-config",
-        )
-
-    raw_workflow_obligations = payload.get("workflow_obligations", {})
-    if raw_workflow_obligations is None:
-        raw_workflow_obligations = {}
-    if not isinstance(raw_workflow_obligations, dict):
-        raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} [workflow_obligations] section must be a table.")
-    workflow_obligations, workflow_obligation_warnings = load_workflow_obligations(
-        raw_obligations=raw_workflow_obligations,
-        config_path=WORKSPACE_CONFIG_PATH,
-    )
-    warnings.extend(workflow_obligation_warnings)
-    system_intent, system_intent_warnings = resolve_system_intent_declaration(
-        target_root=effective_root,
-        raw_system_intent=payload.get("system_intent", {}),
-        config_path=WORKSPACE_CONFIG_PATH,
-    )
-    warnings.extend(system_intent_warnings)
-    raw_assurance = _verification_assurance_source(effective_root, payload.get("assurance", {}))
     assurance, assurance_warnings = _load_assurance_config(
-        raw_assurance=raw_assurance,
-        config_path=WORKSPACE_CONFIG_PATH,
+        raw_assurance=_verification_assurance_source(effective_root, payload.get("assurance", {})), config_path=WORKSPACE_CONFIG_PATH
     )
-    warnings.extend(assurance_warnings)
-    cli_compatibility, cli_compatibility_warnings = _load_cli_compatibility_expectation(
-        raw_cli_compatibility=payload.get("cli_compatibility", {}),
-        config_path=WORKSPACE_CONFIG_PATH,
-    )
-    warnings.extend(cli_compatibility_warnings)
-    payload_target, payload_target_warnings = _load_payload_target_config(
-        raw_payload=payload.get("payload", {}),
-        config_path=WORKSPACE_CONFIG_PATH,
-    )
-    warnings.extend(payload_target_warnings)
-    _validate_installed_capability_ownership(
-        cli_compatibility=cli_compatibility,
-        payload_target=payload_target,
-        config_path=WORKSPACE_CONFIG_PATH,
-    )
-
-    agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
-        target_root=effective_root,
-        configured=configured_agent_instructions_file,
+    payload_target, payload_warnings = _load_payload_target_config(
+        raw_payload=payload.get("payload", {}), config_path=WORKSPACE_CONFIG_PATH
     )
     return WorkspaceConfig(
         target_root=effective_root,
-        path=config_path,
-        exists=True,
-        schema_version=1,
+        path=path,
+        exists=path.exists(),
         enabled=enabled,
         enabled_source=enabled_source,
-        enabled_modules=enabled_modules,
-        agent_instructions_file=agent_instructions_file,
-        agent_instructions_source=agent_instructions_source,
-        workflow_artifact_profile=workflow_artifact_profile,
-        workflow_artifact_profile_source=workflow_artifact_profile_source,
-        improvement_latitude=improvement_latitude,
-        improvement_latitude_source=improvement_latitude_source,
-        optimization_bias=optimization_bias,
-        optimization_bias_source=optimization_bias_source,
-        advanced_features=advanced_features,
-        advanced_features_source=advanced_features_source,
-        maintainer_mode=maintainer_mode,
-        maintainer_mode_source=maintainer_mode_source,
-        cli_invoke=cli_invoke,
-        cli_invoke_source=cli_invoke_source,
-        detected_agent_instructions_files=detected_agent_instruction_files,
-        update_modules=update_modules,
-        workflow_obligations=workflow_obligations,
-        system_intent=system_intent,
+        enabled_modules=tuple(payload.get("modules", {}).get("enabled", DEFAULT_ENABLED_MODULES)),
+        agent_instructions_file=instruction,
+        agent_instructions_source=instruction_source,
+        detected_agent_instructions_files=detected,
+        workflow_artifact_profile=profile,
+        workflow_artifact_profile_source=profile_source,
+        improvement_latitude=latitude,
+        improvement_latitude_source=latitude_source,
+        cli_invoke=invoke,
+        cli_invoke_source=invoke_source,
+        optimization_bias=DEFAULT_OPTIMIZATION_BIAS,
+        optimization_bias_source="product-default",
+        advanced_features=(),
+        advanced_features_source="product-default",
+        maintainer_mode=False,
+        maintainer_mode_source="product-default",
+        update_modules=default_module_update_policies(),
+        system_intent=intent,
         assurance=assurance,
-        cli_compatibility=cli_compatibility,
         payload_target=payload_target,
-        local_override=local_override,
-        warnings=tuple(warnings),
+        local_override=local,
+        warnings=tuple(warnings + intent_warnings + assurance_warnings + payload_warnings),
     )

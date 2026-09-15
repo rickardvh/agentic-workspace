@@ -20,15 +20,13 @@ def configure(target: Path, *, task: str) -> None:
             cached_projection.unlink()
     config_path = target / ".agentic-workspace" / "config.local.toml"
     text = config_path.read_text(encoding="utf-8")
-    marker = '[delegation]\nmode = "auto"'
+    marker = '[delegation]\ntransport_authority = "automatic"'
     replacement = "\n".join(
         [
             "[delegation]",
-            'mode = "auto"',
-            'execution_role = "orchestrator"',
+            'transport_authority = "automatic"',
             'assignment_policy = "required-best-fit"',
             'current_target = "strong_planner"',
-            'manual_transport_policy = "allowed"',
         ]
     )
     if marker not in text:

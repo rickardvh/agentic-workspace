@@ -24,7 +24,6 @@ from agentic_workspace.operating_decision import (
     _resolve_context_authority_source,
     admit_projection_surface_decision_input,
     bind_operation_invocation_to_authorities,
-    bind_projection_surface_operating_decision,
     classify_context_currentness,
     compile_context_maintenance_decision,
     compile_operating_decision,
@@ -371,87 +370,6 @@ def test_repo_improvement_action_is_one_canonical_operating_decision_dimension_a
     }
     assert all(item["repo_improvement_action"] == decisions[0]["repo_improvement_action"] for item in decisions)
     assert all(item["producer_function"] == "compile_operating_decision" for item in decisions)
-
-
-def test_enforcing_workflow_requirement_narrows_completion_without_blocking_unrelated_work() -> None:
-    admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="start")
-    payload = {
-        "decision_packet": {
-            "effects": {"completion_claim_allowed": True, "blocked_claims": []},
-            "claim_boundary": {"completion_claim": "allowed-after-proof"},
-            "reasons": [],
-        },
-        "workflow_obligations": {
-            "relevant_to_current_work": [
-                {"id": "required-review", "force": "required-before-closeout"},
-            ]
-        },
-    }
-
-    decision = compile_projection_surface_operating_decision(
-        payload=payload,
-        admitted_input=admitted,
-        consumer="start",
-    )
-
-    assert decision["external_blocker"].get("owner") != "workspace-config-workflow-obligations"
-    assert decision["external_blocker"].get("reason_code") != "missing-capability"
-    assert decision["blocked_claim_classes"] == ["claim-work-complete"]
-    claim_blockers = decision["instruction_clause_projection"]["blockers"]
-    assert claim_blockers == [
-        {
-            "reason_code": "missing-capability",
-            "owner": "workspace-config-workflow-obligations",
-            "repair": "satisfy human:workflow-obligation-disposition:required-review through its source owner",
-            "clause_id": "adapter:bounded_controls:required-review",
-            "target": "claim:claim-work-complete",
-        }
-    ]
-
-    bound = bind_projection_surface_operating_decision(
-        payload=payload,
-        admitted_input=admitted,
-        operating_decision=decision,
-        consumer="start",
-    )
-    packet = bound["decision_packet"]
-    assert packet["effects"]["completion_claim_allowed"] is False
-    assert packet["effects"]["blocked_claims"] == ["claim-work-complete"]
-    assert packet["claim_boundary"]["completion_claim"] == "blocked-until-proof-and-acceptance"
-    assert packet["claim_blockers"] == claim_blockers
-    assert packet["reasons"] == ["instruction_requirement_unsatisfied"]
-
-
-def test_advisory_workflow_obligation_does_not_narrow_completion() -> None:
-    admitted = admit_projection_surface_decision_input(input_revisions={"current_work": "rev-a"}, consumer="start")
-    payload = {
-        "decision_packet": {
-            "effects": {"completion_claim_allowed": True, "blocked_claims": []},
-            "claim_boundary": {"completion_claim": "allowed-after-proof"},
-            "reasons": [],
-        },
-        "workflow_obligations": {
-            "relevant_to_current_work": [
-                {"id": "suggested-review", "force": "recommended"},
-            ]
-        },
-    }
-
-    decision = compile_projection_surface_operating_decision(
-        payload=payload,
-        admitted_input=admitted,
-        consumer="start",
-    )
-    bound = bind_projection_surface_operating_decision(
-        payload=payload,
-        admitted_input=admitted,
-        operating_decision=decision,
-        consumer="start",
-    )
-
-    assert decision["instruction_clause_projection"]["blockers"] == []
-    assert decision["blocked_claim_classes"] == []
-    assert bound["decision_packet"]["effects"]["completion_claim_allowed"] is True
 
 
 def test_selected_current_assignment_preserves_existing_implement_action() -> None:
@@ -2064,12 +1982,11 @@ def _write_context_authority_sources(root: Path) -> None:
         encoding="utf-8",
     )
     (root / "AGENTS.md").write_text(
-        "Authority marker:\n\n<!-- agentic-workspace:workflow:start -->\nOrdinary route:\n<!-- agentic-workspace:workflow:end -->\n",
+        cli._workspace_agents_template(selected_modules=[], descriptors={}),
         encoding="utf-8",
     )
     (root / ".agentic-workspace/config.toml").write_text(
         """
-schema_version = 1
 
 [modules]
 enabled = ["planning", "memory", "verification"]
@@ -3031,9 +2948,9 @@ def test_repeated_owner_resolution_is_quiet_across_representative_owner_classes(
     assert repeated_generated["refresh_operation"]["status"] == "not-required"
 
 
-def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_path: Path) -> None:
+def test_context_authority_rejects_invalid_current_configuration(tmp_path: Path) -> None:
     _write_context_authority_sources(tmp_path)
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("[workspace]\nenabled = 'invalid'\n", encoding="utf-8")
 
     projection = resolve_context_authority_projection(
         consumer="start",
@@ -3042,7 +2959,7 @@ def test_context_authority_rejects_parseable_file_without_owner_boundary(tmp_pat
     )
 
     target_guidance = next(item for item in projection["excluded_authorities"] if item["surface"] == "target-guidance")
-    assert target_guidance["reason"] == "owner-source-required-key-missing"
+    assert target_guidance["reason"] == "owner-source-schema-invalid"
 
 
 def test_context_authority_rejects_unknown_planning_and_mutation_statuses(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

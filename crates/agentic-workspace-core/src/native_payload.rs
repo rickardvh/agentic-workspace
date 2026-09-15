@@ -57,8 +57,7 @@ pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
         .is_some_and(|s| !s.is_empty())
         || policy["minimum_capabilities"]
             .as_array()
-            .is_some_and(|v| !v.is_empty())
-        || policy["dogfood_latest"] == true;
+            .is_some_and(|v| !v.is_empty());
     if !configured {
         return Ok(json!({"status":"not-configured","blockers":[]}));
     }
@@ -146,6 +145,6 @@ pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
         json!([])
     };
     Ok(
-        json!({"status":if satisfied{"satisfied"}else{"unresolved"},"revision":digest(&json!({"policy":policy,"observations":observations,"gaps":gaps}))?,"policy":policy,"current_policy":{"target_release":policy["target_release"].as_str().unwrap_or("source-current"),"minimum_capabilities":policy["minimum_capabilities"].as_array().cloned().unwrap_or_default(),"policy":policy["policy"].as_str().unwrap_or("advisory")},"former_derivation":if policy["dogfood_latest"]==true {"Exact artifact-following target represented by target_release=source-current when no explicit target was selected; preserve any explicit target and floor."} else {"none"},"artifact_version":version,"observations":observations,"gaps":gaps,"blockers":blockers,"authority":"read-only target conformance; no mutation, proof or completion custody"}),
+        json!({"status":if satisfied{"satisfied"}else{"unresolved"},"revision":digest(&json!({"policy":policy,"observations":observations,"gaps":gaps}))?,"policy":policy,"current_policy":{"target_release":policy["target_release"].as_str().unwrap_or("source-current"),"minimum_capabilities":policy["minimum_capabilities"].as_array().cloned().unwrap_or_default(),"policy":policy["policy"].as_str().unwrap_or("advisory")},"artifact_version":version,"observations":observations,"gaps":gaps,"blockers":blockers,"authority":"read-only target conformance; no mutation, proof or completion custody"}),
     )
 }

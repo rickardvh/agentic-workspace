@@ -31,12 +31,11 @@ pub fn resolve(input: &Value) -> Result<Value, CoreError> {
     if transport.is_some_and(|v| !matches!(v, "manual" | "automatic")) {
         return Err(CoreError::new("unknown transport authority"));
     }
-    let mode = transport
-        .map(|v| if v == "automatic" { "auto" } else { "manual" })
-        .unwrap_or_else(|| policy["mode"].as_str().unwrap_or("suggest"));
-    if !["off", "manual", "suggest", "auto"].contains(&mode) {
-        return Err(CoreError::new("unknown former delegation mode"));
-    }
+    let mode = match transport {
+        Some("automatic") => "auto",
+        Some("manual") => "manual",
+        _ => "suggest",
+    };
     let override_policy = policy["human_override_policy"]
         .as_str()
         .unwrap_or("explicit-only");
@@ -49,16 +48,11 @@ pub fn resolve(input: &Value) -> Result<Value, CoreError> {
     {
         return Err(CoreError::new("unknown human override policy"));
     }
-    let manual = match transport {
-        Some("automatic") => "required-when-no-automatic-method",
-        Some("manual") => "allowed",
-        _ => policy["manual_transport_policy"]
-            .as_str()
-            .unwrap_or("allowed"),
+    let manual = if transport == Some("automatic") {
+        "required-when-no-automatic-method"
+    } else {
+        "allowed"
     };
-    if !["disabled", "allowed", "required-when-no-automatic-method"].contains(&manual) {
-        return Err(CoreError::new("unknown manual transport policy"));
-    }
     let current = policy["current_target"].as_str();
     let matches: Vec<&Value> = input["profiles"]
         .as_array()
@@ -90,7 +84,7 @@ pub fn resolve(input: &Value) -> Result<Value, CoreError> {
         Value::Null
     };
     let safe = input["safe_to_auto_run_commands"] == true;
-    let mut result = json!({"assignment_policy":assignment,"binding":assignment=="required-best-fit","enforceable":assignment!="required-best-fit"||known,"current_target":current,"current_target_status":if known{"known-profile"}else if current.is_some(){"unknown"}else{"not-configured"},"current_profile":if selected.is_null(){Value::Null}else{json!({"name":selected["name"],"target_id":selected["target_id"],"revision":digest(&selected)?})},"transport_authority":transport.unwrap_or(if mode=="auto"{"automatic"}else{"manual"}),"configured_mode":mode,"effective_mode":if mode=="auto"&&!safe{"suggest"}else{mode},"execution_permitted":mode=="auto"&&safe,"safe_to_auto_run_commands":safe,"human_override_policy":override_policy,"manual_transport_policy":manual,"source_boundary":"Canonical fields take precedence over former aliases; assignment never grants transport readiness or safety."});
+    let mut result = json!({"assignment_policy":assignment,"binding":assignment=="required-best-fit","enforceable":assignment!="required-best-fit"||known,"current_target":current,"current_target_status":if known{"known-profile"}else if current.is_some(){"unknown"}else{"not-configured"},"current_profile":if selected.is_null(){Value::Null}else{json!({"name":selected["name"],"target_id":selected["target_id"],"revision":digest(&selected)?})},"transport_authority":transport.unwrap_or(if mode=="auto"{"automatic"}else{"manual"}),"configured_mode":mode,"effective_mode":if mode=="auto"&&!safe{"suggest"}else{mode},"execution_permitted":mode=="auto"&&safe,"safe_to_auto_run_commands":safe,"human_override_policy":override_policy,"manual_transport_policy":manual,"source_boundary":"Assignment never grants transport readiness or safety."});
     result["revision"] = json!(digest(&result)?);
     Ok(result)
 }

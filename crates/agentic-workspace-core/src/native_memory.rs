@@ -11,47 +11,6 @@ use std::{
 const MANIFEST: &str = ".agentic-workspace/memory/repo/manifest.toml";
 const HOME: &str = ".agentic-workspace/memory/repo/";
 
-/// Former local topology is not a supported repository Memory source selector.
-/// Observe only the explicitly named, confined location's metadata, never its
-/// content or an inferred home directory. No default is substituted or created.
-pub(crate) fn former_sources(target: &Path, config: &Value) -> Result<Value, CoreError> {
-    let Some(fields) = config.as_object().filter(|v| !v.is_empty()) else {
-        return Ok(json!({"status":"not-configured","fallback_used":false}));
-    };
-    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
-    let mut observations = Vec::new();
-    for (field, value) in fields {
-        let status = if let Some(reference) = value.as_str() {
-            match confined(&root, reference) {
-                Ok(false) => "explicit-source-missing",
-                Err(_) => "source-inaccessible-or-unconfined",
-                Ok(true) => match root.symlink_metadata(reference) {
-                    Ok(metadata) if metadata.is_dir() => match root.read_dir(reference) {
-                        Ok(mut entries) => match entries.next() {
-                            None => "present-empty-directory",
-                            Some(Ok(_)) => "present-material-unclassified",
-                            Some(Err(_)) => "source-inaccessible-or-unconfined",
-                        },
-                        Err(_) => "source-inaccessible-or-unconfined",
-                    },
-                    Ok(metadata) if metadata.is_file() && metadata.len() == 0 => {
-                        "present-empty-file"
-                    }
-                    Ok(_) => "present-material-unclassified",
-                    Err(_) => "source-inaccessible-or-unconfined",
-                },
-            }
-        } else {
-            "unsupported-explicit-choice"
-        };
-        observations.push(json!({"field":format!("local_memory.{field}"),"status":status,"value_revision":crate::digest(value)?}));
-    }
-    Ok(
-        json!({"status":"unsupported-preserved","observations":observations,"fallback_used":false,
-        "repository_source":MANIFEST,"boundary":"Repository Memory is a distinct supported source, never a replacement for these local sources. No content read, copied, retired or created; meaningfulness and retention require their current owner."}),
-    )
-}
-
 fn error(message: impl ToString) -> CoreError {
     CoreError::new(format!("Memory source: {}", message.to_string()))
 }

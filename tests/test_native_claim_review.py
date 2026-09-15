@@ -17,7 +17,7 @@ def test_exact_claim_review_needs_current_judgment_not_process_success(tmp_path,
     context = fixture(tmp_path)
     if binding_assignment:
         (tmp_path / ".agentic-workspace/config.local.toml").write_text(
-            'schema_version=1\n[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\n'
+            '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="local"\n'
             '[delegation_targets.local]\ntransports=[{kind="internal"}]\n'
         )
 

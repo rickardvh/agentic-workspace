@@ -90,10 +90,6 @@ def workflow_artifact_profiles_manifest() -> dict[str, Any]:
     return load_validated_contract_json("workflow_artifact_profiles.json", "workflow_artifact_profiles.schema.json")
 
 
-def workflow_definition_format_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("workflow_definition_format.json", "workflow_definition_format.schema.json")
-
-
 def skill_specs_manifest() -> dict[str, Any]:
     return load_validated_contract_json("skill_specs.json", "skill_spec.schema.json")
 

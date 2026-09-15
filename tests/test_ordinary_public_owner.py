@@ -37,23 +37,20 @@ def test_ordinary_public_owner_uses_current_local_policy(tmp_path: Path, runtime
     assert quiet["decision_packet"]["surface"] == operation
     assert "effective_orchestration" not in quiet
     local = tmp_path / ".agentic-workspace/config.local.toml"
-    local.write_text("""schema_version = 1
-[runtime]
-supports_internal_delegation = true
-[safety]
+    local.write_text("""[safety]
 safe_to_auto_run_commands = true
 [delegation]
 assignment_policy = "required-best-fit"
 transport_authority = "manual"
 current_target = "current"
 [delegation_targets.current]
-strength = "strong"
-execution_methods = ["internal"]
-capability_classes = ["boundary-shaping", "reasoning-heavy", "mechanical-follow-through"]
+
+transports = [{kind="internal"}]
+
 [delegation_targets.bounded]
-strength = "weak"
-execution_methods = ["manual"]
-capability_classes = ["mechanical-follow-through"]
+
+transports = [{kind="manual"}]
+
 """)
     configured = _run(tmp_path, runtime, *arguments)
     if operation == "start":
@@ -66,7 +63,7 @@ capability_classes = ["mechanical-follow-through"]
     assert recovery["operation_id"] == "assignment.export"
     assert recovery["arguments"] == {"task": arguments[2], "changed": ["docs/introduction.md"], "dry_run": True}
     # Answer only the current owner's typed task judgment; this grants no transport authority.
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     preview_args = ["assignment", "export", *arguments[1:], "--dry-run"]
     missing = _run(tmp_path, runtime, *preview_args)
     assert missing["status"] == "requirements-required", missing
@@ -129,8 +126,7 @@ def test_ordinary_semantic_request_retains_exact_source_currentness(tmp_path: Pa
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
     config.write_text(
-        "schema_version = 1\n[modules]\nenabled = []\n[assurance]\n"
-        'decision_record_target = "design"\ndecision_record_revision = "' + revision + '"\n'
+        '[modules]\nenabled = []\n[assurance]\ndecision_record_target = "design"\ndecision_record_revision = "' + revision + '"\n'
     )
     arguments = ["start", "--task", "Consider the design"]
     quiet = _run(tmp_path, runtime, *arguments)
@@ -155,7 +151,7 @@ def test_ordinary_semantic_request_retains_exact_source_currentness(tmp_path: Pa
 def test_ordinary_invalid_local_policy_exposes_owner_error(tmp_path: Path, runtime: str) -> None:
     config = tmp_path / ".agentic-workspace/config.local.toml"
     config.parent.mkdir()
-    config.write_text('schema_version = 1\n[delegation]\nassignment_policy = "required-best-fitt"\n')
+    config.write_text('[delegation]\nassignment_policy = "required-best-fitt"\n')
     result = _run(tmp_path, runtime, "start", "--task", "Correct the spelling", expected_exit=2)
     if runtime == "typescript":
         assert result["status"] == "rejected"

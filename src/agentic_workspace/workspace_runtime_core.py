@@ -56,44 +56,27 @@ from agentic_workspace.config import (
     DEFAULT_IMPROVEMENT_LATITUDE,
     DEFAULT_OPTIMIZATION_BIAS,
     DEFAULT_WORKFLOW_ARTIFACT_PROFILE,
-    DELEGATION_LEGACY_COMPATIBILITY_POLICY,
-    DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
     DELEGATION_OUTCOMES_KIND,
     MEMORY_POINTER_BLOCK,
     MEMORY_WORKFLOW_MARKER_END,
     MEMORY_WORKFLOW_MARKER_START,
-    SUPPORTED_ADVANCED_FEATURES,
-    SUPPORTED_AGENT_INSTRUCTIONS_FILES,
     SUPPORTED_ASSIGNMENT_POLICIES,
-    SUPPORTED_ASSURANCE_LEVELS,
     SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
     SUPPORTED_BOOTSTRAP_FOOTPRINT_PROFILES,
-    SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
     SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_CLARIFICATION_CONTROL_MODES,
     SUPPORTED_DELEGATION_CONTROL_MODES,
-    SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS,
-    SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES,
     SUPPORTED_DELEGATION_OUTCOMES,
-    SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES,
     SUPPORTED_DELEGATION_TARGET_COST_CLASSES,
-    SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS,
     SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES,
-    SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
-    SUPPORTED_DELEGATION_TARGET_STRENGTHS,
     SUPPORTED_DOWN_ROUTING_BEHAVIORS,
     SUPPORTED_HANDOFF_SUFFICIENCY,
     SUPPORTED_HUMAN_OVERRIDE_POLICIES,
-    SUPPORTED_IMPROVEMENT_LATITUDES,
     SUPPORTED_MANUAL_TRANSPORT_POLICIES,
-    SUPPORTED_OPTIMIZATION_BIASES,
     SUPPORTED_ORCHESTRATION_EXECUTION_ROLES,
     SUPPORTED_REVIEW_BURDENS,
     SUPPORTED_TRANSPORT_AUTHORITIES,
     SUPPORTED_UNDERFIT_BEHAVIORS,
-    SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
-    SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
-    SUPPORTED_WORKFLOW_OBLIGATION_STAGES,
     WORKSPACE_ADOPTION_RECEIPT_PATH,
     WORKSPACE_AGENT_AID_ROOT_PATH,
     WORKSPACE_AGENT_AID_SUBDIRS,
@@ -126,6 +109,9 @@ from agentic_workspace.config import (
     WorkspaceUsageError,
     workspace_pointer_block,
 )
+from agentic_workspace.config import (
+    SUPPORTED_WORKFLOW_ARTIFACT_PROFILES as SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
+)
 from agentic_workspace.contract_tooling import (
     authority_markers_manifest,
     cli_commands_manifest,
@@ -143,7 +129,6 @@ from agentic_workspace.contract_tooling import (
     report_contract_manifest,
     setup_findings_policy_manifest,
     workflow_artifact_profiles_manifest,
-    workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
 from agentic_workspace.current_work_context import (
@@ -216,11 +201,6 @@ from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.review_stack_topology import validate_admitted_pr_topology
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
-from agentic_workspace.runtime_compatibility import (
-    READER_CAPABILITIES,
-    READER_CONTRACT_EPOCH,
-    current_runtime_compatibility_admission,
-)
 from agentic_workspace.semantic_task_routes import current_semantic_task_route_fact, route_selector_matches
 from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
 from agentic_workspace.trusted_execution import host_shell_dialect, run_trusted_shell, trusted_shell_execution_identity
@@ -461,7 +441,6 @@ _CLI_OPTION_GROUPS_MANIFEST = cli_option_groups_manifest()
 _MODULE_REGISTRY_MANIFEST = module_registry_manifest()
 _WORKSPACE_SURFACES_MANIFEST = workspace_surfaces_manifest()
 _WORKFLOW_ARTIFACT_PROFILES_MANIFEST = workflow_artifact_profiles_manifest()
-_WORKFLOW_DEFINITION_FORMAT = workflow_definition_format_manifest()
 _IMPROVEMENT_LATITUDE_POLICY = improvement_latitude_policy_manifest()
 _IMPROVEMENT_SIGNAL_CONTRACT = improvement_signal_contract_manifest()
 _OPTIMIZATION_BIAS_POLICY = optimization_bias_policy_manifest()
@@ -1040,16 +1019,10 @@ def _read_adoption_receipt(*, target_root: Path) -> dict[str, Any]:
     return {"status": "present", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(), "payload": payload}
 
 
-def _without_toml_table(source: str, table: str) -> str:
-    pattern = re.compile(rf"(?ms)^\[{re.escape(table)}\]\s*\r?\n.*?(?=^\[|\Z)")
-    return pattern.sub("", source).rstrip() + ("\n" if source else "")
-
-
 def _setup_context_revision(*, target_root: Path, selected_modules: list[str]) -> str:
     local_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
     local_source = local_path.read_text(encoding="utf-8") if local_path.is_file() else ""
-    local_policy_source = _without_toml_table(local_source, "setup")
-    local_policy_source = re.sub(r"(?m)^schema_version\s*=\s*1\s*$", "", local_policy_source).strip()
+    local_policy_source = local_source
     bounded_sources = [
         "AGENTS.md",
         "CLAUDE.md",
@@ -1096,7 +1069,7 @@ def _setup_context_revision(*, target_root: Path, selected_modules: list[str]) -
             source_revisions.append([relative, hashlib.sha256(path.read_bytes()).hexdigest()])
     payload: dict[str, Any] = {
         "selected_modules": sorted(_dedupe(selected_modules)),
-        "shared_config_revision": _config_policy_revision(target_root / WORKSPACE_CONFIG_PATH),
+        "shared_config_revision": _configuration_source_revision(target_root / WORKSPACE_CONFIG_PATH),
         "local_policy_revision": hashlib.sha256(local_policy_source.encode("utf-8")).hexdigest(),
         "bounded_source_revisions": source_revisions,
     }
@@ -1138,7 +1111,7 @@ def _configuration_readiness_startup_payload(
     readiness = receipt.get("configuration_readiness")
     if not isinstance(readiness, dict):
         return {
-            "status": "legacy-compatible",
+            "status": "not-recorded",
             "surface": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
             "rule": "Missing readiness metadata does not prove that an established repository needs setup.",
         }
@@ -1852,7 +1825,7 @@ def _version_at_least(current: str, minimum: str) -> bool:
 
 def _payload_target_configured(config: WorkspaceConfig) -> bool:
     target = config.payload_target
-    return bool(target.target_release or target.minimum_capabilities or target.dogfood_latest)
+    return bool(target.target_release or target.minimum_capabilities)
 
 
 def _payload_target_sync_commands(*, target_root: Path, config: WorkspaceConfig) -> dict[str, str]:
@@ -1943,7 +1916,6 @@ def _payload_target_status_payload(
         "target_basis": target_basis,
         "minimum_capabilities": list(target.minimum_capabilities),
         "unsupported_capabilities": unsupported_capabilities,
-        "dogfood_latest": target.dogfood_latest,
         "current_installed_release": installed_version,
         "current_installed_capabilities": current_capabilities,
         "current_supported_capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
@@ -2409,173 +2381,6 @@ def _payload_repair_subflow_payload(
     }
 
 
-def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
-    expectation = config.cli_compatibility
-    identity = _invoked_cli_identity_payload(target_root=config.target_root)
-    invocation_resolution = _invocation_resolution_payload(config=config)
-    resource_availability = _required_package_resource_availability(expectation.required_resources)
-    checks: list[dict[str, Any]] = []
-
-    def add_check(name: str, expected: Any, actual: Any, satisfied: bool, *, configured: bool) -> None:
-        checks.append({"name": name, "configured": configured, "expected": expected, "actual": actual, "satisfied": satisfied})
-
-    add_check(
-        "exact_version",
-        expectation.exact_version,
-        identity["version"],
-        expectation.exact_version is None or identity["version"] == expectation.exact_version,
-        configured=expectation.exact_version is not None,
-    )
-    add_check(
-        "minimum_version",
-        expectation.minimum_version,
-        identity["version"],
-        expectation.minimum_version is None or _version_at_least(str(identity["version"]), expectation.minimum_version),
-        configured=expectation.minimum_version is not None,
-    )
-    add_check(
-        "source_class",
-        list(expectation.source_classes),
-        identity["source_class"],
-        not expectation.source_classes or identity["source_class"] in expectation.source_classes,
-        configured=bool(expectation.source_classes),
-    )
-    add_check(
-        "target_relation",
-        list(expectation.target_relations),
-        identity["target_relation"],
-        not expectation.target_relations or identity["target_relation"] in expectation.target_relations,
-        configured=bool(expectation.target_relations),
-    )
-    add_check(
-        "resolution_posture",
-        expectation.resolution_policy,
-        invocation_resolution["posture"],
-        invocation_resolution["policy_satisfied"],
-        configured=expectation.resolution_policy != "direct",
-    )
-    add_check(
-        "contract_schema",
-        expectation.contract_schema,
-        "agentic-workspace/installed-state-compatibility/v1",
-        expectation.contract_schema == "agentic-workspace/installed-state-compatibility/v1",
-        configured=True,
-    )
-    missing_capabilities = sorted(set(expectation.required_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
-    add_check(
-        "required_capabilities",
-        list(expectation.required_capabilities),
-        list(SUPPORTED_PAYLOAD_CAPABILITIES),
-        not missing_capabilities,
-        configured=bool(expectation.required_capabilities),
-    )
-    missing_resources = [item["resource"] for item in resource_availability if not item["available"]]
-    add_check(
-        "required_resources",
-        list(expectation.required_resources),
-        resource_availability,
-        not missing_resources,
-        configured=bool(expectation.required_resources),
-    )
-    add_check(
-        "minimum_reader_epoch",
-        expectation.minimum_reader_epoch,
-        READER_CONTRACT_EPOCH,
-        expectation.minimum_reader_epoch <= READER_CONTRACT_EPOCH,
-        configured=expectation.minimum_reader_epoch > 0,
-    )
-    missing_reader_capabilities = sorted(set(expectation.required_reader_capabilities) - set(READER_CAPABILITIES))
-    add_check(
-        "required_reader_capabilities",
-        list(expectation.required_reader_capabilities),
-        list(READER_CAPABILITIES),
-        not missing_reader_capabilities,
-        configured=bool(expectation.required_reader_capabilities),
-    )
-    configured_checks = [check for check in checks if check["configured"]]
-    failed_checks = [check for check in configured_checks if not check["satisfied"]]
-    configured = expectation.enforcement != "off" or bool(configured_checks) or expectation.command is not None
-    if not configured:
-        status = "no-expectation"
-    elif failed_checks and (
-        expectation.enforcement == "blocking"
-        or any(
-            check["name"]
-            in {
-                "resolution_posture",
-                "contract_schema",
-                "required_capabilities",
-                "required_resources",
-                "minimum_reader_epoch",
-                "required_reader_capabilities",
-            }
-            for check in failed_checks
-        )
-    ):
-        status = "blocking-drift"
-    elif failed_checks:
-        status = "advisory-drift"
-    else:
-        status = "satisfied"
-    drift_findings = _cli_compatibility_drift_findings(identity=identity, expectation=expectation, failed_checks=failed_checks)
-    remediation = _cli_compatibility_remediation(status=status, identity=identity, expectation=expectation, failed_checks=failed_checks)
-    payload: dict[str, Any] = {
-        "kind": "agentic-workspace/cli-compatibility/v1",
-        "status": status,
-        "configured": configured,
-        "enforcement": expectation.enforcement,
-        "enforcement_source": expectation.enforcement_source,
-        "expectation_source": expectation.source,
-        "expected_command": expectation.command,
-        "invocation_resolution": invocation_resolution,
-        "contract_expectation": {
-            "schema": expectation.contract_schema,
-            "capabilities": list(expectation.required_capabilities),
-            "resources": list(expectation.required_resources),
-            "minimum_reader_epoch": expectation.minimum_reader_epoch,
-            "reader_capabilities": list(expectation.required_reader_capabilities),
-            "source": expectation.source,
-        },
-        "package_resources": resource_availability,
-        "invocation_confidence": identity["confidence"],
-        "drift_findings": drift_findings,
-        "remediation": remediation,
-        "checks": checks if not compact else configured_checks,
-        "failed_checks": [check["name"] for check in failed_checks],
-        "rule": "Executable compatibility compares invoked_cli_identity against repo expectations; payload drift remains owned by module lifecycle checks.",
-    }
-    pre_state_admission = current_runtime_compatibility_admission()
-    if pre_state_admission.get("target") == str(config.target_root.resolve() if config.target_root else ""):
-        payload["pre_state_admission"] = {
-            key: pre_state_admission[key]
-            for key in ("kind", "status", "identity_digest", "observed_runtime", "expected_repository", "managed_state_interpreted")
-            if key in pre_state_admission
-        }
-    if compact:
-        compact_payload: dict[str, Any] = {
-            "kind": payload["kind"],
-            "status": payload["status"],
-            "configured": payload["configured"],
-            "enforcement": payload["enforcement"],
-            "failed_checks": payload["failed_checks"],
-        }
-        if drift_findings:
-            compact_payload["drift_findings"] = drift_findings
-            compact_payload["remediation"] = remediation
-        if identity["confidence"] != "high":
-            compact_payload["invocation_confidence"] = identity["confidence"]
-        if configured_checks:
-            compact_payload["checks"] = payload["checks"]
-        if payload.get("pre_state_admission"):
-            compact_payload["pre_state_admission"] = payload["pre_state_admission"]
-        if expectation.source != "product-default" or expectation.resolution_policy != "direct":
-            compact_payload["invocation_resolution"] = invocation_resolution
-            compact_payload["contract_expectation"] = payload["contract_expectation"]
-            compact_payload["package_resources"] = resource_availability
-        return compact_payload
-    return payload
-
-
 def _invocation_resolution_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     """Resolve the configured executable, distribution, source, and lock without mutation."""
 
@@ -2728,7 +2533,7 @@ def _invocation_resolution_payload(*, config: WorkspaceConfig) -> dict[str, Any]
             and selected_package.get("name") == "agentic-workspace"
             and selected_package.get("version")
         )
-    required = config.cli_compatibility.resolution_policy
+    required = "direct"
     posture_satisfied = required == "direct" or posture == required or (required == "locked" and posture == "frozen")
     policy_satisfied = posture_satisfied and actual_resolution_ok
     return {
@@ -2812,7 +2617,6 @@ def execute_workspace_install_upgrade_sync(
         raise ValueError("mode must be install, upgrade, or sync")
     before_pair = _installed_contract_pair_payload(
         config=config,
-        cli_payload=_cli_compatibility_payload(config=config, compact=True),
         summary=None,
     )
     before_payload_mirror = _read_payload_provenance(target_root=target_root)
@@ -2835,7 +2639,6 @@ def execute_workspace_install_upgrade_sync(
     effective_config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
     after_pair = _installed_contract_pair_payload(
         config=effective_config,
-        cli_payload=_cli_compatibility_payload(config=effective_config, compact=True),
         summary={"stale_generated_surfaces": list(transition.get("stale_generated_surfaces", []))},
     )
     before = {
@@ -2924,11 +2727,8 @@ def _installed_contract_conformance_matrix(
     }
 
 
-def _installed_contract_pair_payload(
-    *, config: WorkspaceConfig, cli_payload: dict[str, Any], summary: dict[str, list[str]] | None
-) -> dict[str, Any]:
-    expectation = config.cli_compatibility
-    resources = _required_package_resource_availability(expectation.required_resources)
+def _installed_contract_pair_payload(*, config: WorkspaceConfig, summary: dict[str, list[str]] | None) -> dict[str, Any]:
+    resources: list[dict[str, Any]] = []
     current_identity = _payload_installer_identity(target_root=config.target_root)
     stale_generated = list((summary or {}).get("stale_generated_surfaces", []))
     source_checkout: dict[str, Any] = {"classification": "not-applicable"}
@@ -2952,9 +2752,9 @@ def _installed_contract_pair_payload(
             "dirty": dirty,
             "generated_parity": "stale" if stale_generated else "current",
         }
-    missing_capabilities = sorted(set(expectation.required_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
+    missing_capabilities = sorted(set(config.payload_target.minimum_capabilities) - set(SUPPORTED_PAYLOAD_CAPABILITIES))
     missing_resources = [item["resource"] for item in resources if not item["available"]]
-    resolution = cli_payload.get("invocation_resolution", {}) or _invocation_resolution_payload(config=config)
+    resolution = _invocation_resolution_payload(config=config)
     before_identity = {
         "package": current_identity,
         "resolution": resolution,
@@ -2966,19 +2766,13 @@ def _installed_contract_pair_payload(
         stale_generated=stale_generated,
         payload_mirror=payload_mirror,
     )
-    compatible = (
-        cli_payload.get("status") not in {"blocking-drift"}
-        and not missing_capabilities
-        and not missing_resources
-        and not stale_generated
-        and conformance_matrix["status"] == "admitted"
-    )
+    compatible = not missing_capabilities and not missing_resources and not stale_generated and conformance_matrix["status"] == "admitted"
     blocked_scenarios = [item["id"] for item in conformance_matrix["scenarios"] if item["status"] == "blocked"]
     if "mutable-or-unlocked-vcs" in blocked_scenarios:
         repair_route = {
             "status": "required",
             "action": "lock-dependency-resolution",
-            "command": str(resolution.get("repair_command") or cli_payload.get("remediation", {}).get("command") or config.cli_invoke),
+            "command": str(resolution.get("repair_command") or config.cli_invoke),
         }
     elif "incompatible-or-missing-runtime" in blocked_scenarios:
         repair_route = {
@@ -3004,10 +2798,10 @@ def _installed_contract_pair_payload(
         "kind": "agentic-workspace/installed-contract-pair/v1",
         "status": "compatible" if compatible else "incompatible",
         "expected": {
-            "schema": expectation.contract_schema,
-            "capabilities": list(expectation.required_capabilities),
-            "resources": list(expectation.required_resources),
-            "provenance": expectation.source,
+            "schema": "agentic-workspace/installed-state-compatibility/v1",
+            "capabilities": list(config.payload_target.minimum_capabilities),
+            "resources": [],
+            "provenance": config.payload_target.source,
         },
         "actual": {
             "package": current_identity,
@@ -3040,7 +2834,6 @@ def _installed_contract_pair_payload(
 def _installed_contract_consumer_receipt(*, config: WorkspaceConfig) -> dict[str, Any]:
     pair = _installed_contract_pair_payload(
         config=config,
-        cli_payload=_cli_compatibility_payload(config=config, compact=True),
         summary=None,
     )
     return {
@@ -3050,77 +2843,6 @@ def _installed_contract_consumer_receipt(*, config: WorkspaceConfig) -> dict[str
         "contract_resources": pair["actual"]["resources"],
         "repair_route": pair["repair_route"],
         "ordinary_surface_mutates_dependency_state": False,
-    }
-
-
-def _cli_compatibility_drift_findings(
-    *, identity: dict[str, Any], expectation: Any, failed_checks: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
-    findings: list[dict[str, Any]] = []
-    for check in failed_checks:
-        name = str(check["name"])
-        if name in {"exact_version", "minimum_version"}:
-            drift_class = "executable-version-drift"
-            summary = "Invoked CLI version does not satisfy the repo-owned compatibility expectation."
-        elif name == "source_class":
-            drift_class = "executable-source-drift"
-            summary = "Invoked CLI source class does not satisfy the repo-owned compatibility expectation."
-        elif name == "target_relation":
-            drift_class = "executable-location-drift"
-            summary = "Invoked CLI location relative to the target does not satisfy the repo-owned compatibility expectation."
-        else:
-            drift_class = "executable-compatibility-drift"
-            summary = "Invoked CLI does not satisfy the repo-owned compatibility expectation."
-        findings.append(
-            {
-                "check": name,
-                "class": drift_class,
-                "expected": check.get("expected"),
-                "actual": check.get("actual"),
-                "invocation_confidence": identity.get("confidence", "low"),
-                "summary": summary,
-            }
-        )
-    if not failed_checks and identity.get("confidence") == "low":
-        findings.append(
-            {
-                "check": "invocation_confidence",
-                "class": "invocation-confidence-unknown",
-                "expected": "high or medium",
-                "actual": identity.get("confidence", "low"),
-                "invocation_confidence": identity.get("confidence", "low"),
-                "summary": "Invoked CLI identity could not be classified confidently enough for strong compatibility claims.",
-            }
-        )
-    return findings
-
-
-def _cli_compatibility_remediation(
-    *, status: str, identity: dict[str, Any], expectation: Any, failed_checks: list[dict[str, Any]]
-) -> dict[str, Any]:
-    if not failed_checks and identity.get("confidence") != "low":
-        return {"status": "none", "summary": "Invoked CLI satisfies the configured executable compatibility checks.", "next_action": None}
-    expected_command = expectation.command or DEFAULT_CLI_INVOKE
-    failed_names = {str(check["name"]) for check in failed_checks}
-    if failed_names & {"source_class", "target_relation"}:
-        action = "use-repo-runner"
-        summary = "Run the repo-owned or configured CLI invocation so the executable matches the target repo expectation."
-        command = expected_command
-    elif failed_names & {"exact_version", "minimum_version"}:
-        action = "upgrade-or-select-cli"
-        summary = "Upgrade or select a CLI version that satisfies the repo-owned compatibility expectation."
-        command = expected_command
-    else:
-        action = "verify-invocation"
-        summary = "Verify which CLI executable is being invoked before trusting lifecycle output."
-        command = expected_command
-    return {
-        "status": "required" if status == "blocking-drift" else "recommended",
-        "action": action,
-        "summary": summary,
-        "command": command,
-        "payload_drift_separate": True,
-        "payload_drift_owner": "module lifecycle status/doctor checks",
     }
 
 
@@ -3251,7 +2973,7 @@ def _installed_state_action_state_packet(
             "version_match_required": False,
             "payload_provenance_drift": payload_provenance_drift,
             "payload_target_status": payload_target.get("status") if isinstance(payload_target, dict) else "not-configured",
-            "cli_compatibility_status": cli_status,
+            "executable_status": cli_status,
         },
         "repair_mechanism": "payload-target-upgrade"
         if sync_available and sync_to_payload_target
@@ -3301,13 +3023,10 @@ def _installed_state_compatibility_payload(
     config: WorkspaceConfig,
     selected_modules: list[str],
     installed_modules: list[str],
-    cli_compatibility: dict[str, Any] | None = None,
     summary: dict[str, list[str]] | None = None,
     compact: bool = False,
 ) -> dict[str, Any]:
-    cli_payload = cli_compatibility or _cli_compatibility_payload(config=config, compact=compact)
-    contract_pair = _installed_contract_pair_payload(config=config, cli_payload=cli_payload, summary=summary)
-    failed_cli_checks = {str(check) for check in cli_payload.get("failed_checks", [])}
+    contract_pair = _installed_contract_pair_payload(config=config, summary=summary)
     stale_generated_surfaces = list((summary or {}).get("stale_generated_surfaces", []))
     payload_warnings = list((summary or {}).get("warnings", []))
     target_root = config.target_root or Path.cwd()
@@ -3342,12 +3061,7 @@ def _installed_state_compatibility_payload(
         installed_version=installed_version,
         current_identity=current_identity,
     )
-    if cli_payload.get("status") == "blocking-drift":
-        action_state_name = "blocking_incompatible"
-        status = "blocking-drift"
-        next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
-        reason = "executable compatibility is blocking"
-    elif payload_provenance_drift == "executable-too-old":
+    if payload_provenance_drift == "executable-too-old":
         action_state_name = "blocking_incompatible"
         status = "blocking-drift"
         next_action = config.cli_invoke
@@ -3378,25 +3092,14 @@ def _installed_state_compatibility_payload(
             cli_invoke=config.cli_invoke,
         )
         reason = "repo payload provenance needs an explicit package-owned sync"
-    elif cli_payload.get("status") == "advisory-drift":
-        action_state_name = "manual_review_required"
-        status = "upgrade-recommended"
-        next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
-        reason = "executable compatibility drift is advisory"
     else:
         action_state_name = "no_repair_needed"
         status = "compatible"
         next_action = None
         reason = "repo payload contract is compatible; provenance version drift alone does not require sync"
     executable_class = "compatible"
-    if failed_cli_checks & {"exact_version", "minimum_version"}:
+    if payload_provenance_drift == "executable-too-old":
         executable_class = "executable-too-old-or-wrong-version"
-    elif payload_provenance_drift == "executable-too-old":
-        executable_class = "executable-too-old-or-wrong-version"
-    elif failed_cli_checks & {"source_class", "target_relation"}:
-        executable_class = "use-repo-runner-required"
-    elif cli_payload.get("status") == "advisory-drift":
-        executable_class = "upgrade-recommended"
     dry_run_sync_command = _command_with_cli_invoke(
         command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
         cli_invoke=config.cli_invoke,
@@ -3413,7 +3116,7 @@ def _installed_state_compatibility_payload(
         payload_provenance_drift=payload_provenance_drift,
         provenance_status=provenance_status,
         stale_generated_surfaces=stale_generated_surfaces,
-        cli_status=str(cli_payload.get("status") or ""),
+        cli_status=executable_class,
         payload_target=payload_target if payload_target["configured"] else None,
     )
     generated_status = "stale" if stale_generated_surfaces else "compatible"
@@ -3478,9 +3181,9 @@ def _installed_state_compatibility_payload(
             "source": current_identity.get("source"),
             "source_class": current_identity.get("source_class"),
             "source_identity": current_identity.get("source_identity"),
-            "compatibility_status": cli_payload.get("status"),
+            "compatibility_status": executable_class,
             "classification": executable_class,
-            "failed_checks": list(cli_payload.get("failed_checks", [])),
+            "failed_checks": [],
             "guidance": ("Use the repo-owned configured invocation or install a supported executable version when this component drifts."),
         },
         "payload": {
@@ -3514,7 +3217,7 @@ def _installed_state_compatibility_payload(
             {
                 "adapter": "cli",
                 "contract": "agentic-workspace/cli-adapter-compatibility/v1",
-                "status": cli_payload.get("status"),
+                "status": executable_class,
                 "compatible_payload_range": "agentic-workspace/payload>=1,<2",
             },
             {
@@ -3874,7 +3577,6 @@ def _assurance_requirement_payloads(config: WorkspaceConfig | None) -> list[dict
                 "authority_refs": list(requirement.authority_refs),
                 "required_evidence": list(requirement.required_evidence),
                 "proof_profile": requirement.proof_profile,
-                "workflow_obligation_refs": list(requirement.workflow_obligation_refs),
                 "review_owner": requirement.review_owner,
                 "force": requirement.force,
                 "blocking_claims": list(requirement.blocking_claims),
@@ -3907,7 +3609,6 @@ def _assurance_subsystem_profile_payloads(config: WorkspaceConfig | None) -> lis
                 "requirement_refs": list(profile.requirement_refs),
                 "required_evidence": list(profile.required_evidence),
                 "proof_profile": profile.proof_profile,
-                "workflow_obligation_refs": list(profile.workflow_obligation_refs),
                 "review_owner": profile.review_owner,
                 "force": profile.force,
                 "blocking_claims": list(profile.blocked_without_evidence),
@@ -4048,7 +3749,6 @@ def _subsystem_assurance_payload(
                     "waiver": {"status": "none"},
                     "dismissal": {"status": "none"},
                     "proof_profile": profile.get("proof_profile"),
-                    "workflow_obligation_refs": _list_payload(profile.get("workflow_obligation_refs")),
                     "review_owner": profile.get("review_owner"),
                     "force": str(profile.get("force", "recommended")),
                     "blocking_claims": _list_payload(profile.get("blocking_claims")),
@@ -4691,7 +4391,6 @@ def _assurance_status_for_requirement(
         "waiver_evaluation": waiver_evaluation,
         "dismissal_evaluation": dismissal_evaluation,
         "proof_profile": requirement.get("proof_profile"),
-        "workflow_obligation_refs": _list_payload(requirement.get("workflow_obligation_refs")),
         "review_owner": requirement.get("review_owner"),
         "force": str(requirement.get("force", "recommended")),
         "blocking_claims": _list_payload(requirement.get("blocking_claims")),
@@ -4851,7 +4550,6 @@ def _assurance_requirements_report_payload(
                 "authority_refs": _list_payload(profile.get("requirement_refs")),
                 "required_evidence": _list_payload(profile.get("required_evidence")),
                 "proof_profile": profile.get("proof_profile"),
-                "workflow_obligation_refs": _list_payload(profile.get("workflow_obligation_refs")),
                 "review_owner": profile.get("review_owner"),
                 "force": str(profile.get("force", "recommended")),
                 "blocking_claims": _list_payload(profile.get("blocking_claims")),
@@ -6856,8 +6554,6 @@ def _maintainer_mode_payload(*, config: WorkspaceConfig, target_root: Path | Non
             "required_inputs": ["current host-repo task", "observed package friction or repeated cost"],
             "next_proof": "prove any resulting package change with changed-path proof selection in the package source checkout",
         }
-    else:
-        payload["enable_example"] = ["schema_version = 1", "", "[workspace]", "maintainer_mode = true"]
     return payload
 
 
@@ -10288,7 +9984,6 @@ def _seeded_workspace_config_text(*, config: WorkspaceConfig, enabled_modules: l
     lines = [
         _managed_workspace_config_header(cli_invoke=config.cli_invoke),
         "",
-        "schema_version = 1",
         "",
         "[modules]",
         "enabled = " + json.dumps(enabled_modules),
@@ -11772,17 +11467,14 @@ def _run_lifecycle_command(
     warnings.extend(summary["warnings"])
     placeholders.extend(summary["placeholders"])
     stale_generated_surfaces.extend(summary["stale_generated_surfaces"])
-    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+
     installed_state_compatibility = _installed_state_compatibility_payload(
         config=config,
         selected_modules=selected_modules,
         installed_modules=[entry.name for entry in registry if entry.installed],
-        cli_compatibility=cli_compatibility,
         summary=summary,
         compact=True,
     )
-    cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
-    warnings.extend(cli_compatibility_warnings)
     skill_dependency_diagnostics = (
         _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules)
         if command_name == "doctor"
@@ -11805,7 +11497,6 @@ def _run_lifecycle_command(
         "command": command_name,
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
-        "cli_compatibility": cli_compatibility,
         "installed_state_compatibility": installed_state_compatibility,
         "modules": selected_modules,
         "enabled_modules": selected_modules,
@@ -11867,8 +11558,6 @@ def _run_lifecycle_command(
         "reports": reports,
         "config": _config_payload(config=config),
     }
-    if cli_compatibility_warnings:
-        payload["executable_drift_warnings"] = cli_compatibility_warnings
     if installed_state_compatibility.get("status") != "compatible":
         payload["health"] = "attention-needed"
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
@@ -11895,11 +11584,6 @@ def _run_lifecycle_command(
             repair_actions = [*dependency_repair_actions, *repair_actions]
             manual_review_actions = [*dependency_manual_actions, *manual_review_actions]
         if command_name == "doctor":
-            cli_review_action = _cli_compatibility_manual_review_action(
-                target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
-            )
-            if cli_review_action is not None:
-                manual_review_actions.insert(0, cli_review_action)
             if repair_actions or manual_review_actions:
                 payload["health"] = "attention-needed"
         payload["repair_actions"] = repair_actions
@@ -12309,58 +11993,6 @@ def _scoped_lifecycle_health_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "global_warnings_block_scoped_check": False,
         "rule": "Top-level health includes global workspace warnings; selected_module_health reports only the scoped module lifecycle reports.",
     }
-
-
-def _cli_compatibility_warning_messages(cli_compatibility: dict[str, Any]) -> list[str]:
-    status = str(cli_compatibility.get("status", ""))
-    if status not in {"advisory-drift", "blocking-drift"}:
-        return []
-    failed = ", ".join((str(item) for item in cli_compatibility.get("failed_checks", []))) or "unknown"
-    remediation = cli_compatibility.get("remediation", {})
-    summary = remediation.get("summary") if isinstance(remediation, dict) else ""
-    if not summary:
-        summary = "Invoked CLI does not satisfy the repo-owned compatibility expectation."
-    return [f"executable compatibility {status}: failed checks: {failed}; {summary}"]
-
-
-def _cli_compatibility_manual_review_action(
-    *, target_root: Path, cli_invoke: str, cli_compatibility: dict[str, Any]
-) -> dict[str, Any] | None:
-    status = str(cli_compatibility.get("status", ""))
-    if status not in {"advisory-drift", "blocking-drift"}:
-        return None
-    remediation = cli_compatibility.get("remediation", {})
-    remediation_summary = (
-        str(remediation.get("summary", "")) if isinstance(remediation, dict) else "Invoked CLI compatibility drift detected."
-    )
-    remediation_command = str(remediation.get("command", cli_invoke)) if isinstance(remediation, dict) else cli_invoke
-    severity = "error" if status == "blocking-drift" else "warning"
-    action = _workspace_manual_review_action(
-        id="resolve-cli-executable-drift",
-        invariant="workspace.cli_executable_compatible",
-        fault_class="package_affordance_fault",
-        owner="repo",
-        target_root=target_root,
-        cli_invoke=cli_invoke,
-        affected_surfaces=[".agentic-workspace/config.toml", "invoked_cli_identity"],
-        current_fault_summary=remediation_summary,
-        risk="lifecycle output may validate the payload known to the invoked executable while still using the wrong CLI for this repo",
-        do_not=[
-            "Do not treat module payload freshness as proof that the invoked executable matches repo expectations.",
-            "Do not ignore blocking executable drift before trusting lifecycle output.",
-        ],
-    )
-    action["severity"] = severity
-    action["action"] = str(remediation.get("action", "manual-review")) if isinstance(remediation, dict) else "manual-review"
-    action["command"] = remediation_command
-    action["run"] = remediation_command
-    action["cli_compatibility"] = {
-        "status": status,
-        "failed_checks": list(cli_compatibility.get("failed_checks", [])),
-        "drift_findings": list(cli_compatibility.get("drift_findings", [])),
-        "payload_drift_separate": True,
-    }
-    return action
 
 
 def _workspace_root_startup_pointer_repair_action(*, target_root: Path, cli_invoke: str, affected_surfaces: list[str]) -> dict[str, Any]:
@@ -13612,7 +13244,6 @@ def _run_report_command(
         memory_consult=memory_consult,
         cli_invoke=config.cli_invoke,
     )
-    workflow_obligations = _workflow_obligations_report_payload(config=config, active_planning_record=active_planning_record)
     improvement_intake = _improvement_intake_payload(target_root=target_root, config=config, repo_friction=repo_friction)
     improvement_pressure = _improvement_pressure_payload(improvement_intake, target_root=target_root)
     intent_custody = _intent_custody_payload(
@@ -13626,7 +13257,6 @@ def _run_report_command(
         surface="report",
         task_text=None,
         changed_paths=[],
-        workflow_obligations=workflow_obligations,
         skill_routing={},
         planning_safety_gate={},
         proof={},
@@ -13638,7 +13268,6 @@ def _run_report_command(
         config=config,
         selected_modules=selected_modules,
         installed_modules=installed_modules,
-        cli_compatibility=_cli_compatibility_payload(config=config),
         summary=_summarise_reports(target_root=target_root, reports=module_reports, descriptors=descriptors, command_name="report"),
     )
     configuration_projection = _configuration_projection_payload(config=config)
@@ -13648,7 +13277,6 @@ def _run_report_command(
         "command": "report",
         "target": target_root.as_posix(),
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root),
-        "cli_compatibility": _cli_compatibility_payload(config=config),
         "installed_state_compatibility": installed_state_compatibility,
         "selected_modules": selected_modules,
         "installed_modules": installed_modules,
@@ -13687,7 +13315,6 @@ def _run_report_command(
             installed_modules=installed_modules, active_direction=_effective_active_direction_payload(module_reports=module_reports)
         ),
         "system_intent_mirror": _system_intent_report_payload(target_root=target_root, config=config),
-        "workflow_obligations": workflow_obligations,
         "improvement_pressure": improvement_pressure,
         "task_posture_packet": task_posture_packet,
         "applicable_intent": applicable_intent,
@@ -17372,7 +16999,6 @@ def _closeout_report_final_response_rendering_payload(
     behavior_preservation: dict[str, Any] | None = None,
     parent_intent_status: dict[str, Any] | None = None,
     applicable_intent_status: dict[str, Any] | None = None,
-    workflow_obligation_contract: dict[str, Any] | None = None,
     completion_gate: dict[str, Any] | None = None,
     review_mode: str = "",
 ) -> dict[str, Any]:
@@ -17390,18 +17016,9 @@ def _closeout_report_final_response_rendering_payload(
     behavior_preservation = _as_dict(behavior_preservation)
     parent_intent_status = _as_dict(parent_intent_status)
     applicable_intent_status = _as_dict(applicable_intent_status)
-    workflow_obligation_contract = _as_dict(workflow_obligation_contract)
     completion_gate = _as_dict(completion_gate)
     gate_claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
     review_contract = _closeout_report_review_mode_contract(review_mode or "small-direct-edit")
-    obligation_items = [item for item in _list_payload(workflow_obligation_contract.get("items")) if isinstance(item, dict)]
-    required_obligations = [
-        item
-        for item in obligation_items
-        if str(item.get("state") or "") in {"required", "blocked"}
-        and str(item.get("force") or "") in {"required-before-closeout", "blocking"}
-    ]
-    workflow_obligations_block_done = bool(required_obligations)
 
     def present(text: str) -> str:
         return text.strip() if text and text.strip().lower() not in {"none", "null", "unknown"} else ""
@@ -17629,9 +17246,7 @@ def _closeout_report_final_response_rendering_payload(
         and item.get("id") in {"keep-parent-open", "claim-work-complete", "close-parent-lane"}
         and item.get("owner")
     ]
-    has_material_guidance_signal = bool(
-        guidance_only and (lower_trust or profile_requires_detail or owners or workflow_obligations_block_done)
-    )
+    has_material_guidance_signal = bool(guidance_only and (lower_trust or profile_requires_detail or owners))
     gate_status = present(str(completion_gate.get("status") or ""))
     gate_blocks_full = gate_status in {"blocked", "continue-required", "clarification-required"}
     gate_partial = gate_status == "human-accepted-partial"
@@ -17836,20 +17451,6 @@ def _closeout_report_final_response_rendering_payload(
             "Applicable intent outcome: " + "; ".join(fragment for fragment in fragments if fragment and fragment != "owner: None")
         )
 
-    if required_obligations:
-        must_include.append("workflow obligation status")
-        state_summary = ", ".join(
-            f"{item.get('id')}: {item.get('state')}" for item in required_obligations[:4] if str(item.get("id") or "")
-        )
-        summary_lines.append(
-            "Workflow obligations: "
-            + (state_summary or f"{len(required_obligations)} required before closeout")
-            + "; render satisfied, not-applicable, deferred, or blocked evidence before claiming completion."
-        )
-        must_not_claim.append(
-            "Do not claim completion while required workflow obligations remain unrendered, unsatisfied, undeferred, or unblocked."
-        )
-
     boundary_text = present(completion_decision)
     completion_boundary_text = present(
         str(
@@ -17900,7 +17501,6 @@ def _closeout_report_final_response_rendering_payload(
             or has_material_guidance_signal
             or parent_status_blocks_done
             or applicable_intent_status.get("closeout_blocked")
-            or workflow_obligations_block_done
             or gate_blocks_full
             or gate_partial
             or gate_blocks_full_claim_class
@@ -17917,7 +17517,6 @@ def _closeout_report_final_response_rendering_payload(
         or has_material_guidance_signal
         or parent_status_blocks_done
         or applicable_intent_status.get("closeout_blocked")
-        or workflow_obligations_block_done
         or gate_blocks_full
         or gate_partial
         or gate_blocks_full_claim_class
@@ -18018,79 +17617,6 @@ def _final_response_admission_route_payload(
             "Rendering advertises the host admission operation and the package-owned ordinary autopilot route. Ordinary execution "
             "must enter autopilot so model-authored final responses are admitted before exposure; while CONTINUE remains, custody "
             "stays with the loop and the executor is re-entered with continuation context."
-        ),
-    }
-
-
-def _workflow_obligation_closeout_contract_payload(*, config: WorkspaceConfig, active_planning_record: dict[str, Any]) -> dict[str, Any]:
-    workflow_obligations = _workflow_obligations_report_payload(
-        config=config,
-        active_planning_record=active_planning_record,
-    )
-    closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
-    required = [item for item in _list_payload(closeout_obligations.get("required_before_lane_closeout")) if isinstance(item, dict)]
-    recommended = [item for item in _list_payload(closeout_obligations.get("recommended_before_lane_closeout")) if isinstance(item, dict)]
-    state_model = ["required", "satisfied", "not-applicable", "deferred", "blocked", "rendered"]
-
-    def row(obligation: dict[str, Any], *, required_item: bool) -> dict[str, Any]:
-        force = str(obligation.get("force") or "recommended")
-        state = "required" if required_item else "not-applicable"
-        if force == "blocking" and required_item:
-            state = "blocked"
-        commands = [str(command) for command in _list_payload(obligation.get("commands")) if str(command).strip()]
-        return {
-            "id": str(obligation.get("id") or "").strip(),
-            "summary": str(obligation.get("summary") or "").strip(),
-            "stage": str(obligation.get("stage") or "").strip(),
-            "force": force,
-            "state": state,
-            "rendered": False,
-            "commands": commands,
-            "review_hint": str(obligation.get("review_hint") or "").strip(),
-            "allowed_resolution_states": state_model[1:],
-            "evidence_expected": (
-                "Record satisfaction evidence, not-applicable rationale, deferral owner, blocked reason, and render it in final response."
-                if required_item
-                else "Optional or non-current obligation; mention only if material to closeout."
-            ),
-        }
-
-    items = [row(item, required_item=True) for item in required] + [row(item, required_item=False) for item in recommended]
-    required_count = len(required)
-    blocking_count = sum(1 for item in items if item["state"] == "blocked")
-    return {
-        "kind": "agentic-workspace/workflow-obligation-closeout-contract/v1",
-        "status": "required" if required_count else "recommended" if items else "none",
-        "state_model": state_model,
-        "required_count": required_count,
-        "blocking_count": blocking_count,
-        "items": items,
-        "checklist": [
-            "satisfied",
-            "not-applicable",
-            "deferred",
-            "blocked",
-            "rendered",
-        ],
-        "authority_boundary": {
-            "kind": "agentic-workspace/authority-boundary/v1",
-            "surface": "workflow_obligation_closeout_contract",
-            "authority_class": "hard-gate" if required_count else "advisory-support",
-            "enforced_by_aw": ["required configured closeout obligations"] if required_count else [],
-            "observed_by_aw": ["workspace config workflow_obligations", "current scope tags"],
-            "recommended_by_aw": ["render required obligation status before completion claim"] if required_count else [],
-            "agent_owned_decisions": [
-                "semantic satisfaction evidence",
-                "not-applicable rationale",
-                "deferred owner choice",
-                "blocked explanation",
-                "human-facing wording",
-            ],
-            "human_owned_decisions": ["accepting deferral, waiver, or blocked closeout when applicable"],
-        },
-        "rule": (
-            "Configured required closeout obligations must resolve to satisfied, not-applicable, deferred, blocked, and rendered "
-            "before a completion claim; AW exposes the contract, while the agent owns the semantic evidence."
         ),
     }
 
@@ -18630,12 +18156,11 @@ def _run_lazy_report_section_command(
             payload["closeout_trust"] = closeout_trust
         payload["external_work_delta"] = external_work_delta
         payload["external_work_reconciliation"] = external_work_reconciliation
-        cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+
         payload["installed_state_compatibility"] = _installed_state_compatibility_payload(
             config=config,
             selected_modules=selected_modules,
             installed_modules=[str(module_name) for module_name in payload.get("installed_modules", [])],
-            cli_compatibility=cli_compatibility,
             compact=True,
         )
         payload["architecture_principles"] = _architecture_principles_payload(
@@ -21985,13 +21510,6 @@ def _routine_count(value: Any) -> int:
     return _as_int(value)
 
 
-def _workflow_obligation_match_count(workflow_obligations: dict[str, Any]) -> int:
-    match_evidence = _as_dict(workflow_obligations.get("match_evidence"))
-    if "match_count" in match_evidence:
-        return _routine_count(match_evidence.get("match_count"))
-    return _routine_count(workflow_obligations.get("match_count"))
-
-
 def _routine_detail_command(*, section: str, cli_invoke: str, target_arg: str = "./repo") -> str:
     command = f"agentic-workspace report --target {target_arg} --section {section} --format json"
     return _command_with_cli_invoke(command=command, cli_invoke=cli_invoke) or command
@@ -22984,13 +22502,11 @@ def _knowledge_authority_review_payload(
     stale_count = sum(1 for source in matched_sources if source.get("freshness", {}).get("status") == "needs-review")
     promotion_count = sum(1 for source in matched_sources if source.get("promotion_pressure", {}).get("status") == "candidate")
     supersession_count = sum(1 for source in matched_sources if source.get("supersession", {}).get("status") == "attention")
-    workflow_matches = _workflow_obligation_match_count(_as_dict(source_payload.get("workflow_obligations")))
-    status = "attention" if matched_sources or workflow_matches else "present"
+    status = "attention" if matched_sources else "present"
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/knowledge-authority-review/v1",
         "status": status,
         "matched_source_count": len(matched_sources),
-        "workflow_obligation_match_count": workflow_matches,
         "stale_source_count": stale_count,
         "promotion_candidate_count": promotion_count,
         "supersession_attention_count": supersession_count,
@@ -23030,17 +22546,6 @@ def _knowledge_authority_review_payload(
                 ),
             }
         )
-    if workflow_matches:
-        payload["next_actions"].append(
-            {
-                "id": "inspect-workflow-obligations",
-                "owner": "workspace config",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --section workflow_obligations --format json",
-                    cli_invoke=cli_invoke,
-                ),
-            }
-        )
     if compact:
         if status != "attention":
             return {"kind": payload["kind"], "status": status}
@@ -23050,7 +22555,6 @@ def _knowledge_authority_review_payload(
                 "kind",
                 "status",
                 "matched_source_count",
-                "workflow_obligation_match_count",
                 "stale_source_count",
                 "promotion_candidate_count",
                 "supersession_attention_count",
@@ -23079,7 +22583,6 @@ def _routine_work_context_payload(
     assurance, workflow-obligation, proof, or closeout state.
     """
 
-    workflow_obligations = _as_dict(source_payload.get("workflow_obligations"))
     assurance_requirements = _as_dict(source_payload.get("assurance_requirements"))
     verification = _as_dict(source_payload.get("verification"))
     durable_intent = _as_dict(source_payload.get("durable_intent"))
@@ -23110,7 +22613,6 @@ def _routine_work_context_payload(
             if isinstance(item, dict) and item.get("state") == "missing-evidence"
         ]
     )
-    workflow_matches = _workflow_obligation_match_count(workflow_obligations)
     architecture_principle_matches = _routine_count(architecture_principles.get("matched_count"))
     durable_matches = _routine_count(durable_subsystem.get("matched_count"))
     improvement_candidates = len(_list_payload(improvement_intake.get("improvement_signal_candidates")))
@@ -23135,21 +22637,17 @@ def _routine_work_context_payload(
     categories = {
         "authority": {
             "question": "What source, policy, or owner governs this work?",
-            "status": "attention"
-            if assurance_active or workflow_matches or verification_active or architecture_principle_matches
-            else "available",
+            "status": "attention" if assurance_active or verification_active or architecture_principle_matches else "available",
             "fronts": [
                 "effective_authority",
                 "architecture_principles",
                 "authority_hierarchy",
                 "standing_intent",
-                "workflow_obligations",
                 "assurance_requirements",
                 "verification",
                 "decision_pressure",
             ],
             "signals": {
-                "workflow_obligation_matches": workflow_matches,
                 "architecture_principle_matches": architecture_principle_matches,
                 "active_assurance_requirements": assurance_active,
                 "active_verification_protocols": verification_active,
@@ -23160,7 +22658,6 @@ def _routine_work_context_payload(
                 "effective_authority",
                 "architecture_principles",
                 "authority_hierarchy",
-                "workflow_obligations",
                 "assurance_requirements",
                 "verification",
                 "decision_pressure",
@@ -23189,19 +22686,18 @@ def _routine_work_context_payload(
         },
         "evidence_proof": {
             "question": "What must be shown before a completion claim is safe?",
-            "status": "attention" if assurance_missing or verification_missing or workflow_matches or lower_trust_count else "available",
-            "fronts": ["proof", "verification", "assurance_requirements", "workflow_obligations", "closeout_trust", "completion_options"],
+            "status": "attention" if assurance_missing or verification_missing or lower_trust_count else "available",
+            "fronts": ["proof", "verification", "assurance_requirements", "closeout_trust", "completion_options"],
             "signals": {
                 "proof_command_count": len(proof_commands),
                 "active_verification_protocols": verification_active,
                 "missing_verification_evidence": verification_missing,
                 "active_assurance_requirements": assurance_active,
                 "missing_required_assurance_evidence": assurance_missing,
-                "workflow_obligation_matches": workflow_matches,
                 "closeout_status": closeout_status,
                 "lower_trust_closeout_count": lower_trust_count,
             },
-            "detail_selectors": ["proof", "verification", "assurance_requirements", "workflow_obligations", "closeout_trust"],
+            "detail_selectors": ["proof", "verification", "assurance_requirements", "closeout_trust"],
         },
         "durable_knowledge": {
             "question": "What durable knowledge applies here that future agents should not rediscover?",
@@ -23286,7 +22782,6 @@ def _routine_work_context_payload(
             }
         compact_signal_allowlist = {
             "authority": [
-                "workflow_obligation_matches",
                 "architecture_principle_matches",
                 "active_assurance_requirements",
                 "effective_authority_status",
@@ -23302,7 +22797,6 @@ def _routine_work_context_payload(
                 "proof_command_count",
                 "active_verification_protocols",
                 "missing_verification_evidence",
-                "workflow_obligation_matches",
                 "missing_required_assurance_evidence",
                 "lower_trust_closeout_count",
             ],
@@ -23375,13 +22869,6 @@ def _routine_work_context_payload(
             "classification": "canonical config-owned evidence gate",
             "fronted_by": "assurance_requirements",
             "detail_selector": "assurance_requirements",
-        },
-        {
-            "concept": "workflow obligations",
-            "category": "authority + evidence_proof",
-            "classification": "canonical config-owned lifecycle obligation",
-            "fronted_by": "workflow_obligations",
-            "detail_selector": "workflow_obligations",
         },
         {
             "concept": "decision pressure / ADR routing",
@@ -26019,7 +25506,6 @@ def _report_closeout_trust_payload(
             behavior_preservation={},
             parent_intent_status=parent_intent_status,
             applicable_intent_status=applicable_intent_status,
-            workflow_obligation_contract={},
             completion_gate=completion_gate,
             review_mode="small-direct-edit",
         )
@@ -29597,16 +29083,6 @@ def _tiny_preflight_payload(payload: dict[str, Any], *, config: WorkspaceConfig)
         "timestamp_hint": payload.get("timestamp_hint", ""),
         "branch_workflow_posture": branch_posture,
         "local_memory": local_memory,
-        "workflow_obligations": {
-            "status": payload.get("workflow_obligations", {}).get("status", "unknown")
-            if isinstance(payload.get("workflow_obligations"), dict)
-            else "unknown",
-            "match_count": payload.get("workflow_obligations", {}).get("match_count", 0)
-            if isinstance(payload.get("workflow_obligations"), dict)
-            else 0,
-            "detail_command": "agentic-workspace preflight --verbose --format json",
-        },
-        "closeout_obligations": closeout,
         "operating_posture": posture,
         "durable_intent": intent,
         "active_state_summary": {
@@ -29695,16 +29171,6 @@ def _tiny_preflight_payload_fast(
             "local_memory": {
                 key: value for key, value in _local_memory_payload(config=config).items() if key in {"status", "path", "rule"}
             },
-            "workflow_obligations": {
-                "status": "not-evaluated",
-                "match_count": 0,
-                "detail_command": f"{config.cli_invoke} preflight --verbose --format json",
-            },
-            "closeout_obligations": {
-                "status": "present",
-                "activation_rule": "closeout obligations apply after implementation or lane closeout",
-                "detail_command": f"{config.cli_invoke} report --target ./repo --section closeout_trust --format json",
-            },
             "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
             "durable_intent": durable_intent,
             "active_state_summary": {
@@ -29721,8 +29187,6 @@ def _tiny_preflight_payload_fast(
                 "context.active_state_summary",
                 "context.branch_workflow_posture",
                 "context.local_memory",
-                "context.workflow_obligations",
-                "context.closeout_obligations",
                 "context.operating_posture",
                 "context.durable_intent",
             ],
@@ -29762,14 +29226,7 @@ def _run_preflight_command(
     planning_record = active_state.get("planning_record", {"status": "unavailable"})
     branch_workflow_posture = _branch_workflow_posture_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
-    active_count = int(active_state.get("todo", {}).get("active_count", 0) or 0)
-    obligation_record = (
-        planning_record if isinstance(planning_record, dict) and (planning_record.get("status") == "present" or active_count > 0) else None
-    )
-    workflow_obligations = _workflow_obligations_report_payload(
-        config=config, active_planning_record=obligation_record, task_text=task_text, changed_paths=changed_paths
-    )
-    closeout_obligations = _closeout_workflow_obligations_payload(workflow_obligations)
+    int(active_state.get("todo", {}).get("active_count", 0) or 0)
     durable_intent = _intent_decision_projection(target_root=target_root, config=config, compact=True)
     execution_posture = _execution_posture_payload(
         config=config,
@@ -29805,8 +29262,6 @@ def _run_preflight_command(
             "branch_workflow_posture": branch_workflow_posture,
             "local_memory": local_memory,
             "memory_consult": _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=config.cli_invoke),
-            "workflow_obligations": workflow_obligations,
-            "closeout_obligations": closeout_obligations,
             "operating_posture": _operating_posture_payload(config=config, surface="preflight", compact=True),
             "durable_intent": durable_intent,
             "skill_routing": _startup_skill_routing_payload(target_root=target_root, cli_invoke=config.cli_invoke),
@@ -29881,8 +29336,6 @@ def _run_preflight_command(
         "branch_workflow_posture": branch_workflow_posture,
         "local_memory": local_memory,
         "memory_consult": _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=config.cli_invoke),
-        "workflow_obligations": workflow_obligations,
-        "closeout_obligations": closeout_obligations,
         "operating_posture": _operating_posture_payload(config=config, surface="preflight"),
         "durable_intent": durable_intent,
         "active_planning_state": active_state,
@@ -30802,8 +30255,6 @@ def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any])
     compact = {
         "kind": task_posture_packet.get("kind"),
         "operating_posture": task_posture_packet.get("operating_posture", {}),
-        "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
-        "workflow_obligation_effects": task_posture_packet.get("workflow_obligation_effects", []),
         "improvement_pressure_evaluation": task_posture_packet.get("improvement_pressure_evaluation", {}),
         "improvement_pressure_records": task_posture_packet.get("improvement_pressure_records", []),
         "improvement_obligations": task_posture_packet.get("improvement_obligations", []),
@@ -31983,13 +31434,7 @@ def _attach_summary_task_posture_packet(
         task_text=task_text,
     )
     config = _load_workspace_config(target_root=target_root)
-    active_planning_record = _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
-    workflow_obligations = _workflow_obligations_report_payload(
-        config=config,
-        active_planning_record=active_planning_record,
-        task_text=task_text,
-        changed_paths=_normalize_changed_paths(changed_paths),
-    )
+    _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
     continuation_view = _as_dict(summary.get("continuation_view"))
     claim_boundary = _as_dict(continuation_view.get("claim_boundary"))
     completion_gate = {
@@ -32003,7 +31448,6 @@ def _attach_summary_task_posture_packet(
         surface="summary",
         task_text=task_text,
         changed_paths=changed_paths,
-        workflow_obligations=workflow_obligations,
         skill_routing={},
         planning_safety_gate={},
         proof={},
@@ -32056,8 +31500,6 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "closeout_trust_inspection",
         "closeout_report_route",
         "durable_intent",
-        "workflow_obligations",
-        "closeout_obligations",
         "installed_state_drift_triage",
         "pr_comment_attention",
         "dogfooding_signal_status",
@@ -34802,12 +34244,11 @@ def _start_tiny_payload_fast(
         current_need = "prep-only-planning-routing"
     installed_modules = _fast_installed_modules(target_root=target_root)
     selected_modules = list(config.enabled_modules)
-    startup_cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+
     installed_state_compatibility = _installed_state_compatibility_payload(
         config=config,
         selected_modules=selected_modules,
         installed_modules=installed_modules,
-        cli_compatibility=startup_cli_compatibility,
         compact=True,
     )
     projection_cancellation_checkpoint()
@@ -34871,41 +34312,6 @@ def _start_tiny_payload_fast(
             "next_proof": "select proof after changed paths are known",
             "read_first": [primary_command] if primary_command else [],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
-        },
-        "workflow_obligations": {
-            "status": "not-evaluated",
-            "match_count": 0,
-            "detail_command": _command_with_cli_invoke(command="agentic-workspace preflight --format json", cli_invoke=config.cli_invoke),
-        },
-        "closeout_obligations": {
-            "status": "present",
-            "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
-            "detail_command": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
-                cli_invoke=config.cli_invoke,
-                target_arg=target_arg,
-            ),
-            "ordinary_closeout_route": {
-                "status": "mandatory-before-completion-claim",
-                "first_inspection": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --section closeout_trust --format json",
-                    cli_invoke=config.cli_invoke,
-                    target_arg=target_arg,
-                ),
-                "closeout_report": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --section closeout_report --format json",
-                    cli_invoke=config.cli_invoke,
-                    target_arg=target_arg,
-                ),
-                "applies_to": ["implementation closeout", "read-only GitHub status", "repo-maintenance completion"],
-                "top_level_closeout_command": "not-available",
-                "substitute_command": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --section closeout_report --format json",
-                    cli_invoke=config.cli_invoke,
-                    target_arg=target_arg,
-                ),
-                "rule": "Use this route before claiming completion; if Planning is active, satisfy planning closeout/archive requirements as well.",
-            },
         },
         "memory_consult": _tiny_memory_consult_payload(config=config),
         "local_chat_checkpoint": _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke),
@@ -35431,9 +34837,6 @@ def _start_tiny_payload_fast(
         payload["path_boundaries"] = [
             _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
         ]
-    cli_compatibility = startup_cli_compatibility
-    if cli_compatibility["configured"]:
-        payload["cli_compatibility"] = cli_compatibility
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
         target_root=target_root,
@@ -37028,63 +36431,6 @@ def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "read_first": [".agentic-workspace/memory/repo/index.md"],
         "do_not_bulk_read": True,
         "rule": "Read the index, then only route-matched notes; use report detail for consultation diagnostics.",
-    }
-
-
-def _compact_start_workflow_obligations(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        return {"status": "unavailable"}
-    relevant = value.get("relevant_to_current_work", [])
-    if not isinstance(relevant, list):
-        relevant = []
-    match_evidence = value.get("match_evidence", {})
-    if not isinstance(match_evidence, dict):
-        match_evidence = {}
-    configured_count = int(value.get("configured_count", 0) or 0)
-    match_count = int(match_evidence.get("match_count", len(relevant)) or 0)
-    return {
-        "status": "matched" if match_count else "none-matched",
-        "configured_count": configured_count,
-        "match_count": match_count,
-        "current_scope_tags": value.get("current_scope_tags", []),
-        "relevant_ids": [str(item.get("id", "")) for item in relevant if isinstance(item, dict)],
-        "detail_command": "agentic-workspace preflight --format json",
-        "rule": value.get("rule", ""),
-    }
-
-
-def _compact_start_closeout_obligations(
-    value: Any, *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_root: Path | None = None
-) -> dict[str, Any]:
-    if not isinstance(value, dict):
-        return {"status": "unavailable"}
-    required = value.get("required_before_lane_closeout", [])
-    if not isinstance(required, list):
-        required = []
-    target_arg = _command_target_arg(target_root)
-    closeout_trust_command = _command_with_cli_invoke(
-        command=f"agentic-workspace report --target {target_arg} --section closeout_trust --format json",
-        cli_invoke=cli_invoke,
-    )
-    closeout_report_command = _command_with_cli_invoke(
-        command=f"agentic-workspace report --target {target_arg} --section closeout_report --format json",
-        cli_invoke=cli_invoke,
-    )
-    return {
-        "status": value.get("status", "unknown"),
-        "required_before_lane_closeout_count": len(required),
-        "required_before_lane_closeout_ids": [str(item.get("id", "")) for item in required if isinstance(item, dict)],
-        "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
-        "detail_command": closeout_trust_command,
-        "ordinary_closeout_route": {
-            "status": "mandatory-before-completion-claim",
-            "first_inspection": closeout_trust_command,
-            "closeout_report": closeout_report_command,
-            "applies_to": ["implementation closeout", "read-only GitHub status", "repo-maintenance completion"],
-            "top_level_closeout_command": "not-available",
-            "substitute_command": closeout_report_command,
-            "rule": "Use this route before claiming completion; if Planning is active, satisfy planning closeout/archive requirements as well.",
-        },
     }
 
 
@@ -43807,40 +43153,6 @@ def _assignment_policy_payload(
             "model self-assessment",
         ],
         "separation_rule": "assignment_policy chooses who should own work; transport_authority independently governs execution after selection.",
-        "migration": {
-            "canonical_fields": [
-                "delegation.assignment_policy",
-                "delegation.transport_authority",
-                "delegation.human_override_policy",
-                "delegation.current_target",
-                "delegation_targets.<target>.transports",
-            ],
-            "compatibility_aliases": [
-                "delegation.mode",
-                "delegation.execution_role",
-                "delegation.selection_objective",
-                "delegation.underfit_behavior",
-                "delegation.down_routing_behavior",
-                "delegation.manual_transport_policy",
-                "runtime.cheap_bounded_executor_available",
-                "handoff.prefer_internal_delegation_when_available",
-                "delegation_targets.<target>.human_control_modes",
-                "delegation_targets.<target>.execution_methods",
-                "delegation_targets.<target>.dispatch_adapter_kind",
-                "delegation_targets.<target>.dispatch_command",
-                "delegation_targets.<target>.dispatch_output_mode",
-                "delegation_targets.<target>.dispatch_timeout_seconds",
-                "delegation_targets.<target>.escalation_target",
-            ],
-            "lifecycle": {
-                "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
-                "status": "deprecated-removal-scheduled",
-                "policy": DELEGATION_LEGACY_COMPATIBILITY_POLICY,
-                "removal_version": DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
-                "legacy_authoring_permitted_until_removal": True,
-                "canonical_precedence": "canonical fields win without pairwise reconciliation",
-            },
-        },
     }
 
 
@@ -46983,348 +46295,41 @@ def _agent_configuration_queries_report_payload(*, installed_modules: list[str],
     }
 
 
-def _workflow_obligation_payloads(config: WorkspaceConfig) -> list[dict[str, Any]]:
-    return [
-        {
-            "id": obligation.name,
-            "summary": obligation.summary,
-            "stage": obligation.stage,
-            "force": obligation.force,
-            "scope_tags": list(obligation.scope_tags),
-            "commands": list(obligation.commands),
-            "review_hint": obligation.review_hint,
-        }
-        for obligation in config.workflow_obligations
-    ]
-
-
 def _config_field_enforcement_entries() -> list[dict[str, Any]]:
-    return [
-        {"field": "schema_version", "enforcement": "hard", "scope": "repo-config", "used_by": ["config loader", "all workspace commands"]},
-        {
-            "field": "modules.enabled",
-            "enforcement": "operational",
-            "scope": "repo-config",
-            "used_by": ["setup", "install", "init", "upgrade", "uninstall", "report", "doctor", "module selection"],
-        },
-        {
-            "field": "workspace.agent_instructions_file",
-            "enforcement": "operational",
-            "scope": "repo-config",
-            "used_by": ["startup adapters", "install", "init"],
-        },
-        {
-            "field": "workspace.enabled",
-            "enforcement": "operational",
-            "scope": "repo-config-or-local-config",
-            "used_by": ["start", "summary", "report", "implement", "proof", "planning closeout", "disabled-state packet"],
-        },
-        {
-            "field": "workspace.workflow_artifact_profile",
-            "enforcement": "operational",
-            "scope": "repo-config",
-            "used_by": ["startup adapters", "handoff guidance"],
-        },
-        {
-            "field": "workspace.improvement_latitude",
-            "enforcement": "advisory",
-            "scope": "repo-config",
-            "used_by": ["report.repo_friction", "report.improvement_intake", "defaults.improvement_latitude"],
-        },
-        {
-            "field": "workspace.optimization_bias",
-            "enforcement": "advisory",
-            "scope": "repo-config",
-            "used_by": ["report.output_contract", "report section hints", "rendered output density"],
-        },
-        {
-            "field": "workspace.advanced_features",
-            "enforcement": "operational",
-            "scope": "repo-config",
-            "used_by": ["report advanced sections", "skills routing", "startup guidance"],
-        },
-        {
-            "field": "workspace.maintainer_mode",
-            "enforcement": "local-advisory",
-            "scope": "repo-config-or-local-config",
-            "used_by": ["start.maintainer_mode", "report.maintainer_mode", "dogfooding report routes"],
-        },
-        {
-            "field": "system_intent.sources",
-            "enforcement": "operational",
-            "scope": "repo-config",
-            "used_by": ["config", "system-intent", "report.system_intent_mirror"],
-        },
-        {
-            "field": "system_intent.preferred_source",
-            "enforcement": "operational",
-            "scope": "repo-config",
-            "used_by": ["config", "system-intent", "report.system_intent_mirror"],
-        },
-        {
-            "field": "workflow_obligations.<name>.*",
-            "enforcement": "advisory-operational",
-            "scope": "repo-config",
-            "used_by": ["report.workflow_obligations", "preflight.closeout_obligations", "closeout gate force"],
-        },
-        {
-            "field": "assurance.*",
-            "enforcement": "advisory-operational",
-            "scope": "repo-config",
-            "used_by": ["config.assurance", "summary.planning_record", "proof concern profiles", "closeout guidance"],
-        },
-        {
-            "field": "cli_compatibility.*",
-            "enforcement": "advisory-operational",
-            "scope": "repo-config",
-            "used_by": ["config.cli_compatibility", "status/start/report CLI compatibility comparison"],
-        },
-        {
-            "field": "update.modules.<module>.*",
-            "enforcement": "operational",
-            "scope": "repo-config",
-            "used_by": ["config.update", "status/doctor/upgrade source metadata"],
-        },
-        {
-            "field": "workspace.cli_invoke",
-            "enforcement": "operational",
-            "scope": "local-config",
-            "used_by": ["copyable commands", "startup/report/proof/lifecycle guidance"],
-        },
-        {
-            "field": "runtime|handoff|safety|delegation_targets",
-            "enforcement": "local-advisory",
-            "scope": "local-config",
-            "used_by": ["mixed_agent.runtime_resolution", "delegated_run_guardrail", "handoff guidance"],
-        },
-        {
-            "field": "local_memory.enabled/path",
-            "enforcement": "local-advisory",
-            "scope": "local-config",
-            "used_by": ["config.local_memory", "report.local_memory"],
-        },
-        {
-            "field": "local_overlay.*",
-            "enforcement": "local-advisory",
-            "scope": "local-config",
-            "used_by": ["config.local_overlay", "report.local_overlay", "implement.proof.local_overlay", "proof.high_risk_overlay"],
-        },
-    ]
+    from agentic_workspace.contract_tooling import contract_schema
+
+    entries = []
+    for name, scope in [("workspace_config", "repo-config"), ("workspace_local_override", "local-config")]:
+        schema = contract_schema(f"{name}.schema.json")
+        for section, definition in schema["properties"].items():
+            entries.append(
+                {
+                    "field": section,
+                    "scope": scope,
+                    "enforcement": "operational",
+                    "used_by": ["current native source owner"],
+                    "description": definition.get("description", ""),
+                }
+            )
+    return entries
 
 
 def _config_enforcement_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
-    entries = _config_field_enforcement_entries()
-    counts: dict[str, int] = {}
-    for entry in entries:
-        enforcement = str(entry["enforcement"])
-        counts[enforcement] = counts.get(enforcement, 0) + 1
     return {
         "kind": "workspace-config-enforcement/v1",
         "status": "present",
-        "rule": "Config fields declare policy and posture at different strengths; advisory fields must stay visible as advisory instead of being mistaken for hard execution gates.",
         "config_exists": config.exists,
         "local_override_applied": config.local_override.applied,
-        "classes": {
-            "hard": "invalid values stop command execution",
-            "operational": "validated values directly change package output or lifecycle behavior",
-            "advisory": "validated values shape compact guidance but do not execute work",
-            "local-advisory": "machine-local posture that may shape guidance but cannot become shared repo authority",
-        },
-        "field_count_by_class": counts,
-        "fields": entries,
-        "weak_field_routes": [
-            {
-                "field": "workspace.improvement_latitude",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --section repo_friction --format json", cli_invoke=config.cli_invoke
-                ),
-            },
-            {
-                "field": "workspace.optimization_bias",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --section output_contract --format json", cli_invoke=config.cli_invoke
-                ),
-            },
-            {
-                "field": "workspace.maintainer_mode",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --format json", cli_invoke=config.cli_invoke
-                ),
-                "field_path": "maintainer_mode",
-            },
-            {
-                "field": "workflow_obligations.<name>.*",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace report --target ./repo --section workflow_obligations --format json",
-                    cli_invoke=config.cli_invoke,
-                ),
-            },
-            {
-                "field": "cli_compatibility.*",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace config --target ./repo --verbose --format json", cli_invoke=config.cli_invoke
-                ),
-                "field_path": "cli_compatibility",
-            },
-            {
-                "field": "local runtime/delegation posture",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace config --target ./repo --format json", cli_invoke=config.cli_invoke
-                ),
-                "field_path": "mixed_agent.runtime_resolution",
-            },
-        ],
+        "fields": _config_field_enforcement_entries(),
+        "rule": "Closed source schemas admit durable choices; current owners establish their effect. Configuration grants no proof.",
     }
 
 
 def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
-    entries = _config_field_enforcement_entries()
-    effect_classes = {
-        "hard": {
-            "force": "blocking",
-            "agent_dependency": "none-after-command-start",
-            "meaning": "invalid values stop command execution or validation",
-        },
-        "operational": {
-            "force": "tool-behavior",
-            "agent_dependency": "low",
-            "meaning": "validated values directly change package output, lifecycle behavior, or diagnostics",
-        },
-        "advisory-operational": {
-            "force": "structured-decision-or-diagnostic",
-            "agent_dependency": "medium",
-            "meaning": "values produce structured decisions or diagnostics, but action still depends on later tool use or agent uptake",
-        },
-        "advisory": {
-            "force": "guidance-only",
-            "agent_dependency": "high",
-            "meaning": "values shape compact guidance but do not execute work or block claims by themselves",
-        },
-        "local-advisory": {
-            "force": "machine-local-guidance",
-            "agent_dependency": "high",
-            "meaning": "machine-local posture shapes routing without becoming shared repo authority",
-        },
-        "unused": {
-            "force": "none-detected",
-            "agent_dependency": "not-applicable",
-            "meaning": "field is configured or known but no concrete tool output route is currently declared",
-        },
-    }
-
-    def field_effect(entry: dict[str, Any]) -> dict[str, Any]:
-        effect_type = str(entry.get("enforcement", "unused"))
-        used_by = [str(item) for item in _list_payload(entry.get("used_by"))]
-        field = str(entry.get("field", ""))
-        concrete_commands: list[str] = []
-        payload_fields: list[str] = []
-
-        def command(raw_command: str) -> str:
-            return _command_with_cli_invoke(command=raw_command, cli_invoke=config.cli_invoke) or raw_command
-
-        if field.startswith("workspace.improvement_latitude"):
-            concrete_commands = [command("agentic-workspace report --target ./repo --section repo_friction --format json")]
-            payload_fields = ["repo_friction.policy_mode", "operating_posture.improvement_latitude"]
-        elif field.startswith("workspace.enabled"):
-            concrete_commands = [
-                command("agentic-workspace config --target ./repo --select workspace.enabled,workspace.enabled_source --format json"),
-                command("agentic-workspace start --target ./repo --format json"),
-            ]
-            payload_fields = ["workspace.enabled", "agentic-workspace/disabled-state/v1"]
-        elif field.startswith("workspace.optimization_bias"):
-            concrete_commands = [command("agentic-workspace report --target ./repo --section output_contract --format json")]
-            payload_fields = ["output_contract", "operating_posture.optimization_bias"]
-        elif field.startswith("workspace.maintainer_mode"):
-            concrete_commands = [
-                command("agentic-workspace start --target ./repo --format json"),
-                command("agentic-workspace report --target ./repo --format json"),
-            ]
-            payload_fields = ["maintainer_mode", "report_profile.decision_grade_fields"]
-        elif field.startswith("workflow_obligations"):
-            concrete_commands = [
-                command("agentic-workspace report --target ./repo --section workflow_obligations --format json"),
-                command("agentic-workspace preflight --target ./repo --format json"),
-            ]
-            payload_fields = ["workflow_obligations", "closeout_obligations"]
-        elif field.startswith("assurance"):
-            concrete_commands = [
-                command("agentic-workspace config --target ./repo --select assurance,workflow_obligations --format json"),
-                command("agentic-workspace proof --target ./repo --changed <paths> --format json"),
-            ]
-            payload_fields = ["assurance", "proof", "closeout_trust"]
-        elif field.startswith("cli_compatibility"):
-            concrete_commands = [command("agentic-workspace config --target ./repo --select cli_compatibility --format json")]
-            payload_fields = ["cli_compatibility"]
-        elif field.startswith("runtime|handoff|safety|delegation_targets"):
-            concrete_commands = [
-                command('agentic-workspace start --target ./repo --task "<task>" --format json'),
-                command("agentic-workspace implement --target ./repo --changed <paths> --format json"),
-            ]
-            payload_fields = ["delegation_decision", "mixed_agent.runtime_resolution"]
-        elif field.startswith("local_memory"):
-            concrete_commands = [command("agentic-workspace report --target ./repo --section local_memory --format json")]
-            payload_fields = ["local_memory"]
-        elif field.startswith("local_overlay"):
-            concrete_commands = [
-                command("agentic-workspace report --target ./repo --section local_overlay --format json"),
-                command("agentic-workspace report --target ./repo --section local_high_risk_overlay --format json"),
-                command("agentic-workspace implement --target ./repo --changed <paths> --format json"),
-                command("agentic-workspace proof --target ./repo --changed <paths> --format json"),
-            ]
-            payload_fields = [
-                "local_overlay",
-                "local_high_risk_overlay",
-                "proof.local_overlay",
-                "proof.high_risk_overlay",
-                "proof.proof_decision",
-            ]
-        elif field.startswith("workspace.cli_invoke"):
-            concrete_commands = [command("agentic-workspace config --target ./repo --select workspace.cli_invoke --format json")]
-            payload_fields = ["copyable command strings"]
-        elif field.startswith("system_intent"):
-            concrete_commands = [command("agentic-workspace system-intent --target ./repo --format json")]
-            payload_fields = ["system_intent_mirror", "durable_intent"]
-        elif field.startswith("update.modules"):
-            concrete_commands = [
-                command("agentic-workspace status --target ./repo --format json"),
-                command("agentic-workspace upgrade --target ./repo --dry-run --format json"),
-            ]
-            payload_fields = ["update.modules", "module freshness"]
-        else:
-            concrete_commands = [command("agentic-workspace config --target ./repo --verbose --format json")]
-            payload_fields = used_by
-        return {
-            "field": field,
-            "scope": str(entry.get("scope", "")),
-            "effect_type": effect_type,
-            "force": effect_classes.get(effect_type, effect_classes["unused"])["force"],
-            "agent_dependency": effect_classes.get(effect_type, effect_classes["unused"])["agent_dependency"],
-            "concrete_commands": concrete_commands,
-            "payload_fields": payload_fields,
-            "used_by": used_by,
-        }
-
-    field_effects = [field_effect(entry) for entry in entries]
-    counts: dict[str, int] = {key: 0 for key in effect_classes}
-    for effect in field_effects:
-        effect_type = str(effect.get("effect_type", "unused"))
-        counts[effect_type] = counts.get(effect_type, 0) + 1
-    warnings: list[dict[str, Any]] = []
     return {
         "kind": "workspace-config-effect-audit/v1",
-        "status": "present",
-        "rule": "Config settings must state whether they block, change tool behavior, shape diagnostics, or only advise agents.",
-        "config_exists": config.exists,
-        "local_override_applied": config.local_override.applied,
-        "effect_classes": effect_classes,
-        "field_count_by_effect": counts,
-        "field_effects": field_effects,
-        "agent_dependent_fields": [effect for effect in field_effects if str(effect.get("agent_dependency")) in {"medium", "high"}],
-        "claimed_vs_actual_warnings": warnings,
-        "unused_fields": [effect for effect in field_effects if effect.get("effect_type") == "unused"],
-        "detail_command": _command_with_cli_invoke(
-            command="agentic-workspace report --target ./repo --section config_effect_audit --format json", cli_invoke=config.cli_invoke
-        ),
+        "fields": _config_field_enforcement_entries(),
+        "rule": "Resolve current native owners to observe task-bound effects; source presence alone proves no effect.",
     }
 
 
@@ -47828,49 +46833,31 @@ def _selective_surfacing_evaluation_payload(
 
 
 def _configuration_projection_applicability(field: str) -> str:
-    if field.startswith("workflow_obligations"):
-        return "task text, changed paths, or active Planning scope matches obligation scope_tags"
     if field.startswith("assurance"):
         return "changed paths, active Planning assurance fields, or selected proof profile require assurance routing"
     if field.startswith("runtime|handoff|safety|delegation_targets"):
         return "delegation or runtime posture is relevant to the current task shape and safety allows handoff"
-    if field.startswith("local_memory"):
-        return "local memory is enabled and a memory-backed route is requested"
-    if field.startswith("local_overlay"):
-        return "a local overlay item matches changed paths or task markers for ordinary local guidance or high-assurance profile routing"
     if field.startswith("system_intent"):
         return "task, changed paths, or subsystem config intersects durable system intent"
-    if field.startswith("update.modules"):
-        return "status, doctor, or upgrade inspects installed module freshness"
-    if field.startswith("workspace.maintainer_mode"):
-        return "maintainer mode is enabled or dogfooding/reporting posture is requested"
     return "configured field is requested directly or the ordinary route names its payload field"
 
 
 def _configuration_projection_suppression(field: str) -> str:
-    if field.startswith("workflow_obligations"):
-        return "hide obligation detail when no current scope tag matches; keep configured list behind config/report selectors"
     if field.startswith("assurance"):
         return "hide proof profile detail until proof selection, assurance report, or closeout trust needs it"
     if field.startswith("runtime|handoff|safety|delegation_targets"):
         return "hide target detail unless delegation posture changes the next action or config detail is requested"
-    if field.startswith("local_memory"):
-        return "hide local memory detail when disabled or when shared repo authority is being reported"
-    if field.startswith("local_overlay"):
-        return "hide overlay detail when no overlay exists or no overlay item matches the current changed paths/task facts"
     if field.startswith("system_intent"):
         return "surface only compact applicable-intent facts unless system-intent detail is requested"
     return "keep detailed field data behind config/report selectors unless it changes the ordinary next action"
 
 
 def _configuration_projection_authority_exception(*, field: str, owner_boundary: str, dependency: str) -> str:
-    if field.startswith("local_overlay"):
-        return "local-only guidance may shape this checkout's workflow but cannot become checked-in host policy or certify conformance"
     if owner_boundary == "local-human-owned":
         return "local-only advisory; cannot create shared repo obligations, proof gates, or closeout claims"
     if dependency in {"medium", "high"}:
         return "advisory or diagnostic projection; agent owns semantic applicability unless another payload reports a hard gate"
-    if field.startswith("assurance") or field.startswith("workflow_obligations"):
+    if field.startswith("assurance"):
         return "may create closeout or proof pressure only through the named proof, obligation, or closeout payload"
     return "tool-owned validation may affect output, but human-owned config remains the source authority"
 
@@ -47956,108 +46943,6 @@ def _scope_tags_for_task_text(normalized_task: str) -> set[str]:
     return tags
 
 
-def _workflow_obligations_report_payload(
-    *,
-    config: WorkspaceConfig,
-    active_planning_record: dict[str, Any] | None,
-    task_text: str | None = None,
-    changed_paths: list[str] | None = None,
-) -> dict[str, Any]:
-    configured = _workflow_obligation_payloads(config)
-    current_tags, scope_sources = _scope_tags_for_current_work(
-        active_planning_record=active_planning_record, task_text=task_text, changed_paths=changed_paths
-    )
-    matching: list[dict[str, Any]] = []
-    relevant: list[dict[str, Any]] = []
-    current_tag_set = set(current_tags)
-    for obligation in configured:
-        obligation_tags = {str(tag) for tag in obligation["scope_tags"]}
-        matched_tags = sorted(obligation_tags & current_tag_set)
-        matched = bool(matched_tags)
-        if matched:
-            relevant.append(obligation)
-        matching.append(
-            {
-                "id": obligation["id"],
-                "matched": matched,
-                "matched_scope_tags": matched_tags,
-                "non_match_reason": "" if matched else "no overlap with current_scope_tags",
-                "stage": obligation["stage"],
-                "force": obligation.get("force", "recommended"),
-                "gate_status": _workflow_obligation_gate_status(obligation=obligation, matched=matched),
-            }
-        )
-    return {
-        "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
-        "rule": "Repo-custom workflow obligations live in workspace config so planning can consume them when relevant without becoming the owner of workflow extension machinery.",
-        "configured_count": len(configured),
-        "current_scope_tags": current_tags,
-        "match_evidence": {
-            "observed_scope_source": ", ".join(scope_sources)
-            if scope_sources
-            else "no active planning record, task text, or changed paths",
-            "current_scope_tags": current_tags,
-            "match_count": len(relevant),
-            "matching": matching,
-        },
-        "configured": configured,
-        "relevant_to_current_work": relevant,
-        "disposition_contract": {
-            "kind": "agentic-workspace/workflow-obligation-disposition-contract/v1",
-            "allowed_states": ["changed-behavior", "no-signal", "routed", "dismissed", "accepted-risk", "unresolved"],
-            "diagnostic_command_alone_satisfies": False,
-            "rule": (
-                "Behavior-changing workflow obligations require a recorded disposition; running a diagnostic command alone "
-                "is only evidence gathering unless the disposition says no signal was found or the signal was routed/dismissed."
-            ),
-        },
-        "operational_effects": _workflow_obligation_disposition_effects(configured=configured, relevant=relevant, matching=matching),
-    }
-
-
-def _workflow_obligation_gate_status(*, obligation: dict[str, Any], matched: bool) -> str:
-    force = str(obligation.get("force", "recommended"))
-    if force == "informational":
-        return "informational"
-    if force == "recommended":
-        return "recommended" if matched else "not-currently-relevant"
-    if force == "required-before-closeout":
-        return "required-before-closeout" if matched else "standing-closeout-requirement"
-    if force == "blocking":
-        return "blocking" if matched else "standing-blocking-requirement"
-    return "unknown"
-
-
-def _workflow_obligation_disposition_effects(
-    *, configured: list[dict[str, Any]], relevant: list[dict[str, Any]], matching: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
-    matched_by_id = {str(item.get("id")): item for item in matching if isinstance(item, dict)}
-    relevant_ids = {str(item.get("id")) for item in relevant if isinstance(item, dict)}
-    effects: list[dict[str, Any]] = []
-    for obligation in configured:
-        if not isinstance(obligation, dict):
-            continue
-        obligation_id = str(obligation.get("id") or "").strip()
-        force = str(obligation.get("force") or "recommended")
-        matched = obligation_id in relevant_ids
-        behavior_changing = matched and force in {"required-before-closeout", "blocking"}
-        effects.append(
-            {
-                "id": obligation_id,
-                "status": "behavior-changing" if behavior_changing else "advisory" if matched else "not-currently-relevant",
-                "matched": matched,
-                "force": force,
-                "stage": str(obligation.get("stage") or ""),
-                "gate_status": str(_as_dict(matched_by_id.get(obligation_id)).get("gate_status") or ""),
-                "changes": ["closeout boundary", "forbidden actions", "task posture obligations"] if behavior_changing else [],
-                "allowed_dispositions": ["changed-behavior", "no-signal", "routed", "dismissed", "accepted-risk", "unresolved"],
-                "diagnostic_command_alone_satisfies": False,
-                "record_resolution_to": "closeout evidence, Planning closeout, or PR body",
-            }
-        )
-    return effects
-
-
 def _optimization_posture_operational_effect(*, config: WorkspaceConfig, compact: bool) -> dict[str, Any]:
     effects: list[dict[str, Any]] = []
     if config.optimization_bias == "agent-efficiency":
@@ -48114,7 +46999,6 @@ def _operational_effectiveness_payload(
     improvement_obligations: list[dict[str, Any]],
     dogfooding_signal_status: dict[str, Any],
     dogfooding_obligations: list[dict[str, Any]],
-    workflow_effects: list[dict[str, Any]],
     optimization_effect: dict[str, Any],
     planning_safety_gate: dict[str, Any],
     proof: dict[str, Any],
@@ -48142,16 +47026,6 @@ def _operational_effectiveness_payload(
             if dogfooding_signal_status.get("capture_routes")
             else [],
             non_applicability_reason=str(dogfooding_signal_status.get("reason") or "") if dogfooding_status == "not_applicable" else "",
-        )
-    )
-    behavior_workflow = [item for item in workflow_effects if str(item.get("status")) == "behavior-changing"]
-    records.append(
-        _operational_effectiveness_record(
-            signal="workflow_obligations",
-            source="workflow_obligations",
-            status="behavior-changing" if behavior_workflow else "advisory",
-            changes=["closeout boundary", "forbidden actions", "task posture obligations"] if behavior_workflow else [],
-            non_applicability_reason="no behavior-changing workflow obligation matched current scope" if not behavior_workflow else "",
         )
     )
     optimization_changes = _dedupe(
@@ -48243,7 +47117,6 @@ def _task_posture_packet_payload(
     surface: str,
     task_text: str | None,
     changed_paths: list[str] | None,
-    workflow_obligations: dict[str, Any] | None = None,
     skill_routing: dict[str, Any] | None = None,
     planning_safety_gate: dict[str, Any] | None = None,
     proof: dict[str, Any] | None = None,
@@ -48253,7 +47126,6 @@ def _task_posture_packet_payload(
     compact: bool = False,
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
-    workflow_obligations = _as_dict(workflow_obligations)
     skill_routing = _as_dict(skill_routing)
     planning_safety_gate = _as_dict(planning_safety_gate)
     proof = _as_dict(proof)
@@ -48275,16 +47147,6 @@ def _task_posture_packet_payload(
         "primary_consequence": _as_dict(improvement_pressure.get("primary_consequence")),
     }
     improvement_pressure_evaluation = {key: value for key, value in improvement_pressure_evaluation.items() if value not in ("", [], {})}
-    relevant_obligations = [
-        dict(item) for item in _list_payload(workflow_obligations.get("relevant_to_current_work")) if isinstance(item, dict)
-    ]
-    if not relevant_obligations:
-        for item in _list_payload(workflow_obligations.get("configured")):
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("force", "")) in {"blocking", "required-before-closeout"}:
-                relevant_obligations.append(dict(item))
-    workflow_effects = [dict(item) for item in _list_payload(workflow_obligations.get("operational_effects")) if isinstance(item, dict)]
     operating_posture = _operating_posture_payload(config=config, surface=surface, compact=True)
     execution_posture = _execution_posture_payload(
         config=config,
@@ -48496,8 +47358,6 @@ def _task_posture_packet_payload(
         "Were hard obligations, proof burden, authority boundaries, and read budget respected?",
         "Were divergences from output or initiative posture recorded before closeout?",
     ]
-    if relevant_obligations:
-        review_rubrics.append("Were matched workflow obligations satisfied or explicitly routed?")
     if improvement_obligations:
         review_rubrics.append("Were active improvement-pressure obligations followed, overridden, accepted-risk, or left unresolved?")
     if dogfooding_obligations:
@@ -48509,7 +47369,6 @@ def _task_posture_packet_payload(
         improvement_obligations=improvement_obligations,
         dogfooding_signal_status=dogfooding_signal_status,
         dogfooding_obligations=dogfooding_obligations,
-        workflow_effects=workflow_effects,
         optimization_effect=optimization_effect,
         planning_safety_gate=planning_safety_gate,
         proof=proof,
@@ -48523,7 +47382,6 @@ def _task_posture_packet_payload(
         proof=proof,
         completion_gate=completion_gate,
         closeout_trust=closeout_trust,
-        relevant_obligations=relevant_obligations,
     )
     gate_summary = _knowledge_gate_summary_payload(knowledge_gates)
     blocked_actions = _dedupe(
@@ -48559,8 +47417,6 @@ def _task_posture_packet_payload(
             "repo_posture_digest": repo_posture["digest"],
             "repo_posture_reminder": repo_posture["reminder"],
         },
-        "workflow_obligations": relevant_obligations,
-        "workflow_obligation_effects": workflow_effects,
         "improvement_pressure_evaluation": improvement_pressure_evaluation,
         "improvement_pressure_records": [
             dict(item)
@@ -48596,7 +47452,6 @@ def _task_posture_packet_payload(
         "module_contributions": module_contributions,
         "provenance": [
             {"source": ".agentic-workspace/config.toml", "fields": ["optimization_bias", "workflow_artifact_profile", "assurance"]},
-            {"source": "workflow_obligations", "matched_count": len(relevant_obligations)},
             {"source": "planning_safety_gate", "status": planning_safety_gate.get("status", "not-present")},
             {"source": "module_registry", "matched_module_count": len(module_contributions)},
             {"source": "improvement_pressure", "active_obligation_count": len(improvement_obligations)},
@@ -48610,7 +47465,6 @@ def _task_posture_packet_payload(
         "static_adapter_role": f"{config.agent_instructions_file} points agents to this routed packet; it should not inline all task rules.",
         "rendered_fields": [
             "operating_posture",
-            "workflow_obligations",
             "skill_routes",
             "allowed_actions",
             "forbidden_actions",
@@ -48656,7 +47510,6 @@ def _knowledge_gates_payload(
     proof: dict[str, Any],
     completion_gate: dict[str, Any],
     closeout_trust: dict[str, Any],
-    relevant_obligations: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     gates: list[dict[str, Any]] = []
 
@@ -48734,25 +47587,6 @@ def _knowledge_gates_payload(
             record_resolution_to=".agentic-workspace/planning/ or equivalent checked-in custody evidence",
             closeout_boundaries=["useful_slice_complete", "full_parent_satisfaction", "issue_closure"],
             fallback="If cheap custody creation is unavailable, route creation to #1706 and keep parent completion claims partial.",
-        )
-
-    for index, obligation in enumerate(relevant_obligations, start=1):
-        force = str(obligation.get("force") or "")
-        if force not in {"blocking", "required-before-closeout", "required_before_claim", "required_before_edit"}:
-            continue
-        gate_force = "required_before_claim" if force == "required-before-closeout" else "required_before_edit"
-        add_gate(
-            gate_id=f"workflow-obligation-{index}",
-            route_id=str(obligation.get("id") or f"workflow-obligation-{index}"),
-            trigger="configured workflow obligation matched this task",
-            force=gate_force,
-            reason=str(obligation.get("reason") or obligation.get("description") or "A configured workflow obligation applies."),
-            next_allowed_action="satisfy or dismiss matched workflow obligation",
-            forbidden_actions=["claim completion before obligation is resolved"],
-            required_actions=["consult the obligation owner", "record satisfaction or dismissal in closeout"],
-            record_resolution_to=".agentic-workspace/config.toml",
-            closeout_boundaries=["full_intent_complete"] if gate_force == "required_before_claim" else [],
-            fallback="If the config owner is unavailable, route the unresolved obligation through Planning closeout.",
         )
 
     proof_required = bool(_list_payload(proof.get("required_commands")) or _list_payload(proof.get("proof_commands")))
@@ -48834,9 +47668,7 @@ def _task_posture_packet_changes_routing(packet: dict[str, Any]) -> bool:
     if not isinstance(packet, dict):
         return False
     return bool(
-        packet.get("workflow_obligations")
-        or packet.get("workflow_obligation_effects")
-        or packet.get("improvement_obligations")
+        packet.get("improvement_obligations")
         or packet.get("dogfooding_obligations")
         or packet.get("operational_effectiveness")
         or packet.get("module_contributions")
@@ -48876,59 +47708,6 @@ def _task_posture_packet_relevant(*, task_text: str | None, changed_paths: list[
         "module_registry",
     )
     return any(marker in haystack for marker in markers)
-
-
-def _closeout_workflow_obligations_payload(workflow_obligations: dict[str, Any]) -> dict[str, Any]:
-    relevant = workflow_obligations.get("relevant_to_current_work", [])
-    if not isinstance(relevant, list):
-        relevant = []
-    configured = workflow_obligations.get("configured", [])
-    if not isinstance(configured, list):
-        configured = []
-    closeout_stages = {"before-claiming-completion", "closeout"}
-    closeout_relevant = [
-        obligation for obligation in relevant if isinstance(obligation, dict) and str(obligation.get("stage", "")) in closeout_stages
-    ]
-    standing_closeout = [
-        obligation for obligation in configured if isinstance(obligation, dict) and str(obligation.get("stage", "")) in closeout_stages
-    ]
-    closeout_required = [
-        obligation
-        for obligation in closeout_relevant or standing_closeout
-        if str(obligation.get("force", "recommended")) in {"required-before-closeout", "blocking"}
-    ]
-    closeout_recommended = [
-        obligation
-        for obligation in closeout_relevant or standing_closeout
-        if str(obligation.get("force", "recommended")) in {"informational", "recommended"}
-    ]
-    primary_obligation = closeout_required[0] if closeout_required else closeout_recommended[0] if closeout_recommended else None
-    primary_commands = primary_obligation.get("commands", []) if isinstance(primary_obligation, dict) else []
-    primary_command = str(primary_commands[0]) if isinstance(primary_commands, list) and primary_commands else ""
-    return {
-        "status": "present" if closeout_required else "recommended" if closeout_recommended else "none-configured-for-current-work",
-        "rule": "Before claiming work, a lane, or a milestone is complete, run closeout obligations from repo config; validation success alone is not a closeout.",
-        "primary_next_action": {
-            "action": "run-closeout-obligation",
-            "id": str(primary_obligation.get("id", "")),
-            "summary": str(primary_obligation.get("summary", "")),
-            "command": primary_command,
-            "run": primary_command,
-            "risk": "may surface required closeout work but should not mutate repo state unless the command itself says so",
-            "required_inputs": ["task scope or active planning record", "changed paths or proof scope", "validation results"],
-            "next_proof": "record closeout evidence, route durable residue, then rerun summary/reconcile before issue closure",
-        }
-        if isinstance(primary_obligation, dict)
-        else None,
-        "required_before_lane_closeout": closeout_required,
-        "recommended_before_lane_closeout": closeout_recommended,
-        "blocking_count": sum((1 for obligation in closeout_required if str(obligation.get("force", "")) == "blocking")),
-        "recommended_next_action": "Run the listed closeout obligation commands and record any friction as planning, memory, review, or issue follow-up."
-        if closeout_required
-        else "Consider the listed closeout obligation commands before claiming completion."
-        if closeout_recommended
-        else "No repo-custom closeout obligation is configured.",
-    }
 
 
 def _system_intent_source_payload(config: WorkspaceConfig) -> dict[str, Any]:
@@ -50818,36 +49597,14 @@ def _agent_configuration_queries_payload() -> dict[str, Any]:
 
 
 def _agent_configuration_workflow_extensions_payload() -> dict[str, Any]:
-    canonical_doc = ".agentic-workspace/docs/workspace-config-contract.md"
     return {
-        "canonical_doc": canonical_doc,
+        "canonical_doc": ".agentic-workspace/docs/workspace-config-contract.md",
         "command": "agentic-workspace defaults --section agent_configuration_workflow_extensions --format json",
-        "rule": "Author ordinary repo guidance in `.agentic-workspace/instructions/*.md`. Use workflow obligations only as compatibility metadata for a concrete stage-bound lifecycle consumer.",
-        "definition_format": copy.deepcopy(_WORKFLOW_DEFINITION_FORMAT),
+        "rule": "Author reusable repository guidance, checks, procedures and protections in scoped Markdown.",
+        "owner_surface": ".agentic-workspace/instructions/*.md",
         "ordinary_authoring_surface": ".agentic-workspace/instructions/*.md",
-        "status": "specialized-compatibility-only",
-        "owner_surface": ".agentic-workspace/config.toml [workflow_obligations]",
-        "fields": [
-            {"field": "summary", "purpose": "bounded repo-local expectation worth surfacing into active work"},
-            {"field": "stage", "purpose": "when the obligation matters"},
-            {"field": "force", "purpose": "whether the matched obligation is informational, recommended, required, or blocking"},
-            {"field": "scope_tags", "purpose": "which slices or surfaces should consider the obligation relevant"},
-            {"field": "commands", "purpose": "bounded commands or checks the repo expects before the stage completes"},
-            {"field": "review_hint", "purpose": "compact reminder for review or closure surfaces"},
-        ],
-        "supported_stages": list(SUPPORTED_WORKFLOW_OBLIGATION_STAGES),
-        "supported_forces": list(SUPPORTED_WORKFLOW_OBLIGATION_FORCES),
-        "consumption_rule": [
-            "scoped Markdown owns ordinary repo guidance, checks, procedures, and protections",
-            "workspace reports surviving stage-bound compatibility obligations to their specialized lifecycle consumers",
-            "planning consumes only relevant compatibility obligations and does not treat them as a generic instruction language",
-        ],
-        "must_not": [
-            "turn workflow obligations into a general scheduler",
-            "present stage plus scope_tags plus commands as a peer ordinary authoring model",
-            "move planning ownership into workspace config",
-            "encode every minor preference as a workflow obligation",
-        ],
+        "fields": ["paths", "read", "use", "checks", "protect"],
+        "consumption_rule": ["Current instruction applicability selects relevant guidance; proof remains with Verification."],
     }
 
 
@@ -50879,9 +49636,7 @@ def _emit_startup_report(*, format_name: str, target_root: Path, descriptors: di
         "escalation_boundaries": active_record.get("escalate_when") or [],
         "relevant_handoff_context": plan_report.get("active", {}).get("handoff_contract") or {},
     }
-    cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
-    if cli_compatibility["configured"]:
-        payload["cli_compatibility"] = cli_compatibility
+
     _emit_payload(payload=payload, format_name=format_name)
 
 
@@ -51705,9 +50460,7 @@ def _emit_defaults(*, format_name: str, section: str | None = None, profile: str
     print("Recovery:")
     print(f"- doc: {payload['recovery']['canonical_doc']}")
     print(f"- rule: {payload['recovery']['rule']}")
-    print(
-        f"- effective output posture: {payload['recovery']['effective_output_posture']['command']} -> {payload['recovery']['effective_output_posture']['field']}"
-    )
+    print(f"- effective output posture: {payload['recovery']['effective_output_posture']['command']}")
     print("Completion:")
     print(f"- rule: {payload['completion']['rule']}")
     print("Delegated judgment:")
@@ -52213,681 +50966,16 @@ def _host_repo_orientation_payload(*, target_root: Path) -> dict[str, Any]:
 
 
 def _setup_configuration_concerns_payload(*, target_root: Path, config: WorkspaceConfig, selected_modules: list[str]) -> dict[str, Any]:
-    """Project bounded setup judgments from strong repo-owned evidence.
+    from agentic_workspace.decision import start
 
-    This is intentionally a concern classifier, not a repository analyzer or
-    config writer.  It reads a fixed, small source set and routes inferred
-    actions or human-owned choices to their existing owners.
-    """
-
-    inspected: list[str] = []
-    concerns: list[dict[str, Any]] = []
-    zero_interaction_actions: list[dict[str, Any]] = []
-    human_questions: list[dict[str, Any]] = []
-
-    def existing(relative: str) -> bool:
-        present = (target_root / relative).is_file()
-        if present:
-            _append_unique(inspected, relative)
-        return present
-
-    def evidence(*sources: str, authority: str, strength: str = "strong") -> dict[str, Any]:
-        return {
-            "strength": strength,
-            "sources": [source for source in sources if source],
-            "authority": authority,
-        }
-
-    config_path = target_root / WORKSPACE_CONFIG_PATH
-    raw_config: dict[str, Any] = {}
-    if config_path.is_file():
-        _append_unique(inspected, WORKSPACE_CONFIG_PATH.as_posix())
-        try:
-            loaded_config = tomllib.loads(config_path.read_text(encoding="utf-8"))
-        except (OSError, tomllib.TOMLDecodeError):
-            loaded_config = {}
-        raw_config = loaded_config if isinstance(loaded_config, dict) else {}
-
-    startup_surface = config.agent_instructions_file
-    startup_present = existing(startup_surface)
-    concerns.append(
-        {
-            "id": "startup-entrypoint",
-            "owner": "workspace.init",
-            "status": "satisfied" if startup_present else "inference-ready",
-            "materiality": "required-for-ordinary-startup",
-            "dependency": "none",
-            "evidence": evidence(
-                WORKSPACE_CONFIG_PATH.as_posix() if raw_config else "",
-                startup_surface if startup_present else "",
-                authority="repo-owned-config-and-adapter",
-            ),
-            "inference": f"Use {startup_surface} as the repository startup adapter.",
-            "apply_route": {
-                "owner": "workspace.init",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace init --target . --format json",
-                    cli_invoke=config.cli_invoke,
-                ),
-                "status": "not-required" if startup_present else "owner-route-required",
-            },
-            "detail_selector": "config.workspace.agent_instructions_file",
-        }
-    )
-
-    intent_sources = [
-        path for path in ("SYSTEM_INTENT.md", "docs/system-intent.md", "docs/product-direction.md", "README.md") if existing(path)
-    ]
-    intent_current = existing(".agentic-workspace/system-intent/intent.toml")
-    if intent_current:
-        intent_status = "satisfied"
-        intent_inference = "A current workspace system-intent surface already exists."
-    elif intent_sources:
-        intent_status = "inference-ready"
-        intent_inference = f"Sync interpreted system intent from the strongest available repo source: {intent_sources[0]}."
-        zero_interaction_actions.append(
-            {
-                "concern_id": "system-intent-source",
-                "owner": "system-intent.sync",
-                "status": "ready-for-owner",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace system-intent --target . --sync --format json",
-                    cli_invoke=config.cli_invoke,
-                ),
-                "claim_boundary": "The owner may sync interpreted fields; confirmed human intent remains human-owned.",
-            }
-        )
-    else:
-        intent_status = "not-applicable"
-        intent_inference = "No strong durable product-intent source was found; do not manufacture one from filenames."
-    concerns.append(
-        {
-            "id": "system-intent-source",
-            "owner": "system-intent.sync",
-            "status": intent_status,
-            "materiality": "useful-when-a-durable-intent-source-exists",
-            "dependency": "startup-entrypoint",
-            "evidence": evidence(*intent_sources, authority="repo-owned-intent-source"),
-            "inference": intent_inference,
-            "apply_route": {
-                "owner": "system-intent.sync",
-                "status": "ready-for-owner" if intent_status == "inference-ready" else "not-required",
-            },
-            "detail_selector": "system_intent",
-        }
-    )
-
-    explicit_test_commands: list[dict[str, str]] = []
-    package_json_path = target_root / "package.json"
-    if package_json_path.is_file():
-        _append_unique(inspected, "package.json")
-        try:
-            package_payload = json.loads(package_json_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            package_payload = {}
-        scripts = package_payload.get("scripts") if isinstance(package_payload, dict) else {}
-        if isinstance(scripts, dict) and isinstance(scripts.get("test"), str) and scripts["test"].strip():
-            explicit_test_commands.append({"command": "npm test", "source": "package.json#scripts.test"})
-    pyproject_path = target_root / "pyproject.toml"
-    if pyproject_path.is_file():
-        _append_unique(inspected, "pyproject.toml")
-        try:
-            pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-        except (OSError, tomllib.TOMLDecodeError):
-            pyproject = {}
-        tool = pyproject.get("tool") if isinstance(pyproject, dict) else {}
-        if isinstance(tool, dict) and isinstance(tool.get("pytest"), dict):
-            explicit_test_commands.append({"command": "pytest", "source": "pyproject.toml#tool.pytest"})
-    workflow_sources: list[str] = []
-    workflows_root = target_root / ".github" / "workflows"
-    if workflows_root.is_dir():
-        workflow_sources = [path.relative_to(target_root).as_posix() for path in sorted(workflows_root.glob("*.y*ml"))[:4]]
-        for source in workflow_sources:
-            _append_unique(inspected, source)
-    proof_status = "inference-ready" if explicit_test_commands else "not-applicable"
-    if explicit_test_commands:
-        zero_interaction_actions.append(
-            {
-                "concern_id": "proof-route",
-                "owner": "proof.selection",
-                "status": "inferred-no-mutation-required",
-                "inferred_value": explicit_test_commands[0]["command"],
-                "claim_boundary": "Live changed-path proof still selects and confirms the command before a proof claim.",
-            }
-        )
-    concerns.append(
-        {
-            "id": "proof-route",
-            "owner": "proof.selection",
-            "status": proof_status,
-            "materiality": "required-before-proof-claims",
-            "dependency": "none",
-            "evidence": evidence(
-                *[item["source"] for item in explicit_test_commands],
-                *workflow_sources,
-                authority="explicit-toolchain-or-ci-command",
-            ),
-            "inference": (
-                f"Use the explicit repository test route {explicit_test_commands[0]['command']!r} as a proof candidate."
-                if explicit_test_commands
-                else "No explicit repeatable test command was found; generic test-like filenames are insufficient."
-            ),
-            "apply_route": {
-                "owner": "proof.selection",
-                "status": "ready-for-owner" if explicit_test_commands else "not-required",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace proof --target . --changed <paths> --format json",
-                    cli_invoke=config.cli_invoke,
-                )
-                if explicit_test_commands
-                else "",
-            },
-            "detail_selector": "proof_route_hints",
-        }
-    )
-
-    codeowners = next(
-        (path for path in (".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS") if existing(path)),
-        "",
-    )
-    if codeowners:
-        zero_interaction_actions.append(
-            {
-                "concern_id": "ownership-boundaries",
-                "owner": "ownership.report",
-                "status": "ready-for-owner",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace ownership --target . --format json",
-                    cli_invoke=config.cli_invoke,
-                ),
-                "claim_boundary": "CODEOWNERS is evidence for a proposal; the ownership owner decides the shared mapping.",
-            }
-        )
-    concerns.append(
-        {
-            "id": "ownership-boundaries",
-            "owner": "ownership.report",
-            "status": "inference-ready" if codeowners else "not-applicable",
-            "materiality": "required-only-for-shared-ownership-policy",
-            "dependency": "none",
-            "evidence": evidence(codeowners, authority="explicit-repository-ownership-map"),
-            "inference": (
-                f"Use {codeowners} as evidence when proposing host ownership boundaries."
-                if codeowners
-                else "Directory names alone do not authorize shared ownership policy."
-            ),
-            "apply_route": {
-                "owner": "ownership.report",
-                "status": "ready-for-owner" if codeowners else "not-required",
-                "command": _command_with_cli_invoke(
-                    command="agentic-workspace ownership --target . --format json",
-                    cli_invoke=config.cli_invoke,
-                )
-                if codeowners
-                else "",
-            },
-            "detail_selector": "ownership",
-        }
-    )
-
-    local_override = config.local_override
-    orchestration_declared = local_override.execution_role == "orchestrator"
-    assignment_explicit = local_override.assignment_policy is not None
-    setup_identity = _config_policy_setup_identity(target_root=target_root, config=config)
-    local_config_path = target_root / WORKSPACE_LOCAL_CONFIG_PATH
-    shared_config_revision = _config_policy_revision(config_path)
-    local_config_revision = _config_policy_revision(local_config_path)
-    if orchestration_declared and not assignment_explicit:
-        question = {
-            "concern_id": "orchestration-posture",
-            "why_required": (
-                "The repository explicitly selects orchestration, but it does not say whether work may automatically "
-                "move to another agent. Repository evidence cannot decide that human-owned authority boundary."
-            ),
-            "already_inferred": "Multi-agent orchestration is intended; the transfer policy is unresolved.",
-            "question": "Should suitable work move automatically to the best available agent, or stay here unless you explicitly delegate it?",
-            "alternatives": [
-                {
-                    "id": "automatic-best-fit",
-                    "label": "Move suitable work automatically",
-                    "consequence": "AW may assign bounded work to a better-fit configured target when its safety contract permits it.",
-                    "decision": {
-                        "kind": "agentic-workspace/config-policy-decision/v1",
-                        "concern_id": "orchestration-posture",
-                        "authority": "human-answer",
-                        "scope": "local",
-                        "setup_identity": setup_identity,
-                        "changes": {"delegation.assignment_policy": "required-best-fit"},
-                    },
-                },
-                {
-                    "id": "explicit-delegation-only",
-                    "label": "Keep work local by default",
-                    "consequence": "AW will suggest delegation when useful but waits for an explicit choice before transfer.",
-                    "decision": {
-                        "kind": "agentic-workspace/config-policy-decision/v1",
-                        "concern_id": "orchestration-posture",
-                        "authority": "human-answer",
-                        "scope": "local",
-                        "setup_identity": setup_identity,
-                        "changes": {"delegation.assignment_policy": "best-fit-advisory"},
-                    },
-                },
-            ],
-            "answer_owner": "config.policy-apply",
-            "apply_command": _command_with_cli_invoke(
-                command=(
-                    "agentic-workspace config-policy --target . --decision-json '<selected-alternative.decision-json>' "
-                    f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
-                ),
-                cli_invoke=config.cli_invoke,
-            ),
-            "detail_selector": "config.local_runtime.assignment_policy",
-        }
-        human_questions.append(question)
-        orchestration_status = "human-decision-required"
-    else:
-        question = None
-        orchestration_status = "satisfied" if orchestration_declared else "not-applicable"
-    concerns.append(
-        {
-            "id": "orchestration-posture",
-            "owner": "config.policy-apply",
-            "status": orchestration_status,
-            "materiality": "shared-execution-authority",
-            "dependency": "configured-targets",
-            "evidence": evidence(
-                f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()}#delegation.execution_role" if orchestration_declared else "",
-                authority="explicit-local-config",
-            ),
-            "inference": (
-                "Orchestration is explicitly selected, but automatic transfer policy cannot be inferred."
-                if question
-                else "No unresolved orchestration policy is active."
-            ),
-            "human_decision": question or {},
-            "apply_route": {
-                "owner": "config.policy-apply",
-                "status": "awaiting-human" if question else "not-required",
-                "operation": "config.policy-apply",
-            },
-            "detail_selector": "config.local_runtime.assignment_policy",
-        }
-    )
-
-    if "verification" in selected_modules:
-        verification_status = "satisfied"
-        verification_inference = "Verification is already enabled."
-    elif explicit_test_commands and workflow_sources:
-        verification_status = "inference-ready"
-        verification_inference = (
-            "Explicit test and CI routes support recommending repeatable Verification without a module-choice question."
-        )
-        zero_interaction_actions.append(
-            {
-                "concern_id": "verification-capability",
-                "owner": "modules.reconcile",
-                "status": "ready-for-owner",
-                "desired_outcome": "Preserve repeatable CI-backed proof routes for future claims.",
-                "detail_command": _command_with_cli_invoke(
-                    command="agentic-workspace modules --target . --format json",
-                    cli_invoke=config.cli_invoke,
-                ),
-            }
-        )
-    else:
-        verification_status = "not-applicable"
-        verification_inference = "Do not ask about Verification merely because the capability exists."
-    concerns.append(
-        {
-            "id": "verification-capability",
-            "owner": "modules.reconcile",
-            "status": verification_status,
-            "materiality": "repeatable-proof-lifecycle",
-            "dependency": "proof-route",
-            "evidence": evidence(
-                *[item["source"] for item in explicit_test_commands],
-                *workflow_sources,
-                authority="explicit-repeatable-proof-routes",
-            ),
-            "inference": verification_inference,
-            "apply_route": {
-                "owner": "modules.reconcile",
-                "status": "ready-for-owner" if verification_status == "inference-ready" else "not-required",
-            },
-            "detail_selector": "modules",
-        }
-    )
-
-    ecosystem_sources = [source for source in ("pyproject.toml", "package.json", "Cargo.toml", "go.mod") if existing(source)]
-    broad_work = len(ecosystem_sources) > 1 and not codeowners
-    if broad_work:
-        concerns.append(
-            {
-                "id": "cross-ecosystem-boundaries",
-                "owner": "planning",
-                "status": "bounded-route-required",
-                "materiality": "broad-active-work",
-                "dependency": "human-or-planning-boundary",
-                "evidence": evidence(*ecosystem_sources, authority="multiple-explicit-toolchain-manifests"),
-                "inference": "Multiple explicit ecosystems are present without an authoritative ownership map; setup must not analyze the whole repository.",
-                "apply_route": {
-                    "owner": "planning",
-                    "status": "bounded-route-required",
-                    "command": _command_with_cli_invoke(
-                        command="agentic-workspace planning new-plan --id <id> --title <title> --target . --format json",
-                        cli_invoke=config.cli_invoke,
-                    ),
-                },
-                "detail_selector": "host_orientation",
-            }
-        )
-
-    source_obligation_concerns = _workspace_source_obligation_payloads(
-        target_root=target_root,
-        config=config,
-        raw_config=raw_config,
-    )
-    for source_concern in source_obligation_concerns:
-        concerns.append(source_concern)
-        if source_concern["status"] == "human-decision-required":
-            human_questions.append(copy.deepcopy(_as_dict(source_concern.get("human_decision"))))
-        elif source_concern["status"] == "inference-ready":
-            zero_interaction_actions.append(
-                {
-                    "concern_id": source_concern["id"],
-                    "owner": source_concern["owner"],
-                    "status": "ready-for-owner",
-                    "apply_route": copy.deepcopy(_as_dict(source_concern.get("apply_route"))),
-                    "claim_boundary": "Only the named source owner may bind the existing repository authority.",
-                }
-            )
-
-    descriptors = _module_operations()
-    for module_concern in _module_setup_concern_payloads(selected_modules=selected_modules, descriptors=descriptors):
-        concerns.append(module_concern)
-        if module_concern["status"] == "human-decision-required":
-            human_questions.append(copy.deepcopy(_as_dict(module_concern.get("human_decision"))))
-        elif module_concern["status"] == "inference-ready":
-            zero_interaction_actions.append(
-                {
-                    "concern_id": module_concern["id"],
-                    "owner": module_concern["owner"],
-                    "status": "ready-for-owner",
-                    "apply_route": copy.deepcopy(_as_dict(module_concern.get("apply_route"))),
-                    "claim_boundary": "The enabled module declares the concern; its named owner remains responsible for effects.",
-                }
-            )
-
-    prior_concern_receipts = _setup_concern_receipts(target_root=target_root)
-    current_concern_receipts: dict[str, dict[str, Any]] = {}
-    pressure_ids: set[str] = set()
-    delta_counts = {"newly-applicable": 0, "semantics-changed": 0, "source-changed": 0, "unchanged": 0}
-    for concern in concerns:
-        concern_id = str(concern.get("id") or "")
-        identity = concern_id if concern_id.startswith("module:") else f"workspace:{concern_id}"
-        semantic_revision = str(
-            concern.get("semantic_revision") or _CORE_SETUP_CONCERN_SEMANTIC_REVISIONS.get(concern_id) or f"workspace:{concern_id}/v1"
-        )
-        source_revision = _setup_concern_source_revision(target_root=target_root, concern=concern)
-        contract = {
-            "identity": identity,
-            "semantic_revision": semantic_revision,
-            "source_revision": source_revision,
-            "materiality": str(concern.get("materiality") or "recommended"),
-            "owner": str(concern.get("owner") or ""),
-            "status": str(concern.get("status") or ""),
-            "source_obligation_status": str(_as_dict(concern.get("source_obligation")).get("status") or ""),
-        }
-        prior = prior_concern_receipts.get(identity, {})
-        if not prior:
-            delta_status = "newly-applicable"
-        elif prior.get("semantic_revision") != semantic_revision:
-            delta_status = "semantics-changed"
-        elif prior.get("source_revision") != source_revision:
-            delta_status = "source-changed"
-        else:
-            delta_status = "unchanged"
-        delta_counts[delta_status] += 1
-        active_status = concern.get("status") in {
-            "inference-ready",
-            "human-decision-required",
-            "bounded-route-required",
-            "follow-up-recommended",
-        }
-        pressure = bool(active_status and delta_status != "unchanged")
-        if pressure:
-            pressure_ids.add(concern_id)
-        concern["contract"] = contract
-        concern["delta_status"] = delta_status
-        concern["setup_pressure"] = pressure
-        current_concern_receipts[identity] = contract
-
-    human_questions = [question for question in human_questions if str(question.get("concern_id") or "") in pressure_ids]
-    zero_interaction_actions = [action for action in zero_interaction_actions if str(action.get("concern_id") or "") in pressure_ids]
-    retired_concern_ids = sorted(set(prior_concern_receipts) - set(current_concern_receipts))
-
-    status_counts = {
-        status: sum(1 for concern in concerns if concern.get("status") == status and concern.get("setup_pressure"))
-        for status in ("satisfied", "inference-ready", "human-decision-required", "not-applicable", "bounded-route-required")
-    }
-    bounded_pressure = any(concern.get("status") == "bounded-route-required" and concern.get("setup_pressure") for concern in concerns)
-    status = "human-decision-required" if human_questions else "bounded-route-required" if bounded_pressure else "zero-question-ready"
-    unresolved_concern_ids = [
-        str(concern.get("id"))
-        for concern in concerns
-        if concern.get("status") in {"human-decision-required", "bounded-route-required", "follow-up-recommended"}
-        and concern.get("setup_pressure")
-    ]
-    required_concern_ids = [
-        str(concern.get("id"))
-        for concern in concerns
-        if concern.get("status") in {"human-decision-required", "bounded-route-required"}
-        and concern.get("materiality") != "recommended"
-        and concern.get("setup_pressure")
-    ]
-    context_revision = _setup_context_revision(target_root=target_root, selected_modules=selected_modules)
-    local_disposition = config.local_override.setup_prompt_disposition or "active"
-    local_disposition_current = (
-        local_disposition in {"deferred", "optional-suppressed"}
-        and config.local_override.setup_identity == setup_identity
-        and config.local_override.setup_context_revision == context_revision
-        and tuple(unresolved_concern_ids) == config.local_override.setup_unresolved_concerns
-    )
-    disposition_decision_base = {
-        "kind": "agentic-workspace/config-policy-decision/v1",
-        "concern_id": "setup-continuation",
-        "authority": "human-answer",
-        "scope": "local",
-        "setup_identity": setup_identity,
-    }
-
-    def disposition_decision(disposition: str) -> dict[str, Any]:
-        return {
-            **disposition_decision_base,
-            "changes": {
-                "setup.prompt_disposition": disposition,
-                "setup.setup_identity": setup_identity,
-                "setup.context_revision": context_revision,
-                "setup.unresolved_concerns": unresolved_concern_ids,
-                "setup.required_concerns": required_concern_ids,
-            },
-        }
-
-    disposition_command = _command_with_cli_invoke(
-        command=(
-            "agentic-workspace config-policy --target . --decision-json '<selected-disposition.decision-json>' "
-            f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
-        ),
-        cli_invoke=config.cli_invoke,
-    )
-    adoption_status = _read_adoption_receipt(target_root=target_root)
-    adoption_payload = _as_dict(adoption_status.get("payload"))
-    readiness_basis = {
-        "selected_modules": sorted(_dedupe(selected_modules)),
-        "payload_mirror": bool(adoption_payload.get("payload_mirror")),
-        "checked_in_rule": str(adoption_payload.get("checked_in_rule") or ""),
-    }
+    current = start({"target": str(target_root), "task": "Inspect current configuration", "changed": [], "projection": "full"})
     return {
-        "kind": "agentic-workspace/setup-concerns/v1",
-        "status": status,
-        "concerns": concerns,
-        "status_counts": status_counts,
-        "inferred_configuration": {
-            "startup_adapter": startup_surface if startup_present else "owner-route-required",
-            "intent_source": intent_sources[0] if intent_sources else "not-inferred",
-            "proof_command_candidates": [item["command"] for item in explicit_test_commands],
-            "ownership_source": codeowners or "not-inferred",
-            "capability_outcomes": [
-                action["desired_outcome"]
-                for action in zero_interaction_actions
-                if isinstance(action, dict) and action.get("desired_outcome")
-            ],
-            "authority": "projection-only; each change remains owned by its apply_route",
-        },
-        "zero_interaction_actions": zero_interaction_actions,
-        "human_questions": human_questions,
-        "source_obligations": [
-            copy.deepcopy(_as_dict(concern.get("source_obligation")))
-            for concern in concerns
-            if isinstance(concern.get("source_obligation"), dict)
-        ],
-        "concern_contracts": list(current_concern_receipts.values()),
-        "delta": {
-            "counts": delta_counts,
-            "retired_concern_ids": retired_concern_ids,
-            "rule": "Compare the current applicable semantic/source concern set directly; never replay chronological setup generations.",
-        },
-        "inspection_budget": {
-            "inspected_sources": inspected,
-            "source_count": len(inspected),
-            "excluded_as_independent_authority": [
-                "generic filenames or keywords",
-                "scratch and local artifacts",
-                "package-source-repository policy",
-                "broad docs, backlog, or source-tree scans",
-            ],
-            "rule": "Inspect only fixed strong sources needed by active concerns; exact selectors own further detail.",
-        },
-        "transient_findings": {
-            "status": "kept-transient",
-            "rule": "Advisory orientation and weak setup findings do not become configuration pressure without stronger authority.",
-        },
-        "continuation": {
-            "kind": "agentic-workspace/setup-continuation/v1",
-            "configuration_freshness": (
-                "required-for-affected-action" if required_concern_ids else "follow-up-recommended" if unresolved_concern_ids else "current"
-            ),
-            "user_disposition": local_disposition if local_disposition_current else "active",
-            "setup_identity": setup_identity,
-            "context_revision": context_revision,
-            "unresolved_concern_ids": unresolved_concern_ids,
-            "required_concern_ids": required_concern_ids,
-            "source": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
-            "actions": {
-                "defer": {"decision": disposition_decision("deferred"), "command": disposition_command},
-                "suppress_optional": {"decision": disposition_decision("optional-suppressed"), "command": disposition_command},
-                "resume": {
-                    "decision": {**disposition_decision_base, "changes": {}, "clear_setup_disposition": True},
-                    "command": disposition_command,
-                },
-            },
-            "rule": (
-                "Deferral changes only local prompting disposition, never repository freshness. Applied decisions remain with their owners; "
-                "resume re-resolves from compact concern identities without the prior transcript."
-            ),
-        },
-        "mutation_context": {
-            "setup_identity": setup_identity,
-            "shared_config_revision": shared_config_revision,
-            "local_config_revision": local_config_revision,
-            "decision_kind": "agentic-workspace/config-policy-decision/v1",
-            "operation": "config.policy-apply",
-            "reconciliation_completion": {
-                "decision": {
-                    "kind": "agentic-workspace/config-policy-decision/v1",
-                    "concern_id": "configuration-readiness",
-                    "authority": "strong-repo-evidence",
-                    "scope": "local",
-                    "setup_identity": setup_identity,
-                    "changes": {},
-                    "complete_readiness": True,
-                    "clear_setup_disposition": True,
-                    "readiness_basis": readiness_basis,
-                    "concern_receipts": current_concern_receipts,
-                },
-                "command": _command_with_cli_invoke(
-                    command=(
-                        "agentic-workspace config-policy --target . --decision-json '<reconciliation-completion.decision-json>' "
-                        f"--expect-config-revision {local_config_revision} --expect-setup-identity {setup_identity} --format json"
-                    ),
-                    cli_invoke=config.cli_invoke,
-                ),
-                "rule": "Run only after the listed owner actions are complete, then re-run start; the receipt is not a parallel setup history.",
-            },
-        },
-        "mutation_inventory": [
-            {
-                "concern": "workspace repo policy",
-                "disposition": "typed-owner",
-                "owner": "config.policy-apply",
-                "surface": WORKSPACE_CONFIG_PATH.as_posix(),
-            },
-            {
-                "concern": "machine or user runtime policy",
-                "disposition": "typed-owner",
-                "owner": "config.policy-apply",
-                "surface": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
-            },
-            {
-                "concern": "module selection and lifecycle",
-                "disposition": "existing-owner",
-                "owner": "workspace lifecycle/modules",
-                "rule": "Never edit modules.enabled as a setup shortcut.",
-            },
-            {"concern": "startup adapter generation", "disposition": "existing-owner", "owner": "workspace.init"},
-            {"concern": "compiled system intent", "disposition": "existing-owner", "owner": "system-intent.sync"},
-            {
-                "concern": "ownership declarations",
-                "disposition": "ordinary-repo-source",
-                "owner": "OWNERSHIP.toml",
-                "reason": "Subsystem boundaries require repository judgment; a typed scalar writer adds no authority.",
-            },
-            {
-                "concern": "assurance profiles and requirements",
-                "disposition": "ordinary-repo-source",
-                "owner": "config assurance declarations",
-                "reason": "Nested proof semantics require review; only bounded default scalars use config.policy-apply.",
-            },
-            {
-                "concern": "Verification manifest and proof strategy",
-                "disposition": "existing-owner",
-                "owner": "verification module lifecycle and verification operations",
-            },
-            {
-                "concern": "configuration readiness",
-                "disposition": "setup-reconciliation",
-                "owner": "setup.guidance",
-                "rule": "Re-resolve from the matching identity after every owner action; do not create a second transaction log.",
-            },
-            {
-                "concern": "temporary setup prompting disposition",
-                "disposition": "typed-local-owner",
-                "owner": "config.policy-apply",
-                "surface": f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()}#setup",
-                "rule": "Local defer or optional suppression never changes repository freshness or shared policy and is removed on resume/completion.",
-            },
-        ],
-        "next": {
-            "action": "ask-smallest-semantic-question"
-            if human_questions
-            else "route-bounded-work"
-            if broad_work
-            else "apply-zero-interaction-owner-routes",
-            "question_count": len(human_questions),
-            "auto_action_count": len(zero_interaction_actions),
-            "rule": "After each owner action or human answer, re-resolve setup concerns; do not maintain a separate wizard state.",
-        },
+        "status": "current-owner",
+        "owner": "configuration",
+        "configuration": current.get("configuration", {}),
+        "configuration_write": current.get("configuration_write", {}),
+        "decision_packet": current.get("decision_packet", {}),
+        "rule": "Use exact requests and actions from the current native owner.",
     }
 
 
@@ -57029,293 +55117,9 @@ def _resolve_workspace_operation_target_root(values: dict[str, Any], _arguments:
     return target_root
 
 
-_CONFIG_POLICY_FIELDS: dict[str, dict[str, tuple[type, tuple[Any, ...] | None]]] = {
-    "shared": {
-        "workspace.improvement_latitude": (str, SUPPORTED_IMPROVEMENT_LATITUDES),
-        "workspace.optimization_bias": (str, SUPPORTED_OPTIMIZATION_BIASES),
-        "assurance.default_level": (str, SUPPORTED_ASSURANCE_LEVELS),
-        "assurance.strict_closeout": (bool, None),
-    },
-    "local": {
-        "workspace.cli_invoke": (str, None),
-        "delegation.mode": (str, SUPPORTED_DELEGATION_CONTROL_MODES),
-        "delegation.execution_role": (str, SUPPORTED_ORCHESTRATION_EXECUTION_ROLES),
-        "delegation.assignment_policy": (str, SUPPORTED_ASSIGNMENT_POLICIES),
-        "delegation.transport_authority": (str, SUPPORTED_TRANSPORT_AUTHORITIES),
-        "delegation.underfit_behavior": (str, SUPPORTED_UNDERFIT_BEHAVIORS),
-        "delegation.down_routing_behavior": (str, SUPPORTED_DOWN_ROUTING_BEHAVIORS),
-        "delegation.human_override_policy": (str, SUPPORTED_HUMAN_OVERRIDE_POLICIES),
-        "delegation.manual_transport_policy": (str, SUPPORTED_MANUAL_TRANSPORT_POLICIES),
-        "setup.prompt_disposition": (str, config_lib.SUPPORTED_SETUP_PROMPT_DISPOSITIONS),
-        "setup.setup_identity": (str, None),
-        "setup.context_revision": (str, None),
-        "setup.unresolved_concerns": (list, None),
-        "setup.required_concerns": (list, None),
-    },
-}
-
-
-def _config_policy_revision(path: Path) -> str:
+def _configuration_source_revision(path: Path) -> str:
     payload = path.read_bytes() if path.is_file() else b""
     return "sha256:" + hashlib.sha256(payload).hexdigest()
-
-
-def _toml_scalar(value: Any) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, str):
-        return json.dumps(value, ensure_ascii=False)
-    if isinstance(value, list) and all(isinstance(item, str) and item for item in value):
-        return "[" + ", ".join(json.dumps(item, ensure_ascii=False) for item in value) + "]"
-    raise WorkspaceUsageError("config policy values must be strings, booleans, or non-empty string lists")
-
-
-def _toml_comment_index(text: str) -> int | None:
-    quote = ""
-    escaped = False
-    for index, character in enumerate(text):
-        if escaped:
-            escaped = False
-            continue
-        if character == "\\" and quote == '"':
-            escaped = True
-            continue
-        if character in {'"', "'"}:
-            quote = "" if quote == character else character if not quote else quote
-            continue
-        if character == "#" and not quote:
-            return index
-    return None
-
-
-def _replace_toml_scalar(*, source: str, section: str, key: str, value: Any) -> str:
-    lines = source.splitlines(keepends=True)
-    section_header = f"[{section}]"
-    section_index: int | None = None
-    next_section = len(lines)
-    matches: list[int] = []
-    for index, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped == section_header:
-            if section_index is not None:
-                raise WorkspaceUsageError(f"config policy apply found duplicate [{section}] tables")
-            section_index = index
-            continue
-        if section_index is not None and index > section_index and stripped.startswith("[") and stripped.endswith("]"):
-            next_section = index
-            break
-        if section_index is not None and index > section_index and re.match(rf"^\s*{re.escape(key)}\s*=", line):
-            matches.append(index)
-    rendered = _toml_scalar(value)
-    if len(matches) > 1:
-        raise WorkspaceUsageError(f"config policy apply found duplicate {section}.{key} assignments")
-    if matches:
-        index = matches[0]
-        line = lines[index]
-        newline = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
-        content = line[: -len(newline)] if newline else line
-        equals = content.index("=")
-        suffix_index = _toml_comment_index(content[equals + 1 :])
-        suffix = ""
-        if suffix_index is not None:
-            suffix = content[equals + 1 + suffix_index :]
-            suffix = " " + suffix.lstrip()
-        lines[index] = f"{content[: equals + 1]} {rendered}{suffix}{newline}"
-        return "".join(lines)
-    if section_index is None:
-        separator = "" if not source or source.endswith("\n\n") else "\n" if source.endswith("\n") else "\n\n"
-        return f"{source}{separator}{section_header}\n{key} = {rendered}\n"
-    lines.insert(next_section, f"{key} = {rendered}\n")
-    return "".join(lines)
-
-
-def _config_policy_setup_identity(*, target_root: Path, config: WorkspaceConfig) -> str:
-    readiness = _configuration_readiness_startup_payload(
-        target_root=target_root,
-        config=config,
-        selected_modules=list(config.enabled_modules),
-    )
-    if readiness.get("status") == "legacy-compatible":
-        return "legacy-compatible"
-    return str(readiness.get("observed_identity") or readiness.get("identity") or "unavailable")
-
-
-def _apply_workspace_config_policy(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    target_root = Path(str(values.get("target_root") or values.get("target") or ".")).resolve()
-    raw_decision = values.get("decision_json")
-    if not isinstance(raw_decision, str) or not raw_decision.strip():
-        raise WorkspaceUsageError("config-policy requires --decision-json with an authorised structured decision")
-    try:
-        decision = json.loads(raw_decision)
-    except json.JSONDecodeError as exc:
-        raise WorkspaceUsageError(f"config-policy --decision-json is invalid JSON: {exc}") from exc
-    if not isinstance(decision, dict) or decision.get("kind") != "agentic-workspace/config-policy-decision/v1":
-        raise WorkspaceUsageError("config-policy decision kind must be agentic-workspace/config-policy-decision/v1")
-    scope = str(decision.get("scope") or "")
-    allowed = _CONFIG_POLICY_FIELDS.get(scope)
-    if allowed is None:
-        raise WorkspaceUsageError("config-policy decision scope must be shared or local")
-    authority = str(decision.get("authority") or "")
-    if authority not in {"strong-repo-evidence", "human-answer"}:
-        raise WorkspaceUsageError("config-policy decision authority must be strong-repo-evidence or human-answer")
-    setup_identity = str(decision.get("setup_identity") or "")
-    expected_setup_identity = str(values.get("expect_setup_identity") or "")
-    if not setup_identity or setup_identity != expected_setup_identity:
-        raise WorkspaceUsageError("config-policy decision setup_identity must match --expect-setup-identity")
-    config = config_lib.load_workspace_config(target_root=target_root)
-    observed_setup_identity = _config_policy_setup_identity(target_root=target_root, config=config)
-    if expected_setup_identity != observed_setup_identity:
-        raise WorkspaceUsageError(
-            f"config-policy setup identity is stale: expected {expected_setup_identity!r}, observed {observed_setup_identity!r}"
-        )
-    raw_changes = decision.get("changes", {})
-    complete_readiness = decision.get("complete_readiness", False)
-    clear_setup_disposition = decision.get("clear_setup_disposition", False)
-    if not isinstance(raw_changes, dict) or not raw_changes and complete_readiness is not True and clear_setup_disposition is not True:
-        raise WorkspaceUsageError("config-policy decision requires changes, complete_readiness=true, or clear_setup_disposition=true")
-    if type(complete_readiness) is not bool:
-        raise WorkspaceUsageError("config-policy complete_readiness must be a boolean")
-    if type(clear_setup_disposition) is not bool:
-        raise WorkspaceUsageError("config-policy clear_setup_disposition must be a boolean")
-    if clear_setup_disposition and scope != "local":
-        raise WorkspaceUsageError("config-policy can clear setup disposition only through local scope")
-    if complete_readiness and raw_changes:
-        raise WorkspaceUsageError("config-policy readiness completion must be a separate no-change reconciliation decision")
-    config_path = target_root / (WORKSPACE_CONFIG_PATH if scope == "shared" else WORKSPACE_LOCAL_CONFIG_PATH)
-    observed_revision = _config_policy_revision(config_path)
-    expected_revision = str(values.get("expect_config_revision") or "")
-    if expected_revision != observed_revision:
-        raise WorkspaceUsageError(
-            f"config-policy revision is stale for {config_path.relative_to(target_root).as_posix()}: "
-            f"expected {expected_revision!r}, observed {observed_revision!r}"
-        )
-    source = config_path.read_text(encoding="utf-8") if config_path.is_file() else "schema_version = 1\n"
-    rendered = source
-    effects: list[dict[str, Any]] = []
-    for field, value in raw_changes.items():
-        field_name = str(field)
-        specification = allowed.get(field_name)
-        if specification is None:
-            raise WorkspaceUsageError(f"config-policy field {field_name!r} is not owned by the {scope} policy operation")
-        expected_type, choices = specification
-        if type(value) is not expected_type or choices is not None and value not in choices:
-            allowed_text = f"; allowed values: {', '.join(map(str, choices))}" if choices else ""
-            raise WorkspaceUsageError(f"config-policy value for {field_name} is invalid{allowed_text}")
-        if expected_type is list and (not all(isinstance(item, str) and item for item in value) or len(value) != len(set(value))):
-            raise WorkspaceUsageError(f"config-policy value for {field_name} must be a unique list of non-empty concern ids")
-        lowered = f"{field_name} {value}".lower()
-        if any(marker in lowered for marker in ("password", "secret", "credential", "private_key", "access_token")):
-            raise WorkspaceUsageError("config-policy refuses credential or secret material")
-        if scope == "shared" and isinstance(value, str) and (Path(value).is_absolute() or re.match(r"^[A-Za-z]:[\\/]", value)):
-            raise WorkspaceUsageError("config-policy refuses absolute machine paths in shared configuration")
-        section, key = field_name.split(".", 1)
-        rendered = _replace_toml_scalar(source=rendered, section=section, key=key, value=value)
-        effects.append({"owner": f"config.{scope}", "field": field_name, "value": value})
-    if clear_setup_disposition:
-        cleared = _without_toml_table(rendered, "setup")
-        if cleared != rendered:
-            effects.append({"owner": "config.local", "field": "setup", "value": "removed"})
-        rendered = cleared
-    try:
-        tomllib.loads(rendered)
-    except tomllib.TOMLDecodeError as exc:
-        raise WorkspaceUsageError(f"config-policy would produce invalid TOML: {exc}") from exc
-    readiness_receipt: dict[str, Any] | None = None
-    completion_concern_receipts: dict[str, dict[str, str]] = {}
-    if complete_readiness:
-        receipt_status = _read_adoption_receipt(target_root=target_root)
-        raw_receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else None
-        if not isinstance(raw_receipt, dict):
-            raise WorkspaceUsageError("config-policy cannot complete readiness without a valid adoption receipt")
-        readiness = raw_receipt.get("configuration_readiness")
-        if not isinstance(readiness, dict) or readiness.get("kind") != CONFIGURATION_READINESS_KIND:
-            raise WorkspaceUsageError("config-policy cannot complete missing or unsupported readiness metadata")
-        readiness_receipt = raw_receipt
-        completed_concerns = _setup_configuration_concerns_payload(
-            target_root=target_root,
-            config=config,
-            selected_modules=list(config.enabled_modules),
-        )
-        unresolved_required_sources = [
-            str(concern.get("id") or "")
-            for concern in _list_payload(completed_concerns.get("concerns"))
-            if isinstance(concern, dict)
-            and isinstance(concern.get("source_obligation"), dict)
-            and concern.get("setup_pressure")
-            and concern.get("materiality") != "recommended"
-            and _as_dict(concern.get("source_obligation")).get("status") != "satisfied"
-        ]
-        if unresolved_required_sources:
-            raise WorkspaceUsageError(
-                "config-policy readiness cannot be completed while required repo-source obligations remain unresolved: "
-                + ", ".join(unresolved_required_sources)
-            )
-        completion_concern_receipts = {
-            str(contract["identity"]): {
-                "identity": str(contract["identity"]),
-                "semantic_revision": str(contract["semantic_revision"]),
-                "source_revision": str(contract["source_revision"]),
-                "materiality": str(contract["materiality"]),
-                "owner": str(contract["owner"]),
-                "status": str(contract.get("status") or ""),
-                "source_obligation_status": str(contract.get("source_obligation_status") or ""),
-            }
-            for contract in _list_payload(completed_concerns.get("concern_contracts"))
-            if isinstance(contract, dict) and contract.get("identity")
-        }
-        decision_concern_receipts = decision.get("concern_receipts")
-        if decision_concern_receipts != completion_concern_receipts:
-            raise WorkspaceUsageError(
-                "config-policy readiness concern receipts are stale or do not match current applicable setup concerns"
-            )
-        expected_readiness_basis = {
-            "selected_modules": sorted(_dedupe(list(config.enabled_modules))),
-            "payload_mirror": bool(readiness_receipt.get("payload_mirror")),
-            "checked_in_rule": str(readiness_receipt.get("checked_in_rule") or ""),
-        }
-        if decision.get("readiness_basis") != expected_readiness_basis:
-            raise WorkspaceUsageError("config-policy readiness basis is stale or does not match the current capability set")
-    dry_run = bool(values.get("dry_run"))
-    if not dry_run and rendered != source:
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        config_path.write_text(rendered, encoding="utf-8", newline="")
-        config_lib.load_workspace_config(target_root=target_root)
-    if complete_readiness:
-        receipt_path = target_root / WORKSPACE_ADOPTION_RECEIPT_PATH
-        assert readiness_receipt is not None
-        readiness = cast(dict[str, Any], readiness_receipt["configuration_readiness"])
-        effects.append({"owner": "setup.guidance", "field": "configuration_readiness.status", "value": "current"})
-        if not dry_run:
-            readiness["status"] = "current"
-            readiness["identity"] = setup_identity
-            readiness["basis"] = {
-                **cast(dict[str, Any], decision["readiness_basis"]),
-            }
-            readiness["concern_receipts"] = completion_concern_receipts
-            readiness["completed_by"] = "config.policy-apply"
-            receipt_path.write_text(json.dumps(readiness_receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    result_revision = "sha256:" + hashlib.sha256(rendered.encode("utf-8")).hexdigest()
-    mutation_applied = not dry_run and (rendered != source or complete_readiness)
-    return {
-        "kind": "agentic-workspace/config-policy-result/v1",
-        "status": "preview" if dry_run else "applied" if rendered != source else "current",
-        "scope": scope,
-        "authority": authority,
-        "concern_id": str(decision.get("concern_id") or ""),
-        "setup_identity": setup_identity,
-        "path": config_path.relative_to(target_root).as_posix(),
-        "previous_revision": observed_revision,
-        "revision": result_revision,
-        "effects": effects,
-        "readiness_status": "preview-current" if dry_run and complete_readiness else "current" if complete_readiness else "unchanged",
-        "outcome": "applied" if mutation_applied else "noop",
-        "mutation_applied": mutation_applied,
-        "reason_code": "dry-run" if dry_run else "already-current" if not mutation_applied else "authorised-policy-applied",
-        "conflict_owner": "",
-        "recovery_command": "agentic-workspace setup --target . --format json",
-        "re_resolve_command": "agentic-workspace setup --target . --format json",
-        "claim_boundary": "Only the explicitly authorised bounded policy fields were applied; other setup owners remain independent.",
-    }
 
 
 def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
@@ -60988,7 +58792,7 @@ def _ownership_diagnostics(
             suggested_route="Keep config for repo-owned policy; move current execution state or handoff details into Planning.",
             evidence="workspace config contains active-task or handoff-shaped keys",
         )
-    policy_knobs = ("improvement_latitude", "optimization_bias", "safe_to_auto_run_commands", "[workflow_obligations.")
+    policy_knobs = ("improvement_latitude", "optimization_bias", "safe_to_auto_run_commands")
     if any((marker in workspace_workflow_text.lower() for marker in policy_knobs)):
         add(
             finding_id="workflow-policy-knob",
@@ -61306,6 +59110,14 @@ def _delegation_outcome_advisory(*, profile: DelegationTargetProfile, records: t
         return {"record_count": 0, "status": "no-local-evidence"}
     scores = [_delegation_signal_score(record) for record in records]
     average_score = sum(scores) / len(scores)
+    if profile.confidence is None and profile.strength == "unknown":
+        return {
+            "record_count": len(records),
+            "average_signal": round(average_score, 2),
+            "confidence": {"current": None, "suggested": None, "action": "unknown", "delta": None},
+            "task_fit": _task_fit_suggestions(current_task_fit=profile.task_fit, records=records),
+            "recent_task_classes": sorted({record.task_class for record in records}),
+        }
     baseline_confidence = profile.confidence if profile.confidence is not None else _default_confidence_for_strength(profile.strength)
     suggested_confidence = _round_confidence(baseline_confidence + average_score * 0.1)
     confidence_delta = round(suggested_confidence - baseline_confidence, 2)
@@ -61421,7 +59233,7 @@ def _delegated_run_guardrail_payload(
 
 
 def _strength_rank(strength: str) -> int:
-    return {"weak": 1, "medium": 2, "strong": 3}[strength]
+    return {"weak": 1, "medium": 2, "strong": 3}.get(strength, 0)
 
 
 def _location_match_score(*, preferred_location: str, target_location: str) -> int:
@@ -62083,7 +59895,12 @@ def _write_trusted_producer_receipt(
         from agentic_workspace.decision import invoke as native_invoke
         from agentic_workspace.decision import start as native_start
 
-        context = {"target": str(target_root), "task": str(task_text or ""), "changed": receipt.get("changed_paths", [])}
+        context = {
+            "target": str(target_root),
+            "task": str(task_text or ""),
+            "changed": receipt.get("changed_paths", []),
+            "projection": "full",
+        }
         current = native_start(context)
         requests = current.get("verification", {}).get("record_requests", [])
         if not requests:
@@ -62903,6 +60720,8 @@ def _strong_handoff_packet_template() -> dict[str, Any]:
 
 
 def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
+    from agentic_workspace.contract_tooling import contract_schema
+
     defaults = _defaults_payload()["mixed_agent"]
     local_override = config.local_override
     outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
@@ -62977,12 +60796,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "path": WORKSPACE_CONFIG_PATH.as_posix(),
             "source": "repo-config" if config.exists else "product-defaults",
             "authoritative": config.exists,
-            "supported_fields": [
-                "workspace.enabled",
-                "workspace.improvement_latitude",
-                "workspace.advanced_features",
-                "workspace.maintainer_mode",
-            ],
+            "supported_fields": list(contract_schema("workspace_config.schema.json")["properties"]["workspace"]["properties"]),
         },
         "local_override": {
             "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
@@ -63024,51 +60838,11 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "supported": True,
             "status": "configured" if local_override.delegation_targets else "available-not-set",
             "rule": "local-only advisory target hints; may guide handoff detail and review burden, but must not turn config into a scheduler",
-            "supported_fields": [
-                "delegation_targets.<target>.strength",
-                "delegation_targets.<target>.location",
-                "delegation_targets.<target>.confidence",
-                "delegation_targets.<target>.task_fit",
-                "delegation_targets.<target>.capability_classes",
-                "delegation_targets.<target>.transports",
-                "delegation_targets.<target>.model_family",
-                "delegation_targets.<target>.provider",
-                "delegation_targets.<target>.context_capacity",
-                "delegation_targets.<target>.cost_class",
-                "delegation_targets.<target>.latency_class",
-                "delegation_targets.<target>.forbidden_task_classes",
-                "delegation_targets.<target>.confidence_source",
-                "delegation_targets.<target>.last_evaluation",
-            ],
-            "compatibility_aliases": [
-                "delegation_targets.<target>.execution_methods",
-                "delegation_targets.<target>.dispatch_adapter_kind",
-                "delegation_targets.<target>.dispatch_command",
-                "delegation_targets.<target>.dispatch_output_mode",
-                "delegation_targets.<target>.dispatch_timeout_seconds",
-                "delegation_targets.<target>.escalation_target",
-                "delegation_targets.<target>.reasoning_profile",
-                "delegation_targets.<target>.safe_task_classes",
-                "delegation_targets.<target>.human_control_modes",
-            ],
-            "compatibility_lifecycle": {
-                "kind": "agentic-workspace/delegation-compatibility-lifecycle/v1",
-                "status": "deprecated-removal-scheduled",
-                "policy": DELEGATION_LEGACY_COMPATIBILITY_POLICY,
-                "removal_version": DELEGATION_LEGACY_COMPATIBILITY_REMOVAL_VERSION,
-            },
+            "supported_fields": [field for field in MIXED_AGENT_LOCAL_OVERRIDE_FIELDS if field.startswith("delegation_targets.")],
             "supported_transport_kinds": ["internal", "process", "api", "manual"],
-            "supported_strengths": list(SUPPORTED_DELEGATION_TARGET_STRENGTHS),
             "supported_locations": list(SUPPORTED_CAPABILITY_LOCATIONS),
-            "supported_capability_classes": list(SUPPORTED_CAPABILITY_EXECUTION_CLASSES),
-            "supported_execution_methods": list(SUPPORTED_DELEGATION_TARGET_EXECUTION_METHODS),
-            "supported_dispatch_adapter_kinds": list(SUPPORTED_DELEGATION_DISPATCH_ADAPTER_KINDS),
-            "supported_dispatch_output_modes": list(SUPPORTED_DELEGATION_DISPATCH_OUTPUT_MODES),
-            "supported_context_capacities": list(SUPPORTED_DELEGATION_TARGET_CONTEXT_CAPACITIES),
-            "supported_reasoning_profiles": list(SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES),
             "supported_cost_classes": list(SUPPORTED_DELEGATION_TARGET_COST_CLASSES),
             "supported_latency_classes": list(SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES),
-            "supported_human_control_modes": list(SUPPORTED_DELEGATION_CONTROL_MODES),
             "profiles": profile_payloads,
             "outcome_artifact": {
                 "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
@@ -63092,22 +60866,6 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         ),
         "agent_aid_storage": _agent_aid_storage_payload(target_root=config.target_root),
         "local_memory": _local_memory_payload(config=config),
-        "local_overlay": local_override.local_overlay
-        if isinstance(local_override.local_overlay, dict)
-        else {
-            "kind": "agentic-workspace/local-overlay-config/v1",
-            "status": "absent",
-            "sections": {},
-            "warnings": [],
-        },
-        "high_risk_overlay": local_override.high_risk_overlay
-        if isinstance(local_override.high_risk_overlay, dict)
-        else {
-            "kind": "agentic-workspace/local-high-risk-overlay-config/v1",
-            "status": "absent",
-            "sections": {},
-            "warnings": [],
-        },
         "runtime_inference": {
             "tool_owned": defaults["runtime_inference"]["tool_owned"],
             "reported_here": False,
@@ -63169,485 +60927,97 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
 
 
 def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
-    assurance = config.assurance
+    local = config.local_override
     return {
-        "target": config.target_root.as_posix() if config.target_root is not None else None,
-        "invoked_cli_identity": _invoked_cli_identity_payload(target_root=config.target_root),
-        "cli_compatibility": _cli_compatibility_payload(config=config),
-        "config_path": config.path.as_posix() if config.path is not None else WORKSPACE_CONFIG_PATH.as_posix(),
+        "kind": "agentic-workspace/config-report/v1",
+        "profile": "full",
+        "target": str(config.target_root or Path.cwd()),
+        "config_path": str(config.path or WORKSPACE_CONFIG_PATH),
         "exists": config.exists,
-        "schema_version": config.schema_version,
-        "edit_reference": {
-            "kind": "agentic-workspace/managed-config-reference/v1",
-            "owner": "repo-owned policy",
-            "direct_edit_rule": "Edit directly only when changing repo-owned policy; use the config command for the resolved view.",
-            "reference_doc": WORKSPACE_CONFIG_CONTRACT_DOC,
-            "generated_reference_doc": WORKSPACE_CONFIG_REFERENCE_DOC,
-            "source_schema": WORKSPACE_CONFIG_SOURCE_SCHEMA,
-            "check_command": f"{config.cli_invoke} config --target . --format json",
-            "managed_header": _managed_workspace_config_header(cli_invoke=config.cli_invoke).splitlines(),
-        },
-        "warnings": list(config.warnings),
-        "config_enforcement": _config_enforcement_payload(config=config),
-        "config_effect_audit": _config_effect_audit_payload(config=config),
-        "configuration_projection": _configuration_projection_payload(config=config),
         "workspace": {
             "enabled": config.enabled,
             "enabled_source": config.enabled_source,
             "enabled_modules": list(config.enabled_modules),
-            "module_enablement_source": "repo-config" if config.exists else "product-default",
             "agent_instructions_file": config.agent_instructions_file,
-            "agent_instructions_file_source": config.agent_instructions_source,
             "workflow_artifact_profile": config.workflow_artifact_profile,
-            "workflow_artifact_profile_source": config.workflow_artifact_profile_source,
             "improvement_latitude": config.improvement_latitude,
-            "improvement_latitude_source": config.improvement_latitude_source,
-            "optimization_bias": config.optimization_bias,
-            "optimization_bias_source": config.optimization_bias_source,
-            "advanced_features": list(config.advanced_features),
-            "advanced_features_source": config.advanced_features_source,
-            "maintainer_mode": config.maintainer_mode,
-            "maintainer_mode_source": config.maintainer_mode_source,
             "cli_invoke": config.cli_invoke,
             "cli_invoke_source": config.cli_invoke_source,
-            "maintainer_mode_detail": _maintainer_mode_payload(config=config, target_root=config.target_root),
-            "workflow_artifact_adapter": _workflow_artifact_profile_payload(config.workflow_artifact_profile),
-            "agent_configuration_substrate": {
-                "canonical_doc": _agent_configuration_system_payload()["canonical_doc"],
-                "command": _agent_configuration_system_payload()["command"],
-                "owner_surface": _agent_configuration_system_payload()["owner_surface"],
-                "rule": _agent_configuration_system_payload()["rule"],
-            },
-            "system_intent": {
-                **_system_intent_source_payload(config),
-                "mirror_path": WORKSPACE_SYSTEM_INTENT_MIRROR_PATH.as_posix(),
-                "workflow_path": WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH.as_posix(),
-            },
-            "workflow_obligations": _workflow_obligation_payloads(config),
-            "local_memory": _local_memory_payload(config=config),
-            "detected_agent_instructions_files": list(config.detected_agent_instructions_files),
-            "supported_agent_instructions_files": list(SUPPORTED_AGENT_INSTRUCTIONS_FILES),
-            "supported_workflow_artifact_profiles": list(SUPPORTED_WORKFLOW_ARTIFACT_PROFILES),
-            "supported_improvement_latitudes": list(SUPPORTED_IMPROVEMENT_LATITUDES),
-            "supported_optimization_biases": list(SUPPORTED_OPTIMIZATION_BIASES),
-            "supported_advanced_features": list(SUPPORTED_ADVANCED_FEATURES),
         },
-        "update": {
-            "wrapper_rule": "normal update execution stays behind agentic-workspace",
-            "modules": _module_update_policy_payload(config=config, target_root=config.target_root),
-        },
-        "payload": {
-            "target_release": config.payload_target.target_release,
-            "minimum_capabilities": list(config.payload_target.minimum_capabilities),
-            "policy": config.payload_target.policy,
-            "dogfood_latest": config.payload_target.dogfood_latest,
-            "source": config.payload_target.source,
-            "supported_policies": list(config_lib.SUPPORTED_PAYLOAD_TARGET_POLICIES),
-            "supported_capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
-            "rule": (
-                "Repo payload target policy declares the checked-in payload release/capability state startup should require "
-                "before work or claims."
-            ),
-        },
+        "system_intent": serialise_value(config.system_intent),
         "assurance": {
-            "default_level": assurance.default_level,
-            "default_level_source": assurance.default_level_source,
-            "agent_may_escalate": assurance.agent_may_escalate,
-            "agent_may_deescalate": assurance.agent_may_deescalate,
-            "strict_closeout": assurance.strict_closeout,
-            "supported_levels": list(SUPPORTED_ASSURANCE_LEVELS),
-            "proof_profiles": [
-                {
-                    "id": profile.id,
-                    "required_commands": list(profile.required_commands),
-                    "optional_commands": list(profile.optional_commands),
-                    "review_aids": list(profile.review_aids),
-                    "disallowed_commands": list(profile.disallowed_commands),
-                }
-                for profile in assurance.proof_profiles
-            ],
-            "requirements": _assurance_requirement_payloads(config),
-            "subsystem_profiles": _assurance_subsystem_profile_payloads(config),
-            "domain_proof_lanes": [
-                {
-                    "id": lane.id,
-                    "purpose": lane.purpose,
-                    "applies_to_paths": list(lane.applies_to_paths),
-                    "applies_to_task_markers": list(lane.applies_to_task_markers),
-                    "commands": list(lane.commands),
-                    "manual_evidence": list(lane.manual_evidence),
-                    "review_aids": list(lane.review_aids),
-                    "evidence_concepts": list(lane.evidence_concepts),
-                    "assurance_requirement_refs": list(lane.assurance_requirement_refs),
-                    "proof_profiles": list(lane.proof_profiles),
-                    "authority_refs": list(lane.authority_refs),
-                    "escalation": list(lane.escalation),
-                    "claim_boundary": lane.claim_boundary,
-                    "owner": lane.owner,
-                    "notes": lane.notes,
-                }
-                for lane in assurance.domain_proof_lanes
-            ],
-            "closeout_postures": [
-                {
-                    "id": posture.id,
-                    "purpose": posture.purpose,
-                    "applies_to_paths": list(posture.applies_to_paths),
-                    "applies_to_task_markers": list(posture.applies_to_task_markers),
-                    "assurance_requirement_refs": list(posture.assurance_requirement_refs),
-                    "proof_profiles": list(posture.proof_profiles),
-                    "required_evidence": list(posture.required_evidence),
-                    "review_owner": posture.review_owner,
-                    "authority_refs": list(posture.authority_refs),
-                    "claim_boundary": posture.claim_boundary,
-                    "uncertainty": posture.uncertainty,
-                    "human_waiver_refs": list(posture.human_waiver_refs),
-                    "certification_limits": list(posture.certification_limits),
-                    "notes": posture.notes,
-                }
-                for posture in assurance.closeout_postures
-            ],
-            "test_data_policy": dict(assurance.test_data_policy),
-            "decision_record_target": assurance.decision_record_target,
-            "invariant_registry": assurance.invariant_registry,
-            "risk_registry": assurance.risk_registry,
-            "onboarding": _assurance_onboarding_payload(assurance=assurance),
-            "rule": "Assurance config is generic host-owned routing for refs, proof profiles, gates, blockers, closeout, and review aids; it is not domain law.",
+            key: serialise_value(getattr(config.assurance, key))
+            for key in (
+                "default_level",
+                "agent_may_escalate",
+                "agent_may_deescalate",
+                "strict_closeout",
+                "decision_record_target",
+                "decision_record_revision",
+                "instruction_revision",
+                "decision_record_fallback",
+            )
         },
-        "mixed_agent": _mixed_agent_payload(config=config),
+        "payload": serialise_value(config.payload_target),
+        "local": {
+            "exists": local.exists,
+            "shared_config_path": str(local.shared_config_path) if local.shared_config_path else None,
+            "safety": {
+                "safe_to_auto_run_commands": local.safe_to_auto_run_commands,
+                "requires_human_verification_on_pr": local.requires_human_verification_on_pr,
+            },
+            "delegation": {
+                key: serialise_value(getattr(local, key))
+                for key in (
+                    "assignment_policy",
+                    "transport_authority",
+                    "current_target",
+                    "human_override_policy",
+                    "required_execution_guarantees",
+                )
+            },
+            "clarification": {"mode": local.clarification_mode},
+            "session_logging": {"enabled": local.session_logging.enabled, "path_mode": local.session_logging.path_mode},
+            "delegation_targets": {
+                profile.name: {
+                    key: serialise_value(getattr(profile, key))
+                    for key in (
+                        "target_id",
+                        "target_revision",
+                        "aliases",
+                        "identity_status",
+                        "location",
+                        "confidence",
+                        "confidence_source",
+                        "cost_class",
+                        "latency_class",
+                        "forbidden_task_classes",
+                        "execution_guarantees",
+                        "transports",
+                    )
+                }
+                for profile in local.delegation_targets
+            },
+        },
+        "warnings": list(config.warnings),
     }
 
 
 def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    workspace = payload["workspace"]
-    mixed_agent = payload["mixed_agent"]
-    local_override = mixed_agent["local_override"]
-    effective_posture = mixed_agent["effective_posture"]
-    runtime_resolution = mixed_agent["runtime_resolution"]
-    assignment_policy = mixed_agent["assignment_policy"]
-    effective_orchestration = mixed_agent["effective_orchestration"]
-    target_identity = mixed_agent["target_identity"]
-    correction_feedback = mixed_agent["correction_feedback"]
-    target_evidence = mixed_agent["target_evidence"]
-    assignment_decision = mixed_agent["assignment_decision"]
-    assurance = payload["assurance"]
-    local_overlay = mixed_agent.get("local_overlay", {}) if isinstance(mixed_agent, dict) else {}
-    local_high_risk_overlay = mixed_agent.get("high_risk_overlay", {}) if isinstance(mixed_agent, dict) else {}
-    compact_obligations = [
-        {"id": obligation["id"], "stage": obligation["stage"], "scope_tags": obligation["scope_tags"], "commands": obligation["commands"]}
-        for obligation in workspace["workflow_obligations"]
-    ]
-    return {
-        "kind": "agentic-workspace/config-compact/v1",
-        "profile": "compact",
-        "target": ".",
-        "config_path": WORKSPACE_CONFIG_PATH.as_posix(),
-        "exists": payload["exists"],
-        "schema_version": payload["schema_version"],
-        "warnings": payload["warnings"],
-        "edit_reference": payload["edit_reference"],
-        "config_effect_audit": {
-            "status": payload["config_effect_audit"]["status"],
-            "field_count_by_effect": payload["config_effect_audit"]["field_count_by_effect"],
-            "agent_dependent_field_count": len(payload["config_effect_audit"]["agent_dependent_fields"]),
-            "warning_count": len(payload["config_effect_audit"]["claimed_vs_actual_warnings"]),
-            "detail_command": payload["config_effect_audit"]["detail_command"],
-        },
-        "configuration_projection": _compact_configuration_projection_payload(payload["configuration_projection"]),
-        "workspace": {
-            "enabled": workspace["enabled"],
-            "enabled_source": workspace["enabled_source"],
-            "enabled_modules": workspace["enabled_modules"],
-            "agent_instructions_file": workspace["agent_instructions_file"],
-            "workflow_artifact_profile": workspace["workflow_artifact_profile"],
-            "improvement_latitude": workspace["improvement_latitude"],
-            "improvement_latitude_source": workspace["improvement_latitude_source"],
-            "optimization_bias": workspace["optimization_bias"],
-            "optimization_bias_source": workspace["optimization_bias_source"],
-            "maintainer_mode": workspace["maintainer_mode"],
-            "maintainer_mode_source": workspace["maintainer_mode_source"],
-            "cli_invoke": workspace["cli_invoke"],
-            "workflow_obligations": compact_obligations,
-            "system_intent_sources": workspace["system_intent"]["sources"],
-        },
-        "payload": payload["payload"],
-        "reporting_posture": {
-            "status": "present",
-            "summary": "Use this compact config payload as source evidence; do not read raw config files only to cite line numbers.",
-            "effect": "Report the setting names and values that changed the closeout or handoff answer.",
-            "repo_policy": {
-                "enabled": workspace["enabled"],
-                "enabled_source": workspace["enabled_source"],
-                "improvement_latitude": workspace["improvement_latitude"],
-                "improvement_latitude_source": workspace["improvement_latitude_source"],
-                "optimization_bias": workspace["optimization_bias"],
-                "optimization_bias_source": workspace["optimization_bias_source"],
-                "workflow_obligation_ids": [obligation["id"] for obligation in compact_obligations],
-            },
-            "local_runtime": {
-                "delegation_mode": effective_posture["delegation_mode"],
-                "assignment_policy": assignment_policy["assignment_policy"],
-                "execution_role": assignment_policy["execution_role"],
-                "target_identity": target_identity["current_target_identity"]["status"],
-                "correction_feedback": correction_feedback["status"],
-                "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
-                "requires_human_verification_on_pr": effective_posture["requires_human_verification_on_pr"],
-            },
-            "citation_rule": "Final answers should cite repo-relative surfaces or setting names, not local absolute paths.",
-        },
-        "assurance": {
-            "default_level": assurance["default_level"],
-            "strict_closeout": assurance["strict_closeout"],
-            "agent_may_escalate": assurance["agent_may_escalate"],
-            "agent_may_deescalate": assurance["agent_may_deescalate"],
-            "configured_proof_profile_count": len(assurance["proof_profiles"]),
-            "configured_requirement_count": len(assurance.get("requirements", [])),
-            "configured_subsystem_profile_count": len(assurance.get("subsystem_profiles", [])),
-            "configured_domain_proof_lane_count": len(assurance.get("domain_proof_lanes", [])),
-            "configured_closeout_posture_count": len(assurance.get("closeout_postures", [])),
-        },
-        "local_runtime": {
-            "local_override_path": local_override["path"],
-            "local_override_status": local_override["status"],
-            "supports_internal_delegation": effective_posture["supports_internal_delegation"],
-            "strong_planner_available": effective_posture["strong_planner_available"],
-            "cheap_bounded_executor_available": effective_posture["cheap_bounded_executor_available"],
-            "delegation_mode": effective_posture["delegation_mode"],
-            "assignment_policy": {
-                "status": assignment_policy["status"],
-                "execution_role": assignment_policy["execution_role"],
-                "assignment_policy": assignment_policy["assignment_policy"],
-                "current_target": assignment_policy["current_target"],
-                "current_target_status": assignment_policy["current_target_status"],
-                "binding": assignment_policy["binding"],
-                "separation_rule": assignment_policy["separation_rule"],
-            },
-            "effective_orchestration": {
-                key: effective_orchestration[key]
-                for key in (
-                    "kind",
-                    "status",
-                    "summary",
-                    "assignment",
-                    "current_target",
-                    "transport",
-                    "human_override",
-                    "decisive_reasons",
-                    "change_route",
-                    "separation_rule",
-                )
-            },
-            "target_evidence": {
-                "status": target_evidence["status"],
-                "record_count": target_evidence["record_count"],
-                "storage": target_evidence["storage"],
-                "suitability": target_evidence["suitability"],
-            },
-            "target_identity": {
-                "status": target_identity["status"],
-                "current_target": target_identity["current_target"],
-                "current_target_identity": target_identity["current_target_identity"],
-                "storage": target_identity["storage"],
-                "precedence": target_identity["precedence"],
-            },
-            "correction_feedback": {
-                "status": correction_feedback["status"],
-                "target_identity_required": correction_feedback["target_identity_required"],
-                "storage": correction_feedback["storage"],
-                "routing": correction_feedback["routing"],
-            },
-            "assignment_decision": assignment_decision,
-            "clarification_mode": effective_posture["clarification_mode"],
-            "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
-            "prefer_internal_delegation_when_available": effective_posture["prefer_internal_delegation_when_available"],
-            "requires_human_verification_on_pr": effective_posture["requires_human_verification_on_pr"],
-            "runtime_resolution": {
-                "recommendation": runtime_resolution["recommendation"],
-                "confidence": runtime_resolution["confidence"],
-                "reasons": runtime_resolution["reasons"],
-            },
-        },
-        "local_overlay": {
-            "status": local_overlay.get("status", "absent") if isinstance(local_overlay, dict) else "absent",
-            "item_count": local_overlay.get("item_count", 0) if isinstance(local_overlay, dict) else 0,
-            "ordinary_guidance_count": local_overlay.get("ordinary_guidance_count", 0) if isinstance(local_overlay, dict) else 0,
-            "high_risk_profile_count": local_overlay.get("high_risk_profile_count", 0) if isinstance(local_overlay, dict) else 0,
-            "warning_count": len(local_overlay.get("warnings", [])) if isinstance(local_overlay, dict) else 0,
-            "authority_boundary": local_overlay.get("authority_boundary", {}) if isinstance(local_overlay, dict) else {},
-            "detail_command": f"{workspace['cli_invoke']} report --target ./repo --section local_overlay --format json",
-        },
-        "local_high_risk_overlay": {
-            "status": local_high_risk_overlay.get("status", "absent") if isinstance(local_high_risk_overlay, dict) else "absent",
-            "item_count": local_high_risk_overlay.get("item_count", 0) if isinstance(local_high_risk_overlay, dict) else 0,
-            "warning_count": len(local_high_risk_overlay.get("warnings", [])) if isinstance(local_high_risk_overlay, dict) else 0,
-            "authority_boundary": local_high_risk_overlay.get("authority_boundary", {})
-            if isinstance(local_high_risk_overlay, dict)
-            else {},
-            "detail_command": f"{workspace['cli_invoke']} report --target ./repo --section local_high_risk_overlay --format json",
-        },
-        "full_profile_command": f"{workspace['cli_invoke']} config --target . --verbose --format json",
-    }
+    return {**payload, "profile": "compact"}
 
 
 def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    compact = _compact_config_payload(payload)
-    workspace = compact["workspace"]
-    local_runtime = compact["local_runtime"]
-    reporting_posture = compact["reporting_posture"]
-    return {
-        "kind": "agentic-workspace/config-tiny/v1",
-        "profile": "tiny",
-        "target": compact["target"],
-        "config_path": compact["config_path"],
-        "exists": compact["exists"],
-        "warnings": compact["warnings"],
-        "reporting_posture": {
-            "status": reporting_posture["status"],
-            "effect": reporting_posture["effect"],
-            "citation_rule": reporting_posture["citation_rule"],
-        },
-        "workspace": {
-            "enabled": workspace["enabled"],
-            "enabled_source": workspace["enabled_source"],
-            "enabled_modules": workspace["enabled_modules"],
-            "agent_instructions_file": workspace["agent_instructions_file"],
-            "improvement_latitude": workspace["improvement_latitude"],
-            "improvement_latitude_source": workspace["improvement_latitude_source"],
-            "optimization_bias": workspace["optimization_bias"],
-            "optimization_bias_source": workspace["optimization_bias_source"],
-            "workflow_obligation_ids": reporting_posture["repo_policy"]["workflow_obligation_ids"],
-            "cli_invoke": workspace["cli_invoke"],
-        },
-        "local_runtime": {
-            "delegation_mode": local_runtime["delegation_mode"],
-            "assignment_policy": local_runtime["assignment_policy"],
-            "effective_orchestration": {
-                "status": local_runtime["effective_orchestration"]["status"],
-                "assignment_policy": local_runtime["effective_orchestration"]["assignment"]["policy"],
-                "delegation_mode": local_runtime["effective_orchestration"]["transport"]["effective_mode"],
-                "transport_permitted": local_runtime["effective_orchestration"]["transport"]["execution_permitted"],
-                "detail_selector": "mixed_agent.effective_orchestration",
-            },
-            "clarification_mode": local_runtime["clarification_mode"],
-            "safe_to_auto_run_commands": local_runtime["safe_to_auto_run_commands"],
-            "requires_human_verification_on_pr": local_runtime["requires_human_verification_on_pr"],
-        },
-        "next_detail": {
-            "select": f"{workspace['cli_invoke']} config --target . --select <field.path> --format json",
-            "verbose": f"{workspace['cli_invoke']} config --target . --verbose --format json",
-            "compatibility_compact": f"{workspace['cli_invoke']} config --target . --verbose --format json",
-        },
-        "available_selectors": [
-            "workspace.enabled",
-            "workspace.enabled_modules",
-            "workspace.agent_instructions_file",
-            "workspace.workflow_obligation_ids",
-            "local_runtime",
-            "local_runtime.assignment_policy",
-            "mixed_agent.runtime_resolution",
-            "mixed_agent.assignment_policy",
-            "mixed_agent.effective_orchestration",
-            "mixed_agent.target_identity",
-            "mixed_agent.correction_feedback",
-            "mixed_agent.target_evidence",
-            "mixed_agent.assignment_decision",
-            "cli_compatibility",
-        ],
-    }
+    return {**_compact_config_payload(payload), "profile": "tiny"}
 
 
 def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "full", select: str | None = None) -> None:
-    if prevalidation_error := _selector_prevalidation_error(select=select, source_command="config"):
-        _emit_payload(payload=prevalidation_error, format_name=format_name)
-        return
-    full_payload = _config_payload(config=config)
+    payload = _config_payload(config=config)
     if select:
-        payload = _select_payload_fields(full_payload, select=select, source_command="config")
-    elif profile == "tiny":
-        payload = _tiny_config_payload(full_payload)
-    elif profile == "compact":
-        payload = _compact_config_payload(full_payload)
-    else:
-        payload = full_payload
-    if format_name == "json":
-        print(json.dumps(serialise_value(payload), indent=2))
-        return
-    if profile == "tiny":
-        print(f"Target: {payload['target']}")
-        print(f"Config path: {payload['config_path']}")
-        print(f"AW enabled: {payload['workspace']['enabled']} ({payload['workspace']['enabled_source']})")
-        print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
-        print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
-        print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
-        print(f"Delegation mode: {payload['local_runtime']['delegation_mode']['value']}")
-        print(f"Safe to auto-run commands: {payload['local_runtime']['safe_to_auto_run_commands']['value']}")
-        print(f"Select fields: {payload['next_detail']['select']}")
-        print(f"Verbose diagnostics: {payload['next_detail']['verbose']}")
-        return
-    if profile == "compact":
-        print(f"Target: {payload['target']}")
-        print(f"Config path: {payload['config_path']}")
-        print(f"Exists: {payload['exists']}")
-        print(f"AW enabled: {payload['workspace']['enabled']} ({payload['workspace']['enabled_source']})")
-        print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
-        print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
-        print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
-        print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
-        print(f"Delegation mode: {payload['local_runtime']['delegation_mode']['value']}")
-        print(f"Safe to auto-run commands: {payload['local_runtime']['safe_to_auto_run_commands']['value']}")
-        print(f"Full profile: {payload['full_profile_command']}")
-        return
-    print(f"Target: {payload['target']}")
-    print(f"Config path: {payload['config_path']}")
-    print(f"Exists: {payload['exists']}")
-    print(f"AW enabled: {payload['workspace']['enabled']} ({payload['workspace']['enabled_source']})")
-    print(f"Reference: {payload['edit_reference']['reference_doc']}")
-    print(f"Schema: {payload['edit_reference']['source_schema']}")
-    print(f"Check command: {payload['edit_reference']['check_command']}")
-    if payload["warnings"]:
-        print("Warnings:")
-        for warning in payload["warnings"]:
-            print(f"- {warning}")
-    print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
-    print(
-        f"Agent instructions file: {payload['workspace']['agent_instructions_file']} ({payload['workspace']['agent_instructions_file_source']})"
-    )
-    print(
-        f"Workflow artifact profile: {payload['workspace']['workflow_artifact_profile']} ({payload['workspace']['workflow_artifact_profile_source']})"
-    )
-    print(
-        f"Agent configuration substrate: {payload['workspace']['agent_configuration_substrate']['canonical_doc']} ({payload['workspace']['agent_configuration_substrate']['owner_surface']})"
-    )
-    print(
-        f"System-intent sources: {', '.join(payload['workspace']['system_intent']['sources']) or 'none'} ({payload['workspace']['system_intent']['sources_source']})"
-    )
-    print(f"Workflow obligations: {len(payload['workspace']['workflow_obligations'])} configured")
-    print(f"Improvement latitude: {payload['workspace']['improvement_latitude']} ({payload['workspace']['improvement_latitude_source']})")
-    print(f"Optimization bias: {payload['workspace']['optimization_bias']} ({payload['workspace']['optimization_bias_source']})")
-    print(
-        f"Advanced features: {', '.join(payload['workspace']['advanced_features']) or 'none'} ({payload['workspace']['advanced_features_source']})"
-    )
-    print(f"CLI invoke: {payload['workspace']['cli_invoke']} ({payload['workspace']['cli_invoke_source']})")
-    print(f"Wrapper rule: {payload['update']['wrapper_rule']}")
-    print("Update modules:")
-    for module in payload["update"]["modules"]:
-        print(f"- {module['module']}: {module['source_type']} {module['source_ref']}")
-        print(f"  label: {module['source_label']}")
-        print(f"  metadata: {module['metadata_path']} ({module['sync_status']})")
-    print("Mixed-agent:")
-    print(f"- rule: {payload['mixed_agent']['rule']}")
-    print(f"- repo policy: {payload['mixed_agent']['repo_policy']['path']} ({payload['mixed_agent']['repo_policy']['source']})")
-    print(f"- local override: {payload['mixed_agent']['local_override']['path']} ({payload['mixed_agent']['local_override']['status']})")
-    print(
-        f"- local integration area: {payload['mixed_agent']['local_integration_area']['root']} ({payload['mixed_agent']['local_integration_area']['status']})"
-    )
-    print(
-        f"- effective posture: internal delegation={payload['mixed_agent']['effective_posture']['supports_internal_delegation']['value']}, strong planner={payload['mixed_agent']['effective_posture']['strong_planner_available']['value']}, cheap bounded executor={payload['mixed_agent']['effective_posture']['cheap_bounded_executor_available']['value']}"
-    )
-    print(f"- delegation targets: {len(payload['mixed_agent']['delegation_targets']['profiles'])} configured")
-    print(
-        f"- delegation outcome evidence: {payload['mixed_agent']['delegation_targets']['outcome_artifact']['path']} ({payload['mixed_agent']['delegation_targets']['outcome_artifact']['status']})"
-    )
+        payload = _select_payload_fields(payload, select=select, source_command="config")
+    elif profile != "full":
+        payload = _tiny_config_payload(payload)
+    _emit_payload(payload=payload, format_name=format_name)
 
 
 def _system_intent_command_payload(*, target_root: Path, config: WorkspaceConfig, sync: bool, dry_run: bool = False) -> dict[str, Any]:

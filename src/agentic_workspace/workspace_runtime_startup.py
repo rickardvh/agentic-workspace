@@ -62,7 +62,6 @@ from agentic_workspace.workspace_runtime_core import (
     _authority_markers_for_startup,
     _available_selectors_for_payload,
     _boundary_warning_for_path,
-    _cli_compatibility_payload,
     _cli_invocation_payload,
     _compact_action_signals_payload,
     _compact_assurance_requirements,
@@ -72,12 +71,10 @@ from agentic_workspace.workspace_runtime_core import (
     _compact_repair_plan_profile,
     _compact_repo_posture_projection,
     _compact_selector_next_safe_action,
-    _compact_start_closeout_obligations,
     _compact_start_delegation_decision,
     _compact_start_local_footprint_advisory,
     _compact_start_prep_only_handoff,
     _compact_start_proof_payload,
-    _compact_start_workflow_obligations,
     _compact_startup_installed_state_signal,
     _compact_task_posture_packet_projection,
     _completion_boundary_payload,
@@ -159,7 +156,6 @@ from agentic_workspace.workspace_runtime_core import (
     _uv_cache_guidance_payload,
     _vague_outcome_orientation_payload,
     _validate_target_root,
-    _workflow_obligations_report_payload,
     _workflow_sufficiency_payload,
     _workspace_absence_startup_review,
     _workspace_disabled_payload,
@@ -467,22 +463,6 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "package_boundary": payload["package_boundary"],
         "authority_markers": payload["authority_markers"][:1],
         "immediate_next_allowed_action": immediate,
-        "workflow_obligations": {
-            "status": payload.get("workflow_obligations", {}).get("status", "unknown"),
-            "match_count": payload.get("workflow_obligations", {}).get("match_count", 0),
-            "detail_command": payload.get("workflow_obligations", {}).get("detail_command", "agentic-workspace preflight --format json"),
-        },
-        "closeout_obligations": {
-            "status": payload.get("closeout_obligations", {}).get("status", "unknown"),
-            "activation_rule": payload.get("closeout_obligations", {}).get(
-                "activation_rule",
-                "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
-            ),
-            "detail_command": payload.get("closeout_obligations", {}).get(
-                "detail_command", command_with_target("agentic-workspace report --target ./repo --section closeout_trust --format json")
-            ),
-            "ordinary_closeout_route": payload.get("closeout_obligations", {}).get("ordinary_closeout_route", {}),
-        },
         "memory_consult": {
             "status": payload.get("memory_consult", {}).get("status", "unknown"),
             "read_first": payload.get("memory_consult", {}).get("read_first", []),
@@ -609,13 +589,6 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     repair_profile = payload.get("repair_plan_profile", {})
     if isinstance(repair_profile, dict) and repair_profile.get("status") == "direct-no-plan":
         projected["repair_plan_profile"] = repair_profile
-    cli_compatibility = payload.get("cli_compatibility", {})
-    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {
-        "advisory-drift",
-        "blocking-drift",
-        "warning-drift",
-    }:
-        projected["cli_compatibility"] = cli_compatibility
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         projected["installed_state_compatibility"] = _compact_startup_installed_state_signal(installed_state)
@@ -737,12 +710,6 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if local_footprint_attention:
         projected["local_footprint"] = local_footprint
     compact_changed_signals = ["local_footprint=attention"] if local_footprint_attention else []
-    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {
-        "advisory-drift",
-        "blocking-drift",
-        "warning-drift",
-    }:
-        compact_changed_signals.append(f"cli_compatibility={cli_compatibility.get('status')}")
     if isinstance(installed_state_triage, dict) and installed_state_triage.get("status") not in {None, "", "not_applicable"}:
         compact_changed_signals.append(f"installed_state_drift_triage={installed_state_triage.get('status')}")
     projected["action_signals"] = _compact_action_signals_payload(
@@ -950,12 +917,6 @@ def _start_payload(
         payload = _start_tiny_payload_fast(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
-        current_workflow_obligations = _workflow_obligations_report_payload(
-            config=config,
-            active_planning_record=None,
-            task_text=task_text,
-            changed_paths=changed_paths,
-        )
         projection_cancellation_checkpoint()
         normalized_paths = _normalize_changed_paths(changed_paths)
         payload["context_authority_projection"] = resolve_context_authority_projection(
@@ -969,9 +930,7 @@ def _start_payload(
             payload["work_threads"] = _local_work_threads_projection(
                 target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text
             )
-        if _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start") or _list_payload(
-            current_workflow_obligations.get("relevant_to_current_work")
-        ):
+        if _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start"):
             improvement_pressure = _session_improvement_pressure_payload(
                 target_root=target_root,
                 config=config,
@@ -983,7 +942,6 @@ def _start_payload(
                 surface="start",
                 task_text=task_text,
                 changed_paths=normalized_paths,
-                workflow_obligations=current_workflow_obligations,
                 skill_routing=payload.get("skill_routing", {}),
                 planning_safety_gate=payload.get("planning_safety_gate", {}),
                 proof=payload.get("proof", {}),
@@ -1045,13 +1003,6 @@ def _start_payload(
         if active_planning_present
         else None
     )
-    workflow_obligations = _workflow_obligations_report_payload(
-        config=config,
-        active_planning_record=planning_record if isinstance(planning_record, dict) else None,
-        task_text=task_text,
-        changed_paths=changed_paths,
-    )
-    compact_workflow_obligations = _compact_start_workflow_obligations(workflow_obligations)
     assurance_requirements = _assurance_requirements_report_payload(
         config=config,
         target_root=target_root,
@@ -1082,12 +1033,11 @@ def _start_payload(
         current_need = "config-posture-routing"
     elif _is_prep_only_handoff_task(task_text):
         current_need = "prep-only-planning-routing"
-    startup_cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+
     installed_state_compatibility = _installed_state_compatibility_payload(
         config=config,
         selected_modules=selected_modules,
         installed_modules=installed_modules,
-        cli_compatibility=startup_cli_compatibility,
         compact=True,
     )
     payload: dict[str, Any] = {
@@ -1170,12 +1120,6 @@ def _start_payload(
             "read_first": [],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
-        "workflow_obligations": compact_workflow_obligations,
-        "closeout_obligations": _compact_start_closeout_obligations(
-            preflight.get("closeout_obligations", {}),
-            cli_invoke=config.cli_invoke,
-            target_root=target_root,
-        ),
         "communication_contract": communication_contract_payload(surface="startup"),
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
@@ -1700,9 +1644,6 @@ def _start_payload(
         changed_paths=_normalize_changed_paths(changed_paths),
         startup_template=startup_template,
     )
-    cli_compatibility = startup_cli_compatibility
-    if cli_compatibility["configured"]:
-        payload["cli_compatibility"] = cli_compatibility
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
     if sibling_freshness["status"] != "not-referenced":
         payload["sibling_repo_aw_freshness"] = sibling_freshness
@@ -1811,7 +1752,6 @@ def _start_payload(
         surface="start",
         task_text=task_text,
         changed_paths=normalized_paths,
-        workflow_obligations=workflow_obligations,
         skill_routing=payload.get("skill_routing", {}),
         planning_safety_gate=planning_safety_gate,
         proof=payload.get("proof", {}),
@@ -1822,7 +1762,6 @@ def _start_payload(
         _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start")
         or task_posture_packet.get("improvement_obligations")
         or task_posture_packet.get("dogfooding_obligations")
-        or _list_payload(workflow_obligations.get("relevant_to_current_work"))
     ) and _task_posture_packet_changes_routing(task_posture_packet):
         payload["task_posture_packet"] = task_posture_packet
     _apply_required_payload_target_start_gate(
@@ -2122,7 +2061,6 @@ def _hydrate_selected_start_advisory_payloads(
             config=config,
             selected_modules=selected_modules,
             installed_modules=installed_modules,
-            cli_compatibility=_cli_compatibility_payload(config=config, compact=True),
             compact=True,
         )
         payload["installed_state_drift_triage"] = _installed_state_drift_triage_payload(
@@ -3075,12 +3013,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         startup_changed_signals.append(
             f"planning_safety={planning_gate.get('status')}:{planning_gate.get('gate_result') or planning_gate.get('decision')}"
         )
-    if isinstance(payload.get("cli_compatibility"), dict) and payload["cli_compatibility"].get("status") in {
-        "advisory-drift",
-        "blocking-drift",
-        "warning-drift",
-    }:
-        startup_changed_signals.append(f"cli_compatibility={payload['cli_compatibility'].get('status')}")
     installed_state = payload.get("installed_state_compatibility", {})
     if isinstance(installed_state, dict) and installed_state.get("status") not in {None, "", "compatible"}:
         startup_changed_signals.append(f"installed_state_compatibility={installed_state.get('status')}")
@@ -3409,13 +3341,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     cli_invocation = payload.get("cli_invocation", {})
     if isinstance(cli_invocation, dict) and cli_invocation.get("mismatch"):
         selected["cli_invocation"] = cli_invocation
-    cli_compatibility = payload.get("cli_compatibility", {})
-    if isinstance(cli_compatibility, dict) and cli_compatibility.get("status") in {
-        "advisory-drift",
-        "blocking-drift",
-        "warning-drift",
-    }:
-        selected["cli_compatibility"] = cli_compatibility
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") not in {None, "", "not-referenced"}:
         selected["sibling_repo_aw_freshness"] = sibling_freshness
     durable_intent = payload.get("durable_intent", {})

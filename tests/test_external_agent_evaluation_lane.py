@@ -956,17 +956,15 @@ def test_configured_orchestration_fixture_preparation_is_copy_local(tmp_path: Pa
     module = _load_configured_fixture_module()
     config = tmp_path / ".agentic-workspace" / "config.local.toml"
     config.parent.mkdir(parents=True)
-    config.write_text('schema_version = 1\n\n[delegation]\nmode = "auto"\n', encoding="utf-8")
+    config.write_text('\n[delegation]\ntransport_authority = "automatic"\n', encoding="utf-8")
 
     module.configure(tmp_path, task="Make a bounded mechanical documentation edit to add one compact README troubleshooting example.")
 
     payload = tomllib.loads(config.read_text(encoding="utf-8"))
     assert payload["delegation"] == {
-        "mode": "auto",
-        "execution_role": "orchestrator",
+        "transport_authority": "automatic",
         "assignment_policy": "required-best-fit",
         "current_target": "strong_planner",
-        "manual_transport_policy": "allowed",
     }
     assert (tmp_path / ".agentic-workspace/planning/execplans/configured-orchestration-fixture.plan.json").is_file()
     assert (tmp_path / ".agentic-workspace/planning/assignments/configured-orchestration-assignment.assignment.json").is_file()
@@ -1102,7 +1100,7 @@ def test_model_cli_harness_source_checkout_config_uses_local_schema(tmp_path: Pa
     module._prepare_source_checkout_invocation(repo)
     local_config = (workspace / "config.local.toml").read_text(encoding="utf-8")
 
-    assert "schema_version = 1" in local_config
+    assert "schema_version" not in local_config
     assert 'cli_invoke = "uv run agentic-workspace"' in local_config
 
 
@@ -1140,7 +1138,7 @@ def test_model_cli_harness_includes_setup_jumpstart_discovery_scenario(tmp_path:
     scenario = scenarios["setup-jumpstart-discovery"]
     assert "uv run agentic-workspace setup" in scenario["required_executed_commands"]
     assert "workspace-setup-jumpstart" in scenario["required_command_mentions"]
-    assert "config-policy" in scenario["required_command_mentions"]
+    assert "configuration" in scenario["required_command_mentions"]
     assert scenario["forbidden_write_patterns"] == ["**/*"]
     assert any("pre-write and pre-seed discovery" in note for note in scenario["expected_signals"])
     assert any("structured configuration concerns" in note for note in scenario["expected_signals"])

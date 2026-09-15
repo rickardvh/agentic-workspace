@@ -16,7 +16,7 @@ from tests.test_native_public_cli import native_cli as native_cli
 def configured(target: Path, mode="redacted"):
     source = target / ".agentic-workspace/config.local.toml"
     source.parent.mkdir(parents=True, exist_ok=True)
-    source.write_text(f'schema_version = 1\n[session_logging]\nenabled = true\npath_mode = "{mode}"\n', encoding="utf-8")
+    source.write_text(f'[session_logging]\nenabled = true\npath_mode = "{mode}"\n', encoding="utf-8")
 
 
 def call(binary: Path, target: Path, *, enabled=True, task="Inspect current sources", invoke=False, identity="private-session-secret"):
@@ -47,7 +47,6 @@ def test_native_logging_default_disable_and_result_noninterference(tmp_path, sha
     disabled = call(shared_core_binary, tmp_path, enabled=False)
     assert not (tmp_path / ".agentic-workspace/local").exists()
     enabled = call(shared_core_binary, tmp_path)
-    assert not any(row["field"].startswith("session_logging.") for row in json.loads(enabled.stdout)["configuration"]["residuals"])
     active_result = json.loads(enabled.stdout)
     assert active_result.pop("session_capture") == {"status": "capturing", "authoritative": False}
     assert active_result == json.loads(disabled.stdout)
@@ -165,7 +164,7 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
     "settings,override,enabled,mode",
     [
         ({}, "", False, "absolute"),
-        ({"enabled": True, "redact_local_paths": True}, "", True, "redacted"),
+        ({"enabled": True, "path_mode": "redacted"}, "", True, "redacted"),
         ({"enabled": True, "path_mode": "repo-relative"}, "1", False, "repo-relative"),
         ({"enabled": False}, "0", False, "absolute"),
     ],
@@ -173,7 +172,7 @@ def test_native_capture_remains_readable_by_maintainer_analysis(tmp_path, shared
 def test_shared_logging_policy(settings, override, enabled, mode, shared_core_binary):
     from agentic_workspace.decision import session_logging_policy
 
-    result = session_logging_policy({"local": {"schema_version": 1, "session_logging": settings}, "disable_override": override})
+    result = session_logging_policy({"local": {"session_logging": settings}, "disable_override": override})
     assert result == {"enabled": enabled, "path_mode": mode}
 
 
@@ -208,8 +207,8 @@ def test_native_logging_disabled_overhead_is_measured_without_residue(tmp_path, 
 @pytest.mark.parametrize(
     "source",
     [
-        'schema_version = 1\n[session_logging]\nenabled = "true"\n',
-        'schema_version = 1\n[session_logging]\nenabled = true\npath_mode = "unknown"\n',
+        '[session_logging]\nenabled = "true"\n',
+        '[session_logging]\nenabled = true\npath_mode = "unknown"\n',
         "malformed = [",
     ],
 )

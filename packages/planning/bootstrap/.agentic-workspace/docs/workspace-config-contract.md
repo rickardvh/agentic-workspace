@@ -10,19 +10,15 @@ independently required proof, source trust, module grants and safety are not wai
 Repository-native policy sources may be edited under their explicit authority.
 A recognized path or a previous native write grants no continuing custody.
 
-New authoring uses strict `schema_version = 2`. Existing version-1 sources remain
-bounded former inputs, not another current authoring mode. Invalid current syntax
-never falls back to the former reader. Exact current-key edits preserve unrelated
-former bytes and never implicitly upgrade the source version. Shared-local files
-are read dependencies, not canonical-writer targets.
+Shared and local sources each have one closed grammar. No config version marker
+is required or accepted. Unknown fields fail admission before managed state is
+read. Shared-local files are explicit read dependencies, not writer targets.
 
 Keep durable policy and necessary environment declarations in config. Module
 selection, invocation/source choices, assurance ceilings, and explicit artifact
 requirements have that lifetime. Current task answers, proof results, learned
 confidence, caches, setup continuation and operational registries belong to their
-current domain owners. Historical compatibility/update/procedure fields require
-semantic disposition; do not preserve them merely because an earlier install
-wrote them, or erase their useful meaning without a receiving owner.
+current domain owners.
 
 The native Configuration owner returns schemas and exact current choices. It can
 create or edit supported canonical sources, preserve unrelated text, defer a
@@ -48,9 +44,7 @@ Without executable AW, the same canonical skill supplies the bounded read-only
 path. Runtime, local and external facts remain unknown; no static file can
 manufacture an operating decision or owner effect.
 
-Current package policy is payload target/floor/enforcement plus reader epoch and
-required capabilities. Current independent-module choices prepare one exact
-implementation/contract binding with separately approved grants. Verification
-owns supported assurance definitions. Former guidance maps and local_memory path
-controls are not current authoring: preserve unresolved intent through the named
-source owners, never infer a default fallback, waiver or trust-pin refresh.
+Package policy contains an artifact target, capability floor and enforcement
+choice. Reader facts come from the executing artifact. Independent-module
+choices prepare one exact implementation/contract binding with separately
+approved grants. Verification owns assurance definitions in its manifest.

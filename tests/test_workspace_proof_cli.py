@@ -345,25 +345,12 @@ test-planning:
     _write(
         target / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
+[modules]
+enabled = ["verification"]
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
 
-[assurance.proof_profiles.workspace_behavior]
-required_commands = ["make test-workspace"]
-optional_commands = []
-review_aids = []
-
-[assurance.subsystem_profiles.workspace-cli-runtime]
-assurance_level = "high"
-scope_refs = ["ownership.subsystems.workspace-cli-runtime"]
-requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
-required_evidence = ["workspace_runtime_proof"]
-proof_profile = "workspace_behavior"
-force = "required-before-closeout"
-blocked_without_evidence = ["claim-work-complete"]
-claim_boundary = "workspace-runtime-routing"
 """,
     )
     _write(
@@ -380,6 +367,22 @@ proof = ["make test-workspace"]
         target / ".agentic-workspace" / "verification" / "manifest.toml",
         """
 schema_version = "agentic-workspace/verification-manifest/v1"
+
+[assurance.proof_profiles.workspace_behavior]
+required_commands = ["make test-workspace"]
+optional_commands = []
+review_aids = []
+
+[assurance.subsystem_profiles.workspace-cli-runtime]
+assurance_level = "high"
+scope_refs = ["ownership.subsystems.workspace-cli-runtime"]
+requirement_refs = [".agentic-workspace/OWNERSHIP.toml#subsystems.workspace-cli-runtime"]
+required_evidence = ["workspace_runtime_proof"]
+proof_profile = "workspace_behavior"
+force = "required-before-closeout"
+blocked_without_evidence = ["claim-work-complete"]
+claim_boundary = "workspace-runtime-routing"
+
 
 [scenarios.generated_adapter_local_conformance]
 protocol_id = "generated_adapter_conformance"
@@ -905,7 +908,7 @@ def test_proof_changed_selector_returns_path_based_validation_lane(tmp_path: Pat
 
 
 def _append_focused_proof_runtime_lane(target: Path) -> None:
-    config = target / ".agentic-workspace" / "config.toml"
+    config = target / ".agentic-workspace" / "verification" / "manifest.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
         + """
@@ -917,7 +920,7 @@ commands = ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector
 review_aids = ["Confirm changed proof routing behavior is exercised."]
 evidence_concepts = ["focused-proof-runtime"]
 proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
+authority_refs = [".agentic-workspace/verification/manifest.toml", "docs/maintainer/testing-strategy.md"]
 escalation = ["focused proof does not exercise the changed behavior"]
 claim_boundary = "focused-proof-runtime-required"
 owner = "workspace-cli-runtime"
@@ -940,7 +943,7 @@ test-workspace-session-review:
 """,
         encoding="utf-8",
     )
-    config = target / ".agentic-workspace" / "config.toml"
+    config = target / ".agentic-workspace" / "verification" / "manifest.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
         + """
@@ -970,7 +973,7 @@ def _replace_workspace_subsystem_proof(target: Path, command: str) -> None:
 
 
 def _append_root_workspace_guidance_lane(target: Path) -> None:
-    config = target / ".agentic-workspace" / "config.toml"
+    config = target / ".agentic-workspace" / "verification" / "manifest.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
         + """
@@ -983,7 +986,7 @@ commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_g
 review_aids = ["Confirm root guidance proof stays focused."]
 evidence_concepts = ["root-workspace-guidance"]
 proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
+authority_refs = [".agentic-workspace/verification/manifest.toml", "docs/maintainer/testing-strategy.md"]
 escalation = ["focused route cannot prove the changed guidance behavior"]
 claim_boundary = "focused-root-guidance-required"
 owner = "workspace-cli-runtime"
@@ -994,7 +997,7 @@ route_role = "behavior"
 
 
 def _append_session_logging_lane(target: Path) -> None:
-    config = target / ".agentic-workspace" / "config.toml"
+    config = target / ".agentic-workspace" / "verification" / "manifest.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
         + """
@@ -1006,7 +1009,7 @@ commands = ["uv run pytest tests/test_workspace_session_logging.py -q"]
 review_aids = ["Confirm local diagnostic boundaries and persistence behavior."]
 evidence_concepts = ["focused-session-logging"]
 proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml"]
+authority_refs = [".agentic-workspace/verification/manifest.toml"]
 escalation = ["session-log persistence or local diagnostic boundaries changed"]
 claim_boundary = "focused-session-logging-required"
 owner = "workspace-cli-runtime"
@@ -1123,7 +1126,7 @@ def test_repo_evidence_strategy_shapes_selected_proof_and_replays_without_steeri
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     _write_repo_local_proof_target(tmp_path)
-    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     config_path.write_text(
         config_path.read_text(encoding="utf-8")
         + """
@@ -1147,7 +1150,6 @@ requirement_class = "guideline"
 preference_target = "surface:property_evidence"
 source_intent_ref = "docs/testing.md#property-first"
 source_intent_revision = "strategy-r1"
-source_intent_current = true
 
 [assurance.requirements.representative_complement]
 level = "high"
@@ -1161,7 +1163,6 @@ evidence_owner = "verification:representative-examples"
 detail_route = "run the representative external example owner"
 source_intent_ref = "docs/testing.md#representative-examples"
 source_intent_revision = "strategy-r1"
-source_intent_current = true
 
 [assurance.requirements.public_api_only]
 level = "high"
@@ -1175,7 +1176,6 @@ evidence_owner = "module:host-api-classifier"
 detail_route = "run the host-owned API-surface classifier"
 source_intent_ref = "docs/testing.md#public-api-only"
 source_intent_revision = "strategy-r1"
-source_intent_current = true
 
 [assurance.domain_proof_lanes.strategy_fixture]
 purpose = "Host-classified ordinary strategy proof."
@@ -1296,7 +1296,7 @@ def test_proof_route_health_requires_admitted_retirement_after_observed_route_re
     _write_installed_host_proof_target(tmp_path)
     assert not (tmp_path / "scripts" / "run_agentic_workspace.py").exists()
     _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
-    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     config_path.write_text(
         config_path.read_text(encoding="utf-8")
         + """
@@ -1308,7 +1308,7 @@ commands = ['python -c "import sys; sys.exit(1)"']
 review_aids = ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."]
 evidence_concepts = ["root-workspace-guidance", "focused-serial-proof"]
 proof_profiles = ["workspace_behavior"]
-authority_refs = [".agentic-workspace/config.toml"]
+authority_refs = [".agentic-workspace/verification/manifest.toml"]
 escalation = ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"]
 claim_boundary = "focused-root-workspace-guidance-required-before-runtime-routing-claim"
 owner = "workspace-cli-runtime"
@@ -1372,7 +1372,7 @@ owner = "workspace-cli-runtime"
     assert execution_finding["consequence_record"]["kind"] == "workspace-improvement-pressure-record/v1"
     assert execution_finding["disposition"]["durable_owner_ref"] == execution_finding["consequence_record"]["id"]
     assert execution_finding["repair_operation"]["apply_contract"]["idempotency_key"].startswith("proof-route-health:")
-    assert execution_finding["repair_operation"]["apply_contract"]["authority_path"] == ".agentic-workspace/config.toml"
+    assert execution_finding["repair_operation"]["apply_contract"]["authority_path"] == ".agentic-workspace/verification/manifest.toml"
     assert execution_finding["repair_operation"]["apply_contract"]["field_selector"] == "assurance.domain_proof_lanes"
     assert before_values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
 
@@ -1386,7 +1386,7 @@ owner = "workspace-cli-runtime"
             "review_aids": ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."],
             "evidence_concepts": ["root-workspace-guidance", "focused-serial-proof"],
             "proof_profiles": ["workspace_behavior"],
-            "authority_refs": [".agentic-workspace/config.toml"],
+            "authority_refs": [".agentic-workspace/verification/manifest.toml"],
             "escalation": ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"],
             "claim_boundary": "focused-root-workspace-guidance-required-before-runtime-routing-claim",
             "owner": "workspace-cli-runtime",
@@ -1409,7 +1409,7 @@ owner = "workspace-cli-runtime"
                 "--route-repair-finding-id",
                 execution_finding["id"],
                 "--route-repair-authority-path",
-                ".agentic-workspace/config.toml",
+                ".agentic-workspace/verification/manifest.toml",
                 "--route-repair-field-selector",
                 "assurance.domain_proof_lanes",
                 "--route-repair-expected-revision",
@@ -1668,7 +1668,7 @@ def test_proof_route_repair_rejects_raw_append_delta(tmp_path: Path) -> None:
     _write_repo_local_proof_target(tmp_path)
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=[],
     )
@@ -1679,7 +1679,7 @@ def test_proof_route_repair_rejects_raw_append_delta(tmp_path: Path) -> None:
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-alpha",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps({"append_text": "[assurance.domain_proof_lanes.bad]\n"}),
@@ -1687,7 +1687,7 @@ def test_proof_route_repair_rejects_raw_append_delta(tmp_path: Path) -> None:
             idempotency_key="proof-route-health:finding-alpha:test",
         )
 
-    config_text = (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+    config_text = (tmp_path / ".agentic-workspace" / "verification" / "manifest.toml").read_text(encoding="utf-8")
     assert "[assurance.domain_proof_lanes.bad]" not in config_text
 
 
@@ -1966,11 +1966,11 @@ def test_proof_route_repair_validation_failure_rolls_back_without_receipt(tmp_pa
     )
 
     _write_repo_local_proof_target(tmp_path)
-    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    authority_path = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     before = authority_path.read_text(encoding="utf-8")
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -1995,7 +1995,7 @@ def test_proof_route_repair_validation_failure_rolls_back_without_receipt(tmp_pa
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-validation-fails",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps(delta),
@@ -2017,11 +2017,11 @@ def test_proof_route_repair_candidate_command_failure_rolls_back_without_receipt
     )
 
     _write_repo_local_proof_target(tmp_path)
-    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    authority_path = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     before = authority_path.read_text(encoding="utf-8")
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -2046,7 +2046,7 @@ def test_proof_route_repair_candidate_command_failure_rolls_back_without_receipt
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-candidate-fails",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps(delta),
@@ -2068,11 +2068,11 @@ def test_proof_route_repair_candidate_must_be_selected_for_repaired_scope(tmp_pa
     )
 
     _write_repo_local_proof_target(tmp_path)
-    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    authority_path = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     before = authority_path.read_text(encoding="utf-8")
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -2097,7 +2097,7 @@ def test_proof_route_repair_candidate_must_be_selected_for_repaired_scope(tmp_pa
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-wrong-scope",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps(delta),
@@ -2227,7 +2227,7 @@ def test_proof_route_repair_rejects_proposed_route_as_sole_validation_authority(
     _write_repo_local_proof_target(tmp_path)
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -2247,7 +2247,7 @@ def test_proof_route_repair_rejects_proposed_route_as_sole_validation_authority(
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-self-validating",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps(delta),
@@ -2263,7 +2263,7 @@ def test_proof_route_repair_rejects_candidate_that_contains_validation_command(t
     _write_repo_local_proof_target(tmp_path)
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -2283,7 +2283,7 @@ def test_proof_route_repair_rejects_candidate_that_contains_validation_command(t
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-partly-self-validating",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps(delta),
@@ -2300,7 +2300,7 @@ def test_proof_route_repair_rejects_equivalent_wrapper_self_validation(tmp_path:
     _write_repo_local_proof_target(tmp_path)
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -2325,7 +2325,7 @@ def test_proof_route_repair_rejects_equivalent_wrapper_self_validation(tmp_path:
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-equivalent-self-validating",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps(delta),
@@ -2344,12 +2344,12 @@ def test_proof_route_repair_enforces_selected_route_budget(tmp_path: Path, monke
     )
 
     _write_repo_local_proof_target(tmp_path)
-    authority_path = tmp_path / ".agentic-workspace" / "config.toml"
+    authority_path = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     before = authority_path.read_text(encoding="utf-8")
     candidate = 'python -c "import time; time.sleep(1)"'
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -2372,7 +2372,7 @@ def test_proof_route_repair_enforces_selected_route_budget(tmp_path: Path, monke
             changed_paths=["src/agentic_workspace/config.py"],
             mode="apply",
             finding_id="finding-slow-budget",
-            authority_path=".agentic-workspace/config.toml",
+            authority_path=".agentic-workspace/verification/manifest.toml",
             field_selector="assurance.domain_proof_lanes",
             expected_revision=revision,
             delta_json=json.dumps(
@@ -2430,7 +2430,7 @@ def test_proof_route_repair_report_cannot_admit_unproven_apply_history(tmp_path:
     command = "python -c \"print('route validation ok')\""
     revision = _proof_route_authority_revision(
         target_root=tmp_path,
-        canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+        canonical_edit_surface=".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]",
         selected_commands=[],
         changed_paths=["src/agentic_workspace/config.py"],
     )
@@ -2448,7 +2448,7 @@ def test_proof_route_repair_report_cannot_admit_unproven_apply_history(tmp_path:
             "status": "applied",
             "finding_id": "finding-aw-sufficiency",
             "idempotency_key": "proof-route-health:finding-aw-sufficiency:test",
-            "authority_path": ".agentic-workspace/config.toml",
+            "authority_path": ".agentic-workspace/verification/manifest.toml",
             "field_selector": "assurance.domain_proof_lanes",
             "post_authority_revision": revision,
             "delta_digest": "digest",
@@ -2502,7 +2502,7 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
     lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "domain:proof_runtime")
 
     assert lane["execution_mode"] == "serial-recommended"
-    assert lane["domain_lane"]["source"] == ".agentic-workspace/config.toml [assurance.domain_proof_lanes]"
+    assert lane["domain_lane"]["source"] == ".agentic-workspace/verification/manifest.toml [assurance.domain_proof_lanes]"
     assert lane["domain_lane"]["purpose"] == "Focused proof runtime behavior."
     assert "make test-workspace" not in answer["required_commands"]
     assert "focused proof does not exercise the changed behavior" in lane["escalate_when"]
@@ -2515,9 +2515,9 @@ def test_applicable_measurement_producer_executes_once_and_current_evidence_is_r
     _init_git_repo(tmp_path)
     _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n")
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.selected_latency]
 level = "high"
@@ -2528,7 +2528,6 @@ blocking_claims = ["claim-work-complete"]
 requirement_class = "current-evidence"
 source_intent_ref = "docs/requirements.md#selected-latency"
 source_intent_revision = "policy-r1"
-source_intent_current = true
 evidence_owner = "verification:selected-latency"
 detail_route = "agentic-workspace report --section assurance_requirements"
 
@@ -3080,52 +3079,6 @@ def test_proof_changed_reports_domain_route_inventory_audit(tmp_path: Path, caps
     assert inventory["coverage_evidence"]["status"] == "advisory-only"
 
 
-def test_proof_routine_context_surfaces_workflow_obligation_match(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace/config.toml",
-        """
-schema_version = 1
-
-[workflow_obligations.workspace_closeout]
-summary = "Run workspace closeout checks."
-stage = "closeout"
-force = "required-before-closeout"
-scope_tags = ["workspace"]
-commands = ["agentic-workspace report --target . --section closeout_trust --format json"]
-review_hint = "Workspace orchestration applies to workspace paths."
-""",
-    )
-
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "src/agentic_workspace/runtime.py",
-                "--verbose",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    answer = json.loads(capsys.readouterr().out)["answer"]
-    binding = answer["current_work_context"]
-    assert binding["kind"] == "agentic-workspace/current-work-context/v1"
-    assert binding["authority"] == "local-advisory-binding"
-    routine = answer["routine_work_context"]
-    assert routine["surface"] == "proof"
-    assert routine["categories"]["authority"]["status"] == "attention"
-    assert routine["categories"]["authority"]["signals"]["workflow_obligation_matches"] == 1
-    assert routine["categories"]["evidence_proof"]["status"] == "attention"
-    assert routine["categories"]["evidence_proof"]["signals"]["workflow_obligation_matches"] == 1
-    assert routine["knowledge_authority_review"]["workflow_obligation_match_count"] == 1
-
-
 def test_proof_routes_changed_path_to_verification_protocol(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "tests" / "test_runbook_review.py", "def test_runbook_review_fixture():\n    assert True\n")
@@ -3192,9 +3145,9 @@ def test_proof_routes_active_assurance_requirement_to_verification_protocol(tmp_
     _init_git_repo(tmp_path)
     _write(tmp_path / "tests" / "test_privacy.py", "def test_privacy_fixture():\n    assert True\n")
     _write(
-        tmp_path / ".agentic-workspace/config.toml",
+        tmp_path / ".agentic-workspace/verification/manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.proof_profiles.privacy]
 required_commands = ["uv run pytest tests/test_privacy.py"]
@@ -4207,7 +4160,7 @@ def test_proof_changed_preserves_configured_active_uv_posture(tmp_path: Path, ca
     _init_git_repo(tmp_path)
     _write(
         tmp_path / ".agentic-workspace/config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run --frozen --active python scripts/run_agentic_workspace.py"\n',
+        '\n[workspace]\ncli_invoke = "uv run --frozen --active python scripts/run_agentic_workspace.py"\n',
     )
     _write(
         tmp_path / "pyproject.toml",
@@ -4989,9 +4942,9 @@ def test_proof_changed_host_policy_disallows_generic_discovered_commands(tmp_pat
     _init_git_repo(tmp_path)
     _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.proof_profiles.no_npm_test]
 required_commands = []
@@ -5095,7 +5048,7 @@ def test_proof_verbose_explains_live_discovery_when_no_setup_adopt_route_hints(t
 def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+        '\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
 
     assert (
@@ -5124,7 +5077,7 @@ def test_proof_changed_validation_plan_uses_resolved_cli_invoke(tmp_path: Path, 
 def test_proof_tiny_detail_commands_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
+        '\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n',
     )
 
     assert (
@@ -5152,9 +5105,9 @@ def test_proof_changed_includes_active_assurance_concern_profiles(tmp_path: Path
 
     _write(tmp_path / "tests" / "test_access_control.py", "def test_access_control_fixture():\n    assert True\n")
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance]
 default_level = "medium"
@@ -5251,9 +5204,9 @@ candidates = []
 def test_proof_changed_includes_matched_assurance_requirement_profile(tmp_path: Path, capsys) -> None:
     _write(tmp_path / "tests" / "privacy" / "test_privacy.py", "def test_privacy_fixture():\n    assert True\n")
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.proof_profiles.privacy]
 required_commands = ["uv run pytest tests/privacy -q"]
@@ -5298,9 +5251,9 @@ blocking_claims = ["claim-work-complete", "close-parent-lane"]
 
 def test_proof_changed_marks_missing_path_specific_proof_unavailable(tmp_path: Path, capsys) -> None:
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.proof_profiles.model_harness]
 required_commands = ["uv run pytest tests/test_model_cli_harness.py -q"]
@@ -5409,7 +5362,7 @@ owns = ["planning semantics"]
 """,
         encoding="utf-8",
     )
-    config = tmp_path / ".agentic-workspace" / "config.toml"
+    config = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
         + """
@@ -5506,9 +5459,9 @@ def test_proof_selection_keeps_external_consumer_test_owner_beside_feature_route
 def test_proof_changed_keeps_existing_path_specific_proof_required(tmp_path: Path, capsys) -> None:
     _write(tmp_path / "tests" / "test_model_cli_harness.py", "def test_harness_fixture():\n    assert True\n")
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.proof_profiles.model_harness]
 required_commands = ["uv run pytest tests/test_model_cli_harness.py -q"]
@@ -5556,9 +5509,9 @@ owns = ["audit trail semantics"]
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.proof_profiles.audit]
 required_commands = ["uv run pytest tests/audit -q"]
@@ -5608,9 +5561,9 @@ def test_proof_current_includes_active_planning_assurance_requirement_profile(tm
 
     _write(tmp_path / "tests" / "privacy" / "test_privacy.py", "def test_privacy_fixture():\n    assert True\n")
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.proof_profiles.privacy]
 required_commands = ["uv run pytest tests/privacy -q"]
@@ -5715,9 +5668,9 @@ def test_proof_changed_reports_compact_proof_execution_evidence_states(tmp_path:
     from repo_planning_bootstrap import installer as planning_installer
 
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
-schema_version = 1
+schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance]
 strict_closeout = true
@@ -6176,7 +6129,7 @@ def test_proof_record_receipt_writes_latest_execution_evidence(tmp_path: Path, c
     target = tmp_path / "repo"
     target.mkdir()
     (target / ".agentic-workspace").mkdir()
-    (target / ".agentic-workspace" / "config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "config.toml").write_text("", encoding="utf-8")
 
     assert (
         cli.main(
@@ -6926,7 +6879,6 @@ def test_proof_record_receipt_builds_template_binding_from_current_obligation(tm
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -7105,7 +7057,6 @@ def test_proof_template_receipt_only_commit_is_fixed_point_but_subject_change_is
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f'''\
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -7249,7 +7200,7 @@ def test_proof_failed_receipt_includes_repair_retry_ladder(tmp_path: Path, capsy
     target = tmp_path / "repo"
     target.mkdir()
     (target / ".agentic-workspace").mkdir()
-    (target / ".agentic-workspace" / "config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "config.toml").write_text("", encoding="utf-8")
 
     assert (
         cli.main(
@@ -7293,7 +7244,7 @@ def test_proof_failed_receipt_clusters_supplied_log(tmp_path: Path, capsys) -> N
     target = tmp_path / "repo"
     target.mkdir()
     (target / ".agentic-workspace").mkdir()
-    (target / ".agentic-workspace" / "config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (target / ".agentic-workspace" / "config.toml").write_text("", encoding="utf-8")
     log_path = target / ".agentic-workspace" / "local" / "proof-logs" / "workspace-test.log"
     log_path.parent.mkdir(parents=True)
     log_path.write_text(
@@ -8115,7 +8066,7 @@ def test_proof_changed_selector_includes_planning_schema_reference_wrapper(tmp_p
 
 def test_planning_changed_test_owners_keep_proof_and_implement_narrow_and_in_sync(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
-    config = tmp_path / ".agentic-workspace" / "config.toml"
+    config = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     config.write_text(
         config.read_text(encoding="utf-8")
         + """
@@ -9233,7 +9184,6 @@ def test_proof_changed_selects_host_declared_domain_proof_lane(tmp_path: Path, c
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -9297,7 +9247,6 @@ def test_domain_proof_lane_undeclared_host_concepts_degrade(tmp_path: Path, caps
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -9345,7 +9294,6 @@ def test_domain_proof_lanes_compose_and_skip_non_matching_changes(tmp_path: Path
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -9437,8 +9385,8 @@ lint-workspace:
     )
     broad_conditions = '["explicit-request"]' if explicit_request else '["cross-owner"]'
     _write(
-        target / ".agentic-workspace" / "config.toml",
-        (target / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        target / ".agentic-workspace" / "verification" / "manifest.toml",
+        (target / ".agentic-workspace" / "verification" / "manifest.toml").read_text(encoding="utf-8")
         + f"""
 
 [assurance.domain_proof_lanes.runtime_contract]
@@ -9784,8 +9732,8 @@ lint-workspace:
 """,
     )
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        (tmp_path / ".agentic-workspace" / "verification" / "manifest.toml").read_text(encoding="utf-8")
         + """
 
 [assurance.domain_proof_lanes.runtime_contract]
@@ -9877,8 +9825,8 @@ owner = "workspace-cli-runtime"
 def test_proof_route_strategy_decision_ignores_untyped_escalation_prose(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        (tmp_path / ".agentic-workspace" / "verification" / "manifest.toml").read_text(encoding="utf-8")
         + """
 
 [assurance.domain_proof_lanes.runtime_contract]
@@ -9940,8 +9888,8 @@ owner = "workspace-cli-runtime"
 def test_focused_operation_route_bounds_and_deduplicates_generated_proof(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        (tmp_path / ".agentic-workspace" / "verification" / "manifest.toml").read_text(encoding="utf-8")
         + """
 
 [assurance.domain_proof_lanes.generated_command_packages]
@@ -10014,8 +9962,8 @@ allowed_composition = ["maintenance", "evidence", "broad"]
 def test_proof_route_strategy_decision_requires_matching_high_risk_requirement_ref(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        (tmp_path / ".agentic-workspace" / "verification" / "manifest.toml").read_text(encoding="utf-8")
         + """
 
 [assurance.requirements.security_delta]
@@ -10077,7 +10025,7 @@ route_role = "broad"
 
 def test_proof_route_strategy_decision_consumes_applicable_memory_validation_friction(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
-    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     config_path.write_text(
         config_path.read_text(encoding="utf-8")
         + """
@@ -10251,7 +10199,6 @@ def test_domain_proof_route_inventory_reports_profile_and_command_gaps(tmp_path:
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -10306,7 +10253,6 @@ def test_domain_proof_route_inventory_ignores_disjoint_shared_prefix_globs(tmp_p
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -10364,8 +10310,8 @@ def test_route_refinement_removes_broad_commands_when_focused_command_becomes_un
         (tmp_path / "Makefile").read_text(encoding="utf-8") + "\nlint-workspace:\n\tpython -c \"print('workspace lint')\"\n",
     )
     _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        (tmp_path / ".agentic-workspace" / "verification" / "manifest.toml").read_text(encoding="utf-8")
         + """
 
 [assurance.domain_proof_lanes.runtime_contract]
@@ -10436,7 +10382,6 @@ def test_domain_proof_lane_coexists_with_package_default_lane(tmp_path: Path, ca
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -10472,149 +10417,12 @@ proof_profiles = ["runtime_contract"]
     assert "domain:runtime_contract" in lane_ids
 
 
-def test_local_high_risk_overlay_shapes_proof_decision_with_provenance(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_proof_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-schema_version = 1
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.high_risk.source_maps.auth_docs]
-applies_to_paths = ["services/auth/**"]
-authority_refs = ["SECURITY.md#auth", "docs/adr/auth-boundary.md"]
-required_sources = ["docs/risk/auth-risk-register.md"]
-manual_evidence = ["host:auth-risk-review"]
-review_aids = ["Confirm auth ADR still matches changed code."]
-claim_boundary = "auth-source-map-review"
-impact = "human-review-only"
-
-[local_overlay.high_risk.validation_profiles.security_sensitive]
-category = "security-sensitive"
-applies_to_paths = ["services/auth/**"]
-required_commands = ["python -c \\"print('security validation')\\""]
-manual_checks = ["Review auth threat-model delta."]
-claim_boundary = "security-validation-profile"
-impact = "blocking"
-
-[local_overlay.high_risk.ci_validation.github_actions]
-applies_to_paths = ["services/auth/**"]
-validation_state = "ci_unavailable"
-local_substitute_commands = ["python -c \\"print('local substitute')\\""]
-local_substitute_policy = "human-review-only"
-claim_boundary = "local-substitute-is-not-ci"
-
-[local_overlay.high_risk.templates.security_issue]
-applies_to_paths = ["services/auth/**"]
-host = "github"
-kind = "issue"
-paths = [".github/ISSUE_TEMPLATE/security.yml"]
-headings = ["Risk", "Evidence", "Reviewer"]
-state = "missing"
-impact = "blocking"
-
-[local_overlay.high_risk.guardrails.synthetic_auth_data]
-applies_to_paths = ["services/auth/**"]
-sensitive_data = ["production tokens", "customer emails"]
-synthetic_fixture_guidance = ["Use example.com addresses.", "Use placeholder credentials."]
-impact = "claim-limiting"
-
-[local_overlay.high_risk.unresolved_questions.legal_review]
-applies_to_paths = ["services/auth/**"]
-category = "human-review-required"
-question = "Does this auth change require legal/security review before merge?"
-owner = "security"
-residue_route = "human-review"
-reason = "local high-risk overlay declares auth changes review-sensitive"
-""",
-    )
-    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
-
-    assert (
-        cli.main(
-            [
-                "proof",
-                "--target",
-                str(tmp_path),
-                "--changed",
-                "services/auth/policy.py",
-                "--select",
-                "proof_decision",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
-    overlay = packet["local_high_risk_overlay"]
-    assert packet["local_overlay"]["status"] == "configured-no-match"
-    assert overlay["status"] == "active"
-    assert overlay["active_count"] == 6
-    source_lane = next(lane for lane in packet["selected_lanes"] if lane["id"] == "local-overlay-source:auth_docs")
-    assert source_lane["route_authority"]["authority"] == "local-only-high-risk-profile"
-    assert source_lane["local_overlay"]["source_layer"] == "repo-local-override"
-    assert "SECURITY.md#auth" in source_lane["commands"] or source_lane["manual_evidence"] == ["host:auth-risk-review"]
-    validation_lane = next(lane for lane in packet["selected_lanes"] if lane["id"] == "local-overlay-validation:security_sensitive")
-    assert validation_lane["validation_profile"]["category"] == "security-sensitive"
-    assert "python -c \"print('security validation')\"" in validation_lane["commands"]
-    unresolved = packet["missing_or_unresolved"]
-    assert "validation-state:ci_unavailable" in unresolved["local_overlay_blockers"]
-    assert "local-substitute-policy:human-review-only" in unresolved["local_overlay_blockers"]
-    assert "template-preservation:missing" in unresolved["local_overlay_blockers"]
-    assert "guardrail:claim-limiting" in unresolved["local_overlay_blockers"]
-    assert "unresolved-question:human-review-required" in unresolved["local_overlay_blockers"]
-    assert packet["safe_claim_now"]["state"] == "human-waiver-required"
-
-
-def test_local_high_risk_overlay_no_match_stays_out_of_tiny_proof(tmp_path: Path, capsys) -> None:
-    _init_git_repo(tmp_path)
-    _write_empty_proof_planning_state(tmp_path)
-    _write(
-        tmp_path / ".agentic-workspace" / "config.toml",
-        f"""
-schema_version = 1
-
-[workspace]
-cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace" / "config.local.toml",
-        """
-schema_version = 1
-
-[local_overlay.high_risk.guardrails.auth_data]
-applies_to_paths = ["services/auth/**"]
-sensitive_data = ["production token"]
-impact = "blocking"
-""",
-    )
-    _write(tmp_path / "docs" / "readme.md", "# Docs\n")
-
-    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "docs/readme.md", "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload.get("high_risk_overlay") is None
-
-
 def test_high_assurance_closeout_posture_projects_missing_and_non_applicable_states(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -10699,7 +10507,6 @@ def test_high_assurance_closeout_posture_accepts_admitted_independent_review_rec
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -11436,7 +11243,6 @@ def test_high_assurance_closeout_posture_rejects_expired_independent_review_rece
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -11497,7 +11303,6 @@ def test_high_assurance_closeout_revalidates_admitted_receipt_against_current_ho
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -11597,7 +11402,6 @@ def test_high_assurance_closeout_posture_rejects_hand_written_independent_review
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -11654,7 +11458,6 @@ def test_high_assurance_closeout_posture_projects_waiver_and_uncertainty(tmp_pat
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
         f"""
-schema_version = 1
 
 [workspace]
 cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
@@ -11727,7 +11530,7 @@ def test_proof_decision_packet_includes_architecture_pressure(tmp_path: Path, ca
 def test_verification_distinguishes_host_evidence_concepts(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
-    _write(tmp_path / ".agentic-workspace" / "config.toml", f'schema_version = 1\n\n[workspace]\ncli_invoke = "{REPO_LOCAL_CLI_INVOKE}"\n')
+    _write(tmp_path / ".agentic-workspace" / "config.toml", f'\n[workspace]\ncli_invoke = "{REPO_LOCAL_CLI_INVOKE}"\n')
     _write(
         tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
         """
@@ -11799,8 +11602,8 @@ def test_selected_proof_execution_reconciles_and_reuses_local_receipts(tmp_path:
     _init_git_repo(tmp_path)
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n.agentic-workspace/config.local.toml\n")
-    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
-    _write(tmp_path / ".agentic-workspace/config.local.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "")
+    _write(tmp_path / ".agentic-workspace/config.local.toml", "")
     commands = ["check-one", "check-two", "check-three", "check-four"]
     calls: list[str] = []
     monkeypatch.setattr(
@@ -11881,7 +11684,7 @@ def test_selected_proof_execution_leaves_tracked_receipt_store_unchanged(tmp_pat
     _init_git_repo(tmp_path)
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n")
-    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "")
     _write(tmp_path / ".agentic-workspace/proof/receipts/index.json", '{"receipts": []}\n')
     _write(tmp_path / "changed.py", "VALUE = 1\n")
     subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
@@ -12013,9 +11816,9 @@ def test_selected_proof_rejects_known_unrecordable_broad_command_before_launch(t
 
 def test_selected_proof_execution_preserves_completed_failure_and_requires_new_run_revalidation(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
-    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "")
     local_path = tmp_path / ".agentic-workspace/config.local.toml"
-    _write(local_path, "schema_version = 1\n")
+    _write(local_path, "")
     commands = ["check-one", "check-two"]
     calls: list[str] = []
     fail_second = True
@@ -12087,7 +11890,7 @@ def test_selected_proof_execution_preserves_completed_failure_and_requires_new_r
     assert revalidated["exit_status"] == 0
     assert calls == ["check-one", "check-two", "check-one", "check-two"]
 
-    _write(local_path, "schema_version = 1\n# changed subject\n")
+    _write(local_path, "# changed subject\n")
     stale = workspace_runtime_core._execute_selected_proof_payload(
         target_root=tmp_path,
         changed_paths=[".agentic-workspace/config.local.toml"],
@@ -12104,8 +11907,8 @@ def test_selected_proof_execution_preserves_completed_failure_and_requires_new_r
 
 def test_selected_proof_execution_records_cancel_and_timeout_outcomes(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
-    _write(tmp_path / ".agentic-workspace/config.toml", "schema_version = 1\n")
-    _write(tmp_path / ".agentic-workspace/config.local.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace/config.toml", "")
+    _write(tmp_path / ".agentic-workspace/config.local.toml", "")
     monkeypatch.setattr(
         workspace_runtime_core,
         "_proof_selection_for_changed_paths",

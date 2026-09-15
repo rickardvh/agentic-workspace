@@ -73,7 +73,6 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
 | `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
-| `task_posture_packet.workflow_obligations` | array of object | yes |  | Matched workflow obligations with stage, force, scope, and provenance. |  |  |
 | `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
 | `task_posture_packet.improvement_pressure_records` | array of object | yes |  | Admitted improvement-pressure candidate facts preserved for the canonical operating decision. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
@@ -119,24 +118,6 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | Allowed target relation value for routing or validation. |  |  |
 | `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | Fixed compatibility value required by this contract. |  |  |
 | `invoked_cli_identity.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
-| `cli_compatibility` | ref `#/$defs/cli_compatibility` | no |  | Compatibility assessment between the invoked CLI and any repo-configured CLI expectations. |  |  |
-| `cli_compatibility.kind` | const `"agentic-workspace/cli-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
-| `cli_compatibility.status` | enum `"no-expectation"`, `"satisfied"`, `"advisory-drift"`, `"blocking-drift"` | yes |  | Current lifecycle, readiness, or health state. |  |  |
-| `cli_compatibility.configured` | boolean | yes |  | Configured true/false policy flag used by this contract. |  |  |
-| `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | yes |  | Allowed enforcement value for routing or validation. |  |  |
-| `cli_compatibility.enforcement_source` | string | no |  | Enforcement source text value used by this contract. |  |  |
-| `cli_compatibility.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
-| `cli_compatibility.expected_command` | string \| null | no |  | Expected command contract value used by this contract. |  |  |
-| `cli_compatibility.invocation_resolution` | object | no |  | Non-mutating classification of the configured environment-manager invocation. |  |  |
-| `cli_compatibility.contract_expectation` | object | no |  | Durable schema, capability, and package-resource expectation owned by repo config. |  |  |
-| `cli_compatibility.package_resources` | array of object | no |  | Availability results for required package resources. |  |  |
-| `cli_compatibility.pre_state_admission` | object | no |  | Compact root-reader admission provenance established before managed state interpretation. |  |  |
-| `cli_compatibility.invocation_confidence` | enum `"high"`, `"medium"`, `"low"` | no |  | Allowed invocation confidence value for routing or validation. |  |  |
-| `cli_compatibility.drift_findings` | array of object | no |  | Ordered drift findings entries used by this contract. |  |  |
-| `cli_compatibility.remediation` | object | no |  | Remediation details used by this contract. |  |  |
-| `cli_compatibility.checks` | array of ref `#/$defs/cli_compatibility_check` | no |  | Ordered checks entries used by this contract. |  |  |
-| `cli_compatibility.failed_checks` | array of enum `"exact_version"`, `"minimum_version"`, `"source_class"`, `"target_relation"`, `"resolution_posture"`, `"contract_schema"`, `"required_capabilities"`, `"required_resources"`, `"minimum_reader_epoch"`, `"required_reader_capabilities"` | yes |  | Ordered failed checks entries used by this contract. |  |  |
-| `cli_compatibility.rule` | string | no |  | Policy rule that explains this contract behavior. |  |  |
 | `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | no |  | Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts. |  |  |
 | `installed_state_compatibility.kind` | const `"agentic-workspace/installed-state-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `installed_state_compatibility.status` | enum `"compatible"`, `"upgrade-recommended"`, `"payload-upgrade-required"`, `"blocking-drift"` | yes |  | Current installed-state compatibility classification. |  |  |
@@ -277,8 +258,6 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `continuation_state` | object | no |  | Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue. |  |  |
 | `authority_hierarchy` | object | no |  | Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit. |  |  |
 | `compliance_economics` | object | no |  | Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly. |  |  |
-| `workflow_obligations` | object | no |  | Repo-configured workflow obligations relevant to the startup context. |  |  |
-| `closeout_obligations` | object | no |  | Closeout obligations that may apply before claiming work is complete. |  |  |
 | `memory_consult` | object | no |  | Memory lookup guidance for durable repo knowledge when startup context says it is relevant. |  |  |
 | `operating_posture` | object | no |  | Compact statement of the current operating mode and risk posture. |  |  |
 | `repo_posture` | object | no |  | Compact effective repo posture ref, digest, reminder, provenance route, and reorientation triggers. |  |  |

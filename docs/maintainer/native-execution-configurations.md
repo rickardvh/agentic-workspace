@@ -23,7 +23,7 @@ Retained-local implementation can support `unapplied-patch`. Required result
 classes exclude incapable routes without claiming target-quality inferiority.
 Unresolved viable alternatives still block rather than silently authorizing local work.
 
-Canonical and former declarations use the same Rust decoder. Discovery never
+Current transport declarations use the Rust decoder. Discovery never
 runs the configured command. It observes the executable's current path, size,
 modification time and streamed content digest; files above 128 MiB or changed
 while reading are unavailable. This establishes only a local executable, not
@@ -33,10 +33,9 @@ overflow remains a source-referenced gap. No durable discovery cache is created.
 
 ## Policy and currentness
 
-Current local policy supersedes the former root local source under the existing
-source-owner rule. An explicitly selected shared local source is merged underneath
-local values; missing or malformed sources remain blockers. Canonical assignment
-and transport fields supersede former aliases. All source bytes remain unchanged.
+An explicitly selected shared local source is merged underneath current local
+values; missing or malformed sources remain blockers. Assignment and transport
+fields use the closed local configuration grammar. All source bytes remain unchanged.
 
 Automatic transport authority and independent command safety are separate gates.
 Forbidden task classes require the current typed applicability answer; the agent

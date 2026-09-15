@@ -2,6 +2,7 @@
 //! the product runtime. The binary links this crate like any native extension.
 use agentic_workspace_core::independent_owner::*;
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 
 fn description(owner: &str, effectful: bool) -> Description {
     Description {
@@ -139,8 +140,9 @@ pub fn configuration(owner: &str) -> Value {
         "fixture-escape" => escape(),
         _ => panic!("Unknown fixture"),
     };
-    json!({"schema_version":1,"modules":{"enabled":[],"independent":{owner:{
-        "revision":"fixture-v1","contract_revision":contract_revision(&description).unwrap(),
+    let binding = format!("sha256:{:x}", Sha256::digest(serde_json::to_vec(&json!({"implementation":"fixture-v1","contract":contract_revision(&description).unwrap()})).unwrap()));
+    json!({"modules":{"enabled":[],"independent":{owner:{
+        "binding":binding,
         "effects":description.capability["effects"].as_array().unwrap().iter().map(|e|e["id"].clone()).collect::<Vec<_>>(),
         "claims":[],"restrictions":[],"reads":description.sources,"scope":["fixture-input.txt"],"settings":{"label":"admitted fixture"}
     }}}})

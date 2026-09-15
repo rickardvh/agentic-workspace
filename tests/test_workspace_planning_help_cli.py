@@ -187,7 +187,7 @@ def test_planning_front_door_invoke_enforces_live_route_action_admission(tmp_pat
     workspace = tmp_path / ".agentic-workspace"
     workspace.mkdir()
     (workspace / "config.toml").write_text(
-        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n',
+        '[workspace]\ncli_invoke = "agentic-workspace"\n',
         encoding="utf-8",
     )
     config = config_lib.load_workspace_config(target_root=tmp_path)

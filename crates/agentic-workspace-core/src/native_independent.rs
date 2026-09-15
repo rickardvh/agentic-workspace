@@ -56,8 +56,6 @@ fn descriptor(
 pub(crate) fn prepare(owner: &str, previous: &Value) -> Result<Value, CoreError> {
     let (_, description, binding) = descriptor(owner)?;
     let mut value = previous.as_object().cloned().unwrap_or_default();
-    value.remove("revision");
-    value.remove("contract_revision");
     value.insert("binding".into(), json!(binding));
     for field in ["effects", "claims", "restrictions", "reads", "scope"] {
         if value.get(field).is_some_and(|v| v == &json!([])) {
@@ -157,10 +155,7 @@ impl Runtime {
             if admission.get("settings").is_none() {
                 admission["settings"] = json!({});
             }
-            if registration.api_version != 1
-                || (admission.get("binding").is_none()
-                    && admission["revision"] != registration.revision)
-            {
+            if registration.api_version != 1 {
                 return Err(err(format!(
                     "Independent owner {name} is incompatible with its current admission; restore the admitted revision or reconcile admission through Configuration"
                 )));
@@ -170,11 +165,7 @@ impl Runtime {
             let exact = digest(
                 &json!({"implementation":registration.revision,"contract":contract_revision}),
             )?;
-            if if admission.get("binding").is_some() {
-                admission["binding"] != exact
-            } else {
-                contract_revision != admission["contract_revision"]
-            } {
+            if admission["binding"] != exact {
                 return Err(err(format!(
                     "Independent owner {name} contract differs from its exact admission"
                 )));

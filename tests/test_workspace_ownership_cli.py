@@ -109,7 +109,7 @@ def test_ownership_diagnostics_report_startup_adapter_drift_and_ambiguity(tmp_pa
 
 def test_ownership_diagnostics_report_missing_config_owner(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n", encoding="utf-8")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "", encoding="utf-8")
     _write(
         tmp_path / ".agentic-workspace" / "OWNERSHIP.toml",
         "schema_version = 1\n\n"

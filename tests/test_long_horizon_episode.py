@@ -475,7 +475,7 @@ def test_long_horizon_episode_bootstraps_aw_mode_into_configured_startup_file(tm
     repo.mkdir()
     (repo / ".agentic-workspace").mkdir()
     (repo / ".agentic-workspace" / "config.toml").write_text(
-        'schema_version = 1\n\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
+        '\n[workspace]\nagent_instructions_file = "GEMINI.md"\n',
         encoding="utf-8",
     )
     (repo / "GEMINI.md").write_text("# Gemini\n", encoding="utf-8")

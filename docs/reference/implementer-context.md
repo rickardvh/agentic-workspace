@@ -21,7 +21,6 @@ Cheap implementer context for a bounded changed-path scope.
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when changed paths, task facts, config posture, workflow obligations, or module contributions affect implementation routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
 | `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
-| `task_posture_packet.workflow_obligations` | array of object | yes |  | Matched workflow obligations with stage, force, scope, and provenance. |  |  |
 | `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
 | `task_posture_packet.improvement_pressure_records` | array of object | yes |  | Admitted improvement-pressure candidate facts preserved for the canonical operating decision. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |

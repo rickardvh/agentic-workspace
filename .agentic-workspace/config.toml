@@ -3,7 +3,6 @@
 # Reference: .agentic-workspace/docs/workspace-config-contract.md
 # Resolve through the configured native start route in AGENTS.md.
 
-schema_version = 1
 
 [modules]
 enabled = ["planning", "memory", "verification"]

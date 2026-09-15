@@ -1521,7 +1521,6 @@ def _effective_config_snapshot(state: SessionLoggingState) -> dict[str, Any]:
         "payload": {
             "target_release": config.payload_target.target_release,
             "policy": config.payload_target.policy,
-            "dogfood_latest": config.payload_target.dogfood_latest,
         },
         "cli_identity": {
             "package": "agentic-workspace",
@@ -1531,7 +1530,6 @@ def _effective_config_snapshot(state: SessionLoggingState) -> dict[str, Any]:
         },
         "session_logging": {
             "enabled": config.local_override.session_logging.enabled,
-            "redact_local_paths": config.local_override.session_logging.redact_local_paths,
             "path_mode": config.local_override.session_logging.path_mode,
             "source": config.local_override.session_logging.source,
             "config_path": _normalize_for_log(

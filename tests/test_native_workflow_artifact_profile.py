@@ -20,14 +20,13 @@ def test_repo_owned_profile_preserves_real_planning_custody(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
     )
     config = tmp_path / ".agentic-workspace/config.toml"
-    config.write_text('schema_version=1\n[workspace]\nworkflow_artifact_profile="repo-owned"\n')
+    config.write_text('[workspace]\nworkflow_artifact_profile="repo-owned"\n')
     context = {"target": str(tmp_path), "task": "Continue the bounded current owner"}
     current = consume(surface, shared_core_binary, native_cli, context)
     profile = current["workflow_artifact_profile"]
     assert profile["canonical_owner"] == "planning"
     assert profile["current_owner"]["status"] == current["planning"]["status"]
     assert current["decision_packet"]["decision_request"]
-    assert not any(r["field"] == "workspace.workflow_artifact_profile" for r in current["configuration"]["residuals"])
     request = current["decision_packet"]["decision_request"]["response_request"]
     request["arguments"]["answer"] = "continue-selected"
     action = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["decision_packet"]["primary_action"]
@@ -67,7 +66,7 @@ def test_optional_scratchpads_preserve_only_affected_transfer_gap(
 ) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[workspace]\nworkflow_artifact_profile="gemini"\n')
+    config.write_text('[workspace]\nworkflow_artifact_profile="gemini"\n')
     context = {"target": str(tmp_path), "task": "Inspect an unrelated source"}
     absent = consume(surface, shared_core_binary, native_cli, context)
     assert absent["decision_packet"]["status"] == "direct"

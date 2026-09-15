@@ -22,7 +22,7 @@ from agentic_workspace.generated_operations import assignment_export
 def test_guarantee_config_rejects_malformed_constraints(tmp_path: Path, value) -> None:
     root = tmp_path / ".agentic-workspace"
     root.mkdir()
-    (root / "config.local.toml").write_text("schema_version = 1\n[delegation]\nrequired_execution_guarantees = " + json.dumps(value) + "\n")
+    (root / "config.local.toml").write_text("[delegation]\nrequired_execution_guarantees = " + json.dumps(value) + "\n")
     with pytest.raises(WorkspaceUsageError, match="required_execution_guarantees"):
         load_workspace_config(target_root=tmp_path)
 
@@ -79,8 +79,7 @@ def test_public_history_requirement_filters_and_seals_parameterized_choice(tmp_p
     _, invocation, _ = _prepare_shared_worktree_assignment(tmp_path, run_id="unrelated")
     audit = _install_metadata_only_codex(tmp_path, monkeypatch)
     source = tmp_path / ".agentic-workspace/config.local.toml"
-    source.write_text("""schema_version = 1
-[delegation]
+    source.write_text("""[delegation]
 assignment_policy = "required-best-fit"
 current_target = "orchestrator"
 transport_authority = "automatic"
@@ -90,16 +89,16 @@ safe_to_auto_run_commands = true
 [delegation_targets.orchestrator]
 target_id = "host:orchestrator"
 target_revision = "1"
-strength = "strong"
+
 location = "local"
 transports = [{kind="internal"}]
 [delegation_targets.worker]
 target_id = "host:worker"
 target_revision = "1"
-strength = "strong"
+
 location = "external"
-provider = "openai"
-model_family = "fixture-model"
+
+
 transports = [{kind="manual"}]
 """)
     from repo_planning_bootstrap import installer as planning

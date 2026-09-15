@@ -972,7 +972,7 @@ def test_evaluation_collection_actions_match_structured_context_and_stay_quiet(t
     _init_git_repo(tmp_path)
     workspace_config = tmp_path / ".agentic-workspace" / "config.toml"
     workspace_config.parent.mkdir(parents=True, exist_ok=True)
-    workspace_config.write_text("schema_version = 1\n\n[workspace]\nenabled = true\n", encoding="utf-8")
+    workspace_config.write_text("\n[workspace]\nenabled = true\n", encoding="utf-8")
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
 
     matched = evaluation_collection_actions(
@@ -2175,7 +2175,7 @@ def test_evaluation_observe_derives_and_revalidates_authority_from_public_assign
     _init_git_repo(tmp_path)
     config_path = tmp_path / ".agentic-workspace/config.toml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text("schema_version = 1\n\n[workspace]\nenabled = true\n", encoding="utf-8")
+    config_path.write_text("\n[workspace]\nenabled = true\n", encoding="utf-8")
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
     assignment_path = tmp_path / ".agentic-workspace" / "planning" / "assignments" / "current.assignment.json"
     assignment_path.parent.mkdir(parents=True)
@@ -2427,7 +2427,7 @@ def test_evaluation_report_delivery_generated_operation_family_fails_closed_with
     _init_git_repo(tmp_path)
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text("schema_version = 1\n\n[workspace]\nenabled = true\n", encoding="utf-8")
+    config_path.write_text("\n[workspace]\nenabled = true\n", encoding="utf-8")
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
     invocation = [sys.executable, str(ROOT / "scripts" / "run_agentic_workspace.py")]
 

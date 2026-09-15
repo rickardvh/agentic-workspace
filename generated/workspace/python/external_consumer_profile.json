@@ -3,17 +3,17 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:7d797bb19c068b177985179c569f85f120fffad331275d5e75bb094208d8aa62",
+    "fingerprint": "sha256:05eb9e35e9d61fa2aa5703889008568c3363cc0fce3fd5e2fea80b3f7f2709a2",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
   "readiness_authority": {
     "kind": "agentic-workspace/external-readiness-authority/v1",
     "status": "current",
-    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:425a5834df23b26ab25d241fdc6500185b601f93d4eaa7e56b1fa285792f7419",
-    "client_semantics_revision": "sha256:cb1280874c44f374d0ca9f73cfa8d5eaae67356bec03abf73040aef504130f55",
+    "runner_revision": "scripts/check/run_operation_conformance_tests.py@sha256:78cedef21861239a48ef1fb9b1845b4da17d996ba1acef50d9e5848f94f62161",
+    "client_semantics_revision": "sha256:8fb02e8e00867eee19059e9006075647b4f1340da55eddbcd7066c8ace692b0e",
     "client_artifact_revisions": {
-      "public_python_client": "src/agentic_workspace/client.py@sha256:45f33803829acb173cd92b533613cb6e28c3ddb39061ef3f4f198d536fabc2fc",
+      "public_python_client": "src/agentic_workspace/client.py@sha256:9c62ce37af5241acc52c6a389a22a509f5ec9226cfaab8fb9359d421d88773a6",
       "generated_client_generator": "scripts/generate/generate_external_consumer_profile.py@sha256:7a37e49df281703d6a83ee8366c2c3b28acf5edb5516089467b11c7cd2370ea4",
       "typescript_client_template": "scripts/generate/templates/external_client.mjs@sha256:ddf4db3a67bb20dbe18b3d6980d8116cea79d698c803ce97b81d3ef8f6c39497"
     }
@@ -2556,115 +2556,12 @@
       }
     },
     {
-      "id": "config.policy-apply",
-      "owner": "root-workspace",
-      "operation_contract": "src/agentic_workspace/contracts/operations/config.policy-apply.json",
-      "operation_compatibility": {
-        "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:c8cf90cf2fad2a2c457aa2cdd9be55664ef2472ebd7977f314e35796abc1c83c"
-      },
-      "operation_resources": {
-        "python": {
-          "package": "agentic-workspace",
-          "path": "operations/config.policy-apply.json",
-          "exists": true
-        },
-        "typescript": {
-          "package": "@agentic-workspace/workspace-cli",
-          "path": "resources/operations/config.policy-apply.json",
-          "exists": true
-        }
-      },
-      "schemas": {
-        "input": [],
-        "output": []
-      },
-      "effects": {
-        "read_only": false,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
-      },
-      "targets": {
-        "python": {
-          "package": "agentic-workspace",
-          "status": "mutation-capable-adapter",
-          "maturity": "mutation-capable-adapter",
-          "generated_root": "generated/workspace/python"
-        },
-        "typescript": {
-          "package": "@agentic-workspace/workspace-cli",
-          "status": "mutation-capable-adapter",
-          "maturity": "mutation-capable-adapter",
-          "generated_root": "generated/workspace/typescript"
-        },
-        "bash": {
-          "package": "agentic-workspace-shell",
-          "status": "deferred",
-          "maturity": "deferred",
-          "generated_root": "generated/shell/bash"
-        },
-        "powershell": {
-          "package": "AgenticWorkspace.PowerShell",
-          "status": "deferred",
-          "maturity": "deferred",
-          "generated_root": "generated/shell/powershell"
-        }
-      },
-      "conformance": [
-        "config.policy-apply.process"
-      ],
-      "external_consumption": {
-        "status": "internal",
-        "runtime_exceptions": [
-          {
-            "owner": "root-workspace",
-            "scope": "bounded config authority validation",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "config.policy-apply.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "revision and setup identity admission",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "config.policy-apply.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "preservation-oriented TOML mutation",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "config.policy-apply.process"
-            ],
-            "migration_dependency": "#2044"
-          },
-          {
-            "owner": "root-workspace",
-            "scope": "readiness completion",
-            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
-            "proof": [
-              "config.policy-apply.process"
-            ],
-            "migration_dependency": "#2044"
-          }
-        ],
-        "dependency": "#2044"
-      }
-    },
-    {
       "id": "config.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:cbcd32386629e08c44b9dbbf897c6ff76ce62ca9c7831eee16c1d5ba8da64d18"
+        "fingerprint": "sha256:d8626a1798da92062d4e40a4c20f27757da8f1b37bfc43c90aed0f212ab7a625"
       },
       "operation_resources": {
         "python": {

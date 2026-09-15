@@ -177,12 +177,6 @@
       "consumer": "scripts/check/check_contract_tooling_surfaces.py"
     },
     {
-      "contract": "workflow_definition_format.json",
-      "schema": "workflow_definition_format.schema.json",
-      "loader": "workflow_definition_format_manifest",
-      "consumer": "scripts/check/check_contract_tooling_surfaces.py"
-    },
-    {
       "contract": "skill_specs.json",
       "schema": "skill_spec.schema.json",
       "loader": "skill_specs_manifest",

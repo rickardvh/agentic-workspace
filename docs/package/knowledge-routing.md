@@ -111,7 +111,6 @@ are:
 - active Planning state that owns the current lane, continuation, closeout, or
   stop condition;
 - module participation declarations that match the loop step or posture need;
-- configured `workflow_obligations` that apply to the current stage or scope;
 - stale evidence markers, unresolved review comments, or known proof gaps;
 - closeout residue that contains reusable knowledge, parent-intent pressure, or
   a source ownership conflict.

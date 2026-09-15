@@ -86,30 +86,7 @@ pub fn decode(profile: &Value) -> Result<Vec<Value>, CoreError> {
             transports.push(row);
         }
     } else {
-        let methods = profile["execution_methods"]
-            .as_array()
-            .filter(|v| !v.is_empty())
-            .ok_or_else(|| CoreError::new("current or former transport declaration required"))?;
-        let command = profile
-            .get("dispatch_command")
-            .cloned()
-            .unwrap_or(json!([]));
-        let words = command
-            .as_array()
-            .filter(|v| v.iter().all(|w| w.as_str().is_some_and(|s| !s.is_empty())))
-            .ok_or_else(|| CoreError::new("invalid former dispatch command"))?;
-        for method in methods {
-            let method = method.as_str().unwrap_or("");
-            let kind = match method {
-                "internal" => "internal",
-                "cli" => "process",
-                "api" => "api",
-                "manual" => "manual",
-                _ => return Err(CoreError::new("invalid former execution method")),
-            };
-            let configured = matches!(method, "internal" | "manual") || !words.is_empty();
-            transports.push(json!({"kind":kind,"method":method,"command":if matches!(method,"cli"|"api"){command.clone()}else{json!([])},"output_mode":profile.get("dispatch_output_mode").cloned().unwrap_or(json!("stdout")),"timeout_seconds":profile.get("dispatch_timeout_seconds").cloned().unwrap_or(json!(1800)),"readiness":if method=="internal"{"runtime-required"}else if configured{"configured"}else{"declared-unconfigured"},"source":"legacy-compatibility-decoder"}));
-        }
+        return Err(CoreError::new("transports declaration required"));
     }
     Ok(transports)
 }

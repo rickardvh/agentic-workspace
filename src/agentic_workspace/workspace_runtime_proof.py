@@ -143,8 +143,6 @@ from agentic_workspace.workspace_runtime_core import (
     _tiny_workflow_sufficiency,
     _transient_validation_retry_guidance,
     _validation_plan_for_proof,
-    _workflow_obligation_closeout_contract_payload,
-    _workflow_obligations_report_payload,
     _workflow_sufficiency_payload,
 )
 from agentic_workspace.workspace_runtime_generated_surface import (
@@ -2438,10 +2436,6 @@ def _closeout_report_payload(
     task_posture_followthrough = _as_dict(completion_gate.get("task_posture_followthrough"))
     first_blocking_option = next((item for item in completion_options if item.get("allowed") is False and item.get("blocking_fields")), {})
     blockers = first_blocking_option.get("blocking_fields", [])
-    workflow_obligation_contract = _workflow_obligation_closeout_contract_payload(
-        config=config,
-        active_planning_record=active_planning_record,
-    )
     decision_review = _closeout_report_decision_review_payload(
         active_planning_record=active_planning_record,
         proof_report=proof_report,
@@ -2472,7 +2466,6 @@ def _closeout_report_payload(
         behavior_preservation=behavior_preservation,
         parent_intent_status=parent_intent_status,
         applicable_intent_status=applicable_intent_status,
-        workflow_obligation_contract=workflow_obligation_contract,
         completion_gate=completion_gate,
         review_mode=selected_review_mode,
     )
@@ -2531,7 +2524,6 @@ def _closeout_report_payload(
             f"selected_profile={profile_policy['selected_profile']}",
             f"trust={trust}",
             f"completion_decision={completion_decision}",
-            f"workflow_obligation_required_count={workflow_obligation_contract['required_count']}",
         ],
         recommended_by_aw=[str(next_action), profile_policy["next_command"]],
         proof_hints=[validation_proof],
@@ -2614,7 +2606,6 @@ def _closeout_report_payload(
             if isinstance(workflow_compliance_summary, dict)
             else "unknown",
         },
-        "workflow_obligation_contract": workflow_obligation_contract,
         "completion_gate": completion_gate,
         "terminal_outcome_contract": terminal_outcome_contract,
         "task_posture_followthrough": task_posture_followthrough,
@@ -4031,7 +4022,7 @@ def _proof_route_apply_semantic_delta(
     if authority_path == ".agentic-workspace/config.toml" and field_selector == "assurance.domain_proof_lanes":
         if action != "upsert_domain_lane":
             raise WorkspaceUsageError("config.toml assurance.domain_proof_lanes repair requires action=upsert_domain_lane.")
-        tomllib.loads(previous_text or "schema_version = 1\n")
+        tomllib.loads(previous_text or "")
         lane_id = str(delta.get("lane_id") or "").strip()
         lane = _proof_route_validate_domain_lane(lane_id, _as_dict(delta.get("lane")))
         table = f"assurance.domain_proof_lanes.{lane_id}"
@@ -10395,14 +10386,8 @@ def _proof_selection_for_changed_paths(
             root=target_root,
             task=str(task_text or ""),
         )
-        workflow_obligations = _workflow_obligations_report_payload(
-            config=config,
-            active_planning_record=None,
-            task_text=task_text,
-            changed_paths=changed_paths,
-        )
         proof_routine_context = _routine_work_context_payload(
-            source_payload={"proof": proof_selection, "workflow_obligations": workflow_obligations, "verification": verification},
+            source_payload={"proof": proof_selection, "verification": verification},
             surface="proof",
             cli_invoke=cli_invoke,
             target_root=target_root,

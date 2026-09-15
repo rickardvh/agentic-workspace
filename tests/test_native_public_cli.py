@@ -24,8 +24,8 @@ def test_retired_assignment_commands_do_not_become_hidden_owner_requests(
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
     source.write_text(
-        'schema_version=1\n[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
-        'strength="weak"\nlocation="external"\ntransports=[{kind="manual"}]\n'
+        '[delegation]\nassignment_policy="required-best-fit"\n[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
+        'location="external"\ntransports=[{kind="manual"}]\n'
     )
     context = {"target": str(tmp_path), "task": "Inspect the current work"}
     initial = consume(surface, shared_core_binary, native_cli, context)
@@ -47,9 +47,9 @@ def test_native_task_requirements_bind_current_judgment_and_preserve_owner_const
     source = tmp_path / ".agentic-workspace/config.local.toml"
     source.parent.mkdir()
     source.write_text(
-        'schema_version = 1\n[delegation]\nrequired_execution_guarantees = ["history.non-persisted"]\n'
+        '[delegation]\nassignment_policy="required-best-fit"\nrequired_execution_guarantees = ["history.non-persisted"]\n'
         '[delegation_targets.worker]\ntarget_id = "host:worker"\ntarget_revision = "1"\n'
-        'strength = "weak"\nlocation = "external"\ntransports = [{kind="manual"}]\n'
+        'location = "external"\ntransports = [{kind="manual"}]\n'
     )
     offered = consume(surface, shared_core_binary, native_cli, context)
     assert offered["task_requirements"]["result"]["requirements"] is None
@@ -89,8 +89,8 @@ def test_native_requirements_preserve_planning_subject_but_stale_material_scope(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{plan_ref.as_posix()}"\nstatus="active"\n'
     )
     (tmp_path / ".agentic-workspace/config.local.toml").write_text(
-        'schema_version=1\n[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
-        'strength="weak"\nlocation="external"\ntransports=[{kind="manual"}]\n'
+        '[delegation]\nassignment_policy="required-best-fit"\n[delegation_targets.worker]\ntarget_id="host:worker"\ntarget_revision="1"\n'
+        'location="external"\ntransports=[{kind="manual"}]\n'
     )
     context = {"target": str(tmp_path), "task": "Inspect the current delegation contract", "changed": ["docs/policy.md"]}
     initial = consume(surface, shared_core_binary, native_cli, context)
@@ -330,8 +330,10 @@ def test_real_former_planning_typed_assurance_facts(tmp_path: Path, shared_core_
     (path.parent.parent / "state.toml").write_text(
         f'[[active.execplans]]\nid="{body["id"]}"\npath="{reference.as_posix()}"\nstatus="active"\n'
     )
-    (tmp_path / ".agentic-workspace/config.toml").write_text(
-        "schema_version=1\n"
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir()
+    manifest.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n'
         '[assurance.requirements.profile]\nlevel="high"\nforce="blocking"\napplies_to_proof_profiles=["assignment lifecycle"]\n'
         '[assurance.requirements.risk]\nlevel="high"\nforce="blocking"\napplies_to_risk_refs=["risk:fixture"]\n'
         '[assurance.requirements.invariant]\nlevel="high"\nforce="blocking"\napplies_to_invariant_refs=["invariant:fixture"]\n'
@@ -546,7 +548,7 @@ def pin_instructions(target: Path) -> str:
         check=True,
     )
     pin = subprocess.check_output(["git", "-C", str(target), "rev-parse", "HEAD"], text=True).strip()
-    (target / ".agentic-workspace/config.toml").write_text(f"schema_version=1\n[assurance]\ninstruction_revision='{pin}'\n")
+    (target / ".agentic-workspace/config.toml").write_text(f"[assurance]\ninstruction_revision='{pin}'\n")
     return pin
 
 
@@ -565,7 +567,6 @@ def test_real_instruction_protection_and_source_drift(surface: str, tmp_path: Pa
     assert row["binding_admission"]["status"] == "current"
     assert row["guidance"]
     assert any(f"effect:write:{protected}" in item["affects"] for item in current["decision_packet"]["blockers"])
-    assert not current["configuration"]["residuals"]
     instruction.write_bytes(instruction.read_bytes() + b"\nSource revision changed.\n")
     stale = consume(surface, shared_core_binary, native_cli, context, host_path=host_path)
     assert stale["instructions"]["sources"][0]["binding_admission"]["status"] == "stale"
@@ -799,150 +800,14 @@ def test_malformed_advisory_memory_cannot_veto_direct_work(
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_native_reader_admission_precedes_every_domain_source(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
-) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text('schema_version=2\n[cli_compatibility]\nminimum_reader_epoch=2\nrequired_reader_capabilities=["future-reader"]\n')
-    poisoned = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
-    poisoned.parent.mkdir(parents=True)
-    poisoned.write_text("not JSON and never admitted")
-    registry = tmp_path / "tools/skills/REGISTRY.json"
-    registry.parent.mkdir(parents=True)
-    registry.write_text("invalid route JSON")
-    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    context = {"target": str(tmp_path), "task": "Continue current work"}
-    blocked = consume(surface, shared_core_binary, native_cli, context)
-    assert blocked["failed_checks"] == ["minimum_reader_epoch", "required_reader_capabilities"]
-    assert blocked["managed_state_interpreted"] is False
-    assert "decision_packet" not in blocked
-    invoked = consume(
-        surface, shared_core_binary, native_cli, {**context, "invocation": {"operation_id": "planning.reconcile"}}, allow_failure=True
-    )
-    assert invoked["effect_outcome"]["status"] == "rejected-before-effect"
-    assert invoked["blockers"] == blocked
-    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_native_current_reader_proceeds_with_product_identity_and_retains_installed_residuals(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
-) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text(
-        'schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=1\nrequired_reader_capabilities=["pre-state-runtime-compatibility-v1"]\nexact_version="99.0"\n'
-    )
-    context = {"target": str(tmp_path), "task": "Inspect current work"}
-    result = consume(surface, shared_core_binary, native_cli, context)
-    assert result["runtime_compatibility"]["status"] == "admitted"
-    from agentic_workspace import __version__
-
-    assert result["runtime_compatibility"]["observed_runtime"]["version"] == __version__
-    residuals = result["configuration"]["residuals"]
-    assert any(r["field"] == "cli_compatibility.exact_version" for r in residuals)
-    assert not any(
-        r["field"] in {"cli_compatibility.minimum_reader_epoch", "cli_compatibility.required_reader_capabilities"} for r in residuals
-    )
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-@pytest.mark.parametrize(
-    "declaration,failed_check",
-    [
-        ('cli_compatibility="invalid"', "compatibility_contract_shape"),
-        ('cli_compatibility=["invalid"]', "compatibility_contract_shape"),
-        ('[cli_compatibility]\ncontract_schema=""', "compatibility_contract_shape"),
-        ("[cli_compatibility]\nrequired_reader_capabilities=[1]", "compatibility_contract_shape"),
-        ('[cli_compatibility]\ncontract_schema="agentic-workspace/future-contract/v99"', "contract_schema"),
-    ],
-)
-def test_native_reader_rejects_invalid_or_unknown_contract_before_domain_parsing(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, declaration: str, failed_check: str
-) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text("schema_version=1\n" + declaration + "\n")
-    plan = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
-    plan.parent.mkdir(parents=True)
-    plan.write_text("unreadable domain state")
-    routes = tmp_path / "tools/skills/REGISTRY.json"
-    routes.parent.mkdir(parents=True)
-    routes.write_text("unreadable route state")
-    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Continue current work"})
-    assert result["status"] == "blocked"
-    assert result["failed_checks"] == [failed_check]
-    assert result["managed_state_interpreted"] is False
-    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_native_current_schema_consumption_preserves_other_residuals(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
-) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    declaration = 'schema_version=1\n[cli_compatibility]\ncontract_schema="agentic-workspace/installed-state-compatibility/v1"\n'
-    config.write_text(declaration)
-    context = {"target": str(tmp_path), "task": "Inspect unrelated source"}
-    current = consume(surface, shared_core_binary, native_cli, context)
-    assert current["runtime_compatibility"]["status"] == "admitted"
-    assert current["configuration"]["residuals"] == []
-    assert current["decision_packet"]["status"] == "direct"
-    config.write_text(declaration + 'enforcement="advisory"\nrequired_resources=["agentic_workspace:unobserved-resource"]\n')
-    residual = consume(surface, shared_core_binary, native_cli, context)
-    fields = {item["field"] for item in residual["configuration"]["residuals"]}
-    assert fields == {"cli_compatibility.enforcement", "cli_compatibility.required_resources"}
-    assert residual["decision_packet"]["status"] == "direct"
-    assert all(
-        item["authority"] == "advisory" and item["satisfaction"] == "not-evidence" for item in residual["configuration"]["residuals"]
-    )
-    config.write_text(declaration + 'enforcement="blocking"\nrequired_resources=["agentic_workspace:unobserved-resource"]\n')
-    assert consume(surface, shared_core_binary, native_cli, context)["decision_packet"]["status"] == "blocked"
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-@pytest.mark.parametrize(
-    ("setting", "failed_check"),
-    [
-        ('contract_schema="agentic-workspace/future-contract/v99"', "contract_schema"),
-        ("minimum_reader_epoch=999", "minimum_reader_epoch"),
-        ('required_reader_capabilities=["future-reader"]', "required_reader_capabilities"),
-    ],
-)
-def test_native_advisory_does_not_waive_prestate_reader_contract(
-    tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str, setting: str, failed_check: str
-) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text('schema_version=1\n[cli_compatibility]\nenforcement="advisory"\n' + setting + "\n")
-    state = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
-    state.parent.mkdir(parents=True)
-    state.write_bytes(b"unreadable source must remain untouched")
-    registry = tmp_path / "tools/skills/REGISTRY.json"
-    registry.parent.mkdir(parents=True)
-    registry.write_bytes(b"unreadable route registry")
-    before = {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-    result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Continue current work"})
-    assert result["status"] == "blocked"
-    assert result["failed_checks"] == [failed_check]
-    assert result["managed_state_interpreted"] is False
-    assert "decision_packet" not in result
-    assert before == {p: p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
-
-
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 def test_native_explicit_empty_modules_stays_quiet_without_sources(
     tmp_path: Path, shared_core_binary: Path, native_cli: Path, surface: str
 ) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    config.write_text("[modules]\nenabled=[]\n")
     result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect unrelated source"})
     assert result["decision_packet"]["status"] == "direct"
-    assert result["configuration"]["residuals"] == []
     for owner in ("planning", "memory", "verification"):
         assert result[owner]["status"] == "disabled"
         assert result[owner]["requests"] == []
@@ -965,7 +830,7 @@ def test_native_disabled_owner_preserves_uninterpreted_source(
 ) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    config.write_text("[modules]\nenabled=[]\n")
     source = tmp_path / reference
     source.parent.mkdir(parents=True, exist_ok=True)
     source.write_bytes(b"invalid state must not be decoded or adopted")
@@ -987,12 +852,9 @@ def test_native_disabled_verification_cannot_discard_assurance(
 ) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text(
-        'schema_version=1\n[modules]\nenabled=[]\n[assurance.requirements.review]\nlevel="high"\nforce="blocking"\napplies_to_paths=["src/**"]\nblocking_claims=["claim-work-complete"]\nrequired_evidence=["domain-review"]\n'
-    )
+    config.write_text('[modules]\nenabled=[]\n[assurance]\ndefault_level="high"\nstrict_closeout=true\n')
     result = consume(surface, shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Change source", "changed": ["src/a.py"]})
     assert result["verification"]["status"] == "disabled"
-    assert any(r["field"] == "assurance.requirements" and r["affects"] == ["claim:complete"] for r in result["configuration"]["residuals"])
     assert result["decision_packet"]["blockers"]
 
 
@@ -1008,24 +870,24 @@ def test_native_enablement_change_stales_planning_request_and_action(
         f'[[active.execplans]]\nid="delegation-lane-sweep"\npath="{reference.as_posix()}"\nstatus="active"\n'
     )
     config = tmp_path / ".agentic-workspace/config.toml"
-    config.write_text('schema_version=1\n[modules]\nenabled=["planning"]\n')
+    config.write_text('[modules]\nenabled=["planning"]\n')
     context = {"target": str(tmp_path), "task": "Continue this owner"}
     current = consume(surface, shared_core_binary, native_cli, context)
     request = current["decision_packet"]["decision_request"]["response_request"]
     request["arguments"]["answer"] = "continue-selected"
     selected = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     action = selected["decision_packet"]["primary_action"]
-    config.write_text('schema_version=1\n[modules]\nenabled=["planning","memory"]\n')
+    config.write_text('[modules]\nenabled=["planning","memory"]\n')
     with pytest.raises(AssertionError):
         consume(surface, shared_core_binary, native_cli, {**context, "request": request})
     with pytest.raises(AssertionError, match="stale"):
         consume(surface, shared_core_binary, native_cli, {**context, "invocation": action})
     assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
-    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    config.write_text("[modules]\nenabled=[]\n")
     with pytest.raises(AssertionError, match="disabled"):
         consume(surface, shared_core_binary, native_cli, {**context, "invocation": action})
     assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
-    config.write_text('schema_version=1\n[modules]\nenabled=["planning"]\n')
+    config.write_text('[modules]\nenabled=["planning"]\n')
     restored = consume(surface, shared_core_binary, native_cli, context)
     fresh = restored["decision_packet"]["decision_request"]["response_request"]
     fresh["arguments"]["answer"] = "continue-selected"
@@ -1040,7 +902,7 @@ def test_native_enablement_change_stales_proof_execution(tmp_path: Path, shared_
 
     context = fixture(tmp_path)
     config = tmp_path / ".agentic-workspace/config.toml"
-    config.write_text('schema_version=1\n[modules]\nenabled=["verification"]\n')
+    config.write_text('[modules]\nenabled=["verification"]\n')
 
     def call(value: dict) -> dict:
         return consume(surface, shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
@@ -1048,10 +910,10 @@ def test_native_enablement_change_stales_proof_execution(tmp_path: Path, shared_
     current = call(context)
     request = current["verification"]["execution_requests"][0]
     action = call({**context, "request": request})["decision_packet"]["primary_action"]
-    config.write_text('schema_version=1\n[modules]\nenabled=["verification","memory"]\n')
+    config.write_text('[modules]\nenabled=["verification","memory"]\n')
     with pytest.raises(AssertionError, match="stale"):
         call({**context, "invocation": action})
-    config.write_text("schema_version=1\n[modules]\nenabled=[]\n")
+    config.write_text("[modules]\nenabled=[]\n")
     with pytest.raises(AssertionError, match="disabled"):
         call({**context, "invocation": action})
     assert not (tmp_path / "count.txt").exists()
@@ -1090,7 +952,7 @@ def test_public_read_real_repository_decision_preserves_currentness(
         if source_owner == "memory"
         else f'decision_record_target="docs/decisions"\ndecision_record_revision="{revision}"'
     )
-    config.write_text(f'schema_version=1\n[modules]\nenabled=["memory"]\n[assurance]\n{admission}\n')
+    config.write_text(f'[modules]\nenabled=["memory"]\n[assurance]\n{admission}\n')
     context = {
         "target": str(tmp_path),
         "task": "Review the public semantic boundary",
@@ -1184,9 +1046,7 @@ def test_public_decision_read_supersession_keeps_rationale_without_old_consequen
     config.parent.mkdir()
 
     def admit(revision: str) -> None:
-        config.write_text(
-            f'schema_version=1\n[modules]\nenabled=[]\n[assurance]\ndecision_record_target="design"\ndecision_record_revision="{revision}"\n'
-        )
+        config.write_text(f'[modules]\nenabled=[]\n[assurance]\ndecision_record_target="design"\ndecision_record_revision="{revision}"\n')
 
     admit(host["admitted_revision"])
     context = {"target": str(tmp_path), "task": "Inspect the current component boundary", "changed": ["src/core.rs"]}

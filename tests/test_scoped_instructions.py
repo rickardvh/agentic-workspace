@@ -49,9 +49,7 @@ def _admit(root: Path) -> str:
         capture_output=True,
     )
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
-    (root / ".agentic-workspace/config.toml").write_text(
-        f'schema_version = 1\n[assurance]\ninstruction_revision = "{revision}"\n', encoding="utf-8"
-    )
+    (root / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision = "{revision}"\n', encoding="utf-8")
     return revision
 
 
@@ -100,7 +98,7 @@ def test_instruction_hard_bindings_require_current_shared_admission(tmp_path: Pa
     assert lookalike["checks"] == lookalike["protect"] == []
     shared = tmp_path / ".agentic-workspace/config.toml"
     (shared.parent / "config.local.toml").write_bytes(shared.read_bytes())
-    shared.write_text("schema_version = 1\n", encoding="utf-8")
+    shared.write_text("", encoding="utf-8")
     assert inspect()["instruction_program"]["capabilities"] == []
     _admit(tmp_path)
     source.write_text(source.read_text() + "Changed source\n", encoding="utf-8")
@@ -481,10 +479,10 @@ def test_inline_check_enters_the_existing_trusted_proof_route(tmp_path: Path, re
 
 
 def test_scoped_markdown_can_reference_named_repo_requirement_without_creating_a_second_gate(tmp_path: Path) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
+    config = tmp_path / ".agentic-workspace/verification/manifest.toml"
     config.parent.mkdir(parents=True)
     config.write_text(
-        """schema_version = 1
+        """schema_version = "agentic-workspace/verification-manifest/v1"
 
 [assurance.requirements.typed_exit]
 level = "high"
@@ -495,7 +493,6 @@ blocking_claims = ["claim-work-complete"]
 requirement_class = "invariant"
 source_intent_ref = "SYSTEM_INTENT.md#trust"
 source_intent_revision = "r1"
-source_intent_current = true
 evidence_owner = "verification:typed-exit"
 detail_route = "agentic-workspace proof --select typed-exit"
 """,
@@ -583,7 +580,7 @@ def test_repo_dogfooding_migration_is_scoped_and_keeps_bootstrap_thin() -> None:
 
 def test_context_authority_uses_canonical_instruction_directory_with_adapter_fallback(tmp_path: Path) -> None:
     (tmp_path / "AGENTS.md").write_text(
-        "Authority marker:\n\n<!-- agentic-workspace:workflow:start -->\nOrdinary route:\n",
+        "Authority marker:\n\n<!-- agentic-workspace:workflow:start -->\nUse .agentic-workspace/skills/workspace-startup/SKILL.md.\n",
         encoding="utf-8",
     )
     _skill(tmp_path, "workspace-startup")

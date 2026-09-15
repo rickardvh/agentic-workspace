@@ -1914,7 +1914,6 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "kind",
                     "status",
                     "matched_source_count",
-                    "workflow_obligation_match_count",
                     "stale_source_count",
                     "promotion_candidate_count",
                     "supersession_attention_count",

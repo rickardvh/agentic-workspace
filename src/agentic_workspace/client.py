@@ -7,7 +7,6 @@ import subprocess
 import tomllib
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from importlib.metadata import PackageNotFoundError, version
 from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence, cast
@@ -485,23 +484,12 @@ def detect_workspace(target: str | Path) -> dict[str, Any]:
     if not config.is_file():
         return {"status": "absent", "target": root.as_posix()}
     payload = tomllib.loads(config.read_text(encoding="utf-8"))
+    from agentic_workspace.config import _validate_current_authoring
+
+    _validate_current_authoring(payload, local=False)
     workspace = payload.get("workspace", {})
     if workspace.get("enabled") is False:
         return {"status": "disabled", "target": root.as_posix()}
-    expectation = payload.get("cli_compatibility", {})
-    exact_version = str(expectation.get("exact_version") or "").strip() if isinstance(expectation, dict) else ""
-    try:
-        installed_version = version("agentic-workspace")
-    except PackageNotFoundError:
-        installed_version = "0.0.0"
-    if exact_version and exact_version != installed_version:
-        return {
-            "status": "incompatible",
-            "target": root.as_posix(),
-            "reason": "exact-client-version-mismatch",
-            "expected_version": exact_version,
-            "client_version": installed_version,
-        }
     return {"status": "enabled", "target": root.as_posix()}
 
 

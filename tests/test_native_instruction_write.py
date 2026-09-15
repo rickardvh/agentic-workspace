@@ -36,7 +36,7 @@ def test_current_nomination_uses_destination_authority_and_quiets_after_change(t
     repo(tmp_path)
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[workspace]\nimprovement_latitude="reporting"\ncli_invoke="aw-old"\n')
+    config.write_text('[workspace]\nimprovement_latitude="reporting"\ncli_invoke="aw-old"\n')
     evidence = tmp_path / "observation.md"
     evidence.write_text("Fixture: the same owner method is repeatedly reconstructed.")
     nomination = {
@@ -255,7 +255,7 @@ def test_checked_in_correction_travels_without_local_publication_custody(tmp_pat
     clone = tmp_path / "fresh"
     subprocess.run(["git", "clone", "-q", str(origin), str(clone)], check=True)
     assert not (clone / ".agentic-workspace/local").exists()
-    (clone / ".agentic-workspace/config.toml").write_text(f'schema_version=1\n[assurance]\ninstruction_revision="{pin}"\n')
+    (clone / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
     fresh = consume("json", shared_core_binary, native_cli, {**context, "target": str(clone)}, host_path=os.environ["PATH"])
     row = fresh["instructions"]["sources"][0]
     assert row["source"]["scope"] == "repository"

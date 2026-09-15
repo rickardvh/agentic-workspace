@@ -198,7 +198,18 @@ def _semantic_resolver(surface: str, chosen: Path, root: Path) -> tuple[str, str
     elif surface == "ownership":
         status, reason, schema = _toml_semantics(chosen, ["schema_version", "managed_surfaces", "authority_surfaces"])
     elif surface in {"assignment", "target-guidance"}:
-        status, reason, schema = _toml_semantics(chosen, ["schema_version", "workspace"])
+        from agentic_workspace.config import WorkspaceUsageError, _validate_current_authoring
+
+        try:
+            _validate_current_authoring(tomllib.loads(chosen.read_text(encoding="utf-8")), local=False)
+            status, reason = "current", ""
+        except (OSError, ValueError, WorkspaceUsageError):
+            status, reason = "invalid", "owner-source-schema-invalid"
+        schema = {
+            "source_format": "toml",
+            "parse_status": "valid" if status == "current" else "invalid",
+            "population": {"status": "present"},
+        }
     elif surface == "autopilot-executor":
         status, reason, schema = _module_semantics(chosen, ["delegated_worker_kernel", "assignment_lifecycle"])
     elif surface == "terminal-outcome":

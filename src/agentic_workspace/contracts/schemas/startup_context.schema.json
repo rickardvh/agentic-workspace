@@ -80,10 +80,6 @@
       "$ref": "#/$defs/invoked_cli_identity",
       "description": "Observed identity of the Agentic Workspace CLI that produced this payload."
     },
-    "cli_compatibility": {
-      "$ref": "#/$defs/cli_compatibility",
-      "description": "Compatibility assessment between the invoked CLI and any repo-configured CLI expectations."
-    },
     "installed_state_compatibility": {
       "$ref": "#/$defs/installed_state_compatibility",
       "description": "Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts."
@@ -398,14 +394,6 @@
       "type": "object",
       "description": "Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly.",
       "additionalProperties": true
-    },
-    "workflow_obligations": {
-      "type": "object",
-      "description": "Repo-configured workflow obligations relevant to the startup context."
-    },
-    "closeout_obligations": {
-      "type": "object",
-      "description": "Closeout obligations that may apply before claiming work is complete."
     },
     "memory_consult": {
       "type": "object",
@@ -875,7 +863,6 @@
       "required": [
         "kind",
         "operating_posture",
-        "workflow_obligations",
         "improvement_obligations",
         "improvement_pressure_records",
         "skill_routes",
@@ -906,11 +893,6 @@
           "description": "Resolved optimization, artifact, initiative, assurance, and delegation posture for this task.",
           "additionalProperties": true
         },
-        "workflow_obligations": {
-          "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
-          "description": "Matched workflow obligations with stage, force, scope, and provenance."
-        },
         "improvement_obligations": {
           "type": "array",
           "items": {
@@ -921,32 +903,46 @@
         },
         "improvement_pressure_records": {
           "type": "array",
-          "items": {"type": "object", "additionalProperties": true},
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Admitted improvement-pressure candidate facts preserved for the canonical operating decision."
         },
         "skill_routes": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Task-selected skills, prompts, or routing fragments."
         },
         "allowed_actions": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Actions allowed under the resolved posture."
         },
         "forbidden_actions": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Actions forbidden under the resolved posture."
         },
         "proof_boundaries": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Proof boundaries selected for the current task."
         },
         "closeout_boundaries": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Closeout and claim boundaries selected for the current task."
         },
         "read_budget": {
@@ -956,12 +952,18 @@
         },
         "authority_boundaries": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Authority boundaries with source and owner provenance."
         },
         "knowledge_gates": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Compact pre-work knowledge gates selected when routed knowledge can change task interpretation, work shape, proof, allowed action, or completion claims."
         },
         "gate_summary": {
@@ -971,7 +973,9 @@
         },
         "blocked_actions": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Concrete actions blocked by selected knowledge gates."
         },
         "next_allowed_action": {
@@ -980,22 +984,32 @@
         },
         "output_shape_requirements": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Output-shape constraints selected for this task."
         },
         "review_rubrics": {
           "type": "array",
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Review rubrics selected for this task."
         },
         "module_contributions": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Matched module posture contributions with trigger and projection provenance."
         },
         "provenance": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Config, obligation, module, or command sources used to assemble this packet."
         },
         "dynamic_instruction_projection": {
@@ -1229,12 +1243,16 @@
             },
             "package_owned_surfaces": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Managed surfaces covered by safe sync."
             },
             "manual_review_surfaces": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Surfaces requiring explicit manual review."
             },
             "rule": {
@@ -1282,11 +1300,17 @@
         },
         "adapter_contracts": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Entry-surface adapter contracts covered by this model."
         },
         "next_action": {
-          "type": [ "string", "null" ],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Suggested command when drift requires or recommends action."
         },
         "action_effect": {
@@ -1314,7 +1338,9 @@
             },
             "blocked_until_reconciled": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Actions or claims blocked until the condition is resolved."
             },
             "claim_boundary": {
@@ -1367,7 +1393,10 @@
         },
         "siblings": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Sibling repository posture entries."
         },
         "rule": {
@@ -1377,185 +1406,6 @@
       },
       "additionalProperties": false,
       "description": "Sibling repository AW freshness posture derived from the installed-state compatibility model."
-    },
-    "cli_compatibility_check": {
-      "type": "object",
-      "required": [
-        "name",
-        "configured",
-        "expected",
-        "actual",
-        "satisfied"
-      ],
-      "properties": {
-        "name": {
-          "enum": [
-            "exact_version",
-            "minimum_version",
-            "source_class",
-            "target_relation",
-            "resolution_posture",
-            "contract_schema",
-            "required_capabilities",
-            "required_resources",
-            "minimum_reader_epoch",
-            "required_reader_capabilities"
-          ],
-          "description": "Human-readable or lookup name for this entry."
-        },
-        "configured": {
-          "type": "boolean",
-          "description": "Configured true/false policy flag used by this contract."
-        },
-        "expected": {
-          "type": [
-            "array",
-            "integer",
-            "string",
-            "null"
-          ],
-          "items": {
-            "type": "string",
-            "description": "One entry in the expected list."
-          },
-          "description": "Expected contract value used by this contract."
-        },
-        "actual": {
-          "type": ["array", "integer", "object", "string", "null"],
-          "description": "Actual text value used by this contract."
-        },
-        "satisfied": {
-          "type": "boolean",
-          "description": "Satisfied true/false policy flag used by this contract."
-        }
-      },
-      "additionalProperties": false,
-      "description": "Cli compatibility check details used by this contract."
-    },
-    "cli_compatibility": {
-      "type": "object",
-      "required": [
-        "kind",
-        "status",
-        "configured",
-        "enforcement",
-        "failed_checks"
-      ],
-      "properties": {
-        "kind": {
-          "const": "agentic-workspace/cli-compatibility/v1",
-          "description": "Discriminator identifying the payload or record shape."
-        },
-        "status": {
-          "enum": [
-            "no-expectation",
-            "satisfied",
-            "advisory-drift",
-            "blocking-drift"
-          ],
-          "description": "Current lifecycle, readiness, or health state."
-        },
-        "configured": {
-          "type": "boolean",
-          "description": "Configured true/false policy flag used by this contract."
-        },
-        "enforcement": {
-          "enum": [
-            "off",
-            "advisory",
-            "blocking"
-          ],
-          "description": "Allowed enforcement value for routing or validation."
-        },
-        "enforcement_source": {
-          "type": "string",
-          "description": "Enforcement source text value used by this contract."
-        },
-        "expectation_source": {
-          "type": "string",
-          "description": "Expectation source text value used by this contract."
-        },
-        "expected_command": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Expected command contract value used by this contract."
-        },
-        "invocation_resolution": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Non-mutating classification of the configured environment-manager invocation."
-        },
-        "contract_expectation": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Durable schema, capability, and package-resource expectation owned by repo config."
-        },
-        "package_resources": {
-          "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
-          "description": "Availability results for required package resources."
-        },
-        "pre_state_admission": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Compact root-reader admission provenance established before managed state interpretation."
-        },
-        "invocation_confidence": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ],
-          "description": "Allowed invocation confidence value for routing or validation."
-        },
-        "drift_findings": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "description": "One entry in the drift findings list."
-          },
-          "description": "Ordered drift findings entries used by this contract."
-        },
-        "remediation": {
-          "type": "object",
-          "description": "Remediation details used by this contract."
-        },
-        "checks": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/cli_compatibility_check",
-            "description": "One entry in the checks list."
-          },
-          "description": "Ordered checks entries used by this contract."
-        },
-        "failed_checks": {
-          "type": "array",
-          "items": {
-            "enum": [
-              "exact_version",
-              "minimum_version",
-              "source_class",
-              "target_relation",
-              "resolution_posture",
-              "contract_schema",
-              "required_capabilities",
-              "required_resources",
-              "minimum_reader_epoch",
-              "required_reader_capabilities"
-            ],
-            "description": "One entry in the failed checks list."
-          },
-          "description": "Ordered failed checks entries used by this contract."
-        },
-        "rule": {
-          "type": "string",
-          "description": "Policy rule that explains this contract behavior."
-        }
-      },
-      "additionalProperties": false,
-      "description": "Cli compatibility details used by this contract."
     },
     "authority_marker": {
       "type": "object",

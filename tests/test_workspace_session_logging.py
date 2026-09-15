@@ -48,7 +48,7 @@ def _write(path: Path, content: str) -> None:
 
 
 def _target(tmp_path: Path) -> Path:
-    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "")
     (tmp_path / ".git").mkdir()
     return tmp_path
 
@@ -101,7 +101,7 @@ def test_session_logging_disabled_does_not_redirect_command_output(tmp_path: Pat
 
 def test_session_logging_mutes_pytest_origin_capture_by_default(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
     monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_example (call)")
@@ -122,7 +122,7 @@ def test_session_logging_mutes_pytest_origin_capture_by_default(tmp_path: Path, 
 
 def test_session_logging_default_pytest_capture_stays_bounded_across_many_commands(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
     monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_bounded (call)")
@@ -137,7 +137,7 @@ def test_session_logging_default_pytest_capture_stays_bounded_across_many_comman
 
 def test_session_logging_pytest_origin_full_capture_requires_explicit_opt_in(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_captured (call)")
     monkeypatch.setenv("AW_SESSION_LOG_CAPTURE_DETAIL", "1")
 
@@ -158,7 +158,7 @@ def test_session_logging_pytest_origin_full_capture_requires_explicit_opt_in(tmp
 
 def test_session_logging_explicit_live_agent_origin_captures_even_under_pytest(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
     monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_live_agent (call)")
@@ -174,7 +174,7 @@ def test_session_logging_explicit_live_agent_origin_captures_even_under_pytest(t
 
 def test_session_logging_mutes_nested_pytest_origin_capture_by_default(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
     monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
     monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_nested (call)")
@@ -224,7 +224,7 @@ def test_session_parent_command_is_bounded_deterministically(monkeypatch: pytest
 
 def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelude(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
 
     assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
     first_output = json.loads(capsys.readouterr().out)
@@ -265,7 +265,7 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
 
 def test_session_logging_writes_canonical_monotonic_jsonl(tmp_path: Path) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
 
     assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
     assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
@@ -294,7 +294,7 @@ def test_session_logging_writes_canonical_monotonic_jsonl(tmp_path: Path) -> Non
 
 def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 1)
 
     def run(identity: str) -> dict[str, str]:
@@ -328,7 +328,7 @@ def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: P
 
 def test_session_logging_concurrent_identity_resolution_converges(tmp_path: Path) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
 
     with ThreadPoolExecutor(max_workers=8) as executor:
@@ -341,7 +341,7 @@ def test_session_logging_concurrent_identity_resolution_converges(tmp_path: Path
 
 def test_session_logging_concurrent_event_appends_remain_valid_and_monotonic(tmp_path: Path) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     session = session_logging.ensure_session(state=state, logical_identity="shared")
 
@@ -366,7 +366,7 @@ def test_session_logging_concurrent_event_appends_remain_valid_and_monotonic(tmp
 
 def test_session_logging_serializes_overlapping_index_projection_updates(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     session = session_logging.ensure_session(state=state, logical_identity="shared")
     barrier = threading.Barrier(2)
@@ -441,7 +441,7 @@ def test_session_logging_atomic_replace_retries_windows_access_denied(tmp_path: 
 
 def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "root-session")
     first = session_logging.ensure_session(state=state)
@@ -514,7 +514,7 @@ def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path:
 
 def test_session_log_recovers_after_partial_tail_and_discloses_gap(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     session = session_logging.ensure_session(state=state)
     with (target / session_logging._event_path_for_session(session)).open("ab") as handle:
@@ -531,7 +531,7 @@ def test_session_log_recovers_after_partial_tail_and_discloses_gap(tmp_path: Pat
 
 def test_session_log_exports_legacy_views_with_migration_gap(tmp_path: Path) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
     _current_events(target).unlink()
 
@@ -546,7 +546,7 @@ def test_session_log_exports_legacy_views_with_migration_gap(tmp_path: Path) -> 
 
 def test_session_logging_without_host_identity_creates_no_session_state(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
     state = session_logging.load_state_for_argv(["--target", str(target)])
     assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
@@ -564,7 +564,7 @@ def test_session_logging_without_host_identity_creates_no_session_state(tmp_path
 
 def test_enabled_missing_identity_emits_one_structured_gap_then_recovers(tmp_path: Path, monkeypatch, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
 
     assert session_logging.run_with_session_logging(["start", "--target", str(target)], lambda _argv: 0) == 0
@@ -601,7 +601,7 @@ def test_enabled_missing_identity_emits_one_structured_gap_then_recovers(tmp_pat
 
 def test_missing_identity_capture_status_write_failure_does_not_block_command(tmp_path: Path, monkeypatch, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
     monkeypatch.setattr(session_logging, "_write_json_atomic", lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("read only")))
     ran: list[list[str]] = []
@@ -616,7 +616,7 @@ def test_missing_identity_capture_status_write_failure_does_not_block_command(tm
 
 def test_capture_status_recovery_write_failure_does_not_block_command(tmp_path: Path, monkeypatch, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
     assert session_logging.run_with_session_logging(["start", "--target", str(target)], lambda _argv: 0) == 0
     capsys.readouterr()
@@ -643,11 +643,11 @@ def test_capture_status_recovery_write_failure_does_not_block_command(tmp_path: 
 def test_disabled_logging_overrides_stale_capture_status(tmp_path: Path, monkeypatch, capsys) -> None:
     target = _target(tmp_path)
     config_path = target / ".agentic-workspace/config.local.toml"
-    _write(config_path, "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(config_path, "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
     assert session_logging.run_with_session_logging(["start", "--target", str(target)], lambda _argv: 0) == 0
     capsys.readouterr()
-    _write(config_path, "schema_version = 1\n\n[session_logging]\nenabled = false\n")
+    _write(config_path, "\n[session_logging]\nenabled = false\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
 
     assert session_logging.status_payload(state=state)["capture_posture"] == {
@@ -658,7 +658,7 @@ def test_disabled_logging_overrides_stale_capture_status(tmp_path: Path, monkeyp
 
 def test_missing_identity_warning_respects_pytest_capture_suppression(tmp_path: Path, monkeypatch, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
     monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
     monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
@@ -676,7 +676,7 @@ def test_missing_identity_warning_respects_pytest_capture_suppression(tmp_path: 
 )
 def test_missing_identity_records_gap_through_explicit_continuity(tmp_path: Path, monkeypatch, continuity_env: str) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     if continuity_env == session_logging.SESSION_CORRELATION_ID_ENV:
         monkeypatch.setenv(continuity_env, "shared-correlation")
@@ -699,7 +699,7 @@ def test_missing_identity_records_gap_through_explicit_continuity(tmp_path: Path
 
 def test_unresolved_missing_identity_consumes_explicit_gap_on_next_identified_write(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.delenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV)
     monkeypatch.setenv(session_logging.SESSION_GAP_REASON_ENV, "lost-correlation-window")
 
@@ -718,7 +718,7 @@ def test_unresolved_missing_identity_consumes_explicit_gap_on_next_identified_wr
 
 def test_ambiguous_correlation_does_not_choose_an_arbitrary_logical_owner(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     monkeypatch.setenv(session_logging.SESSION_CORRELATION_ID_ENV, "shared-across-tree")
     first = session_logging.ensure_session(state=state)
@@ -735,7 +735,7 @@ def test_ambiguous_correlation_does_not_choose_an_arbitrary_logical_owner(tmp_pa
 
 def test_physical_event_streams_migrate_to_one_logical_stream(tmp_path: Path) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     session = session_logging.ensure_session(state=state)
     canonical_path = target / session_logging._event_path_for_session(session)
@@ -766,7 +766,7 @@ def test_physical_event_streams_migrate_to_one_logical_stream(tmp_path: Path) ->
 
 def test_session_logging_disabled_capture_is_an_explicit_gap_for_existing_session(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     session = session_logging.ensure_session(state=state)
     monkeypatch.setenv("AW_SESSION_LOGGING_DISABLE", "1")
@@ -783,7 +783,7 @@ def test_session_logging_disabled_capture_is_an_explicit_gap_for_existing_sessio
 
 def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     raw_identity = "vendor-thread-secret-123"
     monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, raw_identity)
     assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
@@ -814,7 +814,7 @@ def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tm
 
 def test_session_logging_new_session_replaces_only_callers_identity_mapping(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     state = session_logging.load_state_for_argv(["--target", str(target)])
     session_a = session_logging.ensure_session(state=state, logical_identity="a")
     session_b = session_logging.ensure_session(state=state, logical_identity="b")
@@ -829,7 +829,7 @@ def test_session_logging_new_session_replaces_only_callers_identity_mapping(tmp_
 
 def test_session_logging_note_command_appends_optional_note(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
 
     assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
     capsys.readouterr()
@@ -849,7 +849,7 @@ def test_session_logging_note_command_appends_optional_note(tmp_path: Path, caps
 
 def test_session_logging_invalid_registry_path_is_replaced(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
 
     assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
     capsys.readouterr()
@@ -871,7 +871,7 @@ def test_session_logging_invalid_registry_path_is_replaced(tmp_path: Path, capsy
 
 def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
 
     def runner(_argv: list[str]) -> int:
@@ -892,7 +892,7 @@ def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, 
 
 def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packets(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     def runner(_argv: list[str]) -> int:
@@ -1091,7 +1091,7 @@ stderr:
 
 def test_session_logging_reuses_duplicate_large_output_artifacts(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
 
     def runner(_argv: list[str]) -> int:
@@ -1114,7 +1114,7 @@ def test_session_logging_redacts_target_root_when_configured(tmp_path: Path, cap
     target = _target(tmp_path)
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[session_logging]\nenabled = true\nredact_local_paths = true\n",
+        '\n[session_logging]\nenabled = true\npath_mode = "redacted"\n',
     )
 
     def runner(_argv: list[str]) -> int:
@@ -1137,7 +1137,7 @@ def test_session_logging_path_mode_redacts_home_and_python_but_keeps_raw_artifac
     target = _target(tmp_path)
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[session_logging]\nenabled = true\npath_mode = "redacted"\n',
+        '\n[session_logging]\nenabled = true\npath_mode = "redacted"\n',
     )
     monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
 
@@ -1163,7 +1163,7 @@ def test_session_logging_path_mode_repo_relative_for_repo_contained_paths(tmp_pa
     target = _target(tmp_path)
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[session_logging]\nenabled = true\npath_mode = "repo-relative"\n',
+        '\n[session_logging]\nenabled = true\npath_mode = "repo-relative"\n',
     )
 
     def runner(_argv: list[str]) -> int:
@@ -1180,7 +1180,7 @@ def test_session_logging_path_mode_repo_relative_for_repo_contained_paths(tmp_pa
 
 def test_session_logging_successful_system_exit_help_is_not_exception(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
 
     def runner(_argv: list[str]) -> int:
         print("usage: agentic-workspace config")
@@ -1201,7 +1201,7 @@ def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_
     target = _target(tmp_path)
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        "schema_version = 1\n\n[session_logging]\nenabled = true\nredact_local_paths = true\n",
+        '\n[session_logging]\nenabled = true\npath_mode = "redacted"\n',
     )
 
     assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
@@ -1211,7 +1211,7 @@ def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_
 
     _write(
         target / ".agentic-workspace" / "config.local.toml",
-        'schema_version = 1\n\n[session_logging]\nenabled = true\npath_mode = "repo-relative"\n',
+        '\n[session_logging]\nenabled = true\npath_mode = "repo-relative"\n',
     )
     assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
@@ -1220,7 +1220,7 @@ def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_
 
 def test_session_log_origins_expected_failures_and_nested_commands_are_separate(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
 
     def fail(_argv: list[str]) -> int:
         print("expected fixture error", file=sys.stderr)
@@ -1255,7 +1255,7 @@ def test_session_log_origins_expected_failures_and_nested_commands_are_separate(
 
 def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
     assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
     capsys.readouterr()
@@ -1327,7 +1327,7 @@ def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_p
 
 def test_session_log_projects_parent_context_written_by_logger(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_PARENT_ENTRY_ID", "parent-entry")
     monkeypatch.setenv("AW_SESSION_LOG_PARENT_COMMAND", "pytest parent_test.py")
     monkeypatch.setenv("AW_SESSION_LOG_PARENT_CONTEXT", "fixture-parent")
@@ -1347,7 +1347,7 @@ def test_session_log_projects_parent_context_written_by_logger(tmp_path: Path, c
 
 def test_session_log_origin_scopes_keep_synthetic_and_unknown_queryable(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     for origin in ("validation", "nested-aw", "unknown"):
         monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", origin)
         assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
@@ -1360,7 +1360,7 @@ def test_session_log_origin_scopes_keep_synthetic_and_unknown_queryable(tmp_path
 
 def test_session_log_preserves_producer_invocation_intent_and_matches_observed_outcomes(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
 
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "pytest")
     monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", "proof-negative-path")
@@ -1434,7 +1434,7 @@ def test_lifecycle_typed_selector_failure_and_session_process_status_agree(
     target = _target(tmp_path)
     _write(
         target / ".agentic-workspace/config.local.toml",
-        "schema_version = 1\n\n[session_logging]\nenabled = true\n",
+        "\n[session_logging]\nenabled = true\n",
     )
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
@@ -1495,7 +1495,7 @@ def test_supported_workspace_commands_declare_generated_operation_purpose_withou
 
 def test_consequential_session_replay_emits_stable_material_candidates(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
     commands = [
         *[["status", "--target", str(target)] for _ in range(3)],
@@ -1559,7 +1559,7 @@ def _run_logged_subprocess(target: Path, *, env: dict[str, str], return_code: in
 
 def test_pytest_subprocess_helper_combines_producer_and_generated_invocation_intent(tmp_path: Path) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     base_env = {key: value for key, value in os.environ.items() if not key.startswith("AW_SESSION_LOG_")}
     parent = {
         "parent_entry_id": "pytest-parent-entry",
@@ -1668,7 +1668,7 @@ def test_pytest_subprocess_helper_combines_producer_and_generated_invocation_int
 
 def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     def runner(argv: list[str]) -> int:
@@ -1713,7 +1713,7 @@ def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tm
 
 def test_current_writer_reconciles_supported_partial_v1_index_before_append(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     def runner(argv: list[str]) -> int:
@@ -1745,7 +1745,7 @@ def test_current_writer_reconciles_supported_partial_v1_index_before_append(tmp_
 
 def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     assert (
@@ -1784,7 +1784,7 @@ def test_context_record_identity_excludes_observation_time() -> None:
 
 def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
     monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", "implement-lane")
     monkeypatch.setenv("AW_SESSION_LOG_SCENARIO_ID", "focused-proof")
@@ -1844,7 +1844,7 @@ def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp
 
 def test_session_log_default_analysis_stays_bounded_for_long_multitask_session(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
     for position in range(80):
         monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", f"lane-{position % 8}")
@@ -1983,7 +1983,7 @@ def test_session_index_cannot_satisfy_current_owner_proof_or_closeout_authority(
 
 def test_session_log_work_context_does_not_carry_stale_pr_across_task_transition(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
     monkeypatch.setenv("AW_SESSION_LOG_PR", "2144")
     assert (
@@ -2247,7 +2247,7 @@ def test_current_work_owner_binding_classifies_adoption_read_only_unrelated_tran
     target = _target(tmp_path)
     _write(
         target / ".agentic-workspace/planning/state.toml",
-        'schema_version = 1\n[todo]\nactive_items = [{ id = "issue-2258", surface = ".agentic-workspace/planning/execplans/issue-2258.plan.json", refs = ["GitHub #2258"] }]\n',
+        '[todo]\nactive_items = [{ id = "issue-2258", surface = ".agentic-workspace/planning/execplans/issue-2258.plan.json", refs = ["GitHub #2258"] }]\n',
     )
     _write(
         target / ".agentic-workspace/planning/execplans/issue-2258.plan.json",
@@ -2279,7 +2279,7 @@ def test_current_work_owner_binding_counts_candidate_owners_not_matching_refs(tm
     owner_ref = ".agentic-workspace/planning/execplans/issue-2258.plan.json"
     _write(
         target / ".agentic-workspace/planning/state.toml",
-        (f'schema_version = 1\n[todo]\nactive_items = [{{ id = "issue-2258", refs = ["#2258", "#2279"], surface = "{owner_ref}" }}]\n'),
+        (f'[todo]\nactive_items = [{{ id = "issue-2258", refs = ["#2258", "#2279"], surface = "{owner_ref}" }}]\n'),
     )
     _write(
         target / owner_ref,
@@ -2371,7 +2371,7 @@ def test_current_work_owner_identity_deduplicates_wording_and_head_revision(tmp_
     target = _target(tmp_path)
     _write(
         target / ".agentic-workspace/planning/state.toml",
-        'schema_version = 1\n[todo]\nactive_items = [{ id = "issue-2258", refs = ["#2258"] }]\n',
+        '[todo]\nactive_items = [{ id = "issue-2258", refs = ["#2258"] }]\n',
     )
     live = {"head": "head-a"}
     monkeypatch.setattr(
@@ -2394,7 +2394,7 @@ def test_current_work_owner_identity_invalidates_on_branch_target_and_selected_o
     for target in (first_target, second_target):
         _write(
             target / ".agentic-workspace/planning/state.toml",
-            'schema_version = 1\n[todo]\nactive_items = [{ id = "issue-2258", refs = ["#2258"] }]\n',
+            '[todo]\nactive_items = [{ id = "issue-2258", refs = ["#2258"] }]\n',
         )
     live = {"branch": "main", "head": "head-a"}
     monkeypatch.setattr(
@@ -2409,7 +2409,7 @@ def test_current_work_owner_identity_invalidates_on_branch_target_and_selected_o
     target_changed = current_work_context.resolve_current_work_context(root=second_target, task="Continue #2258")
     _write(
         first_target / ".agentic-workspace/planning/state.toml",
-        'schema_version = 1\n[todo]\nactive_items = [{ id = "issue-3100", refs = ["#3100"] }]\n',
+        '[todo]\nactive_items = [{ id = "issue-3100", refs = ["#3100"] }]\n',
     )
     owner_changed = current_work_context.resolve_current_work_context(root=first_target, task="Continue #3100")
 
@@ -2425,7 +2425,7 @@ def test_current_work_binding_fails_closed_for_multiple_live_owners_and_consumes
     _write(
         target / ".agentic-workspace/planning/state.toml",
         (
-            "schema_version = 1\n[todo]\nactive_items = ["
+            "[todo]\nactive_items = ["
             f'{{ id = "issue-2258", refs = ["#2258"], surface = "{owner_a}" }}, '
             f'{{ id = "issue-3100", refs = ["#3100"], surface = "{owner_b}" }}'
             "]\n"
@@ -2486,7 +2486,7 @@ def test_current_work_binding_fails_closed_for_multiple_live_owners_and_consumes
 
 def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     commands = [
@@ -2503,7 +2503,7 @@ def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition
 
 def test_session_log_provenance_and_kind_classes_are_recorded(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     def runner(_argv: list[str]) -> int:
@@ -2535,7 +2535,7 @@ def test_session_log_provenance_and_kind_classes_are_recorded(tmp_path: Path, mo
 
 def test_session_log_slow_commands_surface_proof_route_friction(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
     real_monotonic = session_logging.time.monotonic
     monotonic_values = iter([0.0, 125.0, 126.0, 126.1])
@@ -2685,7 +2685,7 @@ def test_session_log_classifies_structured_runtime_exception() -> None:
 
 def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     def runner(_argv: list[str]) -> int:
@@ -2770,7 +2770,7 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
 
 def test_session_log_export_repairs_partial_source_index_in_export_only(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "one"], lambda _argv: 0) == 0

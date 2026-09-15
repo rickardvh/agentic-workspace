@@ -21,7 +21,7 @@ def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace").mkdir(exist_ok=True)
     (tmp_path / ".agentic-workspace/config.toml").write_text(
-        'schema_version = 1\n\n[system_intent]\nsources = ["README.md"]\npreferred_source = "README.md"\n',
+        '\n[system_intent]\nsources = ["README.md"]\npreferred_source = "README.md"\n',
         encoding="utf-8",
     )
     (tmp_path / "README.md").write_text("# Product Direction\n\nKeep the system quiet.\n", encoding="utf-8")
@@ -50,7 +50,7 @@ def test_system_intent_command_sync_refreshes_source_metadata_without_mechanical
 def test_system_intent_rejects_invalid_subsystem_intent_lifecycle(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / ".agentic-workspace/system-intent").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".agentic-workspace/config.toml").write_text("schema_version = 1\n", encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text("", encoding="utf-8")
     (tmp_path / ".agentic-workspace/system-intent/subsystems.toml").write_text(
         'schema_version = 1\nkind = "agentic-workspace/subsystem-intent-set/v1"\n\n'
         '[[subsystems]]\nid = "ux"\nscope = "frontend"\nstatus = "done"\n',
@@ -77,7 +77,6 @@ paths = [".agentic-workspace/planning/**"]
     )
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
-        "schema_version = 1\n",
     )
     _write(
         tmp_path / ".agentic-workspace" / "system-intent" / "subsystems.toml",
@@ -137,7 +136,6 @@ def test_preflight_surfaces_compact_durable_intent_for_task(capsys) -> None:
 def test_start_matches_durable_intent_across_decision_pressure_types(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
-        "schema_version = 1\n",
     )
     _write(
         tmp_path / ".agentic-workspace" / "system-intent" / "subsystems.toml",

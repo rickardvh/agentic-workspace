@@ -10,7 +10,6 @@
     "command",
     "target",
     "invoked_cli_identity",
-    "cli_compatibility",
     "installed_state_compatibility",
     "selected_modules",
     "installed_modules",
@@ -34,7 +33,6 @@
     "agent_aids",
     "agent_configuration_system",
     "agent_configuration_queries",
-    "workflow_obligations",
     "assurance_requirements",
     "verification",
     "durable_intent",
@@ -137,10 +135,6 @@
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity",
       "description": "Invoked cli identity referenced contract shape used by this contract."
-    },
-    "cli_compatibility": {
-      "$ref": "#/$defs/cli_compatibility",
-      "description": "Cli compatibility referenced contract shape used by this contract."
     },
     "installed_state_compatibility": {
       "$ref": "#/$defs/installed_state_compatibility",
@@ -294,15 +288,6 @@
       "description": "Cleanup routing for stale local and checked-in planning surfaces.",
       "additionalProperties": true
     },
-    "workflow_obligations": {
-      "type": "object",
-      "description": "Repo-configured workflow obligations surfaced for report consumers."
-    },
-    "workflow_obligation_effects": {
-      "type": "array",
-      "items": { "type": "object", "additionalProperties": true },
-      "description": "Evaluated behavior and closeout effects for configured workflow obligations."
-    },
     "improvement_pressure_evaluation": {
       "type": "object",
       "description": "Session and repository improvement-pressure evaluation compiled into report posture.",
@@ -315,7 +300,10 @@
     },
     "dogfooding_obligations": {
       "type": "array",
-      "items": { "type": "object", "additionalProperties": true },
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      },
       "description": "Dogfooding obligations that affect closeout and improvement capture."
     },
     "optimization_effect": {
@@ -552,7 +540,6 @@
       "required": [
         "kind",
         "operating_posture",
-        "workflow_obligations",
         "improvement_obligations",
         "improvement_pressure_records",
         "skill_routes",
@@ -582,22 +569,6 @@
           "type": "object",
           "description": "Resolved optimization, artifact, initiative, assurance, and delegation posture for this task.",
           "additionalProperties": true
-        },
-        "workflow_obligations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "description": "Matched workflow obligations with stage, force, scope, and provenance."
-        },
-        "workflow_obligation_effects": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "description": "Evaluated behavior and closeout effects for configured workflow obligations."
         },
         "improvement_pressure_evaluation": {
           "type": "object",
@@ -637,7 +608,10 @@
         },
         "improvement_pressure_records": {
           "type": "array",
-          "items": {"type": "object", "additionalProperties": true},
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Admitted improvement-pressure candidate facts preserved for the canonical operating decision."
         },
         "skill_routes": {
@@ -1484,12 +1458,16 @@
             },
             "package_owned_surfaces": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Managed surfaces covered by safe sync."
             },
             "manual_review_surfaces": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Surfaces requiring explicit manual review."
             },
             "rule": {
@@ -1541,11 +1519,17 @@
         },
         "adapter_contracts": {
           "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
           "description": "Entry-surface adapter contracts covered by this model."
         },
         "next_action": {
-          "type": [ "string", "null" ],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "Suggested command when drift requires or recommends action."
         },
         "action_effect": {
@@ -1573,7 +1557,9 @@
             },
             "blocked_until_reconciled": {
               "type": "array",
-              "items": { "type": "string" },
+              "items": {
+                "type": "string"
+              },
               "description": "Actions or claims blocked until the condition is resolved."
             },
             "claim_boundary": {
@@ -1765,185 +1751,6 @@
       },
       "additionalProperties": false,
       "description": "Commands for one payload-repair subflow."
-    },
-    "cli_compatibility_check": {
-      "type": "object",
-      "required": [
-        "name",
-        "configured",
-        "expected",
-        "actual",
-        "satisfied"
-      ],
-      "properties": {
-        "name": {
-          "enum": [
-            "exact_version",
-            "minimum_version",
-            "source_class",
-            "target_relation",
-            "resolution_posture",
-            "contract_schema",
-            "required_capabilities",
-            "required_resources",
-            "minimum_reader_epoch",
-            "required_reader_capabilities"
-          ],
-          "description": "Human-readable or lookup name for this entry."
-        },
-        "configured": {
-          "type": "boolean",
-          "description": "Configured true/false policy flag used by this contract."
-        },
-        "expected": {
-          "type": [
-            "array",
-            "integer",
-            "string",
-            "null"
-          ],
-          "items": {
-            "type": "string",
-            "description": "One entry in the expected list."
-          },
-          "description": "Expected contract value used by this contract."
-        },
-        "actual": {
-          "type": ["array", "integer", "object", "string", "null"],
-          "description": "Actual text value used by this contract."
-        },
-        "satisfied": {
-          "type": "boolean",
-          "description": "Satisfied true/false policy flag used by this contract."
-        }
-      },
-      "additionalProperties": false,
-      "description": "Cli compatibility check details used by this contract."
-    },
-    "cli_compatibility": {
-      "type": "object",
-      "required": [
-        "kind",
-        "status",
-        "configured",
-        "enforcement",
-        "failed_checks"
-      ],
-      "properties": {
-        "kind": {
-          "const": "agentic-workspace/cli-compatibility/v1",
-          "description": "Discriminator identifying the payload or record shape."
-        },
-        "status": {
-          "enum": [
-            "no-expectation",
-            "satisfied",
-            "advisory-drift",
-            "blocking-drift"
-          ],
-          "description": "Current lifecycle, readiness, or health state."
-        },
-        "configured": {
-          "type": "boolean",
-          "description": "Configured true/false policy flag used by this contract."
-        },
-        "enforcement": {
-          "enum": [
-            "off",
-            "advisory",
-            "blocking"
-          ],
-          "description": "Allowed enforcement value for routing or validation."
-        },
-        "enforcement_source": {
-          "type": "string",
-          "description": "Enforcement source text value used by this contract."
-        },
-        "expectation_source": {
-          "type": "string",
-          "description": "Expectation source text value used by this contract."
-        },
-        "expected_command": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Expected command contract value used by this contract."
-        },
-        "invocation_resolution": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Non-mutating classification of the configured environment-manager invocation."
-        },
-        "contract_expectation": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Durable schema, capability, and package-resource expectation owned by repo config."
-        },
-        "package_resources": {
-          "type": "array",
-          "items": { "type": "object", "additionalProperties": true },
-          "description": "Availability results for required package resources."
-        },
-        "pre_state_admission": {
-          "type": "object",
-          "additionalProperties": true,
-          "description": "Compact root-reader admission provenance established before managed state interpretation."
-        },
-        "invocation_confidence": {
-          "enum": [
-            "high",
-            "medium",
-            "low"
-          ],
-          "description": "Allowed invocation confidence value for routing or validation."
-        },
-        "drift_findings": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "description": "One entry in the drift findings list."
-          },
-          "description": "Ordered drift findings entries used by this contract."
-        },
-        "remediation": {
-          "type": "object",
-          "description": "Remediation details used by this contract."
-        },
-        "checks": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/cli_compatibility_check",
-            "description": "One entry in the checks list."
-          },
-          "description": "Ordered checks entries used by this contract."
-        },
-        "failed_checks": {
-          "type": "array",
-          "items": {
-            "enum": [
-              "exact_version",
-              "minimum_version",
-              "source_class",
-              "target_relation",
-              "resolution_posture",
-              "contract_schema",
-              "required_capabilities",
-              "required_resources",
-              "minimum_reader_epoch",
-              "required_reader_capabilities"
-            ],
-            "description": "One entry in the failed checks list."
-          },
-          "description": "Ordered failed checks entries used by this contract."
-        },
-        "rule": {
-          "type": "string",
-          "description": "Policy rule that explains this contract behavior."
-        }
-      },
-      "additionalProperties": false,
-      "description": "Cli compatibility details used by this contract."
     }
   },
   "x-agentic-workspace-doc-role": "contract-reference"
