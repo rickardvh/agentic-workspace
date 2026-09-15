@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Expose bounded active or degraded capture posture for opted-in native diagnostics without changing operation authority or disabled behavior."
+issues = [3295]
