@@ -16,7 +16,7 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
     workspace.mkdir()
     config = workspace / "config.toml"
     config.write_text(
-        'schema_version=1\n[modules]\nenabled=[]\n[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n'
+        'schema_version=1\n[modules]\nenabled=[]\n[payload]\ndogfood_latest=true\nminimum_capabilities=["installed-state-sync-v2"]\npolicy="required-before-work"\n'
     )
     human = tmp_path / "AGENTS.md"
     human.write_text("Preserve the repository's human policy.\n")
@@ -34,6 +34,26 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
         request = current["configuration_write"]["payload_discovery_request"]
         return call(request=request)["configuration_write"]["payload_choices"]
 
+    former_update = '[update.modules.planning]\nsource_type="local"\nsource_ref="former-module-checkout"\n'
+    config.write_text(config.read_text() + former_update)
+    former = config.read_bytes()
+    observed = call()["configuration"]
+    assert next(row for row in observed["residuals"] if row["field"] == "update.modules")["affects"] == ["effect:package-update"]
+    assert config.read_bytes() == former
+    prior = observed["payload"]
+    assert prior["current_policy"]["target_release"] == "source-current"
+    # Explicit package-source decision retires the old module source in favor of
+    # the already selected coordinated artifact; reading never makes that choice.
+    config.write_text(
+        config.read_text()
+        .replace(former_update, "")
+        .replace("schema_version=1", "schema_version=2")
+        .replace("dogfood_latest=true", 'target_release="source-current"')
+    )
+    current_policy = call()["configuration"]["payload"]
+    assert current_policy["current_policy"] == prior["current_policy"]
+    assert current_policy["status"] == prior["status"] == "unresolved"
+    preserved[config] = config.read_bytes()
     initial = choices()
     assert all(row["status"] == "refresh-available" for row in initial)
     wrong = copy.deepcopy(initial[0]["request"])
@@ -88,7 +108,9 @@ def test_durable_choices_are_exact_and_do_not_admit_operational_state(
 ) -> None:
     source = tmp_path / ".agentic-workspace" / source_name
     source.parent.mkdir()
-    before = b"# Human-owned configuration\r\nschema_version=1\r\n"
+    before = (
+        b"# Human-owned configuration\r\nschema_version=1\r\n[workspace]\r\nmaintainer_mode=false # Former material stays byte-exact\r\n"
+    )
     source.write_bytes(before)
     (tmp_path / "GUIDE.md").write_text("Fixture instructions, retained as a source.\n")
     context = {"target": str(tmp_path), "task": "Apply a deliberate fixture configuration choice", "changed": []}
@@ -103,6 +125,14 @@ def test_durable_choices_are_exact_and_do_not_admit_operational_state(
     selected = call(request=detail)["configuration_write"]["selected_choice"]
     assert selected["schema"]["type"] == {"modules.enabled": "array", "workspace.agent_instructions_file": "string"}.get(key, "boolean")
     assert selected["edit_request"] == request
+    if surface == "native" and key == "modules.enabled":
+        for field, authorable in [("assurance.instruction_revision", True), ("workspace.maintainer_mode", False)]:
+            route = copy.deepcopy(detail)
+            route["arguments"]["key"] = field
+            result = call(request=route)["configuration_write"]["selected_choice"]
+            assert result["authorable"] is authorable
+            assert result["edit_request"] is None
+        assert source.read_bytes() == before
     malformed = copy.deepcopy(request)
     malformed["arguments"]["value"] = {"not": "a valid choice"}
     with pytest.raises(AssertionError, match="is not of type"):
@@ -276,4 +306,4 @@ def test_configuration_defer_resumes_outside_human_policy(tmp_path, shared_core_
     assert call()["configuration_write"]["deferred_choices"] == []
     assert (
         tmp_path / ".agentic-workspace/config.local.toml"
-    ).read_text() == "schema_version=1\n\n[safety]\nsafe_to_auto_run_commands = false\n"
+    ).read_text() == "schema_version=2\n\n[safety]\nsafe_to_auto_run_commands = false\n"

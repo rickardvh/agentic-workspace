@@ -33,11 +33,20 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     def call(value):
         return consume(surface, shared_core_binary, native_cli, value)
 
+    source.write_text(
+        source.read_text()
+        .replace("schema_version=1", "schema_version=2")
+        .replace('strength="weak"\n', "")
+        .replace('strength="strong"\n', 'confidence=0.4\nconfidence_source="human estimate"\n')
+    )
     first = call(context)
     judgment = first["task_requirements"]["requests"][0]
     judgment["arguments"]["required_result_classes"] = ["read-only"]
     offered = call({**context, "request": judgment})["task_requirements"]["execution_configurations"]
     rows = {r["configuration"]["id"]: r for r in offered["configurations"]["candidates"]}
+    human = next(row for row in offered["target_context"] if row["target"] == "worker")
+    assert human["human_prior"]["confidence"] == 0.4
+    assert human["former_observations"]["status"] == "not-admitted-by-configuration"
     assert rows["local:internal"]["eligible"] is True
     assert rows["worker:cli"]["eligible"] is True
     assert rows["worker:cli"]["configuration"]["result_classes"] == ["read-only", "unapplied-patch"]

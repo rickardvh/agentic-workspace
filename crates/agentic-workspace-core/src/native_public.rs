@@ -299,6 +299,9 @@ fn resolve_with_baseline(
     } else {
         native_memory::disabled(target)?
     };
+    if configuration["local_sources"]["status"] != "not-configured" {
+        memory["local_source_selection"] = configuration["local_sources"].clone();
+    }
     let planning_probe = if available("planning") {
         native_planning::resolve(target, &work, None)?
     } else {
@@ -376,14 +379,25 @@ fn resolve_with_baseline(
         .unwrap()
         .extend(configuration_gap_scopes.clone());
     config_write_contract["revision"] = json!(digest(&config_write_contract)?);
+    let instruction_transition_scopes: Vec<Value> = configuration_gap_scopes
+        .iter()
+        .filter(|scope| **scope != "effect:instruction-source")
+        .cloned()
+        .chain([json!("effect:configuration-source")])
+        .collect();
     // Payload nonconformance normally restricts the whole task. Its exact
     // Configuration repair may proceed while every other effect/claim remains
     // restricted; no caller can nominate a broader repair exception.
     if configuration["contribution"]["blockers"]
         .as_array()
         .is_some_and(|rows| {
-            rows.iter()
-                .any(|row| row["code"] == "native-payload-target-unproven")
+            rows.iter().any(|row| {
+                row["code"] == "native-payload-target-unproven"
+                    || row["code"] == "workspace-disabled"
+                    || row["code"]
+                        .as_str()
+                        .is_some_and(|code| code.starts_with("native-config-owner:"))
+            })
         })
     {
         for authority in configuration["capability_contract"]["restriction_authorities"]
@@ -395,6 +409,10 @@ fn resolve_with_baseline(
                 .as_array_mut()
                 .unwrap()
                 .extend(configuration_gap_scopes.clone());
+            authority["affects"]
+                .as_array_mut()
+                .unwrap()
+                .extend(instruction_transition_scopes.clone());
         }
         configuration["capability_contract"]["revision"] =
             json!(digest(&configuration["capability_contract"])?);
@@ -646,6 +664,67 @@ fn resolve_with_baseline(
         {
             if blocker["code"] == "native-payload-target-unproven" {
                 blocker["affects"] = json!(configuration_gap_scopes);
+            }
+        }
+    }
+    // An exact current-key edit preserves unrelated former source bytes. Keep
+    // every non-Configuration effect/claim blocked until its owner resolves it.
+    if config_write["contribution"]["actions"]
+        .as_array()
+        .is_some_and(|actions| {
+            actions.iter().any(|action| {
+                matches!(
+                    action["operation_id"].as_str(),
+                    Some("configuration.write" | "configuration.recover-write")
+                ) && matches!(
+                    action["arguments"]["request"]["arguments"]["source"].as_str(),
+                    Some(".agentic-workspace/config.toml" | ".agentic-workspace/config.local.toml")
+                )
+            })
+        })
+    {
+        for blocker in configuration["contribution"]["blockers"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+        {
+            if blocker["affects"]
+                .as_array()
+                .is_some_and(|scopes| scopes.iter().any(|scope| scope == "task"))
+                && (blocker["code"] == "workspace-disabled"
+                    || blocker["code"]
+                        .as_str()
+                        .is_some_and(|code| code.starts_with("native-config-owner:")))
+            {
+                blocker["affects"] = json!(configuration_gap_scopes);
+            }
+        }
+    }
+    // An independently authorized instruction write may establish a candidate
+    // destination while former guidance remains unresolved. This grants no
+    // retirement, proof, waiver or trust-pin refresh; every other effect and
+    // claim remains restricted, including later edits to the former source.
+    if instructions["contribution"]["actions"]
+        .as_array()
+        .is_some_and(|actions| {
+            actions
+                .iter()
+                .any(|action| action["operation_id"] == crate::native_instruction_write::WRITE)
+        })
+    {
+        for blocker in configuration["contribution"]["blockers"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+        {
+            if blocker["code"].as_str().is_some_and(|code| {
+                code.starts_with("native-config-owner:")
+                    && (code.contains(":local_overlay.") || code.contains(":workflow_obligations."))
+            }) && blocker["affects"]
+                .as_array()
+                .is_some_and(|scopes| scopes.iter().any(|scope| scope == "task"))
+            {
+                blocker["affects"] = json!(instruction_transition_scopes);
             }
         }
     }
@@ -1286,6 +1365,14 @@ fn resolve_with_baseline(
     }
     planning["current_owner"] = planning_detail;
     let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
+    // Keep absent local topology out of public discovery. Its internal source
+    // binding remains intact; explicit former choices still expose observations.
+    if public["configuration"]["local_sources"]["status"] == "not-configured" {
+        public["configuration"]
+            .as_object_mut()
+            .unwrap()
+            .remove("local_sources");
+    }
     public["configuration"]
         .as_object_mut()
         .unwrap()
@@ -1315,6 +1402,16 @@ fn resolve_with_baseline(
     for owner in public.as_object_mut().unwrap().values_mut() {
         if let Some(object) = owner.as_object_mut() {
             object.remove("capability_contract");
+            object.remove("contribution");
+        }
+    }
+    // Memory capture fragments have already joined the same composed decision.
+    // Publish their exact requests/results, not a second copy of internal authority.
+    for capture in ["capture", "advisory_capture"] {
+        if let Some(object) = public["memory"]
+            .get_mut(capture)
+            .and_then(Value::as_object_mut)
+        {
             object.remove("contribution");
         }
     }

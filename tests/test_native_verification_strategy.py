@@ -349,6 +349,22 @@ def test_profile_and_requirement_transfer_preserves_obligation_and_rejects_compe
     manifest.write_text(destination.replace('optional_commands=["echo optional"]', "optional_commands=17"))
     with pytest.raises(AssertionError, match="invalid"):
         call()
+    # A named former closeout posture has no native destination. Preserve it,
+    # expose the unresolved obligation, and refuse a false manifest migration.
+    manifest.write_text(destination)
+    posture = '[assurance.closeout_postures.release]\npurpose="Independent release judgment"\nrequired_evidence=["review"]\n'
+    config.write_text(config.read_text() + posture)
+    preserved = config.read_bytes()
+    unresolved = call()
+    assert any(row["field"] == "assurance.closeout_postures" for row in unresolved["configuration"]["residuals"])
+    assert unresolved["decision_packet"]["claim_boundary"]["allowed"] == []
+    manifest.write_text(destination + posture)
+    with pytest.raises(AssertionError, match="unsupported"):
+        call()
+    assert config.read_bytes() == preserved
+    config.write_bytes(before)
+    manifest.write_text(destination)
+    assert call()["verification"]["strategy_control"]["required_level"] == "high"
     assert config.read_bytes() == before
     assert not (tmp_path / ".agentic-workspace/local").exists()
 
@@ -444,3 +460,82 @@ def test_subsystem_profile_uses_current_ownership_without_granting_review(tmp_pa
     ownership.write_text("Malformed unrelated ownership source")
     assert call()["verification"]["strategy_control"]["effective_level"] == "medium"
     assert source.exists() and (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
+
+
+# These owner semantics have no adapter-specific encoding. Exercise the core JSON
+# ingress once; existing cross-surface conformance/transfer cases own adapter parity.
+def test_strict_closeout_requires_current_judgment_without_matching_protocol(tmp_path, shared_core_binary, native_cli):
+    setup(tmp_path)
+    source = tmp_path / ".agentic-workspace/config.toml"
+    context = {"target": str(tmp_path), "task": "Check resulting work", "changed": ["a.txt"]}
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra})
+
+    source.write_text("schema_version=2\n[assurance]\nstrict_closeout=false\n")
+    assert call()["verification"]["judgment_request"] is None
+    source.write_text("schema_version=2\n[assurance]\nstrict_closeout=true\n")
+    before = source.read_bytes()
+    current = call()
+    assert current["configuration"]["residuals"] == []
+    assert current["verification"]["judgment_request"] is not None
+    assert any(b["code"] == "strict-closeout-judgment-required" for b in current["decision_packet"]["blockers"])
+    request = current["verification"]["claim_review"]["request"]
+    request["arguments"] = {"disposition": "satisfied", "reason": "Checked this exact fixture outcome.", "evidence_refs": []}
+    proposed = call(request=request)
+    decision = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "verification-claim-review")
+    assert any(b["code"] == "strict-closeout-judgment-required" for b in proposed["decision_packet"]["blockers"])
+    answer = decision["response_request"]
+    answer["arguments"]["answer"] = "confirm"
+    reviewed = call(request=answer)
+    assert reviewed["verification"]["claim_review"]["status"] == "current"
+    assert not any(b["code"] == "strict-closeout-judgment-required" for b in reviewed["decision_packet"]["blockers"])
+    assert source.read_bytes() == before
+    (tmp_path / "a.txt").write_text("Different work")
+    with pytest.raises(AssertionError, match="stale"):
+        call(request=answer)
+
+
+def test_current_requirement_rejects_recorded_outcomes_but_former_preserves_them(tmp_path, shared_core_binary, native_cli):
+    from agentic_workspace.config import WorkspaceUsageError, load_workspace_config
+
+    context = setup(tmp_path)
+    source = tmp_path / ".agentic-workspace/config.toml"
+    manifest = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    manifest.parent.mkdir()
+    header = 'schema_version="agentic-workspace/verification-manifest/v1"\n'
+    policy = (
+        '[assurance.requirements.current]\nlevel="high"\nforce="required-before-closeout"\n'
+        'applies_to_paths=["a.txt"]\nrequirement_class="invariant"\n'
+        'source_intent_ref="a.txt"\nsource_intent_revision="declared-source"\n'
+        'required_evidence=["review"]\nblocking_claims=["claim-work-complete"]\n'
+        'evidence_owner="verification:current"\ndetail_route="verification"\n'
+    )
+
+    def call():
+        return consume("json", shared_core_binary, native_cli, context)
+
+    original = source.read_text()
+    manifest.write_text(header + policy)
+    assert call()["verification"]["assurance_applicability"]["requirements"][0]["status"] == "applicable"
+    assert load_workspace_config(target_root=tmp_path).assurance.requirements[0].source_intent_current is None
+    for record in (
+        'waiver={reason="Already accepted",owner="maintainer"}\n',
+        'dismissal={reason="Already accepted",owner="maintainer"}\n',
+        "source_intent_current=true\n",
+    ):
+        manifest.write_text(header + policy + record)
+        with pytest.raises(AssertionError, match="unsupported"):
+            call()
+        with pytest.raises(WorkspaceUsageError, match="recorded outcomes"):
+            load_workspace_config(target_root=tmp_path)
+        manifest.write_text(header)
+        former_record = record if record.startswith("source_intent_current") else "source_intent_current=true\n" + record
+        source.write_text(original + policy + former_record)
+        before = source.read_bytes()
+        result = call()
+        gap = result["verification"]["assurance_owner_gaps"][0]
+        assert gap["status"] == "owner-evidence-not-admitted"
+        assert any(b["code"].startswith("assurance:current:") for b in result["decision_packet"]["blockers"])
+        assert source.read_bytes() == before
+        source.write_text(original)

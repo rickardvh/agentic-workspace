@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Contract guidance and package configuration while preserving former local source intent"
+issues = [3304, 3305, 3306, 3297]

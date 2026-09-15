@@ -10,6 +10,28 @@ const SHARED: &str = ".agentic-workspace/config.toml";
 const LOCAL: &str = ".agentic-workspace/config.local.toml";
 pub(crate) const MAX_SOURCE_BYTES: usize = 1_048_576;
 
+/// Version dispatch is exact: malformed current input never retries a former schema.
+pub(crate) fn validate_source(value: &Value, current: &str) -> Result<(), String> {
+    let schema = match value["schema_version"].as_u64() {
+        Some(2) => current,
+        Some(1) if current.contains("workspace-local-override") => include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/workspace_local_override_former.schema.json"
+        ),
+        Some(1) => include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/workspace_config_former.schema.json"
+        ),
+        _ => return Err(
+            "configuration requires explicit supported schema_version 1 (former) or 2 (current)"
+                .into(),
+        ),
+    };
+    let schema: Value = serde_json::from_str(schema).map_err(|e| e.to_string())?;
+    crate::schema_validator(&schema, "native configuration")
+        .map_err(|e| e.to_string())?
+        .validate(value)
+        .map_err(|e| format!("invalid configuration at {}", e.instance_path()))
+}
+
 pub(crate) fn load(
     root: &Dir,
     path: &str,
@@ -49,11 +71,7 @@ pub(crate) fn load(
     let parsed: toml::Value = toml::from_str(text.trim_start_matches('\u{feff}'))
         .map_err(|_| "invalid TOML; inspect the source locally".to_owned())?;
     let value = serde_json::to_value(parsed).map_err(|e| e.to_string())?;
-    let schema: Value = serde_json::from_str(schema).map_err(|e| e.to_string())?;
-    crate::schema_validator(&schema, "native configuration")
-        .map_err(|e| e.to_string())?
-        .validate(&value)
-        .map_err(|e| format!("invalid configuration at {}", e.instance_path()))?;
+    validate_source(&value, schema)?;
     Ok(Some((value, revision)))
 }
 
@@ -170,6 +188,16 @@ fn residual(source: &str, field: &str, value: &Value, config: &Value) -> Value {
     let mut result = json!({"source":source, "field":field, "owner":owner,
         "value_revision":digest(value).expect("JSON value hashes"),
         "affects":affects, "reason":"current-control-requires-native-owner"});
+    if field.starts_with("local_overlay.") || field.starts_with("workflow_obligations.") {
+        result["transition"] = json!({"status":"entry-level-owner-disposition-required",
+            "authority":if source == LOCAL {"local; never promote into shared policy"} else {"repository"},
+            "durable_guidance":"applicable scoped instructions; preserve advisory versus binding strength",
+            "proof":"supported Verification requirement/check with its existing admission",
+            "template_and_source":"reference the actual repository owner, do not copy its schema",
+            "observations":"reobserve with current owner, not timeless instructions",
+            "questions":"existing responsible decision/continuation only if useful; no retention is valid",
+            "retirement":"preserve former bytes until destination meaning and admission are confirmed; reads never retire"});
+    }
     if field == "delegation.replacement" {
         result["work_identity"] = json!({"id":value["work_id"],"revision":value["work_revision"]});
     }
@@ -238,8 +266,12 @@ pub(crate) fn assignment_consumption(
                                         | "cost_class"
                                         | "latency_class"
                                         | "confidence_source"
-                                        | "current_economic_evidence"
                                         | "identity_status"
+                                        | "aliases"
+                                        | "execution_methods"
+                                        | "dispatch_command"
+                                        | "dispatch_output_mode"
+                                        | "dispatch_timeout_seconds"
                                 )
                             })
                         })
@@ -357,7 +389,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     ] {
         match load(&root, path, schema) {
             Ok(Some((value, revision))) => {
-                sources.push(json!({"reference":path,"revision":revision,"status":"current"}));
+                sources.push(json!({"reference":path,"revision":revision,"status":"current","authoring_contract":if value["schema_version"]==2 {"current-v2"} else {"former-v1"}}));
                 *destination = value;
             }
             Ok(None) => (),
@@ -389,6 +421,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         },
         Err(error)=>blockers.push(json!({"code":"assignment-policy-source-unresolved","message":error.to_string(),"affects":["effect:implementation"]})),
     }
+    let local_sources = crate::native_memory::former_sources(target, &local["local_memory"])?;
     for (source, value) in [(SHARED, &shared), (LOCAL, &local)] {
         for (section, content) in value.as_object().into_iter().flatten() {
             if section == "schema_version" {
@@ -431,6 +464,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                                 "safety.safe_to_auto_run_commands"
                                     | "safety.requires_human_verification_on_pr"
                                     | "session_logging.enabled"
+                                    | "clarification.mode"
                                     | "session_logging.path_mode"
                                     | "session_logging.redact_local_paths"
                             ));
@@ -442,9 +476,11 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
                             field.as_str(),
                             "assurance.requirements"
                                 | "assurance.default_level"
+                                | "assurance.strict_closeout"
                                 | "assurance.agent_may_escalate"
                                 | "assurance.agent_may_deescalate"
                                 | "assurance.proof_profiles"
+                                | "assurance.domain_proof_lanes"
                                 | "assurance.subsystem_profiles"
                         )
                         && shared["modules"]["enabled"]
@@ -545,7 +581,7 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
         }
     }
     let revision = digest(
-        &json!({"sources":configuration_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
+        &json!({"sources":configuration_sources,"local_sources":local_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload}),
     )?;
     // Restriction targets come only from the owner mappings above, never from
     // config-authored effect names. A ceiling grants no operation, effect or claim.
@@ -565,9 +601,9 @@ pub fn view(target: &Path) -> Result<Value, CoreError> {
     capability_contract["revision"] = json!(digest(&capability_contract)?);
     Ok(
         json!({"kind":"agentic-workspace/native-configuration-view/v1", "revision":revision,
-        "sources":sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
+        "sources":sources,"local_sources":local_sources,"residuals":residuals,"artifact_profile":artifact_profile,"payload":payload,"enabled":enabled,"cli_invoke":cli_invoke,
         "capability_contract":capability_contract,
-        "agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
+        "clarification":local["clarification"],"agent_instructions_file":shared["workspace"]["agent_instructions_file"],"modules":shared["modules"]["enabled"],"independent_admissions":shared["modules"]["independent"],"system_intent":shared["system_intent"],
         "improvement_latitude":shared["workspace"]["improvement_latitude"],"execution_posture":shared["execution_posture"],"assignment_policy":assignment_policy,"assignment_requirements":{"configured":local["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()) || shared["delegation_targets"].as_object().is_some_and(|targets|!targets.is_empty()),
             "required_execution_guarantees":local["delegation"]["required_execution_guarantees"].as_array().cloned().unwrap_or_default()},
         "admissions":{"instruction_revision":shared["assurance"]["instruction_revision"],
@@ -726,6 +762,48 @@ mod tests {
     }
 
     #[test]
+    fn current_authoring_and_former_recognition_are_distinct() {
+        let repo = Repo::new();
+        for (version, field, admitted) in [
+            (1, "maintainer_mode=true", true),
+            (2, "maintainer_mode=true", false),
+            (2, "unknown_policy=true", false),
+            (2, "enabled=false", true),
+            (3, "enabled=false", false),
+        ] {
+            let text = format!("schema_version={version}\n[workspace]\n{field}\n");
+            repo.write(SHARED, &text);
+            let result = view(&repo.0).unwrap();
+            assert_eq!(result["sources"][0]["status"] == "current", admitted);
+            assert_eq!(fs::read_to_string(repo.0.join(SHARED)).unwrap(), text);
+        }
+    }
+
+    #[test]
+    fn current_transport_predicates_preserve_variant_requirements() {
+        let schema = include_str!(
+            "../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"
+        );
+        for (transport, valid) in [
+            (
+                json!({"kind":"native","adapter":"selected-owner","parameters":{}}),
+                true,
+            ),
+            (json!({"kind":"native","adapter":"selected-owner"}), false),
+            (json!({"kind":"process","command":["worker"]}), true),
+            (json!({"kind":"process"}), false),
+            (json!({"kind":"manual","command":["worker"]}), false),
+            (
+                json!({"kind":"process","command":["worker"],"parameters":{}}),
+                false,
+            ),
+        ] {
+            let value = json!({"schema_version":2,"delegation_targets":{"worker":{"transports":[transport]}}});
+            assert_eq!(validate_source(&value, schema).is_ok(), valid, "{value}");
+        }
+    }
+
+    #[test]
     fn supported_overrides_and_source_currentness_are_exact() {
         let repo = Repo::new();
         repo.write(
@@ -756,11 +834,26 @@ mod tests {
     }
 
     #[test]
+    fn strict_closeout_remains_unresolved_without_verification() {
+        let repo = Repo::new();
+        repo.write(SHARED, "schema_version=2\n[assurance]\nstrict_closeout=true\n[modules]\nenabled=[\"memory\"]\n");
+        let result = view(&repo.0).unwrap();
+        assert!(
+            result["residuals"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|row| row["field"] == "assurance.strict_closeout")
+        );
+        assert!(validate_source(&json!({"schema_version":2,"assurance":{"strict_closeout":false}}), include_str!("../../../src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json")).is_err());
+    }
+
+    #[test]
     fn unsupported_shared_proof_remains_binding_despite_local_preferences() {
         let repo = Repo::new();
         repo.write(
             SHARED,
-            "schema_version=1\n[assurance]\nstrict_closeout=true\n",
+            "schema_version=1\n[assurance]\nclassification_owner=\"config-native\"\n",
         );
         repo.write(
             LOCAL,
@@ -769,7 +862,7 @@ mod tests {
         let result = view(&repo.0).unwrap();
         let residual = &result["residuals"][0];
         assert_eq!(residual["source"], SHARED);
-        assert_eq!(residual["field"], "assurance.strict_closeout");
+        assert_eq!(residual["field"], "assurance.classification_owner");
         assert_eq!(residual["affects"], json!(["claim:complete"]));
     }
 
@@ -778,7 +871,7 @@ mod tests {
         let repo = Repo::new();
         repo.write(
             SHARED,
-            "schema_version=1\n[assurance]\nstrict_closeout=true\n",
+            "schema_version=1\n[assurance]\nclassification_owner=\"config-native\"\n",
         );
         repo.write(
             LOCAL,

@@ -33,7 +33,7 @@ def check_contract_integrity() -> list[str]:
     if runtime_primitives._reporting_schema_payload() != report_contract_manifest():  # type: ignore[attr-defined]
         errors.append("reporting schema payload drifted from report_contract.json")
 
-    workspace_config_schema = contract_schema("workspace_config.schema.json")
+    workspace_config_schema = contract_schema("workspace_config_former.schema.json")
     agent_instructions_schema = workspace_config_schema["properties"]["workspace"]["properties"]["agent_instructions_file"]
     if agent_instructions_schema.get("type") != "string" or agent_instructions_schema.get("minLength") != 1:
         errors.append("workspace_config schema agent_instructions_file must accept any non-empty string path")
@@ -50,7 +50,7 @@ def check_contract_integrity() -> list[str]:
     ):
         errors.append("workspace_config schema optimization_bias enum drifted from config constants")
 
-    local_override_schema = contract_schema("workspace_local_override.schema.json")
+    local_override_schema = contract_schema("workspace_local_override_former.schema.json")
     delegation_target_schema = local_override_schema["properties"]["delegation_targets"]["patternProperties"]["^.+$"]
     if delegation_target_schema["properties"]["strength"]["enum"] != list(config.SUPPORTED_DELEGATION_TARGET_STRENGTHS):
         errors.append("workspace_local_override schema delegation target strengths drifted from config constants")

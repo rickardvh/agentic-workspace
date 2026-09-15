@@ -213,7 +213,6 @@ pub(crate) fn view(
                 "reasoning_profile",
                 "capability_classes",
                 "safe_task_classes",
-                "forbidden_task_classes",
                 "escalation_target",
                 "human_control_modes",
             ]
@@ -233,7 +232,7 @@ pub(crate) fn view(
             }
         };
         if serde_json::to_vec(profile).is_ok_and(|bytes| bytes.len() <= 8192) {
-            target_context.push(json!({"target":name,"profile":profile,"revision":digest(profile)?,"claim_boundary":"Configured human priors and restrictions, not learned proof or capability grants."}));
+            target_context.push(json!({"target":name,"profile":profile,"revision":digest(profile)?,"human_prior":{"confidence":profile["confidence"],"provenance":profile["confidence_source"],"cost_class":profile["cost_class"],"latency_class":profile["latency_class"]},"former_observations":{"status":"not-admitted-by-configuration","current_economic_evidence":profile["current_economic_evidence"],"last_evaluation":profile["last_evaluation"]},"claim_boundary":"Configured human priors and restrictions, not learned proof or capability grants."}));
         } else {
             unavailable.push(json!({"target":name,"gap":"target-context-exceeds-bound"}));
         }

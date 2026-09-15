@@ -73,6 +73,24 @@ If no applicable concern remains, finish without creating configuration or state
    Byte convergence does not settle unresolved semantic source dispositions or
    establish proof, review acceptance or completion of broader adoption intent.
 
+## Current authoring and former sources
+
+New sources use `schema_version = 2`. Version 1 is bounded source recognition,
+not an alternative current authoring mode. The exact writer checks the selected
+new value against the current schema while preserving unrelated former material,
+comments and the existing version. Do not upgrade or retire a whole source as a
+side effect of one setting change. Deprecated/read-only fields are not current
+choices. A read-choice result without an edit request names the responsible
+repository/local source authoring route; it grants no edit or trust approval.
+
+Local enabled/cli_invoke override shared availability/invocation defaults, including
+shared-local then checkout-local precedence. Independent proof, source admission,
+module grants and local safety remain binding. Shared-local sources are read
+inputs; the canonical writer does not acquire user-file write authority. Use
+session_logging.enabled/path_mode for diagnostics and clarification.mode only
+as an advisory preference. Use existing defer/recovery for continuation, not setup
+fields. Never derive instruction or decision trust pins from HEAD or source hashes.
+
 ## Source and capability convergence
 
 In a source checkout, run the documented `cargo build --locked --workspace --bins`
@@ -118,3 +136,65 @@ obligations, copy package-repository policy, or tune human priors from outcomes.
 
 Report the exact configuration effect and remaining concern. A successful edit
 is not evidence that broader configure-once, proof or completion intent is met.
+
+Verification policy definitions are authored in the existing Verification manifest,
+using its package-owned assurance schema. Only proof_profiles, domain_proof_lanes,
+requirements and subsystem_profiles have supported native destinations. Reject
+competing former/shared and manifest sources even when equal. Preserve unsupported
+closeout_postures, classifier and decision/registry/test-data
+conventions until their source owner confirms each destination or retirement;
+never translate them wholesale or infer a trust revision from HEAD.
+
+Author and preserve `assurance.strict_closeout` as current shared configuration
+policy. When true, it requires a current task-bound Verification claim judgment
+before completion, including work with no matching protocol. False does not waive
+independently binding proof or review requirements. Local config cannot override
+this floor; disabling Verification leaves it unresolved. Use the existing
+Verification claim-review owner to establish judgment, never config as evidence.
+
+For an independent module, read the modules.independent choice and name
+selected_owner. Inspect the exact prepared binding, requested footprint and
+owner settings schema. Preserve existing grants/scope/settings; omitted grants
+are refused. Add only independently authorized grants and approve the exact
+proposal through Configuration. Installation and a descriptor update grant
+nothing. Never fill missing grants merely to make a module executable.
+
+For Assignment, author canonical transports with the selected adapter's validated
+parameters. Keep repository requirements/preferences separate from local identity,
+capability declarations and hard prohibitions. Keep confidence/provenance as human
+priors and cost/latency as rough preferences. Observed outcomes/economics belong
+to their evidence owner. Former aliases may be derived only where equivalent;
+omitted former/shared-local intent survives until represented or explicitly
+retired. Do not replace removed ranking hints with invented guarantees.
+
+## Retiring former guidance and local/package controls
+
+Current authoring has no workflow_obligations, local_overlay, local_memory,
+runtime observation/handoff bags or independently updated module policy. For each
+former entry, separate durable guidance/constraints, proof, original source or
+template references, current observations and useful unanswered questions. Use
+existing scoped instructions and Verification with the original strength, scope
+and shared/local authority. Reobserve stale facts; retain questions only through
+the responsible continuation owner when useful. Never bulk-translate prose or
+promote local material into shared evidence.
+
+A candidate instruction destination can be written through its exact independent
+authorization while former guidance remains blocking for other work. Confirm its
+meaning and admission before the source owner retires the old entry. The write
+neither retires config nor refreshes trust pins. Reenter with relevant and unrelated
+scope and confirm no old form is recreated. Unknown mandatory meaning remains an
+owner blocker, not a successful migration.
+
+All six former local_memory controls are unsupported native topology selections.
+Use the reported explicit-source metadata to distinguish missing, empty,
+inaccessible/unconfined and present-unclassified material. Do not read an empty
+default instead, infer a user-home location, copy private content or retire useful
+material from its mere absence in a review. Repository Memory is a distinct source;
+target guidance and corrections retain their own owners and lifetimes.
+
+Keep payload target_release/minimum_capabilities/policy and reader
+minimum_reader_epoch/required_reader_capabilities as deliberate floors. Derive
+artifact contents/identity and reader contract facts. Former dogfood_latest can
+be represented by source-current only while preserving any explicit target and
+floor. Former module update provenance or incompatible reader pins require their
+source owner's disposition. Payload choices still name only artifact-owned files.

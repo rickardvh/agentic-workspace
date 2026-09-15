@@ -1,3 +1,10 @@
+"""Source-maintenance parsing, including bounded former configuration recognition.
+
+Historical dataclass paths and overlay projections do not establish native owner
+support. Current version-2 authoring is validated separately; native Memory uses
+its repository manifest and explicitly preserves unsupported former local sources.
+"""
+
 from __future__ import annotations
 
 import json
@@ -8,6 +15,20 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.result_adapter import serialise_value
+
+
+def _validate_current_authoring(payload: dict[str, Any], *, local: bool) -> None:
+    # The retained source-maintenance reader must not accept malformed v2 as v1.
+    if payload.get("schema_version") == 2:
+        from jsonschema import Draft202012Validator
+
+        from agentic_workspace.contract_tooling import contract_schema
+
+        name = "workspace_local_override" if local else "workspace_config"
+        errors = list(Draft202012Validator(contract_schema(f"{name}.schema.json")).iter_errors(payload))
+        if errors:
+            raise WorkspaceUsageError(f"Invalid current configuration at {list(errors[0].absolute_path)}")
+
 
 WORKSPACE_CONFIG_PATH = Path(".agentic-workspace/config.toml")
 LEGACY_WORKSPACE_CONFIG_PATH = Path("agentic-workspace.toml")
@@ -1331,10 +1352,10 @@ def _load_assurance_requirements(
             config_path=requirement_path,
             allowed=SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
         )
-        if requirement_class is not None and not (source_intent_ref and source_intent_revision and source_intent_current is not None):
+        if requirement_class is not None and not (source_intent_ref and source_intent_revision):
             raise WorkspaceUsageError(
                 f"{requirement_path.as_posix()} named repo requirements require source_intent_ref, "
-                "source_intent_revision, and source_intent_current."
+                "and source_intent_revision. Currentness is established by the source owner."
             )
         if requirement_class == "guideline":
             if not preference_target or not preference_target.startswith(("surface:", "skill:", "operation:")):
@@ -2907,7 +2928,7 @@ def _normalize_local_overlay(
     if legacy_high_risk_overlay not in (None, {}):
         message = (
             f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [high_risk_overlay] is deprecated; "
-            "use [local_overlay.high_risk] so high-risk workflow guidance consumes the general local overlay substrate."
+            "preserve its former intent and use the responsible scoped instruction/Verification owner for current authoring."
         )
         warnings.append(message)
         overlay_warnings.append(message)
@@ -2986,10 +3007,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
 
     local_payload = load_toml_payload(path=local_path, surface_name=WORKSPACE_LOCAL_CONFIG_PATH.as_posix())
 
+    _validate_current_authoring(local_payload, local=True)
     schema_version = local_payload.get("schema_version")
-    if schema_version != 1:
+    if schema_version not in (1, 2):
         raise WorkspaceUsageError(
-            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current local mixed-agent override contract."
+            f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} must set schema_version = 2 (current) or 1 (former) for the local mixed-agent override contract."
         )
     local_workspace_for_shared = _local_config_table(local_payload, "workspace")
     shared_config_path = _resolve_shared_local_config_path(
@@ -3005,10 +3027,11 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         shared_display = _local_config_display_path(path=shared_config_path, target_root=target_root)
         if shared_config_exists:
             shared_payload = load_toml_payload(path=shared_config_path, surface_name=shared_display)
+            _validate_current_authoring(shared_payload, local=True)
             shared_schema_version = shared_payload.get("schema_version")
-            if shared_schema_version != 1:
+            if shared_schema_version not in (1, 2):
                 raise WorkspaceUsageError(
-                    f"{shared_display} must set schema_version = 1 for the current local mixed-agent override contract."
+                    f"{shared_display} must set schema_version = 2 (current) or 1 (former) for the local mixed-agent override contract."
                 )
             shared_config_applied = True
         else:
@@ -3668,6 +3691,12 @@ def _verification_assurance_source(effective_root: Path, raw_assurance: Any) -> 
             owned = strategy["assurance"]
             if not isinstance(owned, dict) or set(owned) - {"proof_profiles", "domain_proof_lanes", "requirements", "subsystem_profiles"}:
                 raise WorkspaceUsageError("Verification assurance contains unsupported owner fields.")
+            requirements = owned.get("requirements", {})
+            if not isinstance(requirements, dict):
+                raise WorkspaceUsageError("Verification requirements must be a table.")
+            for requirement in requirements.values():
+                if isinstance(requirement, dict) and {"waiver", "dismissal", "source_intent_current"} & requirement.keys():
+                    raise WorkspaceUsageError("Verification policy cannot contain recorded outcomes or currentness.")
             for field, value in owned.items():
                 if field in raw_assurance:
                     raise WorkspaceUsageError(f"Competing Verification {field} sources: config and manifest; preserve both.")
@@ -3803,10 +3832,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         )
         payload: dict[str, Any] = {"schema_version": 1}
 
+    _validate_current_authoring(payload, local=False)
     schema_version = payload.get("schema_version")
-    if schema_version != 1:
+    if schema_version not in (1, 2):
         raise WorkspaceUsageError(
-            f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 1 for the current workspace config contract."
+            f"{WORKSPACE_CONFIG_PATH.as_posix()} must set schema_version = 2 (current) or 1 (former) for the workspace config contract."
         )
 
     unknown_top_level = sorted(

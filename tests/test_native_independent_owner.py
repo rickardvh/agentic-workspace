@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import tomllib
 
 import pytest
 from tests.test_native_public_cli import ROOT, consume
@@ -192,6 +193,13 @@ def test_independent_configuration_requirement_uses_current_configuration_owner(
     assert read["decision_packet"]["status"] == "blocked"
     assert read["decision_packet"]["primary_action"] is None
     selected = read["configuration_write"]["selected_choice"]
+    previous = tomllib.loads(config.read_text())["modules"]["independent"]["fixture-notebook"]
+    compact = selected["value"]["fixture-notebook"]
+    assert "revision" not in compact and "contract_revision" not in compact
+    assert compact["binding"].startswith("sha256:")
+    for field in ["effects", "claims", "restrictions", "reads", "scope"]:
+        assert compact.get(field, []) == previous[field]
+    assert read["configuration_write"]["independent_preparation"]["required_reads"] == previous["reads"]
     edit = selected["edit_request"]
     edit["arguments"]["value"]["fixture-notebook"]["settings"]["label"] = "Repaired by the source owner"
     proposed = call(request=edit)
@@ -328,3 +336,40 @@ def test_many_irrelevant_admissions_do_not_load_owner_detail(tmp_path, independe
     # A previously irrelevant, uninstalled owner must become an explicit gap when selected.
     with pytest.raises(AssertionError, match="unavailable"):
         consume("json", independent_binary, independent_cli, {**context, "changed": ["irrelevant-31"]})
+
+
+def test_selected_module_preparation_never_fills_refused_grants(tmp_path, independent_binary, native_cli):
+    context = setup(tmp_path, independent_binary, "fixture-notebook")
+    context["changed"] = []
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text("schema_version=2\n[modules]\nenabled=[]\n")
+
+    def call(request=None):
+        return consume("json", independent_binary, native_cli, {**context, **({"request": request} if request else {})})
+
+    read = call()["configuration_write"]["choice_requests"][0]
+    read["arguments"].update(key="modules.independent", selected_owner="fixture-notebook")
+    detail = call(read)["configuration_write"]
+    edit = detail["selected_choice"]["edit_request"]
+    value = edit["arguments"]["value"]["fixture-notebook"]
+    assert set(value) == {"binding"}
+    assert detail["independent_preparation"]["required_reads"] == ["fixture-input.txt"]
+    value["settings"] = {"label": "Explicit owner setting"}
+    proposed = call(edit)
+    assert "binding" not in config.read_text()
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    action = call(answer)["decision_packet"]["primary_action"]
+    consume("json", independent_binary, native_cli, {**context, "invocation": action})
+    stored = tomllib.loads(config.read_text())["modules"]["independent"]["fixture-notebook"]
+    assert stored == value
+    assert not any(stored.get(field) for field in ["effects", "reads", "claims", "restrictions"])
+    # An explicit request cannot turn absent grants into descriptor authority.
+    context["changed"] = ["fixture-input.txt"]
+    assert "independent_owners" not in call()
+    read = call()["configuration_write"]["choice_requests"][0]
+    read["arguments"].update(key="modules.independent", selected_owner="fixture-notebook")
+    edit = call(read)["configuration_write"]["selected_choice"]["edit_request"]
+    edit["arguments"]["value"]["fixture-notebook"]["binding"] = "sha256:" + "0" * 64
+    with pytest.raises(AssertionError, match="descriptor changed"):
+        call(edit)

@@ -525,26 +525,16 @@ fn strategy_sources(config: &Value, manifest: &Value) -> Result<Value, CoreError
     let Some(owned) = manifest.get("assurance") else {
         return Ok(config.clone());
     };
-    if !owned.as_object().is_some_and(|fields| {
-        fields.keys().all(|key| {
-            matches!(
-                key.as_str(),
-                "proof_profiles" | "domain_proof_lanes" | "requirements" | "subsystem_profiles"
-            )
-        })
-    }) {
-        return Err(CoreError::new(
-            "Verification assurance contains unsupported owner fields",
-        ));
-    }
     let schema: Value = serde_json::from_str(include_str!(
-        "../../../src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
+        "../../../packages/verification/src/repo_verification_bootstrap/contracts/assurance.schema.json"
     ))
-    .expect("checked schema");
+    .expect("checked Verification owner schema");
     crate::schema_validator(&schema, "Verification strategy source")?
-        .validate(&json!({"schema_version":1,"assurance":owned}))
+        .validate(owned)
         .map_err(|error| {
-            CoreError::new(format!("invalid Verification strategy source: {error}"))
+            CoreError::new(format!(
+                "invalid Verification strategy source; preserve unsupported owner fields: {error}"
+            ))
         })?;
     let mut result = config.clone();
     for (field, value) in owned.as_object().unwrap() {
@@ -1223,7 +1213,10 @@ pub(crate) fn view_with_applicability(
     if !domain.as_object().unwrap().is_empty() {
         gaps.push("domain-lane-strategy-sufficiency-unresolved".into());
     }
-    let applicable = requested || !protocols.is_empty() || !gaps.is_empty();
+    // A repository closeout floor also covers work without a selected protocol.
+    // Only the existing source-bound claim judgment can discharge this floor.
+    let strict_closeout = config["assurance"]["strict_closeout"] == true;
+    let applicable = strict_closeout || requested || !protocols.is_empty() || !gaps.is_empty();
     if applicable {
         gaps.extend(selector_gaps.clone());
         gaps.push("current-task-claim-judgment-not-admitted".into());
@@ -1245,6 +1238,9 @@ pub(crate) fn view_with_applicability(
     } else {
         json!([])
     };
+    if strict_closeout {
+        blockers.as_array_mut().unwrap().push(json!({"code":"strict-closeout-judgment-required","message":"Shared strict closeout requires a current task-bound Verification claim judgment.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+    }
     for gap in strategy_control["gaps"]
         .as_array()
         .into_iter()
@@ -1339,10 +1335,10 @@ pub(crate) fn view_with_applicability(
             )
         })
     {
-        blockers
-            .as_array_mut()
-            .unwrap()
-            .retain(|b| b["code"] != "verification-evidence-unresolved");
+        blockers.as_array_mut().unwrap().retain(|b| {
+            b["code"] != "verification-evidence-unresolved"
+                && b["code"] != "strict-closeout-judgment-required"
+        });
     }
     let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row|json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":row["source_requirement"],"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})).collect();
     Ok(

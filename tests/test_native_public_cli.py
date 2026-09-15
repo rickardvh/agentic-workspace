@@ -804,7 +804,7 @@ def test_native_reader_admission_precedes_every_domain_source(
 ) -> None:
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
-    config.write_text('schema_version=1\n[cli_compatibility]\nminimum_reader_epoch=2\nrequired_reader_capabilities=["future-reader"]\n')
+    config.write_text('schema_version=2\n[cli_compatibility]\nminimum_reader_epoch=2\nrequired_reader_capabilities=["future-reader"]\n')
     poisoned = tmp_path / ".agentic-workspace/local/planning/owner-selection.json"
     poisoned.parent.mkdir(parents=True)
     poisoned.write_text("not JSON and never admitted")

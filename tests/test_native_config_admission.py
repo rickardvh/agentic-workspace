@@ -64,8 +64,9 @@ def test_real_configuration_admits_only_the_exact_planning_effect(
     assert any(b["code"] == "local-human-review-required" for b in restrictions)
     assert not any(r["field"].startswith("workflow_obligations.") for r in first["configuration"]["residuals"])
     assert first["configuration"]["improvement_latitude"] == "proactive"
-    closeout = next(r for r in first["configuration"]["residuals"] if r["field"] == "assurance.strict_closeout")
-    assert closeout["affects"] == ["claim:complete"]
+    assert not any(r["field"] == "assurance.strict_closeout" for r in first["configuration"]["residuals"])
+    closeout = next(b for b in restrictions if b["code"] == "strict-closeout-judgment-required")
+    assert "claim:complete" in closeout["affects"]
     assert {p: p.read_bytes() for p in before} == before, "discovery never transfers source custody"
     transfer = first["planning"]["selector_transfer"]["request"]
     transfer["arguments"]["answer"] = "authorize-selector-transfer"
@@ -151,3 +152,39 @@ def test_historical_installation_roster_cannot_claim_new_payload(tmp_path, share
     current = consume("json", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Inspect historical payload"})
     assert current["configuration"]["payload"]["status"] == "unresolved"
     assert any(gap["path"].endswith("workspace-instruction-correction/SKILL.md") for gap in current["configuration"]["payload"]["gaps"])
+
+
+def test_former_local_sources_are_distinguished_without_default_fallback(tmp_path, shared_core_binary, native_cli):
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(
+        'schema_version=1\n[local_memory]\nenabled=false\ntarget_guidance_enabled=false\npath="private-notes"\nuser_guidance_root="missing-guidance"\ntarget_guidance_overlay_path="empty-overlay"\ncorrection_events_path="private-notes/note/child"\n'
+    )
+    private = tmp_path / "private-notes/note"
+    private.parent.mkdir()
+    private.write_text("PRIVATE-SENTINEL-KEEP")
+    (tmp_path / "empty-overlay").write_text("")
+    before = source.read_bytes(), private.read_bytes()
+    context = {"target": str(tmp_path), "task": "Inspect local source availability", "changed": []}
+    result = consume("json", shared_core_binary, native_cli, context)
+    selection = result["configuration"]["local_sources"]
+    states = {row["field"]: row["status"] for row in selection["observations"]}
+    assert states["local_memory.path"] == "present-material-unclassified"
+    assert states["local_memory.user_guidance_root"] == "explicit-source-missing"
+    assert states["local_memory.target_guidance_overlay_path"] == "present-empty-file"
+    assert states["local_memory.correction_events_path"] == "source-inaccessible-or-unconfined"
+    assert states["local_memory.enabled"] == "unsupported-explicit-choice"
+    assert selection["status"] == "unsupported-preserved" and not selection["fallback_used"]
+    assert result["memory"]["local_source_selection"] == selection
+    assert "PRIVATE-SENTINEL-KEEP" not in str(result)
+    assert (source.read_bytes(), private.read_bytes()) == before
+    assert not (tmp_path / ".agentic-workspace/memory").exists()
+    assert result["decision_packet"]["claim_boundary"]["allowed"] == []
+    # An explicit source-owner retirement changes no data and creates no default.
+    source.write_text("schema_version=2\n")
+    for _ in range(2):
+        fresh = consume("json", shared_core_binary, native_cli, context)
+        assert "local_sources" not in fresh["configuration"]
+        assert "local_source_selection" not in fresh["memory"]
+        assert private.read_bytes() == before[1]
+        assert not (tmp_path / ".agentic-workspace/memory").exists()

@@ -30,6 +30,64 @@ pub(crate) fn linked(owner: &str) -> bool {
         .any(|entry| entry.owner == owner)
 }
 
+fn descriptor(
+    owner: &str,
+) -> Result<(&'static sdk::Registration, sdk::Description, String), CoreError> {
+    let matches: Vec<_> = inventory::iter::<sdk::Registration>
+        .into_iter()
+        .filter(|entry| entry.owner == owner)
+        .collect();
+    let [registration] = matches.as_slice() else {
+        return Err(err(
+            "Selected independent owner unavailable or ambiguous; preserve admission",
+        ));
+    };
+    if registration.api_version != 1 {
+        return Err(err("Unsupported independent owner API; preserve admission"));
+    }
+    let description = (registration.describe)();
+    let binding = digest(
+        &json!({"implementation":registration.revision,"contract":sdk::contract_revision(&description)?}),
+    )?;
+    Ok((registration, description, binding))
+}
+
+/// Prepare description mechanically while keeping every existing grant separate.
+pub(crate) fn prepare(owner: &str, previous: &Value) -> Result<Value, CoreError> {
+    let (_, description, binding) = descriptor(owner)?;
+    let mut value = previous.as_object().cloned().unwrap_or_default();
+    value.remove("revision");
+    value.remove("contract_revision");
+    value.insert("binding".into(), json!(binding));
+    for field in ["effects", "claims", "restrictions", "reads", "scope"] {
+        if value.get(field).is_some_and(|v| v == &json!([])) {
+            value.remove(field);
+        }
+    }
+    Ok(
+        json!({"owner":owner,"value":value,"configuration_schema":description.configuration_schema,
+        "declared_capability":description.capability,"required_reads":description.sources,
+        "authority":"Proposed exact binding only. Missing grants remain refused; inspect and authorize scope, settings and each grant separately."}),
+    )
+}
+
+pub(crate) fn validate_choice(owner: &str, value: &Value) -> Result<(), CoreError> {
+    let (_, description, binding) = descriptor(owner)?;
+    if value["binding"] != binding {
+        return Err(err(
+            "Independent descriptor changed; prepare and authorize its exact binding again",
+        ));
+    }
+    let settings = value.get("settings").cloned().unwrap_or(json!({}));
+    crate::schema_validator(
+        &description.configuration_schema,
+        "independent owner settings",
+    )?
+    .validate(&settings)
+    .map_err(err)?;
+    Ok(())
+}
+
 pub(crate) struct Selected {
     registration: &'static sdk::Registration,
     description: sdk::Description,
@@ -95,14 +153,28 @@ impl Runtime {
                     "Relevant independent owner {name} is unavailable or has conflicting installations; preserve its state and restore the exact admitted implementation"
                 )));
             };
-            let admission = admissions[&name].clone();
-            if registration.api_version != 1 || admission["revision"] != registration.revision {
+            let mut admission = admissions[&name].clone();
+            if admission.get("settings").is_none() {
+                admission["settings"] = json!({});
+            }
+            if registration.api_version != 1
+                || (admission.get("binding").is_none()
+                    && admission["revision"] != registration.revision)
+            {
                 return Err(err(format!(
                     "Independent owner {name} is incompatible with its current admission; restore the admitted revision or reconcile admission through Configuration"
                 )));
             }
             let description = (registration.describe)();
-            if sdk::contract_revision(&description)? != admission["contract_revision"] {
+            let contract_revision = sdk::contract_revision(&description)?;
+            let exact = digest(
+                &json!({"implementation":registration.revision,"contract":contract_revision}),
+            )?;
+            if if admission.get("binding").is_some() {
+                admission["binding"] != exact
+            } else {
+                contract_revision != admission["contract_revision"]
+            } {
                 return Err(err(format!(
                     "Independent owner {name} contract differs from its exact admission"
                 )));
@@ -171,7 +243,7 @@ impl Runtime {
                 };
             }
             let revision = digest(
-                &json!({"registration":registration.revision,"contract":admission["contract_revision"],"effects":admission["effects"],"claims":admission["claims"],"restrictions":admission["restrictions"]}),
+                &json!({"registration":registration.revision,"contract":contract_revision,"effects":admission["effects"],"claims":admission["claims"],"restrictions":admission["restrictions"]}),
             )?;
             capability["revision"] = json!(revision);
             let source_revision =
