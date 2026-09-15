@@ -87,6 +87,10 @@ def test_repository_posture_narrows_before_preferences(tmp_path, shared_core_bin
     task["arguments"]["required_result_classes"] = ["read-only"]
     candidates = resolve([route, task])["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
     assert not any(row["eligible"] for row in candidates)
+    assert (
+        "work-relative-independent-context-owner-unavailable"
+        in resolve([route, task])["task_requirements"]["execution_configurations"]["gaps"]
+    )
 
 
 def call(surface, core, cli, root, request=None):
@@ -146,3 +150,37 @@ def test_manual_owner_consumes_current_transport_authority(tmp_path, monkeypatch
     )
     row = next(row for row in result["candidates"] if row["configuration"]["id"] == "worker:manual")
     assert row["eligible"] is True
+
+
+def test_required_guarantee_has_one_eligibility_consumer(tmp_path, shared_core_binary, native_cli):
+    source = tmp_path / ".agentic-workspace/config.local.toml"
+    source.parent.mkdir()
+    source.write_text(
+        '[delegation]\ncurrent_target="local"\nassignment_policy="required-best-fit"\nrequired_execution_guarantees=["bounded"]\n'
+        + BASE
+        + 'execution_guarantees=["bounded"]\n'
+    )
+
+    def resolve(request=None):
+        return call("native", shared_core_binary, native_cli, tmp_path, request)
+
+    request = resolve()["task_requirements"]["requests"][0]
+    request["arguments"]["required_result_classes"] = ["read-only"]
+    result = resolve(request)
+    candidates = result["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+    assert candidates[0]["eligible"]
+    assert not any("required_execution_guarantees" in str(b) for b in result["decision_packet"]["blockers"])
+    source.write_text(source.read_text() + '[clarification]\nmode="ask-first"\n')
+    fresh = resolve()["task_requirements"]["requests"][0]
+    assert fresh["source_revision"] == request["source_revision"]
+    fresh["arguments"]["required_result_classes"] = ["read-only"]
+    assert resolve(fresh)["task_requirements"]["result"] == result["task_requirements"]["result"]
+    source.write_text(
+        source.read_text().replace('required_execution_guarantees=["bounded"]', 'required_execution_guarantees=["unavailable"]')
+    )
+    with pytest.raises(AssertionError, match="changed|stale"):
+        resolve(request)
+    fresh = resolve()["task_requirements"]["requests"][0]
+    fresh["arguments"]["required_result_classes"] = ["read-only"]
+    rows = resolve(fresh)["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
+    assert not any(row["eligible"] for row in rows)

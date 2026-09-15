@@ -208,6 +208,16 @@ pub(crate) fn view(
         json!({"work":work,"policy":policy,"requirements":requirements["result"],"execution":execution,"judgment":request.map(|r|&r["arguments"])}),
     )?;
     for alternative in result["alternatives"].as_array_mut().into_iter().flatten() {
+        if let Some(context) = execution["target_context"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|context| context["target"] == alternative["target"])
+        {
+            alternative["human_prior"] = context["human_prior"].clone();
+            alternative["human_prior"]["location"] = context["profile"]["location"].clone();
+            alternative["prior_boundary"] = context["claim_boundary"].clone();
+        }
         let candidate = execution["configurations"]["candidates"]
             .as_array()
             .into_iter()
