@@ -4,6 +4,8 @@ Configuration owns first adoption, refresh, removal, and interrupted recovery th
 
 In a plain Git working tree, resolve `start` and follow Configuration's `repository_adoption_request`. Select its exact adoption request, inspect the proposed files and preserved state, supply the authorization judgment, and invoke the returned action. Existing user instructions remain outside the managed fence. No config, optional modules, Planning, Memory, or Verification state is created.
 
+An absent `.agentic-workspace/local/.gitignore` receives `*` so the local effect records remain ignored in a plain host. Existing local ignore policy is preserved. The local rule survives removal with the independent machine-local state.
+
 Repeat adoption to converge the same public footprint. A current footprint is a no-op. A stale request or modified owned surface requires fresh resolution; unknown and edited content is preserved. Retired source-maintenance payload is removed only when its bytes match the contract's exact known preimage.
 
 Removal uses the same discovery and exact removal request, with an explicit preserve disposition for independent repository, domain, and local state. Remove authenticated native skill-discovery links through their existing Configuration requests first. Removal preserves unknown files and all text outside the managed instruction fence. It does not reset domain history or delete the `.agentic-workspace` tree recursively.

@@ -118,6 +118,9 @@ def render_surface_catalogue() -> str:
     )
     for owner, paths in surfaces["preserved_classes"].items():
         lines.append(f"- {owner}: " + ", ".join(f"`{path}`" for path in paths))
+    lines.append(
+        f"- Local diagnostic ignore rule: `{surfaces['local_ignore']['path']}`; created only when absent and preserved with local state on removal."
+    )
     lines.extend(
         [
             "",

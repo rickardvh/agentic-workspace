@@ -198,6 +198,13 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
         Some(format!("{}\n", serde_json::to_string_pretty(&json!({"kind":"agentic-workspace/adopted-repository/v1","contract_revision":digest(&c)?,"package_files":installed,"instruction_fence":fence()})).map_err(err)?))
     };
     add(IDENTITY, desired_identity, false)?;
+    // The adoption attempt store is machine-local even in a plain Git host.
+    // Establish its ignore rule only when absent; it survives de-adoption with
+    // the independent local records and never rewrites repository ignore policy.
+    let local_ignore = c["local_ignore"]["path"].as_str().unwrap();
+    if mode == "adopt" && bytes(&root, local_ignore)?.is_none() {
+        add(local_ignore, Some("*\n".into()), false)?;
+    }
     if removing {
         for path in crate::native_payload::paths() {
             let current = bytes(&root, path)?;

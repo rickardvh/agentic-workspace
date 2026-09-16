@@ -3,7 +3,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:7f5306a9b9f4db7a2341de1b1fbae6963196decaaaddea3945c1956de7b4da26`
+- Contract digest: `sha256:5ad14a52ecb9fa7569f03c68065fab7f293e23fc64a12b7e1366e5e036733b96`
 
 | Surface | Ownership | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- |
@@ -31,6 +31,7 @@ Only the declared workflow fence in `AGENTS.md` is managed. Text outside it rema
 - module-owned: `.agentic-workspace/planning`, `.agentic-workspace/memory`, `.agentic-workspace/verification`
 - local-only: `.agentic-workspace/local`
 - promoted-output: `docs/decisions`
+- Local diagnostic ignore rule: `.agentic-workspace/local/.gitignore`; created only when absent and preserved with local state on removal.
 
 Unknown paths are preserved. Skill-discovery links are removed through their authenticated Configuration exposure owner before removing their canonical targets.
 

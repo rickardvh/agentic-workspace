@@ -137,6 +137,14 @@
   ],
   "identity": ".agentic-workspace/adoption.json",
   "provenance": ".agentic-workspace/payload-provenance.json",
+  "local_ignore": {
+    "path": ".agentic-workspace/local/.gitignore",
+    "ownership": "local-only",
+    "lifetime": "independent local state",
+    "establish": "configuration.repository-adoption when absent",
+    "refresh": "preserve existing local policy",
+    "remove": "preserve with local records"
+  },
   "instruction_fence": {
     "path": "AGENTS.md",
     "start": "<!-- agentic-workspace:workflow:start -->",

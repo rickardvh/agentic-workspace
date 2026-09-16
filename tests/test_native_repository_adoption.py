@@ -51,6 +51,12 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     assert instructions.read_text().startswith("# Repository policy\nPreserve this text.\n")
     identity = tmp_path / ".agentic-workspace/adoption.json"
     assert identity.is_file()
+    ignored = subprocess.run(
+        ["git", "-C", str(tmp_path), "check-ignore", ".agentic-workspace/local/effects/adoption.prepared.json"],
+        capture_output=True,
+        text=True,
+    )
+    assert ignored.returncode == 0
     assert not old.exists()
     assert unknown.read_text() == "Preserve unknown material"
     assert not (tmp_path / ".agentic-workspace/config.toml").exists()
