@@ -126,7 +126,7 @@ def release_identity(tag: str) -> dict[str, Any]:
             "tag": tag,
             "version": f"1.0.0rc{number}",
             "target_stable_tag": "v1.0.0",
-            "package_versions": {"python": f"1.0.0rc{number}", "npm": f"1.0.0-rc.{number}"},
+            "package_versions": {"python": f"1.0.0rc{number}", "npm": f"1.0.0-rc.{number}", "cargo": f"1.0.0-rc.{number}"},
         }
     return {"release_class": release_class, "support_bearing": release_class == "stable", "tag": tag, "version": str(version)}
 
@@ -247,15 +247,14 @@ def prepare_rc_promotion(ownership: dict[str, Any], *, rc_tag: str) -> dict[str,
     set_workspace_payload_release_identity(ownership, "1.0.0")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-    note = release_note_path(ownership, "1.0.0")
-    if note.exists():
-        raise SystemExit("Refusing to replace stable release notes")
-    note.parent.mkdir(parents=True, exist_ok=True)
-    note.write_text(
-        f"# v1.0.0\n\nPromotes {rc_tag} from exact source `{source}`.\n\nStable support remains conditional on fresh exact-subject admission.\n",
-        encoding="utf-8",
+    changesets = parse_changesets(ownership)
+    write_release_note(
+        ownership,
+        version="1.0.0",
+        changesets=changesets,
+        introduction=f"Promotes {rc_tag} from exact source `{source}`.\n\nStable support remains conditional on fresh exact-subject admission.",
     )
-    for changeset in parse_changesets(ownership):
+    for changeset in changesets:
         changeset.path.unlink()
     return record
 
@@ -505,19 +504,30 @@ def set_workspace_payload_release_identity(ownership: dict[str, Any], version: s
     provenance_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
-def write_release_note(ownership: dict[str, Any], *, version: str, changesets: list[Changeset]) -> Path:
+def write_release_note(ownership: dict[str, Any], *, version: str, changesets: list[Changeset], introduction: str = "") -> Path:
     path = release_note_path(ownership, version)
     if path.exists():
         raise SystemExit(f"{_repo_path(path)} already exists; refusing to duplicate release-note summaries")
     path.parent.mkdir(parents=True, exist_ok=True)
-    lines = [f"# Release v{version}", "", "## Changes", ""]
+    lines = [f"# Release v{version}", ""]
+    if introduction:
+        lines.extend([introduction, ""])
+    lines.extend(["## Changes", ""])
     lines.extend(f"- {changeset.summary}" for changeset in changesets)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
 
+def prerelease_label(tag: str) -> str:
+    release_class, _ = parse_release_tag(tag)
+    if release_class not in {"preview", "release-candidate"}:
+        raise ValueError(f"Prerelease tag required, got {tag!r}")
+    return "Release candidate" if release_class == "release-candidate" else "Preview"
+
+
 def write_preview_release_note(ownership: dict[str, Any], *, tag: str, source_commit: str) -> Path:
     identity = release_identity(tag)
+    label = prerelease_label(tag)
     version = identity["version"]
     path = preview_release_note_path(ownership, tag)
     if path.exists():
@@ -526,14 +536,14 @@ def write_preview_release_note(ownership: dict[str, Any], *, tag: str, source_co
     path.write_text(
         "\n".join(
             [
-                f"# Preview {tag}",
+                f"# {label} {tag}",
                 "",
-                "> Non-support-bearing preview for external testing. This is not a stable release or v1 admission.",
+                f"> Non-support-bearing {label.lower()} for external testing. This is not a stable release or v1 admission.",
                 "",
                 f"- Package version: `{version}`",
                 f"- Release identity: `{tag}`; npm version: `{npm_version(version)}`; target stable: `{identity.get('target_stable_tag', 'not release-bound')}`",
                 f"- Reconstruction source commit: `{source_commit}`",
-                "- Stability/support: preview only; interfaces and behavior may change before first stable.",
+                f"- Stability/support: {label.lower()} only; interfaces and behavior may change before first stable.",
                 "",
             ]
         ),

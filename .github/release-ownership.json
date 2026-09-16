@@ -267,6 +267,7 @@
     "support_bearing": false,
     "python_version": "1.0.0rcN",
     "npm_version": "1.0.0-rc.N",
+    "cargo_version": "1.0.0-rc.N",
     "native_version": "Python package version",
     "publisher": "preview-release.yml",
     "promotion_record": ".release/promotions/v1.0.0.json",

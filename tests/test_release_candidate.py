@@ -64,13 +64,13 @@ def candidate(module, ownership, root, source, number=1):
     return result, module.verify_preview_release(ownership, tag=tag, artifact_commit=artifact)
 
 
-def test_rc_progression_immutable_recovery_and_python_npm_mapping(tmp_path, monkeypatch):
+def test_rc_progression_immutable_recovery_and_ecosystem_mapping(tmp_path, monkeypatch):
     module, ownership, source = repository(tmp_path, monkeypatch)
     result, verified = candidate(module, ownership, tmp_path, source)
     assert result["release_class"] == "release-candidate"
     assert result["support_bearing"] is False
     assert result["target_stable_tag"] == "v1.0.0"
-    assert result["package_versions"] == {"python": "1.0.0rc1", "npm": "1.0.0-rc.1"}
+    assert result["package_versions"] == {"python": "1.0.0rc1", "npm": "1.0.0-rc.1", "cargo": "1.0.0-rc.1"}
     assert Version(result["version"]) < Version("1.0.0")
     assert parse_wheel_filename("agentic_workspace-1.0.0rc1-py3-none-any.whl")[1] == Version("1.0.0rc1")
     assert tomllib.loads((tmp_path / "pyproject.toml").read_text())["project"]["version"] == "1.0.0rc1"
@@ -111,10 +111,22 @@ def test_rc_progression_immutable_recovery_and_python_npm_mapping(tmp_path, monk
 
 def test_exact_rc_to_stable_promotion_rejects_product_and_lock_deltas(tmp_path, monkeypatch):
     module, ownership, source = repository(tmp_path, monkeypatch)
+    (tmp_path / ".release/changes/major.toml").write_text(
+        'schema_version="agentic-workspace/release-change/v1"\nbump="major"\nsummary="Reconstruction compatibility changes"\n'
+    )
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "major changeset")
+    source = _git(tmp_path, "rev-parse", "HEAD")
     _, rc = candidate(module, ownership, tmp_path, source)
     _git(tmp_path, "switch", "master")
     record = module.prepare_rc_promotion(ownership, rc_tag=rc["tag"])
     assert record["rc_artifact_commit"] == rc["artifact_commit"]
+    assert record["rc_package_versions"]["cargo"] == "1.0.0-rc.1"
+    note = module.release_note_path(ownership, "1.0.0").read_text(encoding="utf-8")
+    assert f"Promotes {rc['tag']} from exact source `{source}`" in note
+    assert "- Pending product change" in note
+    assert "- Reconstruction compatibility changes" in note
+    assert not list((tmp_path / ".release/changes").glob("*.toml"))
     lock = tmp_path / "uv.lock"
     lock.write_text(lock.read_text().replace('version="0.51.0"', 'version="1.0.0"'))
     _git(tmp_path, "add", ".")
@@ -181,6 +193,7 @@ def test_rc_receipts_use_release_tag_url_and_never_stable_support(tmp_path, monk
     install = json.loads((tmp_path / "install.json").read_text())
     assert install["release_class"] == "release-candidate" and install["support_bearing"] is False
     assert install["target_stable_tag"] == "v1.0.0"
+    assert install["package_versions"] == helper.coordinated_release.release_identity("v1.0.0-rc.1")["package_versions"]
     assert "/v1.0.0-rc.1/agentic_workspace-1.0.0rc1-" in install["artifact"]["url"]
     assert not (tmp_path / "support-bearing-promotion.json").exists()
     assert helper.coordinated_release.release_identity("preview-v0.56.0")["release_class"] == "preview"
@@ -191,7 +204,12 @@ def test_rc_ecosystems_build_the_declared_artifact_identities(tmp_path):
     import tarfile
     import zipfile
 
-    identity = _load_module().release_identity("v1.0.0-rc.1")
+    module = _load_module()
+    identity = module.release_identity("v1.0.0-rc.1")
+    declaration = json.loads((module.ROOT / ".github/release-ownership.json").read_text(encoding="utf-8"))["release_candidate"]
+    assert identity["package_versions"] == {
+        ecosystem: declaration[f"{ecosystem}_version"].replace("N", "1") for ecosystem in ("python", "npm", "cargo")
+    }
     python = tmp_path / "python"
     python.mkdir()
     (python / "candidate_fixture.py").write_text('VALUE = "candidate"\n')
@@ -218,6 +236,18 @@ def test_rc_ecosystems_build_the_declared_artifact_identities(tmp_path):
     )
     with tarfile.open(dist / "candidate-fixture-1.0.0-rc.1.tgz") as archive:
         assert json.load(archive.extractfile("package/package.json"))["version"] == "1.0.0-rc.1"
+
+    # Registry consumers use the owner mapping directly, without parsing the tag.
+    cargo = tmp_path / "cargo"
+    (cargo / "src").mkdir(parents=True)
+    (cargo / "src/lib.rs").write_text("pub fn candidate() {}\n")
+    (cargo / "Cargo.toml").write_text(
+        '[package]\nname="candidate-fixture"\nversion="' + identity["package_versions"]["cargo"] + '"\nedition="2021"\n'
+    )
+    subprocess.run(["cargo", "package", "--offline", "--allow-dirty"], cwd=cargo, check=True, capture_output=True)
+    with tarfile.open(cargo / "target/package/candidate-fixture-1.0.0-rc.1.crate") as archive:
+        metadata = tomllib.loads(archive.extractfile("candidate-fixture-1.0.0-rc.1/Cargo.toml").read().decode())
+        assert metadata["package"]["version"] == identity["package_versions"]["cargo"]
 
 
 def test_packed_node_consumer_preserves_exact_rc_native_mapping(packed, tmp_path):
@@ -248,3 +278,47 @@ def test_packed_node_consumer_preserves_exact_rc_native_mapping(packed, tmp_path
         [shutil.which("node"), "--input-type=module", "-e", script], cwd=package, env=env, capture_output=True, text=True
     )
     assert rejected.returncode != 0 and "platform/version mismatch" in rejected.stderr
+
+
+@pytest.mark.parametrize("tag,label", [("preview-v0.52.0", "Preview"), ("v1.0.0-rc.1", "Release candidate")])
+def test_prerelease_public_wording_matches_class(tmp_path, monkeypatch, tag, label):
+    module = _load_module()
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    note = module.write_preview_release_note({}, tag=tag, source_commit="a" * 40).read_text(encoding="utf-8")
+    assert module.prerelease_label(tag) == label
+    assert note.startswith(f"# {label} {tag}\n")
+    assert f"Non-support-bearing {label.lower()}" in note
+    assert f"Stability/support: {label.lower()} only" in note
+    if label == "Release candidate":
+        assert "preview" not in note.lower()
+
+
+@pytest.mark.parametrize("tag,label", [("preview-v0.52.0", "Preview"), ("v1.0.0-rc.1", "Release candidate")])
+def test_prerelease_helper_creates_truthful_annotated_tag(tmp_path, monkeypatch, tag, label):
+    helper = _load_helper()
+    monkeypatch.setattr(helper, "_fetch_reconstruction_ref", lambda **kw: "fetched")
+    monkeypatch.setattr(helper, "_tag_commit", lambda tag: None)
+    monkeypatch.setattr(helper, "_resolve_commit", lambda *a, **kw: "a" * 40)
+    monkeypatch.setattr(helper, "_assert_source_is_reconstruction_candidate", lambda *a, **kw: None)
+    monkeypatch.setattr(helper, "_preview_isolation", lambda *a: {"request": {"path": str(tmp_path)}, "build_environment": {}})
+    monkeypatch.setattr(helper, "_finish_preview_isolation", lambda *a: None)
+    monkeypatch.setattr(helper, "_load_ownership", lambda *a: {})
+    monkeypatch.setattr(helper, "_verify_release_only_paths", lambda *a: ["pyproject.toml"])
+    calls = []
+
+    def git(*args, **kwargs):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "pyproject.toml\n", "")
+
+    monkeypatch.setattr(helper, "_git", git)
+    monkeypatch.setattr(helper, "_run", lambda *a, **kw: subprocess.CompletedProcess(a, 0, json.dumps({"tag": tag}), ""))
+    result = helper.create_preview_subject(
+        version="0.52.0",
+        rc_tag=tag if label == "Release candidate" else None,
+        source_ref=None,
+        remote="origin",
+        reconstruction_ref="master",
+        push=False,
+    )
+    assert result["status"] == "created"
+    assert next(args for args in calls if args[:2] == ("tag", "-a")) == ("tag", "-a", tag, "a" * 40, "-m", f"{label} {tag}")

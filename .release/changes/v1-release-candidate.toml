@@ -1,4 +1,4 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "minor"
-summary = "Add immutable v1 release candidates with explicit Python/npm versions, shared prerelease publication and exact-source stable promotion."
+summary = "Add immutable v1 release candidates with explicit Python/npm/Cargo versions, shared prerelease publication and exact-source stable promotion preserving accumulated release notes."
 issues = [3358]

@@ -169,13 +169,19 @@ arbitrary target versions, build suffixes and alternate spellings are not admitt
 | Release class | `release-candidate` | `stable` |
 | Python wheel/sdist and compiled native version | `1.0.0rc1` (PEP 440) | `1.0.0` |
 | npm package version | `1.0.0-rc.1` (SemVer) | `1.0.0` |
+| Public Cargo package version | `1.0.0-rc.1` (SemVer) | `1.0.0` |
 | GitHub prerelease / support-bearing | true / false | false / only after admission |
 
 Package versions are explicit mappings, not interchangeable strings. The native
 archive uses the Python/native version; its paired binaries are the same bytes
 carried by the Python and npm packages. RC manifests and install/redistribution
-receipts record the RC tag, target stable tag, both ecosystem versions and exact
+receipts record the RC tag, target stable tag, all three ecosystem versions and exact
 source/artifact commits. Install URLs use the RC tag, not the Python spelling.
+Registry publication leaves #3361 (PyPI/npm) and #3362 (Cargo) consume
+`release_identity(tag)["package_versions"]` from the shared release owner; they
+do not derive a second version mapping. Cargo package topology and publication
+remain #3362. Public RC notes and annotated tags identify a non-support-bearing
+release candidate; exploratory previews retain preview wording.
 
 Use the existing preview helper and trusted master publisher:
 
@@ -215,7 +221,8 @@ uv run python scripts/generate/generate_external_consumer_profile.py
 uv run python scripts/generate/generate_command_packages.py
 ```
 
-Preparation normalizes versions to `1.0.0`, consumes the source's changesets and
+Preparation normalizes versions to `1.0.0`, preserves every consumed changeset
+summary in the stable release note alongside the accepted RC/source identity, and
 records `.release/promotions/v1.0.0.json`. Review and commit those changes through
 the existing release PR flow. The stable tag planner and publisher verify the
 record against the immutable RC and compare the full stable tree to its source:

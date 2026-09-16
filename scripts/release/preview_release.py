@@ -390,12 +390,21 @@ def create_preview_subject(
             "user.email=41898282+github-actions[bot]@users.noreply.github.com",
             "commit",
             "-m",
-            f"Preview {tag} from {source_commit}",
+            f"{coordinated_release.prerelease_label(tag)} {tag} from {source_commit}",
             cwd=worktree,
             environment=environment,
         )
         artifact_commit = _resolve_commit("HEAD", cwd=worktree)
-        _git("tag", "-a", tag, artifact_commit, "-m", f"Preview {tag}", cwd=worktree, environment=environment)
+        _git(
+            "tag",
+            "-a",
+            tag,
+            artifact_commit,
+            "-m",
+            f"{coordinated_release.prerelease_label(tag)} {tag}",
+            cwd=worktree,
+            environment=environment,
+        )
         tag_created = True
         verified = json.loads(
             _run(
