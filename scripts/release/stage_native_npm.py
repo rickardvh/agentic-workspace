@@ -14,6 +14,8 @@ import tomllib
 import zipfile
 from pathlib import Path
 
+import coordinated_release
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -21,7 +23,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     source = ROOT / "generated/workspace/typescript"
     package = json.loads((source / "package.json").read_text(encoding="utf-8"))
     product = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    if package["version"] != product["project"]["version"]:
+    if package["version"] != coordinated_release.npm_version(product["project"]["version"]):
         raise ValueError("npm and compiled product versions differ")
     if (source / "src/native/semantic-decision.mjs").read_text(encoding="utf-8") != (
         ROOT / "bindings/node/semantic-decision.mjs"
@@ -73,7 +75,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
         json.dumps(
             {
                 "kind": "agentic-workspace/native-npm-artifact/v1",
-                "package_version": package["version"],
+                "package_version": product["project"]["version"],
                 "platform": node_platform,
                 "arch": node_arch,
                 "sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),

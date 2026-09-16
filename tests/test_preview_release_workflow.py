@@ -106,7 +106,7 @@ def test_preview_manifest_is_explicitly_non_support_bearing_and_ownership_driven
     manifest = (ROOT / "scripts" / "release" / "preview_manifest.py").read_text(encoding="utf-8")
 
     assert '"kind": "agentic-workspace/coordinated-preview-release-manifest/v1"' in manifest
-    assert '"release_class": "preview"' in manifest
+    assert "coordinated_release.release_identity(tag)" in manifest
     assert '"support_bearing": False' in manifest
     assert '"required": False' in manifest
     assert '"receipt": None' in manifest
@@ -123,7 +123,7 @@ def test_release_docs_describe_preview_as_testing_not_stable_admission() -> None
     assert "## Preview Releases" in docs
     assert "**non-support-bearing**" in docs
     assert "does not satisfy #2990 support-bearing admission" in docs
-    assert "preview_release.py --version 0.52.0 --push" in docs
+    assert "preview_release.py --version <unused-version> --push" in docs
     assert "only that tag is pushed" in docs
     assert "A public preview therefore burns its numeric package version" in docs
     assert "only support-bearing GitHub Release" in docs

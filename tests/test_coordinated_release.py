@@ -256,5 +256,5 @@ def test_preview_release_helper_defaults_to_freshly_fetched_reconstruction_ref()
     assert 'f"{head_ref}:{tracking_ref}"' in helper
     assert "source_commit = _resolve_commit(source_ref or fetched_reconstruction_ref)" in helper
     assert 'default="HEAD"' not in helper
-    assert "freshly fetched reconstruction branch head" in helper
+    assert "freshly fetched master head" in helper
     assert '"merge-base", "--is-ancestor", source_commit, remote_ref' in helper

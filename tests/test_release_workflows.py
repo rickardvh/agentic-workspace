@@ -454,6 +454,7 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
     assert sorted(ownership["release_commit_allowed_paths"]) == [
         ".agentic-workspace/payload-provenance.json",
         ".release/changes/",
+        ".release/promotions/v1.0.0.json",
         ".release/releases/",
         "generated/memory/.agentic-workspace-cli-fingerprint.json",
         "generated/planning/.agentic-workspace-cli-fingerprint.json",

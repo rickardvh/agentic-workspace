@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 from tests.test_native_public_cli import native_cli as native_cli
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -402,18 +403,21 @@ def test_preview_rejects_forged_delta_and_subjects(tmp_path, monkeypatch):
 # not a second supported release topology.
 
 
-def test_existing_release_assets_are_idempotent_and_mismatches_fail_closed(tmp_path, monkeypatch):
+@pytest.mark.parametrize("tag", ["preview-v0.52.0", "v1.0.0-rc.1"])
+def test_existing_release_assets_are_idempotent_and_mismatches_fail_closed(tmp_path, monkeypatch, tag):
     import hashlib
 
     import pytest
 
     helper = _load_helper()
     ownership = json.loads((ROOT / ".github/release-ownership.json").read_text())
-    verified = {"tag": "preview-v0.52.0", "version": "0.52.0", "artifact_commit": "b" * 40, "reconstruction_source_commit": "a" * 40}
-    manifest = {**verified, "release_class": "preview", "support_bearing": False, "packages": [], "semantic_conformance": {"receipts": []}}
+    verified = {**helper.coordinated_release.release_identity(tag), "artifact_commit": "b" * 40, "reconstruction_source_commit": "a" * 40}
+    manifest = {**verified, "support_bearing": False, "packages": [], "semantic_conformance": {"receipts": []}}
     assets = {}
     for package in ownership["packages"] + ownership["typescript_packages"]:
-        entry = {"name": package["name"], "version": "0.52.0"}
+        ecosystem = "python" if "pyproject" in package else "npm"
+        version = verified["version"] if ecosystem == "python" else helper.coordinated_release.npm_version(verified["version"])
+        entry = {"name": package["name"], "version": version, "ecosystem": ecosystem}
         for key in ("wheel", "sdist") if "pyproject" in package else ("tarball",):
             name = package["name"].replace("/", "-") + "." + key
             assets[name] = name.encode()
@@ -432,7 +436,7 @@ def test_existing_release_assets_are_idempotent_and_mismatches_fail_closed(tmp_p
         "security-supply-chain-readiness.json",
         "agentic-workspace.spdx.json",
     ):
-        assets[name] = b"proof"
+        assets[name] = json.dumps(verified).encode()
     manifest_name = "agentic-workspace-preview-release-manifest.json"
     assets[manifest_name] = json.dumps(manifest).encode()
     assets["SHA256SUMS"] = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(assets.items())).encode()
