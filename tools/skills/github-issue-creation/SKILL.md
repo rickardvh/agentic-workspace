@@ -41,23 +41,35 @@ this skill owns creation mechanics, not product diagnosis or issue hierarchy.
    closure text explicitly, including fields whose form has generic default text.
    A missing or unsupported template, helper, dependency, or source is unavailable:
    report that limitation and use the Markdown fallback below.
-4. Use only a fresh `prepared` result. It carries exact template/helper/input and
-   local source identities. If preparation inputs may have changed, rerun with
-   `--previous <prior-packet.json>`: it always prepares fresh and identifies stale
-   dependencies; unrelated files do not invalidate the preparation. A comparison
-   marked `current` covers local preparation inputs only. Supplied external URLs/IDs
-   are explicitly unobserved and must be reobserved when subsequent work depends
-   on their current state. Preparation grants no issue-write authority.
-5. Create the issue through the authorized GitHub transport using the shaped title,
-   body, and labels. Fill required fields with concrete information; do not create
-   an issue containing `TODO` placeholders merely to reserve a number.
-6. Inspect the returned issue once to confirm the intended title, labels, body,
-   hierarchy, and closure boundary landed. Do not add a second issue, comment, or
-   Planning record just to prove the creation step happened.
-7. Refresh external intent or reconcile Planning only when the current AW route or
-   owning Planning continuation says subsequent work depends on that refreshed
-   state. Issue creation does **not** require an unconditional
-   `external-intent refresh-github` + `reconcile` loop.
+4. For the compound path, add `--repository <owner/repo> --task "<current work>"`
+   to preparation. The resulting `issue-creation-request/v1` carries one exact
+   `material.write` (title/body/labels), preparation identities and request ID.
+   Before a deferred effect, pass that packet as `--creation-request`: only a
+   still-current `prepared` result may proceed. Changed task/form/helper/shaped
+   material requires new preparation and renewed authorization. Discovery and
+   preparation grant no GitHub write authority.
+5. The already-authorized host/actor sends `material.write` through its GitHub
+   transport. Preserve the packet and return an external report with its
+   `request_id`, `outcome` (`confirmed`, `rejected-before-effect`, or `uncertain`)
+   and exact issue `number` when known. Rejection requires `effect_attempted:
+   false` and a reason from the actor; a timeout or unsuccessful process is not
+   evidence that GitHub rejected before effect.
+6. Resubmit with `--creation-request <packet.json> --external-result <report.json>`.
+   The helper performs one read of the exact issue through the existing `gh`
+   transport, validates identity/title/body/labels against the request, and returns
+   the observed issue or bounded recovery. It never creates an issue on resume.
+   Missing identity, lost response, or mismatch requires transport reobservation;
+   never replay creation merely because continuation failed. Preserve actor
+   evidence outside disposable carriage when recovery needs it; no local digest
+   supplies GitHub exactly-once semantics or external authentication.
+7. Default continuation is none. Only when an existing current owner actually
+   depends on this result, supply its separately authorized exact request through
+   `--continuation-input` and the current `--native-cli`. The agent supplies any
+   semantic external reference the owner requests; the helper does not synthesize
+   Planning ingestion or create a plan. The native owner revalidates the request.
+   Confirmed creation remains committed if material drift or owner continuation
+   fails. Return the created identity and remaining owner gap, not a retry-create
+   instruction. No unconditional external-intent/Planning refresh is required.
 
 ## Markdown Fallback
 

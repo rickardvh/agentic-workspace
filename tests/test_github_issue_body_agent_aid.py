@@ -257,3 +257,117 @@ def test_checkbox_assertions_are_supplied_not_inferred():
     assert issue_body.render_issue_request(request)["status"] == "needs-input"
     request["fields"]["existing_issue"]["value"] = "- [x] I searched the existing issues first"
     assert issue_body.render_issue_request(request)["status"] == "prepared"
+
+
+def test_compound_request_binds_work_material_and_external_result(tmp_path):
+    request = issue_body.prepare_creation(_request(), repository="owner/repo", task="Bounded creation")
+    assert request["status"] == "prepared"
+    assert issue_body.prepare_creation(_request(), repository="owner/repo", task="Changed work")["request_id"] != request["request_id"]
+    changed = copy.deepcopy(request)
+    changed["material"]["write"]["body"] += "changed"
+    with pytest.raises(ValueError, match="changed"):
+        issue_body.validate_creation_request(changed)
+    with pytest.raises(ValueError, match="different"):
+        issue_body.continue_creation(request, {"request_id": "different", "outcome": "confirmed"})
+
+
+def test_external_creation_reobserves_without_replay_and_preserves_committed_effect():
+    request = issue_body.prepare_creation(_request(), repository="owner/repo", task="Bounded creation")
+    calls = []
+
+    def observe(repo, number):
+        calls.append((repo, number))
+        return {
+            "number": number,
+            "html_url": f"https://github.com/{repo}/issues/{number}",
+            **request["material"]["write"],
+            "labels": [{"name": value} for value in request["material"]["write"]["labels"]],
+        }
+
+    report = {"request_id": request["request_id"], "outcome": "uncertain"}
+    unknown = issue_body.continue_creation(request, report, observer=observe)
+    assert unknown["effect_outcome"] == "unknown" and not unknown["retry_creation"] and not calls
+    # The authorized transport recovers its exact external identity, then a fresh
+    # consumer can confirm it with a GET. No create callback exists on resumption.
+    report["number"] = 42
+    recovered = issue_body.continue_creation(json.loads(json.dumps(request)), report, current=request, observer=observe)
+    assert recovered["effect_outcome"] == "committed"
+    assert recovered["continuation"]["status"] == "not-requested"
+    assert calls == [("owner/repo", 42)]
+
+    def failed_continuation(issue):
+        assert issue["number"] == 42
+        raise OSError("owner unavailable after confirmed external effect")
+
+    continued = issue_body.continue_creation(request, report, current=request, observer=observe, continuation=failed_continuation)
+    assert continued["effect_outcome"] == "committed" and not continued["retry_creation"]
+    assert continued["continuation"]["status"] == "unavailable"
+    stale = issue_body.continue_creation(request, report, observer=observe, continuation=lambda _: pytest.fail("stale continuation"))
+    assert stale["effect_outcome"] == "committed"
+    assert stale["currentness"] == "stale-or-unavailable"
+
+
+def test_rejection_observation_failure_and_mismatch_do_not_authorize_creation():
+    request = issue_body.prepare_creation(_request(), repository="owner/repo", task="Bounded creation")
+    rejected = {
+        "request_id": request["request_id"],
+        "outcome": "rejected-before-effect",
+        "effect_attempted": False,
+        "reason": "Host denied authorization",
+    }
+    assert issue_body.continue_creation(request, rejected)["effect_outcome"] == "not-committed"
+    rejected["effect_attempted"] = True
+    with pytest.raises(ValueError, match="no-effect"):
+        issue_body.continue_creation(request, rejected)
+    report = {"request_id": request["request_id"], "outcome": "confirmed", "number": 7}
+
+    def unavailable(*_):
+        raise OSError("lost response")
+
+    assert issue_body.continue_creation(request, report, observer=unavailable)["effect_outcome"] == "unknown"
+    mismatch = issue_body.continue_creation(
+        request,
+        report,
+        observer=lambda *_: {"number": 7, "html_url": "https://github.com/owner/repo/issues/7", "title": "Different", "labels": []},
+    )
+    assert mismatch["status"] == "external-result-mismatch" and not mismatch["retry_creation"]
+
+
+def test_compound_cli_resumes_after_missing_input_and_owner_failure(tmp_path, monkeypatch, capsys):
+    shaped = tmp_path / "shaped.json"
+    shaped.write_text(json.dumps(_request()))
+    base = ["--input-json", str(shaped), "--repository", "owner/repo", "--task", "Create bounded issue"]
+    assert issue_body.main(base) == 0
+    packet = json.loads(capsys.readouterr().out)
+    prior = tmp_path / "prepared.json"
+    prior.write_text(json.dumps(packet))
+    report = tmp_path / "result.json"
+    report.write_text(json.dumps({"request_id": packet["request_id"], "outcome": "confirmed", "number": 11}))
+    monkeypatch.setattr(
+        issue_body,
+        "observe_created_issue",
+        lambda *_: {
+            "number": 11,
+            "html_url": "https://github.com/owner/repo/issues/11",
+            **packet["material"]["write"],
+            "labels": [{"name": label} for label in packet["material"]["write"]["labels"]],
+        },
+    )
+    resume = [
+        *base,
+        "--creation-request",
+        str(prior),
+        "--external-result",
+        str(report),
+        "--continuation-input",
+        str(tmp_path / "missing-owner-request.json"),
+        "--native-cli",
+        str(tmp_path / "missing-native"),
+    ]
+    assert issue_body.main(resume) == 0
+    observed = json.loads(capsys.readouterr().out)
+    assert observed["effect_outcome"] == "committed" and observed["continuation"]["status"] == "unavailable"
+    shaped.unlink()
+    assert issue_body.main(resume) == 0
+    observed = json.loads(capsys.readouterr().out)
+    assert observed["effect_outcome"] == "committed" and observed["currentness"] == "stale-or-unavailable"
