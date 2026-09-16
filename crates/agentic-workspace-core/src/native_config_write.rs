@@ -326,6 +326,17 @@ pub(crate) fn view(
     contract: &Value,
     request: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    view_selected(target, work, config, contract, request, true)
+}
+
+pub(crate) fn view_selected(
+    target: &Path,
+    work: &Value,
+    config: &Value,
+    contract: &Value,
+    request: Option<&Value>,
+    detail: bool,
+) -> Result<Value, CoreError> {
     let owner = contract["owners"]
         .as_array()
         .unwrap()
@@ -398,35 +409,39 @@ pub(crate) fn view(
         if let Some((v, revision)) =
             crate::native_config::load(&root, source, source_schema(source)?).map_err(err)?
         {
-            let value = v["workspace"]["cli_invoke"]
-                .as_str()
-                .or(config["cli_invoke"].as_str())
-                .unwrap_or("agentic-workspace");
-            result["requests"].as_array_mut().unwrap().push(template(
-                EDIT,
-                json!({"source":source,"key":"workspace.cli_invoke","value":value}),
-            ));
-            for (choice_source, key) in CHOICES.iter().filter(|(s, k)| {
-                *s == source && *k != "workspace.cli_invoke" && !PROGRESSIVE_CHOICES.contains(k)
-            }) {
-                let (section, field) = key.split_once('.').unwrap();
-                let schema = choice_schema(choice_source, key)?;
-                let value = if !v[section][field].is_null() {
-                    v[section][field].clone()
-                } else if !schema["default"].is_null() {
-                    schema["default"].clone()
-                } else if schema["type"] == "boolean" {
-                    json!(false)
-                } else if schema["type"] == "array" {
-                    json!([])
-                } else {
-                    json!("<explicit-source-choice>")
-                };
-                // Discovery is not a recommendation or standing permission.
+            if detail {
+                #[cfg(test)]
+                crate::native_frontier::built("configuration-fields");
+                let value = v["workspace"]["cli_invoke"]
+                    .as_str()
+                    .or(config["cli_invoke"].as_str())
+                    .unwrap_or("agentic-workspace");
                 result["requests"].as_array_mut().unwrap().push(template(
                     EDIT,
-                    json!({"source":source,"key":key,"value":value}),
+                    json!({"source":source,"key":"workspace.cli_invoke","value":value}),
                 ));
+                for (choice_source, key) in CHOICES.iter().filter(|(s, k)| {
+                    *s == source && *k != "workspace.cli_invoke" && !PROGRESSIVE_CHOICES.contains(k)
+                }) {
+                    let (section, field) = key.split_once('.').unwrap();
+                    let schema = choice_schema(choice_source, key)?;
+                    let value = if !v[section][field].is_null() {
+                        v[section][field].clone()
+                    } else if !schema["default"].is_null() {
+                        schema["default"].clone()
+                    } else if schema["type"] == "boolean" {
+                        json!(false)
+                    } else if schema["type"] == "array" {
+                        json!([])
+                    } else {
+                        json!("<explicit-source-choice>")
+                    };
+                    // Discovery is not a recommendation or standing permission.
+                    result["requests"].as_array_mut().unwrap().push(template(
+                        EDIT,
+                        json!({"source":source,"key":key,"value":value}),
+                    ));
+                }
             }
             if let Some(record) = retained(target, source, &revision)? {
                 let prepared = crate::attempt_store::prepare_commit(

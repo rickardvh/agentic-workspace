@@ -1,5 +1,6 @@
 //! Public native ingress. Callers express work and public requests; repository
 //! facts and owner admission are derived here, never accepted as debug inputs.
+use crate::native_frontier::Resolution;
 use crate::{
     CoreError, compile_value, decision_source, digest, native_config, native_instructions,
     native_memory, native_planning, native_requirements, native_routes, native_verification,
@@ -37,13 +38,21 @@ fn input(value: Value) -> Result<(Input, PathBuf), CoreError> {
 }
 
 pub fn start(value: Value) -> Result<Value, CoreError> {
+    let mut result = start_selected(value, &Resolution::Full)?;
+    if let Some(o) = result.as_object_mut() {
+        o.remove("_detail_bindings");
+    }
+    Ok(result)
+}
+
+pub(crate) fn start_selected(value: Value, resolution: &Resolution) -> Result<Value, CoreError> {
     let (input, target) = input(value)?;
     if input.invocation.is_some() {
         return Err(CoreError::new(
             "start accepts a public request, not an invocation",
         ));
     }
-    resolve(&input, &target, false)
+    resolve_selected(&input, &target, false, None, resolution)
 }
 
 fn resolve(input: &Input, target: &std::path::Path, executing: bool) -> Result<Value, CoreError> {
@@ -55,6 +64,16 @@ fn resolve_with_baseline(
     target: &std::path::Path,
     executing: bool,
     baseline: Option<&Value>,
+) -> Result<Value, CoreError> {
+    resolve_selected(input, target, executing, baseline, &Resolution::Full)
+}
+
+fn resolve_selected(
+    input: &Input,
+    target: &std::path::Path,
+    executing: bool,
+    baseline: Option<&Value>,
+    resolution: &Resolution,
 ) -> Result<Value, CoreError> {
     let compatibility = crate::runtime_compatibility::native(target)?;
     if compatibility["status"] == "blocked" {
@@ -307,7 +326,7 @@ fn resolve_with_baseline(
         native_planning::disabled(target)?
     };
     let verification_probe = if available("verification") {
-        native_verification::view(target, &input.task, &input.changed, &work, None, None)?
+        json!({"capability_contract":native_verification::contract()?})
     } else {
         native_verification::disabled(target)?
     };
@@ -623,12 +642,13 @@ fn resolve_with_baseline(
         &contract,
         request_for("scoped-instructions"),
     )?;
-    let mut config_write = crate::native_config_write::view(
+    let mut config_write = crate::native_config_write::view_selected(
         target,
         &work,
         &configuration,
         &contract,
         request_for("configuration"),
+        resolution.detail("configuration_write"),
     )?;
     if config_write["contribution"]["actions"]
         .as_array()
@@ -906,6 +926,8 @@ fn resolve_with_baseline(
                     .collect::<Vec<_>>()
             )),
             native_verification::ApplicabilityContext {
+                detail: resolution.detail("verification"),
+                proof: resolution.detail("proof"),
                 facts: &json!({"route_fact":route_fact,"planning":{"status":planning["status"],"source_revision":planning["source_revision"]}}),
                 request: verification_request("verification/assurance-applicability/v1").cloned(),
                 contract: Some(&contract),
@@ -1291,7 +1313,7 @@ fn resolve_with_baseline(
     )?;
     decision_sources["capture"] = repository_capture;
     planning.as_object_mut().unwrap().remove("planning_input");
-    if planning_detail.is_object() {
+    if planning_detail.is_object() && resolution.detail("planning") {
         planning["portable_continuation"] = planning::portable_continuation(
             target,
             &planning_detail,
@@ -1325,6 +1347,36 @@ fn resolve_with_baseline(
             }
         }
     }
+    // Detail identities bind current owner truth, never optional presentation.
+    // The request/work context is additionally bound by operating transport.
+    let mut verification_identity = public["verification"].clone();
+    if let Some(v) = verification_identity.as_object_mut() {
+        for field in ["execution_requests", "record_requests", "judgment_request"] {
+            v.remove(field);
+        }
+    }
+    if let Some(v) = verification_identity["strategy_control"].as_object_mut() {
+        v.remove("available_profiles");
+        v.remove("omitted_profile_count");
+    }
+    if let Some(v) = verification_identity["execution"].as_object_mut() {
+        for field in [
+            "choices",
+            "omitted_domain_command_count",
+            "omitted_profile_command_count",
+        ] {
+            v.remove(field);
+        }
+    }
+    let mut planning_identity = public["planning"].clone();
+    if let Some(v) = planning_identity.as_object_mut() {
+        v.remove("portable_continuation");
+    }
+    public["_detail_bindings"] = json!({
+        "configuration_write": digest(&json!({"contribution":public["configuration_write"]["contribution"],"recovery":public["configuration_write"]["recovery_requests"],"deferred":public["configuration_write"]["deferred_choices"]}))?,
+        "verification": digest(&verification_identity)?,
+        "planning": digest(&planning_identity)?
+    });
     // Requests bind the composed contract above. Owner-local fragments remain
     // internal composition inputs, not additional public authorities.
     for owner in public.as_object_mut().unwrap().values_mut() {
@@ -1416,6 +1468,7 @@ fn combined_contract(contracts: &[&Value]) -> Result<Value, CoreError> {
 #[derive(Default)]
 struct InvocationProgress {
     entered_effect_owner: bool,
+    resolution: Resolution,
     confirmed: Option<Value>,
 }
 
@@ -1453,7 +1506,11 @@ fn invocation_failure(value: &Value, message: &str, progress: &InvocationProgres
 /// Public Rust callers receive the same explicit effect/continuation result as
 /// CLI, JSON and thin bindings, including pre-effect rejection and uncertainty.
 pub fn invoke(value: Value) -> Result<Value, CoreError> {
-    Ok(invoke_operating(value))
+    let mut result = invoke_operating(value);
+    if let Some(v) = result["continuation"]["result"].as_object_mut() {
+        v.remove("_detail_bindings");
+    }
+    Ok(result)
 }
 
 // Existing interruption fixtures assert diagnostic text as an error. Translate
@@ -1476,7 +1533,14 @@ pub(crate) fn invoke_checked(value: Value) -> Result<Value, CoreError> {
 }
 
 pub(crate) fn invoke_operating(value: Value) -> Value {
-    let mut progress = InvocationProgress::default();
+    invoke_selected(value, &Resolution::Full)
+}
+
+pub(crate) fn invoke_selected(value: Value, resolution: &Resolution) -> Value {
+    let mut progress = InvocationProgress {
+        resolution: resolution.clone(),
+        ..Default::default()
+    };
     match invoke_inner(value.clone(), &mut progress) {
         Ok(result) => result,
         Err(error) => invocation_failure(&value, &error.to_string(), &progress),
@@ -1507,7 +1571,9 @@ fn finish_invocation(
     match post_effect_changed_paths(&input.changed, executed, &outcome) {
         Ok(changed) => {
             context["changed"] = json!(changed);
-            let current = start(context.clone());
+            #[cfg(test)]
+            crate::native_frontier::built("post-effect-continuation");
+            let current = start_selected(context.clone(), &progress.resolution);
             Ok(attach_continuation(result, current, &context))
         }
         Err(error) => {

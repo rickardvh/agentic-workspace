@@ -288,3 +288,12 @@ proof where it is the narrowest evidence, move stable generated behavior to
 contract-owned conformance when both Python and TypeScript generated targets can
 consume it, and use Verification proof decisions or dispositions when changing
 ordinary tests would otherwise leave the reasoning in chat or PR prose.
+
+## Lazy frontier regression boundary
+
+Use the construction and transport classes in [decision-frontier.md](decision-frontier.md)
+for changes to compact/carried resolution, owner detail selection or post-effect
+continuation. Keep the existing exact-carriage authority journeys; count actual
+optional builders rather than treating smaller rendered JSON as avoided work.
+The proof procedure is the branch-heavy consumer. Do not add a per-owner or host
+matrix when these distinct currentness/effect/projection classes cover the change.

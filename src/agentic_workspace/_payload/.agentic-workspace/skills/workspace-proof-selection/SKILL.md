@@ -32,7 +32,10 @@ for known paths. This command consumes one step, not a workflow program:
   not call the method at all.
 
 Retain exact work/request and method identity in disposable caller carriage.
-There is no durable skill cursor. After relevant procedure drift, reread the
+There is no durable skill cursor. Preparation and continuation use the shared
+current decision frontier. Optional profile catalogues and full diagnostics remain
+behind `operating.detail_refs`; a nonzero `omitted_profile_count` means more profiles
+are available through the Verification detail reference. After relevant procedure drift, reread the
 current skill; after policy, subject or source-set drift, use the returned owner
 recovery. Unrelated files do not invalidate selected method material.
 

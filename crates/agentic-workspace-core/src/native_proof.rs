@@ -85,7 +85,22 @@ pub(crate) fn selected(
     strategy: &Value,
     choice: Option<&Value>,
 ) -> Result<Value, CoreError> {
-    select_mode(target, task, changed, work, strategy, choice, None)
+    select_mode(
+        target,
+        task,
+        changed,
+        work,
+        strategy,
+        choice,
+        SelectionMode {
+            report: None,
+            alternatives: true,
+        },
+    )
+}
+pub(crate) struct SelectionMode<'a> {
+    pub report: Option<&'a Value>,
+    pub alternatives: bool,
 }
 pub(crate) fn select_mode(
     target: &Path,
@@ -94,8 +109,12 @@ pub(crate) fn select_mode(
     work: &Value,
     strategy: &Value,
     choice: Option<&Value>,
-    report: Option<&Value>,
+    mode: SelectionMode<'_>,
 ) -> Result<Value, CoreError> {
+    let SelectionMode {
+        report,
+        alternatives,
+    } = mode;
     if report
         .is_some_and(|value| serde_json::to_vec(value).map_or(true, |bytes| bytes.len() > 262144))
     {
@@ -108,7 +127,10 @@ pub(crate) fn select_mode(
     let mut profile_count = 0usize;
     let mut omitted_profile_commands = 0usize;
     let mut omitted_domain_commands = 0usize;
-    if let Some(routes) = strategy["proof_routes"].as_object() {
+    if let Some(routes) = strategy["proof_routes"]
+        .as_object()
+        .filter(|_| alternatives)
+    {
         for (id, route) in routes {
             for command in route["commands"]
                 .as_array()
@@ -133,6 +155,8 @@ pub(crate) fn select_mode(
                     }
                     profile_count += 1;
                 }
+                #[cfg(test)]
+                crate::native_frontier::built("proof-choice");
                 available.push(json!({"route_id":id,"command":command}));
             }
         }

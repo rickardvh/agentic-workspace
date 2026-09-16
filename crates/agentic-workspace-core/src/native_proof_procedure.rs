@@ -130,7 +130,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         }
         let mut full_input = context.clone();
         full_input["projection"] = json!("full");
-        let full = operating::start(full_input)?;
+        let full = operating::start_owner(full_input, "proof")?;
         return present(full, context, &method, 1);
     }
     if step.reference.is_some() || step.answer.is_some() {
@@ -155,7 +155,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         }
         let mut full_input = context.clone();
         full_input["projection"] = json!("full");
-        let full = operating::start(full_input)?;
+        let full = operating::start_owner(full_input, "proof")?;
         calls += 1;
         let candidates: Vec<Value> = full["decision_packet"]["ready_actions"]
             .as_array()
@@ -183,7 +183,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         );
     }
     let mut execution = json!({"target":input.target,"task":input.task,"changed":input.changed,"invocation":action,"projection":"full"});
-    let result = operating::invoke(execution.clone())?;
+    let result = operating::invoke_owner(execution.clone(), "proof")?;
     calls += 1;
     // Retain the exact effect even if later current resolution or evidence
     // admission fails. Reentry uses owner custody; no automatic retry.
@@ -221,7 +221,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
             let mut query = next.clone();
             query["projection"] = json!("full");
             calls += 1;
-            operating::start(query)?
+            operating::start_owner(query, "proof")?
         };
         let mut claim = current["verification"]["requests"][0].clone();
         if claim.is_null() {
@@ -242,7 +242,12 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         let mut query = next.clone();
         query["projection"] = json!("full");
         calls += 1;
-        present(operating::start(query)?, next, &method, calls)
+        present(
+            operating::start_owner(query, "proof")?,
+            next,
+            &method,
+            calls,
+        )
     })();
     // Return compact owner effect data, leaving bulky current context in the
     // selected preparation instead of copying it a second time.

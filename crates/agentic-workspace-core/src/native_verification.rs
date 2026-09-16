@@ -838,6 +838,24 @@ fn visible_strategy(strategy: &Value, selected: Option<&Value>) -> Value {
     result
 }
 
+pub(crate) fn contract() -> Result<Value, CoreError> {
+    let schema = crate::source_schema();
+    let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
+    arguments_schema["$schema"] = schema["$schema"].clone();
+    let declarations = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::native_claim_review::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
+    let owner_revision = digest(&declarations)?;
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
+        "owners":[{"owner":"verification","revision":owner_revision,"requests":declarations}],
+        "restriction_authorities":[{"owner":"verification","affects":["claim:complete","claim:claim-slice-complete","claim:claim-work-complete","claim:close-parent-lane"]}]});
+    contract["owners"][0]["domains"] = json!(["verification"]);
+    contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
+    contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
+    crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
+    contract["revision"] = json!(digest(&contract)?);
+    Ok(contract)
+}
+
 /// Host-only inputs are supplied by the current-work and Planning owners. A
 /// public caller can request a claim judgment, never supply source admission.
 pub fn view(
@@ -856,6 +874,8 @@ pub fn view(
         planning_subject,
         request,
         ApplicabilityContext {
+            detail: true,
+            proof: true,
             facts: &Value::Null,
             request: None,
             contract: None,
@@ -865,6 +885,8 @@ pub fn view(
 }
 
 pub(crate) struct ApplicabilityContext<'a> {
+    pub detail: bool,
+    pub proof: bool,
     pub facts: &'a Value,
     pub request: Option<Value>,
     pub contract: Option<&'a Value>,
@@ -880,6 +902,8 @@ pub(crate) fn view_with_applicability(
     request: Option<Value>,
     applicability: ApplicabilityContext<'_>,
 ) -> Result<Value, CoreError> {
+    #[cfg(test)]
+    crate::native_frontier::built("verification-contribution");
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     let (config, _config_revision) = crate::native_config::load(
@@ -1179,21 +1203,8 @@ pub(crate) fn view_with_applicability(
     let subject = planning_subject.unwrap_or(&direct_subject);
     let work_ref = subject["id"].clone();
     let work_revision = subject["revision"].clone();
-    let schema = crate::source_schema();
-    let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
-    arguments_schema["$schema"] = schema["$schema"].clone();
-    let declarations = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::native_claim_review::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
-    let owner_revision = digest(&declarations)?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
-        "owners":[{"owner":"verification","revision":owner_revision,"requests":declarations}],
-        "restriction_authorities":[{"owner":"verification","affects":["claim:complete","claim:claim-slice-complete","claim:claim-work-complete","claim:close-parent-lane"]}]});
-    contract["owners"][0]["domains"] = json!(["verification"]);
-    contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
-    contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
-    crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
+    let contract = contract()?;
     let owner_revision = contract["owners"][0]["revision"].clone();
-    contract["revision"] = json!(digest(&contract)?);
     let admission_contract = applicability.contract.unwrap_or(&contract);
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":"verification/claim/v1","owner":"verification",
         "owner_revision":owner_revision,"source_revision":source_revision,"capability_revision":admission_contract["revision"],
@@ -1275,6 +1286,7 @@ pub(crate) fn view_with_applicability(
         &assurance,
         planning_subject,
         strategy_assessment.as_ref(),
+        applicability.detail,
     )?;
     for (id, route) in strategy_control["routes"].as_object().unwrap() {
         if strategy["proof_routes"]
@@ -1357,7 +1369,10 @@ pub(crate) fn view_with_applicability(
         subject,
         &strategy,
         proof_choice.as_ref(),
-        reported_observation.as_ref(),
+        crate::native_proof::SelectionMode {
+            report: reported_observation.as_ref(),
+            alternatives: applicability.detail || (applicability.proof && proof_choice.is_none()),
+        },
     )?;
     let execution_actions = crate::native_proof::action(
         target,
@@ -1370,6 +1385,7 @@ pub(crate) fn view_with_applicability(
         .as_array()
         .into_iter()
         .flatten()
+        .filter(|_| applicability.detail || applicability.proof)
         .map(|choice| {
             let mut request = template.clone();
             request["request_kind"] = json!("verification/execute-selected/v1");
@@ -1380,7 +1396,10 @@ pub(crate) fn view_with_applicability(
         .collect();
     let mut record_requests: Vec<Value> = execution_requests
         .iter()
+        .filter(|_| applicability.detail)
         .map(|request| {
+            #[cfg(test)]
+            crate::native_frontier::built("proof-report");
             let mut request = request.clone();
             request["request_kind"] = json!("verification/record-receipt/v1");
             request["id"] = json!("verification/record-receipt/v1");
@@ -1393,7 +1412,9 @@ pub(crate) fn view_with_applicability(
     report_request["request_kind"] = json!("verification/record-receipt/v1");
     report_request["arguments"] =
         json!({"route_id":"unresolved","command":"<reported-command>","result":"failed"});
-    record_requests.push(report_request);
+    if applicability.detail {
+        record_requests.push(report_request);
+    }
     let mut prerequisite_requests = Vec::new();
     if strategy_assessment.is_some() {
         prerequisite_requests.push(strategy_request.clone());
@@ -1438,7 +1459,7 @@ pub(crate) fn view_with_applicability(
             gaps.push("current-task-strategy-requires-owner-judgment".into());
         }
     }
-    let packet = applicable.then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
+    let packet = (applicable && applicability.detail).then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
         "task_identity":current_work,"task_claim_identity":direct_subject,"work_ref":work_ref,"work_revision":work_revision,"planning_subject":planning_subject,
         "acceptance_source":{"source":"current-task","requested_outcome":task},
         "strategy":visible_strategy,"strategy_revision":strategy_revision,

@@ -1,4 +1,4 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "minor"
-summary = "Compose selected native proof execution and receipt admission through the standard proof skill."
-issues = [3315, 3277]
+summary = "Resolve compact decisions and continuations lazily and compose selected proof through the standard skill."
+issues = [3315, 3334, 3277]

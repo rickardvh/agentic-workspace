@@ -13,8 +13,10 @@ owns optional method references. Both consumers share passive availability and
 selected-material revalidation. Method selection is not a proof requirement for
 direct native owner users.
 
-Preparation uses current public owner output and the existing operating
-projection. Execution accepts one exact selected-check request set or previously
+Preparation uses the shared [current decision frontier](decision-frontier.md),
+including post-effect continuation. It selects proof context before optional
+owner detail is built; unrelated Configuration and Planning detail and untaken
+manual report branches remain lazy. Execution accepts one exact selected-check request set or previously
 returned native proof action. It never follows another owner's primary action,
 answers applicability/sufficiency, runs an arbitrary batch, or authenticates a
 reviewer. The selected command passes through native admission and custody;
@@ -44,7 +46,7 @@ composition cases and Rust two-consumer binding case protect shared behavior and
 selective method currentness. This retains missing composition failure classes,
 without a new matrix of adapters or a second proof test suite.
 
-The selected fixture reported 7,802 JSON bytes for preparation and 15,449 for the
+Before the frontier integration, the selected fixture reported 7,802 JSON bytes for preparation and 15,449 for the
 execution/result boundary, using Python's default JSON serialization. Its full
 direct debug answer was 107,641 bytes, but that is **not** the optimized direct
 baseline: direct users also have compact/carried projections. These figures are
@@ -54,7 +56,9 @@ The ordinary selected sequence uses two caller interactions (`prepare`, then
 `execute`) and four explicit public owner calls in total. Native `invoke` also
 performs its pre-effect admission and post-effect resolution; those costs remain.
 A direct caller which uses continuation can perform the same four public calls;
-the composition removes two model-mediated envelope transfers, not native work.
+the composition removes two model-mediated envelope transfers. The frontier
+integration also removes optional construction, as measured separately in the
+linked frontier evidence; mandatory native authority work remains.
 Semantic scope/assessment carriage requires one additional current scope read
 before receipt admission. No batching, hidden retry, persistent procedure state,
 or new evidence store is added. Existing receipt/custody residue remains owned by
