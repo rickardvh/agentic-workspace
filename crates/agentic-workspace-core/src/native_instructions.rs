@@ -75,6 +75,7 @@ pub(crate) fn resolve_with_targets(
         "effect:memory-state",
         "effect:decision-source",
         "effect:configuration-source",
+        "effect:system-intent-source",
     ]
     .map(str::to_owned)
     .into();
@@ -306,9 +307,13 @@ pub fn restrict_pending(
         }
     }
     for action in pending.iter().filter(|a| {
-        a["source_owner"] == "scoped-instructions" || a["source_owner"] == "configuration"
+        a["source_owner"] == "scoped-instructions"
+            || a["source_owner"] == "configuration"
+            || a["source_owner"] == "system-intent"
     }) {
-        let writes = if action["source_owner"] == "configuration" {
+        let writes = if action["source_owner"] == "system-intent" {
+            crate::native_intent_write::write_scope(action)?
+        } else if action["source_owner"] == "configuration" {
             crate::native_config_write::write_scope(action)?
         } else {
             crate::native_instruction_write::write_scope(action)?
@@ -328,7 +333,7 @@ pub fn restrict_pending(
                         .any(|w| instruction_applicability::patterns_overlap(p, w))
                 })
             {
-                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-instruction-write", "Current protection forbids this instruction publication; source authority cannot waive another restriction.", vec![format!("effect:{}",if action["source_owner"]=="configuration"{"configuration-source"}else{"instruction-source"})]));
+                additions.push(blocker(source["source"]["reference"].as_str().unwrap(), "protected-instruction-write", "Current protection forbids this instruction publication; source authority cannot waive another restriction.", vec![format!("effect:{}",if action["source_owner"]=="configuration"{"configuration-source"}else if action["source_owner"]=="system-intent"{"system-intent-source"}else{"instruction-source"})]));
             }
         }
     }

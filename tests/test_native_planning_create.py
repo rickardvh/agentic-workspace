@@ -992,6 +992,15 @@ def test_retained_planning_adapter_preserves_native_plan(tmp_path: Path, shared_
         )
         assert process.returncode != 0
         assert "Native Planning owner preserved" in process.stderr + process.stdout
+        # The same retained transport can still create a legitimate legacy plan.
+        fresh = tmp_path / "legacy-consumer"
+        fresh.mkdir()
+        args = list(process.args)
+        args[args.index("--target") + 1] = str(fresh)
+        args[args.index("--id") + 1] = "legitimate-create"
+        positive = subprocess.run(args, capture_output=True, text=True, timeout=30)
+        assert positive.returncode == 0, positive.stderr + positive.stdout
+        assert list(fresh.rglob("legitimate-create.plan.json"))
     elif attempt == "mutation":
         refused = installer.targeted_execplan_write(target=tmp_path, plan=str(path), patch={"next_action": "legacy overwrite"}, apply=True)
         assert refused["status"] == "native-owner-required", refused

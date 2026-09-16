@@ -24,7 +24,7 @@ import {
 } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { routeDiscovery, assignmentPacket } from './native/semantic-decision.mjs';
+import { routeDiscovery, assignmentPacket, start as nativeStart } from './native/semantic-decision.mjs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -996,7 +996,7 @@ function planningNewPlanResult(values, operationId) {
   const prepOnly = values.prep_only === true;
   const lane = String(values.owner_lane ?? values.lane ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const expectedRevision = String(values.expect_planning_revision ?? '').trim();
-  const cliInvoke = String(workspaceConfig({ target: result.target_root }).workspace?.cli_invoke ?? 'agentic-workspace');
+  const cliInvoke = String(nativeStart({ target: result.target_root, task: 'Read current Planning invocation', projection: 'full' }).configuration.cli_invoke ?? 'agentic-workspace');
   if (expectedRevision) {
     const currentRevision = planningRevision(result.target_root, state);
     if (expectedRevision !== currentRevision.revision_id) {

@@ -4,7 +4,7 @@ use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::path::Path;
-const MIRROR: &str = ".agentic-workspace/system-intent/intent.toml";
+pub(crate) const MIRROR: &str = ".agentic-workspace/system-intent/intent.toml";
 
 pub(crate) fn bytes(root: &Dir, reference: &str) -> Result<Option<Vec<u8>>, CoreError> {
     crate::native_verification::read(root, reference).map_err(CoreError::new)
@@ -22,6 +22,58 @@ pub(crate) fn observation(root: &Dir, reference: &str) -> Value {
             json!({"reference":reference,"status":"unavailable","reason":error.to_string()})
         }
     }
+}
+pub(crate) fn stale_references(root: &Dir, declaration: &Value, value: &Value) -> Vec<String> {
+    let references: Vec<&str> = declaration["sources"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect();
+    let preferred = declaration["preferred_source"]
+        .as_str()
+        .or_else(|| references.first().copied());
+    let mut stale = Vec::new();
+    for reference in &references {
+        let record = value["source_records"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|r| r["path"] == *reference);
+        // Historical source_records hash Python universal-newline text.
+        let observed = bytes(root, reference)
+            .ok()
+            .flatten()
+            .and_then(|b| String::from_utf8(b).ok())
+            .map(|text| {
+                let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
+                format!("{:x}", Sha256::digest(normalized.as_bytes()))
+            });
+        if !record.is_some_and(|r| {
+            r["present"] == true
+                && r["sha256"].as_str() == observed.as_deref()
+                && observed.is_some()
+        }) {
+            stale.push((*reference).to_owned());
+        }
+    }
+    for record in value["source_records"].as_array().into_iter().flatten() {
+        if let Some(reference) = record["path"].as_str() {
+            if !references.contains(&reference) {
+                stale.push(reference.to_owned());
+            }
+        } else {
+            stale.push("invalid-source-record".to_owned());
+        }
+    }
+    if value["preferred_source"].as_str() != preferred {
+        stale.push("preferred_source".to_owned());
+    }
+    // Duplicate records are not an exact declared-source set.
+    if value["source_records"].as_array().map(Vec::len) != Some(references.len()) {
+        stale.push("source_records".into());
+    }
+    stale
 }
 pub(crate) fn view(
     target: &Path,
@@ -73,42 +125,7 @@ pub(crate) fn view(
         if let Some(value) = parsed.filter(|v| {
             v["kind"] == "agentic-workspace/system-intent/v1" && v["schema_version"] == 1
         }) {
-            let mut stale = Vec::new();
-            for reference in &references {
-                let record = value["source_records"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .find(|r| r["path"] == *reference);
-                // Historical source_records hash Python universal-newline text.
-                let observed = bytes(&root, reference)
-                    .ok()
-                    .flatten()
-                    .and_then(|b| String::from_utf8(b).ok())
-                    .map(|text| {
-                        let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
-                        format!("{:x}", Sha256::digest(normalized.as_bytes()))
-                    });
-                if !record.is_some_and(|r| {
-                    r["present"] == true
-                        && r["sha256"].as_str() == observed.as_deref()
-                        && observed.is_some()
-                }) {
-                    stale.push(*reference);
-                }
-            }
-            for record in value["source_records"].as_array().into_iter().flatten() {
-                if let Some(reference) = record["path"].as_str() {
-                    if !references.contains(&reference) {
-                        stale.push(reference);
-                    }
-                } else {
-                    stale.push("invalid-source-record");
-                }
-            }
-            if value["preferred_source"].as_str() != preferred {
-                stale.push("preferred_source");
-            }
+            let stale = stale_references(&root, declaration, &value);
             let unreviewed = value["needs_review"] != false;
             interpretation = json!({"status":"retained","source":mirror,"source_currentness":if stale.is_empty(){"matched"}else{"stale-or-unproven"},"stale_references":stale,
                 "recorded_review_status":if unreviewed{"needs-review-or-unproven"}else{"recorded-no-review-needed"},
@@ -133,14 +150,17 @@ pub(crate) fn view(
     let owner_revision = digest(&shape)?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"system-intent","revision":owner_revision,"requests":[shape]}],
         "restriction_authorities":[{"owner":"system-intent","affects":["claim:complete"]}]});
-    contract["revision"] = json!(digest(&contract)?);
+    crate::native_intent_write::extend_contract(&mut contract)?;
+    let owner_revision = contract["owners"][0]["revision"].clone();
     let validation = full_contract.unwrap_or(&contract);
     let requests:Vec<Value>=sources.iter().filter(|s|s["status"]=="present").map(|source|json!({
         "kind":"agentic-workspace/public-request/v1","id":format!("system-intent/read:{}",source["reference"].as_str().unwrap()),"owner":"system-intent","owner_revision":owner_revision,
         "source_revision":revision,"capability_revision":validation["revision"],"task_identity":work,"request_kind":"system-intent/read-current-source/v1",
         "arguments":{"reference":source["reference"],"revision":source["revision"]}})).collect();
     let mut response = Value::Null;
-    if let Some(request) = request {
+    if let Some(request) =
+        request.filter(|r| r["request_kind"] == "system-intent/read-current-source/v1")
+    {
         let admitted = crate::prepare_request_value(
             json!({"request":request,"current_work":work,"capability_contract":validation}),
         )?;
@@ -176,10 +196,17 @@ pub(crate) fn view(
             "authority_boundary":"Existing governing source content for acting-agent judgment; reading grants no alignment, proof, human acceptance or mutation authority."});
     }
     let blockers:Vec<Value>=gaps.iter().map(|gap|json!({"code":gap,"message":"Preserve existing governing sources and interpretation; current semantic custody requires owner judgment, not a source rewrite or automatic waiver.","affects":["claim:complete"]})).collect();
-    Ok(
-        json!({"kind":"agentic-workspace/native-system-intent-view/v1","status":if sources.is_empty(){"absent"}else{"source-owned"},"revision":revision,
+    let mut result = json!({"kind":"agentic-workspace/native-system-intent-view/v1","status":if sources.is_empty(){"absent"}else{"source-owned"},"revision":revision,
         "declaration":declaration,"preferred_source":preferred,"sources":sources,"interpretation":interpretation,"gaps":gaps,"requests":requests,"response":response,
         "capability_contract":contract,"contribution":{"owner":"system-intent","revision":revision,"blockers":blockers,"settled":gaps.is_empty(),"material":response},
-        "remaining_owner_contract":"Typed Planning update for newly judged larger-outcome alignment remains unavailable; existing intent_continuity is preserved."}),
-    )
+        "remaining_owner_contract":"Reconcile retained interpretation through the exact source-bound owner proposal. Planning intent_continuity and human acceptance remain separate."});
+    crate::native_intent_write::view(
+        target,
+        work,
+        configuration,
+        &mut result,
+        validation,
+        request.filter(|r| r["request_kind"] != "system-intent/read-current-source/v1"),
+    )?;
+    Ok(result)
 }

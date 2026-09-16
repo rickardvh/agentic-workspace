@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Reconcile native Memory package compatibility, retain native-backed Planning routing, prove the installed wheel consumer contract, and add authorized source-bound System Intent reconciliation."
+issues = [3353, 3354, 3355, 3356]
