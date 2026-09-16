@@ -238,3 +238,51 @@ def test_retained_intent_reconciliation_requires_exact_judgment_and_authority(tm
     assert blocked["decision_packet"]["primary_action"] is None
     assert any("protected" in b["code"] for b in blocked["decision_packet"]["blockers"])
     assert mirror.read_text() == post
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_matched_interpretation_can_be_semantically_corrected(tmp_path, shared_core_binary, native_cli, surface):
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('[system_intent]\nsources=["SYSTEM_INTENT.md"]\n')
+    governing = tmp_path / "SYSTEM_INTENT.md"
+    governing.write_text("Preserve specific architectural constraints.\n", encoding="utf-8")
+    mirror = tmp_path / MIRROR
+    mirror.parent.mkdir()
+    original = (
+        'schema_version=1\nkind="agentic-workspace/system-intent/v1"\n'
+        'summary="Generic summary"\nneeds_review=false\npreferred_source="SYSTEM_INTENT.md"\n'
+        '[[source_records]]\npath="SYSTEM_INTENT.md"\npresent=true\nsha256="'
+        + hashlib.sha256(governing.read_text().encode()).hexdigest()
+        + '"\n'
+    )
+    mirror.write_text(original, encoding="utf-8")
+    context = {"target": str(tmp_path), "task": "Correct semantic interpretation"}
+
+    def call(**extra):
+        return consume(surface, shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    quiet = call()["system_intent"]
+    assert quiet["interpretation"]["source_currentness"] == "matched"
+    assert quiet["gaps"] == []
+    assert quiet["reconciliation"]["requests"] == []
+    governing_read = next(r for r in quiet["requests"] if r["arguments"]["reference"] == "SYSTEM_INTENT.md")
+    assert call(request=governing_read)["system_intent"]["reconciliation"]["requests"] == []
+    retained_read = next(r for r in quiet["requests"] if r["arguments"]["reference"] == MIRROR)
+    selected = call(request=retained_read)["system_intent"]
+    edit = selected["reconciliation"]["requests"][0]
+    corrected = original.replace("Generic summary", "Preserve specific architectural constraints")
+    edit["arguments"].update(content=corrected, judgment="revised", reason="The matching mirror lost specific source meaning.")
+    proposed = call(request=edit)
+    assert mirror.read_text() == original
+    answer = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "intent-write-authorization")[
+        "response_request"
+    ]
+    answer["arguments"]["answer"] = "authorize-write"
+    action = call(request=answer)["decision_packet"]["primary_action"]
+    assert call(invocation=action)["status"] == "applied"
+    assert mirror.read_text() == corrected
+    current = call()["system_intent"]
+    assert current["interpretation"]["source_currentness"] == "matched"
+    assert current["interpretation"]["alignment"] == "unresolved-owner-judgment"
+    assert current["reconciliation"]["requests"] == []

@@ -181,4 +181,5 @@ The [integrated acceptance input](../reviews/candidate-c-integrated-acceptance.m
 consolidates the accepted implementation leaves through #3357, current bounded
 validation, operating-cost observations and native System Intent reconciliation.
 Its closeout proposal awaits independent review. Candidate C has no publication
-record here; preview and fresh stable admission remain separate release work.
+record here. The remaining sequence is #3358, then `v1.0.0-rc.1`, then fresh
+stable preparation/admission/publication under #2985.

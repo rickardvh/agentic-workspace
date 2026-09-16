@@ -30,7 +30,7 @@ id = "host-agnostic-agent-judgment"
 title = "Preserve host-agnostic agent judgment"
 authority = "repo-system-intent"
 owner = "workspace-runtime"
-summary = "Agentic Workspace should remain a quiet, portable, skills-first repository competence layer: preserve human intent and useful source-owned context, expose only the current decision frontier, make settled consequences directly usable through one Rust authority, and reduce total successful-completion cost without creating a workflow framework or competing source of truth."
+summary = "AW provides infrastructure, state, evidence, routing surfaces, and guardrails that make agent judgment cheap, efficient, and reliable; it must not encode repo-specific rules, routing tables, workflow meanings, executable names, file-name conventions, issue taxonomy, or local heuristics as package-owned a priori policy."
 derived_from = [
   "governing_intents:Keep package contracts portable across host repos, languages, agents, vendors, and local dogfooding environments.",
   "anti_intents:Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.",
@@ -89,7 +89,7 @@ proof_expectation = "For matching runtime work, closeout must state whether the 
 
 [[architecture_principles.guardrails]]
 id = "non-enum-keyword-routing"
-summary = "Agentic Workspace should remain a quiet, portable, skills-first repository competence layer: preserve human intent and useful source-owned context, expose only the current decision frontier, make settled consequences directly usable through one Rust authority, and reduce total successful-completion cost without creating a workflow framework or competing source of truth."
+summary = "Do not infer routing, ownership, proof selection, delegation, Memory storage, or workflow state from arbitrary prose marker phrases, filenames, executable names, or package-owned keyword tables."
 guardrail_refs = [
   "docs/maintainer/non-enum-keyword-routing-audit.json"
 ]

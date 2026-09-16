@@ -126,7 +126,8 @@ claimed. Those remain with their existing evidence owners.
 ## Current validation
 
 The paired binaries were built with `cargo build --locked --workspace --bins`.
-No Rust or bundled runtime contract changed in this reconciliation.
+The original aggregate selection below predates the bounded review correction
+described under source reconciliation.
 
 - `cargo test --locked --workspace`: **139 passed, 3 ignored** process helpers.
 - Integrated Configuration/skills/Memory/proof/resources/frontier/System Intent
@@ -173,9 +174,35 @@ The source-bound proposal and authorized `system-intent.write` returned
 and no reconciliation gaps. Task alignment still reports
 `unresolved-owner-judgment`: matching sources does not accept the whole task.
 
+### Independent-review correction
+
+The first rewrite accidentally replaced the host-agnostic principle and its
+non-enum keyword-routing guardrail summaries with the top-level product summary.
+Both specific summaries are now restored through a fresh native source-bound
+proposal, authorization and committed write. Parsed-content assertions confirmed
+the top-level skills-first summary and source records stayed unchanged. Fresh
+reentry again reports matching sources, no gaps and unresolved task alignment.
+
+That correction exposed a bounded owner-path gap: a semantically incorrect mirror
+with matching hashes offered no edit request. An explicit retained-interpretation
+read now returns the existing source-bound proposal request. Ordinary reads and
+governing-source reads remain quiet; publication still requires exact proposal
+authorization. No schema or generated adapter interface changed.
+
+After this correction, the paired native build, **21 System Intent tests** across
+native/JSON/Python/TypeScript and **19 frontier/skills-first tests** passed. The
+Rust workspace rerun passed **139 tests, 3 ignored** process helpers; generated
+contract catalogues and contract-tooling adapter freshness checks passed. The new
+regression proves semantic correction with matching hashes and preserves quiet
+reentry and the separate alignment boundary. The first test attempt exposed a
+missing preferred-source field in the new fixture; the corrected fixture passed.
+The first local write invocation omitted task context and was rejected before
+any effect; the task-bound invocation then committed successfully. These retries
+are operating cost, not additional proof coverage.
+
 Independent aggregate acceptance permits administrative #3260 closure. This
-evidence-only PR is the reviewable closeout proposal, not a new unification runtime.
-#3277 remains open for final preview and fresh post-C release evidence; #2985
-remains open for exact stable preparation/admission/publication. Stale #3283 is
+PR is the reviewable closeout proposal with a bounded retained-intent correction
+path fix. #3277 remains open for #3358 followed by `v1.0.0-rc.1` and fresh post-C
+release evidence; #2985 remains open for exact stable preparation/admission/publication. Stale #3283 is
 not fresh admission. #3347–#3351 and Set D remain post-v1. No new release, support
 platform, maturity label or source trust revision is asserted here.

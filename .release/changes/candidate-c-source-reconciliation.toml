@@ -1,4 +1,4 @@
 schema_version = "agentic-workspace/release-change/v1"
 bump = "patch"
-summary = "Reconcile Candidate C aggregate evidence, release documentation and the retained System Intent interpretation through its native owner."
+summary = "Reconcile Candidate C aggregate evidence, release documentation and the retained System Intent interpretation through its native owner, including semantic correction when source hashes already match."
 issues = [3277, 3260]
