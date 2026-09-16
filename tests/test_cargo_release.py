@@ -52,3 +52,75 @@ def test_cargo_registry_recovery_distinguishes_absence_conflict_and_uncertainty(
 
     with pytest.raises(TimeoutError):
         cargo.observe(crate, get=unavailable)
+
+
+@pytest.mark.parametrize("scenario", ["fresh", "partial", "conflict", "uncertain", "repack-drift"])
+def test_cargo_publication_orders_exact_pair_and_stops_before_unsafe_effects(tmp_path, monkeypatch, scenario):
+    import registry_release
+
+    packages = []
+    staging = tmp_path / "stage"
+    for name, binary in (("agentic-workspace-core", "agentic-workspace-core"), ("agentic-workspace-cli", "agentic-workspace")):
+        asset = f"{name}-1.0.0-rc.1.crate"
+        data = name.encode()
+        (tmp_path / asset).write_bytes(data)
+        packaged = staging / name / "target/package"
+        packaged.mkdir(parents=True)
+        (packaged / asset).write_bytes(b"changed" if scenario == "repack-drift" else data)
+        packages.append(
+            {"name": name, "binary": binary, "version": "1.0.0-rc.1", "asset": asset, "sha256": hashlib.sha256(data).hexdigest()}
+        )
+    (tmp_path / "cargo-release-manifest.json").write_text(
+        json.dumps(
+            {
+                "source_commit": "a" * 40,
+                "version": "1.0.0-rc.1",
+                "package_build": "passed",
+                "paired_install": "passed",
+                "packages": packages,
+            }
+        )
+    )
+    monkeypatch.setattr(cargo.coordinated_release, "load_ownership", lambda: {"cargo_packages": packages})
+    monkeypatch.setattr(cargo.subprocess, "check_output", lambda *a, **k: "a" * 40)
+    monkeypatch.setattr(
+        registry_release, "admitted_artifacts", lambda *a: ({"version": "1.0.0rc1", "package_versions": {"cargo": "1.0.0-rc.1"}}, [])
+    )
+    monkeypatch.delenv("CARGO_TARGET_DIR", raising=False)
+    monkeypatch.setattr(
+        sys, "argv", ["cargo_release", "publish", "--artifact-dir", str(tmp_path), "--staging", str(staging), "--tag", "v1.0.0-rc.1"]
+    )
+    published = {packages[0]["name"]} if scenario == "partial" else set()
+    uploads, observations = [], []
+
+    def observe(crate):
+        name = crate["name"]
+        observations.append(name)
+        if scenario == "conflict" and name == packages[1]["name"]:
+            raise ValueError("Immutable conflict")
+        if scenario == "uncertain" and uploads:
+            raise TimeoutError("Unknown publication visibility")
+        return "matching" if name in published else "absent"
+
+    def execute(command, **kwargs):
+        if command[1] == "publish":
+            name = Path(command[-1]).parent.name
+            assert observations[:2] == [p["name"] for p in packages]
+            if name == packages[1]["name"]:
+                assert packages[0]["name"] in published
+            uploads.append(name)
+            published.add(name)
+
+    monkeypatch.setattr(cargo, "observe", observe)
+    monkeypatch.setattr(cargo.subprocess, "run", execute)
+    if scenario in {"conflict", "repack-drift"}:
+        with pytest.raises(ValueError):
+            cargo.main()
+        assert uploads == []
+    elif scenario == "uncertain":
+        with pytest.raises(TimeoutError):
+            cargo.main()
+        assert uploads == [packages[0]["name"]]
+    else:
+        cargo.main()
+        assert uploads == [p["name"] for p in packages[1 if scenario == "partial" else 0 :]]
