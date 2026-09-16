@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Align stable and preview release normalization and source diagnostics with native payload provenance."
-issues = [3270]

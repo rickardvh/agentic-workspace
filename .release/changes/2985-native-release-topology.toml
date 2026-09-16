@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Ship thin Python and npm projections with paired native artifacts and admit only published Linux x64 platform sets."
-issues = [2985]

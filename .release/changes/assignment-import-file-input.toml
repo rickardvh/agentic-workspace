@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Allow assignment imports to read delegated returns from a repo-contained file while keeping nested session command metadata within Windows environment limits."
-issues = [2958]

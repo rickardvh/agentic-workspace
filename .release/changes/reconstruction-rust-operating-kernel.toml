@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "major"
-summary = "Move corrected operating-decision semantics into one shared Rust core with thin Python, Node, and JSON transports."
-issues = [3021, 2989, 2987]
