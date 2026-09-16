@@ -41,7 +41,10 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     assert module.conformance_receipt_freshness_errors(profile) == []
 
     stale_receipts = copy.deepcopy(json.loads(module.CONFORMANCE_RECEIPT_OUTPUTS[0].read_text(encoding="utf-8")))
-    stale_receipts["receipts"][0]["status"] = "passed"
+    receipt = stale_receipts["receipts"][0]
+    operation = next(entry for entry in profile["operations"] if entry["id"] == receipt["operation_id"])
+    receipt["operation_fingerprint"] = operation["operation_compatibility"]["fingerprint"]
+    receipt["status"] = "passed"
     stale_receipts["receipts"][0]["profile_fingerprint"] = "sha256:stale"
     errors = module.conformance_receipt_freshness_errors(
         profile,

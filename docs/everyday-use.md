@@ -88,7 +88,7 @@ that a correction is already covered.
 
 Material friction can justify one bounded change through the receiving owner.
 Repository opportunity proposals also respect `workspace.improvement_latitude`:
-`none`/`reporting` allow reporting, `conservative`/`balanced` permit proposals
+`none`/`reporting` allow reporting, `conservative` permits proposals
 within current work, and `proactive` permits proactive proposals. These settings
 never grant mutation authority. The owner still applies its current write
 authorization, protection, validation and recovery rules. Reporting or declining

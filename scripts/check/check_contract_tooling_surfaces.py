@@ -177,7 +177,7 @@ def _sample_workspace_config_payload() -> dict[str, object]:
         "workspace": {
             "agent_instructions_file": "AGENTS.md",
             "workflow_artifact_profile": "repo-owned",
-            "improvement_latitude": "balanced",
+            "improvement_latitude": "conservative",
         },
         "modules": {"enabled": ["planning", "memory"]},
         "system_intent": {"sources": ["SYSTEM_INTENT.md", "README.md"], "preferred_source": "SYSTEM_INTENT.md"},
