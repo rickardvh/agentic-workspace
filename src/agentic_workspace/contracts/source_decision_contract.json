@@ -90,7 +90,7 @@
     "procedure_references": "non-authoritative"
   },
   "resource_procedure": {
-    "request": "The existing resources request optionally accepts compose: true. Supply fresh operation intent and the same exact path for recovery; never a retained expected_revision.",
+    "request": "The existing resources request optionally accepts compose: true and an exact semantic route_request for the same current work. Unresolved route-scoped destination protection returns existing owner route_requests; settled negatives and unrelated effects remain quiet. Supply fresh operation intent and the same exact path for recovery; never a retained expected_revision.",
     "composition": "Check selected executable availability, obtain one native proposal, and carry its exact action through current native admission. No action loop or separate filesystem semantics.",
     "direct": "operation: direct with compose: true performs zero resource-owner calls and creates no state; ordinary direct work need not call at all.",
     "judgment": "Missing isolation necessity or current policy judgment yields the native proposal. Composition cannot manufacture permits-isolation.",

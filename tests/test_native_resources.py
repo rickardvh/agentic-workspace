@@ -455,3 +455,66 @@ def test_unleased_or_tracked_tool_roots_cannot_be_adopted_for_cleanup(tmp_path, 
     )
     assert "action" not in blocked and any("source tree" in b for b in blocked["blockers"])
     assert not path.exists()
+
+
+def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_public_cli import consume
+
+    for ref in [".agentic-workspace/skills/REGISTRY.json", ".agentic-workspace/skills/workspace-resources/SKILL.md"]:
+        dest = tmp_path / ref
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes((ROOT / ref).read_bytes())
+    registry = tmp_path / "tools/skills/REGISTRY.json"
+    registry.parent.mkdir(parents=True)
+    registry.write_text(json.dumps({"skills": [{"id": "sample", "semantic_routes": ["sample/protected"]}]}))
+    source = tmp_path / ".agentic-workspace/instructions/resource.md"
+    source.parent.mkdir(parents=True)
+    policy = "---\npaths: [.agentic-workspace/local/scratch/**]\nroutes: [sample/protected]\nprotect: [.agentic-workspace/local/scratch/**]\n---\nPreserve the selected resource.\n"
+    source.write_text(policy)
+    context = {"target": str(tmp_path), "task": "Prepare temporary analysis material"}
+
+    def call(**material):
+        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create", **material}})
+
+    unresolved = call()
+    assert "action" not in unresolved and any("applicability" in b for b in unresolved["blockers"])
+    selected = next(r for r in unresolved["route_requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    selected["arguments"] = {"posture": "selected", "routes": ["sample/protected"]}
+    assert "action" not in call(route_request=selected)
+    assert "action" not in call(route_request=selected, compose=True)
+    # Declared path AND route remains conjunctive: an unrelated path is quiet.
+    ordinary = consume("json", shared_core_binary, native_cli, {**context, "request": selected})
+    assert ordinary["instructions"]["sources"][0]["applicable"] is False
+    source.write_text(policy.replace("paths: [.agentic-workspace/local/scratch/**]\n", ""))
+    ordinary = consume("json", shared_core_binary, native_cli, {**context, "request": selected})
+    assert ordinary["instructions"]["sources"][0]["applicable"] is True
+    assert "action" not in call(route_request=selected)
+    selected["arguments"] = {"posture": "none", "routes": []}
+    proposal = call(route_request=selected)
+    assert "action" in proposal
+    (tmp_path / "unrelated.txt").write_text("irrelevant")
+    assert call(route_request=selected)["revision"] == proposal["revision"]
+    # Route discovery drift cannot reuse a settled negative to waive protection.
+    registry.write_text(json.dumps({"skills": [{"id": "sample", "semantic_routes": ["sample/protected", "sample/new"]}]}))
+    assert "action" not in call(route_request=selected)
+    fresh = call()
+    negative = next(r for r in fresh["route_requests"] if r["request_kind"] == "semantic-routes/select/v1")
+    negative["arguments"] = {"posture": "none", "routes": []}
+    created = call(route_request=negative, compose=True)
+    assert created["effect_outcome"] == "committed"
+    assert created["resource_context"]["route_request"] == negative
+    removed = resource(
+        "json",
+        shared_core_binary,
+        native_cli,
+        {
+            **context,
+            "request": {
+                "operation": "scratch-remove",
+                "path": created["resource_context"]["path"],
+                "route_request": negative,
+                "compose": True,
+            },
+        },
+    )
+    assert removed["effect_outcome"] == "committed"

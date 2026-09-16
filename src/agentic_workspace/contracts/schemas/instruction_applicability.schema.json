@@ -9,6 +9,7 @@
     "paths": {"type": "array", "items": {"type": "string"}, "description": "Declared path selectors."},
     "routes": {"type": "array", "items": {"type": "string"}, "description": "Declared exact or subtree route selectors."},
     "changed_paths": {"type": "array", "items": {"type": "string"}, "description": "Current changed or target paths."},
+    "target_patterns": {"type":"array","items":{"type":"string"},"description":"Owner-derived effect destination patterns; intersected with declared path scope."},
     "selected_routes": {"type": "array", "items": {"type": "string"}, "description": "Current agent-selected routes, validated before use."},
     "route_posture": {"type": "string", "enum": ["selected", "none", "unresolved"], "description": "Current semantic route selection posture."}
   },

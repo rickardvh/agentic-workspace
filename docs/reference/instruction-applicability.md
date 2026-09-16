@@ -14,5 +14,6 @@ Current path scope and agent-selected route applicability only; never binding or
 | `paths` | array of string | yes |  | Declared path selectors. |  |  |
 | `routes` | array of string | yes |  | Declared exact or subtree route selectors. |  |  |
 | `changed_paths` | array of string | yes |  | Current changed or target paths. |  |  |
+| `target_patterns` | array of string | no |  | Owner-derived effect destination patterns; intersected with declared path scope. |  |  |
 | `selected_routes` | array of string | yes |  | Current agent-selected routes, validated before use. |  |  |
 | `route_posture` | enum `"selected"`, `"none"`, `"unresolved"` | yes |  | Current semantic route selection posture. |  |  |
