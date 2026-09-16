@@ -2,7 +2,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "frontier": "Host footprint/adoption; effect/resource/diagnostic correctness; CLI/procedure and compact reproducer"
+    "accepted_progress": "Validation is recorded per PR. Issue closure, independent review, merge, and release admission remain distinct and are not claimed. Triage #3381 records the unexplained host rejection; smaller calls resumed successfully. A bounded Planning successor normalization fixes the current owner-progress blocker. Additional operating cost included source-maintenance subtraction, one interrupted native JSON test, isolated revalidation, and repairing the Planning blocker; no whole-task log-completeness claim.",
+    "frontier": "Implementation delivered for issues #3372-#3379 in PRs #3382, #3384, and #3385. #3380 has a current-master NO_PRODUCT_GAP disposition in the final PR. All three layers are published and ready for independent review."
   },
   "creation_provenance": {
     "custody": {
@@ -28,18 +29,18 @@
     "outcome": "Implement issues 3372 through 3380 in three stacked PRs ready for independent review; reproduce and disposition 3380 without speculative machinery"
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "planned",
+  "lifecycle": "live",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Implement minimal host footprint and Configuration adoption/de-adoption",
+  "next_action": "Externally initiated independent review of stacked PRs #3382, #3384, and #3385; implementation custody must not supply review or approval.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "shaping",
+  "phase": "closeout",
   "proof": {
-    "strategy": "Current owner contract evidence and public parity; each PR source-current independently"
+    "strategy": "Owner-specific native fixtures, façade/admission checks, source/current command inventory, and current-master carried System Intent evidence. A native JSON test process exited with Windows access violation once; its isolated repeat passed. No broader performance or universal conformance claim."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3372",
@@ -50,10 +51,14 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3377",
     "https://github.com/rickardvh/agentic-workspace/issues/3378",
     "https://github.com/rickardvh/agentic-workspace/issues/3379",
-    "https://github.com/rickardvh/agentic-workspace/issues/3380"
+    "https://github.com/rickardvh/agentic-workspace/issues/3380",
+    "https://github.com/rickardvh/agentic-workspace/pull/3382",
+    "https://github.com/rickardvh/agentic-workspace/pull/3384",
+    "https://github.com/rickardvh/agentic-workspace/pull/3385",
+    "docs/reviews/compact-intent-3380-2026-09-16.md"
   ],
   "relationships": {},
-  "revision": 1,
+  "revision": 2,
   "scope": {
     "excluded": [
       "Review or approve implementation PRs",
@@ -71,5 +76,34 @@
       "3380"
     ]
   },
-  "title": "Host adoption and current-owner follow-through 3372-3380"
+  "title": "Host adoption and current-owner follow-through 3372-3380",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/b3ae4a825f8bb0d9bb6930f2afe6d307ad73522393599680b2815d0b2d4350b6.attempt.json",
+        "revision": "sha256:43f13833490501ed2bc61bfa863030995d01c9ed8580bd400816e1394e938d32",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/b3ae4a825f8bb0d9bb6930f2afe6d307ad73522393599680b2815d0b2d4350b6.result.json",
+        "revision": "sha256:7432725e4c3c5814c371e29a74c9e459be3d999dec227e5ceddae93c40d2e1b0",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:bea541f8509354b0a40c0709379e32b6d1743657f663ef7f7422fcc94435f9af",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:1379c7d281ee99e89ff350f58dd800fa2faa9ade734115050801fdb859e97703",
+        "owner_id": "work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860",
+        "owner_path": ".agentic-workspace/planning/execplans/work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860.plan.json"
+      }
+    }
+  }
 }
