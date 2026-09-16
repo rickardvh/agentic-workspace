@@ -578,28 +578,41 @@ fn resolve_selected(
                     )
                 }),
             )?;
-            if request_for("memory").is_some_and(|r| {
-                let advisory = r["request_kind"] == crate::native_memory_capture::ADVISORY_CAPTURE
-                    || r["request_kind"] == crate::native_memory_capture::ADVISORY_RECOVER;
-                if advisory != (destination == crate::native_memory_capture::Destination::Advisory)
-                {
-                    return false;
-                }
-                matches!(
-                    r["request_kind"].as_str(),
-                    Some(
-                        crate::native_memory_capture::CAPTURE
-                            | crate::native_memory_capture::RECOVER
-                            | crate::native_memory_capture::ADVISORY_CAPTURE
-                            | crate::native_memory_capture::ADVISORY_RECOVER
+            if capture["contribution"]["actions"]
+                .as_array()
+                .is_some_and(|a| !a.is_empty())
+                || request_for("memory").is_some_and(|r| {
+                    let advisory = r["request_kind"]
+                        == crate::native_memory_capture::ADVISORY_CAPTURE
+                        || r["request_kind"] == crate::native_memory_capture::ADVISORY_RECOVER;
+                    if advisory
+                        != (destination == crate::native_memory_capture::Destination::Advisory)
+                    {
+                        return false;
+                    }
+                    matches!(
+                        r["request_kind"].as_str(),
+                        Some(
+                            crate::native_memory_capture::CAPTURE
+                                | crate::native_memory_capture::RECOVER
+                                | crate::native_memory_capture::ADVISORY_CAPTURE
+                                | crate::native_memory_capture::ADVISORY_RECOVER
+                        )
                     )
-                )
-            }) {
+                })
+            {
                 memory["contribution"]["relevant"] = json!(true);
                 memory["contribution"]["settled"] = json!(false);
-                for field in ["revision", "actions", "decisions"] {
-                    if let Some(v) = capture["contribution"].get(field) {
-                        memory["contribution"][field] = v.clone();
+                memory["contribution"]["revision"] = capture["contribution"]["revision"].clone();
+                for field in ["actions", "decisions"] {
+                    if let Some(v) = capture["contribution"][field].as_array() {
+                        if !memory["contribution"][field].is_array() {
+                            memory["contribution"][field] = json!([]);
+                        }
+                        memory["contribution"][field]
+                            .as_array_mut()
+                            .unwrap()
+                            .extend(v.iter().cloned());
                     }
                 }
             }
@@ -751,6 +764,9 @@ fn resolve_selected(
         capture["contribution"]["relevant"] = json!(
             request_for("decision-continuity").is_some()
                 || capture["contribution"]["blockers"].is_array()
+                || capture["contribution"]["actions"]
+                    .as_array()
+                    .is_some_and(|a| !a.is_empty())
         );
         if decision_source_problem.is_none() {
             contributions.push(capture["contribution"].clone());
@@ -1197,6 +1213,44 @@ fn resolve_selected(
     }
     contributions.push(assignment_contribution);
     contributions.push(system_intent["contribution"].clone());
+    if available("memory") {
+        let learning = crate::native_memory_learning::view(
+            target,
+            &work,
+            &input.changed,
+            &configuration,
+            &contract,
+            &verification,
+            &memory,
+            &owner_input["decision_context"],
+            &requests,
+        )?;
+        if learning["contribution"].is_object() {
+            memory["contribution"]["revision"] = learning["contribution"]["revision"].clone();
+            memory["contribution"]["relevant"] = json!(true);
+            memory["contribution"]["settled"] = learning["contribution"]["settled"].clone();
+            for field in ["actions", "decisions"] {
+                if let Some(rows) = learning["contribution"][field].as_array() {
+                    if !memory["contribution"][field].is_array() {
+                        memory["contribution"][field] = json!([]);
+                    }
+                    memory["contribution"][field]
+                        .as_array_mut()
+                        .unwrap()
+                        .extend(rows.iter().cloned());
+                }
+            }
+        }
+        if !learning.is_null() {
+            memory["future_value"] = learning;
+        }
+        native_memory::deliver(
+            target,
+            &mut memory,
+            resolution.detail("memory")
+                || matches!(resolution, Resolution::Frontier(Some(owner)) if owner == "proof"),
+        )?;
+    }
     contributions.push(memory["contribution"].clone());
     contributions.extend(independent_contributions);
     contributions.push(instructions["contribution"].clone());
@@ -1372,7 +1426,12 @@ fn resolve_selected(
     if let Some(v) = planning_identity.as_object_mut() {
         v.remove("portable_continuation");
     }
+    let mut memory_identity = public["memory"].clone();
+    if let Some(object) = memory_identity.as_object_mut() {
+        object.remove("advisory_context");
+    }
     public["_detail_bindings"] = json!({
+        "memory": digest(&memory_identity)?,
         "configuration_write": digest(&json!({"contribution":public["configuration_write"]["contribution"],"recovery":public["configuration_write"]["recovery_requests"],"deferred":public["configuration_write"]["deferred_choices"]}))?,
         "verification": digest(&verification_identity)?,
         "planning": digest(&planning_identity)?
@@ -1387,7 +1446,7 @@ fn resolve_selected(
     }
     // Memory capture fragments have already joined the same composed decision.
     // Publish their exact requests/results, not a second copy of internal authority.
-    for capture in ["capture", "advisory_capture"] {
+    for capture in ["capture", "advisory_capture", "future_value"] {
         if let Some(object) = public["memory"]
             .get_mut(capture)
             .and_then(Value::as_object_mut)
@@ -1423,10 +1482,17 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     crate::schema_validator(&schema, "native public requests")?
         .validate(request)
         .map_err(|e| CoreError::new(e.to_string()))?;
-    let requests = request
+    let mut requests = request
         .as_array()
         .cloned()
         .unwrap_or_else(|| vec![request.clone()]);
+    for candidate in requests.clone() {
+        for prerequisite in crate::native_memory_learning::prerequisites(&candidate)? {
+            if !requests.contains(&prerequisite) {
+                requests.push(prerequisite);
+            }
+        }
+    }
     let mut owners = std::collections::BTreeSet::new();
     for request in &requests {
         let owner = request["owner"].as_str().unwrap();

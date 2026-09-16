@@ -89,3 +89,14 @@ rediscovery. Do not infer lane completion from a local check or self-review.
 The native composition and resource-method tests protect exact effects, currentness,
 strict closeout and confirmed-effect recovery. Changes to this procedure must
 cite behavior-impact evidence and update its canonical/payload surfaces together.
+
+## Advisory consequences of observed proof
+
+The executable procedure delivers current selected Memory advice with its ordinary
+answer, expanding selected large detail for the active judgment. Treat it as
+advisory, never as proof or permission. A currently admitted command may explicitly
+emit a bounded `future_value_candidate` with `lesson` and `rationale`. The owner
+then asks for the remaining materiality/strongest-owner disposition; failures and
+retries alone do not nominate learning. Carry that exact pending request through
+partial work or handoff, and use the existing capture authorization if advisory
+retention is selected. No-retention is a valid disposition.

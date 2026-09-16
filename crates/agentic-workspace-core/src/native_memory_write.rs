@@ -317,6 +317,19 @@ pub(crate) fn view(
         }
     }
     let Some(request) = request else {
+        if let Some(recovery) = result["recovery_requests"]
+            .as_array()
+            .filter(|r| r.len() == 1)
+            .and_then(|r| r.first())
+        {
+            return match view(target, work, memory, config, contract, Some(recovery)) {
+                Ok(current) => Ok(current),
+                Err(problem) => {
+                    result["contribution"]["blockers"] = json!([{"code":"memory-recovery-unresolved","message":problem.to_string(),"affects":["effect:memory-state"]}]);
+                    Ok(result)
+                }
+            };
+        }
         return Ok(result);
     };
     crate::prepare_request_value(
@@ -450,7 +463,7 @@ pub(crate) fn view(
 }
 
 pub(crate) fn apply_view(memory: &mut Value, disposition: Value) {
-    for field in ["revision", "actions", "decisions"] {
+    for field in ["revision", "actions", "decisions", "blockers"] {
         if let Some(value) = disposition["contribution"].get(field) {
             memory["contribution"][field] = value.clone();
         }
@@ -704,10 +717,8 @@ mod tests {
                     );
                     invocation["invocation"] = action.clone();
                 } else {
-                    let request =
-                        resolve(None)["memory"]["disposition"]["recovery_requests"][0].clone();
                     invocation["invocation"] =
-                        resolve(Some(request))["decision_packet"]["primary_action"].clone();
+                        resolve(None)["decision_packet"]["primary_action"].clone();
                     assert_eq!(
                         invocation["invocation"]["operation_id"],
                         "memory.recover-disposition"

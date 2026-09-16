@@ -294,3 +294,83 @@ def test_native_supersession_retains_git_admitted_ancestor_locator(
         fresh = call(task="Fresh relevant session", changed=changed)["decision_packet"]["decision_context"]
         assert [row["id"] for row in fresh["consequences"]] == ["fixture:native-successor"]
     assert former.read_bytes() == original
+
+
+def test_observable_future_value_disposition_without_memory_prompt(tmp_path, shared_core_binary, native_cli):
+    import hashlib
+    import json
+    import os
+
+    from tests.test_native_proof_procedure import install, procedure
+    from tests.test_native_public_cli import consume
+
+    install(tmp_path)
+    (tmp_path / "a.txt").write_text("subject")
+    context = {"target": str(tmp_path), "task": "Check the repaired export and preserve its result", "changed": ["a.txt"]}
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    source.parent.mkdir()
+    signal = json.dumps(
+        {
+            "future_value_candidate": {
+                "lesson": "The export diagnostic distinguishes a missing optional profile from a corrupt required profile.",
+                "rationale": "That distinction avoids rediscovering the repair during a later export investigation.",
+            }
+        }
+    )
+    command = "Write-Output '" + signal + "'" if os.name == "nt" else "printf '%s' '" + signal + "'"
+    source.write_text(
+        'schema_version="agentic-workspace/verification-manifest/v1"\n[proof_routes]\n[protocols.check]\napplies_to_paths=["a.txt"]\ncommands=['
+        + json.dumps(command)
+        + "]\n"
+    )
+    first = procedure(shared_core_binary, context, "prepare")
+    assert all(d["owner"] != "memory" for d in first["operating"]["decision_packet"]["pending_consequences"]["decisions"])
+    checked = procedure(shared_core_binary, context, "execute", request=first["proof"]["execution_requests"][0])
+    question = next(
+        d
+        for d in [
+            checked["operating"]["decision_packet"]["decision_request"],
+            *checked["operating"]["decision_packet"]["pending_consequences"]["decisions"],
+        ]
+        if d and d["owner"] == "memory"
+    )
+    request = question["response_request"]
+
+    def call(request):
+        return consume("json", shared_core_binary, native_cli, context | {"request": request})
+
+    carried = consume("json", shared_core_binary, native_cli, context | {"request": request, "projection": "carried"})
+    resumed = consume("json", shared_core_binary, native_cli, carried["carriage"]["context"])
+    assert any(
+        d["owner"] == "memory" and "claim:complete" in d["affects"] for d in resumed["decision_packet"]["pending_consequences"]["decisions"]
+    )
+    dismissed = json.loads(json.dumps(request))
+    dismissed["arguments"]["disposition"] = "no-retention"
+    assert call(dismissed)["memory"]["future_value"]["dispositions"][0]["status"] == "not-retained"
+    assert not (tmp_path / ".agentic-workspace/memory/repo/manifest.toml").exists()
+    stronger = json.loads(json.dumps(request))
+    receiver = tmp_path / "export-guidance.md"
+    receiver.write_text(request["arguments"]["lesson"])
+    stronger["arguments"].update(
+        disposition="already-absorbed",
+        receiving_source={"reference": "export-guidance.md", "revision": "sha256:" + hashlib.sha256(receiver.read_bytes()).hexdigest()},
+    )
+    assert call(stronger)["memory"]["future_value"]["dispositions"][0]["retained"] is False
+    request["arguments"]["disposition"] = "advisory-memory"
+    proposed = call(request)
+    assert proposed["decision_packet"]["primary_action"] is None  # No nomination grants publication authority.
+    answer = next(d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["owner"] == "memory")["response_request"]
+    answer["arguments"]["answer"] = "confirm-retention"
+    ready = call(answer)
+    action = next(a for a in ready["decision_packet"]["ready_actions"] if a["operation_id"] == "memory.capture-advisory")
+    result = consume("json", shared_core_binary, native_cli, context | {"invocation": action}, allow_failure=True)
+    assert result["effect_outcome"]["status"] == "committed", {
+        k: v for k, v in result.items() if k in ["status", "diagnostic", "error", "effect_outcome"]
+    }
+    later = consume("json", shared_core_binary, native_cli, context | {"task": "Investigate the next export", "projection": "compact"})
+    assert "missing optional profile" in later["advisory_context"][0]["body"]
+    (tmp_path / "a.txt").write_text("changed dependency")
+    stale = consume("json", shared_core_binary, native_cli, context | {"projection": "compact"})
+    assert not stale.get("advisory_context")
+    with pytest.raises(AssertionError, match="stale|unavailable|current"):
+        call(dismissed)

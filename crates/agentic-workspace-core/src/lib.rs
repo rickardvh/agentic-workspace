@@ -26,6 +26,7 @@ mod native_intent;
 mod native_measurement;
 mod native_memory;
 mod native_memory_capture;
+mod native_memory_learning;
 mod native_memory_write;
 mod native_methods;
 mod native_owner_change;

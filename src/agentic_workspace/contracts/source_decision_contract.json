@@ -208,5 +208,20 @@
     "recovery": "Confirmed effect remains in effect even when continuation fails. Uncertain execution requires exact native custody reentry, never a newly prepared retry.",
     "direct": "Zero owner calls; no proof or claim authority.",
     "cost": "public_owner_calls counts explicit public calls. Native invoke separately resolves pre-effect admission and post-effect continuation; no parallel batch or hidden automatic retry."
+  },
+  "memory_consequences": {
+    "selected_advice": "Current selected small notes are delivered as bounded advisory_context; active proof procedure or explicit detail expands selected large notes. No disposition or authority is inferred.",
+    "capture_recovery": "One exact recoverable interrupted owner transaction exposes its existing recovery action after current scope, policy and custody admission. Original publications are not automatically replayed.",
+    "future_value_signal": {
+      "source": "Admitted native Verification receipt, complete JSON stdout up to 8192 bytes",
+      "field": "future_value_candidate",
+      "required": [
+        "lesson",
+        "rationale"
+      ],
+      "text_limit_bytes": 2048,
+      "authority": "Untrusted nomination only; agent supplies materiality and strongest-owner disposition, existing capture owner requires publication authorization.",
+      "continuity": "Exact Verification prerequisites travel in the disposition request; an unresolved candidate restricts claim:complete. No signal is quiet."
+    }
   }
 }

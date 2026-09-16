@@ -104,6 +104,19 @@ pub(crate) fn read_selected(
             "selected note changed canonical owner; reconcile source",
         ));
     }
+    for (path, revision) in note
+        .get("dependencies")
+        .and_then(toml::Value::as_table)
+        .into_iter()
+        .flatten()
+    {
+        if !confined(&root, path)?
+            || revision.as_str()
+                != Some(&decision_source::hash(&decision_source::read(&root, path)?))
+        {
+            return Err(error("advisory dependency changed before consumption"));
+        }
+    }
     let bytes = decision_source::read(&root, reference)?;
     let revision = decision_source::hash(&bytes);
     if revision != expected_revision {
@@ -443,12 +456,12 @@ pub(crate) fn public_view(
     {
         crate::native_memory_write::extend_owner(&mut contract["owners"][0])?;
         contract["restriction_authorities"] =
-            json!([{"owner":"memory","affects":["task","effect:memory-state"]}]);
+            json!([{"owner":"memory","affects":["task","effect:memory-state","claim:complete"]}]);
     }
     if capture_available {
         crate::native_memory_capture::extend_owner(&mut contract["owners"][0])?;
         contract["restriction_authorities"] =
-            json!([{"owner":"memory","affects":["task","effect:memory-state"]}]);
+            json!([{"owner":"memory","affects":["task","effect:memory-state","claim:complete"]}]);
     }
     let owner_revision = contract["owners"][0]["revision"].clone();
     contract["revision"] = json!(crate::digest(&contract)?);
@@ -500,6 +513,65 @@ pub(crate) fn public_view(
         "relevant":!view["selected_notes"].as_array().unwrap().is_empty() || !view["diagnostics"].as_array().unwrap().is_empty(),
         "facts":{"advisory_sources":view["selected_notes"],"diagnostics":view["diagnostics"]}});
     Ok(view)
+}
+
+/// Selected advice is delivered, never acknowledged or promoted. Optional large
+/// bodies expand only in the selected owner/proof procedure, not ordinary entry.
+pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result<(), CoreError> {
+    let mut context = Vec::new();
+    let mut budget = 16 * 1024;
+    for note in view["selected_notes"].as_array().into_iter().flatten() {
+        let mut item = json!({"source":note["source"],"currentness":note["currentness"],"authority_effect":"advisory-only","delivery_is_disposition":false});
+        let reason = note["currentness"]["reason"].as_str().unwrap_or("");
+        if !matches!(
+            reason,
+            "no-admitted-currentness-baseline" | "disposition-needs-current-admission"
+        ) {
+            item["status"] = json!("reconciliation-required");
+        } else if let (Some(reference), Some(revision)) = (
+            note["source"]["reference"].as_str(),
+            note["source"]["revision"].as_str(),
+        ) {
+            match read_selected(target, reference, revision) {
+                Ok(detail) => {
+                    let body = detail["body"].as_str().unwrap();
+                    if expanded || (body.len() <= 4096 && body.len() <= budget) {
+                        item["body"] = json!(body);
+                        item["status"] = json!("delivered");
+                        budget = budget.saturating_sub(body.len());
+                    } else {
+                        item["status"] = json!("selected-detail-deferred");
+                        if let Some(summary) = note["metadata"]["summary"]
+                            .as_str()
+                            .filter(|s| s.len() <= 2048)
+                        {
+                            item["summary"] = json!(summary);
+                        }
+                        item["detail_rule"] = json!(
+                            "The selected owner or executable proof procedure carries the exact body when that branch is active; source identity is revalidated."
+                        );
+                    }
+                }
+                Err(problem) => {
+                    item["status"] = json!("reconciliation-required");
+                    item["diagnostic"] = json!(problem.to_string());
+                }
+            }
+        }
+        context.push(item);
+    }
+    if !context.is_empty() {
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+        if !decision_source::read(&root, MANIFEST)
+            .is_ok_and(|bytes| view["manifest"]["revision"] == decision_source::hash(&bytes))
+        {
+            context = vec![
+                json!({"status":"reconciliation-required","diagnostic":"Memory source set changed during delivery","authority_effect":"advisory-only"}),
+            ];
+        }
+        view["advisory_context"] = json!(context);
+    }
+    Ok(())
 }
 
 pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
@@ -664,8 +736,9 @@ mod tests {
     }
     fn fixture() -> Temp {
         let temp = Temp(std::env::temp_dir().join(format!(
-                "aw-native-memory-{}-{}",
+                "aw-native-memory-{}-{:?}-{}",
                 std::process::id(),
+                std::thread::current().id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -751,6 +824,14 @@ stale_when=["src/owner.rs"]
             .unwrap()["status"],
             "no-match"
         );
+        let mut routed = resolve(
+            repo.path(),
+            &[],
+            &json!({"status":"current","posture":"selected","routes":["github/pr/review"]}),
+        )
+        .unwrap();
+        deliver(repo.path(), &mut routed, false).unwrap();
+        assert_eq!(routed["advisory_context"][0]["status"], "delivered");
         fs::write(repo.path().join(MANIFEST), "invalid[").unwrap();
         assert_eq!(
             resolve(repo.path(), &[], &Value::Null).unwrap()["status"],
@@ -800,12 +881,14 @@ stale_when=["src/owner.rs"]
             .find(|row| row["source"]["reference"] == reference)
             .unwrap();
         assert_eq!(note["currentness"]["status"], "review-required");
-        let body = read_selected(
-            repo.path(),
-            &reference,
-            note["source"]["revision"].as_str().unwrap(),
-        )
-        .unwrap();
+        let mut current = result;
+        deliver(repo.path(), &mut current, false).unwrap();
+        let body = current["advisory_context"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["source"]["reference"] == reference)
+            .unwrap();
         assert!(
             body["body"]
                 .as_str()
