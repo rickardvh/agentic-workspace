@@ -74,9 +74,9 @@ fallback owner files; their absence remained unknown/unverified, not fabricated
 current owner facts. The host used its available programmatic filesystem tool
 for reads. No issue review or independent acceptance was requested.
 
-The one-line pointer was: ìUse
+The one-line pointer was: ‚ÄúUse
 `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure;
-if native skill discovery is unavailable, read it directly.î This is also the
+if native skill discovery is unavailable, read it directly.‚Äù This is also the
 new managed fence. Its first clause preserves a canonical entrypoint hint and
 its second supports mixed readers. The removed sentences repeated policy/owner
 separation and runtime/fallback procedure already supplied by the skill.
@@ -106,6 +106,13 @@ One ordinary compact `start` on the fixture returned 2,887 UTF-8 bytes; it did n
 contain the skill body or a copy of all six discovery descriptions. Full owner
 detail is still explicitly available. The projection adds no catalogue/body to
 ordinary startup. No helper executes during host listing.
+
+CI exposed an old 100,000-character bound on the full diagnostic answer after
+the added API schemas brought that fixture to 101,533 characters. The guard now
+bounds complete schema introspection (76,000), owner state (28,000), and ordinary
+compact output (6,000) separately. This permits explicit API declaration growth
+and adds a direct ordinary-context guard; it does not claim that full
+introspection got smaller. Former-route detail retains its own 8,000 bound.
 
 ## Validation and limits
 
