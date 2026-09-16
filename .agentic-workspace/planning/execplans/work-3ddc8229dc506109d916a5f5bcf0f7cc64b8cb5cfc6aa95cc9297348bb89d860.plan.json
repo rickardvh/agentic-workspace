@@ -2,8 +2,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted_progress": "Validation is recorded per PR. Issue closure, independent review, merge, and release admission remain distinct and are not claimed. Triage #3381 records the unexplained host rejection; smaller calls resumed successfully. A bounded Planning successor normalization fixes the current owner-progress blocker. Additional operating cost included source-maintenance subtraction, one interrupted native JSON test, isolated revalidation, and repairing the Planning blocker; no whole-task log-completeness claim.",
-    "frontier": "The user extended the stack with later issues. #3381 and #3380 are closed. #3383 is the only new open implementation issue at selection. Current host capability and unknown/unavailable distinction are being implemented in the fourth layer."
+    "accepted_progress": "Validation is recorded per PR. Issue closure, independent review, merge, and release admission remain distinct and are not claimed. Triage #3381 records the unexplained host rejection; smaller calls resumed successfully. A bounded Planning successor normalization fixes the current owner-progress blocker. Additional operating cost included source-maintenance subtraction, one interrupted native JSON test, isolated revalidation, and repairing the Planning blocker; no whole-task log-completeness claim. The #3383 layer passed 84 affected cases across the bounded run and corrected-case reruns, generated static proof and commit hooks. First-run failures included fixture source-restoration ordering and stale transport/packed-binding assumptions; they were corrected and rerun. Actual current host discovery admitted Sol as a feasible implementation alternative, with local execution selected by current comparative judgment. No paid worker turn, economic benchmark, independent review, merge or release is claimed. Additional cost included host discovery, stale-check correction and focused reruns.",
+    "frontier": "The original batch is delivered in PRs #3382/#3384/#3385. User-authorized later issue #3383 is implemented in PR #3386 above #3385, ready for independent review. #3380 and triage #3381 were closed. No other later open issue existed when this continuation was scoped."
   },
   "creation_provenance": {
     "custody": {
@@ -35,10 +35,10 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Implement and validate #3383 above PR #3385; leave all implementation layers ready for externally initiated independent review.",
+  "next_action": "Externally initiated independent review of stacked PRs #3382, #3384, #3385 and #3386; implementation custody must not review or approve them.",
   "owner_level": "lane",
   "parent": {},
-  "phase": "implementation",
+  "phase": "closeout",
   "proof": {
     "strategy": "Owner-specific native fixtures and adapter/admission checks. #3383 adds current host capability, unknown/unavailable, stale binding and exact dispatch frontier regression; reuse existing result/integration/proof coverage."
   },
@@ -56,10 +56,12 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3384",
     "https://github.com/rickardvh/agentic-workspace/pull/3385",
     "docs/reviews/compact-intent-3380-2026-09-16.md",
-    "https://github.com/rickardvh/agentic-workspace/issues/3383"
+    "https://github.com/rickardvh/agentic-workspace/issues/3383",
+    "https://github.com/rickardvh/agentic-workspace/pull/3386",
+    "docs/reviews/host-feasibility-3383-2026-09-16.md"
   ],
   "relationships": {},
-  "revision": 3,
+  "revision": 4,
   "scope": {
     "excluded": [
       "Review or approve implementation PRs",
@@ -83,18 +85,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/5552fff3142ef7b4e9333d740f8719bd2de848331799ea8077aea9c2d0ce4f7e.attempt.json",
-        "revision": "sha256:80609dee5afcbf75c51ac68dca454e48b6bdfadd891273530bca51deefd6383e",
+        "path": ".agentic-workspace/local/effects/ace781f37d0776ebbc602ee2336794a107f309d4a42705448bb292ca387077ff.attempt.json",
+        "revision": "sha256:53a7bc9060b6626cbb5d1dd2ca5a747f58d8f4cc87c0b36b1452f23175e37b33",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/5552fff3142ef7b4e9333d740f8719bd2de848331799ea8077aea9c2d0ce4f7e.result.json",
-        "revision": "sha256:35f45254f3b5daf142f799043bd8c99e955fdcf6169f9a110069845b82091cee",
+        "path": ".agentic-workspace/local/effects/ace781f37d0776ebbc602ee2336794a107f309d4a42705448bb292ca387077ff.result.json",
+        "revision": "sha256:0acc2396fcaa0b9cafa1b36840be267bb8e3b36313dfb041cc44761972c1c9fd",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:a01cdda27de52449d9e4162fb205ecd45cdde011c3c2a87e151935c682f549b7",
+    "invocation_revision": "sha256:877de83077a427cad65aa0b89b8425f6b394e7cd5c69c0866f3c813fe50aa6ff",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -102,7 +104,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:720563a2471430cd3b2154aa48071246f276668b9c2ad01471a68b03486d1bbe",
+        "document_revision": "sha256:8c6ec0f365ec41488447f4573bce27816d6118a8f39b06374978c1a866061cea",
         "owner_id": "work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860",
         "owner_path": ".agentic-workspace/planning/execplans/work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860.plan.json"
       }
