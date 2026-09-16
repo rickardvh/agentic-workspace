@@ -125,6 +125,18 @@ def test_resource_procedure_direct_scratch_and_fresh_recovery(tmp_path, shared_c
     blocked = call("scratch-remove", path=relative)
     assert blocked["blockers"] and path.exists() and "action" not in blocked
     call("scratch-release", path=relative, reason="Evidence disposition settled")
+    # Legitimate staged files can exceed the full snapshot without losing the
+    # same container's bounded, fresh-process disposal route.
+    for name in ("first.packet", "second.packet"):
+        (path / name).write_bytes(b"x" * 9_000_000)
+    over = call("scratch-remove", path=relative)
+    assert over["snapshot"]["status"] == "over-capacity"
+    assert "action" not in over and "build cache" not in json.dumps(over)
+    with pytest.raises(AssertionError):
+        call("scratch-prune", path=relative, selection="../outside")
+    pruned = call("scratch-prune", path=relative, selection="first.packet")
+    assert pruned["effect_outcome"] == "committed"
+    assert not (path / "first.packet").exists() and (path / "second.packet").exists()
     removed = call("scratch-remove", path=relative)
     assert removed["effect_outcome"] == "committed" and not path.exists()
     with pytest.raises(AssertionError, match="fresh intent"):

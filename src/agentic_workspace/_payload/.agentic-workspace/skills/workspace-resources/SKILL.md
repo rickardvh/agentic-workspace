@@ -43,6 +43,14 @@ Direct work normally needs no call. If a caller needs an explicit no-resource
 result, `{"operation":"direct","compose":true}` performs zero resource-owner
 calls and creates no resource state. `audit` remains a read-only report.
 
+When the owner reports `over-capacity`, preserve the container and follow its
+bounded recovery: request `scratch-prune` with the same exact `path`, one known
+regular file's relative `selection`, and `compose: true`. Each selected file must
+fit the returned observation bound. The owner rechecks custody, retention,
+references and current bytes; unselected material stays unobserved and preserved.
+Reobserve from a fresh process and finish with ordinary `scratch-remove` once the
+remaining container fits. An observation limit does not identify build caches.
+
 If composition is unavailable but the existing native resource operation is
 available, omit `compose`: obtain a read-only proposal and execute only its exact
 returned `action` after the same policy judgment. Missing native execution itself

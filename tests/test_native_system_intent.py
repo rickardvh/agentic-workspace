@@ -212,6 +212,28 @@ def test_retained_intent_reconciliation_requires_exact_judgment_and_authority(tm
     assert mirror.read_text() == post
     assert call()["system_intent"]["reconciliation"]["recovery_requests"] == []
 
+    # Committed historical bytes cannot suppress a fresh current publication,
+    # including a later return to the same source preimage in this effect store.
+    for preimage in (old + "\n# another source state\n", old):
+        mirror.write_text(preimage)
+        request = call()["system_intent"]["reconciliation"]["requests"][0]
+        request["arguments"].update(content=post, judgment="revised", reason="Restore the faithful current interpretation.")
+        proposed = call(request=request)
+        answer = next(
+            d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "intent-write-authorization"
+        )["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        restored = call(invocation=call(request=answer)["decision_packet"]["primary_action"])
+        assert restored["effect_outcome"]["status"] == "committed"
+        assert mirror.read_text() == post
+        current = call()["system_intent"]
+        read_mirror = next(r for r in current["requests"] if r["arguments"]["reference"] == MIRROR)
+        request = call(request=read_mirror)["system_intent"]["reconciliation"]["requests"][0]
+        request["arguments"].update(content=post, judgment="faithful", reason="The exact current interpretation is already present.")
+        noop = call(request=request)
+        assert noop["system_intent"]["reconciliation"]["status"] == "already-current"
+        assert noop["decision_packet"]["primary_action"] is None
+
     # An accepted answer cannot waive another owner's path protection.
     from tests.test_native_instruction_write import instruction
 

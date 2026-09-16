@@ -1,5 +1,18 @@
 # Session logging
 
+Analysis and export describe the **known recorded stream**. An internally complete
+stream is compatible with unknown whole-task coverage: no gap event does not prove
+that no host work went uncaptured. `coverage.subject` identifies index agreement;
+`recorded_stream_integrity` identifies canonical-stream integrity. Export profiles
+are `recorded-stream-summary` or `recorded-stream-with-output-chunks` and explicitly
+retain `whole_task_coverage: unknown`.
+
+Maintainer analysis/export functions accept bounded `capture_observations` status
+values (`identity-unavailable`, `capture-failed`, `disabled`) as caller-supplied
+context. They do not fabricate events or ingest transcripts. Source/export command
+counts refer to recorded completions, including native-only streams. Metadata-only
+repetition with omitted arguments cannot establish redundant routing.
+
 Agentic Workspace records each logical session in one append-only `events.jsonl` file under the local session-logging registry namespace. That shared stream owns the monotonic sequence across physical rotations. Each event retains its physical session id, while the adjacent physical-session `session.md` and `index.json` files remain human-readable and query-friendly compatibility projections.
 
 Every event follows `session_log_event.schema.json` and carries a stable event id, timestamp, monotonic sequence, event type, logical and physical session ids, optional parent/correlation ids, and a typed payload. `command.started` and `command.completed` share an entry id, making interrupted commands visible. Routed `start`, `implement`, `proof`, and `closeout` commands also emit compact `workflow.transition` events. Identifiers derived from host-provided correlation values are salted hashes, so raw host identities are not written to disk.

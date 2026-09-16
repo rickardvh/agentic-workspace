@@ -129,7 +129,6 @@ def load_state_for_argv(argv: Sequence[str], *, cwd: Path | None = None) -> Sess
         policy = session_logging_policy(
             {
                 "local": {
-                    "schema_version": 1,
                     "session_logging": {
                         "enabled": bool(config.local_override.session_logging.enabled),
                         "path_mode": config.local_override.session_logging.path_mode,
@@ -2782,6 +2781,16 @@ def _friction_candidates(
         )
     for item in repeated[:LARGE_OUTPUT_SUMMARY_LIMIT]:
         command = str(item["command"])
+        if any(entry.get("command") == command and entry.get("omissions") for entry in entries):
+            candidates.append(
+                {
+                    "id": "repetition-intent-unknown",
+                    "summary": f"Recorded {item['count']} occurrences of {command}; omitted arguments/intent prevent a redundancy judgment.",
+                    "owner": "session-log evidence",
+                    "confidence": "unknown",
+                }
+            )
+            continue
         digest = hashlib.sha256(command.encode("utf-8")).hexdigest()[:10]
         symptom = f"{command} was re-entered {item['count']} times in one session."
         fingerprint = _improvement_signal_fingerprint(signal_kind="workflow_cost", symptom=symptom, owner_hint="operating-loop")
@@ -2950,6 +2959,19 @@ def _session_id_from_log_path(log_path: Path) -> str:
     return match.group("session_id") if match else ""
 
 
+def _capture_quality(observations: tuple[str, ...]) -> dict[str, Any]:
+    allowed = {"identity-unavailable", "capture-failed", "disabled"}
+    if len(observations) > 32 or any(value not in allowed for value in observations):
+        raise ValueError("capture observations must be bounded portable capture statuses")
+    return {
+        "known_observations": sorted(set(observations)),
+        "provenance": "caller-supplied context, not reconstructed events",
+        "whole_task_coverage": "unknown",
+        "absence_rule": "No recorded gap does not establish absence of uncaptured host work.",
+        "authoritative": False,
+    }
+
+
 def _coverage_payload(*, markdown_entries: list[dict[str, Any]], index: dict[str, Any] | None) -> dict[str, Any]:
     markdown_ids = [str(entry.get("id", "")) for entry in markdown_entries]
     indexed_entries = _entries_from_index(index or {})
@@ -2968,6 +2990,8 @@ def _coverage_payload(*, markdown_entries: list[dict[str, Any]], index: dict[str
         status = "stale"
     return {
         "status": status,
+        "subject": "recorded entries versus derived index; not whole-task capture",
+        "whole_task_coverage": "unknown",
         "markdown_command_count": len(markdown_entries),
         "indexed_command_count": len(indexed_entries),
         "missing_entry_ids": [entry_id for entry_id in markdown_ids if entry_id not in indexed_set],
@@ -3161,7 +3185,7 @@ def _synthetic_export_event(
         "payload": payload,
         "local_only": False,
         "authoritative": False,
-        "recovered_from": "legacy-derived-view",
+        "recovered_from": payload.get("recovery_basis", "legacy-derived-view"),
     }
 
 
@@ -3195,7 +3219,11 @@ def _events_for_export(
                 event_type="session.started",
                 sequence=sequence,
                 timestamp=session.get("created_at", ""),
-                payload={"created_at": session.get("created_at", ""), "migration": "legacy-session"},
+                payload=(
+                    {"created_at": session.get("created_at", ""), "recovery_basis": "recorded-stream-session-metadata"}
+                    if events
+                    else {"created_at": session.get("created_at", ""), "migration": "legacy-session"}
+                ),
             )
         )
     missing_entries = [entry for entry in legacy_entries if str(entry.get("id", "")) not in command_ids]
@@ -3227,7 +3255,8 @@ def _events_for_export(
                 payload={"entry": entry, "migration": "legacy-session"},
             )
         )
-    return events + recovered, legacy_entries, issues
+    combined = events + recovered
+    return combined, _command_entries_from_events(combined), issues
 
 
 def _artifact_chunk_events(
@@ -3289,6 +3318,7 @@ def export_session_log(
     path: str = "",
     session_id: str = "",
     include_artifacts: bool = True,
+    capture_observations: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     logical_identity = _logical_session_identity()
     session = _session_for_caller(target_root=state.target_root, logical_identity=logical_identity)
@@ -3314,7 +3344,7 @@ def export_session_log(
     all_events: list[dict[str, Any]] = []
     artifact_coverage: list[dict[str, Any]] = []
     source_hashes: dict[str, str] = {}
-    source_command_count = 0
+    source_command_ids: set[tuple[str, str]] = set()
     source_issues: list[dict[str, Any]] = []
     read_event_streams: set[str] = set()
     for physical in physical_sessions:
@@ -3330,7 +3360,7 @@ def export_session_log(
             read_event_streams.add(event_stream_path)
         else:
             all_events.extend(event for event in events if event.get("recovered_from"))
-        source_command_count += len(entries)
+        source_command_ids.update((event_stream_path, str(entry.get("id", ""))) for entry in entries)
         for source_path in (
             physical["log_path"],
             _event_path_for_session(physical).as_posix(),
@@ -3397,14 +3427,19 @@ def export_session_log(
         "event_count": len(normalized_events),
         "event_type_counts": dict(sorted(Counter(str(event.get("event_type", "")) for event in normalized_events).items())),
         "gap_count": len(gap_events),
+        "capture_quality": _capture_quality(capture_observations),
         "gaps": [event.get("payload", {}) for event in gap_events],
         "source_stream_issues": source_issues,
         "time_coverage": {"started_at": min(timestamps) if timestamps else "", "finished_at": max(timestamps) if timestamps else ""},
         "evidence_profile": {
-            "id": "complete-logical-session-with-output-chunks" if include_artifacts else "complete-logical-session-summary",
-            "command_selection": "all-logical-session-tree-commands" if not explicit_selection else "one-physical-session",
+            "id": "recorded-stream-with-output-chunks" if include_artifacts else "recorded-stream-summary",
+            "subject": "known recorded streams only; uncaptured host work cannot be inferred",
+            "whole_task_coverage": "unknown",
+            "command_selection": "recorded-logical-session-tree-commands"
+            if not explicit_selection
+            else "recorded-physical-session-commands",
             "detail_policy": "include-available-artifact-output-chunks" if include_artifacts else "omit-artifact-bytes-retain-digests",
-            "source_command_count": source_command_count,
+            "source_command_count": len(source_command_ids),
             "exported_command_count": sum(1 for event in normalized_events if event.get("event_type") == "command.completed"),
             "canonical_event_stream_complete": not source_issues and not gap_events,
             "suitable_for": ["summary-analysis", "human-chronology", "stream-processing"],
@@ -3565,6 +3600,7 @@ def analyze_session_log(
     detail: str = "summary",
     page: int = 1,
     page_size: int = DEFAULT_ANALYSIS_PAGE_SIZE,
+    capture_observations: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
@@ -3757,6 +3793,16 @@ def analyze_session_log(
         "event_stream_issues": event_issues,
         "session_scope": session_scope,
         "coverage": coverage,
+        "capture_quality": _capture_quality(capture_observations),
+        "recorded_stream_integrity": {
+            "subject": "known canonical stream only",
+            "status": "incomplete"
+            if event_issues or any(e.get("event_type") == "logging.gap" for e in canonical_events)
+            else "complete"
+            if canonical_events
+            else "unavailable",
+            "whole_task_coverage": "unknown",
+        },
         "index_path": str(index.get("path", "")) if isinstance(index, dict) else "",
         "summary": summary_payload,
         "analysis_scope": analysis_scope,
