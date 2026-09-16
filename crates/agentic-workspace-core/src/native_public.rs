@@ -1352,6 +1352,10 @@ fn resolve_with_baseline(
             }
         }
     }
+    if let Some(concern) = public["configuration_write"]["requested_behavior"].as_str() {
+        public["configuration_behavior"] =
+            crate::native_configuration_procedure::observe(target, concern, &public)?;
+    }
     Ok(public)
 }
 
@@ -1725,7 +1729,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 revalidate,
             )?
         };
-        let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
+        let mut result = finish_invocation(&input, &target, invocation, &executed, progress)?;
+        crate::native_configuration_procedure::attach(&target, invocation, &mut result);
         return Ok(result);
     }
     if invocation["operation_id"] == crate::native_patch::OP {
@@ -1994,7 +1999,14 @@ mod continuation_tests {
             Err(CoreError::new("source unavailable after commit")),
             Ok(json!({"status":"blocked","recovery":"restore compatible runtime"})),
         ] {
-            let result = attach_continuation(committed.clone(), next, &context);
+            let mut result = attach_continuation(committed.clone(), next, &context);
+            crate::native_configuration_procedure::attach(
+                &root,
+                &selected["decision_packet"]["primary_action"],
+                &mut result,
+            );
+            assert_eq!(result["configuration_behavior"]["status"], "unavailable");
+            assert_eq!(result["configuration_behavior"]["retry_effect"], false);
             for field in ["status", "effects", "value", "custody", "effect_outcome"] {
                 assert_eq!(result[field], committed[field]);
             }

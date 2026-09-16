@@ -267,6 +267,15 @@
           "workspace surfaces need to be populated after init or install",
           "mature repo discovery needs bounded pre-seed routing"
         ]
+      },
+      "executable": {
+        "entrypoint": {
+          "kind": "file",
+          "path": ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
+        },
+        "dependencies": [
+          ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md"
+        ]
       }
     },
     {

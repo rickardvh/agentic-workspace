@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Carry selected configuration changes to fresh affected-owner observations without replay or manual policy reconstruction."
+issues = [3266, 3277]
