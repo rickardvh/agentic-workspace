@@ -34,4 +34,5 @@ name = "agentic-workspace-core"
 path = "src/main.rs"
 
 [target.'cfg(windows)'.dependencies]
+junction = { version = "2.0.0", default-features = false }
 windows = { version = "0.62", features = ["Win32_System_Threading"] }

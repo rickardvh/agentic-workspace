@@ -73,6 +73,21 @@ If no applicable concern remains, finish without creating configuration or state
    Byte convergence does not settle unresolved semantic source dispositions or
    establish proof, review acceptance or completion of broader adoption intent.
 
+
+9. For standard host skill discovery, submit Configuration's `skill_exposure_request`.
+   Inspect its selected product bundles and use the exact `expose_request` or
+   `remove_request` with the authorized answer, then invoke the returned action.
+   Exposure links `.agents/skills/<name>` to the canonical bundle; package refresh
+   and user edits remain visible without copying bodies. Unix uses relative
+   directory symlinks; Windows uses NTFS junctions. Unsupported filesystems yield
+   an explicit gap and retain the mixed-reader pointer. Never overwrite a collision.
+   A moved Windows checkout needs explicit reconciliation of its old absolute
+   junctions; do not silently adopt them. Remove exposure before canonical payload
+   teardown when possible. Owned retired skills remain removable after registry
+   changes. After interruption, reobserve: use an offered `recovery_request` to
+   settle an already-published result, or a fresh exact proposal when absence is
+   established. Discovery and selection grant no effect, policy or proof authority.
+
 ## Configuration grammar
 
 Shared and local sources use their single closed schemas, with no version marker.

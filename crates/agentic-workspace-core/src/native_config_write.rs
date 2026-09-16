@@ -244,6 +244,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_PAYLOAD,"result_kind":"agentic-workspace/configuration-payload-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"selected_owner":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,63}$"}}}}));
+    crate::native_skill_exposure::declarations(&mut owner);
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
@@ -344,6 +345,7 @@ pub(crate) fn view(
     result["contribution"]["revision"] = json!(digest(&binding)?);
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     result["payload_discovery_request"] = template(READ_PAYLOAD, json!({}));
+    result["skill_exposure_request"] = template(crate::native_skill_exposure::READ, json!({}));
     result["choice_requests"] = json!(
         PROGRESSIVE_CHOICES
             .iter()
@@ -467,6 +469,13 @@ pub(crate) fn view(
         return Err(err(
             "configuration source, policy or capability changed; resolve a fresh request",
         ));
+    }
+    if matches!(
+        request["request_kind"].as_str(),
+        Some(crate::native_skill_exposure::READ | crate::native_skill_exposure::EDIT)
+    ) {
+        crate::native_skill_exposure::view(target, request, &binding, &template, &mut result)?;
+        return Ok(result);
     }
     if request["request_kind"] == READ_PAYLOAD {
         let mut choices = Vec::new();
@@ -696,6 +705,9 @@ pub(crate) fn view(
     Ok(result)
 }
 pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
+    if action["operation_id"] == crate::native_skill_exposure::OP {
+        return crate::native_skill_exposure::write_scope(action);
+    }
     let args = &action["arguments"]["request"]["arguments"];
     let source = args["source"]
         .as_str()
@@ -725,6 +737,9 @@ pub(crate) fn execute(
     invocation: &Value,
     mut revalidate: impl FnMut() -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
+    if invocation["operation_id"] == crate::native_skill_exposure::OP {
+        return crate::native_skill_exposure::execute(target, decision, invocation, revalidate);
+    }
     let mut result = execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
         Ok(())
     })?;

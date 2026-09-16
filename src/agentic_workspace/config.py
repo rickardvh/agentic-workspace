@@ -283,7 +283,7 @@ def workspace_pointer_block(cli_invoke: str = "agentic-workspace") -> str:
     """Render the mixed-agent activation pointer; invocation policy stays source-owned."""
     return (
         f"{WORKSPACE_WORKFLOW_MARKER_START}"
-        "\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` as the canonical Agentic Workspace procedure.\n\nIf host-native skill discovery is unavailable, read that skill before other package-owned AW surfaces. Repository and local instructions/config remain policy and constraints; current owner state/evidence remains source-owned. The skill explains how to use the configured Rust-backed tools when executable AW is available and how to degrade conservatively when it is not.\n"
+        "\nUse `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure; if native skill discovery is unavailable, read it directly.\n"
         f"{WORKSPACE_WORKFLOW_MARKER_END}"
     )
 

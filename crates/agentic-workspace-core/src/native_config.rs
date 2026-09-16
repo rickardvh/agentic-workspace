@@ -414,10 +414,17 @@ mod tests {
         );
         for (transport, valid) in [
             (
-                json!({"kind":"native","adapter":"selected-owner","parameters":{}}),
+                json!({"kind":"native","adapter":"selected-owner","command":["worker"],"parameters":{}}),
                 true,
             ),
-            (json!({"kind":"native","adapter":"selected-owner"}), false),
+            (
+                json!({"kind":"native","adapter":"selected-owner","command":["worker"]}),
+                false,
+            ),
+            (
+                json!({"kind":"native","adapter":"selected-owner","parameters":{}}),
+                false,
+            ),
             (json!({"kind":"process","command":["worker"]}), true),
             (json!({"kind":"process"}), false),
             (json!({"kind":"manual","command":["worker"]}), false),

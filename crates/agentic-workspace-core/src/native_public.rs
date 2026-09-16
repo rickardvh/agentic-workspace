@@ -84,6 +84,7 @@ fn resolve_with_baseline(
                 && i["operation_id"] != crate::native_instruction_write::RECOVERY
                 && i["operation_id"] != "configuration.defer-choice"
                 && i["operation_id"] != "configuration.write"
+                && i["operation_id"] != "configuration.skill-exposure"
                 && i["operation_id"] != "configuration.recover-write"
                 && i["operation_id"] != "memory.dispose"
                 && i["operation_id"] != "memory.recover-disposition"
@@ -1194,6 +1195,7 @@ fn resolve_with_baseline(
                             | "configuration.write"
                             | "configuration.recover-write"
                             | "configuration.defer-choice"
+                            | "configuration.skill-exposure"
                             | "instructions.write"
                             | "instructions.recover-write"
                             | "memory.dispose"
@@ -1587,6 +1589,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != crate::native_instruction_write::WRITE
         && invocation["operation_id"] != crate::native_instruction_write::RECOVERY
         && invocation["operation_id"] != "configuration.defer-choice"
+        && invocation["operation_id"] != "configuration.skill-exposure"
         && invocation["operation_id"] != "configuration.write"
         && invocation["operation_id"] != "configuration.recover-write"
         && invocation["operation_id"] != "memory.dispose"
@@ -1659,6 +1662,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             "configuration.write"
                 | "configuration.recover-write"
                 | "configuration.defer-choice"
+                | "configuration.skill-exposure"
                 | "instructions.write"
                 | "instructions.recover-write"
                 | "memory.dispose"

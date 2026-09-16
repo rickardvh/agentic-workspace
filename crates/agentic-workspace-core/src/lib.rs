@@ -35,6 +35,7 @@ pub mod native_public;
 mod native_requirements;
 mod native_resources;
 pub mod native_routes;
+mod native_skill_exposure;
 mod native_source_reconciliation;
 mod native_startup;
 mod native_verification;

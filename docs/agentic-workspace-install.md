@@ -163,3 +163,35 @@ artifacts may lack the operation; their actual contract remains authoritative.
 5. After acting, reconcile the result: passing proof supports only its bounded claim; unfinished parent intent stays with its owner; durable anti-rediscovery residue may route to Memory; Verification contributes evidence only if configured and relevant. Resolve again when a constructible next action remains.
 
 This example intentionally omits an exhaustive command or footprint list. Exact current commands are in the [CLI catalogue](reference/cli-catalogue.md), and exact installed files are in the [surface catalogue](reference/installed-surface-catalogue.md).
+
+## Standard project skill discovery
+
+In an adopted repository, Configuration returns `skill_exposure_request` from
+`start --projection full`. Submit that exact request through `start --input` to
+inspect the current package registry's main and specialized product bundles.
+Use an offered `expose_request`, supply the authorized answer, and execute the
+returned exact action through `invoke`. The same owner offers removal and
+interrupted-result recovery. These are Configuration operations, not a restored
+legacy install/uninstall CLI.
+
+Exposure uses `.agents/skills/<name>` directory links to canonical
+`.agentic-workspace/skills/<name>` bundles. Unix uses relative symlinks; Windows
+uses NTFS junctions because ordinary symlink creation can require privileges.
+Canonical updates and bundle-relative resources remain visible without another
+maintained body. Reference-only and maintainer skills are not exported.
+The current Codex 0.154.0 Windows discovery/activation observation is recorded in
+[the exposure evidence](maintainer/skill-exposure-3325.md); it is not a general
+Windows distribution support claim or a guarantee about other hosts.
+
+A filesystem that cannot create the applicable link returns an explicit gap.
+Keep the small `AGENTS.md` pointer for mixed readers and unavailable runtimes.
+Never replace a colliding host skill. Reconcile/move that path explicitly and
+request fresh exposure. A moved Windows checkout can retain absolute junctions
+to its old location; preserve and explicitly reconcile those links before
+readoption. Removal deletes only an authenticated, matching discovery link.
+It preserves canonical edits, unrelated skills, and owner state. Prefer removal
+before payload teardown; previously owned retired links remain discoverable for
+removal after registry changes. Do not recursively delete `.agents/skills`.
+
+Listing skills is passive. Host selection is procedure discovery; it cannot
+establish policy applicability, effect permission, evidence or issue closure.

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Expose canonical product skills through owned standard project discovery links with safe removal and recovery."
+issues = [3325, 3277]
