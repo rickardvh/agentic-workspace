@@ -4,7 +4,7 @@
 
 The issue's pre-implementation selection named `workspace-setup-jumpstart` and
 the current Configuration procedure. Accepted #3303/#3313/#3314 and module
-#3316–#3319 work showed why saved fields must be distinguished from actual
+#3316â€“#3319 work showed why saved fields must be distinguished from actual
 consumer behavior. This change implements that selected case through the normal
 repository/package owner; recurrence did not authorize a running process to
 modify its method or approve its replacement.
