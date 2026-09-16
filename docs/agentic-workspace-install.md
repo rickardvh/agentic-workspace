@@ -58,7 +58,7 @@ This page is the canonical support/prerequisite owner. Exact release identity is
 | --- | --- | --- |
 | Python | 3.11–3.14; 3.11/3.13/3.14 exercised, 3.12 bounded by minimum/primary lanes | later versions and alternative implementations are unproven |
 | Node | npm projection: majors 20, 24 and 25 exercised | other majors are unproven |
-| Installer | `uv tool install` using the exact hash-bound stable release receipt command | ordinary registry resolution, mutable branches, editable/source installs are not support-bearing |
+| Installer | `uv tool install` using the exact hash-bound stable release receipt command | exact registry versions require `registry-publication.json`; mutable branches and editable/source installs are not support-bearing |
 | Git/repository | a Git working tree for shared checked-in operating context and ownership | non-Git hosts are not part of the current public adoption contract |
 | Network | required to obtain release assets and for explicitly configured external adapters | ordinary local resolve/act/reconcile does not imply a network service |
 | OS/shell | native reconstruction: Linux x64, GNU target, `linux_x86_64` wheel | no manylinux, Windows, macOS, ARM or blanket shell/container/runner guarantee |
@@ -69,7 +69,7 @@ The [checked-in install projection](reference/support-bearing-install.md) tracks
 
 The support-bearing public installation identity is a **stable versioned GitHub Release** and the exact command recorded in that release's `distribution-install-readiness.json`. That receipt currently owns the canonical `uv tool install` command, exact root-wheel release URL, and SHA-256 binding. Therefore the support-bearing public path requires a working `uv` installation capable of executing that receipt command.
 
-Mutable branches and ordinary registry resolution are not support-bearing installation identities unless a future release policy explicitly changes that contract. `uvx`, `pipx run`, editable installs, and source-checkout commands are useful development/debug routes but should not be confused with the support-bearing release identity.
+Mutable branches are not support-bearing installation identities. Exact PyPI/npm versions are supported distribution projections only after the corresponding registry receipt and stable admission pass. RC registry versions remain non-support-bearing. `uvx`, `pipx run`, editable installs, and source-checkout commands are useful development/debug routes but should not be confused with the support-bearing release identity.
 
 Operating-system and shell portability should not be inferred from this page beyond what the selected stable release and its test evidence actually cover. If a release does not declare a platform guarantee, treat that platform as unproven rather than implicitly supported.
 

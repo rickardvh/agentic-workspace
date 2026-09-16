@@ -198,6 +198,7 @@ jobs:
           rm -rf dist
           mkdir -p dist
           uv build --wheel --sdist --out-dir dist
+          python scripts/release/admit_linux_wheel.py dist
           python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
           (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
           uv run python scripts/check/check_package_identity.py \
@@ -543,3 +544,13 @@ jobs:
             dist/support-bearing-promotion.json
             dist/agentic-workspace.spdx.json
           fail_on_unmatched_files: true
+
+  language-registries:
+    needs: agentic-workspace-package
+    permissions:
+      contents: read
+      id-token: write
+      attestations: read
+    uses: ./.github/workflows/registry-release.yml
+    with:
+      tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}

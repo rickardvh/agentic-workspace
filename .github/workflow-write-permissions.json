@@ -1,6 +1,13 @@
 {
   "kind": "agentic-workspace/repository-workflow-write-permissions/v1",
   "allowed_write_permissions": {
-    ".github/workflows/preview-release.yml": ["contents", "id-token", "attestations"]
+    ".github/workflows/preview-release.yml": [
+      "contents",
+      "id-token",
+      "attestations"
+    ],
+    ".github/workflows/registry-release.yml": [
+      "id-token"
+    ]
   }
 }

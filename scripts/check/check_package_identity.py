@@ -171,8 +171,8 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
     coordinated_modules = expected_names - {str(distribution.get("canonical_root_distribution", ""))}
     if not coordinated_modules.issubset(dependency_names):
         errors.append("root dependencies do not contain every coordinated module identity")
-    if distribution.get("strategy") != "exact-github-release-assets" or distribution.get("registry_resolution_supported") is not False:
-        errors.append("supported distribution strategy must be exact GitHub release assets, not registry resolution")
+    if distribution.get("strategy") != "exact-tagged-release-artifacts" or distribution.get("registry_resolution_supported") is not True:
+        errors.append("supported distribution strategy must project exact tagged artifacts to GitHub and registries")
     for relative in (
         "README.md",
         "docs/agentic-workspace-install.md",
@@ -191,7 +191,7 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
         prefix = package_path.relative_to(root).as_posix()
         expected = {
             "name": package["name"],
-            "private": True,
+            "private": False,
             "license": identity.get("license_spdx"),
             "author": identity.get("author"),
             "homepage": identity.get("homepage"),
@@ -202,11 +202,11 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
             if payload.get(field) != value:
                 errors.append(f"{prefix} {field} does not match canonical identity")
         if (
-            "publishConfig" in payload
-            or package.get("release_policy") != "release-asset-only"
-            or package.get("registry_status") != "unpublished"
+            payload.get("publishConfig") != {"access": "public"}
+            or package.get("release_policy") != "coordinated-public-registry"
+            or package.get("registry_status") != "trusted-publication-required"
         ):
-            errors.append(f"{prefix} must be explicitly unpublished and release-asset-only")
+            errors.append(f"{prefix} must declare coordinated trusted public registry publication")
         if "LICENSE" not in payload.get("files", []):
             errors.append(f"{prefix} does not package LICENSE")
         generated_license = package_path.parent / "LICENSE"
@@ -286,7 +286,7 @@ def artifact_identity_errors(root: Path, dist: Path, *, require_exact_urls: bool
             if (
                 payload.get("name") != package["name"]
                 or payload.get("license") != identity["license_spdx"]
-                or payload.get("private") is not True
+                or payload.get("private") is not False
             ):
                 errors.append(f"{tarball.name} has conflicting package identity")
             if data != license_text:

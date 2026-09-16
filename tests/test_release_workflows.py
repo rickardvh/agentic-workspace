@@ -98,14 +98,14 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
     for package in ownership["typescript_packages"]:
         package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
         assert package_json["name"] == package["name"]
-        assert package_json["private"] is True
-        assert "publishConfig" not in package_json
+        assert package_json["private"] is False
+        assert package_json["publishConfig"] == {"access": "public"}
         assert package_json["license"] == "MIT"
         assert "LICENSE" in package_json["files"]
         assert package_json["engines"]["node"] == ">=20"
         assert package["runtime_requirement"] == "node>=20"
-        assert package["release_policy"] == "release-asset-only"
-        assert package["registry_status"] == "unpublished"
+        assert package["release_policy"] == "coordinated-public-registry"
+        assert package["registry_status"] == "trusted-publication-required"
         assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
 
 
@@ -247,8 +247,8 @@ def test_releaseable_typescript_package_generation_preserves_release_owned_versi
         current = json.loads((ROOT / package_json_path).read_text(encoding="utf-8"))
         rendered = rendered_by_path[package_json_path]
         assert rendered["version"] == current["version"]
-        assert rendered["private"] is True
-        assert "publishConfig" not in rendered
+        assert rendered["private"] is False
+        assert rendered["publishConfig"] == {"access": "public"}
         assert rendered["license"] == "MIT"
 
 

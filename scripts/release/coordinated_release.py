@@ -128,7 +128,15 @@ def release_identity(tag: str) -> dict[str, Any]:
             "target_stable_tag": "v1.0.0",
             "package_versions": {"python": f"1.0.0rc{number}", "npm": f"1.0.0-rc.{number}", "cargo": f"1.0.0-rc.{number}"},
         }
-    return {"release_class": release_class, "support_bearing": release_class == "stable", "tag": tag, "version": str(version)}
+    return {
+        "release_class": release_class,
+        "support_bearing": release_class == "stable",
+        "tag": tag,
+        "version": str(version),
+        **(
+            {"package_versions": {ecosystem: str(version) for ecosystem in ("python", "npm", "cargo")}} if release_class == "stable" else {}
+        ),
+    }
 
 
 def npm_version(python_version: str) -> str:

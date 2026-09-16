@@ -92,7 +92,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
         encoding="utf-8",
     )
     package = {
-        key: package[key] for key in ("name", "version", "author", "license", "repository", "homepage", "bugs", "engines", "private")
+        key: package[key] for key in ("name", "version", "author", "license", "repository", "homepage", "bugs", "engines", "private", "publishConfig")
     }
     package.update(
         {

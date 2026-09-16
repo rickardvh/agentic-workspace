@@ -71,7 +71,10 @@
   "homepage": "https://github.com/rickardvh/agentic-workspace",
   "license": "MIT",
   "name": "@agentic-workspace/workspace-cli",
-  "private": true,
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/rickardvh/agentic-workspace"

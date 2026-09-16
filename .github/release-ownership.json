@@ -15,7 +15,7 @@
     "maturity_classifier": "Development Status :: 3 - Alpha"
   },
   "distribution_identity": {
-    "strategy": "exact-github-release-assets",
+    "strategy": "exact-tagged-release-artifacts",
     "release_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/v{version}",
     "preview_release_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/preview-v{version}",
     "canonical_root_distribution": "agentic-workspace",
@@ -23,8 +23,8 @@
     "redistributable_receipt": "redistributable-package-readiness.json",
     "digest_algorithm": "sha256",
     "mutable_branch_install_supported": false,
-    "registry_resolution_supported": false,
-    "rule": "Support-bearing installs use one exact root wheel URL and digest; one npm artifact and paired native CLI/core carry the same Rust authority. Preview artifacts remain non-support-bearing.",
+    "registry_resolution_supported": true,
+    "rule": "RC/stable language registries project the admitted GitHub artifact digests; only stable admission grants support. Exploratory previews remain GitHub-only.",
     "release_candidate_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/{tag}"
   },
   "changeset_dir": ".release/changes",
@@ -162,8 +162,8 @@
       "python_package": "agentic-workspace",
       "runtime": "node",
       "runtime_requirement": "node>=20",
-      "release_policy": "release-asset-only",
-      "registry_status": "unpublished",
+      "release_policy": "coordinated-public-registry",
+      "registry_status": "trusted-publication-required",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],
@@ -272,5 +272,19 @@
     "publisher": "preview-release.yml",
     "promotion_record": ".release/promotions/v1.0.0.json",
     "progression": "Contiguous rc.N for a new source; retries reuse the same immutable tag."
+  },
+  "registry_publisher": {
+    "workflow": ".github/workflows/registry-release.yml",
+    "environment": "package-registries",
+    "classes": [
+      "release-candidate",
+      "stable"
+    ],
+    "python": "https://pypi.org",
+    "npm": "https://registry.npmjs.org",
+    "rc_npm_tag": "rc",
+    "stable_npm_tag": "latest",
+    "receipt": "registry-publication.json",
+    "authority": "Same admitted immutable tagged artifact set; no registry rebuilds"
   }
 }
