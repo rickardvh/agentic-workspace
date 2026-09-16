@@ -25,8 +25,16 @@ requires the existing native reader capability `resource-procedure-v1`; missing
 material or incompatible runtime returns unavailable detail before resource work.
 No Python or shell resource implementation is introduced.
 
+A protection whose semantic applicability is unresolved yields `route_requests`
+for the affected destination. Supply the exact current selection with only its
+requested judgment in the resource request's `route_request`; an admitted ordinary
+route request for the same task/changed paths works too. A selected skill name or
+policy hash is not scope admission. The owner revalidates route/work/source inputs
+and intersects declared path scope with the actual resource write destination.
+A current `none` selection is a settled negative; missing/stale selection is not.
+
 Keep the returned `resource_context` in caller context. To clean up, carry its
-target/task/changed fields with a request containing the same exact `path`,
+target/task/changed fields with a request containing the same exact `path` and current `route_request` when present,
 `operation: scratch-remove` (or `worktree-remove`) and `compose: true`. Reentry
 uses fresh observations, never an old `expected_revision`. `resource_context` is
 ordinary disposable carriage, not a session record or authority grant.

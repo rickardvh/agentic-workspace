@@ -161,6 +161,8 @@ struct Input {
     routes: Vec<String>,
     changed_paths: Vec<String>,
     selected_routes: Vec<String>,
+    #[serde(default)]
+    target_patterns: Vec<String>,
     route_posture: String,
 }
 
@@ -199,7 +201,12 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect();
-    let path_applies = input.paths.is_empty() || !matched.is_empty();
+    let path_applies = input.paths.is_empty()
+        || !matched.is_empty()
+        || input
+            .paths
+            .iter()
+            .any(|p| input.target_patterns.iter().any(|t| patterns_overlap(p, t)));
     let route_applies = input.routes.is_empty()
         || (input.route_posture == "selected"
             && selectors.iter().any(|selector| {
@@ -212,17 +219,21 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 })
             }));
     let applies = path_applies && route_applies;
+    let unresolved =
+        path_applies && !input.routes.is_empty() && input.route_posture == "unresolved";
     let mut reasons = Vec::new();
     if applies {
         if input.paths.is_empty() {
             reasons.push("global path scope".to_owned());
-        } else {
+        } else if !matched.is_empty() {
             let pattern = input
                 .paths
                 .iter()
                 .find(|pattern| matches(pattern, &matched[0]))
                 .unwrap();
             reasons.push(format!("{} matches {pattern}", matched[0]));
+        } else {
+            reasons.push("resource destination intersects declared path scope".into());
         }
         if !input.routes.is_empty() {
             reasons.push(format!(
@@ -249,7 +260,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         }
     }
     Ok(
-        json!({"applies":applies,"path_applies":path_applies,"route_applies":route_applies,"reason":reasons.join("; "),"matched_paths":matched}),
+        json!({"status":if unresolved {"unresolved"} else if applies {"applicable"} else {"not-applicable"},"applies":applies,"path_applies":path_applies,"route_applies":route_applies,"reason":reasons.join("; "),"matched_paths":matched}),
     )
 }
 
@@ -300,6 +311,13 @@ mod tests {
             view(input.clone()).unwrap()["reason"],
             "semantic route selection is unresolved"
         );
+        assert_eq!(view(input.clone()).unwrap()["status"], "unresolved");
+        input["changed_paths"] = json!([]);
+        assert_eq!(view(input.clone()).unwrap()["status"], "not-applicable");
+        input["target_patterns"] = json!(["src/auth/**"]);
+        assert_eq!(view(input.clone()).unwrap()["status"], "unresolved");
+        input["target_patterns"] = json!([]);
+        input["changed_paths"] = json!(["src/auth/token.py"]);
         input["route_posture"] = json!("selected");
         input["selected_routes"] = json!(["workspace/ownership/audit"]);
         let output = view(input.clone()).unwrap();

@@ -90,7 +90,7 @@
     "procedure_references": "non-authoritative"
   },
   "resource_procedure": {
-    "request": "The existing resources request optionally accepts compose: true. Supply fresh operation intent and the same exact path for recovery; never a retained expected_revision.",
+    "request": "The existing resources request optionally accepts compose: true and an exact semantic route_request for the same current work. Unresolved route-scoped destination protection returns existing owner route_requests; settled negatives and unrelated effects remain quiet. Supply fresh operation intent and the same exact path for recovery; never a retained expected_revision.",
     "composition": "Check selected executable availability, obtain one native proposal, and carry its exact action through current native admission. No action loop or separate filesystem semantics.",
     "direct": "operation: direct with compose: true performs zero resource-owner calls and creates no state; ordinary direct work need not call at all.",
     "judgment": "Missing isolation necessity or current policy judgment yields the native proposal. Composition cannot manufacture permits-isolation.",
@@ -208,5 +208,26 @@
     "recovery": "Confirmed effect remains in effect even when continuation fails. Uncertain execution requires exact native custody reentry, never a newly prepared retry.",
     "direct": "Zero owner calls; no proof or claim authority.",
     "cost": "public_owner_calls counts explicit public calls. Native invoke separately resolves pre-effect admission and post-effect continuation; no parallel batch or hidden automatic retry."
+  },
+  "memory_consequences": {
+    "selected_advice": "Current selected small notes are delivered as bounded advisory_context; active proof procedure or explicit detail expands selected large notes. No disposition or authority is inferred.",
+    "capture_recovery": "One exact recoverable interrupted owner transaction exposes its existing recovery action after current scope, policy and custody admission. Original publications are not automatically replayed.",
+    "future_value_signal": {
+      "source": "Admitted native Verification receipt, complete JSON stdout up to 8192 bytes",
+      "field": "future_value_candidate",
+      "required": [
+        "lesson",
+        "rationale"
+      ],
+      "text_limit_bytes": 2048,
+      "authority": "Untrusted nomination only; agent supplies materiality and strongest-owner disposition, existing capture owner requires publication authorization.",
+      "continuity": "Exact Verification prerequisites travel in the disposition request; an unresolved candidate restricts claim:complete. No signal is quiet."
+    }
+  },
+  "execution_continuity": {
+    "binding_dispatch": "Carry exact ready dispatch only for binding nonlocal current Assignment and supported selected transport; no automatic invoke. Exact in-flight custody blocks relaunch.",
+    "planning_continuity": "Current admitted owner custody carries exact sealed-handoff retention, admitted integrated return adoption and same-owner pending-update recovery. Semantic relation, selector permission and new plan material remain explicit.",
+    "no_op": "Identical retained handoff or consumed result does not synthesize a new durable update.",
+    "authority": "No new proof, worker-result trust, completion or source admission."
   }
 }

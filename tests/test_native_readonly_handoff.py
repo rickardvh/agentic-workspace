@@ -204,7 +204,10 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         forged_retention[-1]["id"] = "client-chosen-retention"
         with pytest.raises(AssertionError, match="exact request"):
             call(forged_retention)
-        retain_action = call(retention)["decision_packet"]["primary_action"]
+        retain_action = next(a for a in call(export)["decision_packet"]["ready_actions"] if a["operation_id"] == "planning.update")
+        assert retain_action == next(
+            a for a in call(retention)["decision_packet"]["ready_actions"] if a["operation_id"] == "planning.update"
+        )
         assert retain_action["operation_id"] == "planning.update"
         call(invocation=retain_action)
         assert call(invocation=retain_action)["status"] == "applied"
@@ -218,7 +221,10 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         export = held["reentry"]["request"]
         assert call(export)["planning"]["current_owner"]["reconciliation"]["subject"]["revision"] == before_retention
     dispatch = call(export)["task_requirements"]["delegation"]["requests"][0]
-    dispatch_view = call(dispatch)
+    dispatch_view = call(export)
+    assert next(a for a in dispatch_view["decision_packet"]["ready_actions"] if a["operation_id"] == "delegation.dispatch") == next(
+        a for a in call(dispatch)["decision_packet"]["ready_actions"] if a["operation_id"] == "delegation.dispatch"
+    )
     action = next(action for action in dispatch_view["decision_packet"]["ready_actions"] if action["operation_id"] == "delegation.dispatch")
     assert action["operation_id"] == "delegation.dispatch"
     assert not (tmp_path / "launches.txt").exists()
@@ -262,6 +268,12 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         assert call(invocation=action)["value"] == result["value"]
         completion.unlink()
         original = terminal.read_bytes()
+        terminal.unlink()
+        pending = call(export)
+        assert not any(a["operation_id"] == "delegation.dispatch" for a in pending["decision_packet"]["ready_actions"])
+        assert any(b["code"] == "delegation-execution-uncertain" for b in pending["decision_packet"]["blockers"])
+        assert (tmp_path / "launches.txt").read_text() == "launched\n"
+        terminal.write_bytes(original)
         held["outcome"]["value"]["returned"]["summary"] = "invented recovery"
         terminal.write_text(json.dumps(held))
         with pytest.raises(AssertionError, match="custody|differs"):
@@ -421,7 +433,8 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
         judgment[-1]["arguments"] = {"answer": "repair-required", "reason": dependency.read_bytes().decode()}
         admitted = call(judgment)
     adoption = admitted["planning"]["adoption_requests"][0]
-    adopt_action = call(adoption)["decision_packet"]["primary_action"]
+    adopt_action = next(a for a in admitted["decision_packet"]["ready_actions"] if a["operation_id"] == "planning.update")
+    assert adopt_action == call(adoption)["decision_packet"]["primary_action"]
     assert adopt_action["operation_id"] == "planning.update"
     assert adopt_action["arguments"]["document"]["continuation"][destination] == expected_frontier
     tampered = copy.deepcopy(adopt_action)
@@ -440,6 +453,16 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
     call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
     assert call()["planning"]["current_owner"]["current"] is True
     assert call()["planning"]["handoff_continuation"] is None
+    before_reobservation = plan_path.read_bytes()
+    if surface == "native" and not repair_evaluation:
+        continued = [r for r in judgment if r["owner"] != "planning"]
+        continued.append(call()["planning"]["requests"][0])
+        # Adoption changed the semantic Planning subject. Reusing the old
+        # requirement judgment cannot manufacture another progress update.
+        with pytest.raises(AssertionError, match="task requirements source changed"):
+            call(continued)
+        assert not any(a["operation_id"] == "planning.update" for a in call()["decision_packet"]["ready_actions"])
+        assert plan_path.read_bytes() == before_reobservation
     proof_context = {**context, "changed": [plan_ref, "dependency.md", "verify_frontier.py"]}
     proof_start = consume(surface, shared_core_binary, native_cli, proof_context, host_path=os.environ["PATH"])
     continuation = proof_start["planning"]["requests"][0]

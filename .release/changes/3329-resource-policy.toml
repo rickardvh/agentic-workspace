@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Preserve current scoped instruction applicability through direct and composed resources."
+issues = [3329, 3277]

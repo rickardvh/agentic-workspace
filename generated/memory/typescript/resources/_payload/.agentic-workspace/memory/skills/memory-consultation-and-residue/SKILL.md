@@ -5,7 +5,7 @@ description: Distinguish current Memory selection, useful durable residue and st
 
 # Memory Consultation And Residue
 
-Use the configured AW `start --target . --task "<task>" --format json` and known changed paths. Follow the decision packet. Inspect only current selected notes through `memory.requests`; no-match needs no further Memory work.
+Use the configured AW `start --target . --task "<task>" --format json` and known changed paths. Follow the decision packet. Use the directly delivered selected `advisory_context`; no-match needs no further Memory work.
 
 Keep the useful conclusion with its smallest existing owner. Planning owns execution continuity, Verification owns proof, and repository decisions retain their deciding authority. A passing test does not establish a durable lesson or authorize a Memory write.
 

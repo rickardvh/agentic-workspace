@@ -211,8 +211,12 @@ pub(crate) fn extend_destination(
     if destination == Destination::Advisory {
         material = json!({"type":"object","additionalProperties":false,"properties":{"id":{"type":"string","minLength":1,"maxLength":256},"lesson":text,"rationale":text,"dependency_paths":strings},"required":["id","lesson","rationale","dependency_paths"]});
     }
-    let args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
+    let mut args = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"material":material,"disposition":{"enum":["retain","no-retention"]},"answer":{"enum":[destination.answer(),"defer"]},"proposal_revision":text},"required":["material"]});
+    if destination == Destination::Advisory {
+        args["properties"]["candidate_evidence_requests"] =
+            json!({"type":"array","maxItems":8,"items":{"type":"object"}});
+    }
     let recovery = json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
         "properties":{"source":text,"record_revision":text},"required":["source","record_revision"]});
     owner["domains"] = json!([destination.owner()]);
@@ -229,6 +233,12 @@ pub(crate) fn extend_destination(
     owner["requests"].as_array_mut().unwrap().extend([
         json!({"kind":destination.capture(),"result_kind":"agentic-memory/decision-proposal/v1","input_schema":args}),
         json!({"kind":destination.recover(),"result_kind":destination.result_kind(),"input_schema":recovery})]);
+    if destination == Destination::Advisory {
+        owner["requests"]
+            .as_array_mut()
+            .unwrap()
+            .push(crate::native_memory_learning::declaration());
+    }
     owner["revision"] = json!(digest(&json!([
         owner["requests"],
         owner["operations"],
@@ -755,6 +765,29 @@ pub(crate) fn view_for(
                     }
                 }
             }
+        }
+        let recoveries: Vec<_> = view["requests"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|r| r["request_kind"] == destination.recover())
+            .collect();
+        if recoveries.len() == 1 {
+            return match view_for(
+                target,
+                work,
+                scope,
+                config,
+                contract,
+                (destination, context),
+                Some(recoveries[0]),
+            ) {
+                Ok(current) => Ok(current),
+                Err(problem) => {
+                    view["contribution"]["blockers"] = json!([{"code":"memory-publication-recovery-unresolved","message":problem.to_string(),"affects":[format!("effect:{}",destination.effect())]}]);
+                    Ok(view)
+                }
+            };
         }
         return Ok(view);
     };
@@ -1522,16 +1555,7 @@ mod tests {
             let next = if stage == "prepared" {
                 action.clone()
             } else {
-                let recovery = fresh["memory"][section]["requests"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .find(|r| {
-                        r["request_kind"] == if advisory { ADVISORY_RECOVER } else { RECOVER }
-                    })
-                    .unwrap()
-                    .clone();
-                start(Some(recovery))["decision_packet"]["primary_action"].clone()
+                fresh["decision_packet"]["primary_action"].clone()
             };
             assert!(next.is_object(), "{fresh}");
             let mut invoke = input.clone();

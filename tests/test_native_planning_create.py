@@ -237,7 +237,11 @@ def test_real_former_owner_can_evolve_after_native_custody(
     recovery = admitted["planning"]["update_recovery_requests"][0]
     with pytest.raises(AssertionError):
         call({**context, "request": recovery})
-    ready = call({**context, "request": [continuation, recovery]})
+    ready = admitted
+    assert (
+        ready["decision_packet"]["primary_action"]
+        == call({**context, "request": [continuation, recovery]})["decision_packet"]["primary_action"]
+    )
     recovered = call({**context, "invocation": ready["decision_packet"]["primary_action"]})
     assert recovered["value"]["material_written"] is False
     assert json.loads(path.read_bytes()) == updated
@@ -308,7 +312,11 @@ def test_public_pending_update_current_same_owner_reentry(tmp_path: Path, shared
     stale_continuation = {**continuation, "source_revision": "sha256:" + "0" * 64}
     with pytest.raises(AssertionError):
         call({**current, "request": [stale_continuation, recovery]})
-    ready = call({**current, "request": [continuation, recovery]})
+    ready = admitted
+    assert (
+        ready["decision_packet"]["primary_action"]
+        == call({**current, "request": [continuation, recovery]})["decision_packet"]["primary_action"]
+    )
     action = ready["decision_packet"]["primary_action"]
     assert action["operation_id"] == "planning.update-recover"
     with pytest.raises(AssertionError):

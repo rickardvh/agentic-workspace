@@ -50,6 +50,8 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     prior["input_schema"]["required"] = json!(["custody", "disposition"]);
     let operation = json!({"id":OP,"semantic_revision":"native-delegation-v2","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"target":{"type":"string"},"packet":{"type":"object"},"execution":{"type":"object"}},"required":["target","packet","execution"],"additionalProperties":false},"effects":["delegation-execution"],"reads":["delegation"],"result_kind":"agentic-workspace/delegation-execution/v1"});
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"delegation","revision":digest(&json!([declaration,read,prior,operation]))?,"requests":[declaration,read,prior],"operations":[operation],"domains":["delegation"],"effects":[{"id":"delegation-execution","domain":"delegation"}]}]});
+    result["restriction_authorities"] =
+        json!([{"owner":"delegation","affects":["effect:delegation-execution"]}]);
     result["revision"] = json!(digest(&result)?);
     Ok(result)
 }
@@ -198,6 +200,13 @@ pub(crate) fn view(
             let mut prerequisites = submitted.to_vec();
             prerequisites.push(template);
             requests.push(json!(prerequisites));
+            if requirements["assignment"]["result"]["binding"] == true
+                && requirements["assignment"]["result"]["local_assignment_satisfied"] != true
+            {
+                // Carry the same exact request. Execution still owns admission,
+                // in-flight custody and replay; this query launches nothing.
+                actions.push(json!({"operation_id":OP,"dependency_revision":source,"arguments":{"target":target,"packet":packet,"execution":selected["execution"]},"effects":["delegation-execution"],"source_requests":prerequisites}));
+            }
         }
     } else if submitted_request.is_some() {
         return Err(error(
@@ -211,6 +220,42 @@ pub(crate) fn view(
     }
     Ok(
         json!({"status":if !observation.is_null(){"result-observed"} else if ready {"dispatch-ready"} else {"not-ready"},"requests":requests,"prior_result":prior_result,"observation":observation,"observed_invocation":observed_invocation,"contribution":{"owner":"delegation","revision":source,"settled":actions.is_empty(),"actions":actions},"claim_boundary":"Execution transports the sealed assignment only; no return admission, Verification proof, Planning progress or completion authority."}),
+    )
+}
+
+/// Inspect only the exact action's existing carrier. Never scan runs or infer
+/// that loss of continuation permits a new launch.
+pub(crate) fn pending_launch(target: &Path, decision: &Value) -> Result<Value, CoreError> {
+    let Some(action) = decision["ready_actions"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|a| a["operation_id"] == OP)
+    else {
+        return Ok(Value::Null);
+    };
+    let root = Dir::open_ambient_dir(target, cap_std::ambient_authority()).map_err(error)?;
+    let path = format!(
+        ".agentic-workspace/local/delegation-runs/{}.json",
+        digest(&action["idempotency_key"])?.replace(':', "-")
+    );
+    let Some(bytes) = read(&root, &path)? else {
+        return Ok(Value::Null);
+    };
+    let held: Value = serde_json::from_slice(&bytes).map_err(error)?;
+    if held["invocation"] != *action || !held["custody"].is_object() {
+        return Ok(
+            json!({"code":"delegation-custody-unresolved","message":"Existing exact run custody differs; preserve it for responsible-owner reconciliation.","affects":["effect:delegation-execution"]}),
+        );
+    }
+    if read(&root, &format!("{path}.completed.json"))?.is_some()
+        || read(&root, &format!("{path}.terminal.json"))?.is_some()
+    {
+        // Only execute() admits exact terminal recovery or committed replay.
+        return Ok(Value::Null);
+    }
+    Ok(
+        json!({"code":"delegation-execution-uncertain","message":"The exact dispatch is in flight or uncertain. Preserve its custody; do not relaunch the worker.","affects":["effect:delegation-execution"]}),
     )
 }
 

@@ -312,7 +312,20 @@ pub(crate) fn retain_handoff(
     requests.push(retention.clone());
     result["requests"] = json!([requests]);
     let Some(request) = request else {
-        return Ok(result);
+        return match retain_handoff(
+            target,
+            work,
+            contract,
+            planning,
+            context,
+            result["requests"][0].as_array().unwrap(),
+        ) {
+            Ok(ready) => Ok(ready),
+            Err(problem) => {
+                result["unresolved"] = json!(problem.to_string());
+                Ok(result)
+            }
+        };
     };
     prepare_request_value(
         json!({"request":request,"current_work":work,"capability_contract":contract}),
@@ -417,6 +430,24 @@ pub(crate) fn adopt_return(
         }
         return Ok(result);
     }
+    if request.is_none()
+        && submitted.iter().any(|r| {
+            [KIND, RECOVER_KIND, RETAIN_HANDOFF]
+                .iter()
+                .any(|k| r["request_kind"] == *k)
+        })
+    {
+        return Ok(result);
+    }
+    let consumed = &planning["consumed_result"]["consumption"];
+    if consumed["assignment_identity"] == admission["assignment_identity"]
+        && consumed["judgment_revision"] == admission["source_revision"]
+        && consumed["result_revision"] == digest(&admission["returned"])?
+        && consumed["integration"] == admission["integration"]
+    {
+        result["status"] = json!("already-current");
+        return Ok(result);
+    }
     let mut adoption = template.clone();
     adoption["id"] = json!(ADOPT);
     adoption["request_kind"] = json!(ADOPT);
@@ -424,6 +455,22 @@ pub(crate) fn adopt_return(
         &json!({"owner":template["source_revision"],"admission":admission["source_revision"],"judgment":admission["judgment"],"integration":admission["integration"]})
     )?);
     let body: Value = serde_json::from_slice(&read(target, reference)?).map_err(error)?;
+    if HANDOFF_SLOTS.iter().any(|(field, key)| {
+        let prior = &body["relationships"][field][key];
+        !prior.is_null()
+            && (prior["kind"] != HANDOFF
+                || prior["assignment_identity"] != admission["assignment_identity"])
+    }) {
+        if request.is_some() {
+            return Err(error(
+                "Unknown or different-assignment Planning continuity requires owner reconciliation",
+            ));
+        }
+        result["unresolved"] = json!(
+            "Unknown or different-assignment Planning continuity requires owner reconciliation"
+        );
+        return Ok(result);
+    }
     let destination = if !repair
         && body[crate::planning_lifetime::FIELD]["continuation_frontier"] == "observation"
     {
@@ -441,7 +488,20 @@ pub(crate) fn adopt_return(
     prerequisites.push(adoption.clone());
     result["requests"] = json!([prerequisites]);
     let Some(request) = request else {
-        return Ok(result);
+        return match adopt_return(
+            target,
+            work,
+            contract,
+            planning,
+            admission,
+            result["requests"][0].as_array().unwrap(),
+        ) {
+            Ok(ready) => Ok(ready),
+            Err(problem) => {
+                result["unresolved"] = json!(problem.to_string());
+                Ok(result)
+            }
+        };
     };
     prepare_request_value(
         json!({"request":request,"current_work":work,"capability_contract":contract}),
@@ -819,6 +879,25 @@ fn view_material(
         template["request_kind"] = json!(RECOVER_KIND);
         template["arguments"] = json!({"owner_ref":reference,"pending_revision":pending_revision});
         result["recovery_requests"] = json!([template]);
+        if effective.is_none()
+            && invocation.is_none()
+            && continuation.is_some_and(|c| c["arguments"]["answer"] == "continue-selected")
+        {
+            let carried = &result["recovery_requests"][0];
+            match view_material(
+                target,
+                work,
+                contract,
+                planning,
+                Some(carried),
+                None,
+                continuation,
+                custody_update,
+            ) {
+                Ok(ready) => return Ok(ready),
+                Err(problem) => result["unresolved"] = json!(problem.to_string()),
+            }
+        }
         if let Some(request) = recovery_request {
             prepare_request_value(
                 json!({"request":request,"current_work":work,"capability_contract":contract}),
@@ -846,6 +925,9 @@ fn view_material(
                 json!({"request":continuation,"current_work":work,"capability_contract":contract}),
             )?;
             result["retained"] = retained.clone();
+            if retained["committed"] != true {
+                result["pending"] = retained.clone();
+            }
             result["action"] = json!({"operation_id":"planning.update-recover","dependency_revision":digest(&json!({"source":current_revision,"pending":pending_revision,"continuation":continuation}))?,"arguments":{"target":target,"request":request,"planning_request":continuation,"owner_path":reference,"retained_invocation":retained["invocation"]},"effects":["planning-state"]});
             return Ok(result);
         }

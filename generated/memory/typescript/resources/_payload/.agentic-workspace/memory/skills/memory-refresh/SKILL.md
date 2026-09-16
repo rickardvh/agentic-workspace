@@ -5,7 +5,7 @@ description: Reassess only Memory selected by the current changed paths and pres
 
 # Memory Refresh
 
-Run the configured AW `start --target . --task "<task>" --format json`, repeating `--changed <path>` for affected paths. Follow the decision packet and exact Memory reads; a code change does not justify a corpus sweep.
+Run the configured AW `start --target . --task "<task>" --format json`, repeating `--changed <path>` for affected paths. Follow the decision packet and its delivered selected advisory context; a code change does not justify a corpus sweep.
 
 For each selected lesson, use [Memory Hygiene](../memory-hygiene/SKILL.md) for current retain, retire or promotion requests. Preserve uncertain former material. A changed source hash is not factual confirmation, and promotion is not established by naming a destination.
 

@@ -88,9 +88,9 @@ existing Planning lock and recheck exact bytes; arbitrary external editors are
 not participants in that cooperative protocol.
 
 The original invocation keeps its exact task identity, including wording and
-changed paths. A fresh caller with different wording can submit the returned
-`planning.update_recovery_requests` entry exposed after continuation, together with the existing current
-`continue-selected` request. This selects `planning.update-recover`, a new
+changed paths. After a fresh caller admits current `continue-selected`, the
+owner directly exposes `planning.update-recover`. The explicit recovery request
+remains available to clients; no model request-copying turn is needed. This is a new
 current re-entry action bound to the exact retained postimage, effect and
 selected owner. It cannot also change selection, admit historical custody or
 substitute the old task identity. Stale source, capability, continuation and
@@ -130,9 +130,9 @@ and ready operations. Two inherited assertions previously read the removed
 private `verification.contribution`; their replacement preserves the stale-work
 and disallowed-command no-operation invariants across all four consumers.
 
-For already Planning-owned work, a sealed Assignment handoff now exposes
-`planning.handoff_retention_requests`. Submit that exact request set to obtain
-the existing `planning.update` operation. Planning records assigned, returned,
+For already Planning-owned work, a current sealed Assignment handoff directly
+exposes the exact `planning.update` operation. The explicit
+`planning.handoff_retention_requests` remain available to clients. Planning records assigned, returned,
 or integration-pending continuation in its existing relationship observations;
 it does not create another execution ledger or interpret worker success as
 acceptance. Direct work has no retention request and acquires no Plan.

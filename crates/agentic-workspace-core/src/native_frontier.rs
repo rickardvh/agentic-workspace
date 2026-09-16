@@ -176,6 +176,67 @@ mod tests {
                 proof_work.len()
             );
         }
+        // Observe actual construction, not merely the absence of rendered text.
+        std::fs::remove_file(root.join(".agentic-workspace/verification/manifest.toml")).unwrap();
+        let reference = ".agentic-workspace/memory/repo/domains/advice.md";
+        std::fs::create_dir_all(root.join(".agentic-workspace/memory/repo/domains")).unwrap();
+        std::fs::write(root.join(".agentic-workspace/memory/repo/manifest.toml"), format!("version=1\n[notes.\"{reference}\"]\nroutes_from=['a.txt']\nsummary='Bounded selected advice'\n")).unwrap();
+        // Exercise UTF-8 and CRLF across streaming chunk boundaries, including
+        // a large single line that must never become a compact body buffer.
+        for body in [
+            "Small selected advice".to_owned(),
+            format!(
+                "{}\u{00e9}\r\n{}\r",
+                "x".repeat(8191),
+                "detail".repeat(2000)
+            ),
+            format!("{}\r\nend", "x".repeat(8191)),
+        ] {
+            std::fs::write(root.join(reference), body.as_bytes()).unwrap();
+            let (compact, compact_work) = observe(context.clone(), Resolution::Frontier(None));
+            let row = &compact["memory"]["advisory_context"][0];
+            assert_eq!(
+                row["source"]["revision"],
+                crate::decision_source::hash(body.as_bytes())
+            );
+            if body.len() > 4096 {
+                assert_eq!(row["status"], "selected-detail-deferred");
+                assert!(!compact_work.contains(&"memory-body"));
+            } else {
+                assert_eq!(row["body"], body);
+                assert_eq!(
+                    compact_work.iter().filter(|v| **v == "memory-body").count(),
+                    1
+                );
+            }
+            for selected in ["memory", "proof"] {
+                let (expanded, built) =
+                    observe(context.clone(), Resolution::Frontier(Some(selected.into())));
+                assert_eq!(expanded["memory"]["advisory_context"][0]["body"], body);
+                assert_eq!(built.iter().filter(|v| **v == "memory-body").count(), 1);
+                assert_eq!(expanded["decision_packet"], compact["decision_packet"]);
+                assert_eq!(expanded["_detail_bindings"], compact["_detail_bindings"]);
+            }
+            std::fs::write(root.join(reference), "Changed after selection").unwrap();
+            assert!(
+                crate::native_memory::read_selected(
+                    &root,
+                    reference,
+                    row["source"]["revision"].as_str().unwrap()
+                )
+                .is_err()
+            );
+        }
+        for invalid_bytes in [
+            [vec![b'x'; 8191], vec![0xff]].concat(),
+            [vec![b'x'; 8191], vec![0xc3]].concat(),
+            vec![b'x'; crate::decision_source::MAX_SOURCE_BYTES + 1],
+        ] {
+            std::fs::write(root.join(reference), invalid_bytes).unwrap();
+            let (invalid, built) = observe(context.clone(), Resolution::Frontier(None));
+            assert_eq!(invalid["memory"]["status"], "reconciliation-required");
+            assert!(!built.contains(&"memory-body"));
+        }
         std::fs::remove_dir_all(root).unwrap();
     }
 }

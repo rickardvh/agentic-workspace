@@ -513,18 +513,19 @@ fn receipt_view(
     } else {
         Value::Null
     };
-    let measurement_observations = if !checked_scope.is_null() {
+    let observed_detail = if !checked_scope.is_null() {
         receipt["execution_artifact"]["path"]
             .as_str()
             .and_then(|path| read(root, path).ok().flatten())
             .filter(|bytes| receipt["execution_artifact"]["sha256"] == sha(bytes))
             .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
-            .map(|detail| crate::native_measurement::observations(&detail))
             .unwrap_or(Value::Null)
     } else {
         Value::Null
     };
-    json!({"reference":reference,"status":"unadmitted","measurement_observations":measurement_observations,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
+    let measurement_observations = crate::native_measurement::observations(&observed_detail);
+    let future_value_candidate = crate::native_memory_learning::signal(&observed_detail);
+    json!({"reference":reference,"status":"unadmitted","measurement_observations":measurement_observations,"future_value_candidate":future_value_candidate,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
         "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }

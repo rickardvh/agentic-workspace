@@ -15,6 +15,21 @@ For a deliberately authored fallback decision, use the current `memory.capture.r
 
 Submit the proposal through `start --input` with the same task and changed paths. Present its complete postimage and exact returned human decision request. Return only the human's bounded answer in that request; do not supply actor, authority, authorship or provenance labels. Current policy must mechanically establish any agent-taken authority for the exact scope; an automatic-execution preference or an agent assertion does not do so. Otherwise use the bounded human decision request. Capability approval does not confirm a particular record.
 
-Invoke only the exact returned action, then resolve again. The deciding basis is the exact owner-issued proposal/request and bounded answer, with no claim of cryptographically authenticated identity. Publication receipts establish the write only. Fresh relevant work revalidates source, declared scope, dependencies and policy before projecting the consequence; unrelated work stays quiet. Preserve former rationale during scoped supersession. For an interrupted publication, use the returned `memory/recover-decision/v1` request in the original work context; do not repeat a consumed authorization or overwrite a colliding source.
+Invoke only the exact returned action, then resolve again. The deciding basis is the exact owner-issued proposal/request and bounded answer, with no claim of cryptographically authenticated identity. Publication receipts establish the write only. Fresh relevant work revalidates source, declared scope, dependencies and policy before projecting the consequence; unrelated work stays quiet. Preserve former rationale during scoped supersession. For an interrupted publication, use the exact recovery action exposed at the current frontier in the original work context; do not repeat a consumed authorization or overwrite a colliding source.
 
-This typed decision path does not implement arbitrary advisory-note capture or prose/routing maintenance. For those outcomes, retain the bounded candidate with its existing owner and expose the missing operation. Do not manufacture a write request, edit stale source bytes, or treat an earlier selector/configuration authorization as Memory authority.
+An explicit structured future-value observation from an admitted native check can
+already place a bounded disposition question at the current frontier, without a
+Memory-specific request. Judge whether the lesson belongs to a stronger existing
+owner, advisory Memory, or no retention. A producer suggestion is untrusted and
+is not proof of durable value. Stronger-owner disposition needs exact current
+receiving source material; it does not grant that source new authority.
+
+For advisory retention, the procedure carries the existing exact publication
+proposal. Human or exact delegated authorization still applies. No-signal work
+has no capture question or retrospective; no-retention is success. Carriage keeps
+explicit candidate evidence and pending claim consequences across reentry. Do not
+silently drop those references during a partial handoff.
+
+Prose/routing maintenance and governing decisions retain their own owners. Do not
+manufacture a write request, edit stale source bytes, or treat capability approval
+as permission to retain a particular lesson.

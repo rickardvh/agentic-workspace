@@ -17,10 +17,15 @@ fn strings(value: &Value) -> Vec<String> {
         .collect()
 }
 
-fn applicability(metadata: &Value, changed: &[String], route: &Value) -> Result<Value, CoreError> {
+fn applicability(
+    metadata: &Value,
+    changed: &[String],
+    route: &Value,
+    targets: &[String],
+) -> Result<Value, CoreError> {
     instruction_applicability::view(json!({
         "paths":strings(&metadata["paths"]), "routes":strings(&metadata["routes"]),
-        "changed_paths":changed, "selected_routes":strings(&route["routes"]),
+        "changed_paths":changed, "target_patterns":targets, "selected_routes":strings(&route["routes"]),
         "route_posture":if route["status"] == "current" {route["posture"].as_str().unwrap_or("unresolved")} else {"unresolved"}
     }))
 }
@@ -49,6 +54,16 @@ pub fn resolve(
     route: &Value,
     pin: &str,
 ) -> Result<Value, CoreError> {
+    resolve_with_targets(target, changed, route, pin, &[])
+}
+
+pub(crate) fn resolve_with_targets(
+    target: &Path,
+    changed: &[String],
+    route: &Value,
+    pin: &str,
+    targets: &[String],
+) -> Result<Value, CoreError> {
     let documents = instruction_source::current_sources(target)?;
     let mut rows = Vec::new();
     let mut blockers = Vec::new();
@@ -67,7 +82,9 @@ pub fn resolve(
         let reference = document["source"]["reference"].as_str().unwrap();
         let metadata = &document["metadata"];
         let valid = document["valid"] == true;
-        let applicable = valid && applicability(metadata, changed, route)?["applies"] == true;
+        let scope = applicability(metadata, changed, route, targets)?;
+        let applicable = valid && scope["applies"] == true;
+        let unresolved = valid && scope["status"] == "unresolved";
         let binding = if valid && hard(metadata) {
             match instruction_source::view(json!({"target":target,"admitted_revision":pin,
                 "sources":[{"reference":reference,"revision":document["source"]["revision"]}]}))
@@ -92,8 +109,11 @@ pub fn resolve(
                 scopes.insert(format!("effect:write:{path}"));
             }
         }
-        if applicable && hard(metadata) {
+        if (applicable || unresolved) && hard(metadata) {
             let mut affects = Vec::new();
+            if unresolved && !strings(&metadata["reconcile"]).is_empty() {
+                affects.push("claim:complete".into());
+            }
             if metadata["checks"]
                 .as_array()
                 .into_iter()
@@ -106,7 +126,7 @@ pub fn resolve(
             {
                 affects.push("claim:complete".into());
             }
-            if !strings(&metadata["reconcile"]).is_empty() {
+            if applicable && !strings(&metadata["reconcile"]).is_empty() {
                 blockers.push(blocker(reference, "source-reconciliation-required",
                     "Canonical sources require a current authorized updated or reviewed-current judgment against the resulting work.",
                     vec!["claim:complete".into()]));
@@ -123,8 +143,8 @@ pub fn resolve(
             affects.sort();
             affects.dedup();
             if !affects.is_empty() {
-                blockers.push(blocker(reference,if binding["status"]=="current" {"current-binding"} else {"binding-unadmitted"},
-                    if binding["status"]=="current" {"Current repository protection/check obligations remain binding; no proof success is inferred."} else {"Current hard instruction intent requires source admission before affected behavior."},affects));
+                blockers.push(blocker(reference,if unresolved {"applicability-unresolved"} else if binding["status"]=="current" {"current-binding"} else {"binding-unadmitted"},
+                    if unresolved {"Current semantic route applicability remains unresolved for this affected consequence."} else if binding["status"]=="current" {"Current repository protection/check obligations remain binding; no proof success is inferred."} else {"Current hard instruction intent requires source admission before affected behavior."},affects));
             }
         }
         let guidance = if applicable {
@@ -140,7 +160,7 @@ pub fn resolve(
         } else {
             vec![]
         };
-        rows.push(json!({"source":document["source"],"metadata":metadata,"valid":valid,"applicable":applicable,
+        rows.push(json!({"source":document["source"],"metadata":metadata,"valid":valid,"applicable":applicable,"applicability":scope,
             "guidance":guidance,"read":if applicable {metadata["read"].clone()} else {json!([])},
             "reconcile":if applicable {metadata["reconcile"].clone()} else {json!([])},
             "procedure_resolution":procedures,"preferred_procedures":if applicable {metadata["use"].clone()} else {json!([])},
@@ -202,7 +222,7 @@ pub fn restrict_pending(
         for source in view["sources"].as_array().into_iter().flatten() {
             let metadata = &source["metadata"];
             if source["valid"] == true
-                && applicability(metadata, &[], route)?["route_applies"] == true
+                && applicability(metadata, &[], route, &[])?["route_applies"] == true
                 && (source["applicable"] == true
                     || strings(&metadata["paths"]).is_empty()
                     || strings(&metadata["paths"]).iter().any(|pattern| {
@@ -241,7 +261,7 @@ pub fn restrict_pending(
             let patterns = strings(&metadata["paths"]);
             if source["valid"] == true
                 && (source["applicable"] == true
-                    || (applicability(metadata, &[], route)?["route_applies"] == true
+                    || (applicability(metadata, &[], route, &[])?["route_applies"] == true
                         && (patterns.is_empty()
                             || patterns.iter().any(|p| {
                                 writes
@@ -318,7 +338,7 @@ pub fn restrict_pending(
         for source in view["sources"].as_array().into_iter().flatten() {
             let metadata = &source["metadata"];
             if source["valid"] == true
-                && applicability(metadata, &[], route)?["route_applies"] == true
+                && applicability(metadata, &[], route, &[])?["route_applies"] == true
                 && (!strings(&metadata["protect"]).is_empty())
             {
                 additions.push(blocker(source["source"]["reference"].as_str().unwrap(),"proof-execution-scope-unresolved",
@@ -376,7 +396,7 @@ pub fn restrict_pending(
             let metadata = &source["metadata"];
             let patterns = strings(&metadata["paths"]);
             if source["valid"] != true
-                || applicability(metadata, &[], route)?["route_applies"] != true
+                || applicability(metadata, &[], route, &[])?["route_applies"] != true
                 || !(patterns.is_empty()
                     || patterns.iter().any(|pattern| {
                         writes

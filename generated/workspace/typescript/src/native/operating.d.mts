@@ -27,6 +27,8 @@ export interface ResourceInput {
   changed?: string[];
   request: {
     operation: "audit" | "scratch-create" | "scratch-remove" | "scratch-retain" | "scratch-release" | "worktree-create" | "worktree-remove";
+    route_request?: JsonObject;
+    compose?: boolean;
     path?: string;
     base?: string;
     need?: "conflicting-checkout" | "transport-requires-isolation" | "destructive-validation";

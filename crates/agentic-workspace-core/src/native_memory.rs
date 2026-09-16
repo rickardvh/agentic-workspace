@@ -3,8 +3,10 @@
 use crate::{CoreError, decision_source, instruction_applicability};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeSet,
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -68,6 +70,68 @@ fn path_patterns(value: Option<&Value>, field: &str) -> Result<Vec<String>, Core
     Ok(rows)
 }
 
+/// Validate UTF-8 and hash normalized source identity in bounded chunks. Keep
+/// original bytes only while they fit the selected delivery budget. This is
+/// source observation, not optional body construction (even for one huge line).
+fn observe_source(
+    root: &Dir,
+    reference: &str,
+    limit: usize,
+) -> Result<(String, Option<Vec<u8>>), CoreError> {
+    let mut file = root.open(reference).map_err(error)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 8196];
+    let mut normalized = [0u8; 8196];
+    let mut pending = 0;
+    let mut total = 0;
+    let mut cr = false;
+    let mut body = (limit > 0).then(Vec::new);
+    loop {
+        let count = file.read(&mut buffer[pending..8192]).map_err(error)?;
+        if count == 0 {
+            if pending != 0 {
+                return Err(error("selected source contains incomplete UTF-8"));
+            }
+            break;
+        }
+        total += count;
+        if total > decision_source::MAX_SOURCE_BYTES {
+            return Err(error("decision source exceeds bounded read"));
+        }
+        if total > limit {
+            body = None;
+        }
+        if let Some(body) = body.as_mut() {
+            body.extend_from_slice(&buffer[pending..pending + count]);
+        }
+        let length = pending + count;
+        let valid = match std::str::from_utf8(&buffer[..length]) {
+            Ok(_) => length,
+            Err(problem) if problem.error_len().is_none() => problem.valid_up_to(),
+            Err(problem) => return Err(error(problem)),
+        };
+        let mut output = 0;
+        for byte in &buffer[..valid] {
+            if cr && *byte != b'\n' {
+                normalized[output] = b'\r';
+                output += 1;
+            }
+            cr = *byte == b'\r';
+            if !cr {
+                normalized[output] = *byte;
+                output += 1;
+            }
+        }
+        hash.update(&normalized[..output]);
+        buffer.copy_within(valid..length, 0);
+        pending = length - valid;
+    }
+    if cr {
+        hash.update(b"\r");
+    }
+    Ok((format!("sha256:{:x}", hash.finalize()), body))
+}
+
 /// The public owner must first validate this reference against its freshly
 /// selected resources. This helper additionally checks manifest membership and
 /// exact observed bytes; possession of a path/revision grants no authority.
@@ -76,6 +140,26 @@ pub(crate) fn read_selected(
     reference: &str,
     expected_revision: &str,
 ) -> Result<Value, CoreError> {
+    let body = selected_body(
+        target,
+        reference,
+        expected_revision,
+        decision_source::MAX_SOURCE_BYTES,
+    )?
+    .ok_or_else(|| error("selected body exceeds delivery bound"))?;
+    Ok(
+        json!({"source":{"reference":reference,"revision":expected_revision},
+        "body":body,"authority_effect":"advisory-only",
+        "currentness":{"status":"review-required","reason":"source-identity-is-not-factual-currentness"}}),
+    )
+}
+
+fn selected_body(
+    target: &Path,
+    reference: &str,
+    expected_revision: &str,
+    limit: usize,
+) -> Result<Option<String>, CoreError> {
     if !reference.starts_with(HOME) || !reference.ends_with(".md") {
         return Err(error("read requires a declared Memory note"));
     }
@@ -104,16 +188,32 @@ pub(crate) fn read_selected(
             "selected note changed canonical owner; reconcile source",
         ));
     }
-    let bytes = decision_source::read(&root, reference)?;
-    let revision = decision_source::hash(&bytes);
+    for (path, revision) in note
+        .get("dependencies")
+        .and_then(toml::Value::as_table)
+        .into_iter()
+        .flatten()
+    {
+        if !confined(&root, path)?
+            || revision.as_str()
+                != Some(&decision_source::hash(&decision_source::read(&root, path)?))
+        {
+            return Err(error("advisory dependency changed before consumption"));
+        }
+    }
+    let (revision, bytes) = observe_source(&root, reference, limit)?;
     if revision != expected_revision {
         return Err(error(
             "selected note revision changed; resolve current Memory again",
         ));
     }
-    Ok(json!({"source":{"reference":reference,"revision":revision},
-        "body":std::str::from_utf8(&bytes).map_err(error)?,"authority_effect":"advisory-only",
-        "currentness":{"status":"review-required","reason":"source-identity-is-not-factual-currentness"}}))
+    bytes
+        .map(|bytes| {
+            #[cfg(test)]
+            crate::native_frontier::built("memory-body");
+            String::from_utf8(bytes).map_err(error)
+        })
+        .transpose()
 }
 
 /// `route` must be the current semantic-route owner's result, never caller facts.
@@ -345,9 +445,7 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
                 .cloned()
                 .collect();
             let observed = if confined(&root, reference)? {
-                Some(decision_source::hash(&decision_source::read(
-                    &root, reference,
-                )?))
+                Some(observe_source(&root, reference, 0)?.0)
             } else {
                 None
             };
@@ -443,12 +541,12 @@ pub(crate) fn public_view(
     {
         crate::native_memory_write::extend_owner(&mut contract["owners"][0])?;
         contract["restriction_authorities"] =
-            json!([{"owner":"memory","affects":["task","effect:memory-state"]}]);
+            json!([{"owner":"memory","affects":["task","effect:memory-state","claim:complete"]}]);
     }
     if capture_available {
         crate::native_memory_capture::extend_owner(&mut contract["owners"][0])?;
         contract["restriction_authorities"] =
-            json!([{"owner":"memory","affects":["task","effect:memory-state"]}]);
+            json!([{"owner":"memory","affects":["task","effect:memory-state","claim:complete"]}]);
     }
     let owner_revision = contract["owners"][0]["revision"].clone();
     contract["revision"] = json!(crate::digest(&contract)?);
@@ -500,6 +598,68 @@ pub(crate) fn public_view(
         "relevant":!view["selected_notes"].as_array().unwrap().is_empty() || !view["diagnostics"].as_array().unwrap().is_empty(),
         "facts":{"advisory_sources":view["selected_notes"],"diagnostics":view["diagnostics"]}});
     Ok(view)
+}
+
+/// Selected advice is delivered, never acknowledged or promoted. Optional large
+/// bodies expand only in the selected owner/proof procedure, not ordinary entry.
+pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result<(), CoreError> {
+    let mut context = Vec::new();
+    let mut budget: usize = 16 * 1024;
+    for note in view["selected_notes"].as_array().into_iter().flatten() {
+        let mut item = json!({"source":note["source"],"currentness":note["currentness"],"authority_effect":"advisory-only","delivery_is_disposition":false});
+        let reason = note["currentness"]["reason"].as_str().unwrap_or("");
+        if !matches!(
+            reason,
+            "no-admitted-currentness-baseline" | "disposition-needs-current-admission"
+        ) {
+            item["status"] = json!("reconciliation-required");
+        } else if let (Some(reference), Some(revision)) = (
+            note["source"]["reference"].as_str(),
+            note["source"]["revision"].as_str(),
+        ) {
+            let limit = if expanded {
+                decision_source::MAX_SOURCE_BYTES
+            } else {
+                budget.min(4096)
+            };
+            match selected_body(target, reference, revision, limit) {
+                Ok(Some(body)) => {
+                    budget = budget.saturating_sub(body.len());
+                    item["body"] = json!(body);
+                    item["status"] = json!("delivered");
+                }
+                Ok(None) => {
+                    item["status"] = json!("selected-detail-deferred");
+                    if let Some(summary) = note["metadata"]["summary"]
+                        .as_str()
+                        .filter(|s| s.len() <= 2048)
+                    {
+                        item["summary"] = json!(summary);
+                    }
+                    item["detail_rule"] = json!(
+                        "The selected owner or executable proof procedure carries the exact body when that branch is active; source identity is revalidated."
+                    );
+                }
+                Err(problem) => {
+                    item["status"] = json!("reconciliation-required");
+                    item["diagnostic"] = json!(problem.to_string());
+                }
+            }
+        }
+        context.push(item);
+    }
+    if !context.is_empty() {
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
+        if !decision_source::read(&root, MANIFEST)
+            .is_ok_and(|bytes| view["manifest"]["revision"] == decision_source::hash(&bytes))
+        {
+            context = vec![
+                json!({"status":"reconciliation-required","diagnostic":"Memory source set changed during delivery","authority_effect":"advisory-only"}),
+            ];
+        }
+        view["advisory_context"] = json!(context);
+    }
+    Ok(())
 }
 
 pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
@@ -664,8 +824,9 @@ mod tests {
     }
     fn fixture() -> Temp {
         let temp = Temp(std::env::temp_dir().join(format!(
-                "aw-native-memory-{}-{}",
+                "aw-native-memory-{}-{:?}-{}",
                 std::process::id(),
+                std::thread::current().id(),
                 std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -751,6 +912,14 @@ stale_when=["src/owner.rs"]
             .unwrap()["status"],
             "no-match"
         );
+        let mut routed = resolve(
+            repo.path(),
+            &[],
+            &json!({"status":"current","posture":"selected","routes":["github/pr/review"]}),
+        )
+        .unwrap();
+        deliver(repo.path(), &mut routed, false).unwrap();
+        assert_eq!(routed["advisory_context"][0]["status"], "delivered");
         fs::write(repo.path().join(MANIFEST), "invalid[").unwrap();
         assert_eq!(
             resolve(repo.path(), &[], &Value::Null).unwrap()["status"],
@@ -800,12 +969,14 @@ stale_when=["src/owner.rs"]
             .find(|row| row["source"]["reference"] == reference)
             .unwrap();
         assert_eq!(note["currentness"]["status"], "review-required");
-        let body = read_selected(
-            repo.path(),
-            &reference,
-            note["source"]["revision"].as_str().unwrap(),
-        )
-        .unwrap();
+        let mut current = result;
+        deliver(repo.path(), &mut current, false).unwrap();
+        let body = current["advisory_context"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|v| v["source"]["reference"] == reference)
+            .unwrap();
         assert!(
             body["body"]
                 .as_str()

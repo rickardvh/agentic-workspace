@@ -235,6 +235,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut result = json!({"decision_packet":packet,"detail_refs":refs,
         "reentry":{"target":context["target"],"task":context["task"],"changed":context["changed"]},
         "detail_rule":"Exact optional detail: send its reference with the same explicit work context, or use carried/full projection. References grant no authority and are freshly reobserved."});
+    if let Some(advice) = full["memory"].get("advisory_context") {
+        result["advisory_context"] = advice.clone();
+    }
     let recovery = consequence_recovery(full, context)?;
     if !recovery.is_empty() {
         result["consequence_recovery"] = json!(recovery);

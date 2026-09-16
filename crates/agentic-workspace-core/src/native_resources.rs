@@ -36,6 +36,8 @@ struct Input {
 #[serde(deny_unknown_fields)]
 struct Request {
     operation: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    route_request: Option<Value>,
     #[serde(default, skip_serializing_if = "is_false")]
     compose: bool,
     path: Option<String>,
@@ -97,7 +99,7 @@ fn compose(mut value: Value, input: &Input) -> Result<Value, CoreError> {
         proposal["composition"] = json!({"status":"stale","owner_calls":1,"recovery":"Reobserve current skill material and the same exact resource before continuing."});
         return Ok(proposal);
     }
-    let resource_context = json!({"target":action["target"],"task":action["task"],"changed":action["changed"],"path":action["request"]["path"]});
+    let resource_context = json!({"target":action["target"],"task":action["task"],"changed":action["changed"],"path":action["request"]["path"],"route_request":action["request"]["route_request"]});
     match view(action) {
         Ok(mut result) => {
             result["resource_context"] = resource_context;
@@ -158,7 +160,12 @@ fn git(target: &Path, args: &[&str]) -> Result<String, CoreError> {
         .unwrap_or("")
         .to_owned())
 }
-fn policy(target: &Path, changed: &[String]) -> Result<Value, CoreError> {
+fn policy(
+    target: &Path,
+    changed: &[String],
+    targets: &[String],
+    route: &Value,
+) -> Result<Value, CoreError> {
     let config = crate::native_config::view(target)?;
     if config["sources"]
         .as_array()
@@ -170,13 +177,14 @@ fn policy(target: &Path, changed: &[String]) -> Result<Value, CoreError> {
             "current configuration is invalid; preserve resources and reconcile its owner",
         ));
     }
-    let instructions = crate::native_instructions::resolve(
+    let instructions = crate::native_instructions::resolve_with_targets(
         target,
         changed,
-        &Value::Null,
+        route,
         config["admissions"]["instruction_revision"]
             .as_str()
             .unwrap_or(""),
+        targets,
     )?;
     if instructions["sources"]
         .as_array()
@@ -512,18 +520,34 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     if request.operation == "audit" {
         return audit(&target);
     }
-    let mut scope = input.changed.clone();
-    scope.push(if request.operation.starts_with("scratch") {
-        format!("{SCRATCH}/**")
-    } else {
-        ".git/worktrees/**".to_owned()
-    });
-    let policy = policy(&target, &scope)?;
-    let policy_revision = digest(&policy)?;
+    let mut changed = input.changed.clone();
+    for path in &changed {
+        crate::decision_source::relative(path)?;
+    }
+    changed.sort();
+    changed.dedup();
+    let work = json!({"kind":"current-work","id":digest(&json!({"target":target,"task":input.task,"changed":changed}))?});
+    let catalogue = crate::native_routes::source(&target)?;
+    let (route_source, _) = crate::native_routes::former_selection(&target, &catalogue)?;
+    let routes = crate::semantic_routes::view(
+        json!({"current_work":work,"source":route_source,"request":request.route_request}),
+    )?;
     let task_id = digest(&json!({"target":target,"task":input.task}))?;
     let id = task_id.trim_start_matches("sha256:");
     let scratch = format!("{SCRATCH}/{id}");
     let relative = request.path.as_deref().unwrap_or(&scratch);
+    let targets = if request.operation.starts_with("scratch") {
+        vec![relative.to_owned(), format!("{relative}/**")]
+    } else {
+        vec![".git/worktrees/**".to_owned()]
+    };
+    let policy = policy(
+        &target,
+        &changed,
+        &targets,
+        &routes["decision"]["semantic_task_routes"],
+    )?;
+    let policy_revision = digest(&policy)?;
     let mut snapshot;
     let mut files = vec![];
     let mut blockers = vec![];
@@ -714,8 +738,9 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     } else {
         vec![".git/worktrees/**".to_owned()]
     };
+    let mut route_unresolved = false;
     for source in policy["instructions"].as_array().into_iter().flatten() {
-        if source["applicable"] == true
+        if (source["applicable"] == true || source["applicability"]["status"] == "unresolved")
             && source["metadata"]["protect"]
                 .as_array()
                 .into_iter()
@@ -727,7 +752,12 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     })
                 })
         {
-            blockers.push("current structured instruction protects this resource destination");
+            route_unresolved |= source["applicability"]["status"] == "unresolved";
+            blockers.push(if source["applicability"]["status"] == "unresolved" {
+                "current instruction applicability is unresolved for this resource destination"
+            } else {
+                "current structured instruction protects this resource destination"
+            });
         }
     }
     if (request.operation == "scratch-remove" && snapshot["status"] == "present")
@@ -776,6 +806,9 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     });
     next.expected_revision = Some(revision.clone());
     let mut result = json!({"kind":"agentic-workspace/resource-proposal/v1","operation":request.operation,"path":path,"revision":revision,"policy":policy,"policy_revision":policy_revision,"blockers":blockers,"snapshot":snapshot,"effect_outcome":"not-invoked","recovery":"Reobserve this exact path from a fresh process; never create a replacement merely to clean up."});
+    if route_unresolved {
+        result["route_requests"] = routes["requests"].clone();
+    }
     if request.operation.starts_with("worktree") {
         result["disposable_outputs"] = json!(outputs);
         result["build_environment"] = build_environment(&path, &outputs);
