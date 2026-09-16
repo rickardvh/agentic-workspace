@@ -1,10 +1,11 @@
 # Release And Versioning
 
-Agentic Workspace uses coordinated workspace releases. The root
-`agentic-workspace`, `agentic-workspace-memory`, `agentic-workspace-planning`, and
-`agentic-workspace-verification` release together under one coordinated numeric
-version, with both Python and TypeScript CLI distributions treated as first-class
-release artifacts. Stable/support-bearing tags use `vMAJOR.MINOR.PATCH`; external-
+Agentic Workspace uses coordinated workspace releases: one root
+`agentic-workspace` Python distribution (wheel and sdist), one TypeScript CLI npm
+package, and a paired native CLI/core archive share one numeric version. Separate
+Memory, Planning and Verification packages are source-development fixtures, not
+shipped native dependencies. The exact shipped set is owned by
+`.github/release-ownership.json`. Stable/support-bearing tags use `vMAJOR.MINOR.PATCH`; external-
 testing previews use the distinct `preview-vMAJOR.MINOR.PATCH` namespace.
 
 ## Support-bearing promotion boundary
@@ -22,11 +23,11 @@ The authoritative required check, runtime matrix, Node semantic majors, and rece
 The ordinary support-bearing downstream path should be:
 
 1. CI proves the source tree.
-2. CI builds every workspace wheel, sdist, and TypeScript npm package tarball.
+2. CI builds the root wheel and sdist, npm tarball, and paired native archive.
 3. CI proves installation from built artifacts outside the source tree,
    including the single-root-wheel public install path.
 4. CI publishes a GitHub Release tagged `vMAJOR.MINOR.PATCH`.
-5. The release contains all wheels, all sdists, all npm tarballs,
+5. The release contains those admitted artifacts,
    `SHA256SUMS`, and `agentic-workspace-release-manifest.json`.
 6. Host repositories can verify release identity, payload provenance, checksums,
    generated-command contract version, and command-generation dependency from the
@@ -88,51 +89,50 @@ does not satisfy #2990 support-bearing admission, and does not create
 `support-bearing-promotion.json`.
 
 A maintainer publishes one by choosing an unused numeric coordinated version. By
-default the helper refreshes and selects the current `origin/reconstruct/first-stable`
+default the helper refreshes and selects the current `origin/master`
 head; an exact older source commit may be supplied only if it is still reachable
-from that fetched reconstruction branch:
+from that fetched master branch:
 
 ```bash
-uv run python scripts/release/preview_release.py --version 0.52.0
+uv run python scripts/release/preview_release.py --version <unused-version>
 ```
 
 Inspect the returned exact source/artifact identities first. To publish the same
 subject, rerun with `--push`:
 
 ```bash
-uv run python scripts/release/preview_release.py --version 0.52.0 --push
+uv run python scripts/release/preview_release.py --version <unused-version> --push
 ```
 
 For an explicit candidate:
 
 ```bash
-uv run python scripts/release/preview_release.py --version 0.52.0 --source-commit <exact-reconstruction-sha> --push
+uv run python scripts/release/preview_release.py --version <unused-version> --source-commit <exact-master-sha> --push
 ```
 
-The helper does not commit version normalization to the reconstruction branch or
-`master`. It creates a detached release-only commit whose single parent is the
-selected reconstruction source, permits only the exact release-owned paths listed
+The helper does not commit version normalization to `master`. It creates a
+detached release-only commit whose single parent is the selected master source,
+permits only the exact release-owned paths listed
 by `preview_release_commit_allowed_paths`, writes preview release metadata/notes,
 updates the coordinated lockfile, and creates the immutable
 `preview-vMAJOR.MINOR.PATCH` tag. With `--push`, only that tag is pushed.
 
 The helper explicitly dispatches `.github/workflows/preview-release.yml` on
-`reconstruct/first-stable` with the existing tag and exact artifact SHA. Tag pushes
+`master` with the existing tag and exact artifact SHA. Tag pushes
 do not trigger this publisher. Its read-only admission job checks out the trusted
 dispatch commit and runs that verifier against the tag as data, including source
 ancestry and the release-only delta. A tag cannot substitute its own verifier or
 workflow to admit itself. Only successful admission allows downstream jobs to
 check out the admitted artifact SHA and acquire publication permissions. The
-workflow then builds the same coordinated Python and TypeScript
-release assets, patches the root wheel to exact same-preview dependency URLs and
-digests, exercises packaged install and generated-command semantics, emits security
+workflow then builds the coordinated Python, TypeScript and native
+release assets, exercises packaged install and generated-command semantics, emits security
 readiness and an SBOM, creates checksums and artifact attestations, and publishes a
 GitHub Release marked prerelease.
 
 `agentic-workspace-preview-release-manifest.json` records both identities:
 
 ```text
-exact reconstruction source C
+exact master source C
   -> release-only artifact commit P (single parent C)
   -> preview-vV
   -> exact packaged artifacts and checksums

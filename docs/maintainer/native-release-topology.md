@@ -174,3 +174,17 @@ The [Candidate B reconciliation](../reviews/candidate-b-publication.md) records
 independent leaf acceptance, downloaded-asset verification, real issue-creation
 dogfood, exact cleanup recovery and residual ownership. Public maturity remains
 Alpha; Candidate C and support-bearing v1 admission remain separate.
+
+## Candidate C prepublication reconciliation
+
+The [integrated acceptance input](../reviews/candidate-c-integrated-acceptance.md)
+consolidates the accepted implementation leaves through #3357, current bounded
+validation, operating-cost observations and native System Intent reconciliation.
+Its closeout proposal awaits independent review. Candidate C has no publication
+record here. Remaining P0 release gates include #3358 for canonical RC identity,
+#3363/#3364 for wrapper façade parity and shipped-wrapper subtraction before first
+registry publication, and #3361/#3362 for PyPI/npm and crates.io/native publication
+with exact public-byte proof. These gates remain outside #3260. After their
+acceptance and integrated review of the exact source, publish/exercise
+`v1.0.0-rc.1`, then perform fresh stable preparation/admission/publication under
+#2985 from the accepted RC.

@@ -163,13 +163,18 @@ pub(crate) fn view(
     let revision = intent["revision"].clone();
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"system-intent","owner_revision":owner["revision"],"source_revision":revision,"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     let mut write = json!({"status":"not-requested","requests":[],"recovery_requests":[]});
+    // Matching source hashes do not establish semantic correctness. An explicit
+    // retained-interpretation read must still offer the source-bound edit path.
+    let selected_interpretation = intent["response"]["source"]["reference"] == MIRROR;
+    let reconciliation_selected =
+        selected_interpretation || !intent["gaps"].as_array().unwrap().is_empty();
     // Authoring guidance belongs to selected reconciliation, not quiet reads.
-    if request.is_some() || !intent["gaps"].as_array().unwrap().is_empty() {
+    if request.is_some() || reconciliation_selected {
         write["boundary"] = json!(
             "Read every declared source and retained interpretation. Supply a complete reviewable interpretation and exact source_records after semantic judgment; an exact accepted proposal authorizes only this mirror, never governing intent or Planning completion."
         );
     }
-    if !intent["gaps"].as_array().unwrap().is_empty() {
+    if reconciliation_selected {
         write["requests"] = json!([template(
             EDIT,
             json!({"content":"","judgment":"unresolved","reason":"Semantic review required"})
