@@ -34,6 +34,11 @@ See [Maturity model](maturity-model.md), [Installation](agentic-workspace-instal
 
 ## Current skills-first candidate evidence
 
+The [Candidate C integrated acceptance input](reviews/candidate-c-integrated-acceptance.md)
+aggregates accepted child reviews, current native public journeys and measured
+frontier cost. It records the remaining independent acceptance and publication
+boundaries; source validation does not put Candidate C into older published bytes.
+
 The [C53 recheck](maintainer/c53-conformance.md) identifies the exact integrated
 source and distinguishes owner tests, public journeys, architecture constraints
 and public documentation. The [continuation burden report](priority5-validation.md)

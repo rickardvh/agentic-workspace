@@ -18,18 +18,16 @@ The support and compatibility contract is deliberate enough that incompatible ch
 
 ## Current public status
 
-The coordinated Python distributions currently advertise `Development Status :: 3 - Alpha`. Until package metadata and release/evidence policy deliberately promote a surface, public documentation should not independently call the same distribution beta.
+The shipped Python distribution currently advertises `Development Status :: 3 - Alpha`. Until package metadata and release/evidence policy deliberately promote a surface, public documentation should not independently call the same distribution beta.
 
 | Surface | Public maturity | Current interpretation |
 | --- | --- | --- |
 | `agentic-workspace` root distribution | alpha | substantial deterministic and live-agent evidence exists; public compatibility may still change materially |
-| Agentic Planning distribution | alpha | active continuity and reconciliation are substantial; the coordinated distribution retains the alpha compatibility contract |
-| Agentic Memory distribution | alpha | durable anti-rediscovery routing is substantial; the coordinated distribution retains the alpha compatibility contract |
-| Agentic Verification distribution | alpha | protocols, evidence, proof routes, and producer authority are real; the coordinated distribution retains the alpha compatibility contract |
-| Generated/runtime targets | alpha unless a release explicitly states otherwise | conformance and packaging are substantial but target parity/support claims remain tied to current release evidence |
+| Memory, Planning and Verification capabilities | alpha | independently selectable capabilities within the root native product; no separately shipped native module dependencies |
+| TypeScript npm package and paired native CLI/core archive | alpha unless a release explicitly states otherwise | projections of the same Rust authority; target parity/support claims remain tied to current release evidence |
 | Public independent-module compatibility profile | alpha | the v2 descriptor and out-of-tree conformance fixture are public, while incompatible evolution remains possible under the alpha release contract |
 
-For the native reconstruction, the root package carries the current runtime; the separate module distributions in this table are retained source-development fixtures, not additional shipped native dependencies. Exact artifact admission establishes the bounded behavior and platform evidence in [Evidence and support](evidence-and-support.md#admitted-native-reconstruction). It does not itself change classifiers, publish a stable version or promote the maturity label.
+The separate module packages retained in the source tree are source-development fixtures. Exact artifact admission establishes the bounded behavior and platform evidence in [Evidence and support](evidence-and-support.md#admitted-native-reconstruction). It does not itself change classifiers, publish a stable version or promote the maturity label.
 
 This table describes public support maturity, not feature count. A capability can have strong deterministic or dogfooding evidence and still remain alpha while its compatibility or ownership boundary is changing materially.
 

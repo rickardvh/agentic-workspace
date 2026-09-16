@@ -73,7 +73,7 @@ Repository instructions can also be dynamic rather than purely static: repo-owne
 
 The ordinary deterministic product authority is the **native Rust CLI/core**. Public operations resolve and execute through that shared native authority rather than through independent language-specific implementations.
 
-The coordinated Python distribution carries the native executable together with package and payload support. Generated TypeScript CLI packages and JSON `start`/`invoke` envelopes are thin first-class projections/adapters over the same Rust-owned operation semantics. They are not peer semantic runtimes, and adapter-specific code should not become a second source of ordinary domain behavior.
+The root Python distribution and single generated TypeScript CLI package carry the paired native CLI/core executables. The release also provides a native archive. Python, TypeScript and JSON `start`/`invoke` envelopes are thin first-class projections/adapters over the same Rust-owned operation semantics. They are not peer semantic runtimes, and adapter-specific code should not become a second source of ordinary domain behavior.
 
 See [`docs/package/contracts.md`](docs/package/contracts.md) for the current contract and generated-interface model.
 
