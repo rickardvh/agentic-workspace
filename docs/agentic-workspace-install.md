@@ -109,6 +109,15 @@ The current implementation establishes one small public footprint: a managed sta
 
 Payload-mirroring profiles describe source-maintenance packaging. They are not native CLI flags or permission to copy managed state into another repository.
 
+The retained bounded-adaptation Python path also operates only in source
+maintenance. Its explicit adapters for proof-route, instruction and Memory work
+require `source-maintenance-only` contracts and preserve their existing owner
+admission and revision checks. The projection reports
+`operation_maintenance_executable`; it does not claim public native execution.
+Current source schemas still apply: a maintenance adapter cannot restore retired
+`assurance.domain_proof_lanes` authoring. Such a proposal is rejected with source
+bytes preserved; current proof-route changes belong to the Verification source.
+
 Exact installed files and required/optional degraded references are generated in the [current installed-surface catalogue](reference/installed-surface-catalogue.md).
 
 ## Stable invocation after bootstrap

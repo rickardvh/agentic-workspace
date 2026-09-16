@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import tomllib
 from copy import deepcopy
 from pathlib import Path
 
@@ -80,7 +79,7 @@ def test_bounded_adaptation_deduplicates_and_routes_to_existing_owner_operation(
         "status": "existing-operation-ready",
         "operation_id": "proof.report",
         "operation_registered": True,
-        "operation_runtime_consumed": True,
+        "operation_maintenance_executable": True,
         "revision_guard": "matched",
         "canonical_source_only": True,
         "learned_override_created": False,
@@ -96,7 +95,7 @@ def test_bounded_adaptation_keeps_consequential_instruction_change_owner_bound()
     assert candidate["promotion"]["status"] == "owner-admission-required"
     assert candidate["promotion"]["operation_id"] == "instructions.create"
     assert candidate["promotion"]["operation_registered"] is True
-    assert candidate["promotion"]["operation_runtime_consumed"] is True
+    assert candidate["promotion"]["operation_maintenance_executable"] is True
     assert "owner_admission" not in candidate
 
 
@@ -245,7 +244,7 @@ def test_unregistered_operation_cannot_be_labeled_promotion_ready() -> None:
     assert candidate["status"] == "owner-review-required"
     assert candidate["promotion"]["status"] == "owner-admission-required"
     assert candidate["promotion"]["operation_registered"] is False
-    assert candidate["promotion"]["operation_runtime_consumed"] is False
+    assert candidate["promotion"]["operation_maintenance_executable"] is False
 
 
 def test_machine_observed_proof_and_generated_additions_become_owner_bound_candidates() -> None:
@@ -536,13 +535,14 @@ def test_defer_choice_persists_until_reentry_trigger_changes(tmp_path: Path) -> 
     assert changed_trigger["candidates"][0]["persisted_disposition"]["status"] == "stale-trigger-changed"
 
 
-def test_draft_operation_cannot_be_labeled_or_executed_as_automatic_authority(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize("migration_status", ["draft-contract-only", "runtime-consumed"])
+def test_other_classification_cannot_grant_maintenance_execution(tmp_path: Path, monkeypatch, migration_status) -> None:
     from agentic_workspace import adaptation
 
     operation_root = tmp_path / "operations"
     operation_root.mkdir()
     contract = json.loads(Path("src/agentic_workspace/contracts/operations/proof.report.json").read_text(encoding="utf-8"))
-    contract["migration_status"] = "draft-contract-only"
+    contract["migration_status"] = migration_status
     (operation_root / "proof.report.json").write_text(json.dumps(contract), encoding="utf-8")
     monkeypatch.setattr(adaptation, "_OPERATION_CONTRACT_ROOT", operation_root)
 
@@ -550,13 +550,13 @@ def test_draft_operation_cannot_be_labeled_or_executed_as_automatic_authority(tm
 
     assert candidate["status"] == "owner-review-required"
     assert candidate["promotion"]["operation_registered"] is True
-    assert candidate["promotion"]["operation_runtime_consumed"] is False
+    assert candidate["promotion"]["operation_maintenance_executable"] is False
     candidate["status"] = "promotion-ready"
-    with pytest.raises(ValueError, match="not runtime-consumed authority"):
+    with pytest.raises(ValueError, match="not a supported source-maintenance operation"):
         execute_bounded_adaptation(candidate, target_root=tmp_path)
 
 
-def test_real_route_health_signal_executes_registered_owner_operation(tmp_path: Path, monkeypatch) -> None:
+def test_real_route_health_dispatch_preserves_current_configuration_schema(tmp_path: Path, monkeypatch) -> None:
     from agentic_workspace import workspace_runtime_proof
 
     config_path = tmp_path / ".agentic-workspace" / "config.toml"
@@ -626,19 +626,14 @@ def test_real_route_health_signal_executes_registered_owner_operation(tmp_path: 
         lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
     )
 
-    execution = execute_bounded_adaptation(candidate, target_root=tmp_path)
-
-    assert execution["status"] == "quiet"
-    assert execution["operation_id"] == "proof.report"
-    assert execution["validation_status"] == "passed"
-    assert execution["post_owner_revision"] != execution["expected_owner_revision"]
-    assert execution["operation_result"]["semantic_delta"]["lane_id"] == "example_focused"
-    contract = json.loads(Path("src/agentic_workspace/contracts/operations/proof.report.json").read_text(encoding="utf-8"))
-    assert execution["operation_result"]["authority_path"] in {item["surface"].split(" [", 1)[0] for item in contract["writes"]}
-    assert (
-        json.loads((tmp_path / ".agentic-workspace/local/proof-route-repairs/history.jsonl").read_text().splitlines()[0])["status"]
-        == "applied"
-    )
+    # The maintenance dispatcher is constructible, but the current source schema
+    # no longer admits historical assurance.domain_proof_lanes. Classification
+    # must not restore that retired authoring field or suppress owner validation.
+    before = config_path.read_bytes()
+    with pytest.raises(workspace_runtime_proof.WorkspaceUsageError, match="Invalid configuration"):
+        execute_bounded_adaptation(candidate, target_root=tmp_path)
+    assert config_path.read_bytes() == before
+    assert not (tmp_path / ".agentic-workspace/local/proof-route-repairs/history.jsonl").exists()
 
 
 def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evidence(
@@ -748,59 +743,13 @@ def test_route_health_constructs_bounded_candidate_only_from_safe_refinement_evi
         "_proof_route_independent_validation_commands",
         lambda **_: (['python -c "import sys; sys.exit(1)"'], "test-independent-validation-owner"),
     )
-    with pytest.raises(workspace_runtime_proof.WorkspaceUsageError, match="validation command failed"):
+    with pytest.raises(workspace_runtime_proof.WorkspaceUsageError, match="Invalid configuration"):
         execute_bounded_adaptation(candidate, target_root=tmp_path)
     assert config_path.read_bytes() == previous_config
     assert not (tmp_path / ".agentic-workspace/local/proof-route-repairs/history.jsonl").exists()
 
-    monkeypatch.setattr(
-        workspace_runtime_proof,
-        "_proof_route_independent_validation_commands",
-        lambda **_: (["python -c \"print('independent ok')\""], "test-independent-validation-owner"),
-    )
-    execution = execute_bounded_adaptation(candidate, target_root=tmp_path)
-    assert execution["status"] == "quiet"
-    assert execution["operation_id"] == "proof.report"
-    assert execution["validation_status"] == "passed"
-    assert execution["operation_result"]["apply_receipt"]["validation_authority"] == "test-independent-validation-owner"
-
-    replay_candidate = deepcopy(candidate)
-    replay_candidate["authority_requirement"]["expected_owner_revision"] = execution["post_owner_revision"]
-    replay_candidate["authority_requirement"]["current_owner_revision"] = execution["post_owner_revision"]
-    idempotent_execution = execute_bounded_adaptation(replay_candidate, target_root=tmp_path)
-    assert idempotent_execution["status"] == "quiet"
-    assert idempotent_execution["operation_result"]["status"] == "already-applied"
-    assert idempotent_execution["operation_result"]["apply_receipt"] == execution["operation_result"]["apply_receipt"]
-
-    canonical = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    canonical_lane = canonical["assurance"]["domain_proof_lanes"]["example"]
-    later_commands = [
-        {
-            "command": command,
-            "lane": "domain:example",
-            "route_id": "domain:example",
-            "claim_boundary": "example-owner-claim",
-        }
-        for command in canonical_lane["commands"]
-    ]
-    later_health = workspace_runtime_proof._proof_route_health_payload(
-        selected_commands=later_commands,
-        stale_hints=[],
-        invalid_hints=[],
-        manual_missing=[],
-        changed_paths=changed_paths,
-        target_root=tmp_path,
-        cli_invoke="agentic-workspace",
-        focused_route_coverage_audit={},
-        route_refinement_required={},
-        unavailable_commands=[],
-        proof_execution_evidence={},
-    )
-    assert [item["command"] for item in later_commands] == ["pytest tests/test_example.py -q"]
-    assert len(later_commands) < 2
-    assert not any(item.get("bounded_adaptation_signal") for item in later_health["findings"])
-    assert all(item.get("command") != "make test-workspace" for item in later_commands)
-
+    # Do not manufacture a successful route or cost reduction from the rejected
+    # legacy field. Current route changes require the Verification source owner.
     ambiguous = deepcopy(common)
     ambiguous["route_refinement_evidence"] = {"classification": "ambiguous"}
     ambiguous_health = workspace_runtime_proof._proof_route_health_payload(

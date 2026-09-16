@@ -1,3 +1,5 @@
+"""Source-maintenance adaptation; never public native CLI or effect authority."""
+
 from __future__ import annotations
 
 import copy
@@ -12,6 +14,7 @@ _MATERIAL_COVERAGE_EFFECTS = {"action", "authority", "proof", "claim", "procedur
 _CONSEQUENTIAL_OWNER_CLASSES = {"architecture", "security", "authority", "public-contract"}
 _COVERAGE_SOURCE_CLASSES = {"machine", "repo", "human", "review", "agent"}
 _OPERATION_CONTRACT_ROOT = Path(__file__).parent / "contracts" / "operations"
+_MAINTENANCE_ADAPTERS = {"proof.report", "instructions.create", "workspace.memory-create-note.apply"}
 
 
 def _list(value: Any) -> list[Any]:
@@ -265,8 +268,14 @@ def _path_revision(path: Path) -> str:
         return ""
 
 
-def _operation_runtime_consumed(contract: dict[str, Any] | None) -> bool:
-    return isinstance(contract, dict) and contract.get("migration_status") == "runtime-consumed"
+def _operation_maintenance_executable(contract: dict[str, Any] | None) -> bool:
+    # Classification alone cannot invent an executor. Retain only the three
+    # bounded maintenance adapters with their existing admission/revision guards.
+    return (
+        isinstance(contract, dict)
+        and contract.get("migration_status") == "source-maintenance-only"
+        and contract.get("id") in _MAINTENANCE_ADAPTERS
+    )
 
 
 def adaptation_signal_from_proof_route_finding(
@@ -363,7 +372,7 @@ def admit_bounded_adaptation(
 
 
 def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, dry_run: bool = False) -> dict[str, Any]:
-    """Execute an admitted low-risk adaptation through its canonical owner operation."""
+    """Execute an admitted adaptation through a bounded source-maintenance adapter."""
     authority = _dict(candidate.get("authority_requirement"))
     operation_id = str(authority.get("operation_id") or "")
     contract = _registered_operation(operation_id)
@@ -372,10 +381,8 @@ def execute_bounded_adaptation(candidate: dict[str, Any], *, target_root: Path, 
         raise ValueError("adaptation execution requires a promotion-ready candidate with a passed simulation")
     if contract is None:
         raise ValueError(f"adaptation operation is not registered: {operation_id}")
-    if not _operation_runtime_consumed(contract):
-        raise ValueError(f"adaptation operation is not runtime-consumed authority: {operation_id}")
-    if operation_id not in {"proof.report", "instructions.create", "workspace.memory-create-note.apply"}:
-        raise ValueError(f"adaptation operation has no bounded execution adapter: {operation_id}")
+    if not _operation_maintenance_executable(contract):
+        raise ValueError(f"adaptation operation is not a supported source-maintenance operation: {operation_id}")
     operation_inputs = _dict(candidate.get("operation_inputs"))
     proposed_delta = candidate.get("proposed_delta")
     if not isinstance(proposed_delta, dict):
@@ -623,7 +630,7 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]], *, target_root:
         operation_id = str(authority.get("operation_id") or "")
         operation_contract = _registered_operation(operation_id)
         operation_registered = operation_contract is not None
-        operation_runtime_consumed = _operation_runtime_consumed(operation_contract)
+        operation_maintenance_executable = _operation_maintenance_executable(operation_contract)
         revision_matched = bool(authority.get("expected_owner_revision")) and authority.get("expected_owner_revision") == authority.get(
             "current_owner_revision"
         )
@@ -631,7 +638,7 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]], *, target_root:
             candidate.get("risk_class") == "low"
             and authority.get("mode") == "existing-typed-operation"
             and operation_registered
-            and operation_runtime_consumed
+            and operation_maintenance_executable
             and revision_matched
             and simulation["status"] == "passed"
         )
@@ -660,7 +667,7 @@ def bounded_adaptation_projection(signals: list[dict[str, Any]], *, target_root:
                     else "owner-admission-required",
                     "operation_id": authority.get("operation_id"),
                     "operation_registered": operation_registered,
-                    "operation_runtime_consumed": operation_runtime_consumed,
+                    "operation_maintenance_executable": operation_maintenance_executable,
                     "revision_guard": "matched" if revision_matched else "missing-or-stale",
                     "canonical_source_only": True,
                     "learned_override_created": False,
