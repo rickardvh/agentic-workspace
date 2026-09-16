@@ -82,6 +82,10 @@ def cargo_manifests(ownership: dict[str, Any]) -> list[Path]:
     return [ROOT / package["path"] / "Cargo.toml" for package in ownership.get("cargo_packages", [])]
 
 
+def cargo_lockfiles(ownership: dict[str, Any]) -> list[Path]:
+    return [ROOT / path for path in ownership.get("cargo_lockfiles", ["Cargo.lock"])] if ownership.get("cargo_packages") else []
+
+
 def version_file_paths(ownership: dict[str, Any]) -> list[Path]:
     return [*package_pyprojects(ownership), *typescript_package_jsons(ownership)]
 
@@ -214,7 +218,7 @@ def verify_normalization_delta(
         elif path in cargo_projects:
             before, after = tomllib.loads(before_text), tomllib.loads(after_text)
             before["package"]["version"] = npm_version(version)
-        elif path == "Cargo.lock" and cargo_names:
+        elif path in {_repo_path(lock) for lock in cargo_lockfiles(ownership)}:
             before, after = tomllib.loads(before_text), tomllib.loads(after_text)
             for package in before.get("package", []):
                 if package.get("name") in cargo_names and "source" not in package:
@@ -484,11 +488,12 @@ def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
     for path in cargo_manifests(ownership):
         text = path.read_text(encoding="utf-8")
         path.write_text(re.sub(r'^version = "[^"]+"$', f'version = "{node_version}"', text, count=1, flags=re.MULTILINE), encoding="utf-8")
-    if ownership.get("cargo_packages"):
-        lock = ROOT / "Cargo.lock"
+    for lock in cargo_lockfiles(ownership):
         text = lock.read_text()
-        for package in ownership["cargo_packages"]:
-            pattern = r'(\[\[package\]\]\nname = "' + re.escape(package["name"]) + r'"\nversion = ")[^"]+("\n)'
+        names = {package["name"] for package in ownership["cargo_packages"]}
+        local_names = {package["name"] for package in tomllib.loads(text)["package"] if "source" not in package}
+        for name in names & local_names:
+            pattern = r'(\[\[package\]\]\nname = "' + re.escape(name) + r'"\nversion = ")[^"]+("\n)'
             text, count = re.subn(pattern, lambda match: match[1] + node_version + match[2], text)
             if count != 1:
                 raise SystemExit("Missing unique coordinated Cargo lock identity")
@@ -735,13 +740,13 @@ def verify_preview_release(
         before["package"]["version"] = npm_version(version)
         if before != tomllib.loads(read(path)):
             raise SystemExit(f"Preview changed non-version Cargo metadata: {_repo_path(path)}")
-    if ownership.get("cargo_packages"):
-        before = tomllib.loads(_run(["git", "show", f"{expected_source}:Cargo.lock"]).stdout)
+    for lock in cargo_lockfiles(ownership):
+        before = tomllib.loads(_run(["git", "show", f"{expected_source}:{_repo_path(lock)}"]).stdout)
         names = {package["name"] for package in ownership["cargo_packages"]}
         for package in before["package"]:
             if package["name"] in names and "source" not in package:
                 package["version"] = npm_version(version)
-        if before != tomllib.loads(read(ROOT / "Cargo.lock")):
+        if before != tomllib.loads(read(lock)):
             raise SystemExit("Preview changed third-party Cargo resolution")
     provenance_ref = next(package["payload_provenance"] for package in ownership["packages"] if package["name"] == "agentic-workspace")
     before = json.loads(_run(["git", "show", f"{expected_source}:{provenance_ref}"]).stdout)

@@ -497,6 +497,7 @@ def test_release_workflows_prevent_coordinated_version_drift_at_release_time() -
         "generated/workspace/typescript/external_contract_bundle.json",
         "generated/workspace/typescript/package.json",
         "pyproject.toml",
+        "tests/fixtures/native-independent-owner/Cargo.lock",
         "uv.lock",
     ]
 

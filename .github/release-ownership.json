@@ -83,7 +83,8 @@
     ".release/promotions/v1.0.0.json",
     "crates/agentic-workspace-core/Cargo.toml",
     "crates/agentic-workspace-cli/Cargo.toml",
-    "Cargo.lock"
+    "Cargo.lock",
+    "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
   "preview_release_commit_allowed_paths": [
     "pyproject.toml",
@@ -106,7 +107,8 @@
     "generated/verification/.agentic-workspace-cli-fingerprint.json",
     "crates/agentic-workspace-core/Cargo.toml",
     "crates/agentic-workspace-cli/Cargo.toml",
-    "Cargo.lock"
+    "Cargo.lock",
+    "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
   "package_affecting_paths": [
     ".release/changes/",
@@ -319,5 +321,9 @@
     "manifest": "cargo-release-manifest.json",
     "bootstrap": "First versions require bounded manual publication before OIDC can be configured",
     "support": "Same admitted release host; RC remains non-support-bearing"
-  }
+  },
+  "cargo_lockfiles": [
+    "Cargo.lock",
+    "tests/fixtures/native-independent-owner/Cargo.lock"
+  ]
 }

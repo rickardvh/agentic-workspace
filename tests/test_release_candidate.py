@@ -56,6 +56,11 @@ def repository(tmp_path, monkeypatch):
         + '[[package]]\nname = "external"\nversion = "2.0.0"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n'
     )
     ownership["preview_release_commit_allowed_paths"].append("Cargo.lock")
+    ownership["cargo_lockfiles"] = ["Cargo.lock", "tests/fixture/Cargo.lock"]
+    fixture_lock = tmp_path / ownership["cargo_lockfiles"][1]
+    fixture_lock.parent.mkdir(parents=True)
+    fixture_lock.write_text('version = 4\n[[package]]\nname = "agentic-workspace-core"\nversion = "0.51.0"\n')
+    ownership["preview_release_commit_allowed_paths"].append(ownership["cargo_lockfiles"][1])
     (tmp_path / ".github/release-ownership.json").write_text(json.dumps(ownership))
     _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test")
