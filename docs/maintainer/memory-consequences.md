@@ -2,7 +2,10 @@
 
 Selected advisory notes now arrive in `advisory_context`. A small note needs no
 follow-up read request. The compact budget is 4096 bytes per note and 16384 total;
-larger detail stays lazy until selected Memory detail or the active proof
+Source identity and UTF-8 validity are checked in bounded streaming chunks;
+compact delivery retains at most its selected small-body budget and does not
+construct a large body or decode/copy it into a string. Larger detail stays lazy
+until selected Memory detail or the active proof
 procedure needs it. Only selected sources are read. The existing bounded manifest
 selection still parses metadata; adding unrelated entries does not add delivered
 bodies. Source identity does not establish factual freshness. Missing, changed,
@@ -52,3 +55,8 @@ journeys use one public transport. There is no new ordinary CI command or pollin
 loop. The additional work is bounded selected-source delivery and parsing one
 already-read admitted command artifact. This evidence supports these owner
 consequences, not whole-release acceptance or empirical agent learning quality.
+
+The native frontier construction observer checks zero large-body materializations
+for compact entry and exactly one on selected Memory/proof expansion, including
+UTF-8 and CRLF chunk boundaries. Public stale/missing/dependency checks remain
+unchanged. Streaming hashing preserves the existing normalized source identity.

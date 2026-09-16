@@ -3,8 +3,10 @@
 use crate::{CoreError, decision_source, instruction_applicability};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeSet,
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -68,6 +70,68 @@ fn path_patterns(value: Option<&Value>, field: &str) -> Result<Vec<String>, Core
     Ok(rows)
 }
 
+/// Validate UTF-8 and hash normalized source identity in bounded chunks. Keep
+/// original bytes only while they fit the selected delivery budget. This is
+/// source observation, not optional body construction (even for one huge line).
+fn observe_source(
+    root: &Dir,
+    reference: &str,
+    limit: usize,
+) -> Result<(String, Option<Vec<u8>>), CoreError> {
+    let mut file = root.open(reference).map_err(error)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 8196];
+    let mut normalized = [0u8; 8196];
+    let mut pending = 0;
+    let mut total = 0;
+    let mut cr = false;
+    let mut body = (limit > 0).then(Vec::new);
+    loop {
+        let count = file.read(&mut buffer[pending..8192]).map_err(error)?;
+        if count == 0 {
+            if pending != 0 {
+                return Err(error("selected source contains incomplete UTF-8"));
+            }
+            break;
+        }
+        total += count;
+        if total > decision_source::MAX_SOURCE_BYTES {
+            return Err(error("decision source exceeds bounded read"));
+        }
+        if total > limit {
+            body = None;
+        }
+        if let Some(body) = body.as_mut() {
+            body.extend_from_slice(&buffer[pending..pending + count]);
+        }
+        let length = pending + count;
+        let valid = match std::str::from_utf8(&buffer[..length]) {
+            Ok(_) => length,
+            Err(problem) if problem.error_len().is_none() => problem.valid_up_to(),
+            Err(problem) => return Err(error(problem)),
+        };
+        let mut output = 0;
+        for byte in &buffer[..valid] {
+            if cr && *byte != b'\n' {
+                normalized[output] = b'\r';
+                output += 1;
+            }
+            cr = *byte == b'\r';
+            if !cr {
+                normalized[output] = *byte;
+                output += 1;
+            }
+        }
+        hash.update(&normalized[..output]);
+        buffer.copy_within(valid..length, 0);
+        pending = length - valid;
+    }
+    if cr {
+        hash.update(b"\r");
+    }
+    Ok((format!("sha256:{:x}", hash.finalize()), body))
+}
+
 /// The public owner must first validate this reference against its freshly
 /// selected resources. This helper additionally checks manifest membership and
 /// exact observed bytes; possession of a path/revision grants no authority.
@@ -76,6 +140,26 @@ pub(crate) fn read_selected(
     reference: &str,
     expected_revision: &str,
 ) -> Result<Value, CoreError> {
+    let body = selected_body(
+        target,
+        reference,
+        expected_revision,
+        decision_source::MAX_SOURCE_BYTES,
+    )?
+    .ok_or_else(|| error("selected body exceeds delivery bound"))?;
+    Ok(
+        json!({"source":{"reference":reference,"revision":expected_revision},
+        "body":body,"authority_effect":"advisory-only",
+        "currentness":{"status":"review-required","reason":"source-identity-is-not-factual-currentness"}}),
+    )
+}
+
+fn selected_body(
+    target: &Path,
+    reference: &str,
+    expected_revision: &str,
+    limit: usize,
+) -> Result<Option<String>, CoreError> {
     if !reference.starts_with(HOME) || !reference.ends_with(".md") {
         return Err(error("read requires a declared Memory note"));
     }
@@ -117,16 +201,19 @@ pub(crate) fn read_selected(
             return Err(error("advisory dependency changed before consumption"));
         }
     }
-    let bytes = decision_source::read(&root, reference)?;
-    let revision = decision_source::hash(&bytes);
+    let (revision, bytes) = observe_source(&root, reference, limit)?;
     if revision != expected_revision {
         return Err(error(
             "selected note revision changed; resolve current Memory again",
         ));
     }
-    Ok(json!({"source":{"reference":reference,"revision":revision},
-        "body":std::str::from_utf8(&bytes).map_err(error)?,"authority_effect":"advisory-only",
-        "currentness":{"status":"review-required","reason":"source-identity-is-not-factual-currentness"}}))
+    bytes
+        .map(|bytes| {
+            #[cfg(test)]
+            crate::native_frontier::built("memory-body");
+            String::from_utf8(bytes).map_err(error)
+        })
+        .transpose()
 }
 
 /// `route` must be the current semantic-route owner's result, never caller facts.
@@ -358,9 +445,7 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
                 .cloned()
                 .collect();
             let observed = if confined(&root, reference)? {
-                Some(decision_source::hash(&decision_source::read(
-                    &root, reference,
-                )?))
+                Some(observe_source(&root, reference, 0)?.0)
             } else {
                 None
             };
@@ -519,7 +604,7 @@ pub(crate) fn public_view(
 /// bodies expand only in the selected owner/proof procedure, not ordinary entry.
 pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result<(), CoreError> {
     let mut context = Vec::new();
-    let mut budget = 16 * 1024;
+    let mut budget: usize = 16 * 1024;
     for note in view["selected_notes"].as_array().into_iter().flatten() {
         let mut item = json!({"source":note["source"],"currentness":note["currentness"],"authority_effect":"advisory-only","delivery_is_disposition":false});
         let reason = note["currentness"]["reason"].as_str().unwrap_or("");
@@ -532,25 +617,28 @@ pub(crate) fn deliver(target: &Path, view: &mut Value, expanded: bool) -> Result
             note["source"]["reference"].as_str(),
             note["source"]["revision"].as_str(),
         ) {
-            match read_selected(target, reference, revision) {
-                Ok(detail) => {
-                    let body = detail["body"].as_str().unwrap();
-                    if expanded || (body.len() <= 4096 && body.len() <= budget) {
-                        item["body"] = json!(body);
-                        item["status"] = json!("delivered");
-                        budget = budget.saturating_sub(body.len());
-                    } else {
-                        item["status"] = json!("selected-detail-deferred");
-                        if let Some(summary) = note["metadata"]["summary"]
-                            .as_str()
-                            .filter(|s| s.len() <= 2048)
-                        {
-                            item["summary"] = json!(summary);
-                        }
-                        item["detail_rule"] = json!(
-                            "The selected owner or executable proof procedure carries the exact body when that branch is active; source identity is revalidated."
-                        );
+            let limit = if expanded {
+                decision_source::MAX_SOURCE_BYTES
+            } else {
+                budget.min(4096)
+            };
+            match selected_body(target, reference, revision, limit) {
+                Ok(Some(body)) => {
+                    budget = budget.saturating_sub(body.len());
+                    item["body"] = json!(body);
+                    item["status"] = json!("delivered");
+                }
+                Ok(None) => {
+                    item["status"] = json!("selected-detail-deferred");
+                    if let Some(summary) = note["metadata"]["summary"]
+                        .as_str()
+                        .filter(|s| s.len() <= 2048)
+                    {
+                        item["summary"] = json!(summary);
                     }
+                    item["detail_rule"] = json!(
+                        "The selected owner or executable proof procedure carries the exact body when that branch is active; source identity is revalidated."
+                    );
                 }
                 Err(problem) => {
                     item["status"] = json!("reconciliation-required");
