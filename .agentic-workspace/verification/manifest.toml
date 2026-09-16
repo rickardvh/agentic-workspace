@@ -625,7 +625,6 @@ assurance_requirement_refs = [
 ]
 commands = [
   "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q",
-  "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q",
   "uv run pytest tests/test_instruction_clause_ir.py tests/test_scoped_instructions.py tests/test_native_config_admission.py -q",
 ]
 review_aids = [
@@ -1146,7 +1145,7 @@ notes = "Independent writable config dimensions must compose for every legal val
 
 [assurance.requirements.direct_no_signal]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_runtime_implement.py", "tests/test_native_public_cli.py", "tests/test_native_public_cli.py"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_runtime_implement.py", "tests/test_native_public_cli.py"]
 applies_to_task_markers = ["direct no-signal", "irrelevant capability", "ordinary startup proportionality"]
 authority_refs = ["SYSTEM_INTENT.md#product-shape-rules", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
 required_evidence = ["direct_no_signal_fixture"]
