@@ -94,8 +94,11 @@ def test_former_selection_requires_exact_current_agent_request(
     # Full detail includes every declared API schema, including passive skill
     # exposure. Bound that explicit introspection separately from current state
     # and the ordinary compact response; new APIs must not inflate the latter.
-    # Explicit future-value disposition adds a bounded declared API schema.
-    assert len(json.dumps(first["capability_contract"])) < 78_000
+    # System Intent reconciliation adds explicit edit/recovery request and effect
+    # schemas (78,625 bytes total). Allow 3 KB over the former 78 KB ceiling for
+    # that declared API; keep current-state and compact-operation budgets below
+    # unchanged. This is introspection capacity, not ordinary context growth.
+    assert len(json.dumps(first["capability_contract"])) < 81_000
     state = {key: value for key, value in first.items() if key != "capability_contract"}
     assert len(json.dumps(state)) < 28_000, {key: len(json.dumps(value)) for key, value in state.items()}
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})

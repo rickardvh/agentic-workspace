@@ -159,7 +159,7 @@ The release helper preserved its temporary checkout when commit hooks created
 unleased Ruff/uv caches and validation output. Only these known new outputs were
 relocated to task scratch; uv cleaned its cache, then native resource removal
 succeeded. Do not broaden cleanup to unrelated ignored files or worktrees. Hosted
-Dependabot alerts 1â€“3 still reported open for removed member locks when checked;
+Dependabot alerts 1–3 still reported open for removed member locks when checked;
 the active workspace lock and exact preview security checks passed. No hosted
 alert dismissal or closure is inferred from source removal.
 ## Candidate B publication record

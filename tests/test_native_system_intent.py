@@ -73,6 +73,7 @@ def test_governing_source_absence_is_quiet_and_missing_declaration_is_not_waived
     quiet = consume(surface, shared_core_binary, native_cli, context)
     assert quiet["system_intent"]["status"] == "absent"
     assert quiet["system_intent"]["requests"] == []
+    assert "boundary" not in quiet["system_intent"]["reconciliation"]
     assert quiet["decision_packet"]["status"] == "direct"
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
@@ -181,6 +182,7 @@ def test_retained_intent_reconciliation_requires_exact_judgment_and_authority(tm
     assert current["interpretation"]["alignment"] == "unresolved-owner-judgment"  # No automatic larger-task alignment claim.
     assert current["gaps"] == []
     assert current["reconciliation"]["requests"] == []
+    assert "boundary" not in current["reconciliation"]
     subprocess.run(
         [
             "git",
