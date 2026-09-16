@@ -317,7 +317,7 @@ jobs:
               declared = package_json["version"]
               if declared != version:
                   raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
-              if package_json.get("private") is not True or package.get("release_policy") != "release-asset-only":
+              if package_json.get("private") is not False or package.get("release_policy") != "coordinated-public-registry":
                   raise SystemExit(f"{package['package_json']} must declare coordinated public registry publication")
               tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
               if tarball is None:

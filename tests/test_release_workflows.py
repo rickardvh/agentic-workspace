@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import ast
 import fnmatch
 import importlib.util
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW_ROOT = ROOT / ".github" / "workflows"
@@ -107,6 +110,33 @@ def test_release_ownership_manifest_declares_coordinated_workspace_packages() ->
         assert package["release_policy"] == "coordinated-public-registry"
         assert package["registry_status"] == "trusted-publication-required"
         assert package["generated_command_contract"] == "agentic-workspace/command-package-ir/v1"
+
+
+@pytest.mark.parametrize(
+    ("private", "policy", "accepted"),
+    [
+        (False, "coordinated-public-registry", True),
+        (True, "coordinated-public-registry", False),
+        (False, "release-asset-only", False),
+        (True, "release-asset-only", False),
+    ],
+)
+def test_stable_manifest_admits_only_public_registry_contract(private, policy, accepted):
+    block = _step_run_block((WORKFLOW_ROOT / "release.yml").read_text(), "Generate checksums and release manifest")
+    source = block.split("python - <<'PY'\n", 1)[1].rsplit("\nPY", 1)[0]
+    guards = [
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.If) and any(isinstance(child, ast.Constant) and child.value == "private" for child in ast.walk(node.test))
+    ]
+    assert len(guards) == 1
+    guard = compile(ast.Module(body=guards, type_ignores=[]), "stable-manifest-guard", "exec")
+    context = {"package_json": {"private": private}, "package": {"release_policy": policy, "package_json": "package.json"}}
+    if accepted:
+        exec(guard, context)
+    else:
+        with pytest.raises(SystemExit, match="coordinated public registry publication"):
+            exec(guard, context)
 
 
 def test_package_affecting_scope_excludes_github_automation() -> None:
