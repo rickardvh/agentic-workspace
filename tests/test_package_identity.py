@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -248,7 +249,9 @@ def test_redistributable_receipt_binds_exact_artifact_names_and_hashes(
         first_artifact.write_bytes(original)
 
 
-def test_install_survives_into_fresh_second_process(coordinated_artifacts: tuple[Path, Path], tmp_path: Path) -> None:
+def test_install_survives_into_fresh_second_process(
+    coordinated_artifacts: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     local_dist, _ = coordinated_artifacts
     environment = tmp_path / "tool-environment"
     host = tmp_path / "host"
@@ -269,6 +272,14 @@ def test_install_survives_into_fresh_second_process(coordinated_artifacts: tuple
     )
     from tests.test_external_consumer_readiness import _module
 
+    # Other source tests export a development core through a session fixture.
+    # An installed-artifact proof must use its own verified pair, even when that
+    # ambient override is present. Make that isolation requirement deterministic.
+    foreign_core = tmp_path / "foreign-core"
+    foreign_core.write_bytes(b"not the installed native artifact")
+    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(foreign_core))
+    environment_vars = {key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"}
+
     def call(request):
         context = request["context"]
         packet = tmp_path / "packet.json"
@@ -279,8 +290,12 @@ def test_install_survives_into_fresh_second_process(coordinated_artifacts: tuple
         if value is not None:
             packet.write_text(json.dumps(value))
             args.extend(["--input", str(packet)])
-        result = subprocess.run(args, cwd=host, capture_output=True, text=True)
-        return {"status": "ok", "result": json.loads(result.stdout)} if result.returncode == 0 else {"status": "error"}
+        result = subprocess.run(args, cwd=host, env=environment_vars, capture_output=True, text=True)
+        return (
+            {"status": "ok", "result": json.loads(result.stdout)}
+            if result.returncode == 0
+            else {"status": "error", "argv": args, "returncode": result.returncode, "stdout": result.stdout, "stderr": result.stderr}
+        )
 
     _module().exercise_native_lifecycle(call, host)
     assert all(str(environment).encode() not in path.read_bytes() for path in (host / ".agentic-workspace").rglob("*") if path.is_file())

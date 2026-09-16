@@ -123,7 +123,7 @@ def test_release_docs_describe_preview_as_testing_not_stable_admission() -> None
     assert "## Preview Releases" in docs
     assert "**non-support-bearing**" in docs
     assert "does not satisfy #2990 support-bearing admission" in docs
-    assert "preview_release.py --version 0.52.0 --push" in docs
+    assert "preview_release.py --version <unused-version> --push" in docs
     assert "only that tag is pushed" in docs
     assert "A public preview therefore burns its numeric package version" in docs
     assert "only support-bearing GitHub Release" in docs
