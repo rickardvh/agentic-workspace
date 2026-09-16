@@ -189,8 +189,8 @@ jobs:
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           for package in ownership["typescript_packages"]:
               payload = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
-              if payload.get("private") is not True or package.get("release_policy") != "release-asset-only":
-                  raise SystemExit(f"{package['package_json']} must be explicitly unpublished and release-asset-only")
+              if payload.get("private") is not False or package.get("release_policy") != "coordinated-public-registry":
+                  raise SystemExit(f"{package['package_json']} must declare coordinated public registry publication")
           PY
 
       - name: Build Agentic Workspace package artifacts
@@ -318,7 +318,7 @@ jobs:
               if declared != version:
                   raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
               if package_json.get("private") is not True or package.get("release_policy") != "release-asset-only":
-                  raise SystemExit(f"{package['package_json']} must be explicitly unpublished and release-asset-only")
+                  raise SystemExit(f"{package['package_json']} must declare coordinated public registry publication")
               tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
               if tarball is None:
                   raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
