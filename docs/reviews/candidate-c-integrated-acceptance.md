@@ -2,8 +2,10 @@
 
 Date: 2026-09-16. Runtime subject: master
 `d0423df70161cb5565792f1789ec707f3e7f376d`, after merged #3357.
-This change adds evidence and reconciles documentation/retained interpretation;
-it changes no runtime behavior. It is **ready for independent review**.
+The original aggregate adds evidence and reconciles documentation/retained
+interpretation. Its review correction also adds a bounded runtime discovery path
+for semantic correction of a retained interpretation whose source hashes match,
+as described below. It is **ready for independent review**.
 
 This is a finite aggregation for [#3277](https://github.com/rickardvh/agentic-workspace/issues/3277)
 and the administrative closeout of
@@ -202,7 +204,16 @@ are operating cost, not additional proof coverage.
 
 Independent aggregate acceptance permits administrative #3260 closure. This
 PR is the reviewable closeout proposal with a bounded retained-intent correction
-path fix. #3277 remains open for #3358 followed by `v1.0.0-rc.1` and fresh post-C
-release evidence; #2985 remains open for exact stable preparation/admission/publication. Stale #3283 is
+path fix. The remaining #3277 release gates are #3358 for canonical Python/npm/Cargo
+RC identity, #3363 for structural wrapper façade parity, #3364 for shipped-wrapper
+subtraction, and #3361/#3362 for registry publication and exact public-byte proof.
+The P0 wrapper gates #3363/#3364 must be accepted before first registry publication
+under #3361 (PyPI/npm) and #3362 (crates.io/native). These release-surface and
+distribution gates remain outside the #3260 product closeout.
+
+After acceptance of those gates and the finite integrated review on the exact
+Candidate C source, publish/exercise immutable `v1.0.0-rc.1`; product fixes require
+a later RC. #2985 remains open for fresh exact stable preparation/admission/
+publication from the accepted RC. Stale #3283 is
 not fresh admission. #3347–#3351 and Set D remain post-v1. No new release, support
 platform, maturity label or source trust revision is asserted here.
