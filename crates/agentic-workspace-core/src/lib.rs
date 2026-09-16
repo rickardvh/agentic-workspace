@@ -23,6 +23,7 @@ mod native_independent_publication;
 mod native_instruction_write;
 mod native_instructions;
 mod native_intent;
+mod native_intent_write;
 mod native_measurement;
 mod native_memory;
 mod native_memory_capture;

@@ -18,6 +18,13 @@ build directories and standalone Node development use an explicit
 `AGENTIC_WORKSPACE_CORE_BINARY` override. Importing a
 binding never starts Cargo or falls back to a Python/generated command host.
 
+The installed consumer contract is the capability contract returned by native
+`start`. The prerelease `external_operation_conformance_receipts` Python export
+and private `_generated_cli_package_impl` resources are retired installed APIs;
+source-only conformance fixtures do not make them wheel compatibility promises.
+The isolated wheel consumer test checks the current API with development core
+overrides removed and checks that those retired surfaces remain absent.
+
 Legacy Python clients, operations, generated command trees, and the three module
 distributions remain source development and migration fixtures. They are not
 wheel contents, installed dependencies, npm contents, or release assets. The
@@ -152,7 +159,7 @@ The release helper preserved its temporary checkout when commit hooks created
 unleased Ruff/uv caches and validation output. Only these known new outputs were
 relocated to task scratch; uv cleaned its cache, then native resource removal
 succeeded. Do not broaden cleanup to unrelated ignored files or worktrees. Hosted
-Dependabot alerts 1–3 still reported open for removed member locks when checked;
+Dependabot alerts 1â€“3 still reported open for removed member locks when checked;
 the active workspace lock and exact preview security checks passed. No hosted
 alert dismissal or closure is inferred from source removal.
 ## Candidate B publication record

@@ -99,6 +99,8 @@ fn resolve_selected(
                 .is_some_and(crate::native_independent::linked)
                 && i["operation_id"] != "delegation.dispatch"
                 && i["operation_id"] != crate::native_patch::OP
+                && i["operation_id"] != crate::native_intent_write::WRITE
+                && i["operation_id"] != crate::native_intent_write::RECOVERY
                 && i["operation_id"] != crate::native_instruction_write::WRITE
                 && i["operation_id"] != crate::native_instruction_write::RECOVERY
                 && i["operation_id"] != "configuration.defer-choice"
@@ -334,6 +336,7 @@ fn resolve_selected(
         &mut startup_adapter,
         &[
             &config_write_contract,
+            &system_intent["capability_contract"],
             &planning_probe["capability_contract"],
             &verification_probe["capability_contract"],
             &memory["capability_contract"],
@@ -487,10 +490,10 @@ fn resolve_selected(
             Some(&contract),
         )?;
     } else {
-        for request in system_intent["requests"].as_array_mut().unwrap() {
-            request["capability_revision"] = contract["revision"].clone();
-        }
+        system_intent =
+            crate::native_intent::view(target, &work, &configuration, None, Some(&contract))?;
     }
+
     if let Some(request) =
         request_for("memory").filter(|r| r["request_kind"] == "memory/read-current-note/v1")
     {
@@ -1292,6 +1295,8 @@ fn resolve_selected(
                             | "configuration.recover-write"
                             | "configuration.defer-choice"
                             | "configuration.skill-exposure"
+                            | "system-intent.write"
+                            | "system-intent.recover-write"
                             | "instructions.write"
                             | "instructions.recover-write"
                             | "memory.dispose"
@@ -1757,6 +1762,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         && invocation["operation_id"] != "planning.update-recover"
         && invocation["operation_id"] != "delegation.dispatch"
         && invocation["operation_id"] != crate::native_patch::OP
+        && invocation["operation_id"] != crate::native_intent_write::WRITE
+        && invocation["operation_id"] != crate::native_intent_write::RECOVERY
         && invocation["operation_id"] != crate::native_instruction_write::WRITE
         && invocation["operation_id"] != crate::native_instruction_write::RECOVERY
         && invocation["operation_id"] != "configuration.defer-choice"
@@ -1834,6 +1841,8 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
                 | "configuration.recover-write"
                 | "configuration.defer-choice"
                 | "configuration.skill-exposure"
+                | "system-intent.write"
+                | "system-intent.recover-write"
                 | "instructions.write"
                 | "instructions.recover-write"
                 | "memory.dispose"
@@ -1869,6 +1878,13 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
             )
         ) {
             crate::native_memory_capture::execute(
+                &target,
+                &current["decision_packet"],
+                invocation,
+                revalidate,
+            )?
+        } else if invocation["source_owner"] == "system-intent" {
+            crate::native_intent_write::execute(
                 &target,
                 &current["decision_packet"],
                 invocation,

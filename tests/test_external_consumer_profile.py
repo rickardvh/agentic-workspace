@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -262,35 +263,35 @@ def test_typescript_packed_artifact_exports_profile() -> None:
         assert loaded.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
 
 
-def test_built_wheel_resolves_profile_outside_checkout(tmp_path: Path) -> None:
+def test_built_wheel_resolves_native_contract_outside_checkout(tmp_path: Path) -> None:
     dist = tmp_path / "dist"
     subprocess.run(
         [shutil.which("uv") or "uv", "build", "--wheel", "--out-dir", str(dist)], cwd=ROOT, check=True, capture_output=True, text=True
     )
     site = tmp_path / "site"
     with zipfile.ZipFile(next(dist.glob("*.whl"))) as wheel:
+        assert not any("_generated_cli_package_impl" in name for name in wheel.namelist())
         wheel.extractall(site)
     code = (
-        "from agentic_workspace import external_operation_conformance_receipts; "
-        "from importlib.resources import files; import json; "
-        "profile = json.loads(files('agentic_workspace._generated_cli_package_impl').joinpath('external_consumer_profile.json').read_text()); "
-        "receipts = external_operation_conformance_receipts(); "
-        "print(json.dumps([profile['schema_version'], receipts['kind'], len(receipts['receipts'])]))"
+        "import agentic_workspace as aw; import importlib.util, json; "
+        "assert not hasattr(aw, 'external_operation_conformance_receipts'); "
+        "assert importlib.util.find_spec('agentic_workspace._generated_cli_package_impl') is None; "
+        "result = aw.start({'target': '.', 'task': 'Read native consumer contract', 'projection': 'full'}); "
+        "contract = result['capability_contract']; "
+        "assert contract['revision']; assert contract['owners']; "
+        "assert all(owner['revision'] for owner in contract['owners']); "
+        "print(json.dumps(contract['kind']))"
     )
+    env = {key: value for key, value in os.environ.items() if not key.startswith("AGENTIC_WORKSPACE_")}
     loaded = subprocess.run(
-        [sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(site)!r}); {code}"], cwd=tmp_path, text=True, capture_output=True
+        [sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(site)!r}); {code}"],
+        cwd=tmp_path,
+        env=env,
+        text=True,
+        capture_output=True,
     )
     assert loaded.returncode == 0, loaded.stderr
-    expected_receipt_count = len(
-        json.loads((ROOT / "src/agentic_workspace/contracts/external_operation_conformance_receipts.json").read_text(encoding="utf-8"))[
-            "receipts"
-        ]
-    )
-    assert json.loads(loaded.stdout) == [
-        "agentic-workspace/external-consumer-profile/v1",
-        "agentic-workspace/external-operation-conformance-receipt-store/v1",
-        expected_receipt_count,
-    ]
+    assert json.loads(loaded.stdout) == "agentic-workspace/capability-contract/v1"
 
 
 def test_usable_generation_with_unusable_maturity_fails_closed() -> None:
