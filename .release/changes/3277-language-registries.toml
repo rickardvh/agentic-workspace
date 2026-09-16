@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Publish admitted RC and stable language artifacts through trusted PyPI and npm registry projections."
