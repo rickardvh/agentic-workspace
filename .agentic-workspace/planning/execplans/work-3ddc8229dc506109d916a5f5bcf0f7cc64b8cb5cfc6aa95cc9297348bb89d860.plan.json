@@ -2,8 +2,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted_progress": "Validation is recorded per PR. Issue closure, independent review, merge, and release admission remain distinct and are not claimed. Triage #3381 records the unexplained host rejection; smaller calls resumed successfully. A bounded Planning successor normalization fixes the current owner-progress blocker. Additional operating cost included source-maintenance subtraction, one interrupted native JSON test, isolated revalidation, and repairing the Planning blocker; no whole-task log-completeness claim. The #3383 layer passed 84 affected cases across the bounded run and corrected-case reruns, generated static proof and commit hooks. First-run failures included fixture source-restoration ordering and stale transport/packed-binding assumptions; they were corrected and rerun. Actual current host discovery admitted Sol as a feasible implementation alternative, with local execution selected by current comparative judgment. No paid worker turn, economic benchmark, independent review, merge or release is claimed. Additional cost included host discovery, stale-check correction and focused reruns.",
-    "frontier": "The original batch is delivered in PRs #3382/#3384/#3385. User-authorized later issue #3383 is implemented in PR #3386 above #3385, ready for independent review. #3380 and triage #3381 were closed. No other later open issue existed when this continuation was scoped."
+    "accepted_progress": "Validation is recorded per PR. Issue closure, independent review, merge, and release admission remain distinct and are not claimed. Triage #3381 records the unexplained host rejection; smaller calls resumed successfully. A bounded Planning successor normalization fixes the current owner-progress blocker. Additional operating cost included source-maintenance subtraction, one interrupted native JSON test, isolated revalidation, and repairing the Planning blocker; no whole-task log-completeness claim. The #3383 layer passed 84 affected cases across the bounded run and corrected-case reruns, generated static proof and commit hooks. First-run failures included fixture source-restoration ordering and stale transport/packed-binding assumptions; they were corrected and rerun. Actual current host discovery admitted Sol as a feasible implementation alternative, with local execution selected by current comparative judgment. No paid worker turn, economic benchmark, independent review, merge or release is claimed. Additional cost included host discovery, stale-check correction and focused reruns. Review follow-through: #3384 passed 30 route/adoption tests; #3385 passed 53 adaptation/route tests; the rebased top passed 32 affected adaptation, route-budget and host-binding tests. Commit hooks passed. Two stale proof-maintenance fixtures expected a retired configuration field; they now prove current-schema rejection and preservation instead of reintroducing that field. GitHub has not yet created fresh runs for pushed heads; missing checks are not green proof. Existing #3382 independent review disposition remains on its unchanged exact head.",
+    "frontier": "Independent review feedback addressed in each owning layer: #3384 keeps repository-adoption invitations out of unrelated directory queries without raising the 28 KB state ceiling and lists all five native commands; #3385 preserves explicit maintenance execution classification and current-schema rejection for retired proof fields. #3386 is rebased above both. Ready for independent review, with hosted CI still unresolved."
   },
   "creation_provenance": {
     "custody": {
@@ -35,7 +35,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Externally initiated independent review of stacked PRs #3382, #3384, #3385 and #3386; implementation custody must not review or approve them.",
+  "next_action": "Fresh hosted CI on corrected PRs #3384/#3385/#3386, then externally initiated independent re-review. No implementation-agent approval or merge.",
   "owner_level": "lane",
   "parent": {},
   "phase": "closeout",
@@ -61,7 +61,7 @@
     "docs/reviews/host-feasibility-3383-2026-09-16.md"
   ],
   "relationships": {},
-  "revision": 4,
+  "revision": 5,
   "scope": {
     "excluded": [
       "Review or approve implementation PRs",
@@ -85,18 +85,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/ace781f37d0776ebbc602ee2336794a107f309d4a42705448bb292ca387077ff.attempt.json",
-        "revision": "sha256:53a7bc9060b6626cbb5d1dd2ca5a747f58d8f4cc87c0b36b1452f23175e37b33",
+        "path": ".agentic-workspace/local/effects/b63732035adacffac88f16d97ebb8affd208b327905d0769d69c4899127ce05c.attempt.json",
+        "revision": "sha256:fdc6a9cd7a8e0e4f5548687098bbb905f2bd6df654476c7b86ec649b05f56d5a",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/ace781f37d0776ebbc602ee2336794a107f309d4a42705448bb292ca387077ff.result.json",
-        "revision": "sha256:0acc2396fcaa0b9cafa1b36840be267bb8e3b36313dfb041cc44761972c1c9fd",
+        "path": ".agentic-workspace/local/effects/b63732035adacffac88f16d97ebb8affd208b327905d0769d69c4899127ce05c.result.json",
+        "revision": "sha256:3cfb82900ca1f3a07162b4dfc94fd9e432d3f341f43deea7dc75d2fbb8c3deba",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:877de83077a427cad65aa0b89b8425f6b394e7cd5c69c0866f3c813fe50aa6ff",
+    "invocation_revision": "sha256:dd7b58befc68fe01e25183eed237a8467b3625882f97254eb33e4939df48c776",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -104,7 +104,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:8c6ec0f365ec41488447f4573bce27816d6118a8f39b06374978c1a866061cea",
+        "document_revision": "sha256:297b8f41b01945bc6a39daa6eab1555ff18c005181cdd0142b1a954c10f99341",
         "owner_id": "work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860",
         "owner_path": ".agentic-workspace/planning/execplans/work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860.plan.json"
       }
