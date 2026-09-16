@@ -101,7 +101,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json"
   },
@@ -159,7 +159,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Refresh provider-agnostic external intent evidence from GitHub issues through the optional gh CLI adapter.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Refresh provider-agnostic external intent evidence from GitHub issues through the optional gh CLI adapter.",
   "writes": [
     {
       "required": false,

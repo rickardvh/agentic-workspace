@@ -136,7 +136,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -182,7 +182,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Import returned delegated work into received/awaiting-admission without proof or integration.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Import returned delegated work into received/awaiting-admission without proof or integration.",
   "writes": [
     {
       "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",

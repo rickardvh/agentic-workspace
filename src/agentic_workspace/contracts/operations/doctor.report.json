@@ -4,7 +4,7 @@
   "command_surface": {
     "command": "doctor"
   },
-  "summary": "Report drift, missing surfaces, and recommended remediation.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Report drift, missing surfaces, and recommended remediation.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -111,5 +111,5 @@
     "operation contract validates against operation.schema.json",
     "doctor command tests remain compatible"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

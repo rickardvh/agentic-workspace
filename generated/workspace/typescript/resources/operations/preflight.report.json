@@ -77,7 +77,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json"
   },
@@ -167,6 +167,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Get compact takeover-safe context: startup defaults, resolved config, and active planning state in one call.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Get compact takeover-safe context: startup defaults, resolved config, and active planning state in one call.",
   "writes": []
 }

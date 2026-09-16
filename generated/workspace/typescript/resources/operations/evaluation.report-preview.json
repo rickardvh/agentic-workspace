@@ -73,7 +73,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "description": "Evaluation report-authority payload.",
     "kind": "json",
@@ -111,6 +111,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Compile current evaluation report authority without claiming external delivery.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Compile current evaluation report authority without claiming external delivery.",
   "writes": []
 }

@@ -75,7 +75,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "json",
     "schema_ref": "schemas/evaluation_definition.schema.json"
@@ -108,7 +108,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Apply a validated evaluation lifecycle transition.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Apply a validated evaluation lifecycle transition.",
   "writes": [
     {
       "required": true,

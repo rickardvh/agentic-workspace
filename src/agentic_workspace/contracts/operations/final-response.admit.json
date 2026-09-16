@@ -6,7 +6,7 @@
     "subcommand": "admit",
     "format_option": "format"
   },
-  "summary": "Admit or reject a model-authored final response, or run a vendor-neutral executor loop that re-enters execution while CONTINUE remains.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Admit or reject a model-authored final response, or run a vendor-neutral executor loop that re-enters execution while CONTINUE remains.",
   "classification": "local-record-append",
   "inputs": [
     {
@@ -158,5 +158,5 @@
     "integrated downstream upgrade proof retains zero live Planning records through proof, structured residue routing, and bounded admission",
     "closeout rendering exposes the integrated vendor-neutral ordinary executor loop and the codex-sbx dogfooding adapter"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "source-maintenance-only"
 }

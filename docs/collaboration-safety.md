@@ -44,13 +44,7 @@ Agentic Workspace is git-native and collaboration-aware, not multi-writer safe.
 
 When a merge touches Agentic Workspace surfaces:
 
-1. Run `agentic-workspace doctor --target . --format json`.
-2. If `repair_plan.status` is `safe-action-available`, inspect the primary action before applying it.
-3. If conflict markers appear in `.agentic-workspace/config.toml`, `.agentic-workspace/OWNERSHIP.toml`, or `config.local.toml.example`, treat the conflict as policy review. Do not blindly regenerate these files.
-4. If conflict markers appear in `.agentic-workspace/planning/state.toml`, preserve the intentional active/queued future work from both sides. Do not delete `state.toml` as the first move.
-5. If conflict markers appear in an active execplan, preserve the bounded implementation contract before continuing. Do not replace it with a freehand plan unless the conflicting intent has been retained.
-6. If conflict markers appear in Memory notes, preserve reusable durable knowledge and split the note when the same broad surface keeps colliding.
-7. If a generated or derived surface is stale, identify the canonical source and rerender command before editing generated output by hand.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 ## Generated Surface Repair
 
@@ -60,7 +54,7 @@ Generated and derived surfaces are cheap to repair only when source authority is
 - package command that renders the managed or generated surface;
 - generated output as inspection evidence only.
 
-Use `agentic-workspace doctor --target . --format json` to find `repair_actions`, `manual_review_actions`, `stale_generated_surfaces`, and `repair_plan.primary_next_action`. Safe rerender actions should name the command and proof-after command. Manual-review actions mean the package cannot prove which side of a merge is authoritative.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 Do not turn generated surfaces into a second handbook during conflict resolution. Repair the source, rerender, then review the resulting diff.
 
@@ -75,8 +69,6 @@ Do not turn generated surfaces into a second handbook during conflict resolution
 
 Use compact diagnostics before closeout or push:
 
-- `agentic-workspace summary --target . --verbose --format json` exposes `planning_surface_health.collaboration_pressure`.
-- `agentic-workspace report --target . --format json` exposes `branch_workflow_posture.shared_state_mutation_risk`.
-- `agentic-memory report --target . --format json` exposes `merge_safety` when Memory is installed.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 These are pressure signals, not locks. They tell an agent or reviewer when ordinary git collaboration risk is high enough to review, split, close, archive, rerender, or route durable residue before continuing.

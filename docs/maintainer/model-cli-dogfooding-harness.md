@@ -274,17 +274,7 @@ uv run python scripts/model_cli_harness/external_agent_evaluation_lane.py report
 
 Inspect `run.json`, the CLI transcript, the copied repo diff, and package diagnostics. Useful signals:
 
-- startup: did the agent read `AGENTS.md` and route to `.agentic-workspace/WORKFLOW.md` or CLI help?
-- CLI-first use: did it run `agentic-workspace implement --changed <paths>` for known-path work, `agentic-workspace start --task "<task>"` for ordinary first contact, or an equivalent compact route before broad work?
-- planning shape: did it use schema-backed records or invent PM-shaped artifacts?
-- state safety: did it notice unsupported `state.toml` activation shapes?
-- proof: did it select a narrow proof command instead of guessing?
-- closeout: did it route residue and report uncertainty honestly?
-- config: did it inspect the effective config surface when repo/local settings could affect closeout, delegation, proof, or reporting?
-- local posture: did it treat `.agentic-workspace/config.local.toml` as local runtime posture, not checked-in repo policy?
-- proportionality: did direct work stay direct while lane/epic-shaped work got durable planning?
-- native-plan bridge: did private runtime planning remain private while durable decisions reached checked-in workspace state?
-- Memory routing: did the agent use the index and the narrow note, and did repeated learning become compact durable context?
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 Treat one-off capability failures cautiously. Give more weight to repeated ambiguity, discovery-cost, proof-selection, and handoff failures across weaker or cheaper models.
 

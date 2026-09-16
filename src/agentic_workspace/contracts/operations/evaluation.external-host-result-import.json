@@ -6,7 +6,7 @@
     "format_option": "format",
     "subcommand": "external-host-result-import"
   },
-  "summary": "Import one provider-owned external evaluation host result by opaque reference after host admission verification.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Import one provider-owned external evaluation host result by opaque reference after host admission verification.",
   "classification": "local-record-append",
   "inputs": [
     {
@@ -119,5 +119,5 @@
     "operation contract validates against operation.schema.json",
     "generated external consumer profile includes the operation"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "source-maintenance-only"
 }

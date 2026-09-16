@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import re
 import subprocess
-import tomllib
 from collections import Counter
 from pathlib import Path
 
@@ -52,11 +51,8 @@ def test_workspace_split_targets_preserve_serial_pytest_contract() -> None:
     text = _makefile_text()
 
     assert ".NOTPARALLEL: test-workspace" in text
-    assert (
-        "test-workspace: "
-        "test-workspace-cli test-workspace-proof test-workspace-session-review "
-        "test-workspace-contracts test-workspace-generated-release test-workspace-integration"
-    ) in text
+    assert ("test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review") in text
+    assert "test-source-maintenance: test-workspace-contracts test-workspace-generated-release test-workspace-integration" in text
 
     for target, variable in SPLIT_TARGETS.items():
         parallel_variable = "WORKSPACE_PROOF_PYTEST_PARALLEL_ARGS" if target == "test-workspace-proof" else "WORKSPACE_PYTEST_PARALLEL_ARGS"
@@ -89,13 +85,6 @@ def test_workspace_split_targets_preserve_serial_pytest_contract() -> None:
     assert "test-workspace-contracts:\n" in text
 
 
-def test_workspace_broad_suite_exposes_split_target_matrix() -> None:
-    config = tomllib.loads((WORKSPACE_ROOT / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8"))
-    commands = config["assurance"]["domain_proof_lanes"]["workspace_broad_suite"]["commands"]
-
-    assert commands == [f"make {target}" for target in SPLIT_TARGETS] + ["make lint-workspace"]
-
-
 def test_makefile_exposes_setup_free_aggregate_targets() -> None:
     text = _makefile_text()
 
@@ -117,7 +106,7 @@ def test_makefile_exposes_local_packed_artifact_semantic_replay() -> None:
     assert "PACKED_ARTIFACT_DIR ?= $(CURDIR)/.agentic-workspace/local/packed-artifact-conformance" in text
     assert "PACKED_ARTIFACT_CONTEXT ?= local" in text
     assert (
-        'run_generated_command_package_proof.py --packed-conformance --artifact-dir "$(PACKED_ARTIFACT_DIR)" '
+        'check_native_release_topology.py --artifact-dir "$(PACKED_ARTIFACT_DIR)" '
         '--receipt-out "$(PACKED_ARTIFACT_RECEIPT)" --execution-context "$(PACKED_ARTIFACT_CONTEXT)"'
     ) in text
 

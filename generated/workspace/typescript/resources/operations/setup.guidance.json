@@ -69,7 +69,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "module-result"
   },
@@ -110,6 +110,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show bounded post-bootstrap setup guidance for a mature repository.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Show bounded post-bootstrap setup guidance for a mature repository.",
   "writes": []
 }

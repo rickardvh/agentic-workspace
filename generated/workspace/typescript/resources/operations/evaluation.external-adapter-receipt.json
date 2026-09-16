@@ -124,7 +124,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "description": "Indexed producer-owned adapter receipt.",
     "kind": "json",
@@ -158,7 +158,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Record a producer-owned external adapter attempt/result receipt for later delivery admission.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Record a producer-owned external adapter attempt/result receipt for later delivery admission.",
   "writes": [
     {
       "required": true,

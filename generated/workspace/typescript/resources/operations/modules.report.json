@@ -71,7 +71,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json"
   },
@@ -116,6 +116,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "List workspace modules available to the orchestrator and installed-module signals for the target repository.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. List workspace modules available to the orchestrator and installed-module signals for the target repository.",
   "writes": []
 }

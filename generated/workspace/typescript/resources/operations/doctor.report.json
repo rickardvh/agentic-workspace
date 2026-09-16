@@ -80,7 +80,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "module-result"
   },
@@ -138,6 +138,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Report drift, missing surfaces, and recommended remediation.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Report drift, missing surfaces, and recommended remediation.",
   "writes": []
 }

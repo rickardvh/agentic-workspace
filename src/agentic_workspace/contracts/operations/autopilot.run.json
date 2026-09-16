@@ -5,7 +5,7 @@
     "command": "autopilot",
     "format_option": "format"
   },
-  "summary": "Run the canonical ordinary AW executor loop through final-response admission until terminal custody is authorized.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Run the canonical ordinary AW executor loop through final-response admission until terminal custody is authorized.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -126,5 +126,5 @@
     "autopilot route tests prove a real repository-state transition between a rejected CONTINUE final and an accepted DELIVERED final",
     "generated package freshness checks include the Python and TypeScript autopilot command surfaces"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "source-maintenance-only"
 }

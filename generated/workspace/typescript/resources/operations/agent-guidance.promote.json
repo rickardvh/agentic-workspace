@@ -126,7 +126,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -160,7 +160,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Promote one authorised guidance candidate into its lifecycle store.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Promote one authorised guidance candidate into its lifecycle store.",
   "writes": [
     {
       "description": "bounded local guidance lifecycle store and receipts",

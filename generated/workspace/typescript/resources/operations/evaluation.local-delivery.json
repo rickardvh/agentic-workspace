@@ -73,7 +73,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "description": "Local report delivery receipt.",
     "kind": "json",
@@ -107,7 +107,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Record a local report compilation receipt without claiming external sink delivery.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Record a local report compilation receipt without claiming external sink delivery.",
   "writes": [
     {
       "required": true,

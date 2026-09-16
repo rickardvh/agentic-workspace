@@ -36,7 +36,7 @@ Do not leave meaningful product feedback in chat-only residue.
 
 Closeout records should distinguish `not_checked` from `no_signal_found`. If concrete signals are present, route each to issue follow-up, Memory, Planning, docs/checks/contracts, direct fix, or dismissed-with-reason before claiming the reflection is complete.
 
-Use `agentic-workspace defaults --section improvement_intake --format json` as the compact router before treating setup findings, dogfooding feedback, review findings, validation friction, or Memory improvement-signal notes as separate mechanisms. The underlying artifacts stay useful evidence, but the first question is shared: admit, dismiss, or route the signal to a durable owner.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 For host-repo runs that need to report feedback back to this package, use `docs/host-repo-dogfooding-report-template.md`. Keep the report compact, classify friction before routing it, and create package issues only for product-general or likely product-general findings with concrete evidence.
 

@@ -10,7 +10,7 @@ For the product model, use [`docs/package/overview.md`](package/overview.md). Fo
 
 ## Fast chooser
 
-Use `agentic-workspace defaults --section module_selection --format json` for the current compact selection guidance.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 Choose by the bottleneck you actually have:
 

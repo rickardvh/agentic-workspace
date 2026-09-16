@@ -306,8 +306,8 @@ applies_to_paths = [
   "packages/planning/src/**/closeout*.py",
   "packages/planning/tests/**/test_archive*.py",
   "src/agentic_workspace/workspace_runtime*.py",
-  "tests/test_workspace_summary_cli.py",
-  "tests/test_workspace_implement_cli.py",
+  "tests/test_native_planning_create.py",
+  "tests/test_native_public_cli.py",
 ]
 applies_to_task_markers = [
   "closeout",
@@ -365,8 +365,8 @@ applies_to_paths = [
   ".agentic-workspace/config.toml",
   ".agentic-workspace/OWNERSHIP.toml",
   "src/agentic_workspace/workspace_runtime*.py",
-  "tests/test_workspace_config_cli.py",
-  "tests/test_workspace_implement_cli.py",
+  "tests/test_native_config_admission.py",
+  "tests/test_native_public_cli.py",
 ]
 applies_to_task_markers = [
   "requirement grounding",
@@ -551,7 +551,7 @@ fail_evidence_labels = [
   "repo_acceptance_evidence_stale",
   "repo_acceptance_guideline_became_blocking",
 ]
-automation_hint = "uv run pytest tests/test_workspace_cli.py tests/test_workspace_session_logging.py tests/test_summary_exact_selector_performance.py tests/test_workspace_proof_cli.py -k 'upgrade_unknown_selector or upgrade_selector_inventory or process_status_matches_typed_selected_execution_failure or lifecycle_typed_selector_failure_and_session_process_status_agree or exact_summary_selectors_are_clean_process_history_independent or leaves_tracked_receipt_store_unchanged' -q"
+automation_hint = "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
 manual_boundary = "Verification reports evidence; config and the operating decision retain policy and claim authority. This route does not authorize non-local dispatch or satisfy open issue #2817."
 
 [protocols.repo_acceptance_policy]
@@ -598,8 +598,8 @@ authority_refs = [
 stale_when = [
   ".agentic-workspace/config.toml",
   "tests/test_summary_exact_selector_performance.py",
-  "tests/test_workspace_cli.py",
-  "tests/test_workspace_proof_cli.py",
+  "tests/test_native_public_cli.py",
+  "tests/test_native_domain_proof.py",
 ]
 non_goals = [
   "The protocol does not create generic portable thresholds.",
@@ -624,9 +624,9 @@ assurance_requirement_refs = [
   "selected_proof_residue_budget",
 ]
 commands = [
-  "uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_session_logging.py -k 'upgrade_unknown_selector or upgrade_selector_inventory or process_status_matches_typed_selected_execution_failure or lifecycle_typed_selector_failure_and_session_process_status_agree' -q",
-  "uv run pytest tests/test_summary_exact_selector_performance.py tests/test_workspace_proof_cli.py -k 'exact_summary_selectors_are_clean_process_history_independent or leaves_tracked_receipt_store_unchanged' -q",
-  "uv run pytest tests/test_instruction_clause_ir.py tests/test_scoped_instructions.py tests/test_workspace_config_cli.py -q",
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q",
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q",
+  "uv run pytest tests/test_instruction_clause_ir.py tests/test_scoped_instructions.py tests/test_native_config_admission.py -q",
 ]
 review_aids = [
   "Check evidence identity/currentness and verify guidelines remain non-blocking for unrelated direct work.",
@@ -653,9 +653,9 @@ steps = ["Validate the existing configuration requirement against its owner fixt
 expected_evidence = ["config_orthogonality_constructibility_fixture"]
 review_owner = "workspace-config"
 authority_refs = [".agentic-workspace/config.toml#assurance.requirements.config_orthogonality_constructibility", "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility"]
-stale_when = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_workspace_config_cli.py"]
+stale_when = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_native_config_admission.py"]
 non_goals = ["A configuration proof does not satisfy unrelated policy requirements or supported-host delegation evidence."]
-commands = ["uv run pytest tests/test_workspace_config_cli.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q"]
+commands = ["uv run pytest tests/test_native_config_admission.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q"]
 
 # Operational strategy declarations transferred from shared config (#2613).
 review_aids = ["Source review guidance (requires current owner judgment, never automatic policy admission): retention = \"retain-summary\""]
@@ -675,8 +675,8 @@ review_aids = ["Record or inspect the Verification proof-decision route when ord
 
 [assurance.domain_proof_lanes.workspace_proof_runtime]
 purpose = "Focused root Workspace proof-routing behavior."
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
-commands = ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_native_domain_proof.py"]
+commands = ["uv run pytest tests/test_native_domain_proof.py -k changed_selector -q"]
 review_aids = ["Confirm the selected proof route, narrowness packet, and escalation fields match the changed proof behavior.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"60\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
 evidence_concepts = ["root-workspace-proof-routing", "focused-serial-proof"]
 proof_profiles = ["workspace_behavior"]
@@ -724,8 +724,8 @@ owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.correction_guidance_authority]
 purpose = "Focused trusted-correction custody, normalization, canonical-owner disposition, and guidance authority behavior."
-applies_to_paths = ["src/agentic_workspace/agent_guidance.py", "src/agentic_workspace/contracts/operations/correction-event*.json", "src/agentic_workspace/contracts/schemas/correction_event*.json", "tests/test_external_operation_clients.py", "tests/test_workspace_config_cli.py"]
-commands = ["uv run pytest tests/test_external_operation_clients.py tests/test_workspace_config_cli.py -k correction -q", "uv run ruff check src/agentic_workspace/agent_guidance.py tests/test_external_operation_clients.py tests/test_workspace_config_cli.py"]
+applies_to_paths = ["src/agentic_workspace/agent_guidance.py", "src/agentic_workspace/contracts/operations/correction-event*.json", "src/agentic_workspace/contracts/schemas/correction_event*.json", "tests/test_external_operation_clients.py", "tests/test_native_config_admission.py"]
+commands = ["uv run pytest tests/test_external_operation_clients.py tests/test_native_config_admission.py -k correction -q", "uv run ruff check src/agentic_workspace/agent_guidance.py tests/test_external_operation_clients.py tests/test_native_config_admission.py"]
 review_aids = ["Confirm caller labels cannot mint correction authority, trusted host custody survives corrected-agent non-compliance, unresolved events constrain closeout, and canonical-owner disposition creates no duplicate guidance or Memory policy.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"75\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
 evidence_concepts = ["regression_prevention", "authority-separation", "scenario_coverage"]
 proof_profiles = ["workspace_behavior"]
@@ -736,8 +736,8 @@ owner = "workspace-cli-runtime"
 
 [assurance.domain_proof_lanes.proof_route_authority]
 purpose = "Focused maintenance route for repo-owned proof-routing authority."
-applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".release/changes/*.toml", "Makefile", "docs/reference/implementer-context.md", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/operations/proof.report.json", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/implementer_context.schema.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_selector_validation.py", "tests/test_workspace_makefile_targets.py", "tests/test_workspace_proof_cli.py"]
-commands = ["uv run pytest tests/test_workspace_proof_cli.py -k \"focused_domain_route or missing_focused_route or tiny_profile_returns_next_validation_action\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
+applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".release/changes/*.toml", "Makefile", "docs/reference/implementer-context.md", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/operations/proof.report.json", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/implementer_context.schema.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_selector_validation.py", "tests/test_workspace_makefile_targets.py", "tests/test_native_domain_proof.py"]
+commands = ["uv run pytest tests/test_native_domain_proof.py -k \"focused_domain_route or missing_focused_route or tiny_profile_returns_next_validation_action\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
 manual_evidence = ["proof_route_authority_review"]
 review_aids = ["Confirm focused routes remain declared in existing config and Verification authority rather than in a standalone parallel matrix.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"explicit-request\", \"focused-route-insufficient\"]; route_role = \"maintenance\"; precedence = \"90\"; allowed_composition = [\"behavior\", \"evidence\", \"broad\"]"]
 evidence_concepts = ["root-workspace-proof-routing", "route-maintenance", "focused-serial-proof"]
@@ -809,7 +809,7 @@ owner = "workspace-maintainers"
 [assurance.domain_proof_lanes.planning_reconciliation_runtime]
 purpose = "Focused Planning-to-workspace reconciliation, residue disposition, and bounded-effect routing behavior."
 applies_to_paths = [".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/fallback/no-cli-policy.json", ".agentic-workspace/memory/repo/domains/planning-package-context.md", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/schemas/**", ".agentic-workspace/planning/issue-relations/**", ".agentic-workspace/planning/assignments/**", "docs/reference/installed-surface-catalogue.md", "packages/planning/**", "scripts/check/check_source_payload_operational_install.py", "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml", "src/agentic_workspace/_payload/.agentic-workspace/fallback/no-cli-policy.json", "src/agentic_workspace/contracts/authority_markers.json", "src/agentic_workspace/contracts/contract_inventory.json", "src/agentic_workspace/contracts/improvement_latitude_policy.json", "src/agentic_workspace/contracts/module_registry.json", "src/agentic_workspace/contracts/setup_findings_policy.json", "src/agentic_workspace/contracts/workflow_artifact_profiles.json", "src/agentic_workspace/contracts/workspace_defaults/payload.json", "src/agentic_workspace/contracts/workspace_surfaces.json", "src/agentic_workspace/operating_decision.py", "src/agentic_workspace/reconciliation.py", "src/agentic_workspace/workspace_runtime_planning.py", "tools/agent-manifest.json"]
-commands = ["uv run pytest packages/planning/tests/test_promote.py tests/test_reconciliation.py tests/test_workspace_cli.py -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
+commands = ["uv run pytest packages/planning/tests/test_promote.py tests/test_reconciliation.py tests/test_native_public_cli.py -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
 review_aids = ["Confirm future-context disposition remains explicit and owner-backed, bounded external effects stay fail-closed, schema mirrors are synchronized, and no parallel Memory or Planning authority is introduced.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"high-risk-requirement\"]; route_role = \"behavior\"; precedence = \"65\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
 evidence_concepts = ["planning-workspace-reconciliation", "bounded-external-effects", "owner-backed-residue"]
 proof_profiles = ["workspace_behavior"]
@@ -881,7 +881,7 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.proof_subject_owner]
 purpose = "Shared proof identity, receipt admission and bounded current-owner evidence reconciliation."
 applies_to_paths = ["crates/agentic-workspace-core/src/proof_publication.rs", "crates/agentic-workspace-core/src/attempt_store.rs", "tests/test_proof_publication.py", "tests/test_verification_public_owner.py", "crates/agentic-workspace-core/src/separation_of_duty.rs", "tests/test_separation_of_duty.py", "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json", "crates/agentic-workspace-core/src/task_judgment.rs", "tests/test_task_judgment_candidates.py", "crates/agentic-workspace-core/src/proof_subject.rs", "crates/agentic-workspace-core/src/proof_receipt.rs", "src/agentic_workspace/proof_subject.py", "src/agentic_workspace/proof_receipt_admission.py", "tests/test_proof_subject.py", "tests/test_proof_subject_batch.py", "tests/test_proof_receipt_owner.py"]
-commands = ["cargo test --locked -p agentic-workspace-core proof_publication --lib", "uv run pytest tests/test_proof_publication.py tests/test_verification_public_owner.py -q", "cargo test --locked -p agentic-workspace-core separation_of_duty", "uv run pytest tests/test_separation_of_duty.py -q", "cargo test --locked -p agentic-workspace-core task_judgment", "uv run pytest tests/test_task_judgment_candidates.py -q", "cargo test --locked -p agentic-workspace-core proof_subject", "cargo test --locked -p agentic-workspace-core proof_receipt", "uv run pytest tests/test_proof_subject.py tests/test_proof_subject_batch.py tests/test_proof_receipt_owner.py -q", "uv run pytest tests/test_workspace_proof_cli.py -k 'reconciliation or every_bridge_result or proof_record_receipt' -q"]
+commands = ["cargo test --locked -p agentic-workspace-core proof_publication --lib", "uv run pytest tests/test_proof_publication.py tests/test_verification_public_owner.py -q", "cargo test --locked -p agentic-workspace-core separation_of_duty", "uv run pytest tests/test_separation_of_duty.py -q", "cargo test --locked -p agentic-workspace-core task_judgment", "uv run pytest tests/test_task_judgment_candidates.py -q", "cargo test --locked -p agentic-workspace-core proof_subject", "cargo test --locked -p agentic-workspace-core proof_receipt", "uv run pytest tests/test_proof_subject.py tests/test_proof_subject_batch.py tests/test_proof_receipt_owner.py -q", "uv run pytest tests/test_native_domain_proof.py -k 'reconciliation or every_bridge_result or proof_record_receipt' -q"]
 review_aids = ["Compare original owner fingerprints, reject incomplete identity, preserve missing strategy/independent judgment, and verify current source changes invalidate evidence after a batched evaluation.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
 evidence_concepts = ["task-claim-currentness", "public-language-parity", "regression_prevention"]
 proof_profiles = ["workspace_behavior"]
@@ -897,7 +897,7 @@ commands = ["uv run pytest tests/test_orchestration.py -q", "uv run pytest tests
 review_aids = ["Verify unknown facts grant no target credit, proof publication alone does not calibrate, and current closeout nominates evidence only after return/integration/bound proof. Distinguish remaining unimplemented failure-heavy learning and unsupported-host behavior from passing fixtures.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"missing-domain-authority\"]; route_role = \"behavior\"; precedence = \"85\"; allowed_composition = [\"maintenance\", \"evidence\", \"broad\"]"]
 evidence_concepts = ["generated-adapter-conformance", "regression_prevention"]
 proof_profiles = ["workspace_behavior"]
-authority_refs = ["tests/test_orchestration.py", "tests/test_external_operation_clients.py", "tests/test_workspace_config_cli.py"]
+authority_refs = ["tests/test_orchestration.py", "tests/test_external_operation_clients.py", "tests/test_native_config_admission.py"]
 escalation = ["a responsibility claim requires semantic judgment absent from the canonical owner evidence"]
 claim_boundary = "attributed-outcome-proof-is-not-independent-PR-approval-or-lane-closure"
 owner = "workspace-cli-runtime"
@@ -917,7 +917,7 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.delegation_owner_conformance]
 purpose = "Focused ratchet for current Planning custody, task-bound Verification, and sparse assignment observations."
 applies_to_paths = ["crates/agentic-workspace-core/src/planning.rs", "src/agentic_workspace/assignment_burden.py", "tests/test_assignment_burden.py", "tests/test_assignment_no_change_prompt.py", "tests/test_assignment_override_policy.py", "tests/test_assignment_planning_requirements.py", "tests/test_ordinary_public_owner.py", "tests/test_task_judgment_candidates.py", "tests/test_verification_public_owner.py"]
-commands = ["uv run pytest tests/test_assignment_burden.py tests/test_assignment_no_change_prompt.py tests/test_assignment_override_policy.py tests/test_assignment_planning_requirements.py tests/test_ordinary_public_owner.py tests/test_task_judgment_candidates.py tests/test_verification_public_owner.py -q", "uv run pytest tests/test_shared_core.py -k planning -q", "uv run pytest tests/test_workspace_cli.py -k \"upgrade_replay_preserves_context_through_proof_and_bounded_closeout or direct_task_claim_does_not_reuse_unrelated_or_unbound_judgment\" -q", "make lint-workspace", "make typecheck"]
+commands = ["uv run pytest tests/test_assignment_burden.py tests/test_assignment_no_change_prompt.py tests/test_assignment_override_policy.py tests/test_assignment_planning_requirements.py tests/test_ordinary_public_owner.py tests/test_task_judgment_candidates.py tests/test_verification_public_owner.py -q", "uv run pytest tests/test_shared_core.py -k planning -q", "uv run pytest tests/test_native_public_cli.py -k \"upgrade_replay_preserves_context_through_proof_and_bounded_closeout or direct_task_claim_does_not_reuse_unrelated_or_unbound_judgment\" -q", "make lint-workspace", "make typecheck"]
 review_aids = ["Keep semantic authority in the existing owners. Distinguish public deterministic currentness proof from supported-host lifecycle evidence and independent acceptance.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"focused-route-insufficient\", \"missing-domain-authority\"]; route_role = \"evidence\"; precedence = \"85\"; allowed_composition = [\"behavior\", \"maintenance\", \"broad\"]"]
 evidence_concepts = ["real-source-custody", "task-claim-currentness", "public-language-parity", "lifecycle-observation"]
 proof_profiles = ["workspace_behavior"]
@@ -997,11 +997,11 @@ purpose = "Focused validation-runtime plan, evidence, manifest, compact-runner, 
 review_aids = ["Confirm compact result records carry canonical constituent ids, dependencies, and proof purposes.", "Confirm checked-in runtime evidence references an exact passing manifest for the broad validation run.", "Source review guidance (requires current owner judgment, never automatic policy admission): allowed_composition = [\"maintenance\", \"evidence\"]; escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; precedence = \"70\"; route_role = \"evidence\""]
 
 [assurance.domain_proof_lanes.workspace_root_guidance]
-applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/composed_operation_scenarios.py", "src/agentic_workspace/projection_reuse.py", "src/agentic_workspace/contracts/runtime_implementation_ownership.json", "src/agentic_workspace/contracts/skill_specs.json", "scripts/check/check_composed_operation_scenarios.py", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py", "tests/test_workspace_cli.py"]
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/composed_operation_scenarios.py", "src/agentic_workspace/projection_reuse.py", "src/agentic_workspace/contracts/runtime_implementation_ownership.json", "src/agentic_workspace/contracts/skill_specs.json", "scripts/check/check_composed_operation_scenarios.py", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py", "tests/test_native_public_cli.py"]
 applies_to_task_markers = ["host guidance target localization", "root workspace guidance", "startup fallback authority"]
 authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", "docs/maintainer/testing-strategy.md"]
 claim_boundary = "focused-root-guidance-proof-required-before-runtime-routing-claim"
-commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "uv run pytest tests/test_workspace_cli.py -k \"session_improvement_intake or repo_friction or dogfooding_report_sections\" -q", "make typecheck", "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py"]
+commands = ["uv run pytest tests/test_native_domain_proof.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "uv run pytest tests/test_native_public_cli.py -k \"session_improvement_intake or repo_friction or dogfooding_report_sections\" -q", "make typecheck", "uv run --frozen --active --no-sync python scripts/check/check_generated_command_packages.py"]
 escalation = ["the change alters generated command-package IR, cross-package payload behavior, or user-visible CLI compatibility beyond startup/report/defaults guidance", "the focused route cannot prove the changed command contract"]
 evidence_concepts = ["root-workspace-guidance", "startup-routing", "report-contract", "generated-contract-freshness", "focused-serial-proof"]
 notes = "Focused replacement for broad workspace CLI validation on root guidance and diagnostic-intake changes."
@@ -1013,7 +1013,7 @@ review_aids = ["Confirm host-target localization, diagnostic intake, maintained 
 [assurance.domain_proof_lanes.workspace_local_override_contract]
 purpose = "Focused workspace-local override documentation, schema, and configuration contract proof."
 applies_to_paths = ["docs/reference/workspace-local-override.md", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json"]
-commands = ["uv run pytest tests/test_workspace_config_cli.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
+commands = ["uv run pytest tests/test_native_config_admission.py -k \"local_override or assignment_policy or config_orthogonality or overlapping_assurance_level_owners\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success"]
 review_aids = ["Confirm local-only transport configuration remains schema-backed, source-attributed, non-portable, and separate from portable assignment semantics.", "Source review guidance (requires current owner judgment, never automatic policy admission): escalation_conditions = [\"cross-owner\", \"cross-claim-boundary\", \"focused-route-insufficient\"]; route_role = \"behavior\"; precedence = \"66\"; allowed_composition = [\"maintenance\", \"evidence\"]"]
 evidence_concepts = ["workspace-local-override-contract", "configuration-source-attribution"]
 proof_profiles = ["workspace_behavior"]
@@ -1063,7 +1063,7 @@ notes = "Changing ordinary test evidence should explain the trust question and r
 
 [assurance.requirements.closeout_intent_satisfaction]
 level = "high"
-applies_to_paths = ["packages/planning/src/**/archive*.py", "packages/planning/src/**/closeout*.py", "packages/planning/tests/**/test_archive*.py", "tests/test_workspace_summary_cli.py", "tests/test_workspace_implement_cli.py"]
+applies_to_paths = ["packages/planning/src/**/archive*.py", "packages/planning/src/**/closeout*.py", "packages/planning/tests/**/test_archive*.py", "tests/test_native_planning_create.py", "tests/test_native_public_cli.py"]
 applies_to_task_markers = ["closeout", "intent satisfaction", "parent lane", "completion claim"]
 authority_refs = ["AGENTS.md", ".agentic-workspace/OWNERSHIP.toml#subsystems.planning", ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md"]
 required_evidence = ["intent_satisfaction_review", "closeout_trust_review"]
@@ -1078,7 +1078,7 @@ notes = "Planning and closeout behavior changes need explicit intent-satisfactio
 # docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy.
 [assurance.requirements.typed_cli_selector_contract]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/proof_execution_projection.py", "src/agentic_workspace/workspace_selector_validation.py", "src/agentic_workspace/workspace_runtime*.py", "src/agentic_workspace/cli.py", "generated/workspace/python/**", "tests/test_workspace_cli.py", "tests/test_workspace_proof_cli.py", "tests/test_workspace_session_logging.py"]
+applies_to_paths = ["src/agentic_workspace/proof_execution_projection.py", "src/agentic_workspace/workspace_selector_validation.py", "src/agentic_workspace/workspace_runtime*.py", "src/agentic_workspace/cli.py", "generated/workspace/python/**", "tests/test_native_public_cli.py", "tests/test_native_domain_proof.py", "tests/test_workspace_session_logging.py"]
 applies_to_task_markers = ["typed cli result", "invalid selector", "selector authority", "process exit status", "proof execution result"]
 authority_refs = ["SYSTEM_INTENT.md#3-make-control-programmable-and-actionable", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
 required_evidence = ["typed_cli_selector_contract_fixture"]
@@ -1090,12 +1090,12 @@ requirement_class = "invariant"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#typed-cli-and-selector-contract"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-cli-runtime"
-detail_route = "uv run pytest tests/test_workspace_cli.py tests/test_workspace_proof_cli.py tests/test_workspace_session_logging.py -k 'upgrade_unknown_selector or upgrade_selector_inventory or process_status_matches_typed_selected_execution_failure or lifecycle_typed_selector_failure_and_session_process_status_agree' -q"
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
 notes = "Typed usage, validation, or failed direct-action results must declare and return the same nonzero status; pre-execution rejections remain mutation-free and happen before expensive payload construction through the shared selector/result boundary."
 
 [assurance.requirements.proof_execution_integrity]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_core.py", "tests/test_workspace_proof_cli.py", ".agentic-workspace/proof/**"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_core.py", "tests/test_native_domain_proof.py", ".agentic-workspace/proof/**"]
 applies_to_task_markers = ["proof completeness", "execute selected", "proof residue", "proof evidence reuse"]
 authority_refs = ["SYSTEM_INTENT.md#authority-model", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
 required_evidence = ["proof_execution_integrity_fixture"]
@@ -1107,12 +1107,12 @@ requirement_class = "invariant"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#proof-execution-integrity"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-proof-runtime"
-detail_route = "uv run pytest tests/test_workspace_proof_cli.py -k 'selected_proof_execution or claim_boundary' -q"
+detail_route = "uv run pytest tests/test_native_domain_proof.py -k 'selected_proof_execution or claim_boundary' -q"
 notes = "A green proof claim requires affected-owner coverage, one admitted execution path, current evidence, and no default tracked proof residue."
 
 [assurance.requirements.binding_automatic_assignment]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/assignment_lifecycle.py", "tests/test_workspace_implement_cli.py", ".agentic-workspace/config.local.toml"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/assignment_lifecycle.py", "tests/test_native_public_cli.py", ".agentic-workspace/config.local.toml"]
 applies_to_task_markers = ["binding automatic assignment", "automatic delegation", "non-local assignment", "delegation permission", "issue 2817"]
 authority_refs = ["https://github.com/rickardvh/agentic-workspace/issues/2817", "docs/maintainer/repo-evidence-requirements.md#binding-automatic-assignment"]
 required_evidence = ["binding_automatic_assignment_organic_dogfood"]
@@ -1129,7 +1129,7 @@ notes = "Once durable local policy and a current binding non-local assignment au
 
 [assurance.requirements.config_orthogonality_constructibility]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_workspace_config_cli.py", "docs/reference/workspace-config.md", "docs/reference/workspace-local-override.md"]
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json", "tests/test_native_config_admission.py", "docs/reference/workspace-config.md", "docs/reference/workspace-local-override.md"]
 applies_to_task_markers = ["config orthogonality", "constructible configuration", "overlapping config owners", "issue 2613", "issue 2916"]
 authority_refs = ["https://github.com/rickardvh/agentic-workspace/issues/2613", "https://github.com/rickardvh/agentic-workspace/issues/2916", "docs/maintainer/repo-evidence-requirements.md#config-orthogonality-and-constructibility"]
 required_evidence = ["config_orthogonality_constructibility_fixture"]
@@ -1141,12 +1141,12 @@ requirement_class = "invariant"
 source_intent_ref = "https://github.com/rickardvh/agentic-workspace/issues/2613"
 source_intent_revision = "issues-2613-2916-orthogonality-v1"
 evidence_owner = "verification:workspace-config"
-detail_route = "uv run pytest tests/test_workspace_config_cli.py -k 'config_orthogonality or overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q"
+detail_route = "uv run pytest tests/test_native_config_admission.py -k 'config_orthogonality or overlapping_assurance_level_owners or shared_local_assignment_policy_layers_compose' -q"
 notes = "Independent writable config dimensions must compose for every legal value. Same-question aliases or dependent peers require one canonical owner, a tagged/derived shape, or finite migration; explicit repo/local authority layering and safety intersections remain legal. Maintained seed coverage includes session path-mode and subsystem-level aliases, classifier owner/source, proof command roles, installed capability ownership, terminal assurance dispositions, and the shared/local delegation matrix. This seeded mechanically enforceable subset does not close the general #2613 or delegation-specific #2916 redesign."
 
 [assurance.requirements.direct_no_signal]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_runtime_implement.py", "tests/test_workspace_cli.py", "tests/test_workspace_implement_cli.py"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/workspace_runtime_implement.py", "tests/test_native_public_cli.py", "tests/test_native_public_cli.py"]
 applies_to_task_markers = ["direct no-signal", "irrelevant capability", "ordinary startup proportionality"]
 authority_refs = ["SYSTEM_INTENT.md#product-shape-rules", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
 required_evidence = ["direct_no_signal_fixture"]
@@ -1158,7 +1158,7 @@ requirement_class = "invariant"
 source_intent_ref = "SYSTEM_INTENT.md#product-shape-rules"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-cli-runtime"
-detail_route = "uv run pytest tests/test_workspace_implement_cli.py -k 'direct and (signal or irrelevant or unchanged)' -q"
+detail_route = "uv run pytest tests/test_native_public_cli.py -k 'direct and (signal or irrelevant or unchanged)' -q"
 notes = "Installed but irrelevant Planning, Memory, proof, reporting, and dogfood capabilities remain absent from direct work."
 
 [assurance.requirements.selected_planning_read_budget]
@@ -1230,7 +1230,7 @@ producer_command = "uv run pytest tests/test_summary_exact_selector_performance.
 
 [assurance.requirements.invalid_selector_rejection_budget]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_selector_validation.py", "src/agentic_workspace/workspace_runtime*.py", "tests/test_workspace_cli.py"]
+applies_to_paths = ["src/agentic_workspace/workspace_selector_validation.py", "src/agentic_workspace/workspace_runtime*.py", "tests/test_native_public_cli.py"]
 applies_to_task_markers = ["invalid selector", "selector latency", "selector fail-fast"]
 authority_refs = ["SYSTEM_INTENT.md#3-make-control-programmable-and-actionable", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
 required_evidence = ["invalid_selector_cold_median"]
@@ -1242,7 +1242,7 @@ requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#typed-cli-and-selector-contract"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-cli-runtime"
-detail_route = "uv run pytest tests/test_workspace_cli.py -k 'upgrade_unknown_selector' -q"
+  "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
 
 [assurance.requirements.invalid_selector_rejection_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -1254,15 +1254,15 @@ threshold = 2.0
 aggregation = "median"
 minimum_samples = 5
 subject = "upgrade-dry-run-invalid-actions-selector"
-subject_revision = "tests/test_workspace_cli.py@policy-v1"
+subject_revision = "tests/test_native_public_cli.py@policy-v1"
 environment = "maintained-local-cold-process"
 source_revision = "repo-acceptance-policy-v1"
 excluded_costs = ["dependency installation"]
-producer_command = "uv run pytest tests/test_workspace_cli.py -k upgrade_unknown_selector -q"
+producer_command = "uv run pytest tests/test_native_public_cli.py -k upgrade_unknown_selector -q"
 
 [assurance.requirements.selected_proof_residue_budget]
 level = "high"
-applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_core.py", "tests/test_workspace_proof_cli.py"]
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_core.py", "tests/test_native_domain_proof.py"]
 applies_to_task_markers = ["selected proof persistence", "tracked proof residue", "proof evidence reuse"]
 authority_refs = ["SYSTEM_INTENT.md#7-keep-ownership-sharp-and-residue-low", "docs/maintainer/repo-evidence-requirements.md#initial-dogfood-policy"]
 required_evidence = ["selected_proof_tracked_residue"]
@@ -1274,7 +1274,7 @@ requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#proof-execution-integrity"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-proof-runtime"
-detail_route = "uv run pytest tests/test_workspace_proof_cli.py -k 'leaves_tracked_receipt_store_unchanged' -q"
+detail_route = "uv run pytest tests/test_native_domain_proof.py -k 'leaves_tracked_receipt_store_unchanged' -q"
 
 [assurance.requirements.selected_proof_residue_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
@@ -1286,10 +1286,10 @@ threshold = 0
 aggregation = "count"
 minimum_samples = 1
 subject = "ordinary-execute-selected-proof"
-subject_revision = "tests/test_workspace_proof_cli.py@policy-v1"
+subject_revision = "tests/test_native_domain_proof.py@policy-v1"
 environment = "none"
 source_revision = "repo-acceptance-policy-v1"
-producer_command = "uv run pytest tests/test_workspace_proof_cli.py -k leaves_tracked_receipt_store_unchanged -q"
+producer_command = "uv run pytest tests/test_native_domain_proof.py -k leaves_tracked_receipt_store_unchanged -q"
 
 [assurance.requirements.total_completion_cost]
 level = "medium"

@@ -68,7 +68,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/local_work_thread_select_result.schema.json"
@@ -110,7 +110,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Select an ignored local work-thread continuation handle through the supported local index writer.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Select an ignored local work-thread continuation handle through the supported local index writer.",
   "writes": [
     {
       "required": true,

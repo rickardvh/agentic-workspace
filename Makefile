@@ -39,17 +39,40 @@ WORKSPACE_TEST_CLI = \
 	tests/test_native_advisory_config.py \
 	tests/test_native_assignment_judgment.py \
 	tests/test_native_assignment_policy.py \
+	tests/test_native_claim_review.py \
 	tests/test_native_config_admission.py \
+	tests/test_native_configuration_write.py \
+	tests/test_native_delegation_lifecycle.py \
 	tests/test_native_execution_configurations.py \
 	tests/test_native_former_routes.py \
+	tests/test_native_frontier.py \
+	tests/test_native_independent_owner.py \
+	tests/test_native_instruction_verification.py \
+	tests/test_native_instruction_write.py \
+	tests/test_native_invoke_continuation.py \
 	tests/test_native_maintainer_logging.py \
+	tests/test_native_measurement.py \
+	tests/test_native_memory_capture.py \
+	tests/test_native_memory_declarations.py \
+	tests/test_native_memory_disposition.py \
 	tests/test_native_npm_routes.py \
+	tests/test_native_operating_carriage.py \
 	tests/test_native_planning_create.py \
+	tests/test_native_planning_lifetime.py \
+	tests/test_native_proof_procedure.py \
+	tests/test_native_proof_scope.py \
 	tests/test_native_public_cli.py \
 	tests/test_native_readonly_handoff.py \
+	tests/test_native_release_receipt.py \
+	tests/test_native_release_topology.py \
+	tests/test_native_repository_adoption.py \
+	tests/test_native_repository_decisions.py \
+	tests/test_native_resources.py \
+	tests/test_native_source_reconciliation.py \
 	tests/test_native_startup_adapter.py \
 	tests/test_native_system_intent.py \
 	tests/test_native_transport.py \
+	tests/test_native_verification_declarations.py \
 	tests/test_native_workflow_artifact_profile.py \
 	tests/test_operating_decision.py \
 	tests/test_operating_projection_receipt.py \
@@ -59,23 +82,10 @@ WORKSPACE_TEST_CLI = \
 	tests/test_source_request_dependencies.py \
 	tests/test_summary_exact_selector_performance.py \
 	tests/test_task_judgment_candidates.py \
-	tests/test_typescript_config_policy_cleanup.py \
 	tests/test_typescript_owner_interpreter.py \
-	tests/test_workspace_cli.py \
-	tests/test_workspace_cli_blackbox.py \
-	tests/test_workspace_config_cli.py \
-	tests/test_workspace_defaults_cli.py \
-	tests/test_workspace_doctor_status_cli.py \
 	tests/test_workspace_evaluation.py \
-	tests/test_workspace_implement_cli.py \
-	tests/test_workspace_intent_cli.py \
-	tests/test_workspace_modules_cli.py \
-	tests/test_workspace_ownership_cli.py \
-	tests/test_workspace_planning_help_cli.py \
 	tests/test_workspace_projection_reuse.py \
-	tests/test_workspace_runtime_projection.py \
-	tests/test_workspace_skills_cli.py \
-	tests/test_workspace_summary_cli.py
+	tests/test_workspace_runtime_projection.py
 
 WORKSPACE_TEST_PROOF = \
 	tests/test_assurance_applicability.py \
@@ -90,9 +100,7 @@ WORKSPACE_TEST_PROOF = \
 	tests/test_proof_subject.py \
 	tests/test_proof_subject_batch.py \
 	tests/test_verification_public_owner.py \
-	tests/test_verification_requirements.py \
-	tests/test_workspace_proof_cli.py \
-	tests/test_workspace_proof_generated_packages_cli.py
+	tests/test_verification_requirements.py
 
 WORKSPACE_TEST_SESSION_REVIEW = \
 	tests/test_chatgpt_review_loop.py \
@@ -100,7 +108,7 @@ WORKSPACE_TEST_SESSION_REVIEW = \
 	tests/test_github_check_inspection.py \
 	tests/test_pr_comment_delta.py \
 	tests/test_review_authentication.py \
-	tests/test_review_merge_gate.py \
+	tests/test_review_preparation.py \
 	tests/test_review_stack_ops.py \
 	tests/test_review_stack_transitions.py \
 	tests/test_start_chatgpt_review_poller.py \
@@ -108,26 +116,36 @@ WORKSPACE_TEST_SESSION_REVIEW = \
 
 WORKSPACE_TEST_CONTRACTS = \
 	tests/test_agent_aids.py \
+	tests/test_cargo_release.py \
+	tests/test_ci_exhaustive_admission.py \
 	tests/test_command_surface_bundle_check.py \
+	tests/test_configuration_procedure.py \
 	tests/test_contract_catalogues.py \
 	tests/test_contract_tooling_surfaces.py \
 	tests/test_github_issue_body_agent_aid.py \
+	tests/test_github_workflow_skills.py \
 	tests/test_instruction_clause_ir.py \
 	tests/test_intent_feedback.py \
+	tests/test_language_facade.py \
 	tests/test_module_contract.py \
 	tests/test_no_absolute_paths.py \
 	tests/test_open_issues_closure_evidence.py \
 	tests/test_package_artifact_duplicates.py \
+	tests/test_preview_public_smoke.py \
 	tests/test_prompt_semantic_markers.py \
 	tests/test_reconstruction_disposition_map.py \
+	tests/test_registry_release.py \
+	tests/test_release_candidate.py \
 	tests/test_review_scale_extracted_boundaries.py \
 	tests/test_runtime_compatibility.py \
 	tests/test_runtime_implementation_ownership.py \
 	tests/test_schema_reference_docs.py \
 	tests/test_scoped_instructions.py \
 	tests/test_security_supply_chain.py \
+	tests/test_selected_procedure_preparation.py \
 	tests/test_separation_of_duty.py \
 	tests/test_shared_core.py \
+	tests/test_skills_first_interface.py \
 	tests/test_structured_executor_contracts.py \
 	tests/test_structured_executor_replay.py \
 	tests/test_structured_executor_safety.py \
@@ -141,10 +159,10 @@ WORKSPACE_TEST_GENERATED_RELEASE = \
 	tests/test_command_generation_integration.py \
 	tests/test_command_generation_release_promotion.py \
 	tests/test_coordinated_release.py \
-	tests/test_preview_release.py \
-	tests/test_preview_release_workflow.py \
 	tests/test_generated_tool_conformance.py \
 	tests/test_package_identity.py \
+	tests/test_preview_release.py \
+	tests/test_preview_release_workflow.py \
 	tests/test_release_recovery_status.py \
 	tests/test_release_workflows.py \
 	tests/test_support_bearing_promotion.py \
@@ -183,7 +201,6 @@ WORKSPACE_TEST_INTEGRATION = \
 	tests/test_repo_evolution_scenario.py \
 	tests/test_repo_improvement_effectiveness.py \
 	tests/test_repository_scanning.py \
-	tests/test_self_configuration_lifecycle.py \
 	tests/test_source_payload_operational_install.py \
 	tests/test_v1_contract.py
 
@@ -214,7 +231,7 @@ help:
 	@echo "  test-nosync          Run tests after caller-provided dependency sync."
 	@echo "                       Opt into pytest-xdist only with PYTEST_PARALLEL_ARGS='-n <count>'."
 	@echo "  test-workspace       Run all focused workspace test targets serially."
-	@echo "  test-workspace-cli   Run workspace CLI, config, summary, and projection tests."
+	@echo "  test-workspace-cli   Run current native CLI, config, and projection tests."
 	@echo "  test-workspace-proof Run proof-router and generated proof-package tests."
 	@echo "  test-workspace-session-review  Run session logging and review-loop tests."
 	@echo "  test-workspace-contracts  Run contract, schema, inventory, and guardrail tests."
@@ -287,7 +304,10 @@ test-rust-core:
 	@cargo build --locked --workspace --bins
 	@cargo test --locked --workspace
 
-test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration
+test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review
+
+# Retained schema/generation/release model suites are explicit source maintenance.
+test-source-maintenance: test-workspace-contracts test-workspace-generated-release test-workspace-integration
 
 test-workspace-cli:
 	@$(COMPACT_RUN) --label "workspace CLI tests" -- uv run pytest $(WORKSPACE_PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CLI)

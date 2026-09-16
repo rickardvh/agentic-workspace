@@ -76,8 +76,7 @@ protocols, or claim gates. When a changed path activates a workflow obligation o
 verification protocol, proof can show the authority and evidence/proof
 categories so the obligation or protocol is not missed before validation.
 
-`report` is the best inspection home for the full assembled view:
-`agentic-workspace report --section routine_work_context --format json`.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 `closeout_trust` and completion options remain the claim boundary. They should
 consume evidence and residue signals rather than move canonical ownership into

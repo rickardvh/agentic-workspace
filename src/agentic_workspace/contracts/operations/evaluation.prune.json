@@ -6,7 +6,7 @@
     "format_option": "format",
     "subcommand": "prune"
   },
-  "summary": "Prune or compact bounded local evaluation observation history with a lineage receipt.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Prune or compact bounded local evaluation observation history with a lineage receipt.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -94,5 +94,5 @@
     "evaluation unit tests",
     "operation contract validates against operation.schema.json"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "source-maintenance-only"
 }

@@ -114,7 +114,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "module-result"
   },
@@ -171,7 +171,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Refresh managed surfaces for selected installed modules.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Refresh managed surfaces for selected installed modules.",
   "writes": [
     {
       "required": true,

@@ -79,7 +79,7 @@
     "outside_repo_writes": "allowed",
     "requires_repo": false
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/final_response_admission_result.schema.json"
@@ -142,7 +142,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Run the canonical ordinary AW executor loop through final-response admission until terminal custody is authorized.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Run the canonical ordinary AW executor loop through final-response admission until terminal custody is authorized.",
   "writes": [
     {
       "required": true,

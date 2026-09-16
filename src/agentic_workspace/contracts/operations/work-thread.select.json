@@ -6,7 +6,7 @@
     "subcommand": "select",
     "format_option": "format"
   },
-  "summary": "Select an ignored local work-thread continuation handle through the supported local index writer.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Select an ignored local work-thread continuation handle through the supported local index writer.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -89,5 +89,5 @@
     "local work-thread select tests validate stdout against local_work_thread_select_result.schema.json",
     "select tests prove A to B to A round-trip and index key preservation"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

@@ -2,12 +2,33 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts/generate/generate_contract_catalogues.py"
+
+
+def test_active_executable_examples_agree_with_native_command_authority():
+    contract = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
+    commands = {row["name"] for row in contract["native_cli"]["commands"]}
+    files = [
+        *REPO_ROOT.glob("docs/*.md"),
+        *REPO_ROOT.glob("docs/package/*.md"),
+        *REPO_ROOT.glob("docs/maintainer/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/skills/*/SKILL.md"),
+    ]
+    unsupported = []
+    for path in files:
+        for block in re.findall(r"```[^\n]*\n(.*?)```", path.read_text(encoding="utf-8"), re.S):
+            for command in re.findall(r"(?:^|\s)agentic-workspace\s+([a-z][\w-]*)", block):
+                if command not in commands:
+                    unsupported.append(f"{path.relative_to(REPO_ROOT)}: {command}")
+    assert unsupported == []
+    for path in (REPO_ROOT / "src/agentic_workspace/contracts/operations").glob("*.json"):
+        assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
 
 
 def _module():

@@ -112,7 +112,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "module-result"
   },
@@ -192,6 +192,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show a compact combined workspace report router by default, with explicit verbose diagnostics, operational-compression measures, section access, and exact field selection for deeper detail.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Show a compact combined workspace report router by default, with explicit verbose diagnostics, operational-compression measures, section access, and exact field selection for deeper detail.",
   "writes": []
 }

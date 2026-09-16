@@ -4,7 +4,7 @@
   "command_surface": {
     "command": "report"
   },
-  "summary": "Show a compact combined workspace report router by default, with explicit verbose diagnostics, operational-compression measures, section access, and exact field selection for deeper detail.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Show a compact combined workspace report router by default, with explicit verbose diagnostics, operational-compression measures, section access, and exact field selection for deeper detail.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -165,5 +165,5 @@
     "operating projection receipt tests prove same-input reuse, constituent-level invalidation, stale-proof fallback, and explicit broad escalation",
     "strict-current negative fixtures prove deterministic non-zero exit semantics and archive-only success"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

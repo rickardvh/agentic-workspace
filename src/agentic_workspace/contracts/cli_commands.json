@@ -45,10 +45,18 @@
           "mutates_state": false,
           "name": "list",
           "options": [
-            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "ordinary_host_repo",
@@ -57,12 +65,35 @@
           "mutates_state": true,
           "name": "new",
           "options": [
-            {"flags": ["--name"], "help": "Lowercase instruction identity used as the filename stem.", "name": "name", "required": true},
-            {"action": "append", "default": [], "flags": ["--paths"], "help": "Repository-relative applicability pattern. Repeat for multiple patterns.", "name": "paths"},
-            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+            {
+              "flags": [
+                "--name"
+              ],
+              "help": "Lowercase instruction identity used as the filename stem.",
+              "name": "name",
+              "required": true
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--paths"
+              ],
+              "help": "Repository-relative applicability pattern. Repeat for multiple patterns.",
+              "name": "paths"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "ordinary_host_repo",
@@ -71,10 +102,18 @@
           "mutates_state": false,
           "name": "check",
           "options": [
-            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "ordinary_host_repo",
@@ -83,13 +122,43 @@
           "mutates_state": false,
           "name": "explain",
           "options": [
-            {"default": "", "flags": ["--task"], "help": "Optional task text used during applicability explanation.", "name": "task"},
-            {"action": "append", "default": [], "flags": ["--changed"], "help": "Changed or target path. Repeat for multiple paths.", "name": "changed"},
-            {"action": "store_true", "flags": ["--verbose"], "help": "Include the compiled instruction program.", "name": "verbose"},
-            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+            {
+              "default": "",
+              "flags": [
+                "--task"
+              ],
+              "help": "Optional task text used during applicability explanation.",
+              "name": "task"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--changed"
+              ],
+              "help": "Changed or target path. Repeat for multiple paths.",
+              "name": "changed"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--verbose"
+              ],
+              "help": "Include the compiled instruction program.",
+              "name": "verbose"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "ordinary_host_repo",
@@ -98,12 +167,34 @@
           "mutates_state": false,
           "name": "routes",
           "options": [
-            {"default": "", "flags": ["--parent"], "help": "Optional route branch to expand one level.", "name": "parent"},
-            {"default": "", "flags": ["--exact"], "help": "Optional known route leaf to inspect directly.", "name": "exact"},
-            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+            {
+              "default": "",
+              "flags": [
+                "--parent"
+              ],
+              "help": "Optional route branch to expand one level.",
+              "name": "parent"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--exact"
+              ],
+              "help": "Optional known route leaf to inspect directly.",
+              "name": "exact"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "ordinary_host_repo",
@@ -112,15 +203,64 @@
           "mutates_state": true,
           "name": "select-route",
           "options": [
-            {"choices": ["selected", "none", "unresolved"], "flags": ["--posture"], "help": "Explicit semantic applicability posture.", "name": "posture", "required": true},
-            {"action": "append", "default": [], "flags": ["--route"], "help": "Existing route leaf. Repeat for multiple facets.", "name": "route"},
-            {"default": "", "flags": ["--current-work-id"], "help": "Optional exact current-work guard.", "name": "current_work_id"},
-            {"flags": ["--expect-source-revision"], "help": "Exact source revision returned by route discovery.", "name": "expected_source_revision", "required": true},
-            {"action": "store_true", "flags": ["--dry-run"], "help": "Validate the selection without writing local state.", "name": "dry_run"},
-            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+            {
+              "choices": [
+                "selected",
+                "none",
+                "unresolved"
+              ],
+              "flags": [
+                "--posture"
+              ],
+              "help": "Explicit semantic applicability posture.",
+              "name": "posture",
+              "required": true
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--route"
+              ],
+              "help": "Existing route leaf. Repeat for multiple facets.",
+              "name": "route"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--current-work-id"
+              ],
+              "help": "Optional exact current-work guard.",
+              "name": "current_work_id"
+            },
+            {
+              "flags": [
+                "--expect-source-revision"
+              ],
+              "help": "Exact source revision returned by route discovery.",
+              "name": "expected_source_revision",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Validate the selection without writing local state.",
+              "name": "dry_run"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "ordinary_host_repo",
@@ -129,11 +269,26 @@
           "mutates_state": false,
           "name": "migrate",
           "options": [
-            {"flags": ["--from"], "help": "Repository-relative instruction source to inspect.", "name": "source", "required": true},
-            {"flags": ["--target"], "help": "Target repository path. Defaults to current directory.", "name": "target"}
+            {
+              "flags": [
+                "--from"
+              ],
+              "help": "Repository-relative instruction source to inspect.",
+              "name": "source",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory.",
+              "name": "target"
+            }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         }
       ]
     },
@@ -315,51 +470,67 @@
           "name": "targeted-write",
           "options": [
             {
-              "flags": ["--plan"],
+              "flags": [
+                "--plan"
+              ],
               "help": "Exact live execplan id or repo-relative owner path.",
               "name": "targeted_write_plan",
               "required": true
             },
             {
-              "flags": ["--patch"],
+              "flags": [
+                "--patch"
+              ],
               "help": "JSON object containing only supported owner-scoped fields.",
               "name": "patch",
               "required": true
             },
             {
               "default": "",
-              "flags": ["--expect-planning-revision"],
+              "flags": [
+                "--expect-planning-revision"
+              ],
               "help": "Optional low-level Planning revision guard; ordinary semantic mutation resolves current owner authority internally.",
               "name": "expect_planning_revision",
               "required": false
             },
             {
               "default": "",
-              "flags": ["--expect-owner-revision"],
+              "flags": [
+                "--expect-owner-revision"
+              ],
               "help": "Optional low-level execplan owner revision guard; omit with the other guards for ordinary semantic mutation.",
               "name": "expect_owner_revision",
               "required": false
             },
             {
               "default": "",
-              "flags": ["--expect-lane-revision"],
+              "flags": [
+                "--expect-lane-revision"
+              ],
               "help": "Optional low-level lane revision guard; ordinary semantic mutation resolves the current bound lane internally.",
               "name": "expect_lane_revision"
             },
             {
               "action": "store_true",
-              "flags": ["--apply"],
+              "flags": [
+                "--apply"
+              ],
               "help": "Apply after rerunning the operation's sealed internal preflight.",
               "name": "apply"
             },
             {
-              "flags": ["--target"],
+              "flags": [
+                "--target"
+              ],
               "help": "Optional repository path.",
               "name": "target"
             }
           ],
           "role": "core_context_router",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "ordinary_host_repo",
@@ -599,30 +770,30 @@
               "help": "How this lane advances the parent decomposition.",
               "name": "purpose"
             },
-              {
-                "default": "",
-                "flags": [
-                  "--proof-strategy"
-                ],
-                "help": "How slice proofs aggregate into lane proof.",
-                "name": "proof_strategy"
-              },
-              {
-                "default": "",
-                "flags": [
-                  "--bind-execplan"
-                ],
-                "help": "Existing execplan owner to bind atomically as a child of the created or reused lane.",
-                "name": "bind_execplan"
-              },
-              {
-                "default": "",
-                "flags": [
-                  "--source-ref"
-                ],
-                "help": "External parent identity recorded on a newly created lane for deterministic reuse.",
-                "name": "source_ref"
-              },
+            {
+              "default": "",
+              "flags": [
+                "--proof-strategy"
+              ],
+              "help": "How slice proofs aggregate into lane proof.",
+              "name": "proof_strategy"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--bind-execplan"
+              ],
+              "help": "Existing execplan owner to bind atomically as a child of the created or reused lane.",
+              "name": "bind_execplan"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--source-ref"
+              ],
+              "help": "External parent identity recorded on a newly created lane for deterministic reuse.",
+              "name": "source_ref"
+            },
             {
               "flags": [
                 "--target"
@@ -2230,10 +2401,7 @@
               "name": "action_policy"
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "evaluation definition registration writes the local evaluation ledger",
-          "mutates_state": true
+          "role": "core_lifecycle"
         },
         {
           "audience": "ordinary_host_repo",
@@ -2330,10 +2498,7 @@
               "default": ""
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "local observation append for evaluation evidence collection",
-          "mutates_state": true
+          "role": "core_lifecycle"
         },
         {
           "name": "authority-refresh",
@@ -2796,7 +2961,6 @@
               "flags": [
                 "--evaluation-id"
               ],
-              "name": "evaluation_id",
               "required": true
             },
             {
@@ -3449,20 +3613,119 @@
           "mutates_state": true,
           "name": "signal",
           "options": [
-            {"flags": ["--target"], "help": "Optional repository path.", "name": "target"},
-            {"choices": ["workaround", "opportunity"], "default": "workaround", "flags": ["--kind"], "help": "Observation class.", "name": "kind"},
-            {"flags": ["--symptom"], "help": "Observed workaround, friction, or concrete opportunity.", "name": "symptom", "required": true},
-            {"flags": ["--cost"], "help": "Concrete current or future repository cost.", "name": "cost", "required": true},
-            {"flags": ["--expected-benefit"], "help": "Expected future-cost or operability benefit; required for opportunities.", "name": "expected_benefit"},
-            {"choices": ["agent_observed", "machine_observed", "human_confirmed", "review_derived"], "default": "agent_observed", "flags": ["--evidence-class"], "help": "Evidence provenance class.", "name": "evidence_class"},
-            {"flags": ["--owner-hint"], "help": "Suspected repository or AW owner.", "name": "owner_hint", "default": "unknown"},
-            {"choices": ["current-scope", "adjacent-scope", "standalone-repo", "aw-internal"], "default": "current-scope", "flags": ["--scope-relation"], "help": "Relation to the current task scope.", "name": "scope_relation"},
-            {"choices": ["first_seen", "repeated", "human_confirmed"], "default": "first_seen", "flags": ["--recurrence"], "help": "Observed recurrence state.", "name": "recurrence"},
-            {"action": "append", "default": [], "flags": ["--evidence-ref"], "help": "Compact evidence reference; repeat for multiple references.", "name": "evidence_ref"},
-            {"flags": ["--likely-remediation"], "help": "Likely existing remediation class.", "name": "likely_remediation", "default": "unknown"}
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "workaround",
+                "opportunity"
+              ],
+              "default": "workaround",
+              "flags": [
+                "--kind"
+              ],
+              "help": "Observation class.",
+              "name": "kind"
+            },
+            {
+              "flags": [
+                "--symptom"
+              ],
+              "help": "Observed workaround, friction, or concrete opportunity.",
+              "name": "symptom",
+              "required": true
+            },
+            {
+              "flags": [
+                "--cost"
+              ],
+              "help": "Concrete current or future repository cost.",
+              "name": "cost",
+              "required": true
+            },
+            {
+              "flags": [
+                "--expected-benefit"
+              ],
+              "help": "Expected future-cost or operability benefit; required for opportunities.",
+              "name": "expected_benefit"
+            },
+            {
+              "choices": [
+                "agent_observed",
+                "machine_observed",
+                "human_confirmed",
+                "review_derived"
+              ],
+              "default": "agent_observed",
+              "flags": [
+                "--evidence-class"
+              ],
+              "help": "Evidence provenance class.",
+              "name": "evidence_class"
+            },
+            {
+              "flags": [
+                "--owner-hint"
+              ],
+              "help": "Suspected repository or AW owner.",
+              "name": "owner_hint",
+              "default": "unknown"
+            },
+            {
+              "choices": [
+                "current-scope",
+                "adjacent-scope",
+                "standalone-repo",
+                "aw-internal"
+              ],
+              "default": "current-scope",
+              "flags": [
+                "--scope-relation"
+              ],
+              "help": "Relation to the current task scope.",
+              "name": "scope_relation"
+            },
+            {
+              "choices": [
+                "first_seen",
+                "repeated",
+                "human_confirmed"
+              ],
+              "default": "first_seen",
+              "flags": [
+                "--recurrence"
+              ],
+              "help": "Observed recurrence state.",
+              "name": "recurrence"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--evidence-ref"
+              ],
+              "help": "Compact evidence reference; repeat for multiple references.",
+              "name": "evidence_ref"
+            },
+            {
+              "flags": [
+                "--likely-remediation"
+              ],
+              "help": "Likely existing remediation class.",
+              "name": "likely_remediation",
+              "default": "unknown"
+            }
           ],
           "role": "reusable_host_repo_diagnostics",
-          "uses_option_groups": ["format"]
+          "uses_option_groups": [
+            "format"
+          ]
         },
         {
           "audience": "local_only",
@@ -3610,7 +3873,9 @@
       "name": "start",
       "options": [
         {
-          "flags": ["--request"],
+          "flags": [
+            "--request"
+          ],
           "help": "Complete returned public request JSON. Discover semantic route requests with --select semantic_route_result; edit only the declared arguments.",
           "name": "request"
         },
@@ -4443,12 +4708,34 @@
       "mutates_state": false,
       "name": "external-evidence-submit",
       "options": [
-        {"flags": ["--target"], "help": "Repository path.", "name": "target"},
-        {"flags": ["--candidate-json"], "help": "Provider-neutral external evidence candidate JSON.", "name": "candidate_json", "required": true},
-        {"flags": ["--host-result-ref"], "help": "Opaque package-trusted host result reference.", "name": "host_result_ref", "required": true}
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--candidate-json"
+          ],
+          "help": "Provider-neutral external evidence candidate JSON.",
+          "name": "candidate_json",
+          "required": true
+        },
+        {
+          "flags": [
+            "--host-result-ref"
+          ],
+          "help": "Opaque package-trusted host result reference.",
+          "name": "host_result_ref",
+          "required": true
+        }
       ],
       "role": "reusable_host_repo_diagnostics",
-      "uses_option_groups": ["format"]
+      "uses_option_groups": [
+        "format"
+      ]
     },
     {
       "audience": "advanced_host_repo",
@@ -4457,12 +4744,34 @@
       "mutates_state": false,
       "name": "external-evidence-query",
       "options": [
-        {"flags": ["--target"], "help": "Repository path.", "name": "target"},
-        {"flags": ["--candidate-json"], "help": "Provider-neutral external evidence candidate JSON.", "name": "candidate_json", "required": true},
-        {"flags": ["--host-result-ref"], "help": "Opaque package-trusted host result reference.", "name": "host_result_ref", "required": true}
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--candidate-json"
+          ],
+          "help": "Provider-neutral external evidence candidate JSON.",
+          "name": "candidate_json",
+          "required": true
+        },
+        {
+          "flags": [
+            "--host-result-ref"
+          ],
+          "help": "Opaque package-trusted host result reference.",
+          "name": "host_result_ref",
+          "required": true
+        }
       ],
       "role": "reusable_host_repo_diagnostics",
-      "uses_option_groups": ["format"]
+      "uses_option_groups": [
+        "format"
+      ]
     },
     {
       "audience": "advanced_host_repo",
@@ -6131,24 +6440,24 @@
               ],
               "help": "Serialized producer-owned independent-review result envelope."
             },
-                  {
-                    "name": "review_result_ref",
-                    "flags": [
-                      "--review-result-ref"
-                    ],
-                    "help": "Repo-relative independent-review result envelope to admit."
-                  },
-                  {
-                    "name": "host_result_ref",
-                    "flags": [
-                      "--host-result-ref"
-                    ],
-                    "help": "Opaque host/adapter independent-review result ref to import and admit; a protected host/adapter resolver must supply the admission verdict."
-                  },
-                  {
-                    "name": "required_mode",
-                    "flags": [
-                      "--required-mode"
+            {
+              "name": "review_result_ref",
+              "flags": [
+                "--review-result-ref"
+              ],
+              "help": "Repo-relative independent-review result envelope to admit."
+            },
+            {
+              "name": "host_result_ref",
+              "flags": [
+                "--host-result-ref"
+              ],
+              "help": "Opaque host/adapter independent-review result ref to import and admit; a protected host/adapter resolver must supply the admission verdict."
+            },
+            {
+              "name": "required_mode",
+              "flags": [
+                "--required-mode"
               ],
               "choices": [
                 "fresh-context",
@@ -7616,7 +7925,7 @@
       ]
     }
   ],
-  "description": "Workspace-level lifecycle orchestrator for selected agentic-workspace modules.",
+  "description": "Historical source-maintenance parser metadata only. Current public commands are exclusively source_decision_contract.json native_cli. This model is not an executable installed CLI.",
   "local_execution_effects": {
     "authority": "diagnostic-only",
     "condition": ".agentic-workspace/config.local.toml enables session_logging",

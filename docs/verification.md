@@ -11,12 +11,7 @@ Verification manual.
 
 Ordinary surfaces:
 
-```text
-agentic-verification report --target . --format json
-agentic-workspace report --section verification --format json
-agentic-workspace proof --changed <paths> --verbose --format json
-agentic-workspace implement --select verification --changed <paths> --format json
-```
+Use the current `start` result and its exact owner request/action; see the [native CLI catalogue](/docs/reference/cli-catalogue.md).
 
 The module implementation lives in `packages/verification/`. Host-repo protocol
 and evidence state lives under `.agentic-workspace/verification/` when enabled.

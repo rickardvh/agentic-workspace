@@ -181,7 +181,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/correction_event_result.schema.json"
@@ -215,7 +215,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Record a dispute/correction transition for a prior correction event.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Record a dispute/correction transition for a prior correction event.",
   "writes": [
     {
       "description": "bounded local correction-event store and receipts",

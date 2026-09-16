@@ -78,7 +78,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/local_work_thread_prune_result.schema.json"
@@ -116,7 +116,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Prune ignored local work-thread records that startup already classifies as safe local candidates.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Prune ignored local work-thread records that startup already classifies as safe local candidates.",
   "writes": [
     {
       "required": false,

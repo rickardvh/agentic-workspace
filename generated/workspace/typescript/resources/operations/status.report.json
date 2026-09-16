@@ -80,7 +80,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "module-result"
   },
@@ -135,6 +135,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Report installed modules and workspace health summary.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Report installed modules and workspace health summary.",
   "writes": []
 }

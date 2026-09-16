@@ -89,7 +89,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/implementer_context.schema.json"
@@ -167,6 +167,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Return a cheap-implementer context for a bounded changed-path scope.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Return a cheap-implementer context for a bounded changed-path scope.",
   "writes": []
 }

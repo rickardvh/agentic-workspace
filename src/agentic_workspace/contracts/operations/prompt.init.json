@@ -5,7 +5,7 @@
     "command": "prompt",
     "subcommand": "init"
   },
-  "summary": "Print the workspace bootstrap handoff prompt.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Print the workspace bootstrap handoff prompt.",
   "classification": "derived-output",
   "inputs": [
     {
@@ -84,7 +84,7 @@
     "operation contract validates against operation.schema.json",
     "prompt init tests remain compatible"
   ],
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "ir_plan": {
     "status": "representative",
     "summary": "Render the workspace bootstrap handoff prompt from generated operation IR while workspace runtime supplies module selection and prompt text compatibility.",

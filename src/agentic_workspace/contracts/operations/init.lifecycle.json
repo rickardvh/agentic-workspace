@@ -4,7 +4,7 @@
   "command_surface": {
     "command": "init"
   },
-  "summary": "Bootstrap selected modules into a target repository using conservative init/adopt behavior.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Bootstrap selected modules into a target repository using conservative init/adopt behavior.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -118,5 +118,5 @@
     "init lifecycle tests remain compatible",
     "init.lifecycle.dry-run.process proves dry-run plan shape and no filesystem writes"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

@@ -7,6 +7,7 @@ import hashlib
 import json
 import re
 import subprocess
+import tomllib
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
@@ -131,7 +132,64 @@ def followup(prefix, previous_head, head):
     return result
 
 
-def prepare(repo, number, baseline, *, previous=None):
+def layer_currentness(base, head, files, declarations, owner_evidence=()):
+    """Bind reported owner evidence to this PR, never to a downstream stack head.
+
+    Declarations select checks; this collector does not interpret domain state.
+    Evidence is supplied by the independent reviewer after the existing owner
+    check, and remains reported evidence rather than a review verdict.
+    """
+    changed = {name for row in files for name in (row["filename"], row.get("previous_filename")) if name}
+    obligations = []
+    for declaration in declarations:
+        touched = sorted(changed.intersection(declaration["sources"]))
+        if not touched:
+            continue
+        matching = [
+            row
+            for row in owner_evidence
+            if row.get("base") == base
+            and row.get("head") == head
+            and row.get("owner") == declaration["owner"]
+            and row.get("check") == declaration["check"]
+        ]
+        evidence = matching[0] if len(matching) == 1 else None
+        status = evidence.get("status") if evidence else "unknown"
+        if status not in {"current", "stale"} or not (evidence or {}).get("evidence_ref"):
+            status = "unknown"
+        obligations.append(
+            {
+                "owner": declaration["owner"],
+                "check": declaration["check"],
+                "base": base,
+                "head": head,
+                "paths": touched,
+                "status": status,
+                "evidence": evidence,
+                "boundary": "reported owner result for this PR only; not independent review or integration proof",
+            }
+        )
+    return obligations
+
+
+def currentness_declarations(baseline):
+    # The trusted repository's existing System Intent source declaration selects
+    # the check. Additional owners are admitted as explicit reviewer obligations.
+    path = ".agentic-workspace/system-intent/intent.toml"
+    tree = set(git("ls-tree", "-r", "--name-only", baseline).decode().splitlines())
+    if path not in tree:
+        return []
+    source = tomllib.loads(git("show", f"{baseline}:{path}").decode("utf-8"))
+    return [
+        {
+            "owner": "system_intent",
+            "check": "system_intent current source reconciliation",
+            "sources": [row["path"] for row in source.get("source_records", []) if "path" in row] + [path],
+        }
+    ]
+
+
+def prepare(repo, number, baseline, *, previous=None, owner_evidence=(), owner_obligations=()):
     started = datetime.now(timezone.utc).isoformat()
     prefix = f"repos/{repo}"
     subject = observe(f"{prefix}/pulls/{number}")
@@ -219,6 +277,9 @@ def prepare(repo, number, baseline, *, previous=None):
         evidence["files"]["status"] = "unavailable"
         evidence["files"]["reason"] = "incomplete or duplicate changed-file set; transport limit or moved subject"
     packet["guidance"] = guidance(baseline, files)
+    packet["owner_currentness"] = layer_currentness(
+        base, head, files, [*currentness_declarations(baseline), *owner_obligations], owner_evidence
+    )
     packet["helper"] = {"path": HELPER, "baseline": baseline, "revision": digest(git("show", f"{baseline}:{HELPER}"))}
     packet["linked_references"] = [{"repository": owner, "number": issue} for owner, issue in references(pr.get("body") or "", repo)]
     for owner, issue in references(pr.get("body") or "", repo):
@@ -279,6 +340,12 @@ def main():
     parser.add_argument("--pr", required=True, type=int)
     parser.add_argument("--eligibility", choices=["independent", "ineligible", "unknown"], default="unknown")
     parser.add_argument("--previous", type=Path)
+    parser.add_argument(
+        "--owner-evidence", type=Path, help="Reviewer-observed owner results with exact base/head/check and evidence_ref; never a verdict"
+    )
+    parser.add_argument(
+        "--owner-obligations", type=Path, help="Named currentness-sensitive source/check obligations discovered by the independent reviewer"
+    )
     args = parser.parse_args()
     try:
         if args.eligibility != "independent":
@@ -289,7 +356,11 @@ def main():
         if globals().get("TRUSTED_HELPER_BYTES") != trusted:
             raise ValueError("use the trusted Git-object loader documented in the baseline skill, never the PR-head script")
         previous = json.loads(args.previous.read_text(encoding="utf-8")) if args.previous else None
-        result = prepare(args.repo, args.pr, args.baseline, previous=previous)
+        owner_evidence = json.loads(args.owner_evidence.read_text(encoding="utf-8")) if args.owner_evidence else []
+        owner_obligations = json.loads(args.owner_obligations.read_text(encoding="utf-8")) if args.owner_obligations else []
+        result = prepare(
+            args.repo, args.pr, args.baseline, previous=previous, owner_evidence=owner_evidence, owner_obligations=owner_obligations
+        )
     except (OSError, ValueError, KeyError, TypeError) as exc:
         result = {
             "status": "unavailable",

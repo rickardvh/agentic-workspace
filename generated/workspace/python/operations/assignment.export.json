@@ -161,7 +161,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -207,7 +207,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
   "writes": [
     {
       "description": "When no assignment id is supplied, export first materializes the live task-bound Planning assignment and structural identity receipt.",
