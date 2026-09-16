@@ -17,7 +17,6 @@ def _load_module():
 
 
 _MODULE = _load_module()
-load_manifest = _MODULE.load_manifest
 render_quickstart = _MODULE.render_quickstart
 render_routing = _MODULE.render_routing
 render_readme_entrypoints = _MODULE.render_readme_entrypoints

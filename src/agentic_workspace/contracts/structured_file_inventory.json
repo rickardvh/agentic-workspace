@@ -13,6 +13,18 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Compact Memory declaration admission shared by current native producers and consumers.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Native selection and capture enforce closed shape; descriptive context remains advisory.",
+      "owner": "memory",
+      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/*.schema.json",
+      "schema_or_validator": "JSON Schema draft 2020-12",
+      "status": "schema-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Pinned compiler and components are the shared source-build and artifact provenance authority.",
       "editable_by_agents": true,
       "format": "toml",
@@ -1073,23 +1085,6 @@
       "storage_class": "historical-audit-distillation"
     },
     {
-      "checked_in_justification": "Checked in for weak-agent or package compatibility; canonical source remains contracts, templates, or renderer inputs.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Generated planning adapter manifest is payload-managed.",
-      "owner": "planning-payload",
-      "pattern": ".agentic-workspace/planning/agent-manifest.json",
-      "reconstructable_from": [
-        "package render/check commands",
-        "source contracts and templates"
-      ],
-      "routed_to": "#539",
-      "schema_or_validator": "planning payload verification",
-      "status": "typed-validator-backed",
-      "storage_class": "generated-required-adapter"
-    },
-    {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
       "editable_by_agents": false,
       "format": "toml",
@@ -1136,23 +1131,6 @@
       "schema_or_validator": "agentic-workspace skills discovery",
       "status": "typed-validator-backed",
       "storage_class": "source-of-truth"
-    },
-    {
-      "checked_in_justification": "Checked in for weak-agent or package compatibility; canonical source remains contracts, templates, or renderer inputs.",
-      "editable_by_agents": false,
-      "format": "json",
-      "generated": true,
-      "notes": "Root generated agent manifest is a compatibility adapter.",
-      "owner": "planning-payload",
-      "pattern": "tools/agent-manifest.json",
-      "reconstructable_from": [
-        "package render/check commands",
-        "source contracts and templates"
-      ],
-      "routed_to": "#539",
-      "schema_or_validator": "planning payload render/check surfaces",
-      "status": "generated-derived",
-      "storage_class": "generated-required-adapter"
     },
     {
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy.",
@@ -2544,26 +2522,6 @@
       "max_bytes": 5000000
     },
     {
-      "checked_in_justification": "Installed planning payload manifest used as the local source for generated weak-agent adapters.",
-      "freshness_check": "uv run agentic-workspace doctor --target . --modules planning --format json",
-      "max_bytes": 20000,
-      "named_consumer": "installed planning module lifecycle and root maintainer-surface renderers",
-      "ordinary_agent_route": "agentic-workspace start --task \"<task>\" --format json or summary --format json",
-      "pattern": ".agentic-workspace/planning/agent-manifest.json",
-      "removal_or_demotion_path": "demote when installed planning lifecycle can reconstruct adapter metadata without a stable manifest path",
-      "source_command": "uv run agentic-planning doctor --target . --format json"
-    },
-    {
-      "checked_in_justification": "Compatibility mirror for agents that inspect tools/ before package commands are available.",
-      "freshness_check": "make maintainer-surfaces",
-      "max_bytes": 20000,
-      "named_consumer": "weak-agent and source-checkout compatibility readers under tools/",
-      "ordinary_agent_route": "AGENTS.md -> agentic-workspace start --task \"<task>\" --format json",
-      "pattern": "tools/agent-manifest.json",
-      "removal_or_demotion_path": "remove when tools/ weak-agent adapters are no longer a supported first-contact shape",
-      "source_command": "make render-agent-docs"
-    },
-    {
       "checked_in_justification": "Small generated compatibility adapter for agents that need a Markdown route before running commands.",
       "freshness_check": "make maintainer-surfaces",
       "max_bytes": 5000,
@@ -2582,16 +2540,6 @@
       "pattern": "tools/AGENT_ROUTING.md",
       "removal_or_demotion_path": "merge into or remove after AGENT_QUICKSTART if secondary routing stops lowering startup cost",
       "source_command": "make render-agent-docs"
-    },
-    {
-      "checked_in_justification": "Package payload source needed to install the planning manifest into target repos.",
-      "freshness_check": "make maintainer-surfaces",
-      "max_bytes": 20000,
-      "named_consumer": "planning package bootstrap payload installation",
-      "ordinary_agent_route": "package consumers should use installed AGENTS.md and agentic-workspace start, not this payload path",
-      "pattern": "packages/planning/bootstrap/.agentic-workspace/planning/agent-manifest.json",
-      "removal_or_demotion_path": "demote only if package install can generate the manifest from packaged contracts without a checked-in payload copy",
-      "source_command": "uv run agentic-planning doctor --target <repo> --format json"
     },
     {
       "checked_in_justification": "Generated Python package metadata is kept as a peer target projection beside generated TypeScript outputs.",

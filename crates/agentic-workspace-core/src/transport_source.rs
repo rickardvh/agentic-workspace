@@ -15,7 +15,6 @@ pub fn decode(profile: &Value) -> Result<Vec<Value>, CoreError> {
             let method = match kind {
                 "internal" => "internal",
                 "process" => "cli",
-                "api" => "api",
                 "manual" => "manual",
                 "native" => "cli",
                 _ => return Err(CoreError::new("unsupported transport kind")),
@@ -41,6 +40,8 @@ pub fn decode(profile: &Value) -> Result<Vec<Value>, CoreError> {
                         "timeout_seconds",
                     ]
                     .contains(&k.as_str())
+                } else if matches!(kind, "internal" | "manual") {
+                    ["kind"].contains(&k.as_str())
                 } else {
                     ["kind", "command", "output_mode", "timeout_seconds"].contains(&k.as_str())
                 }
@@ -52,7 +53,7 @@ pub fn decode(profile: &Value) -> Result<Vec<Value>, CoreError> {
                 .as_array()
                 .filter(|v| v.iter().all(|w| w.as_str().is_some_and(|s| !s.is_empty())))
                 .ok_or_else(|| CoreError::new("invalid transport command"))?;
-            if matches!(kind, "process" | "api") && words.is_empty() {
+            if matches!(kind, "process" | "native") && words.is_empty() {
                 return Err(CoreError::new(format!(
                     "command is required for {kind} transport"
                 )));
@@ -66,16 +67,14 @@ pub fn decode(profile: &Value) -> Result<Vec<Value>, CoreError> {
                 && (!item["parameters"].is_object()
                     || !item["adapter"].as_str().is_some_and(|s| !s.is_empty()))
             {
-                return Err(CoreError::new(
-                    "native adapter identity and parameters required",
-                ));
+                return Err(CoreError::new("native adapter identity required"));
             }
             let timeout = item.get("timeout_seconds").cloned().unwrap_or(json!(1800));
             if !timeout.as_u64().is_some_and(|n| n > 0) {
                 return Err(CoreError::new("invalid transport timeout"));
             }
             let output = item.get("output_mode").cloned().unwrap_or(json!("stdout"));
-            if !matches!(output.as_str(), Some("stdout" | "json-file")) {
+            if output != "stdout" {
                 return Err(CoreError::new("unsupported transport output mode"));
             }
             let mut row = json!({"kind":kind,"method":method,"command":command,"output_mode":output,"timeout_seconds":timeout,"readiness":if kind=="internal"{"runtime-required"}else{"configured"},"source":"canonical-transports"});

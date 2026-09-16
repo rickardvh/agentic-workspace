@@ -296,6 +296,20 @@ fn blocked(reason: &str) -> Value {
 fn nonempty(v: &Value) -> bool {
     v.as_str().is_some_and(|s| !s.is_empty())
 }
+fn override_restriction(source: &Value) -> Option<&'static str> {
+    match source["human_override_policy"].as_str() {
+        Some("explicit-only") => None,
+        Some("allowed-with-recorded-reason")
+            if source["recorded_reason"]
+                .as_str()
+                .is_some_and(|s| !s.trim().is_empty()) =>
+        {
+            None
+        }
+        Some("allowed-with-recorded-reason") => Some("assignment-override-reason-required"),
+        _ => Some("assignment-override-authority-unavailable"),
+    }
+}
 pub fn replace(value: Value) -> Result<Value, CoreError> {
     let input: Input = serde_json::from_value(value).map_err(|e| CoreError::new(e.to_string()))?;
     let Some(admission) = input.admission else {
@@ -366,6 +380,9 @@ pub fn replace(value: Value) -> Result<Value, CoreError> {
         || admission["source"] != input.source
     {
         return Ok(blocked("assignment-override-stale-source"));
+    }
+    if let Some(reason) = override_restriction(&input.source) {
+        return Ok(blocked(reason));
     }
     if !input.execution.is_object()
         || admission["execution"] != input.execution
@@ -495,6 +512,9 @@ pub fn admit(value: Value) -> Result<Value, CoreError> {
     }
     if packet["replacement"]["source"] != value["source"] {
         return Ok(blocked("assignment-override-stale-source"));
+    }
+    if let Some(reason) = override_restriction(&value["source"]) {
+        return Ok(blocked(reason));
     }
     if packet["replacement"]["work"] != value["work"] {
         return Ok(blocked("assignment-override-stale-work"));

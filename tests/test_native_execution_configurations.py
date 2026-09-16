@@ -40,6 +40,10 @@ def test_current_configuration_choice_is_feasibility_not_assignment(tmp_path, sh
     rows = {r["configuration"]["id"]: r for r in offered["configurations"]["candidates"]}
     human = next(row for row in offered["target_context"] if row["target"] == "worker")
     assert human["human_prior"]["confidence"] == 0.4
+    comparison = call({**context, "request": judgment})["task_requirements"]["assignment"]["result"]
+    prior = next(row for row in comparison["alternatives"] if row["id"] == "worker:cli")
+    assert prior["human_prior"]["confidence"] == 0.4
+    assert prior["human_prior"]["provenance"] == "human estimate"
     assert rows["local:internal"]["eligible"] is True
     assert rows["worker:cli"]["eligible"] is True
     assert rows["worker:cli"]["configuration"]["result_classes"] == ["read-only", "unapplied-patch"]
@@ -113,46 +117,23 @@ def test_missing_capability_and_safety_keep_execution_unavailable(tmp_path, shar
     assert "independent-safety-ceiling" in rows["worker:cli"]["reasons"]
 
 
-@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
-def test_native_adapter_and_unknown_transport_do_not_become_capabilities(tmp_path, shared_core_binary, native_cli, surface):
+def test_unsupported_transport_authoring_fails_closed(tmp_path, shared_core_binary, native_cli):
     source, _, context = fixture(tmp_path)
-    with source.open("a") as stream:
-        stream.write(
-            '[delegation_targets.native]\nconfidence=0.4\nconfidence_source="human estimate"\ntransports=[{kind="native",adapter="provider-owned",parameters={}}]\n'
-        )
-    before = source.read_bytes()
-    first = consume(surface, shared_core_binary, native_cli, context)
-    request = first["task_requirements"]["requests"][0]
-    request["arguments"]["required_result_classes"] = ["read-only"]
-    result = consume(surface, shared_core_binary, native_cli, {**context, "request": request})["task_requirements"][
-        "execution_configurations"
-    ]
-    assert any(row["gap"] == "native-provider-adapter-command-unavailable" for row in result["unavailable_adapters"])
-    assert not any(row["eligible"] and row["configuration"]["target"] == "native" for row in result["configurations"]["candidates"])
-    assert source.read_bytes() == before
-    assert not (tmp_path / "marker.txt").exists()
-
-    # An executable is insufficient when the native return path is unsupported.
-    for declaration in ('kind="api"', 'kind="process",output_mode="json-file"'):
-        source.write_text(before.decode().replace('kind="process"', declaration), newline="")
-        current = consume(surface, shared_core_binary, native_cli, context)
-        request = current["task_requirements"]["requests"][0]
-        request["arguments"]["required_result_classes"] = ["read-only"]
-        current = consume(surface, shared_core_binary, native_cli, {**context, "request": request})
-        rows = current["task_requirements"]["execution_configurations"]["configurations"]["candidates"]
-        worker = next(r for r in rows if r["configuration"]["target"] == "worker" and r["configuration"]["transport"] != "manual")
-        assert worker["eligible"] is False
-        assert "execution-return-unconstructible" in worker["reasons"]
+    baseline = source.read_text()
+    for declaration in (
+        'kind="native",adapter="provider-owned"',
+        'kind="api",command=["ignored"]',
+        'kind="process",command=["ignored"],output_mode="json-file"',
+        'kind="internal",timeout_seconds=30',
+        'kind="process",command=["ignored"],invented=true',
+    ):
+        source.write_text(baseline + "[delegation_targets.invalid]\ntransports=[{" + declaration + "}]\n")
+        before = source.read_bytes()
+        invalid = consume("native", shared_core_binary, native_cli, context)
+        assert invalid["status"] == "blocked"
+        assert invalid["managed_state_interpreted"] is False
+        assert source.read_bytes() == before
         assert not (tmp_path / "marker.txt").exists()
-    source.write_bytes(before)
-
-    with source.open("a") as stream:
-        stream.write('[delegation_targets.invalid]\ntransports=[{kind="process",command=["ignored"],invented=true}]\n')
-    invalid_bytes = source.read_bytes()
-    invalid = consume(surface, shared_core_binary, native_cli, context)
-    assert invalid["status"] == "blocked"
-    assert invalid["managed_state_interpreted"] is False
-    assert source.read_bytes() == invalid_bytes
 
 
 def test_oversized_executable_is_unavailable_without_reading_or_running(tmp_path, shared_core_binary, native_cli):

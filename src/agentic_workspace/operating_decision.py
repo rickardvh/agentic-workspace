@@ -3231,7 +3231,7 @@ def compile_repo_improvement_action(
     if not candidate:
         return {}
     current_work = _as_dict(current_work)
-    mode = latitude if latitude in {"none", "reporting", "conservative", "balanced", "proactive"} else "conservative"
+    mode = latitude if latitude in {"none", "reporting", "conservative", "proactive"} else "conservative"
     candidate_id = str(
         candidate.get("id")
         or candidate.get("evidence_fingerprint")
@@ -3318,11 +3318,6 @@ def compile_repo_improvement_action(
         reason = "bounded improvement stays in already-touched scope with local ownership and proof"
         initiative_authorized = True
         next_action = "prepare the smallest touched-scope improvement through the existing owner"
-    elif mode == "balanced" and scope_relation in {"current-scope", "adjacent-scope"}:
-        action_class = "bounded-current-slice"
-        reason = "material evidence supports bounded improvement inside the current ownership and proof boundary"
-        initiative_authorized = True
-        next_action = "prepare a bounded current-slice improvement without changing requested ends"
     elif mode == "proactive" and scope_relation in {"current-scope", "adjacent-scope", "standalone-repo"} and net_value_supported:
         action_class = "bounded-standalone-permitted" if scope_relation == "standalone-repo" else "bounded-current-slice"
         reason = "strong or repeated evidence, admitted ownership/proof, and positive future value support bounded initiative"

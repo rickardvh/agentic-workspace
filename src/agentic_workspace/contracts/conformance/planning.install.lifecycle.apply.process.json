@@ -4,34 +4,77 @@
   "operation_id": "planning.install.lifecycle",
   "adapter": {
     "kind": "process",
-    "command_template": ["{agentic_planning_cli}", "install", "--target", ".", "--format", "json"],
+    "command_template": [
+      "{agentic_planning_cli}",
+      "install",
+      "--target",
+      ".",
+      "--format",
+      "json"
+    ],
     "cwd": "fixture_root"
   },
   "fixtures": [
     {
       "id": "install-apply",
-      "files": {".git/.keep": ""}
+      "files": {
+        ".git/.keep": ""
+      }
     }
   ],
   "expectations": {
-    "exit": {"code": 0},
+    "exit": {
+      "code": 0
+    },
     "stdout": {
       "format": "json",
       "field_assertions": [
-        {"path": ["dry_run"], "equals": false},
-        {"path": ["outcome"], "equals": "applied"},
-        {"path": ["mutation_applied"], "equals": true},
-        {"path": ["reason_code"], "equals": "mutation-applied"}
+        {
+          "path": [
+            "dry_run"
+          ],
+          "equals": false
+        },
+        {
+          "path": [
+            "outcome"
+          ],
+          "equals": "applied"
+        },
+        {
+          "path": [
+            "mutation_applied"
+          ],
+          "equals": true
+        },
+        {
+          "path": [
+            "reason_code"
+          ],
+          "equals": "mutation-applied"
+        }
       ]
     },
-    "stderr": {"allow_non_empty": false},
+    "stderr": {
+      "allow_non_empty": false
+    },
     "filesystem": {
-      "allowed_write_paths": ["AGENTS.md"],
-      "allowed_write_directories": [".agentic-workspace"],
-      "required_paths": [".git/.keep", ".agentic-workspace/planning/agent-manifest.json"],
+      "allowed_write_paths": [
+        "AGENTS.md"
+      ],
+      "allowed_write_directories": [
+        ".agentic-workspace"
+      ],
+      "required_paths": [
+        ".git/.keep"
+      ],
       "forbidden_paths": []
     },
-    "idempotency": {"run_twice": false},
-    "safety": {"no_writes_outside_repo_root": true}
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
   }
 }

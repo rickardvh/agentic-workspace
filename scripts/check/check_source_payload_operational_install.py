@@ -340,7 +340,23 @@ def _executable_payload_files(repo_root: Path, package_name: str) -> list[str]:
     payload_root = repo_root / "packages" / package_name / "bootstrap"
     if not payload_root.exists():
         return []
-    return sorted(path.relative_to(payload_root).as_posix() for path in payload_root.rglob("*") if _looks_like_executable_payload(path))
+    # Selected executable skill leaves are declared by their exact registry owner.
+    declared: set[str] = set()
+    for registry in payload_root.glob(".agentic-workspace/*/skills/REGISTRY.json"):
+        for skill in json.loads(registry.read_text(encoding="utf-8")).get("skills", []):
+            entry = skill.get("executable", {}).get("entrypoint", {})
+            path = entry.get("path", "")
+            if (
+                entry.get("kind") == "file"
+                and path.startswith(registry.parent.relative_to(payload_root).as_posix() + "/")
+                and ".." not in Path(path).parts
+            ):
+                declared.add(path)
+    return sorted(
+        path.relative_to(payload_root).as_posix()
+        for path in payload_root.rglob("*")
+        if _looks_like_executable_payload(path) and path.relative_to(payload_root).as_posix() not in declared
+    )
 
 
 def _executable_payload_warnings(*, repo_root: Path, package_name: str) -> list[BoundaryWarning]:
@@ -794,9 +810,6 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
         repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md": (
             "Root operational planning install is missing `.agentic-workspace/planning/execplans/README.md`."
         ),
-        repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json": (
-            "Root operational planning install is missing `.agentic-workspace/planning/agent-manifest.json`."
-        ),
     }
 
     for path, message in required_root_surfaces.items():
@@ -845,7 +858,6 @@ def gather_boundary_summary(*, repo_root: Path = REPO_ROOT) -> dict[str, object]
         repo_root / ".agentic-workspace" / "memory" / "WORKFLOW.md",
         repo_root / ".agentic-workspace" / "memory" / "SKILLS.md",
         repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
-        repo_root / ".agentic-workspace" / "planning" / "agent-manifest.json",
     ]
 
     return {
@@ -1016,7 +1028,6 @@ def gather_sync_proof(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
             expected_payload=planning_expected,
             root_sentinels=[
                 ".agentic-workspace/planning/execplans/README.md",
-                ".agentic-workspace/planning/agent-manifest.json",
             ],
             intentional_differences=[
                 {

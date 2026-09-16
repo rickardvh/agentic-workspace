@@ -10,10 +10,26 @@
       "stability": "package-managed",
       "summary": "capture durable repo knowledge into checked-in memory",
       "activation_hints": {
-        "verbs": ["capture", "record", "store"],
-        "nouns": ["durable knowledge", "trap", "invariant", "runbook", "decision"],
-        "phrases": ["capture this in memory", "record durable knowledge"],
-        "when": ["knowledge should survive the session", "anti-rediscovery capture"]
+        "verbs": [
+          "capture",
+          "record",
+          "store"
+        ],
+        "nouns": [
+          "durable knowledge",
+          "trap",
+          "invariant",
+          "runbook",
+          "decision"
+        ],
+        "phrases": [
+          "capture this in memory",
+          "record durable knowledge"
+        ],
+        "when": [
+          "knowledge should survive the session",
+          "anti-rediscovery capture"
+        ]
       }
     },
     {
@@ -23,10 +39,29 @@
       "stability": "package-managed",
       "summary": "classify memory consultation, durable residue, and improvement-signal routing",
       "activation_hints": {
-        "verbs": ["consult", "classify", "route", "decide"],
-        "nouns": ["memory consultation", "durable residue", "improvement signal", "closeout residue"],
-        "phrases": ["memory consultation status", "durable residue decision", "improvement signal status", "closeout durable residue"],
-        "when": ["closeout residue routing", "explicit no-memory-write decision", "repeated correction or workflow friction"]
+        "verbs": [
+          "consult",
+          "classify",
+          "route",
+          "decide"
+        ],
+        "nouns": [
+          "memory consultation",
+          "durable residue",
+          "improvement signal",
+          "closeout residue"
+        ],
+        "phrases": [
+          "memory consultation status",
+          "durable residue decision",
+          "improvement signal status",
+          "closeout durable residue"
+        ],
+        "when": [
+          "closeout residue routing",
+          "explicit no-memory-write decision",
+          "repeated correction or workflow friction"
+        ]
       }
     },
     {
@@ -36,10 +71,43 @@
       "stability": "package-managed",
       "summary": "keep checked-in memory compact, current, and well-routed",
       "activation_hints": {
-        "verbs": ["clean", "tighten", "prune"],
-        "nouns": ["memory note", "note shape", "overlap", "noise"],
-        "phrases": ["clean up memory", "tighten memory note shape", "prune memory noise"],
-        "when": ["memory hygiene", "note-shape cleanup"]
+        "verbs": [
+          "clean",
+          "tighten",
+          "prune"
+        ],
+        "nouns": [
+          "memory note",
+          "note shape",
+          "overlap",
+          "noise"
+        ],
+        "phrases": [
+          "clean up memory",
+          "tighten memory note shape",
+          "prune memory noise"
+        ],
+        "when": [
+          "memory hygiene",
+          "note-shape cleanup"
+        ]
+      },
+      "semantic_routes": [
+        {
+          "id": "memory/hygiene",
+          "match": "exact",
+          "priority": 10,
+          "description": "Inspect bounded Memory declaration hygiene and separately authorized disposition."
+        }
+      ],
+      "executable": {
+        "entrypoint": {
+          "kind": "file",
+          "path": ".agentic-workspace/memory/skills/memory-hygiene/prepare.py"
+        },
+        "dependencies": [
+          ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md"
+        ]
       }
     },
     {
@@ -49,10 +117,24 @@
       "stability": "package-managed",
       "summary": "refresh stale or weakly routed memory notes after relevant repo changes",
       "activation_hints": {
-        "verbs": ["refresh", "update", "recheck"],
-        "nouns": ["stale memory", "memory notes", "routing drift"],
-        "phrases": ["refresh stale memory", "update memory after changes"],
-        "when": ["relevant repo changes", "weakly routed notes"]
+        "verbs": [
+          "refresh",
+          "update",
+          "recheck"
+        ],
+        "nouns": [
+          "stale memory",
+          "memory notes",
+          "routing drift"
+        ],
+        "phrases": [
+          "refresh stale memory",
+          "update memory after changes"
+        ],
+        "when": [
+          "relevant repo changes",
+          "weakly routed notes"
+        ]
       }
     },
     {
@@ -62,10 +144,26 @@
       "stability": "package-managed",
       "summary": "route to the narrowest relevant checked-in memory notes for the current task",
       "activation_hints": {
-        "verbs": ["route", "select", "find", "load"],
-        "nouns": ["memory notes", "note set", "memory context"],
-        "phrases": ["route memory for this task", "find the smallest memory note set", "route to relevant memory"],
-        "when": ["smallest relevant note set", "memory for current task"]
+        "verbs": [
+          "route",
+          "select",
+          "find",
+          "load"
+        ],
+        "nouns": [
+          "memory notes",
+          "note set",
+          "memory context"
+        ],
+        "phrases": [
+          "route memory for this task",
+          "find the smallest memory note set",
+          "route to relevant memory"
+        ],
+        "when": [
+          "smallest relevant note set",
+          "memory for current task"
+        ]
       }
     },
     {
@@ -75,12 +173,25 @@
       "stability": "package-managed",
       "summary": "run the normal checked-in memory upgrade flow from the installed repo surface",
       "activation_hints": {
-        "verbs": ["upgrade", "refresh", "sync"],
-        "nouns": ["memory bootstrap", "installed memory", "managed surfaces"],
-        "phrases": ["upgrade memory bootstrap", "refresh installed memory surfaces"],
-        "when": ["managed memory upgrade", "installed surface refresh"]
+        "verbs": [
+          "upgrade",
+          "refresh",
+          "sync"
+        ],
+        "nouns": [
+          "memory bootstrap",
+          "installed memory",
+          "managed surfaces"
+        ],
+        "phrases": [
+          "upgrade memory bootstrap",
+          "refresh installed memory surfaces"
+        ],
+        "when": [
+          "managed memory upgrade",
+          "installed surface refresh"
+        ]
       }
     }
   ]
 }
-

@@ -1447,20 +1447,8 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     schema_version = payload.get("schema_version")
     if schema_version != SCHEMA_VERSION:
         raise VerificationUsageError(f'{VERIFICATION_MANIFEST_PATH.as_posix()} schema_version must be "{SCHEMA_VERSION}".')
-    unknown_top = sorted(
-        set(payload)
-        - {
-            "schema_version",
-            "assurance",
-            "protocols",
-            "scenarios",
-            "evidence_bundles",
-            "proof_routes",
-            "evidence_authorities",
-            "known_gaps",
-            "evidence_concepts",
-        }
-    )
+    source_schema = json.loads((Path(__file__).parent / "contracts/manifest.schema.json").read_text(encoding="utf-8"))
+    unknown_top = sorted(set(payload) - source_schema["properties"].keys())
     if unknown_top:
         raise VerificationUsageError(
             f"{VERIFICATION_MANIFEST_PATH.as_posix()} contains unsupported top-level field(s): {', '.join(unknown_top)}."
@@ -1513,35 +1501,14 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     activation_fields = {
         "applies_to_paths",
         "applies_to_task_markers",
-        "applies_to_semantic_routes",
         "assurance_requirement_refs",
         "proof_profiles",
-        "planning_refs",
-        "protocol_refs",
     }
     for protocol_id, raw_protocol in sorted(raw_protocols.items()):
         surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} protocols.{protocol_id}"
         if not isinstance(raw_protocol, dict):
             raise VerificationUsageError(f"{surface} must be a table.")
-        unknown = sorted(
-            set(raw_protocol)
-            - {
-                "title",
-                "purpose",
-                *activation_fields,
-                "scenario_refs",
-                "steps",
-                "expected_evidence",
-                "review_owner",
-                "ownerless_reason",
-                "authority_refs",
-                "stale_when",
-                "retention",
-                "non_goals",
-                "commands",
-                "review_aids",
-            }
-        )
+        unknown = sorted(set(raw_protocol) - source_schema["properties"]["protocols"]["additionalProperties"]["properties"].keys())
         if unknown:
             raise VerificationUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
         activation_values = {key: _string_list(payload=raw_protocol, key=key, surface=surface) for key in activation_fields}
@@ -1567,7 +1534,6 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
             "ownerless_reason": ownerless_reason,
             "authority_refs": _string_list(payload=raw_protocol, key="authority_refs", surface=surface),
             "stale_when": _string_list(payload=raw_protocol, key="stale_when", surface=surface),
-            "retention": _optional_string(payload=raw_protocol, key="retention", surface=surface),
             "non_goals": _string_list(payload=raw_protocol, key="non_goals", surface=surface),
             "commands": _string_list(payload=raw_protocol, key="commands", surface=surface),
             "review_aids": _string_list(payload=raw_protocol, key="review_aids", surface=surface),
@@ -1579,133 +1545,11 @@ def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     protocols_by_id = {str(protocol["id"]): protocol for protocol in protocols}
     protocol_ids = set(protocols_by_id)
     evidence_bundles: list[dict[str, Any]] = []
-    raw_bundles = _table(payload, "evidence_bundles", surface=VERIFICATION_MANIFEST_PATH.as_posix())
-    for bundle_id, raw_bundle in sorted(raw_bundles.items()):
-        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} evidence_bundles.{bundle_id}"
-        if not isinstance(raw_bundle, dict):
-            raise VerificationUsageError(f"{surface} must be a table.")
-        unknown = sorted(
-            set(raw_bundle)
-            - {
-                "protocol_id",
-                "scenario_id",
-                "task_refs",
-                "issue_refs",
-                "pr_refs",
-                "changed_paths",
-                "executor",
-                "executed_at",
-                "outcome",
-                "evidence_items",
-                "transcript_refs",
-                "transcript_summaries",
-                "residual_risk",
-                "claim_boundaries",
-                "reviewer",
-                "retention_until",
-                "stale_when",
-                "redaction",
-                "source_tool",
-                "source_model",
-                "post_score_reference",
-            }
-        )
-        if unknown:
-            raise VerificationUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
-        protocol_id = _required_string(payload=raw_bundle, key="protocol_id", surface=surface)
-        if protocol_id not in protocol_ids:
-            raise VerificationUsageError(f"{surface} references unknown protocol_id {protocol_id}.")
-        scenario_id = _optional_string(payload=raw_bundle, key="scenario_id", surface=surface)
-        if scenario_id and scenario_id not in scenarios_by_id:
-            raise VerificationUsageError(f"{surface} references unknown scenario_id {scenario_id}.")
-        transcript_refs = _string_list(payload=raw_bundle, key="transcript_refs", surface=surface)
-        transcript_summaries = _string_list(payload=raw_bundle, key="transcript_summaries", surface=surface)
-        retention_until = _optional_string(payload=raw_bundle, key="retention_until", surface=surface)
-        redaction = _optional_string(payload=raw_bundle, key="redaction", surface=surface)
-        protocol_retention = _optional_string(
-            payload=protocols_by_id[protocol_id],
-            key="retention",
-            surface=f"{VERIFICATION_MANIFEST_PATH.as_posix()} protocols.{protocol_id}",
-        )
-        if transcript_refs:
-            missing_bounds: list[str] = []
-            if not transcript_summaries:
-                missing_bounds.append("transcript_summaries")
-            if not (retention_until or protocol_retention):
-                missing_bounds.append("retention_until or protocol retention")
-            if not redaction:
-                missing_bounds.append("redaction")
-            if missing_bounds:
-                raise VerificationUsageError(
-                    f"{surface} transcript_refs requires bounded transcript metadata: {', '.join(missing_bounds)}."
-                )
-        evidence_bundles.append(
-            {
-                "id": str(bundle_id).strip(),
-                "protocol_id": protocol_id,
-                "scenario_id": scenario_id,
-                "task_refs": _string_list(payload=raw_bundle, key="task_refs", surface=surface),
-                "issue_refs": _string_list(payload=raw_bundle, key="issue_refs", surface=surface),
-                "pr_refs": _string_list(payload=raw_bundle, key="pr_refs", surface=surface),
-                "changed_paths": _string_list(payload=raw_bundle, key="changed_paths", surface=surface),
-                "executor": _optional_string(payload=raw_bundle, key="executor", surface=surface),
-                "executed_at": _optional_string(payload=raw_bundle, key="executed_at", surface=surface),
-                "outcome": _optional_string(payload=raw_bundle, key="outcome", surface=surface) or "recorded",
-                "evidence_items": _string_list(payload=raw_bundle, key="evidence_items", surface=surface),
-                "transcript_refs": transcript_refs,
-                "transcript_summaries": transcript_summaries,
-                "residual_risk": _optional_string(payload=raw_bundle, key="residual_risk", surface=surface),
-                "claim_boundaries": _string_list(payload=raw_bundle, key="claim_boundaries", surface=surface),
-                "reviewer": _optional_string(payload=raw_bundle, key="reviewer", surface=surface),
-                "retention_until": retention_until,
-                "stale_when": _string_list(payload=raw_bundle, key="stale_when", surface=surface),
-                "redaction": redaction,
-                "source_tool": _optional_string(payload=raw_bundle, key="source_tool", surface=surface),
-                "source_model": _optional_string(payload=raw_bundle, key="source_model", surface=surface),
-                "post_score_reference": _optional_string(payload=raw_bundle, key="post_score_reference", surface=surface),
-            }
-        )
 
-    evidence_concepts = _load_evidence_concepts(payload=payload)
     proof_routes = _load_proof_routes(payload=payload, protocol_ids=protocol_ids, scenarios_by_id=scenarios_by_id)
     evidence_authorities: list[dict[str, Any]] = []
-    raw_authorities = _table(payload, "evidence_authorities", surface=VERIFICATION_MANIFEST_PATH.as_posix())
-    for authority_id, raw_authority in sorted(raw_authorities.items()):
-        surface = f"{VERIFICATION_MANIFEST_PATH.as_posix()} evidence_authorities.{authority_id}"
-        if not isinstance(raw_authority, dict):
-            raise VerificationUsageError(f"{surface} must be a table.")
-        supported = {
-            "producer_id",
-            "issuer_id",
-            "proof_route",
-            "evidence_class",
-            "result_contract",
-            "allowed_results",
-            "application_id",
-        }
-        unknown = sorted(set(raw_authority) - supported)
-        if unknown:
-            raise VerificationUsageError(f"{surface} contains unsupported field(s): {', '.join(unknown)}.")
-        proof_route = _required_string(payload=raw_authority, key="proof_route", surface=surface)
-        if proof_route not in {str(item.get("id")) for item in proof_routes}:
-            raise VerificationUsageError(f"{surface} references unknown proof_route {proof_route}.")
-        allowed_results = _string_list(payload=raw_authority, key="allowed_results", surface=surface)
-        if not allowed_results:
-            raise VerificationUsageError(f"{surface} requires allowed_results.")
-        evidence_authorities.append(
-            {
-                "kind": "agentic-workspace/evidence-authority/v1",
-                "id": str(authority_id).strip(),
-                "producer_id": _required_string(payload=raw_authority, key="producer_id", surface=surface),
-                "issuer_id": _optional_string(payload=raw_authority, key="issuer_id", surface=surface),
-                "proof_route": proof_route,
-                "evidence_class": _required_string(payload=raw_authority, key="evidence_class", surface=surface),
-                "result_contract": _required_string(payload=raw_authority, key="result_contract", surface=surface),
-                "allowed_results": allowed_results,
-                "application_id": _optional_string(payload=raw_authority, key="application_id", surface=surface),
-            }
-        )
-    known_gaps = _load_known_gaps(payload=payload, protocol_ids=protocol_ids, scenarios_by_id=scenarios_by_id)
+    known_gaps: list[dict[str, Any]] = []
+    evidence_concepts = _load_evidence_concepts(payload={})
     return {
         "configured": True,
         "path": _repo_relative_path(manifest_path, target_root),

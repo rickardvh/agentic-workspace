@@ -94,8 +94,12 @@ pub(crate) fn view(
     required.dedup();
     preferred.sort_by_key(Value::to_string);
     preferred.dedup();
+    let mut policy = configuration["assignment_policy"].clone();
+    if let Some(fields) = policy.as_object_mut() {
+        fields.remove("source_revision");
+    }
     let source_revision = digest(&json!({"task":task_identity,"work":current_work,
-        "configuration":configuration["assignment_policy"],"posture":posture,"required_execution_guarantees":required,"verification_strategy":verification["strategy_revision"]}))?;
+        "configuration":policy,"posture":posture,"required_execution_guarantees":required,"verification_strategy":verification["strategy_revision"]}))?;
     let declaration = self::contract()?;
     let owner_revision = &declaration["owners"][0]["revision"];
     let mut template = json!({"kind":"agentic-workspace/public-request/v1","id":"assignment/task-requirements",

@@ -146,6 +146,65 @@ pub(crate) fn resolve(
     })
 }
 
+/// Single declaration admission for selection and all native producers.
+pub(crate) fn validate_manifest(manifest: &Value) -> Result<(), CoreError> {
+    let schema: Value = serde_json::from_str(include_str!(
+        "../../../packages/memory/src/repo_memory_bootstrap/contracts/manifest.schema.json"
+    ))
+    .expect("Memory declaration schema");
+    crate::schema_validator(&schema, "Memory manifest")?
+        .validate(manifest)
+        .map_err(|e| error(format!("unsupported declaration; repair {MANIFEST}: {e}")))?;
+    for (id, fact) in manifest["durable_facts"].as_object().into_iter().flatten() {
+        let reference = fact["note_ref"]
+            .as_str()
+            .unwrap()
+            .split('#')
+            .next()
+            .unwrap();
+        if manifest["notes"].get(reference).is_none() {
+            return Err(error(format!(
+                "fact {id}: note_ref must name a declared note"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn hygiene(manifest: &Value) -> Result<Value, CoreError> {
+    let directories = path_patterns(manifest["rules"].get("canonical_dirs"), "canonical_dirs")?;
+    let boards = path_patterns(
+        manifest["rules"].get("task_board_globs"),
+        "task_board_globs",
+    )?;
+    let mut findings = Vec::new();
+    for (reference, note) in manifest["notes"].as_object().into_iter().flatten() {
+        if note["note_type"] == "routing" {
+            continue;
+        }
+        if !directories.is_empty()
+            && !directories
+                .iter()
+                .any(|p| reference.starts_with(&format!("{}/", p.trim_end_matches('/'))))
+        {
+            findings.push(json!({"source":reference,"code":"outside-canonical-directories","judgment":"Check the intended durable owner; no relocation is authorized."}));
+        }
+        for field in ["routes_from", "stale_when"] {
+            let selectors = path_patterns(note.get(field), field)?;
+            if selectors.iter().any(|p| {
+                boards
+                    .iter()
+                    .any(|b| p == b || instruction_applicability::matches(b, p))
+            }) {
+                findings.push(json!({"source":reference,"code":"task-board-dependence","field":field,"judgment":"Check whether durable knowledge depends on transient task state."}));
+            }
+        }
+    }
+    Ok(
+        json!({"status":"checked","scope":"declared-notes-only","source":MANIFEST,"findings":findings,"authority_effect":"advisory-only","effects":[]}),
+    )
+}
+
 fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<Value, CoreError> {
     let selected_routes = if route["status"] == "current" && route["posture"] == "selected" {
         crate::route_ids(
@@ -175,8 +234,16 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
         .parse()
         .map_err(error)?;
     let manifest = serde_json::to_value(parsed).map_err(error)?;
+    validate_manifest(&manifest)?;
+    let maintenance = selected_routes.iter().any(|r| r == "memory/hygiene");
+    let hygiene = if maintenance {
+        hygiene(&manifest)?
+    } else {
+        Value::Null
+    };
+    let empty_notes = serde_json::Map::new();
     let notes = match manifest.get("notes") {
-        None => return Ok(empty("no-match")),
+        None => &empty_notes,
         Some(value) => value
             .as_object()
             .ok_or_else(|| error("manifest notes must be a table"))?,
@@ -207,8 +274,7 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
                     "semantic_routes",
                 )?;
             }
-            if metadata.get("routing_only") == Some(&json!(true))
-                || metadata.get("note_type") == Some(&json!("routing"))
+            if metadata.get("note_type") == Some(&json!("routing"))
                 || metadata.get("task_relevance") == Some(&json!("review-only"))
             {
                 return Ok(None);
@@ -298,7 +364,7 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
             };
             Ok(Some(
                 json!({"source":{"reference":reference,"revision":observed},
-            "metadata":{"note_type":metadata.get("note_type"),"canonical_home":canonical,
+            "metadata":{"summary":metadata.get("summary"),"note_type":metadata.get("note_type"),"canonical_home":canonical,
                 "routes_from":paths,"semantic_routes":routes,"stale_when":stale_when,
                 "last_confirmed":metadata.get("last_confirmed"),"valid_until":metadata.get("valid_until"),
                 "superseded_by":superseded_by,"contradicted_by":contradicted_by},
@@ -333,17 +399,18 @@ fn resolve_sources(target: &Path, changed: &[String], route: &Value) -> Result<V
                 row["note_ref"] = json!(note_ref);
                 row["owner"] = fact["owner"].clone();
                 row["promotion_target"] = fact["promotion_target"].clone();
+                row["review_context"] = json!({"evidence":fact["evidence"],"summary":fact["summary"],"promotion":fact["promotion"],"promotion_trigger":fact["promotion_trigger"],"demotion_or_expiry":fact["demotion_or_expiry"],"preferred_remediation":fact["preferred_remediation"],"elimination_target":fact["elimination_target"]});
                 diagnostics.push(row);
             }
         }
     }
-    if selected.is_empty() && diagnostics.is_empty() {
+    if selected.is_empty() && diagnostics.is_empty() && !maintenance {
         return Ok(empty("no-match"));
     }
     Ok(
         json!({"kind":"agentic-memory/source-selection/v1","status":if diagnostics.is_empty(){"review-required"}else{"reconciliation-required"},
         "authority_effect":"advisory-only", "manifest":{"reference":MANIFEST,"revision":decision_source::hash(&bytes)},
-        "selected_notes":selected,"diagnostics":diagnostics}),
+        "selected_notes":selected,"diagnostics":diagnostics,"hygiene":hygiene}),
     )
 }
 
@@ -611,7 +678,6 @@ mod tests {
                 r#"version=1
 [notes."{HOME}decisions/former.md"]
 note_type="decision"
-authority="canonical"
 routes_from=["src/**"]
 semantic_routes=["github/pr/review"]
 stale_when=["src/owner.rs"]
@@ -782,7 +848,7 @@ stale_when=["src/owner.rs"]
     }
 
     #[test]
-    fn native_memory_isolates_bad_notes_and_keeps_exact_fact_residue() {
+    fn native_memory_rejects_unsupported_declarations_without_partial_admission() {
         let repo = fixture();
         let mut manifest = fs::read_to_string(repo.path().join(MANIFEST)).unwrap();
         manifest.push_str(&format!(
@@ -800,24 +866,11 @@ promotion_target="planning-current-owner"
         ));
         fs::write(repo.path().join(MANIFEST), manifest).unwrap();
         let result = resolve(repo.path(), &["src/x.rs".into()], &Value::Null).unwrap();
-        assert_eq!(result["selected_notes"].as_array().unwrap().len(), 1);
-        let diagnostics = result["diagnostics"].as_array().unwrap();
-        assert_eq!(diagnostics.len(), 2);
+        assert!(result["selected_notes"].as_array().unwrap().is_empty());
         assert!(
-            diagnostics
-                .iter()
-                .any(|row| row["source"].as_str().unwrap().ends_with("unknown.md"))
-        );
-        assert!(
-            diagnostics
-                .iter()
-                .any(|row| row["code"] == "native-fact-owner-unresolved"
-                    && row["owner"] == "planning")
-        );
-        assert!(
-            !diagnostics
-                .iter()
-                .any(|row| row["source"].as_str().unwrap().ends_with("unrelated.md"))
+            result["diagnostics"]
+                .to_string()
+                .contains("unsupported declaration")
         );
         fs::write(repo.path().join(MANIFEST), "invalid[").unwrap();
         let view = public_view(

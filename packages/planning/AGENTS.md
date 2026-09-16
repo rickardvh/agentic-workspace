@@ -49,7 +49,7 @@ Package-local contract for work under `packages/planning/`.
 - Keep a clear distinction between package source, shipped payload, and this repo's active planning surfaces.
 - Do not confuse payload files under `bootstrap/` with the root planning system that drives current work in this monorepo.
 - Do not recreate package-local operational installs in this monorepo; root planning and memory installs remain authoritative here.
-- Preserve the relationship between `.agentic-workspace/planning/agent-manifest.json`, the managed planning scripts, and the generated root helper surfaces.
+- Keep installed skills and generated procedure pointers aligned with current native Planning and scoped instructions; do not restore a parallel agent manifest.
 - Prefer updating tests when installer paths, generated outputs, or ownership rules change.
 
 ## Validation

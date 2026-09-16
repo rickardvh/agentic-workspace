@@ -225,7 +225,6 @@ def _material_improvement_candidate(**overrides: object) -> dict[str, object]:
         ("none", "report-only", False),
         ("reporting", "report-only", False),
         ("conservative", "improve-touched-scope", True),
-        ("balanced", "bounded-current-slice", True),
         ("proactive", "bounded-current-slice", True),
     ],
 )
@@ -295,7 +294,7 @@ def test_repo_improvement_action_routes_explicit_package_owner_class_without_con
             suspected_owner="runtime-owner",
             ownership={"owner_class": "package-owned", "current_owner": True, "mutation_authority_admitted": True},
         ),
-        latitude="balanced",
+        latitude="conservative",
     )
 
     assert action["action_class"] == "route-package-owner"
@@ -310,7 +309,7 @@ def test_repo_owner_name_cannot_infer_package_ownership(repo_owner: str) -> None
             suspected_owner=repo_owner,
             ownership={"owner_class": "repo-owned", "current_owner": True, "mutation_authority_admitted": True},
         ),
-        latitude="balanced",
+        latitude="conservative",
     )
 
     assert action["action_class"] == "bounded-current-slice"
@@ -906,7 +905,7 @@ def test_balanced_scope_or_authority_drift_promotes_before_mutation() -> None:
         ownership={"current_owner": False, "mutation_authority_admitted": False, "source_owner": "adjacent-owner"},
         proof_boundary={"status": "missing"},
     )
-    action = compile_repo_improvement_action(candidate=candidate, latitude="balanced")
+    action = compile_repo_improvement_action(candidate=candidate, latitude="conservative")
     execution = compile_repo_improvement_execution(action=action, candidate=candidate)
 
     assert action["action_class"] == "promote-or-review"
@@ -1070,7 +1069,7 @@ def test_improvement_execution_rejects_stale_owner_and_failed_plan_without_unrel
         },
         proof_boundary={"status": "local", "requirements": [{"evidence": "focused proof"}]},
     )
-    action = compile_repo_improvement_action(candidate=candidate, latitude="balanced")
+    action = compile_repo_improvement_action(candidate=candidate, latitude="conservative")
     stale = compile_repo_improvement_execution(action=action, candidate=candidate, current_work={"owner_revision": "routing-owner:current"})
 
     assert stale["status"] == "owner-revision-stale"

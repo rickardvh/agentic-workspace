@@ -2292,7 +2292,7 @@ def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path
             },
         }
     )
-    source = {"reference": "configured-human-source", "revision": "source-1"}
+    source = {"reference": "configured-human-source", "revision": "source-1", "human_override_policy": "explicit-only"}
     work = {"id": "slice-1", "revision": "plan-rev-1"}
     execution = {
         "target": "codex_sol",
@@ -2334,6 +2334,16 @@ def test_assignment_replacement_authority_and_cross_surface_currentness(tmp_path
     assert node.returncode == 0, node.stderr
     assert json.loads(node.stdout) == result
     assert result["status"] == "replaced"
+    for policy, reason, accepted in [
+        ("disallowed", "", False),
+        ("allowed-with-recorded-reason", "", False),
+        ("allowed-with-recorded-reason", "Current target unavailable", True),
+        (None, "", False),
+    ]:
+        candidate = deepcopy(context)
+        candidate["source"].update(human_override_policy=policy, recorded_reason=reason)
+        candidate["admission"]["source"] = candidate["source"]
+        assert (replace_assignment(candidate)["status"] == "replaced") is accepted
     replacement = result["packet"]
     assert packet == original
     assert replacement["target"] == "codex_sol"

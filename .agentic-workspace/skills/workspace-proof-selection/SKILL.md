@@ -95,3 +95,22 @@ Changes to this skill must name the behavior being steered and cite the command/
 - proof result classification
 - `completion_claim_allowed=<true|false>`
 - unresolved proof gaps and their owner
+
+## Admitted declaration detail
+
+Use only the native admitted strategy and selected command detail. Inspect selected
+protocol purpose/steps, scenario observations and evidence labels, review aids,
+authority refs and claim limits when judging adequacy. Profile references suggest
+methods; source requirements and reviewer boundaries remain binding independently.
+Use selected lane escalation and review guidance to judge composition and whether
+the focused route is sufficient. Numeric ordering, role labels or a successful
+command cannot establish that judgment. Retention preferences in review aids do
+not change native receipt retention or authorize evidence deletion.
+
+Unknown fields, conflicting command roles or dangling declaration references are
+source-repair errors. Preserve restrictions while the responsible owner repairs
+the source. Semantic task markers require owner judgment; do not match task text.
+Measurement/source-intent fields in an assurance gap describe still-unsatisfied
+conditions, not admitted evidence. Native measurement admission remains a named
+capability gap until its owner supplies a current result. Do not reparse the
+manifest in a helper, fabricate a waiver or advance source trust to clear it.

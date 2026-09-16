@@ -74,3 +74,19 @@ Exact host footprint and ownership come from the generated [installed-surface ca
 - Source-checkout tests and checks live under `packages/memory/tests` and `packages/memory/scripts`.
 
 Public maturity: **alpha**, matching coordinated package metadata. Strong capability evidence does not independently promote the distribution support contract.
+
+## Current declarations and selected maintenance
+
+The native owner admits the closed `contracts/manifest.schema.json` vocabulary.
+Notes use path/semantic selectors, exact source dependencies and explicit stale or
+contradiction references. Summary/type and optional dates inform selected review;
+none establishes factual freshness. Facts keep their stable ID, note reference,
+advisory summary and bounded receiving-owner review context. Disposition and native
+decision linkage require current owner custody, even when their bytes are visible.
+
+Use the installed `memory-hygiene` executable skill to request bounded native
+checks of `rules.canonical_dirs` and `rules.task_board_globs`. It checks declarations,
+not the repository corpus. Routing compactness derives from note type. Retired
+core-document flags were disabled in the shipped policy; repository instructions
+and Verification own any document-governance requirement. Missing tools or sources
+mean unexecuted maintenance. Findings never authorize retirement or promotion.

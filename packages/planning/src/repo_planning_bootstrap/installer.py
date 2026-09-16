@@ -22,7 +22,6 @@ from jsonschema import Draft202012Validator
 from repo_planning_bootstrap import __version__
 from repo_planning_bootstrap._ownership import module_root
 from repo_planning_bootstrap._render import (
-    load_manifest,
     render_quickstart,
     render_routing,
 )
@@ -38,7 +37,6 @@ from repo_planning_bootstrap.future_context_distillation import CLOSEOUT_DISTILL
 PLANNING_MANAGED_ROOT = module_root("planning")
 WORKSPACE_WORKFLOW_PATH = Path(".agentic-workspace") / "WORKFLOW.md"
 PLANNING_SKILLS_MANAGED_ROOT = PLANNING_MANAGED_ROOT / "skills"
-PLANNING_MANIFEST_PATH = PLANNING_MANAGED_ROOT / "agent-manifest.json"
 PLANNING_STATE_PATH = PLANNING_MANAGED_ROOT / "state.toml"
 PLANNING_EXTERNAL_INTENT_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "external-intent-evidence.json"
 PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "cache" / "external-intent-evidence.json"
@@ -215,7 +213,6 @@ REQUIRED_PAYLOAD_FILES = (
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
     CLOSEOUT_EVIDENCE_SCHEMA_PATH,
     UPGRADE_SOURCE_PATH,
-    PLANNING_MANIFEST_PATH,
 )
 
 OPTIONAL_PAYLOAD_FILES = (
@@ -251,7 +248,6 @@ PLANNING_COMPATIBILITY_CONTRACT_FILES = (
     INTEGRATION_PROPOSAL_SCHEMA_PATH,
     INTEGRATION_RECEIPT_SCHEMA_PATH,
     FINISHED_WORK_EVIDENCE_SCHEMA_PATH,
-    PLANNING_MANIFEST_PATH,
 )
 
 PLANNING_LOWER_STABILITY_HELPER_FILES = tuple(
@@ -415,17 +411,17 @@ def _add_contract_surface_summary(result: InstallResult, root: Path) -> None:
     optional = ", ".join(path.as_posix() for path in OPTIONAL_PAYLOAD_FILES)
     result.add(
         "current",
-        root / PLANNING_MANIFEST_PATH,
+        root / PLANNING_MANAGED_ROOT,
         f"default compatibility contract files: {compatibility}",
     )
     result.add(
         "current",
-        root / PLANNING_MANIFEST_PATH,
+        root / PLANNING_MANAGED_ROOT,
         f"default lower-stability helper files: {helpers}",
     )
     result.add(
         "current",
-        root / PLANNING_MANIFEST_PATH,
+        root / PLANNING_MANAGED_ROOT,
         f"optional packaged payload files: {optional}",
     )
 
@@ -1762,7 +1758,6 @@ def install_bootstrap(
     _copy_bundled_skills(target_root=target_root, result=result, conservative=False, force=force)
     if include_optional:
         _copy_payload(target_root=target_root, result=result, conservative=False, force=force, files=OPTIONAL_PAYLOAD_FILES)
-    _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_state(target_root=target_root, result=result, dry_run=False)
         _remove_generated_planning_views(target_root, result=result)
@@ -1792,7 +1787,6 @@ def adopt_bootstrap(*, target: str | Path | None = None, dry_run: bool = False, 
     _copy_bundled_skills(target_root=target_root, result=result, conservative=True, force=False)
     if include_optional:
         _copy_payload(target_root=target_root, result=result, conservative=True, force=False, files=OPTIONAL_PAYLOAD_FILES)
-    _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     if not dry_run:
         _migrate_legacy_planning_state(target_root=target_root, result=result, dry_run=False)
         _remove_generated_planning_views(target_root, result=result)
@@ -1819,7 +1813,6 @@ def upgrade_bootstrap(*, target: str | Path | None = None, dry_run: bool = False
     for relative in ROOT_SURFACE_FILES:
         _copy_payload_file(relative=relative, target_root=target_root, result=result, overwrite=False)
 
-    _render_generated_agent_files(target_root=target_root, result=result, apply=not dry_run)
     _migrate_current_execplan_owners(target_root=target_root, result=result, dry_run=dry_run)
     _migrate_legacy_planning_state(target_root=target_root, result=result, dry_run=dry_run)
     if not dry_run:
@@ -1943,7 +1936,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
             result.add(
                 "manual review",
                 destination,
-                f"{label} is out of sync with .agentic-workspace/planning/agent-manifest.json; run agentic-workspace doctor --target ./repo --modules planning --format json",
+                f"{label} is out of sync with the current package procedure; run agentic-workspace doctor --target ./repo --modules planning --format json",
             )
     return result
 
@@ -25197,29 +25190,6 @@ def _remove_bundled_skill_file(*, relative: Path, target_root: Path) -> bool:
     return destination.read_bytes() == source.read_bytes()
 
 
-def _render_generated_agent_files(*, target_root: Path, result: InstallResult, apply: bool) -> None:
-    manifest_path = target_root / PLANNING_MANIFEST_PATH
-    if not manifest_path.exists():
-        result.add(
-            "manual review",
-            manifest_path,
-            "cannot render generated agent docs because .agentic-workspace/planning/agent-manifest.json is missing",
-        )
-        return
-    for relative, rendered, label in _generated_agent_file_expectations(target_root):
-        destination = target_root / relative
-        existing = destination.read_text(encoding="utf-8") if destination.exists() else None
-        if existing == rendered:
-            result.add("current", destination, f"{label} already matches manifest")
-            continue
-        if not apply:
-            result.add("would update", destination, f"render {label} from manifest")
-            continue
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(rendered, encoding="utf-8")
-        result.add("updated" if existing is not None else "created", destination, f"rendered {label} from manifest")
-
-
 def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
     checker_path = SOURCE_PLANNING_CHECKER_SCRIPT_PATH
     if not checker_path.exists():
@@ -25239,23 +25209,14 @@ def _run_planning_checker(target_root: Path) -> list[dict[str, str]]:
 
 
 def _render_quickstart_for_repo(target_root: Path) -> str:
-    manifest_path = target_root / PLANNING_MANIFEST_PATH
-    if not manifest_path.exists():
-        return render_quickstart(load_manifest(manifest_path))
-    return render_quickstart(load_manifest(manifest_path))
+    return render_quickstart()
 
 
 def _render_routing_for_repo(target_root: Path) -> str:
-    manifest_path = target_root / PLANNING_MANIFEST_PATH
-    if not manifest_path.exists():
-        return render_routing(load_manifest(manifest_path))
-    return render_routing(load_manifest(manifest_path))
+    return render_routing()
 
 
 def _generated_agent_file_expectations(target_root: Path) -> list[tuple[Path, str, str]]:
-    manifest_path = target_root / PLANNING_MANIFEST_PATH
-    if not manifest_path.exists():
-        return []
     return []
 
 

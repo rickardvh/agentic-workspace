@@ -1322,7 +1322,6 @@ NECESSARY_SURFACE_PACKAGE_PAYLOAD_PATHS = (
     ".agentic-workspace/planning/reviews",
     ".agentic-workspace/planning/upstream-task-intake.md",
     ".agentic-workspace/planning/pre-ingestion-refinement.md",
-    ".agentic-workspace/planning/agent-manifest.json",
     ".agentic-workspace/memory/bootstrap",
     ".agentic-workspace/memory/SKILLS.md",
     ".agentic-workspace/memory/VERSION.md",
@@ -9424,7 +9423,6 @@ def _filter_minimal_bootstrap_module_report(report: dict[str, Any]) -> dict[str,
             or (path.startswith(".agentic-workspace/planning/") and path.endswith("/README.md") and missing_or_package_change)
             or (path.startswith(".agentic-workspace/planning/") and "/TEMPLATE." in path and missing_or_package_change)
             or (path.startswith(".agentic-workspace/planning/decompositions/") and missing_or_package_change)
-            or (path == ".agentic-workspace/planning/agent-manifest.json" and missing_or_package_change)
             or (path.startswith(".agentic-workspace/memory/skills/") and missing_or_package_change)
             or (path.startswith(".agentic-workspace/memory/bootstrap/") and missing_or_package_change)
             or (path.startswith(".agentic-workspace/memory/repo/") and path.endswith("/README.md") and missing_or_package_change)
@@ -49517,7 +49515,7 @@ def _agent_configuration_system_payload() -> dict[str, Any]:
             {"surface": "AGENTS.md", "role": "ordinary startup adapter over structured substrate"},
             {"surface": "docs/agentic-workspace-install.md", "role": "public external install/adopt instructions"},
             {
-                "surface": ".agentic-workspace/planning/agent-manifest.json",
+                "surface": ".agentic-workspace/planning/execplans/README.md",
                 "role": "planning package-owned generation source over structured substrate",
             },
         ],
@@ -49613,13 +49611,6 @@ def _emit_startup_report(*, format_name: str, target_root: Path, descriptors: di
 
     plan_report = planning_report(target=target_root)
     active_record = plan_report.get("active", {}).get("planning_record", {})
-    manifest_path = target_root / ".agentic-workspace" / "planning" / "agent-manifest.json"
-    manifest = {}
-    if manifest_path.exists():
-        try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except Exception:
-            pass
     tiny_safe_model = _defaults_payload()["startup"]["tiny_safe_model"].copy()
     tiny_safe_model["cli_invoke"] = config.cli_invoke
     tiny_safe_model["first_compact_queries"] = [
@@ -49632,7 +49623,7 @@ def _emit_startup_report(*, format_name: str, target_root: Path, descriptors: di
         "immediate_next_action": active_record.get("next_action") or "No next action",
         "tiny_safe_model": tiny_safe_model,
         "module_boundaries": _defaults_payload()["startup"]["top_level_capabilities"],
-        "critical_invariants": manifest.get("invariants") or [],
+        "procedure_reference": ".agentic-workspace/skills/workspace-startup/SKILL.md",
         "escalation_boundaries": active_record.get("escalate_when") or [],
         "relevant_handoff_context": plan_report.get("active", {}).get("handoff_contract") or {},
     }
@@ -51085,7 +51076,7 @@ def _setup_payload(
         orientation: dict[str, Any] = {
             "mode": "no-new-seed-surfaces-needed",
             "summary": "No new seed surfaces are needed; the repo already has the core setup orientation surfaces.",
-            "reason": f"{startup_file}, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/agent-manifest.json, and .agentic-workspace/memory/repo/index.md are already present.",
+            "reason": f"{startup_file}, .agentic-workspace/planning/state.toml, .agentic-workspace/planning/execplans/README.md, and .agentic-workspace/memory/repo/index.md are already present.",
         }
         next_action = {
             "summary": "No new core seed surfaces needed; inspect onboarding routes before adding assurance or verification seeds",

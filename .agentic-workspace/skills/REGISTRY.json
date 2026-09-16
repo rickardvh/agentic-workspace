@@ -11,8 +11,21 @@
       "visibility": "ordinary-default",
       "summary": "canonical skills-first Agentic Workspace procedure: consume current policy and owner state from their sources, use exact Rust-backed information and bounded effects when needed, discover specialized procedures selectively, and degrade honestly without an executable runtime",
       "activation_hints": {
-        "verbs": ["start", "orient", "use", "resume", "implement", "reconcile"],
-        "nouns": ["workspace", "agentic workspace", "AW repo", "current context", "next action"],
+        "verbs": [
+          "start",
+          "orient",
+          "use",
+          "resume",
+          "implement",
+          "reconcile"
+        ],
+        "nouns": [
+          "workspace",
+          "agentic workspace",
+          "AW repo",
+          "current context",
+          "next action"
+        ],
         "phrases": [
           "use agentic workspace",
           "start work in this aw repo",
@@ -44,7 +57,15 @@
         }
       ],
       "activation_hints": {
-        "verbs": ["ask", "clarify", "discover", "resolve", "classify", "shape", "triage"],
+        "verbs": [
+          "ask",
+          "clarify",
+          "discover",
+          "resolve",
+          "classify",
+          "shape",
+          "triage"
+        ],
         "nouns": [
           "intent discovery",
           "human intent",
@@ -77,6 +98,16 @@
           "the user describes an outcome rather than a solution",
           "why, desired outcome, non-goals, or acceptable first slice are missing"
         ]
+      },
+      "executable": {
+        "entrypoint": {
+          "kind": "file",
+          "path": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py"
+        },
+        "dependencies": [
+          ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
+          ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
+        ]
       }
     },
     {
@@ -87,9 +118,20 @@
       "visibility": "reference-only",
       "summary": "reference vocabulary for direct, bounded, lane, and epic work shapes; merged procedure lives in workspace-intent-discovery",
       "activation_hints": {
-        "verbs": ["reference"],
-        "nouns": ["work shape reference", "direct bounded lane epic vocabulary", "shape vocabulary", "shape taxonomy"],
-        "phrases": ["work shape reference", "direct bounded lane epic vocabulary", "what does lane shape mean"],
+        "verbs": [
+          "reference"
+        ],
+        "nouns": [
+          "work shape reference",
+          "direct bounded lane epic vocabulary",
+          "shape vocabulary",
+          "shape taxonomy"
+        ],
+        "phrases": [
+          "work shape reference",
+          "direct bounded lane epic vocabulary",
+          "what does lane shape mean"
+        ],
         "when": [
           "a compact packet or review explicitly asks for work-shape vocabulary",
           "workspace-intent-discovery has already handled the procedure"
@@ -112,9 +154,29 @@
         }
       ],
       "activation_hints": {
-        "verbs": ["prove", "validate", "verify", "select"],
-        "nouns": ["proof selection", "completion claim", "validation evidence", "negative proof", "skipped tests", "proof gap", "claim level"],
-        "phrases": ["proof selection", "completion claim allowed", "negative proof", "proof gap", "claim level", "proof before completion"],
+        "verbs": [
+          "prove",
+          "validate",
+          "verify",
+          "select"
+        ],
+        "nouns": [
+          "proof selection",
+          "completion claim",
+          "validation evidence",
+          "negative proof",
+          "skipped tests",
+          "proof gap",
+          "claim level"
+        ],
+        "phrases": [
+          "proof selection",
+          "completion claim allowed",
+          "negative proof",
+          "proof gap",
+          "claim level",
+          "proof before completion"
+        ],
         "when": [
           "proof must match task, slice, lane, or epic scope",
           "validation passed but completion may not be justified",
@@ -130,9 +192,29 @@
       "visibility": "reference-only",
       "summary": "reference for explicit current-contract gates, routed owner/action, proof or claim limits, reconciliation, and degraded recovery",
       "activation_hints": {
-        "verbs": ["reference", "interpret", "recover", "reconcile"],
-        "nouns": ["transition gate", "allowed actions", "forbidden actions", "preferred operation", "owner route", "proof gate", "claim gate", "reconciliation gate"],
-        "phrases": ["transition gate reference", "interpret forbidden actions", "interpret owner route", "bounded fallback", "reconciliation gate"],
+        "verbs": [
+          "reference",
+          "interpret",
+          "recover",
+          "reconcile"
+        ],
+        "nouns": [
+          "transition gate",
+          "allowed actions",
+          "forbidden actions",
+          "preferred operation",
+          "owner route",
+          "proof gate",
+          "claim gate",
+          "reconciliation gate"
+        ],
+        "phrases": [
+          "transition gate reference",
+          "interpret forbidden actions",
+          "interpret owner route",
+          "bounded fallback",
+          "reconciliation gate"
+        ],
         "when": [
           "a compact routed gate needs deeper interpretation",
           "a blocked action needs an exact owner or recovery route"
@@ -155,9 +237,31 @@
         }
       ],
       "activation_hints": {
-        "verbs": ["setup", "jumpstart", "populate", "seed", "adopt", "install"],
-        "nouns": ["lived-in repo", "mature repo", "post-bootstrap", "setup findings", "seed surfaces", "durable surfaces", "new repo adoption"],
-        "phrases": ["setup jumpstart", "mature repo jumpstart", "post-bootstrap setup", "seed surfaces", "newly installed workspace", "new repo adoption"],
+        "verbs": [
+          "setup",
+          "jumpstart",
+          "populate",
+          "seed",
+          "adopt",
+          "install"
+        ],
+        "nouns": [
+          "lived-in repo",
+          "mature repo",
+          "post-bootstrap",
+          "setup findings",
+          "seed surfaces",
+          "durable surfaces",
+          "new repo adoption"
+        ],
+        "phrases": [
+          "setup jumpstart",
+          "mature repo jumpstart",
+          "post-bootstrap setup",
+          "seed surfaces",
+          "newly installed workspace",
+          "new repo adoption"
+        ],
         "when": [
           "Agentic Workspace was newly installed or adopted in a lived-in repo",
           "workspace surfaces need to be populated after init or install",
@@ -238,6 +342,16 @@
         ],
         "when": [
           "a trusted correction should change later repository behavior"
+        ]
+      },
+      "executable": {
+        "entrypoint": {
+          "kind": "file",
+          "path": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py"
+        },
+        "dependencies": [
+          ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
+          ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
         ]
       }
     }
