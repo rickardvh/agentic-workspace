@@ -213,6 +213,8 @@ def _compose(args: argparse.Namespace) -> int:
             return {}
         inputs.append(path)
         payload = _load(path)
+        if payload.get("support_bearing") is False or payload.get("release_class") in {"preview", "release-candidate"}:
+            failures.append(f"{path.name} is non-support-bearing evidence and cannot admit stable publication")
         if payload.get("kind") != kind:
             failures.append(f"{path.name} has kind {payload.get('kind')!r}, expected {kind!r}")
         if payload.get("status") != status:

@@ -1,6 +1,12 @@
 name: Prepare Coordinated Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      accepted_rc:
+        description: Independently accepted v1.0.0-rc.N to promote from its exact current master source
+        required: true
+        type: string
   push:
     branches:
       - master
@@ -15,6 +21,7 @@ concurrency:
 
 jobs:
   promotion-admission:
+    if: github.ref == 'refs/heads/master'
     name: Verify exact protected commit
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -67,12 +74,21 @@ jobs:
 
       - name: Resolve pending release state
         id: release-plan
-        run: python scripts/release/coordinated_release.py plan --github-output "$GITHUB_OUTPUT"
+        env:
+          ACCEPTED_RC: ${{ inputs.accepted_rc }}
+        run: |
+          args=()
+          if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
+          python scripts/release/coordinated_release.py plan "${args[@]}" --github-output "$GITHUB_OUTPUT"
 
       - name: Prepare coordinated release PR changes
         if: steps.release-plan.outputs.release_required == 'true'
+        env:
+          ACCEPTED_RC: ${{ inputs.accepted_rc }}
         run: |
-          python scripts/release/coordinated_release.py prepare
+          args=()
+          if [ -n "$ACCEPTED_RC" ]; then args+=(--from-rc "$ACCEPTED_RC"); fi
+          python scripts/release/coordinated_release.py prepare "${args[@]}"
           uv lock
           uv run python scripts/generate/generate_external_consumer_profile.py
           uv run python scripts/generate/generate_command_packages.py

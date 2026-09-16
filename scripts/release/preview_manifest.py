@@ -36,6 +36,9 @@ def _require_json(path: Path) -> dict[str, Any]:
 
 
 def _preview_base_url(ownership: dict[str, Any], version: str) -> str:
+    if "rc" in version:
+        tag = "v" + coordinated_release.npm_version(version)
+        return str(ownership["distribution_identity"]["release_candidate_base_url_template"]).format(tag=tag)
     template = str(ownership["distribution_identity"]["preview_release_base_url_template"])
     return template.format(version=version)
 
@@ -47,6 +50,7 @@ def _write_preview_readiness_receipts(
     tag: str,
     version: str,
     package_entries: list[dict[str, Any]],
+    subject: dict[str, Any],
 ) -> tuple[str, str]:
     distribution = ownership["distribution_identity"]
     root_name = distribution["canonical_root_distribution"]
@@ -61,10 +65,12 @@ def _write_preview_readiness_receipts(
     install = {
         "kind": "agentic-workspace/distribution-install-readiness/v1",
         "status": "passed",
-        "release_class": "preview",
+        **coordinated_release.release_identity(tag),
         "support_bearing": False,
         "version": version,
         "tag": tag,
+        "artifact_commit": subject["artifact_commit"],
+        "reconstruction_source_commit": subject["reconstruction_source_commit"],
         "artifact": {
             "name": root_wheel["asset"],
             "sha256": root_wheel["sha256"],
@@ -94,10 +100,12 @@ def _write_preview_readiness_receipts(
     redistributable = {
         "kind": "agentic-workspace/redistributable-package-readiness/v1",
         "status": "passed",
-        "release_class": "preview",
+        **coordinated_release.release_identity(tag),
         "support_bearing": False,
         "version": version,
         "tag": tag,
+        "artifact_commit": subject["artifact_commit"],
+        "reconstruction_source_commit": subject["reconstruction_source_commit"],
         "license_spdx": ownership["project_identity"]["license_spdx"],
         "identity_source": OWNERSHIP_PATH.relative_to(ROOT).as_posix(),
         "identity_sha256": identity_digest,
@@ -117,6 +125,9 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     reconstruction_source_commit = verified["reconstruction_source_commit"]
     dist = artifact_dir.resolve()
     dist.mkdir(parents=True, exist_ok=True)
+
+    if (dist / "support-bearing-promotion.json").exists():
+        raise SystemExit("A non-support-bearing subject cannot contain stable promotion evidence")
 
     package_entries: list[dict[str, Any]] = []
     expected_assets: set[str] = set()
@@ -163,17 +174,17 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
 
     for package in ownership["typescript_packages"]:
         package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
-        if package_json.get("version") != version:
+        if package_json.get("version") != coordinated_release.npm_version(version):
             raise SystemExit(f"{package['package_json']} has version {package_json.get('version')}, expected {version}")
         if package_json.get("private") is not True or package.get("release_policy") != "release-asset-only":
             raise SystemExit(f"{package['package_json']} must remain private release-asset-only for preview publication")
-        tarball = _unique_artifact(dist, f"{package['tarball_prefix']}-{version}.tgz")
+        tarball = _unique_artifact(dist, f"{package['tarball_prefix']}-{coordinated_release.npm_version(version)}.tgz")
         expected_assets.add(tarball.name)
         package_entries.append(
             {
                 "name": package["name"],
                 "ecosystem": "npm",
-                "version": version,
+                "version": coordinated_release.npm_version(version),
                 "package_json": package["package_json"],
                 "package_root": package["package_root"],
                 "tarball": {"asset": tarball.name, "sha256": _sha256(tarball)},
@@ -194,6 +205,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
         tag=tag,
         version=version,
         package_entries=package_entries,
+        subject=verified,
     )
     expected_assets.update({distribution_receipt, redistributable_receipt})
 
@@ -256,7 +268,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     manifest = {
         "kind": "agentic-workspace/coordinated-preview-release-manifest/v1",
         "release_model": ownership["release_model"],
-        "release_class": "preview",
+        **coordinated_release.release_identity(tag),
         "support_bearing": False,
         "version": version,
         "tag": tag,

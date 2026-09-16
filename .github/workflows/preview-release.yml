@@ -1,4 +1,4 @@
-name: Preview Release
+name: Preview and Release Candidate
 
 on:
   # Register the publisher from the accepted default branch. This event cannot admit or publish a preview.
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       preview_tag:
-        description: Existing immutable preview tag
+        description: Existing immutable preview-vX.Y.Z or v1.0.0-rc.N tag
         required: true
         type: string
       artifact_commit:
@@ -242,7 +242,7 @@ jobs:
           from pathlib import Path
 
           manifest = json.loads(Path("dist/agentic-workspace-preview-release-manifest.json").read_text(encoding="utf-8"))
-          assert manifest["release_class"] == "preview"
+          assert manifest["release_class"] in {"preview", "release-candidate"}
           assert manifest["support_bearing"] is False
           assert manifest["support_bearing_promotion"]["required"] is False
           assert manifest["artifact_commit"] != manifest["reconstruction_source_commit"]
@@ -265,7 +265,7 @@ jobs:
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          name: Preview ${{ env.RELEASE_TAG }}
+          name: Prerelease ${{ env.RELEASE_TAG }}
           prerelease: true
           overwrite_files: false
           make_latest: false

@@ -42,6 +42,10 @@ jobs:
             echo "Release subject ${RELEASE_COMMIT} does not match ${EXPECTED_SOURCE_COMMIT}" >&2
             exit 1
           fi
+          python scripts/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
+          if [ "${RELEASE_TAG}" = "v1.0.0" ]; then
+            python scripts/release/coordinated_release.py verify-rc-promotion --require-published --repo "${GITHUB_REPOSITORY}"
+          fi
           python scripts/release/support_bearing_promotion.py github-checks \
             --repository "${GITHUB_REPOSITORY}" \
             --commit "${RELEASE_COMMIT}" \
@@ -418,6 +422,10 @@ jobs:
                   ).stdout.strip(),
               },
           }
+          if os.environ["RELEASE_TAG"] == "v1.0.0":
+              manifest["release_candidate_promotion"] = json.loads(subprocess.check_output(
+                  ["python", "scripts/release/coordinated_release.py", "verify-rc-promotion"], text=True
+              ))
           manifest_path = dist / "agentic-workspace-release-manifest.json"
           manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           for required_security_asset in ("security-supply-chain-readiness.json", "agentic-workspace.spdx.json"):

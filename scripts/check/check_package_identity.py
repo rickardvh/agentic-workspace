@@ -271,7 +271,8 @@ def artifact_identity_errors(root: Path, dist: Path, *, require_exact_urls: bool
 
     for package in ownership["typescript_packages"]:
         try:
-            tarball = _find_one(dist, f"{package['tarball_prefix']}-{version}.tgz")
+            node_version = _load_json(root / package["package_json"])["version"]
+            tarball = _find_one(dist, f"{package['tarball_prefix']}-{node_version}.tgz")
         except ValueError as exc:
             errors.append(str(exc))
             continue
@@ -297,6 +298,8 @@ def write_readiness_receipts(root: Path, dist: Path) -> list[Path]:
     ownership = _load_json(root / OWNERSHIP_PATH)
     distribution = ownership["distribution_identity"]
     version = _load_pyproject(root / "pyproject.toml")["project"]["version"]
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+        raise ValueError("Non-support-bearing receipts must use the preview/RC manifest owner")
     root_package = ownership["packages"][0]
     wheel = _find_one(dist, f"{root_package['wheel_prefix']}-{version}-*.whl")
     digest = hashlib.sha256(wheel.read_bytes()).hexdigest()

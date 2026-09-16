@@ -164,6 +164,11 @@ the active workspace lock and exact preview security checks passed. No hosted
 alert dismissal or closure is inferred from source removal.
 ## Candidate B publication record
 
+The subsequent Candidate C is release-bound: use `v1.0.0-rc.1` through the shared
+preview publisher, followed by exact-source stable promotion under #2985. See
+[the RC contract](../release-and-versioning.md#first-stable-release-candidates).
+This scheduling rule does not assert an RC has been published.
+
 The accepted executable-skill stack is published as non-support-bearing
 [`preview-v0.56.0`](https://github.com/rickardvh/agentic-workspace/releases/tag/preview-v0.56.0).
 Source `3fd508feba856354e30fd4afc82930f2e6012c87` is the single parent of release-only

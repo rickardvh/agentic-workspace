@@ -106,7 +106,7 @@ def test_preview_manifest_is_explicitly_non_support_bearing_and_ownership_driven
     manifest = (ROOT / "scripts" / "release" / "preview_manifest.py").read_text(encoding="utf-8")
 
     assert '"kind": "agentic-workspace/coordinated-preview-release-manifest/v1"' in manifest
-    assert '"release_class": "preview"' in manifest
+    assert "coordinated_release.release_identity(tag)" in manifest
     assert '"support_bearing": False' in manifest
     assert '"required": False' in manifest
     assert '"receipt": None' in manifest

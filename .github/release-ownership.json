@@ -24,7 +24,8 @@
     "digest_algorithm": "sha256",
     "mutable_branch_install_supported": false,
     "registry_resolution_supported": false,
-    "rule": "Support-bearing installs use one exact root wheel URL and digest; one npm artifact and paired native CLI/core carry the same Rust authority. Preview artifacts remain non-support-bearing."
+    "rule": "Support-bearing installs use one exact root wheel URL and digest; one npm artifact and paired native CLI/core carry the same Rust authority. Preview artifacts remain non-support-bearing.",
+    "release_candidate_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/{tag}"
   },
   "changeset_dir": ".release/changes",
   "release_notes_dir": ".release/releases",
@@ -78,7 +79,8 @@
     "generated/workspace/.agentic-workspace-cli-fingerprint.json",
     "generated/memory/.agentic-workspace-cli-fingerprint.json",
     "generated/planning/.agentic-workspace-cli-fingerprint.json",
-    "generated/verification/.agentic-workspace-cli-fingerprint.json"
+    "generated/verification/.agentic-workspace-cli-fingerprint.json",
+    ".release/promotions/v1.0.0.json"
   ],
   "preview_release_commit_allowed_paths": [
     "pyproject.toml",
@@ -257,5 +259,17 @@
         "generated_command_contract": "agentic-workspace/command-package-ir/v1"
       }
     ]
+  },
+  "release_candidate": {
+    "tag_pattern": "v1.0.0-rc.N (N is a positive canonical integer)",
+    "target_stable_tag": "v1.0.0",
+    "release_class": "release-candidate",
+    "support_bearing": false,
+    "python_version": "1.0.0rcN",
+    "npm_version": "1.0.0-rc.N",
+    "native_version": "Python package version",
+    "publisher": "preview-release.yml",
+    "promotion_record": ".release/promotions/v1.0.0.json",
+    "progression": "Contiguous rc.N for a new source; retries reuse the same immutable tag."
   }
 }

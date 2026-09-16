@@ -55,7 +55,7 @@ def smoke_published_preview(*, repo: str, tag: str) -> dict[str, Any]:
         manifest = _load_json(assets / MANIFEST_NAME)
         readiness = _load_json(assets / READINESS_NAME)
         expected_identity = {
-            "release_class": "preview",
+            **coordinated_release.release_identity(tag),
             "support_bearing": False,
             "tag": verified["tag"],
             "version": verified["version"],
@@ -65,7 +65,7 @@ def smoke_published_preview(*, repo: str, tag: str) -> dict[str, Any]:
         for key, expected in expected_identity.items():
             if manifest.get(key) != expected:
                 raise SystemExit(f"Published preview manifest {key} does not match the admitted preview subject")
-        for key in ("release_class", "support_bearing", "tag", "version"):
+        for key in coordinated_release.release_identity(tag):
             if readiness.get(key) != expected_identity[key]:
                 raise SystemExit(f"Published preview install receipt {key} does not match the admitted preview subject")
         if readiness.get("kind") != "agentic-workspace/distribution-install-readiness/v1" or readiness.get("status") != "passed":
@@ -135,7 +135,7 @@ def smoke_published_preview(*, repo: str, tag: str) -> dict[str, Any]:
     return {
         "kind": "agentic-workspace/preview-public-smoke/v1",
         "status": "passed",
-        "release_class": "preview",
+        **coordinated_release.release_identity(tag),
         "support_bearing": False,
         "tag": verified["tag"],
         "version": verified["version"],

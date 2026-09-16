@@ -83,6 +83,10 @@ workflow-local policy lists.
 
 ## Preview Releases
 
+Exploratory `preview-vMAJOR.MINOR.PATCH` releases remain available. Final Candidate
+C under #3277 instead uses the first-stable RC identity below; do not publish a
+parallel final `preview-v0.57.0` for the same candidate.
+
 A preview is an immutable packaged reconstruction candidate for external testing.
 It is explicitly **non-support-bearing**: it does not establish Stable/1.0 support,
 does not satisfy #2990 support-bearing admission, and does not create
@@ -152,6 +156,80 @@ version.
 The stable path remains separate: `vMAJOR.MINOR.PATCH` tags still require the
 master-reachable support-bearing subject and its existing admission evidence.
 Preview tags cannot enter that stable tag namespace or remove any stable gate.
+
+## First-stable release candidates
+
+The narrow first-stable lane accepts only `v1.0.0-rc.N`, where `N` is a positive
+integer without leading zeroes. It starts at `v1.0.0-rc.1`. Alpha/beta/nightly,
+arbitrary target versions, build suffixes and alternate spellings are not admitted.
+
+| Identity | RC 1 | Stable target |
+| --- | --- | --- |
+| GitHub tag | `v1.0.0-rc.1` | `v1.0.0` |
+| Release class | `release-candidate` | `stable` |
+| Python wheel/sdist and compiled native version | `1.0.0rc1` (PEP 440) | `1.0.0` |
+| npm package version | `1.0.0-rc.1` (SemVer) | `1.0.0` |
+| GitHub prerelease / support-bearing | true / false | false / only after admission |
+
+Package versions are explicit mappings, not interchangeable strings. The native
+archive uses the Python/native version; its paired binaries are the same bytes
+carried by the Python and npm packages. RC manifests and install/redistribution
+receipts record the RC tag, target stable tag, both ecosystem versions and exact
+source/artifact commits. Install URLs use the RC tag, not the Python spelling.
+
+Use the existing preview helper and trusted master publisher:
+
+```bash
+uv run python scripts/release/preview_release.py --rc v1.0.0-rc.1
+# After inspecting the exact subject, publish/recover that immutable tag:
+uv run python scripts/release/preview_release.py --rc v1.0.0-rc.1 --push
+```
+
+As with previews, release normalization uses the native resource owner and may
+require the current isolation-policy revision. The RC artifact is a release-only
+child of the exact candidate source. The shared publisher keeps runtime/package,
+install, security, SBOM, checksum, attestation and public-byte smoke authorities.
+RC publication is a non-support-bearing GitHub prerelease; it cannot contain or
+produce `support-bearing-promotion.json`.
+
+A failed/cancelled publisher resumes the same tag and exact assets. Existing bytes
+cannot be replaced. Only a new source continuing the prior candidate can allocate
+the next contiguous `rc.N`; the old RC remains immutable. The target `v1.0.0`
+numeric identity is not burned by an RC. Exploratory numeric previews retain their
+existing reservation rule.
+
+### Promoting an accepted RC
+
+Independent acceptance is required before promotion. Dispatch the existing
+`release-from-semver-label.yml` workflow on master with `accepted_rc` set to the
+accepted tag. Master must still be the exact RC source; a product fix requires a
+new RC first. Ordinary automatic preparation cannot silently manufacture the
+first stable release without this explicit selection.
+
+The equivalent source-checkout preparation is:
+
+```bash
+python scripts/release/coordinated_release.py prepare --from-rc v1.0.0-rc.1
+uv lock
+uv run python scripts/generate/generate_external_consumer_profile.py
+uv run python scripts/generate/generate_command_packages.py
+```
+
+Preparation normalizes versions to `1.0.0`, consumes the source's changesets and
+records `.release/promotions/v1.0.0.json`. Review and commit those changes through
+the existing release PR flow. The stable tag planner and publisher verify the
+record against the immutable RC and compare the full stable tree to its source:
+only version fields, corresponding local lock versions, generated version fields
+and fingerprint digests, new release notes/promotion metadata and consumed
+changesets may differ. Product files, package dependency declarations, third-party
+lock resolution and file-mode changes are rejected. Fingerprint metadata is still
+subject to the existing generated-surface validation.
+
+The stable publisher also requires complete RC publication and all existing fresh
+exact-stable-subject checks, runtime/package/install/security and support-bearing
+promotion receipts. The stable manifest carries the RC promotion record. RC
+acceptance is not stable admission, byte-identical packaging or a maturity/platform
+promotion: the permitted version normalization necessarily changes package bytes.
 
 ## Release Changesets
 

@@ -97,6 +97,8 @@ def preview_metadata_dir(ownership: dict[str, Any]) -> Path:
 
 
 def parse_release_tag(tag: str) -> tuple[str, Version]:
+    if re.fullmatch(r"v1\.0\.0-rc\.[1-9][0-9]*", tag):
+        return "release-candidate", Version(1, 0, 0)
     if tag.startswith(PREVIEW_TAG_PREFIX):
         version_text = tag.removeprefix(PREVIEW_TAG_PREFIX)
         release_class = "preview"
@@ -106,22 +108,201 @@ def parse_release_tag(tag: str) -> tuple[str, Version]:
     else:
         raise ValueError(f"Unsupported Agentic Workspace release tag {tag!r}")
     version = Version.parse(version_text)
+    if min(version.major, version.minor, version.patch) < 0:
+        raise ValueError(f"Negative release version: {tag!r}")
     canonical = f"{PREVIEW_TAG_PREFIX if release_class == 'preview' else 'v'}{version}"
     if tag != canonical:
         raise ValueError(f"Release tag must be canonical, got {tag!r}; expected {canonical!r}")
     return release_class, version
 
 
+def release_identity(tag: str) -> dict[str, Any]:
+    release_class, version = parse_release_tag(tag)
+    if release_class == "release-candidate":
+        number = int(tag.rsplit(".", 1)[1])
+        return {
+            "release_class": release_class,
+            "support_bearing": False,
+            "tag": tag,
+            "version": f"1.0.0rc{number}",
+            "target_stable_tag": "v1.0.0",
+            "package_versions": {"python": f"1.0.0rc{number}", "npm": f"1.0.0-rc.{number}"},
+        }
+    return {"release_class": release_class, "support_bearing": release_class == "stable", "tag": tag, "version": str(version)}
+
+
+def npm_version(python_version: str) -> str:
+    match = re.fullmatch(r"1\.0\.0rc([1-9][0-9]*)", python_version)
+    if match:
+        return f"1.0.0-rc.{match[1]}"
+    version = Version.parse(python_version)
+    if str(version) != python_version or min(version.major, version.minor, version.patch) < 0:
+        raise ValueError(f"Noncanonical package version: {python_version!r}")
+    return python_version
+
+
+def validate_next_rc(ownership: dict[str, Any], *, tag: str, source_commit: str) -> None:
+    """Reserve contiguous names; existing tags are handled by immutable recovery."""
+    number = int(tag.rsplit(".", 1)[1])
+    tags = _run(["git", "tag", "--list", "v1.0.0*"], check=False).stdout.splitlines()
+    if "v1.0.0" in tags:
+        raise SystemExit("v1.0.0 already exists; the first-stable RC lane is closed")
+    prior = []
+    for existing in tags:
+        if re.fullmatch(r"v1\.0\.0-rc\.[1-9][0-9]*", existing):
+            prior.append(int(existing.rsplit(".", 1)[1]))
+    if number != max(prior, default=0) + 1:
+        raise SystemExit("RC progression must be contiguous; retry the existing immutable tag for recovery")
+    if prior:
+        previous = verify_preview_release(ownership, tag=f"v1.0.0-rc.{max(prior)}", artifact_commit=_tag_target(f"v1.0.0-rc.{max(prior)}"))
+        old_source = previous["reconstruction_source_commit"]
+        if old_source == source_commit or _run(["git", "diff", "--quiet", old_source, source_commit], check=False).returncode == 0:
+            raise SystemExit("A new RC requires a new candidate source; recover the prior RC instead")
+        if _run(["git", "merge-base", "--is-ancestor", old_source, source_commit], check=False).returncode:
+            raise SystemExit("A new RC must continue the prior candidate source")
+
+
+PROMOTION_RECORD = ".release/promotions/v1.0.0.json"
+
+
+def verify_normalization_delta(
+    ownership: dict[str, Any], *, source: str, subject: str, version: str, metadata_paths: set[str]
+) -> list[str]:
+    """Check values as well as paths; lock changes cannot alter third-party resolution."""
+    changed = _run(["git", "diff", "--name-only", "--no-renames", source, subject]).stdout.splitlines()
+    pyprojects = {str(p["pyproject"]) for p in ownership["packages"]}
+    node_projects = {str(p["package_json"]) for p in ownership["typescript_packages"]}
+    provenance = {str(p["payload_provenance"]) for p in ownership["packages"] if p.get("payload_provenance")}
+    names = {str(p["name"]) for p in ownership["packages"]}
+    for path in changed:
+        # Git file modes are product semantics too, even when parsed content agrees.
+        before_mode = _run(["git", "ls-tree", source, "--", path]).stdout.split(" ", 1)[0]
+        after_mode = _run(["git", "ls-tree", subject, "--", path]).stdout.split(" ", 1)[0]
+        if version == "1.0.0" and path.startswith(".release/changes/") and path.endswith(".toml") and not after_mode:
+            old = tomllib.loads(_run(["git", "show", f"{source}:{path}"]).stdout)
+            if before_mode != "100644" or old.get("schema_version") != CHANGESET_SCHEMA:
+                raise SystemExit(f"Invalid consumed release changeset: {path}")
+            continue
+        if path in metadata_paths:
+            if before_mode or after_mode != "100644":
+                raise SystemExit(f"Release metadata must be a new regular file: {path}")
+            continue
+        if before_mode != "100644" or after_mode != "100644":
+            raise SystemExit(f"Release normalization changed file custody/mode: {path}")
+        before_text = _run(["git", "show", f"{source}:{path}"]).stdout
+        after_text = _run(["git", "show", f"{subject}:{path}"]).stdout
+        if path in pyprojects:
+            before, after = tomllib.loads(before_text), tomllib.loads(after_text)
+            before["project"]["version"] = version
+        elif path in node_projects:
+            before, after = json.loads(before_text), json.loads(after_text)
+            before["version"] = npm_version(version)
+        elif path in provenance:
+            before, after = normalized_payload_provenance(json.loads(before_text), version), json.loads(after_text)
+        elif path == "uv.lock":
+            before, after = tomllib.loads(before_text), tomllib.loads(after_text)
+            for package in before.get("package", []):
+                if package.get("name") in names and package.get("source", {}).get("editable") is not None:
+                    package["version"] = version
+        elif path in {f"generated/workspace/{lang}/external_contract_bundle.json" for lang in ("python", "typescript")}:
+            before, after = json.loads(before_text), json.loads(after_text)
+            before["versions"]["client_package"] = version
+            before["versions"]["python_package"]["version"] = version
+            before["versions"]["typescript_package"]["version"] = npm_version(version)
+        elif path in {
+            f"generated/{owner}/.agentic-workspace-cli-fingerprint.json" for owner in ("workspace", "memory", "planning", "verification")
+        }:
+            before, after = json.loads(before_text), json.loads(after_text)
+            if not re.fullmatch(r"[0-9a-f]{64}", str(after.get("fingerprint", ""))):
+                raise SystemExit(f"Invalid regenerated fingerprint: {path}")
+            before["fingerprint"] = after["fingerprint"]
+        else:
+            raise SystemExit(f"Product-semantic delta is not release normalization: {path}")
+        if before != after:
+            raise SystemExit(f"Non-version release normalization delta: {path}")
+    return changed
+
+
+def prepare_rc_promotion(ownership: dict[str, Any], *, rc_tag: str) -> dict[str, Any]:
+    if parse_release_tag(rc_tag)[0] != "release-candidate":
+        raise SystemExit("Stable promotion requires a canonical RC")
+    verified = verify_preview_release(ownership, tag=rc_tag, artifact_commit=_tag_target(rc_tag))
+    source = verified["reconstruction_source_commit"]
+    if _run(["git", "rev-parse", "HEAD"]).stdout.strip() != source or _run(["git", "status", "--porcelain"]).stdout.strip():
+        raise SystemExit("Prepare promotion from the clean exact accepted RC source checkout")
+    if _run(["git", "show-ref", "--verify", "--quiet", "refs/tags/v1.0.0"], check=False).returncode == 0:
+        raise SystemExit("Stable v1.0.0 already exists; use its existing publication recovery")
+    record = {
+        "kind": "agentic-workspace/rc-stable-promotion/v1",
+        "rc_tag": rc_tag,
+        "rc_artifact_commit": verified["artifact_commit"],
+        "source_commit": source,
+        "stable_tag": "v1.0.0",
+        "rc_package_versions": release_identity(rc_tag)["package_versions"],
+    }
+    path = ROOT / PROMOTION_RECORD
+    if path.exists():
+        raise SystemExit("Refusing to replace an existing promotion record")
+    set_workspace_version(ownership, "1.0.0")
+    set_workspace_payload_release_identity(ownership, "1.0.0")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    note = release_note_path(ownership, "1.0.0")
+    if note.exists():
+        raise SystemExit("Refusing to replace stable release notes")
+    note.parent.mkdir(parents=True, exist_ok=True)
+    note.write_text(
+        f"# v1.0.0\n\nPromotes {rc_tag} from exact source `{source}`.\n\nStable support remains conditional on fresh exact-subject admission.\n",
+        encoding="utf-8",
+    )
+    for changeset in parse_changesets(ownership):
+        changeset.path.unlink()
+    return record
+
+
+def verify_rc_promotion(ownership: dict[str, Any], *, subject: str | None = None) -> dict[str, Any]:
+    subject = subject or _run(["git", "rev-parse", "HEAD"]).stdout.strip()
+    record = json.loads(_run(["git", "show", f"{subject}:{PROMOTION_RECORD}"]).stdout)
+    rc_tag = record.get("rc_tag", "")
+    if parse_release_tag(rc_tag)[0] != "release-candidate":
+        raise SystemExit("Stable promotion requires an RC identity")
+    verified = verify_preview_release(ownership, tag=rc_tag, artifact_commit=_tag_target(rc_tag))
+    expected = {
+        "kind": "agentic-workspace/rc-stable-promotion/v1",
+        "rc_tag": rc_tag,
+        "rc_artifact_commit": verified["artifact_commit"],
+        "source_commit": verified["reconstruction_source_commit"],
+        "stable_tag": "v1.0.0",
+        "rc_package_versions": release_identity(rc_tag)["package_versions"],
+    }
+    if record != expected:
+        raise SystemExit("Stable promotion record does not match the exact immutable RC")
+    source = record["source_commit"]
+    if _run(["git", "merge-base", "--is-ancestor", source, subject], check=False).returncode:
+        raise SystemExit("Stable subject does not descend from the accepted RC source")
+    changed = verify_normalization_delta(
+        ownership,
+        source=source,
+        subject=subject,
+        version="1.0.0",
+        metadata_paths={PROMOTION_RECORD, _repo_path(release_note_path(ownership, "1.0.0"))},
+    )
+    for path in package_pyprojects(ownership):
+        if tomllib.loads(_run(["git", "show", f"{subject}:{_repo_path(path)}"]).stdout)["project"]["version"] != "1.0.0":
+            raise SystemExit("Stable promotion requires normalized package versions")
+    return {**record, "stable_commit": subject, "normalization_paths": changed, "support_bearing_admission": "required-separately"}
+
+
 def preview_release_note_path(ownership: dict[str, Any], tag: str) -> Path:
     release_class, _ = parse_release_tag(tag)
-    if release_class != "preview":
+    if release_class not in {"preview", "release-candidate"}:
         raise ValueError(f"Preview release tag required, got {tag!r}")
     return release_notes_dir(ownership) / f"{tag}.md"
 
 
 def preview_metadata_path(ownership: dict[str, Any], tag: str) -> Path:
     release_class, _ = parse_release_tag(tag)
-    if release_class != "preview":
+    if release_class not in {"preview", "release-candidate"}:
         raise ValueError(f"Preview release tag required, got {tag!r}")
     return preview_metadata_dir(ownership) / f"{tag}.json"
 
@@ -216,6 +397,8 @@ def existing_release_versions(ownership: dict[str, Any]) -> list[Version]:
         # A canonical preview name reserves its version permanently, even when
         # its subject is invalid or future package topology no longer matches.
         # Reservation is not publication/admission verification.
+        if release_class == "release-candidate":
+            continue  # RC identity reserves its rc.N, never burns target stable v1.0.0.
         if release_class == "preview" or _tag_declares_coordinated_release_version(ownership, tag=tag, version=version):
             versions.append(version)
     return versions
@@ -243,6 +426,13 @@ def plan_release(ownership: dict[str, Any], *, include_git_tags: bool = True) ->
 
     bump = highest_bump(changesets)
     version = floor.bump(bump)
+    if version == Version(1, 0, 0) and "release_candidate" in ownership:
+        return {
+            "kind": "agentic-workspace/coordinated-release-plan/v1",
+            "release_required": False,
+            "reason": "first-stable-requires-explicit-accepted-rc",
+            "changesets": [_repo_path(c.path) for c in changesets],
+        }
     return {
         "kind": "agentic-workspace/coordinated-release-plan/v1",
         "release_required": True,
@@ -259,7 +449,7 @@ def plan_release(ownership: dict[str, Any], *, include_git_tags: bool = True) ->
 
 
 def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
-    Version.parse(version)
+    node_version = npm_version(version)
     for path in package_pyprojects(ownership):
         text = path.read_text(encoding="utf-8")
         updated = re.sub(r'^version = "[^"]+"$', f'version = "{version}"', text, count=1, flags=re.MULTILINE)
@@ -268,7 +458,7 @@ def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
         path.write_text(updated, encoding="utf-8")
     for path in typescript_package_jsons(ownership):
         payload = json.loads(path.read_text(encoding="utf-8"))
-        payload["version"] = version
+        payload["version"] = node_version
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
 
 
@@ -278,7 +468,7 @@ def normalized_payload_provenance(payload: Any, version: str) -> dict[str, Any]:
     Tags belong to release metadata/receipts. Preserve unrelated source fields;
     normalization cannot manufacture a missing or malformed payload identity.
     """
-    Version.parse(version)
+    npm_version(version)
     if not isinstance(payload, dict):
         raise SystemExit("Workspace payload provenance must be an object")
     identity = payload.get("release_identity")
@@ -327,7 +517,8 @@ def write_release_note(ownership: dict[str, Any], *, version: str, changesets: l
 
 
 def write_preview_release_note(ownership: dict[str, Any], *, tag: str, source_commit: str) -> Path:
-    _, version = parse_release_tag(tag)
+    identity = release_identity(tag)
+    version = identity["version"]
     path = preview_release_note_path(ownership, tag)
     if path.exists():
         raise SystemExit(f"{_repo_path(path)} already exists; refusing to replace preview release notes")
@@ -340,6 +531,7 @@ def write_preview_release_note(ownership: dict[str, Any], *, tag: str, source_co
                 "> Non-support-bearing preview for external testing. This is not a stable release or v1 admission.",
                 "",
                 f"- Package version: `{version}`",
+                f"- Release identity: `{tag}`; npm version: `{npm_version(version)}`; target stable: `{identity.get('target_stable_tag', 'not release-bound')}`",
                 f"- Reconstruction source commit: `{source_commit}`",
                 "- Stability/support: preview only; interfaces and behavior may change before first stable.",
                 "",
@@ -363,6 +555,7 @@ def write_preview_metadata(ownership: dict[str, Any], *, tag: str, source_commit
         "tag": tag,
         "version": str(version),
         "reconstruction_source_commit": source_commit,
+        **release_identity(tag),
     }
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return path
@@ -385,21 +578,25 @@ def prepare_release(ownership: dict[str, Any]) -> dict[str, Any]:
 
 def prepare_preview_release(ownership: dict[str, Any], *, tag: str, source_commit: str) -> dict[str, Any]:
     release_class, version = parse_release_tag(tag)
-    if release_class != "preview":
+    if release_class not in {"preview", "release-candidate"}:
         raise SystemExit(f"Preview preparation requires a {PREVIEW_TAG_PREFIX}MAJOR.MINOR.PATCH tag")
     actual_source = _run(["git", "rev-parse", "HEAD"]).stdout.strip()
     if actual_source != source_commit:
         raise SystemExit(f"Preview source checkout is {actual_source}, expected {source_commit}")
 
-    existing_versions = existing_release_versions(ownership)
-    current_versions = current_package_versions(ownership)
-    public_floor = max([*current_versions, *existing_versions])
-    if version <= public_floor:
-        raise SystemExit(f"Preview version {version} must be greater than public/package version floor {public_floor}")
+    if release_class == "release-candidate":
+        validate_next_rc(ownership, tag=tag, source_commit=source_commit)
+    else:
+        existing_versions = existing_release_versions(ownership)
+        current_versions = current_package_versions(ownership)
+        public_floor = max([*current_versions, *existing_versions])
+        if version <= public_floor:
+            raise SystemExit(f"Preview version {version} must be greater than public/package version floor {public_floor}")
+    package_version = release_identity(tag)["version"]
 
     pending_changesets = [_repo_path(changeset.path) for changeset in parse_changesets(ownership)]
-    set_workspace_version(ownership, str(version))
-    set_workspace_payload_release_identity(ownership, str(version))
+    set_workspace_version(ownership, package_version)
+    set_workspace_payload_release_identity(ownership, package_version)
     note_path = write_preview_release_note(ownership, tag=tag, source_commit=source_commit)
     metadata_path = write_preview_metadata(ownership, tag=tag, source_commit=source_commit)
     return {
@@ -412,6 +609,7 @@ def prepare_preview_release(ownership: dict[str, Any], *, tag: str, source_commi
         "release_note": _repo_path(note_path),
         "preview_metadata": _repo_path(metadata_path),
         "preserved_changesets": pending_changesets,
+        **release_identity(tag),
     }
 
 
@@ -424,12 +622,13 @@ def verify_preview_release(
         return path.read_text(encoding="utf-8")
 
     release_class, version = parse_release_tag(tag)
-    if release_class != "preview":
+    if release_class not in {"preview", "release-candidate"}:
         raise SystemExit(f"Preview verification requires a {PREVIEW_TAG_PREFIX}MAJOR.MINOR.PATCH tag")
+    version = release_identity(tag)["version"]
     versions = [tomllib.loads(read(path))["project"]["version"] for path in package_pyprojects(ownership)]
-    versions.extend(json.loads(read(path))["version"] for path in typescript_package_jsons(ownership))
-    if not versions or len(set(versions)) != 1:
-        raise SystemExit("Preview packages must share one coordinated version")
+    node_versions = [json.loads(read(path))["version"] for path in typescript_package_jsons(ownership)]
+    if not versions or any(v != version for v in versions) or any(v != npm_version(version) for v in node_versions):
+        raise SystemExit("Preview tag requires workspace version matching the explicit Python/npm version mapping")
     workspace_version = versions[0]
     if workspace_version != str(version):
         raise SystemExit(f"Preview tag {tag!r} requires workspace version {version}, got {workspace_version}")
@@ -444,6 +643,7 @@ def verify_preview_release(
         "tag": tag,
         "version": str(version),
         "reconstruction_source_commit": expected_source,
+        **release_identity(tag),
     }
     if metadata != expected_metadata:
         raise SystemExit(f"Preview metadata mismatch at {_repo_path(metadata_path)}")
@@ -480,7 +680,7 @@ def verify_preview_release(
             raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
     for path in typescript_package_jsons(ownership):
         before = json.loads(_run(["git", "show", f"{expected_source}:{_repo_path(path)}"]).stdout)
-        before["version"] = str(version)
+        before["version"] = npm_version(version)
         if before != json.loads(read(path)):
             raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
     provenance_ref = next(package["payload_provenance"] for package in ownership["packages"] if package["name"] == "agentic-workspace")
@@ -495,12 +695,42 @@ def verify_preview_release(
         before = json.loads(_run(["git", "show", f"{expected_source}:{relative}"]).stdout)
         before["versions"]["client_package"] = str(version)
         before["versions"]["python_package"]["version"] = str(version)
-        before["versions"]["typescript_package"]["version"] = str(version)
+        before["versions"]["typescript_package"]["version"] = npm_version(version)
         if before != json.loads(read(ROOT / relative)):
             raise SystemExit(f"Preview changed non-version external contract: {relative}")
     note_path = preview_release_note_path(ownership, tag)
     if expected_source not in read(note_path):
         raise SystemExit(f"Preview release note {_repo_path(note_path)} must identify reconstruction source {expected_source}")
+    if release_class == "release-candidate":
+        number = int(tag.rsplit(".", 1)[1])
+        prior_tags = _run(["git", "tag", "--list", "v1.0.0-rc.*"]).stdout.splitlines()
+        numbers = sorted(
+            int(t.rsplit(".", 1)[1])
+            for t in prior_tags
+            if re.fullmatch(r"v1\.0\.0-rc\.[1-9][0-9]*", t) and int(t.rsplit(".", 1)[1]) <= number
+        )
+        if len(numbers) != number or any(n != i for i, n in enumerate(numbers, 1)):
+            raise SystemExit("RC admission requires contiguous immutable candidate identities")
+        if number > 1:
+            prior_tag = f"v1.0.0-rc.{number - 1}"
+            prior_commit = _tag_target(prior_tag)
+            prior_metadata = preview_metadata_path(ownership, prior_tag)
+            prior = json.loads(_run(["git", "show", f"{prior_commit}:{_repo_path(prior_metadata)}"]).stdout)
+            prior_source = prior["reconstruction_source_commit"]
+            if (
+                prior_source == expected_source
+                or _run(["git", "diff", "--quiet", prior_source, expected_source], check=False).returncode == 0
+            ):
+                raise SystemExit("RC admission requires a new candidate source, not a retry identity")
+            if _run(["git", "merge-base", "--is-ancestor", prior_source, expected_source], check=False).returncode:
+                raise SystemExit("RC admission requires continuation of the preceding source")
+        verify_normalization_delta(
+            ownership,
+            source=expected_source,
+            subject=subject_commit,
+            version=version,
+            metadata_paths={_repo_path(note_path), _repo_path(metadata_path)},
+        )
 
     return {
         "kind": "agentic-workspace/coordinated-preview-verification/v1",
@@ -510,10 +740,11 @@ def verify_preview_release(
         "tag": tag,
         "reconstruction_source_commit": expected_source,
         "artifact_commit": subject_commit,
-        "package_count": len(versions),
+        "package_count": len(versions) + len(node_versions),
         "release_note": _repo_path(note_path),
         "preview_metadata": _repo_path(metadata_path),
         "release_only_paths": changed,
+        **release_identity(tag),
     }
 
 
@@ -526,6 +757,8 @@ def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = No
     version = current_workspace_version(ownership)
     if tag and tag != f"v{version}":
         raise SystemExit(f"Release tag {tag!r} must match workspace version {version!r}")
+    if tag == "v1.0.0" and "release_candidate" in ownership:
+        verify_rc_promotion(ownership)
     for package in ownership["packages"]:
         if package.get("name") == "agentic-workspace" and package.get("payload_provenance"):
             payload = json.loads((ROOT / package["payload_provenance"]).read_text(encoding="utf-8"))
@@ -604,6 +837,8 @@ def pending_tag_plan(ownership: dict[str, Any]) -> dict[str, Any]:
             "tag": tag,
         }
     release_commit = _release_commit_for_version(ownership, version)
+    if version == "1.0.0" and "release_candidate" in ownership:
+        verify_rc_promotion(ownership, subject=release_commit)
     if existing.returncode == 0:
         tag_target = _tag_target(tag)
         if tag_target != release_commit:
@@ -667,8 +902,10 @@ def main(argv: list[str] | None = None) -> int:
     plan_parser = subparsers.add_parser("plan")
     plan_parser.add_argument("--github-output", type=Path)
     plan_parser.add_argument("--ignore-git-tags", action="store_true")
+    plan_parser.add_argument("--from-rc")
 
-    subparsers.add_parser("prepare")
+    prepare_parser = subparsers.add_parser("prepare")
+    prepare_parser.add_argument("--from-rc")
 
     verify_parser = subparsers.add_parser("verify")
     verify_parser.add_argument("--tag")
@@ -684,17 +921,46 @@ def main(argv: list[str] | None = None) -> int:
     preview_verify_parser.add_argument("--tag", required=True)
     preview_verify_parser.add_argument("--source-commit")
 
+    promotion_prepare = subparsers.add_parser("prepare-rc-promotion")
+    promotion_prepare.add_argument("--rc", required=True)
+    promotion_verify = subparsers.add_parser("verify-rc-promotion")
+    promotion_verify.add_argument("--require-published", action="store_true")
+    promotion_verify.add_argument("--repo")
+
     args = parser.parse_args(argv)
     ownership = load_ownership()
 
+    if args.command == "prepare-rc-promotion":
+        print(json.dumps(prepare_rc_promotion(ownership, rc_tag=args.rc), indent=2))
+        return 0
+    if args.command == "verify-rc-promotion":
+        result = verify_rc_promotion(ownership)
+        if args.require_published:
+            import preview_release
+
+            if not args.repo:
+                parser.error("--require-published needs --repo")
+            verified = verify_preview_release(ownership, tag=result["rc_tag"], artifact_commit=result["rc_artifact_commit"])
+            if not preview_release.verify_published_preview(repo=args.repo, verified=verified):
+                raise SystemExit("Accepted RC publication is incomplete")
+        print(json.dumps(result, indent=2))
+        return 0
+
     if args.command == "plan":
-        plan = plan_release(ownership, include_git_tags=not args.ignore_git_tags)
+        if args.from_rc:
+            if parse_release_tag(args.from_rc)[0] != "release-candidate":
+                parser.error("--from-rc requires a canonical RC")
+            verify_preview_release(ownership, tag=args.from_rc, artifact_commit=_tag_target(args.from_rc))
+            plan = {"release_required": True, "version": "1.0.0", "tag": "v1.0.0", "bump": "major", "changesets": []}
+        else:
+            plan = plan_release(ownership, include_git_tags=not args.ignore_git_tags)
         if args.github_output:
             write_github_output(plan, args.github_output)
         print(json.dumps(plan, indent=2, sort_keys=True))
         return 0
     if args.command == "prepare":
-        print(json.dumps(prepare_release(ownership), indent=2, sort_keys=True))
+        result = prepare_rc_promotion(ownership, rc_tag=args.from_rc) if args.from_rc else prepare_release(ownership)
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     if args.command == "verify":
         print(json.dumps(verify_workspace_versions(ownership, tag=args.tag), indent=2, sort_keys=True))

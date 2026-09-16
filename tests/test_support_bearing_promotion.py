@@ -227,6 +227,18 @@ def test_composed_promotion_passes_only_with_every_exact_receipt(tmp_path: Path)
     assert any("Receipt digest mismatch" in failure for failure in result["failures"])
 
 
+@pytest.mark.parametrize("release_class", ["preview", "release-candidate"])
+def test_prerelease_receipts_cannot_satisfy_stable_promotion(tmp_path: Path, release_class: str) -> None:
+    args = _compose_fixture(tmp_path)
+    path = tmp_path / "dist/distribution-install-readiness.json"
+    payload = json.loads(path.read_text())
+    payload.update(release_class=release_class, support_bearing=False)
+    _write(path, payload)
+    assert PROMOTION.main(args) == 1
+    result = json.loads((tmp_path / "dist/support-bearing-promotion.json").read_text())
+    assert any("non-support-bearing evidence" in failure for failure in result["failures"])
+
+
 def test_composed_promotion_fails_closed_on_stale_or_missing_evidence(tmp_path: Path) -> None:
     args = _compose_fixture(tmp_path)
     (tmp_path / "runtime/ubuntu-latest-py3.14-node24.json").unlink()

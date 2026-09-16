@@ -34,6 +34,18 @@ A preview is intentionally unstable. Interfaces and behavior may change before f
 
 ## Stable/support-bearing prerequisites
 
+### First-stable release candidates
+
+An explicitly published `v1.0.0-rc.N` uses the same immutable prerelease assets and
+receipt-based install procedure above. Its manifest class is `release-candidate`,
+its target stable tag is `v1.0.0`, and `support_bearing` remains `false`. The Python
+version is `1.0.0rcN`; npm uses `1.0.0-rc.N`. Use the exact hash-bound install
+command from that RC's receipt, without substituting a version spelling or tag.
+An RC is not stable support, and its existence must not be inferred from a branch
+or a proposed tag. See the [RC/promotion contract](release-and-versioning.md#first-stable-release-candidates).
+
+### Runtime prerequisites
+
 The native root wheel declares **Python 3.11 or newer**. The admitted runtime range is Python 3.11–3.14; a metadata lower bound does not prove future Python versions. The npm projection has evidence for Node 20, 24 and 25. Standalone native execution requires neither Python nor Node.
 
 Building from source additionally requires the exact repository toolchain in

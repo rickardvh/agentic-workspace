@@ -115,7 +115,7 @@ def _verify_existing_preview(tag: str, source_commit: str | None = None) -> dict
 def admit_preview_subject(*, tag: str, artifact_commit: str) -> dict[str, Any]:
     """Run from the trusted dispatch checkout; inspect P without executing it."""
     release_class, _ = coordinated_release.parse_release_tag(tag)
-    if release_class != "preview":
+    if release_class not in {"preview", "release-candidate"}:
         raise SystemExit("Publication admission requires a canonical preview tag")
     if len(artifact_commit) != 40 or any(character not in "0123456789abcdef" for character in artifact_commit):
         raise SystemExit("Publication admission requires an exact artifact commit SHA")
@@ -178,11 +178,13 @@ def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_di
         downloaded = Path(directory)
         if release.get("assets"):
             _run(["gh", "release", "download", tag, "--repo", repo, "--dir", directory])
+        if (downloaded / "support-bearing-promotion.json").exists():
+            raise SystemExit("Non-support-bearing release contains stable promotion evidence")
         manifest_path = downloaded / "agentic-workspace-preview-release-manifest.json"
         if manifest_path.exists():
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             expected = {key: verified[key] for key in ("tag", "version", "artifact_commit", "reconstruction_source_commit")}
-            expected.update(release_class="preview", support_bearing=False)
+            expected.update(coordinated_release.release_identity(tag))
             if any(manifest.get(key) != value for key, value in expected.items()):
                 raise SystemExit("Published preview manifest does not match exact source/artifact identity")
             ownership = _load_ownership(ROOT)
@@ -190,7 +192,11 @@ def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_di
             packages = manifest.get("packages", [])
             if len(packages) != len(expected_packages) or {item["name"] for item in packages} != expected_packages:
                 raise SystemExit("Published preview manifest omits or adds coordinated packages")
-            if any(item.get("version") != verified["version"] for item in packages):
+            if any(
+                item.get("version")
+                != (coordinated_release.npm_version(verified["version"]) if item.get("ecosystem") == "npm" else verified["version"])
+                for item in packages
+            ):
                 raise SystemExit("Published preview package version mismatch")
             expected_receipts = {
                 f"generated-command-conformance-node{major}.json" for major in ownership["semantic_conformance"]["runtime_majors"]
@@ -236,6 +242,14 @@ def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_di
         required.update(item["asset"] for item in manifest["semantic_conformance"]["receipts"])
         if set(entries) != required:
             raise SystemExit("Preview checksum inventory does not cover the exact manifest assets")
+        if coordinated_release.parse_release_tag(tag)[0] == "release-candidate":
+            for name in ("distribution-install-readiness.json", "redistributable-package-readiness.json"):
+                receipt_path = downloaded / name
+                if not receipt_path.exists():
+                    return False
+                receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+                if any(receipt.get(key) != value for key, value in expected.items()):
+                    raise SystemExit("RC receipt does not bind the exact release/source/package identity")
         return not release.get("draft") and all((downloaded / name).is_file() for name in required)
 
 
@@ -303,9 +317,15 @@ def create_preview_subject(
     reconstruction_ref: str,
     push: bool,
     isolation_policy_revision: str | None = None,
+    rc_tag: str | None = None,
 ) -> dict[str, Any]:
-    version_obj = coordinated_release.Version.parse(version)
-    tag = f"{coordinated_release.PREVIEW_TAG_PREFIX}{version_obj}"
+    if rc_tag is not None:
+        if coordinated_release.parse_release_tag(rc_tag)[0] != "release-candidate":
+            raise SystemExit("--rc requires a canonical v1.0.0-rc.N tag")
+        tag = rc_tag
+    else:
+        version_obj = coordinated_release.Version.parse(version)
+        tag = f"{coordinated_release.PREVIEW_TAG_PREFIX}{version_obj}"
 
     if push and _reconstruction_head_ref(reconstruction_ref) != _reconstruction_head_ref(DEFAULT_RECONSTRUCTION_REF):
         raise SystemExit("Preview publication requires the trusted master source branch")
@@ -406,7 +426,7 @@ def create_preview_subject(
         }
         return result
     except Exception:
-        if tag_created and not push:
+        if tag_created and not push and rc_tag is None:
             _git("tag", "-d", tag, check=False)
         raise
     finally:
@@ -447,6 +467,7 @@ def main(argv: list[str] | None = None) -> int:
         "--isolation-policy-revision", help="Exact current native resource policy read and judged to permit preview normalization isolation"
     )
     parser.add_argument("--version", help="Unused coordinated numeric package version, for example 0.52.0")
+    parser.add_argument("--rc", help="Canonical first-stable candidate tag, for example v1.0.0-rc.1")
     parser.add_argument("--check-published", metavar="TAG")
     parser.add_argument("--admit-tag", metavar="TAG")
     parser.add_argument("--artifact-commit")
@@ -479,8 +500,8 @@ def main(argv: list[str] | None = None) -> int:
         complete = verify_published_preview(repo=args.repo, verified=verified, artifact_dir=args.artifact_dir)
         print(f"complete={'true' if complete else 'false'}")
         return 0
-    if not args.version:
-        parser.error("--version is required")
+    if bool(args.version) == bool(args.rc):
+        parser.error("Supply exactly one of --version or --rc")
 
     result = create_preview_subject(
         version=args.version,
@@ -489,6 +510,7 @@ def main(argv: list[str] | None = None) -> int:
         reconstruction_ref=args.reconstruction_ref,
         push=args.push,
         isolation_policy_revision=args.isolation_policy_revision,
+        rc_tag=args.rc,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 2 if result.get("cleanup", {}).get("status") == "reentry-required" else 0
