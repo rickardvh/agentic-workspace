@@ -308,7 +308,7 @@ fn use_selected(
     answer: Option<Value>,
     invoking: bool,
     projection: &Value,
-    detail: Option<&str>,
+    detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
     let selector = selected_entry["selector"]
         .as_str()
@@ -415,17 +415,17 @@ fn operate(value: Value, invoking: bool) -> Result<Value, CoreError> {
 }
 // Executable procedures select their certainly-required owner context through
 // the same private resolution boundary; no separate proof resolver or cache.
-pub(crate) fn start_owner(value: Value, owner: &str) -> Result<Value, CoreError> {
+pub(crate) fn start_owner(value: Value, owner: Option<&str>) -> Result<Value, CoreError> {
     operate_selected(value, false, Some(owner))
 }
-pub(crate) fn invoke_owner(value: Value, owner: &str) -> Result<Value, CoreError> {
+pub(crate) fn invoke_owner(value: Value, owner: Option<&str>) -> Result<Value, CoreError> {
     operate_selected(value, true, Some(owner))
 }
-fn resolution(projection: &Value, detail: Option<&str>) -> Resolution {
-    if projection == "full" && detail.is_none() {
-        Resolution::Full
-    } else {
-        Resolution::Frontier(detail.map(str::to_owned))
+fn resolution(projection: &Value, detail: Option<Option<&str>>) -> Resolution {
+    match detail {
+        Some(owner) => Resolution::Frontier(owner.map(str::to_owned)),
+        None if projection == "full" => Resolution::Full,
+        None => Resolution::Frontier(None),
     }
 }
 fn selected_owner(reference: &Value) -> Option<&str> {
@@ -438,7 +438,7 @@ fn selected_owner(reference: &Value) -> Option<&str> {
 fn operate_selected(
     mut value: Value,
     invoking: bool,
-    detail: Option<&str>,
+    detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
     let delivered = value.as_object_mut().and_then(|v| v.remove("delivered"));
     let delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
@@ -520,7 +520,7 @@ fn delivery_producer() -> &'static str {
 fn operate_current(
     mut value: Value,
     invoking: bool,
-    detail: Option<&str>,
+    detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
     let (projection, selected, answer) = {
         let object = value
@@ -618,7 +618,11 @@ fn operate_current(
             }
             let current = native_public::start_selected(
                 carrier.context.clone(),
-                &Resolution::Frontier(selected_owner(&selected).or(detail).map(str::to_owned)),
+                &Resolution::Frontier(
+                    selected_owner(&selected)
+                        .or(detail.flatten())
+                        .map(str::to_owned),
+                ),
             )?;
             return use_selected(
                 carrier.context,
@@ -642,7 +646,11 @@ fn operate_current(
         let context = normalize_context(value)?;
         let current = native_public::start_selected(
             context.clone(),
-            &Resolution::Frontier(selected_owner(&selected).or(detail).map(str::to_owned)),
+            &Resolution::Frontier(
+                selected_owner(&selected)
+                    .or(detail.flatten())
+                    .map(str::to_owned),
+            ),
         )?;
         let selected_entry = select_entry(&current, &context, &selected)?;
         return use_selected(
@@ -673,7 +681,11 @@ fn operate_current(
     }
 }
 
-fn project_invocation(mut result: Value, projection: &Value, detail: Option<&str>) -> Value {
+fn project_invocation(
+    mut result: Value,
+    projection: &Value,
+    detail: Option<Option<&str>>,
+) -> Value {
     if result["continuation"]["status"] == "current" {
         let full = result["continuation"]["result"].take();
         let context = result["continuation"]["context"].clone();

@@ -75,29 +75,6 @@ fn runtime(strategy: &Value) -> Result<Value, CoreError> {
         "nested_tool_runtime":"unobserved"}),
     )
 }
-/// Only exact source commands are constructible. Template resolution belongs to
-/// the existing strategy owner and remains an explicit gap here.
-pub(crate) fn selected(
-    target: &Path,
-    task: &str,
-    changed: &[String],
-    work: &Value,
-    strategy: &Value,
-    choice: Option<&Value>,
-) -> Result<Value, CoreError> {
-    select_mode(
-        target,
-        task,
-        changed,
-        work,
-        strategy,
-        choice,
-        SelectionMode {
-            report: None,
-            alternatives: true,
-        },
-    )
-}
 pub(crate) struct SelectionMode<'a> {
     pub report: Option<&'a Value>,
     pub alternatives: bool,
@@ -300,25 +277,47 @@ pub(crate) fn freshness(
             json!({"status":"unproven","strategy_coverage":"unproven","reason":"legacy-proof-recorder-runtime-unobserved"}),
         );
     }
-    let choices = selected(target, task, changed, work, strategy, None)?;
-    for choice in choices["choices"].as_array().into_iter().flatten() {
-        if choice["command"] != receipt["command"] {
-            continue;
-        }
-        let current = selected(target, task, changed, work, strategy, Some(choice))?;
-        if current["status"] != "selected" {
-            continue;
-        }
-        let comparison = proof_subject::compare(
-            &receipt["proof_subject"],
-            &current["selection"]["proof_subject"],
-            receipt["command"].as_str().unwrap_or(""),
+    // The publication's authenticated native custody already identifies the
+    // selected route and command. Revalidate that exact selection, never a
+    // catalogue of hypothetical alternatives (including same-command aliases).
+    let Some(committed) = committed_publication(target, receipt)? else {
+        return Ok(
+            json!({"status":"unproven","strategy_coverage":"unproven","reason":"native-selected-receipt-custody-unavailable"}),
         );
-        if comparison["status"] == "reusable" {
-            return Ok(
-                json!({"status":if current["gaps"].as_array().is_some_and(Vec::is_empty) {"reusable"} else {"unproven"},"strategy_coverage":"selected-command-covered","command_coverage":choice,"comparison":comparison,
-                "environment_scope":"producer-and-declared-shell","remaining_gaps":current["gaps"],"nested_tool_runtime":"unobserved"}),
+    };
+    let choice = &committed["invocation"]["arguments"]["selection"]["choice"];
+    let declared = strategy["proof_routes"]
+        .get(choice["route_id"].as_str().unwrap_or(""))
+        .is_some_and(|route| {
+            route["commands"]
+                .as_array()
+                .is_some_and(|commands| commands.contains(&choice["command"]))
+        });
+    if declared {
+        let current = select_mode(
+            target,
+            task,
+            changed,
+            work,
+            strategy,
+            Some(choice),
+            SelectionMode {
+                report: None,
+                alternatives: false,
+            },
+        )?;
+        if current["status"] == "selected" {
+            let comparison = proof_subject::compare(
+                &receipt["proof_subject"],
+                &current["selection"]["proof_subject"],
+                receipt["command"].as_str().unwrap_or(""),
             );
+            if comparison["status"] == "reusable" {
+                return Ok(
+                    json!({"status":if current["gaps"].as_array().is_some_and(Vec::is_empty) {"reusable"} else {"unproven"},"strategy_coverage":"selected-command-covered","command_coverage":choice,"comparison":comparison,
+                    "environment_scope":"producer-and-declared-shell","remaining_gaps":current["gaps"],"nested_tool_runtime":"unobserved"}),
+                );
+            }
         }
     }
     let reason = if receipt["proof_subject"]["runtime"]["producer"]

@@ -16,7 +16,12 @@ direct native owner users.
 Preparation uses the shared [current decision frontier](decision-frontier.md),
 including post-effect continuation. It selects proof context before optional
 owner detail is built; unrelated Configuration and Planning detail and untaken
-manual report branches remain lazy. Execution accepts one exact selected-check request set or previously
+manual report branches remain lazy. Execution can carry a unique missing required check established by Verification
+without a model selection echo. Verification examines complete current routes and
+profile knowledge, including alternatives omitted from bounded presentation; a sole
+protocol candidate, unresolved applicability or a legitimate alternative yields.
+The skill does not interpret manifests or decide sufficiency. Otherwise execution
+accepts one exact selected-check request set or previously
 returned native proof action. It never follows another owner's primary action,
 answers applicability/sufficiency, runs an arbitrary batch, or authenticates a
 reviewer. The selected command passes through native admission and custody;
@@ -52,7 +57,13 @@ direct debug answer was 107,641 bytes, but that is **not** the optimized direct
 baseline: direct users also have compact/carried projections. These figures are
 fixture observations, not a general context-reduction or performance claim.
 
-The ordinary selected sequence uses two caller interactions (`prepare`, then
+A sole required check uses one caller interaction (`execute`) and four explicit
+public owner calls, including the owner probe and exact selection. It still leaves
+claim judgment and strict closeout visible. Regression cases cover optional and
+unselected profile alternatives, semantic scope, a sole non-required candidate,
+and receipt-backed requirements that must not run again.
+
+The ordinary explicitly selected sequence uses two caller interactions (`prepare`, then
 `execute`) and four explicit public owner calls in total. Native `invoke` also
 performs its pre-effect admission and post-effect resolution; those costs remain.
 A direct caller which uses continuation can perform the same four public calls;

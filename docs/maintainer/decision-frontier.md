@@ -65,9 +65,14 @@ compact and already-selected proof build zero of either. All three resolve one
 Verification contribution. The test compares complete compiled decisions and
 owner detail bindings, addresses Configuration without building proof choices,
 and verifies that a confirmed check's compact continuation also builds zero
-alternatives. There is no production telemetry store.
+alternatives. It now also readmits the actual committed receipt with 128 alternatives,
+compares full/compact claim restrictions, and instruments the composed execution
+path after its effect: zero untaken choice/report builders. Freshness retrieves the
+exact route and command from authenticated publication custody and validates only
+that selection; post-effect composition does not request alternative detail.
+There is no production telemetry store.
 
-The public JSON fixture measured UTF-8 compact serialization on Windows:
+Before this receipt-reentry correction, the public JSON fixture measured UTF-8 compact serialization on Windows:
 
 | Declared commands | Full bytes | Compact bytes | Carriage bytes | Full ms | Frontier ms |
 | --- | ---: | ---: | ---: | ---: | ---: |

@@ -204,7 +204,7 @@
   },
   "proof_procedure": {
     "request": "operation: prepare, execute or direct; request carries exact owner requests; invocation carries one exact native proof action. expected_revision optionally binds selected method material.",
-    "composition": "One explicitly selected check, exact native admission, current receipt observation, then remaining owner judgment. Never a primary-action loop or automatic sufficiency answer.",
+    "composition": "One explicitly selected check or one owner-established unique missing required check, exact native admission, bounded exact receipt observation, then remaining owner judgment. A sole candidate is not required; complete current alternatives and unresolved scope prevent automatic selection. Never a primary-action loop or automatic sufficiency answer.",
     "recovery": "Confirmed effect remains in effect even when continuation fails. Uncertain execution requires exact native custody reentry, never a newly prepared retry.",
     "direct": "Zero owner calls; no proof or claim authority.",
     "cost": "public_owner_calls counts explicit public calls. Native invoke separately resolves pre-effect admission and post-effect continuation; no parallel batch or hidden automatic retry."
