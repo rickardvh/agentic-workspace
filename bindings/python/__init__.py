@@ -2,7 +2,7 @@
 
 from importlib.metadata import version
 
-from .decision import DecisionContractError, answer_carried, invoke, invoke_carried, select_reference, start
+from ._binding import DecisionContractError, answer_carried, invoke, invoke_carried, resources, select_reference, start
 
 __version__ = version("agentic-workspace")
-__all__ = ["DecisionContractError", "answer_carried", "invoke", "invoke_carried", "select_reference", "start"]
+__all__ = ["DecisionContractError", "answer_carried", "invoke", "invoke_carried", "resources", "select_reference", "start"]

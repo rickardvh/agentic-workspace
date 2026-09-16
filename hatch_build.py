@@ -39,6 +39,7 @@ class CustomBuildHook(BuildHookInterface):
             return
         root = Path(self.root)
         build_data.setdefault("force_include", {})[str(root / "bindings/python/__init__.py")] = "agentic_workspace/__init__.py"
+        build_data.setdefault("force_include", {})[str(root / "bindings/python/_binding.py")] = "agentic_workspace/_binding.py"
         # An explicit host target prevents an ambient cross-compilation target
         # from being silently labelled as a locally executable wheel.
         spec = importlib.util.spec_from_file_location("native_toolchain", root / "scripts/release/native_toolchain.py")
