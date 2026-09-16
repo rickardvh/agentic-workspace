@@ -7,9 +7,11 @@ on:
         description: Independently accepted v1.0.0-rc.N to promote from its exact current master source
         required: true
         type: string
-  push:
-    branches:
-      - master
+# Automatic release-PR preparation from master pushes is temporarily disabled.
+# Previous trigger:
+#   push:
+#     branches:
+#       - master
 
 permissions:
   contents: read
