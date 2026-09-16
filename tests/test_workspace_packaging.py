@@ -198,7 +198,7 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
-    manifest = json.loads((WORKSPACE_ROOT / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json").read_text())
+    manifest = json.loads((WORKSPACE_ROOT / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json").read_text())
 
     missing = [path for path in manifest["payload_files"] if not (PAYLOAD_ROOT / path).is_file()]
 

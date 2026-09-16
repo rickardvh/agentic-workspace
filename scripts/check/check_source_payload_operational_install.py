@@ -263,7 +263,7 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
                 {"path": ".agentic-workspace/payload-provenance.json", "reason": "required native payload capability identity is missing"}
             )
 
-    manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json"
     source_payload_root = repo_root / "src" / "agentic_workspace" / "_payload"
     if manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -635,7 +635,7 @@ def evaluate_no_cli_fallback(
 def gather_installed_reference_closure(*, repo_root: Path = REPO_ROOT) -> dict[str, object]:
     """Validate the canonical installed-reference graph for every footprint/module cell."""
 
-    manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json"
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -786,7 +786,7 @@ def gather_boundary_warnings(*, repo_root: Path = REPO_ROOT) -> list[BoundaryWar
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="planning", expected=planning_expected))
     warnings.extend(_packaging_manifest_warnings(repo_root=repo_root, package_name="memory", expected=memory_expected))
     warnings.extend(_committed_payload_alignment_warnings(repo_root=repo_root))
-    closure_manifest = repo_root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json"
+    closure_manifest = repo_root / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json"
     closure = gather_installed_reference_closure(repo_root=repo_root) if closure_manifest.is_file() else None
     if closure is not None and closure["status"] != "passed":
         warnings.append(

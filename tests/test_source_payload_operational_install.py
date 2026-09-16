@@ -105,7 +105,7 @@ def _write_workspace_surface_manifest(root: Path, *, include_target: bool = True
             "next_safe_action": "continue-from-installed-startup-without-managed-state-mutation",
         },
     }
-    _write(root / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json", json.dumps(manifest))
+    _write(root / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json", json.dumps(manifest))
     _write(
         root / "src" / "agentic_workspace" / "_payload" / ".agentic-workspace/skills/workspace-startup/SKILL.md",
         "Use `.agentic-workspace/docs/module-map.md`; if the CLI is absent run `.agentic-workspace/fallback/no_cli_startup.py`.",
@@ -194,7 +194,7 @@ def test_installed_reference_discovery_rejects_undeclared_toml_reference(tmp_pat
 def _pointer_fixture(host_root: Path) -> dict:
     # Isolated pointer contract fixture. Native payload delivery is exercised by
     # the Configuration-owner tests, not by a historical install command.
-    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
     for key in ("entrypoint", "policy", "procedure"):
         reference = manifest["no_cli_fallback"][key]
         destination = host_root / reference
@@ -263,7 +263,7 @@ def _write_source_current_payload_fixture(tmp_path: Path) -> None:
         ),
     )
     _write(
-        tmp_path / "src/agentic_workspace/contracts/workspace_surfaces.json",
+        tmp_path / "src/agentic_workspace/contracts/source_maintenance_surfaces.json",
         json.dumps({"payload_files": [".agentic-workspace/skills/workspace-startup/SKILL.md"]}),
     )
     _write(tmp_path / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md", "current")
