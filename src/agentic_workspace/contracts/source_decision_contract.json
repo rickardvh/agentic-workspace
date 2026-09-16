@@ -229,5 +229,97 @@
     "planning_continuity": "Current admitted owner custody carries exact sealed-handoff retention, admitted integrated return adoption and same-owner pending-update recovery. Semantic relation, selector permission and new plan material remain explicit.",
     "no_op": "Identical retained handoff or consumed result does not synthesize a new durable update.",
     "authority": "No new proof, worker-result trust, completion or source admission."
+  },
+  "language_facade": {
+    "authority": "Exact native request envelopes; language adapters only name, serialize and transport.",
+    "adapter_exports": {
+      "python": [
+        "DecisionContractError"
+      ],
+      "typescript": []
+    },
+    "resources_disposition": "Common API: the standard task-resource skill needs bounded lifecycle composition from either language host.",
+    "operations": [
+      {
+        "python": "start",
+        "typescript": "start",
+        "arguments": [
+          "context"
+        ],
+        "envelope": {
+          "start": "$context"
+        }
+      },
+      {
+        "python": "invoke",
+        "typescript": "invoke",
+        "arguments": [
+          "context"
+        ],
+        "envelope": {
+          "invoke": "$context"
+        }
+      },
+      {
+        "python": "resources",
+        "typescript": "resources",
+        "arguments": [
+          "context"
+        ],
+        "envelope": {
+          "resources": "$context"
+        }
+      },
+      {
+        "python": "select_reference",
+        "typescript": "selectReference",
+        "arguments": [
+          "context",
+          "reference",
+          "answer"
+        ],
+        "envelope": {
+          "start": {
+            "$spread": "context",
+            "reference": "$reference",
+            "answer": "$answer"
+          }
+        },
+        "optional": "answer"
+      },
+      {
+        "python": "answer_carried",
+        "typescript": "answerCarried",
+        "arguments": [
+          "carriage",
+          "reference",
+          "answer"
+        ],
+        "envelope": {
+          "start": {
+            "request": "$carriage",
+            "reference": "$reference",
+            "answer": "$answer",
+            "projection": "carried"
+          }
+        }
+      },
+      {
+        "python": "invoke_carried",
+        "typescript": "invokeCarried",
+        "arguments": [
+          "carriage",
+          "reference"
+        ],
+        "envelope": {
+          "invoke": {
+            "invocation": "$carriage",
+            "reference": "$reference",
+            "projection": "carried"
+          }
+        }
+      }
+    ],
+    "typescript_declarations": "/** JSON transport declarations, not an executable owner or validation model. */\nexport type Json = null | boolean | number | string | Json[] | { [key: string]: Json };\nexport type JsonObject = { [key: string]: Json };\nexport type Projection = \"compact\" | \"full\" | \"carried\";\nexport interface WorkContext {\n  target?: string;\n  task?: string;\n  changed?: string[];\n  request?: Json;\n  projection?: Projection;\n  delivered?: string[];\n}\nexport interface StartInput extends WorkContext {\n  reference?: string;\n  answer?: Json;\n}\nexport interface InvokeInput extends WorkContext {\n  invocation?: Json;\n  reference?: string;\n}\n/** Results retain the exact Rust shape, including unknown owner contributions. */\nexport function start(context: StartInput): JsonObject;\nexport function invoke(context: InvokeInput): JsonObject;\n/** Resource request validation and operation variants are native-owned. */\nexport interface ResourceInput extends WorkContext {\n  target: string;\n  request: JsonObject;\n}\nexport function resources(context: ResourceInput): JsonObject;\nexport function selectReference(context: WorkContext, reference: string, answer?: Json): JsonObject;\nexport function answerCarried(carriage: JsonObject, reference: string, answer: Json): JsonObject;\nexport function invokeCarried(carriage: JsonObject, reference: string): JsonObject;\n"
   }
 }

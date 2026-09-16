@@ -1152,7 +1152,7 @@ def render_workspace_command_package_outputs(
             (repo_root / "bindings/node" / name).read_text(encoding="utf-8"),
         )
         for package in sorted(release_metadata)
-        for name in ("semantic-decision.mjs", "operating.mjs", "operating.d.mts")
+        for name in ("semantic-decision.mjs", "_transport.mjs", "operating.mjs", "operating.d.mts")
     ]
     return [*normalized_outputs, *native_bindings, *_typescript_license_outputs(release_metadata=release_metadata, repo_root=repo_root)]
 

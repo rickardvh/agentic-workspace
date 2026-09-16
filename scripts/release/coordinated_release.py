@@ -78,6 +78,14 @@ def typescript_package_jsons(ownership: dict[str, Any]) -> list[Path]:
     return [ROOT / package["package_json"] for package in ownership["typescript_packages"]]
 
 
+def cargo_manifests(ownership: dict[str, Any]) -> list[Path]:
+    return [ROOT / package["path"] / "Cargo.toml" for package in ownership.get("cargo_packages", [])]
+
+
+def cargo_lockfiles(ownership: dict[str, Any]) -> list[Path]:
+    return [ROOT / path for path in ownership.get("cargo_lockfiles", ["Cargo.lock"])] if ownership.get("cargo_packages") else []
+
+
 def version_file_paths(ownership: dict[str, Any]) -> list[Path]:
     return [*package_pyprojects(ownership), *typescript_package_jsons(ownership)]
 
@@ -128,7 +136,15 @@ def release_identity(tag: str) -> dict[str, Any]:
             "target_stable_tag": "v1.0.0",
             "package_versions": {"python": f"1.0.0rc{number}", "npm": f"1.0.0-rc.{number}", "cargo": f"1.0.0-rc.{number}"},
         }
-    return {"release_class": release_class, "support_bearing": release_class == "stable", "tag": tag, "version": str(version)}
+    return {
+        "release_class": release_class,
+        "support_bearing": release_class == "stable",
+        "tag": tag,
+        "version": str(version),
+        **(
+            {"package_versions": {ecosystem: str(version) for ecosystem in ("python", "npm", "cargo")}} if release_class == "stable" else {}
+        ),
+    }
 
 
 def npm_version(python_version: str) -> str:
@@ -172,6 +188,8 @@ def verify_normalization_delta(
     changed = _run(["git", "diff", "--name-only", "--no-renames", source, subject]).stdout.splitlines()
     pyprojects = {str(p["pyproject"]) for p in ownership["packages"]}
     node_projects = {str(p["package_json"]) for p in ownership["typescript_packages"]}
+    cargo_projects = {_repo_path(path) for path in cargo_manifests(ownership)}
+    cargo_names = {p["name"] for p in ownership.get("cargo_packages", [])}
     provenance = {str(p["payload_provenance"]) for p in ownership["packages"] if p.get("payload_provenance")}
     names = {str(p["name"]) for p in ownership["packages"]}
     for path in changed:
@@ -197,6 +215,14 @@ def verify_normalization_delta(
         elif path in node_projects:
             before, after = json.loads(before_text), json.loads(after_text)
             before["version"] = npm_version(version)
+        elif path in cargo_projects:
+            before, after = tomllib.loads(before_text), tomllib.loads(after_text)
+            before["package"]["version"] = npm_version(version)
+        elif path in {_repo_path(lock) for lock in cargo_lockfiles(ownership)}:
+            before, after = tomllib.loads(before_text), tomllib.loads(after_text)
+            for package in before.get("package", []):
+                if package.get("name") in cargo_names and "source" not in package:
+                    package["version"] = npm_version(version)
         elif path in provenance:
             before, after = normalized_payload_provenance(json.loads(before_text), version), json.loads(after_text)
         elif path == "uv.lock":
@@ -459,6 +485,19 @@ def set_workspace_version(ownership: dict[str, Any], version: str) -> None:
         payload = json.loads(path.read_text(encoding="utf-8"))
         payload["version"] = node_version
         path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    for path in cargo_manifests(ownership):
+        text = path.read_text(encoding="utf-8")
+        path.write_text(re.sub(r'^version = "[^"]+"$', f'version = "{node_version}"', text, count=1, flags=re.MULTILINE), encoding="utf-8")
+    for lock in cargo_lockfiles(ownership):
+        text = lock.read_text()
+        names = {package["name"] for package in ownership["cargo_packages"]}
+        local_names = {package["name"] for package in tomllib.loads(text)["package"] if "source" not in package}
+        for name in names & local_names:
+            pattern = r'(\[\[package\]\]\nname = "' + re.escape(name) + r'"\nversion = ")[^"]+("\n)'
+            text, count = re.subn(pattern, lambda match: match[1] + node_version + match[2], text)
+            if count != 1:
+                raise SystemExit("Missing unique coordinated Cargo lock identity")
+        lock.write_text(text)
 
 
 def normalized_payload_provenance(payload: Any, version: str) -> dict[str, Any]:
@@ -637,6 +676,9 @@ def verify_preview_release(
     version = release_identity(tag)["version"]
     versions = [tomllib.loads(read(path))["project"]["version"] for path in package_pyprojects(ownership)]
     node_versions = [json.loads(read(path))["version"] for path in typescript_package_jsons(ownership)]
+    cargo_versions = [tomllib.loads(read(path))["package"]["version"] for path in cargo_manifests(ownership)]
+    if any(v != npm_version(version) for v in cargo_versions):
+        raise SystemExit("Cargo versions do not match the canonical release mapping")
     if not versions or any(v != version for v in versions) or any(v != npm_version(version) for v in node_versions):
         raise SystemExit("Preview tag requires workspace version matching the explicit Python/npm version mapping")
     workspace_version = versions[0]
@@ -693,6 +735,19 @@ def verify_preview_release(
         before["version"] = npm_version(version)
         if before != json.loads(read(path)):
             raise SystemExit(f"Preview changed non-version package metadata: {_repo_path(path)}")
+    for path in cargo_manifests(ownership):
+        before = tomllib.loads(_run(["git", "show", f"{expected_source}:{_repo_path(path)}"]).stdout)
+        before["package"]["version"] = npm_version(version)
+        if before != tomllib.loads(read(path)):
+            raise SystemExit(f"Preview changed non-version Cargo metadata: {_repo_path(path)}")
+    for lock in cargo_lockfiles(ownership):
+        before = tomllib.loads(_run(["git", "show", f"{expected_source}:{_repo_path(lock)}"]).stdout)
+        names = {package["name"] for package in ownership["cargo_packages"]}
+        for package in before["package"]:
+            if package["name"] in names and "source" not in package:
+                package["version"] = npm_version(version)
+        if before != tomllib.loads(read(lock)):
+            raise SystemExit("Preview changed third-party Cargo resolution")
     provenance_ref = next(package["payload_provenance"] for package in ownership["packages"] if package["name"] == "agentic-workspace")
     before = json.loads(_run(["git", "show", f"{expected_source}:{provenance_ref}"]).stdout)
     before = normalized_payload_provenance(before, str(version))
@@ -765,6 +820,9 @@ def preview_path_allowed(path: str, allowed: list[str]) -> bool:
 def verify_workspace_versions(ownership: dict[str, Any], *, tag: str | None = None) -> dict[str, Any]:
     versions = current_package_versions(ownership)
     version = current_workspace_version(ownership)
+    for path in cargo_manifests(ownership):
+        if tomllib.loads(path.read_text())["package"]["version"] != npm_version(version):
+            raise SystemExit("Cargo package version differs from coordinated release")
     if tag and tag != f"v{version}":
         raise SystemExit(f"Release tag {tag!r} must match workspace version {version!r}")
     if tag == "v1.0.0" and "release_candidate" in ownership:

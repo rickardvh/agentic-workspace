@@ -188,3 +188,55 @@ with exact public-byte proof. These gates remain outside #3260. After their
 acceptance and integrated review of the exact source, publish/exercise
 `v1.0.0-rc.1`, then perform fresh stable preparation/admission/publication under
 #2985 from the accepted RC.
+# Coordinated Cargo distribution
+
+The public Cargo surface is the existing `agentic-workspace-core` and
+`agentic-workspace-cli` crates, in that publication order. Both versions come from
+the release owner's `package_versions.cargo` mapping; the source manifests and
+their two local Cargo.lock entries are normalized together. Third-party lock
+resolution is not a release-only normalization.
+
+After the corresponding registry publication receipt passes, install both exact
+versions into the same Cargo root, core first. For the first candidate:
+
+```sh
+cargo +1.98.1 install --locked agentic-workspace-core --version '=1.0.0-rc.1'
+cargo +1.98.1 install --locked agentic-workspace-cli --version '=1.0.0-rc.1'
+agentic-workspace start --target . --task 'Inspect this repository' --format json
+```
+
+Use the stable mapped version only after its independent support admission.
+Installing the CLI alone is not the supported paired installation. Registry
+availability does not widen the release's admitted platform/toolchain classes.
+
+`scripts/release/cargo_release.py` stages the existing sources, relocates literal
+compile-time resource references into `_inputs`, and retains the original bytes
+of included Rust source used for owner identities. The Cargo payload inventory
+explicitly includes hidden `.agentic-workspace` resources. The standalone lock is
+pruned by Cargo and checked to contain only the original locked third-party
+identities. No executable domain implementation is generated or forked.
+
+The existing publisher builds and verifies each `.crate`, installs from the actual
+archives in a clean Cargo home, and includes the crates and
+`cargo-release-manifest.json` in checksums, SBOM inputs and attestations. Registry
+publication reconstructs packaging and compares the bytes before uploading;
+matching versions are reused, conflicting/yanked versions fail, and an uncertain
+upload is reobserved on the next invocation. The CLI upload requires its exact
+core predecessor to be public. Public verification checks the archive downloaded
+by the clean Cargo consumer, not only registry metadata.
+
+crates.io requires the first version of each crate to exist before configuring a
+trusted publisher. The package owner performs that one-time bootstrap only from
+an independently admitted release: download its admitted assets, run the same
+staging/byte comparison, publish core before CLI using a short-lived manually
+authorized credential, and verify the public bytes. Record the receipt and revoke
+the bootstrap credential. Configure the calling workflows `preview-release.yml`
+and `release.yml` for `rickardvh/agentic-workspace`, environment `cargo-registry`,
+before ordinary OIDC publication. The registry workflow contains no persistent
+Cargo token secret; its token comes from the Rust team's authentication action.
+See the [Rust trusted-publishing announcement](https://blog.rust-lang.org/2025/07/11/crates-io-development-update-2025-07/)
+and [authentication action](https://github.com/rust-lang/crates-io-auth-action).
+
+Account bootstrap, trusted-publisher configuration and live registry receipts are
+external acceptance steps. Local staging/build/install proof does not establish
+their completion or authorize the final RC/stable release.

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { runNativeCli } from "./native/semantic-decision.mjs";
+import { runNativeCli } from "./native/_transport.mjs";
 try {
   process.exitCode = runNativeCli(process.argv.slice(2));
 } catch (error) {

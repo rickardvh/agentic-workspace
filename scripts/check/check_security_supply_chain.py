@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = Path("src/agentic_workspace/contracts/security_supply_chain_policy.json")
 REPOSITORY_PERMISSION_POLICY_PATH = Path(".github/workflow-write-permissions.json")
 ACTION_REF = re.compile(r"^\s*uses:\s*(?P<action>[^\s#]+)(?:\s+#.*)?$", re.MULTILINE)
-PINNED_ACTION = re.compile(r"^(?:\./|docker://|[^@]+@[0-9a-f]{40}$)")
+PINNED_ACTION = re.compile(r"^(?:\./\.github/workflows/[A-Za-z0-9_-]+\.ya?ml|docker://|[^@]+@[0-9a-f]{40})$")
 
 
 def _sha256_json(value: Any) -> str:

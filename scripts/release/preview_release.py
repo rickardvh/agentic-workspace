@@ -236,6 +236,11 @@ def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_di
                     if entries.get(item["asset"]) != item["sha256"]:
                         raise SystemExit("Preview package manifest/checksum mismatch")
         native = manifest["native_archive"]
+        if manifest.get("cargo"):
+            for item in [manifest["cargo"]["manifest"], *manifest["cargo"]["packages"]]:
+                required.add(item["asset"])
+                if entries.get(item["asset"]) != item["sha256"]:
+                    raise SystemExit("Cargo package manifest/checksum mismatch")
         required.add(native["asset"])
         if entries.get(native["asset"]) != native["sha256"]:
             raise SystemExit("Preview native archive manifest/checksum mismatch")

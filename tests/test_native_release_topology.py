@@ -34,10 +34,7 @@ def test_wheel_contains_only_binding_and_paired_core(wheel):
     with zipfile.ZipFile(wheel) as archive:
         files = archive.namelist()
         code = {name for name in files if name.endswith(".py")}
-        assert code == {
-            f"agentic_workspace/{name}.py"
-            for name in ("__init__", "cli", "decision", "native_core", "native_transport", "sealed_codex_transport")
-        }
+        assert code == {f"agentic_workspace/{name}.py" for name in ("__init__", "cli", "_binding", "native_core")}
         metadata = archive.read(next(name for name in files if name.endswith("/METADATA"))).decode()
         assert "Requires-Dist:" not in metadata
         manifest = json.loads(archive.read("agentic_workspace/_native/artifact.json"))
@@ -85,6 +82,14 @@ print(json.dumps({'effect':result['effect_outcome']['status']}))
     result = subprocess.run([str(python), "-I", "-c", script], cwd=target, env=environment, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["effect"] == "committed"
+    parity = subprocess.run(
+        [str(python), str(ROOT / "scripts/check/check_language_facade.py"), "--installed-python"],
+        cwd=target,
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+    assert parity.returncode == 0, parity.stderr
     native = next(venv.rglob("agentic_workspace/_native/agentic-workspace-core*"))
     native.write_bytes(native.read_bytes() + b"altered")
     rejected = subprocess.run(
@@ -122,6 +127,9 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
         capture_output=True,
     )
     package = consumer / "node_modules/@agentic-workspace/workspace-cli"
+    metadata = json.loads((package / "package.json").read_text())
+    assert set(metadata["exports"]) == {".", "./operating"}
+    assert {p.name for p in (package / "src/native").glob("*.mjs")} == {"operating.mjs", "_transport.mjs"}
     assert not (package / "resources").exists()
     assert not (package / "src/commands").exists()
     environment = {key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"}
@@ -137,6 +145,11 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     assert json.loads(result.stdout)["decision_packet"]["status"] == "direct"
     assert not (consumer / ".agentic-workspace").exists()
     manifest = json.loads((package / "src/native/bin/artifact.json").read_text())
+    from tests.test_language_facade import check_node
+
+    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["language_facade"]
+    core = package / "src/native/bin" / ("agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core")
+    check_node(contract, package / "src/native/operating.mjs", core)
     assert manifest["cli_sha256"]
     assert len(list((package / "src/native/bin").iterdir())) == 3
     script = """

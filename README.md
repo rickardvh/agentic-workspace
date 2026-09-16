@@ -87,7 +87,7 @@ During reconstruction, an explicitly published `preview-vMAJOR.MINOR.PATCH` GitH
 
 The native reconstruction has passed [exact artifact admission](https://github.com/rickardvh/agentic-workspace/issues/2990), with Linux x64 as its evidenced platform. Admission and a canonical branch move do not publish a stable release or change package maturity. The install reference tracks the latest stable release, `v0.51.0`, which predates this native implementation; see the [installation guide](docs/agentic-workspace-install.md) before selecting bytes.
 
-The later support-bearing install path is a stable `vMAJOR.MINOR.PATCH` GitHub Release. Each coordinated stable release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches and ordinary registry resolution are not support-bearing identities unless release policy says otherwise.
+The later support-bearing install path is a stable `vMAJOR.MINOR.PATCH` GitHub Release. Each coordinated stable release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches are not support-bearing identities. RC/stable PyPI and npm versions project these same admitted artifacts, with public digests and clean-install evidence in `registry-publication.json`.
 
 After adoption, use the canonical skill and the installed CLI's `--help`.
 The native tools are `start`, `invoke`, `resources` and `worker`; domain requests

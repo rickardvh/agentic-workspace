@@ -41,6 +41,26 @@ def repository(tmp_path, monkeypatch):
         'version=1\n[[package]]\nname="agentic-workspace"\nversion="0.51.0"\nsource={editable="."}\n[[package]]\nname="external"\nversion="2.0.0"\nsource={registry="https://pypi.org/simple"}\n'
     )
     ownership["preview_release_commit_allowed_paths"].append("uv.lock")
+    ownership["cargo_packages"] = [
+        {"name": "agentic-workspace-core", "path": "crates/agentic-workspace-core"},
+        {"name": "agentic-workspace-cli", "path": "crates/agentic-workspace-cli"},
+    ]
+    for crate in ownership["cargo_packages"]:
+        manifest = tmp_path / crate["path"] / "Cargo.toml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(f'[package]\nname = "{crate["name"]}"\nversion = "0.51.0"\n')
+        ownership["preview_release_commit_allowed_paths"].append(f"{crate['path']}/Cargo.toml")
+    (tmp_path / "Cargo.lock").write_text(
+        "version = 4\n"
+        + "".join(f'[[package]]\nname = "{crate["name"]}"\nversion = "0.51.0"\n' for crate in ownership["cargo_packages"])
+        + '[[package]]\nname = "external"\nversion = "2.0.0"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n'
+    )
+    ownership["preview_release_commit_allowed_paths"].append("Cargo.lock")
+    ownership["cargo_lockfiles"] = ["Cargo.lock", "tests/fixture/Cargo.lock"]
+    fixture_lock = tmp_path / ownership["cargo_lockfiles"][1]
+    fixture_lock.parent.mkdir(parents=True)
+    fixture_lock.write_text('version = 4\n[[package]]\nname = "agentic-workspace-core"\nversion = "0.51.0"\n')
+    ownership["preview_release_commit_allowed_paths"].append(ownership["cargo_lockfiles"][1])
     (tmp_path / ".github/release-ownership.json").write_text(json.dumps(ownership))
     _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test")
@@ -133,7 +153,11 @@ def test_exact_rc_to_stable_promotion_rejects_product_and_lock_deltas(tmp_path, 
     _git(tmp_path, "commit", "-m", "stable normalization")
     stable = _git(tmp_path, "rev-parse", "HEAD")
     assert module.verify_rc_promotion(ownership)["support_bearing_admission"] == "required-separately"
-    for path, content in [("product.txt", "changed"), ("uv.lock", lock.read_text().replace('version="2.0.0"', 'version="2.0.1"'))]:
+    for path, content in [
+        ("product.txt", "changed"),
+        ("uv.lock", lock.read_text().replace('version="2.0.0"', 'version="2.0.1"')),
+        ("Cargo.lock", (tmp_path / "Cargo.lock").read_text().replace('version = "2.0.0"', 'version = "2.0.1"')),
+    ]:
         _git(tmp_path, "switch", "--detach", stable)
         (tmp_path / path).write_text(content)
         _git(tmp_path, "add", ".")
@@ -266,7 +290,7 @@ def test_packed_node_consumer_preserves_exact_rc_native_mapping(packed, tmp_path
     native_path.write_text(json.dumps(native))
     # Exercise manifest admission using already-proven binary bytes; this does
     # not claim those source-test binaries were compiled as an RC release.
-    script = "import {start} from './src/native/semantic-decision.mjs'; console.log(JSON.stringify(start({target:process.cwd(),task:'Inspect'})));"
+    script = "import {start} from './src/native/operating.mjs'; console.log(JSON.stringify(start({target:process.cwd(),task:'Inspect'})));"
     env = {k: v for k, v in os.environ.items() if k != "AGENTIC_WORKSPACE_CORE_BINARY"}
     result = subprocess.run(
         [shutil.which("node"), "--input-type=module", "-e", script], cwd=package, env=env, capture_output=True, text=True

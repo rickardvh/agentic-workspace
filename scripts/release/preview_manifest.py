@@ -176,8 +176,8 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
         package_json = json.loads((ROOT / package["package_json"]).read_text(encoding="utf-8"))
         if package_json.get("version") != coordinated_release.npm_version(version):
             raise SystemExit(f"{package['package_json']} has version {package_json.get('version')}, expected {version}")
-        if package_json.get("private") is not True or package.get("release_policy") != "release-asset-only":
-            raise SystemExit(f"{package['package_json']} must remain private release-asset-only for preview publication")
+        if package_json.get("private") is not False or package.get("release_policy") != "coordinated-public-registry":
+            raise SystemExit(f"{package['package_json']} must declare the coordinated public registry package identity")
         tarball = _unique_artifact(dist, f"{package['tarball_prefix']}-{coordinated_release.npm_version(version)}.tgz")
         expected_assets.add(tarball.name)
         package_entries.append(
@@ -308,6 +308,12 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     }
 
     manifest_path = dist / "agentic-workspace-preview-release-manifest.json"
+    if ownership.get("cargo_packages"):
+        import cargo_release
+
+        manifest["cargo"] = cargo_release.admitted_manifest(dist, ownership, artifact_commit, version)
+        expected_assets.add(manifest["cargo"]["manifest"]["asset"])
+        expected_assets.update(crate["asset"] for crate in manifest["cargo"]["packages"])
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     expected_assets.add(manifest_path.name)
 

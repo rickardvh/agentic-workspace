@@ -15,7 +15,7 @@
     "maturity_classifier": "Development Status :: 3 - Alpha"
   },
   "distribution_identity": {
-    "strategy": "exact-github-release-assets",
+    "strategy": "exact-tagged-release-artifacts",
     "release_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/v{version}",
     "preview_release_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/preview-v{version}",
     "canonical_root_distribution": "agentic-workspace",
@@ -23,8 +23,8 @@
     "redistributable_receipt": "redistributable-package-readiness.json",
     "digest_algorithm": "sha256",
     "mutable_branch_install_supported": false,
-    "registry_resolution_supported": false,
-    "rule": "Support-bearing installs use one exact root wheel URL and digest; one npm artifact and paired native CLI/core carry the same Rust authority. Preview artifacts remain non-support-bearing.",
+    "registry_resolution_supported": true,
+    "rule": "RC/stable language registries project the admitted GitHub artifact digests; only stable admission grants support. Exploratory previews remain GitHub-only.",
     "release_candidate_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/{tag}"
   },
   "changeset_dir": ".release/changes",
@@ -80,7 +80,11 @@
     "generated/memory/.agentic-workspace-cli-fingerprint.json",
     "generated/planning/.agentic-workspace-cli-fingerprint.json",
     "generated/verification/.agentic-workspace-cli-fingerprint.json",
-    ".release/promotions/v1.0.0.json"
+    ".release/promotions/v1.0.0.json",
+    "crates/agentic-workspace-core/Cargo.toml",
+    "crates/agentic-workspace-cli/Cargo.toml",
+    "Cargo.lock",
+    "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
   "preview_release_commit_allowed_paths": [
     "pyproject.toml",
@@ -100,7 +104,11 @@
     "generated/workspace/.agentic-workspace-cli-fingerprint.json",
     "generated/memory/.agentic-workspace-cli-fingerprint.json",
     "generated/planning/.agentic-workspace-cli-fingerprint.json",
-    "generated/verification/.agentic-workspace-cli-fingerprint.json"
+    "generated/verification/.agentic-workspace-cli-fingerprint.json",
+    "crates/agentic-workspace-core/Cargo.toml",
+    "crates/agentic-workspace-cli/Cargo.toml",
+    "Cargo.lock",
+    "tests/fixtures/native-independent-owner/Cargo.lock"
   ],
   "package_affecting_paths": [
     ".release/changes/",
@@ -111,7 +119,10 @@
     "pyproject.toml",
     "scripts/release/",
     "src/",
-    "uv.lock"
+    "uv.lock",
+    "Cargo.toml",
+    "Cargo.lock",
+    "crates/"
   ],
   "non_semver_generated_metadata": [
     {
@@ -162,8 +173,8 @@
       "python_package": "agentic-workspace",
       "runtime": "node",
       "runtime_requirement": "node>=20",
-      "release_policy": "release-asset-only",
-      "registry_status": "unpublished",
+      "release_policy": "coordinated-public-registry",
+      "registry_status": "trusted-publication-required",
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],
@@ -272,5 +283,47 @@
     "publisher": "preview-release.yml",
     "promotion_record": ".release/promotions/v1.0.0.json",
     "progression": "Contiguous rc.N for a new source; retries reuse the same immutable tag."
-  }
+  },
+  "registry_publisher": {
+    "workflow": ".github/workflows/registry-release.yml",
+    "environment": "package-registries",
+    "classes": [
+      "release-candidate",
+      "stable"
+    ],
+    "python": "https://pypi.org",
+    "npm": "https://registry.npmjs.org",
+    "rc_npm_tag": "rc",
+    "stable_npm_tag": "latest",
+    "receipt": "registry-publication.json",
+    "authority": "Same admitted immutable tagged artifact set; no registry rebuilds"
+  },
+  "cargo_packages": [
+    {
+      "name": "agentic-workspace-core",
+      "path": "crates/agentic-workspace-core",
+      "binary": "agentic-workspace-core"
+    },
+    {
+      "name": "agentic-workspace-cli",
+      "path": "crates/agentic-workspace-cli",
+      "binary": "agentic-workspace"
+    }
+  ],
+  "cargo_distribution": {
+    "version_source": "canonical RC/stable package_versions.cargo",
+    "order": [
+      "agentic-workspace-core",
+      "agentic-workspace-cli"
+    ],
+    "install": "Install both exact same-version crates, core first, into one Cargo root",
+    "staging": "scripts/release/cargo_release.py",
+    "manifest": "cargo-release-manifest.json",
+    "bootstrap": "First versions require bounded manual publication before OIDC can be configured",
+    "support": "Same admitted release host; RC remains non-support-bearing"
+  },
+  "cargo_lockfiles": [
+    "Cargo.lock",
+    "tests/fixtures/native-independent-owner/Cargo.lock"
+  ]
 }

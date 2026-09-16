@@ -345,3 +345,24 @@ Material decisions may reference shared `semantic_routes` identities. An exact p
 The shared Rust compiler normalizes a missing or stale route selection to unresolved applicability with no selected routes. A bounded decision candidate then reports `applicability-unresolved`; it cannot block the task or unrelated actions. Explicit `none` or another current route leaves the candidate quiet. Malformed contracts and attempts to claim authority beyond applicability still fail closed. Empty semantic references preserve existing material decision revisions.
 
 The #2909 Rust/Python/Node/JSON vectors exercise the same consequence projection. Focused cases also cover exact-scope precedence, work/source staleness, missing/none/unrelated selection, and unchanged action/claim authority. Public route discovery/selection and ordinary source-adapter integration remain the next dependent slice; this primitive does not close #2930, #3040, #3041, or #2570.
+# Installed language façade
+
+The `language_facade` section of `source_decision_contract.json` owns the six
+supported operations and their exact envelopes: start, invoke, resources,
+select-reference, answer-carried and invoke-carried. Python uses snake_case and
+Node uses camelCase. Resources is common because the standard task-resource skill
+needs bounded lifecycle composition from both language hosts. The Python exception
+class is a transport presentation concern, not another operation.
+
+The wheel ships the root façade, private `_binding`, native binary locator and CLI
+shim. The npm artifact ships its façade/declarations, private `_transport` and CLI
+shim. Both contain the verified Rust pair. Repository maintenance helpers in
+`decision.py`, `semantic-decision.mjs` and provider transport modules remain
+source-only. npm `./native` is not a supported installed export. Python support is
+the root façade; importable platform implementation modules are not public APIs.
+
+`check_language_facade.py` compares exports and serialized envelopes against the
+native declaration at source and installed-artifact boundaries. The existing
+installed mutation and tamper tests establish that contraction still reaches the
+same native authority. This adds structural drift proof without another semantic
+cross-product suite.

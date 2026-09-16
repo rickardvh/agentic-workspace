@@ -171,8 +171,11 @@ jobs:
           rm -rf dist
           mkdir -p dist
           uv build --wheel --sdist --out-dir dist
+          python scripts/release/admit_linux_wheel.py dist
           python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
           (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+          python scripts/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+          python scripts/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
           uv run python scripts/check/check_package_identity.py \
             --artifact-dir dist \
             --require-exact-urls
@@ -274,6 +277,8 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
             dist/*.tgz
+            dist/*.crate
+            dist/cargo-release-manifest.json
             dist/agentic-workspace-native-*.zip
             dist/generated-command-conformance-node*.json
             dist/SHA256SUMS
@@ -297,3 +302,14 @@ jobs:
             cat preview-public-smoke.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  language-registries:
+    needs: [preview-admission, preview-package]
+    if: startsWith(needs.preview-admission.outputs.tag, 'v1.0.0-rc.')
+    permissions:
+      contents: read
+      id-token: write
+      attestations: read
+    uses: ./.github/workflows/registry-release.yml
+    with:
+      tag: ${{ needs.preview-admission.outputs.tag }}

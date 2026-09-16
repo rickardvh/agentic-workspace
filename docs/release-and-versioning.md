@@ -448,3 +448,40 @@ or preview tag, and installed-state compatibility compares that payload
 provenance against the current executable version. Host repositories should be
 able to answer which AW release installed or last refreshed `.agentic-workspace/`
 without reconstructing state from release notes or package filenames.
+# Public language registries
+
+RC and stable publication project the same admitted wheel/sdist/npm tarball to
+PyPI and npm after the existing publisher succeeds. Exploratory `preview-v0.x`
+releases remain GitHub-only. `registry-release.yml` is called by those publishers;
+it has no independent release trigger, version source or rebuild step. It verifies
+the GitHub attestation signer, manifest/source, checksums and admission before
+observing registry state. Matching immutable bytes are reusable; only definite
+absence enters an upload directory. Conflicts or transport uncertainty stop the
+attempt. A retry repeats observation, never allocates a replacement version.
+
+The release owner supplies Python/npm/Cargo versions for every release class.
+RC npm publication uses `rc`; stable uses `latest`. A mismatching channel on recovery
+requires inspection of its history and a separate deliberate tag repair, never an
+automatic rollback of a newer release. Registry verification downloads public bytes,
+checks integrity and performs clean PyPI/npm installs before recording
+`registry-publication.json` as a workflow artifact. This receipt is additional
+distribution evidence; it does not modify an immutable release manifest or grant
+stable support by itself.
+
+Configure trusted publishers for `rickardvh/agentic-workspace`, the calling workflow
+filenames `preview-release.yml` and `release.yml`, and environment
+`package-registries`. npm validates the caller identity for reusable workflows.
+PyPI supports pending publishers for a new project. npm's package settings require
+the controlled package to exist; if it does not, the package owner must establish
+its initial publication before trusted publishing can run. Account setup is an
+external prerequisite, not evidence supplied by the workflow implementation. Do not
+store persistent publish tokens. Ordinary publication uses the PyPA OIDC action
+and npm 11.5.1 with Node 24 on GitHub-hosted runners. See the
+[PyPI publisher guide](https://docs.pypi.org/trusted-publishers/using-a-publisher/)
+and [npm publisher guide](https://docs.npmjs.com/trusted-publishers/).
+
+Before hosted artifact proof, Linux wheels are audited against
+`manylinux_2_39_x86_64`. Only a wheel whose ELF dependencies satisfy that ABI is
+relabeled. Native executable bytes are never repaired or replaced during tagging;
+the existing exact-pair proof still compares wheel, npm and native archive bytes.
+Other host classes are not newly admitted by registry availability.
