@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -150,3 +151,101 @@ def test_oversized_executable_is_unavailable_without_reading_or_running(tmp_path
     assert row["configuration"]["constructible"] is False
     assert "execution-return-unconstructible" in row["reasons"]
     assert not (tmp_path / "marker.txt").exists()
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_internal_binding_requires_current_host_facts_before_local_comparison(tmp_path, shared_core_binary, native_cli, surface):
+    source, _, context = fixture(tmp_path)
+    prefix = source.read_text().split("[delegation_targets.worker]")[0]
+    internal = prefix + '[delegation_targets.worker]\ntransports=[{kind="internal"}]\n'
+    source.write_text(internal)
+
+    def call(request=None):
+        return consume(surface, shared_core_binary, native_cli, {**context, **({"request": request} if request else {})})
+
+    def requirements():
+        request = call()["task_requirements"]["requests"][0]
+        request["arguments"]["required_result_classes"] = ["unapplied-patch"]
+        return call(request)
+
+    def local_choice(state):
+        request = state["task_requirements"]["assignment"]["requests"][0]
+        request[-1]["arguments"].update(alternative="local:internal", reason="Retain current host after feasibility comparison.")
+        return call(request)
+
+    unknown = requirements()
+    unresolved = unknown["task_requirements"]["assignment"]["result"]["unresolved_alternatives"]
+    assert any(row["gap"] == "host-internal-capability-unbound" and row["status"] == "unknown" for row in unresolved)
+    assert local_choice(unknown)["task_requirements"]["implementation_admission"]["status"] == "assessment-required"
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+    # Bind the intended target to the existing supported bridge, without a new
+    # target identity, capability flag, provider registry or dispatch instruction.
+    worker = tmp_path / "host.py"
+    worker.write_text(
+        "import json\nfrom pathlib import Path\n"
+        "from agentic_workspace import sealed_codex_transport as host\n"
+        "def discover(*args,**kwargs):\n"
+        " assert kwargs=={'refresh':True,'persist':False}\n"
+        " Path('probe-called.txt').write_text('observed')\n"
+        " state=Path('capability-state.txt').read_text()\n"
+        " if state=='unknown': raise host.native_transport.ProviderError('discovery-interrupted')\n"
+        " return {'revision':state,'expires_at':99999999999,'modes':['fresh'],'parameters':['model'],'models':[{'model':state}]}\n"
+        "host.native_transport.discover=discover\n"
+        "host.main()\n"
+    )
+    state_path = tmp_path / "capability-state.txt"
+    state_path.write_text("available")
+    bound = (
+        prefix
+        + '[delegation_targets.worker]\ntransports=[{kind="native",adapter="codex-app-server/v1",parameters={model="available"},command='
+        + json.dumps([sys.executable, str(worker)])
+        + "}]\n"
+    )
+    source.write_text(bound)
+    available = requirements()
+    execution = available["task_requirements"]["execution_configurations"]
+    row = next(r for r in execution["configurations"]["candidates"] if r["configuration"]["id"] == "worker:native:codex-app-server/v1")
+    assert row["eligible"] and row["configuration"]["constructible"]
+    assert row["configuration"]["result_classes"] == ["read-only", "unapplied-patch"]
+    assert row["configuration"]["execution"]["host_capability"]["status"] == "available"
+    assert local_choice(available)["task_requirements"]["implementation_admission"]["status"] == "admitted-local"
+
+    inputs = available["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"].update(input_refs=["a.txt"], complete=False, reason="One exact implementation subject.")
+    inputs = call(inputs)["task_requirements"]["handoff_inputs"]["requests"][0]
+    inputs[-1]["arguments"]["complete"] = True
+    ready = call(inputs)["task_requirements"]
+    assessment = ready["assignment"]["requests"][0]
+    assessment[-1]["arguments"].update(
+        alternative="worker:native:codex-app-server/v1", reason="Use the currently available worker for this bounded patch."
+    )
+    selected = call(assessment)
+    assert selected["task_requirements"]["implementation_admission"]["status"] == "admitted-nonlocal"
+    export = selected["task_requirements"]["handoff"]["requests"][0]
+    frontier = call(export)
+    assert any(action["operation_id"] == "delegation.dispatch" for action in frontier["decision_packet"]["ready_actions"])
+    assert not (tmp_path / ".agentic-workspace/local").exists()
+
+    (tmp_path / "probe-called.txt").unlink()
+    source.write_text(bound.replace('assignment_policy="required-best-fit"', 'assignment_policy="local-preferred"'))
+    requirements()
+    assert not (tmp_path / "probe-called.txt").exists()
+    source.write_text(bound.replace("safe_to_auto_run_commands=true", "safe_to_auto_run_commands=false"))
+    requirements()
+    assert not (tmp_path / "probe-called.txt").exists()
+
+    state_path.write_text("unavailable")  # complete current model list excludes the configured model
+    source.write_text(bound)
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(assessment)
+    unavailable = requirements()
+    assert unavailable["task_requirements"]["assignment"]["result"]["unresolved_alternatives"] == []
+    assert local_choice(unavailable)["task_requirements"]["implementation_admission"]["status"] == "admitted-local"
+    state_path.write_text("unknown")
+    assert local_choice(requirements())["task_requirements"]["implementation_admission"]["status"] == "assessment-required"
+    state_path.write_text("available")
+    source.write_text(bound.replace('model="available"', 'model="changed"'))
+    with pytest.raises(AssertionError, match="stale|changed"):
+        call(assessment)
+    assert not (tmp_path / ".agentic-workspace/local").exists()

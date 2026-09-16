@@ -3889,7 +3889,8 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             # results. Its bounded argument parser is not generated CLI ownership.
             # Generic dispatch and subcommand ownership remain prohibited.
             matched_categories = [
-                category for category in matched_categories
+                category
+                for category in matched_categories
                 if category not in {"console entrypoint", "parser construction", "command parsing"}
             ]
         if relative_path == "src/agentic_workspace/sealed_codex_transport.py" and "console entrypoint" in matched_categories:
@@ -3897,7 +3898,12 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             # generated CLI or fallback runtime. Admit only its exact wrapper;
             # parser/executor markers elsewhere in the module remain errors.
             expected = ast.parse(
-                "def main() -> None:\n    packet = json.load(sys.stdin)\n    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
+                "def main() -> None:\n"
+                "    if sys.argv[1:] == ['--aw-capability']:\n"
+                "        print(json.dumps(capability(Path.cwd(), json.load(sys.stdin))))\n"
+                "        return\n"
+                "    packet = json.load(sys.stdin)\n"
+                "    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
             ).body[0]
             entries = [node for node in ast.walk(ast.parse(text)) if isinstance(node, ast.FunctionDef) and node.name == "main"]
             if len(entries) == 1 and ast.dump(entries[0]) == ast.dump(expected):

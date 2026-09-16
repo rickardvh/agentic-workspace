@@ -490,7 +490,12 @@ def test_configured_process_and_native_remain_distinct_peer_options(tmp_path):
                 "location": "external",
                 "transports": [
                     {"kind": "process", "command": ["fixture"]},
-                    {"kind": "native", "adapter": "codex-app-server/v1", "parameters": {"model": "fixture-model"}},
+                    {
+                        "kind": "native",
+                        "adapter": "codex-app-server/v1",
+                        "parameters": {"model": "fixture-model"},
+                        "command": ["fixture-host"],
+                    },
                 ],
             }
         },

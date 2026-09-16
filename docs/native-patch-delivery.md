@@ -72,7 +72,12 @@ provided.
 
 Configured `supports_internal_delegation` alone does not make nonlocal dispatch
 constructible. Current execution configuration reports the actual process or
-adapter boundary and its gaps. Unknown visibility, persistence, resume and
+adapter boundary and its gaps. Binding best-fit comparison preserves unbound
+internal workers as unresolved alternatives. Configure a concrete supported
+transport in the machine-local source; the sealed Codex bridge binds current
+installed-protocol/model capability to the candidate and rechecks it at dispatch.
+See [consequential delegation](maintainer/consequential-delegation.md).
+Unknown visibility, persistence, resume and
 cleanup guarantees remain unknown; read-only discovery creates no provider work.
 Direct work without an Assignment requirement gains no admission procedure.
 

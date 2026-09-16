@@ -733,7 +733,9 @@ class CodexConnection:
                 self.process.wait(timeout=5)
 
 
-def discover(root: Path, *, executable: str = "codex", refresh: bool = False, now: float | None = None) -> dict[str, Any]:
+def discover(
+    root: Path, *, executable: str = "codex", refresh: bool = False, now: float | None = None, persist: bool = True
+) -> dict[str, Any]:
     """Local version signal plus bounded remote/account capability refresh."""
     clock = time.time() if now is None else now
     scope = _discovery_scope.get()
@@ -833,7 +835,8 @@ def discover(root: Path, *, executable: str = "codex", refresh: bool = False, no
         "conversation_lifetime": "provider-owned",
         "source": "installed-protocol-and-model-list",
     }
-    _write(path, snapshot)
+    if persist:
+        _write(path, snapshot)
     if scope is not None:
         scope[key] = snapshot
     return snapshot

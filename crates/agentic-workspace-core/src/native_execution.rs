@@ -144,6 +144,50 @@ fn executable(
     }
     None
 }
+
+fn host_capability(target: &Path, transport: &Value, observed: &Value) -> Value {
+    let unknown = || json!({"kind":"agentic-workspace/host-transport-capability/v1","status":"unknown","reason":"host-capability-observation-required"});
+    let mut command = std::process::Command::new(observed["path"].as_str().unwrap());
+    command.args(
+        transport["command"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .skip(1)
+            .map(|v| v.as_str().unwrap()),
+    );
+    command.arg("--aw-capability").current_dir(target);
+    let Ok(result) = crate::process_execution::run(
+        command,
+        serde_json::to_vec(&transport["parameters"]).ok(),
+        std::time::Duration::from_secs(30),
+    ) else {
+        return unknown();
+    };
+    if result["status"] != "passed" || result["output"]["stdout"]["truncated"] != false {
+        return unknown();
+    }
+    let Ok(value) =
+        serde_json::from_str::<Value>(result["output"]["stdout"]["tail"].as_str().unwrap_or(""))
+    else {
+        return unknown();
+    };
+    if value["kind"] != "agentic-workspace/host-transport-capability/v1"
+        || !matches!(
+            value["status"].as_str(),
+            Some("available" | "unavailable" | "unknown")
+        )
+        || value["parameters"] != transport["parameters"]
+        || !value["revision"]
+            .as_str()
+            .is_some_and(|r| r.starts_with("sha256:"))
+        || (value["status"] == "available"
+            && value["result_classes"] != json!(["read-only", "unapplied-patch"]))
+    {
+        return unknown();
+    }
+    value
+}
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn view(
     target: &Path,
@@ -204,6 +248,7 @@ pub(crate) fn view(
     let mut unavailable = Vec::new();
     let mut manual_targets = Vec::new();
     let mut observed_paths = std::collections::BTreeMap::new();
+    let mut host_observations = std::collections::BTreeMap::new();
     for (name, profile) in targets.into_iter().flatten() {
         let transports = match crate::transport_source::decode(profile) {
             Ok(value) => value,
@@ -294,6 +339,37 @@ pub(crate) fn view(
                 && !profile["human_control_modes"]
                     .as_array()
                     .is_some_and(|v| v.iter().any(|i| i == "off"));
+            let host =
+                transport["kind"] == "native" && transport["adapter"] == "codex-app-server/v1";
+            let capability_observation = if host {
+                if authority
+                    && profile_safe
+                    && source_policy["assignment_policy"] != "local-preferred"
+                    && local["safety"]["safe_to_auto_run_commands"] == true
+                {
+                    if let Some(observed) = &observed {
+                        let key = digest(&json!([transport, observed]))?;
+                        host_observations
+                            .entry(key)
+                            .or_insert_with(|| host_capability(target, &transport, observed))
+                            .clone()
+                    } else {
+                        json!({"status":"unavailable","reason":"configured-executable-unavailable"})
+                    }
+                } else {
+                    json!({"status":"unknown","reason":"host-capability-observation-not-authorized"})
+                }
+            } else {
+                Value::Null
+            };
+            if source_policy["assignment_policy"] == "required-best-fit"
+                && authority
+                && profile_safe
+                && (transport["kind"] == "internal"
+                    || host && capability_observation["status"] == "unknown")
+            {
+                unavailable.push(json!({"target":name,"status":"unknown","gap":"host-internal-capability-unbound","source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}.transports"),"recovery":"Bind this target to a concrete supported process/native transport in its source configuration, then reobserve its current host capability. An internal declaration or static capability flag is not launch/return authority.","observation":capability_observation}));
+            }
             if manual {
                 manual_targets.push(json!({"target":name,"source_ref":format!(".agentic-workspace/config.local.toml#delegation_targets.{name}"),"source_policy_eligible":authority&&profile_safe,"required_result_classes_supported":requirements["requirements"]["required_result_classes"].as_array().is_some_and(|classes| classes.iter().all(|class| class == "read-only")),"handoff_constructible":handoff_inputs["status"]=="ready","automatic_invocation":false,"gap":if handoff_inputs["status"]=="ready"{""}else{"native-manual-input-completeness-unresolved"},"target_best_fit":"unresolved-not-rejected"}));
             }
@@ -305,9 +381,9 @@ pub(crate) fn view(
                 json!(["read-only"])
             };
             let capability = digest(
-                &json!({"profile":profile,"target_scope":target_scope[name],"transport":transport,"executable":observed,"process_supported":process,"result_classes":result_classes,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
+                &json!({"profile":profile,"target_scope":target_scope[name],"transport":transport,"executable":observed,"host_capability":capability_observation,"process_supported":process,"result_classes":result_classes,"handoff_inputs":if manual{handoff_inputs["revision"].clone()}else{Value::Null}}),
             )?;
-            candidates.push(json!({"id":format!("{name}:{variant}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&process,"result_classes":result_classes,"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution_guarantees":profile["execution_guarantees"].as_array().cloned().unwrap_or_default(),"execution":{"adapter":transport,"observed_executable":observed,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
+            candidates.push(json!({"id":format!("{name}:{variant}"),"target":name,"transport":method,"capability_revision":capability,"current":true,"authorized":authority,"safe":profile_safe&&(retained||manual||local["safety"]["safe_to_auto_run_commands"]==true),"constructible":(manual&&handoff_inputs["status"]=="ready")||retained||observed.is_some()&&process&&(!host||capability_observation["status"]=="available"),"result_classes":result_classes,"proof_classes":[],"independent_context":false,"concurrency_available":true,"execution_guarantees":profile["execution_guarantees"].as_array().cloned().unwrap_or_default(),"execution":{"adapter":transport,"observed_executable":observed,"host_capability":capability_observation,"source_revision":source_revision,"context_strategy":"bounded","continuity":{"mode":"adapter-owned-unknown"}}}));
         }
     }
     let mut input = requirements["requirements"].clone();
