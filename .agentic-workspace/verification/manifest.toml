@@ -1090,7 +1090,7 @@ requirement_class = "invariant"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#typed-cli-and-selector-contract"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-cli-runtime"
-  "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
+detail_route = "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
 notes = "Typed usage, validation, or failed direct-action results must declare and return the same nonzero status; pre-execution rejections remain mutation-free and happen before expensive payload construction through the shared selector/result boundary."
 
 [assurance.requirements.proof_execution_integrity]
@@ -1242,7 +1242,7 @@ requirement_class = "current-evidence"
 source_intent_ref = "docs/maintainer/repo-evidence-requirements.md#typed-cli-and-selector-contract"
 source_intent_revision = "repo-acceptance-policy-v1"
 evidence_owner = "verification:workspace-cli-runtime"
-  "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
+detail_route = "uv run pytest tests/test_native_public_cli.py tests/test_native_domain_proof.py tests/test_native_config_admission.py -q"
 
 [assurance.requirements.invalid_selector_rejection_budget.measurement]
 kind = "agentic-workspace/measurement-requirement/v1"
