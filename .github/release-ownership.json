@@ -80,7 +80,10 @@
     "generated/memory/.agentic-workspace-cli-fingerprint.json",
     "generated/planning/.agentic-workspace-cli-fingerprint.json",
     "generated/verification/.agentic-workspace-cli-fingerprint.json",
-    ".release/promotions/v1.0.0.json"
+    ".release/promotions/v1.0.0.json",
+    "crates/agentic-workspace-core/Cargo.toml",
+    "crates/agentic-workspace-cli/Cargo.toml",
+    "Cargo.lock"
   ],
   "preview_release_commit_allowed_paths": [
     "pyproject.toml",
@@ -100,7 +103,10 @@
     "generated/workspace/.agentic-workspace-cli-fingerprint.json",
     "generated/memory/.agentic-workspace-cli-fingerprint.json",
     "generated/planning/.agentic-workspace-cli-fingerprint.json",
-    "generated/verification/.agentic-workspace-cli-fingerprint.json"
+    "generated/verification/.agentic-workspace-cli-fingerprint.json",
+    "crates/agentic-workspace-core/Cargo.toml",
+    "crates/agentic-workspace-cli/Cargo.toml",
+    "Cargo.lock"
   ],
   "package_affecting_paths": [
     ".release/changes/",
@@ -111,7 +117,10 @@
     "pyproject.toml",
     "scripts/release/",
     "src/",
-    "uv.lock"
+    "uv.lock",
+    "Cargo.toml",
+    "Cargo.lock",
+    "crates/"
   ],
   "non_semver_generated_metadata": [
     {
@@ -286,5 +295,29 @@
     "stable_npm_tag": "latest",
     "receipt": "registry-publication.json",
     "authority": "Same admitted immutable tagged artifact set; no registry rebuilds"
+  },
+  "cargo_packages": [
+    {
+      "name": "agentic-workspace-core",
+      "path": "crates/agentic-workspace-core",
+      "binary": "agentic-workspace-core"
+    },
+    {
+      "name": "agentic-workspace-cli",
+      "path": "crates/agentic-workspace-cli",
+      "binary": "agentic-workspace"
+    }
+  ],
+  "cargo_distribution": {
+    "version_source": "canonical RC/stable package_versions.cargo",
+    "order": [
+      "agentic-workspace-core",
+      "agentic-workspace-cli"
+    ],
+    "install": "Install both exact same-version crates, core first, into one Cargo root",
+    "staging": "scripts/release/cargo_release.py",
+    "manifest": "cargo-release-manifest.json",
+    "bootstrap": "First versions require bounded manual publication before OIDC can be configured",
+    "support": "Same admitted release host; RC remains non-support-bearing"
   }
 }

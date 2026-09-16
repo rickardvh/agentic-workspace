@@ -41,6 +41,21 @@ def repository(tmp_path, monkeypatch):
         'version=1\n[[package]]\nname="agentic-workspace"\nversion="0.51.0"\nsource={editable="."}\n[[package]]\nname="external"\nversion="2.0.0"\nsource={registry="https://pypi.org/simple"}\n'
     )
     ownership["preview_release_commit_allowed_paths"].append("uv.lock")
+    ownership["cargo_packages"] = [
+        {"name": "agentic-workspace-core", "path": "crates/agentic-workspace-core"},
+        {"name": "agentic-workspace-cli", "path": "crates/agentic-workspace-cli"},
+    ]
+    for crate in ownership["cargo_packages"]:
+        manifest = tmp_path / crate["path"] / "Cargo.toml"
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text(f'[package]\nname = "{crate["name"]}"\nversion = "0.51.0"\n')
+        ownership["preview_release_commit_allowed_paths"].append(f"{crate['path']}/Cargo.toml")
+    (tmp_path / "Cargo.lock").write_text(
+        "version = 4\n"
+        + "".join(f'[[package]]\nname = "{crate["name"]}"\nversion = "0.51.0"\n' for crate in ownership["cargo_packages"])
+        + '[[package]]\nname = "external"\nversion = "2.0.0"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n'
+    )
+    ownership["preview_release_commit_allowed_paths"].append("Cargo.lock")
     (tmp_path / ".github/release-ownership.json").write_text(json.dumps(ownership))
     _git(tmp_path, "init", "-b", "master")
     _git(tmp_path, "config", "user.name", "Test")
@@ -133,7 +148,11 @@ def test_exact_rc_to_stable_promotion_rejects_product_and_lock_deltas(tmp_path, 
     _git(tmp_path, "commit", "-m", "stable normalization")
     stable = _git(tmp_path, "rev-parse", "HEAD")
     assert module.verify_rc_promotion(ownership)["support_bearing_admission"] == "required-separately"
-    for path, content in [("product.txt", "changed"), ("uv.lock", lock.read_text().replace('version="2.0.0"', 'version="2.0.1"'))]:
+    for path, content in [
+        ("product.txt", "changed"),
+        ("uv.lock", lock.read_text().replace('version="2.0.0"', 'version="2.0.1"')),
+        ("Cargo.lock", (tmp_path / "Cargo.lock").read_text().replace('version = "2.0.0"', 'version = "2.0.1"')),
+    ]:
         _git(tmp_path, "switch", "--detach", stable)
         (tmp_path / path).write_text(content)
         _git(tmp_path, "add", ".")

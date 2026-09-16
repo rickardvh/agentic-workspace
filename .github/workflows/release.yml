@@ -201,6 +201,8 @@ jobs:
           python scripts/release/admit_linux_wheel.py dist
           python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
           (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+          python scripts/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
+          python scripts/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
           uv run python scripts/check/check_package_identity.py \
             --artifact-dir dist \
             --require-exact-urls \
@@ -427,6 +429,12 @@ jobs:
               manifest["release_candidate_promotion"] = json.loads(subprocess.check_output(
                   ["python", "scripts/release/coordinated_release.py", "verify-rc-promotion"], text=True
               ))
+          import sys
+          sys.path.insert(0, "scripts/release")
+          import cargo_release
+          manifest["cargo"] = cargo_release.admitted_manifest(dist, ownership, manifest["source_commit"], manifest["version"])
+          for item in [manifest["cargo"]["manifest"], *manifest["cargo"]["packages"]]:
+              checksum_lines.append(f"{item['sha256']}  {item['asset']}")
           manifest_path = dist / "agentic-workspace-release-manifest.json"
           manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           for required_security_asset in ("security-supply-chain-readiness.json", "agentic-workspace.spdx.json"):
@@ -505,6 +513,10 @@ jobs:
           required_assets.add(native["asset"])
           if checksums.get(native["asset"]) != native["sha256"]:
               raise SystemExit("Native archive manifest/checksum mismatch")
+          for item in [manifest["cargo"]["manifest"], *manifest["cargo"]["packages"]]:
+              required_assets.add(item["asset"])
+              if checksums.get(item["asset"]) != item["sha256"]:
+                  raise SystemExit("Cargo manifest/checksum mismatch")
           for package in manifest["packages"]:
               if package.get("ecosystem") == "npm":
                   required_assets.add(package["tarball"]["asset"])
@@ -534,6 +546,8 @@ jobs:
             dist/*.whl
             dist/*.tar.gz
             dist/*.tgz
+            dist/*.crate
+            dist/cargo-release-manifest.json
             dist/agentic-workspace-native-*.zip
             dist/generated-command-conformance-node*.json
             dist/SHA256SUMS

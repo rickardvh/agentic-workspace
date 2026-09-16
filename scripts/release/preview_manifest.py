@@ -308,6 +308,12 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     }
 
     manifest_path = dist / "agentic-workspace-preview-release-manifest.json"
+    if ownership.get("cargo_packages"):
+        import cargo_release
+
+        manifest["cargo"] = cargo_release.admitted_manifest(dist, ownership, artifact_commit, version)
+        expected_assets.add(manifest["cargo"]["manifest"]["asset"])
+        expected_assets.update(crate["asset"] for crate in manifest["cargo"]["packages"])
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     expected_assets.add(manifest_path.name)
 
