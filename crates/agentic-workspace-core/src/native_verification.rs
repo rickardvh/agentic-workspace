@@ -513,7 +513,18 @@ fn receipt_view(
     } else {
         Value::Null
     };
-    json!({"reference":reference,"status":"unadmitted","publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
+    let measurement_observations = if !checked_scope.is_null() {
+        receipt["execution_artifact"]["path"]
+            .as_str()
+            .and_then(|path| read(root, path).ok().flatten())
+            .filter(|bytes| receipt["execution_artifact"]["sha256"] == sha(bytes))
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .map(|detail| crate::native_measurement::observations(&detail))
+            .unwrap_or(Value::Null)
+    } else {
+        Value::Null
+    };
+    json!({"reference":reference,"status":"unadmitted","measurement_observations":measurement_observations,"publication_admission":publication,"receipt_admission":admission,"checked_scope":checked_scope,
         "task_judgment":judgment,"detail":detail,"runtime_admission":freshness,"evidence_freshness":freshness["status"],"strategy_coverage":freshness["strategy_coverage"],"independent_review":"not-established-by-publication",
         "proof_subject":subject["id"],"gaps":gaps})
 }
@@ -765,6 +776,7 @@ fn domain_routes(
     config: &Value,
     changed: &[String],
     source: &str,
+    scope: &Value,
 ) -> Result<(Value, Value), CoreError> {
     let mut routes = serde_json::Map::new();
     let mut descriptors = Vec::new();
@@ -785,15 +797,13 @@ fn domain_routes(
                     .any(|pattern| matches(pattern, path))
             })
             .collect();
-        let unresolved = lane["applies_to_task_markers"]
-            .as_array()
-            .is_some_and(|items| !items.is_empty());
-        if matched.is_empty() && !unresolved {
+        let status = &scope[format!("domain:{id}")]["status"];
+        if status == "not-applicable" {
             continue;
         }
         let source_ref = format!("{source}#assurance.domain_proof_lanes.{id}");
         let revision = digest(lane)?;
-        let descriptor = json!({"route_id":format!("domain:{id}"),"source_ref":source_ref,"source_revision":revision,"applicability":if matched.is_empty(){"current-task-judgment-unresolved"}else{"path-matched"},"command_count":lane["commands"].as_array().map_or(0,Vec::len),"metadata":"retained-in-source-and-selected-strategy","claim_boundary":"candidate-not-strategy-sufficiency"});
+        let descriptor = json!({"route_id":format!("domain:{id}"),"source_ref":source_ref,"source_revision":revision,"applicability":if !matched.is_empty(){"path-matched"}else if status=="applicable"{"current-task-judgment-applicable"}else{"current-task-judgment-unresolved"},"command_count":lane["commands"].as_array().map_or(0,Vec::len),"metadata":"retained-in-source-and-selected-strategy","claim_boundary":"candidate-not-strategy-sufficiency"});
         if descriptors.len() < 32
             && serde_json::to_vec(&descriptor).is_ok_and(|bytes| bytes.len() <= 2048)
         {
@@ -801,7 +811,7 @@ fn domain_routes(
         } else {
             omitted += 1;
         }
-        if !matched.is_empty() {
+        if status == "applicable" {
             let mut route = lane.clone();
             route["source_kind"] = json!("config-domain-lane");
             route["source_ref"] = json!(source_ref);
@@ -828,6 +838,24 @@ fn visible_strategy(strategy: &Value, selected: Option<&Value>) -> Value {
     result
 }
 
+pub(crate) fn contract() -> Result<Value, CoreError> {
+    let schema = crate::source_schema();
+    let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
+    arguments_schema["$schema"] = schema["$schema"].clone();
+    let declarations = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
+        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::native_claim_review::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
+    let owner_revision = digest(&declarations)?;
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
+        "owners":[{"owner":"verification","revision":owner_revision,"requests":declarations}],
+        "restriction_authorities":[{"owner":"verification","affects":["claim:complete","claim:claim-slice-complete","claim:claim-work-complete","claim:close-parent-lane"]}]});
+    contract["owners"][0]["domains"] = json!(["verification"]);
+    contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
+    contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
+    crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
+    contract["revision"] = json!(digest(&contract)?);
+    Ok(contract)
+}
+
 /// Host-only inputs are supplied by the current-work and Planning owners. A
 /// public caller can request a claim judgment, never supply source admission.
 pub fn view(
@@ -846,6 +874,8 @@ pub fn view(
         planning_subject,
         request,
         ApplicabilityContext {
+            detail: true,
+            proof: true,
             facts: &Value::Null,
             request: None,
             contract: None,
@@ -855,6 +885,8 @@ pub fn view(
 }
 
 pub(crate) struct ApplicabilityContext<'a> {
+    pub detail: bool,
+    pub proof: bool,
     pub facts: &'a Value,
     pub request: Option<Value>,
     pub contract: Option<&'a Value>,
@@ -870,6 +902,8 @@ pub(crate) fn view_with_applicability(
     request: Option<Value>,
     applicability: ApplicabilityContext<'_>,
 ) -> Result<Value, CoreError> {
+    #[cfg(test)]
+    crate::native_frontier::built("verification-contribution");
     let root = Dir::open_ambient_dir(target, ambient_authority())
         .map_err(|e| CoreError::new(e.to_string()))?;
     let (config, _config_revision) = crate::native_config::load(
@@ -942,6 +976,70 @@ pub(crate) fn view_with_applicability(
         applicability.facts,
     )?;
 
+    // Named proof scopes use the existing source-bound applicability judgment.
+    // They are selectors, never assurance evidence requirements or waivers.
+    let mut scope_ids = std::collections::BTreeSet::new();
+    for (kind, declarations) in [
+        ("protocol", &manifest["protocols"]),
+        ("domain", &config["assurance"]["domain_proof_lanes"]),
+    ] {
+        for (id, source) in declarations.as_object().into_iter().flatten() {
+            let id = format!("{kind}:{id}");
+            scope_ids.insert(id.clone());
+            let mut row = json!({"id":id,"force":"informational"});
+            for selector in ["applies_to_paths", "applies_to_task_markers"] {
+                if let Some(value) = source.get(selector) {
+                    row[selector] = value.clone();
+                }
+            }
+            assurance_input["requirements"]
+                .as_array_mut()
+                .unwrap()
+                .push(row);
+        }
+    }
+    let retained_scope = applicability
+        .invocation
+        .and_then(|i| i["arguments"]["selection"]["strategy"].get("assurance_request"))
+        .filter(|v| !v.is_null())
+        .cloned();
+    let requests: Vec<Value> = request
+        .into_iter()
+        .flat_map(|value| value.as_array().cloned().unwrap_or_else(|| vec![value]))
+        .chain(applicability.request)
+        .chain(retained_scope)
+        .collect();
+    let mut current_scope_request = Value::Null;
+    for request in &requests {
+        if request["request_kind"] == "verification/assurance-applicability/v1" {
+            if !current_scope_request.is_null() && current_scope_request != *request {
+                return Err(CoreError::new(
+                    "conflicting assurance applicability judgments",
+                ));
+            }
+            current_scope_request = request.clone();
+            assurance_input["judgment"] = json!({"source_revision":request["source_revision"],
+                "task_identity":if request["task_identity"]==*current_work {assurance_input["task_identity"].clone()} else {request["task_identity"].clone()},
+                "current_work":request["task_identity"],"decisions":request["arguments"]["decisions"]});
+        }
+    }
+    // Public contract admission still runs below before any result is returned.
+    let mut assurance = crate::assurance_applicability::view(assurance_input.clone())?;
+    let mut proof_scope = serde_json::Map::new();
+    assurance["requirements"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|row| {
+            let id = row["id"].as_str().unwrap();
+            if scope_ids.contains(id) {
+                proof_scope.insert(id.to_owned(), row.clone());
+                false
+            } else {
+                true
+            }
+        });
+    let proof_scope = json!(proof_scope);
+
     let profile_source = if manifest["assurance"].get("proof_profiles").is_some() {
         MANIFEST
     } else {
@@ -953,11 +1051,12 @@ pub(crate) fn view_with_applicability(
         ".agentic-workspace/config.toml"
     };
     let strategy_policy = crate::verification_strategy::policy(&config, profile_source)?;
-    let (domain, domain_descriptors) = domain_routes(&config, changed, domain_source)?;
+    let (domain, domain_descriptors) =
+        domain_routes(&config, changed, domain_source, &proof_scope)?;
     let domain_revision = digest(&json!({"routes":domain,"descriptors":domain_descriptors}))?;
     let source_revision = digest(
         &json!({"instruction_sources":instruction_view["sources"].as_array().unwrap().iter().filter(|r|r["applicable"]==true && !r["metadata"]["checks"].as_array().unwrap().is_empty()).collect::<Vec<_>>(),"manifest_revision":manifest_revision,"domain_revision":domain_revision,"strategy_policy":strategy_policy["revision"],"assurance_source":assurance_input["source_revision"],
-        "planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
+        "proof_scope":proof_scope,"planning_subject":planning_subject.map(|s| json!({"id":s["id"],"revision":s["revision"]}))}),
     )?;
     let mut protocols = serde_json::Map::new();
     let mut selector_gaps = Vec::new();
@@ -967,21 +1066,12 @@ pub(crate) fn view_with_applicability(
                 if patterns.iter().any(|p| p.as_str().is_none()) {
                     selector_gaps.push(format!("unsupported-path-selector:{id}"));
                 }
-                if patterns
-                    .iter()
-                    .filter_map(Value::as_str)
-                    .any(|p| changed.iter().any(|path| matches(p, path)))
-                {
-                    protocols.insert(id.clone(), protocol.clone());
-                }
             } else if !protocol["applies_to_paths"].is_null() {
                 gaps.push(format!("invalid-path-selectors:{id}"));
             }
-            if !protocols.contains_key(id)
-                && protocol["applies_to_task_markers"]
-                    .as_array()
-                    .is_some_and(|items| !items.is_empty())
-            {
+            if proof_scope[format!("protocol:{id}")]["status"] == "applicable" {
+                protocols.insert(id.clone(), protocol.clone());
+            } else if proof_scope[format!("protocol:{id}")]["status"] == "unresolved" {
                 selector_gaps.push(format!(
                     "protocol-semantic-scope-requires-owner-judgment:{id}"
                 ));
@@ -1091,25 +1181,30 @@ pub(crate) fn view_with_applicability(
         }
     }
     let mut strategy = json!({"source":MANIFEST,"protocols":protocols,"proof_routes":routes,"scenarios":scenarios});
+    for row in assurance["requirements"].as_array().unwrap() {
+        if row["status"] != "applicable" {
+            continue;
+        }
+        let requirement = &row["source_requirement"];
+        if let Some(command) = requirement["measurement"]["producer_command"].as_str() {
+            let id = format!("measurement:{}", row["id"].as_str().unwrap());
+            let route = json!({"source_kind":"measurement-requirement","requirement":requirement,"commands":[command],"protocol_refs":[]});
+            if strategy["proof_routes"]
+                .as_object_mut()
+                .unwrap()
+                .insert(id, route)
+                .is_some()
+            {
+                return Err(CoreError::new("measurement proof route identity collision"));
+            }
+        }
+    }
     let direct_subject = crate::direct_task::subject(task, changed)?;
     let subject = planning_subject.unwrap_or(&direct_subject);
     let work_ref = subject["id"].clone();
     let work_revision = subject["revision"].clone();
-    let schema = crate::source_schema();
-    let mut arguments_schema = schema["$defs"]["verification_claim_request"].clone();
-    arguments_schema["$schema"] = schema["$schema"].clone();
-    let requests = json!([{"kind":"verification/claim/v1","result_kind":"agentic-workspace/native-verification-view/v1",
-        "input_schema":arguments_schema}, crate::verification_requirements::declaration(), crate::review_authentication::declaration(), crate::native_claim_review::declaration(), crate::assurance_applicability::declaration(), crate::native_proof::declaration(), crate::native_proof::record_declaration(), crate::verification_strategy::declaration()]);
-    let owner_revision = digest(&requests)?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
-        "owners":[{"owner":"verification","revision":owner_revision,"requests":requests}],
-        "restriction_authorities":[{"owner":"verification","affects":["claim:complete","claim:claim-slice-complete","claim:claim-work-complete","claim:close-parent-lane"]}]});
-    contract["owners"][0]["domains"] = json!(["verification"]);
-    contract["owners"][0]["effects"] = json!([{"id":"proof-execution","domain":"verification"}]);
-    contract["owners"][0]["operations"] = json!([crate::native_proof::operation()]);
-    crate::native_source_reconciliation::extend_contract(&mut contract["owners"][0])?;
+    let contract = contract()?;
     let owner_revision = contract["owners"][0]["revision"].clone();
-    contract["revision"] = json!(digest(&contract)?);
     let admission_contract = applicability.contract.unwrap_or(&contract);
     let template = json!({"kind":"agentic-workspace/public-request/v1","id":"verification/claim/v1","owner":"verification",
         "owner_revision":owner_revision,"source_revision":source_revision,"capability_revision":admission_contract["revision"],
@@ -1129,12 +1224,6 @@ pub(crate) fn view_with_applicability(
         .and_then(|i| i["arguments"]["selection"]["strategy"].get("assessment"))
         .filter(|v| !v.is_null())
         .cloned();
-    let retained_scope = applicability
-        .invocation
-        .and_then(|i| i["arguments"]["selection"]["strategy"].get("assurance_request"))
-        .filter(|v| !v.is_null())
-        .cloned();
-    let mut current_scope_request = Value::Null;
     let mut evidence_refs = Vec::<String>::new();
     let mut proof_choice = applicability
         .invocation
@@ -1148,12 +1237,7 @@ pub(crate) fn view_with_applicability(
     let mut evidence = Vec::new();
     let mut requested = false;
     let mut claim_review_request = None;
-    for request in request
-        .into_iter()
-        .flat_map(|value| value.as_array().cloned().unwrap_or_else(|| vec![value]))
-        .chain(applicability.request)
-        .chain(retained_scope)
-    {
+    for request in requests {
         prepare_request_value(
             json!({"request":request,"current_work":request["task_identity"],"capability_contract":admission_contract}),
         )?;
@@ -1163,12 +1247,6 @@ pub(crate) fn view_with_applicability(
         let scope_request = request["request_kind"] == "verification/assurance-applicability/v1";
         let claim_request = !scope_request && request["request_kind"] != "verification/strategy/v1";
         requested |= claim_request;
-        if scope_request {
-            current_scope_request = request.clone();
-            assurance_input["judgment"] = json!({"source_revision":request["source_revision"],
-                "task_identity":if request["task_identity"]==*current_work {assurance_input["task_identity"].clone()} else {request["task_identity"].clone()},
-                "current_work":request["task_identity"],"decisions":request["arguments"]["decisions"]});
-        }
         if scope_request {
             // The shared applicability owner validates its separately bound source.
         } else if request["task_identity"] != *current_work
@@ -1203,12 +1281,12 @@ pub(crate) fn view_with_applicability(
             evidence_refs.extend(refs.iter().filter_map(Value::as_str).map(str::to_owned));
         }
     }
-    let assurance = crate::assurance_applicability::view(assurance_input.clone())?;
     let mut strategy_control = crate::verification_strategy::view(
         &strategy_policy,
         &assurance,
         planning_subject,
         strategy_assessment.as_ref(),
+        applicability.detail,
     )?;
     for (id, route) in strategy_control["routes"].as_object().unwrap() {
         if strategy["proof_routes"]
@@ -1225,6 +1303,7 @@ pub(crate) fn view_with_applicability(
     strategy["assessment"] = json!(strategy_assessment);
     strategy["assurance_source_revision"] = assurance_input["source_revision"].clone();
     strategy["assurance_request"] = current_scope_request;
+    strategy["proof_scope"] = proof_scope.clone();
     strategy["disallowed_commands"] = strategy_control["disallowed_commands"].clone();
     strategy["selection_blocked"] = strategy_control["execution_blocked"].clone();
     strategy["selected_profile_identity"] = strategy_control["selected_profiles"].clone();
@@ -1240,6 +1319,23 @@ pub(crate) fn view_with_applicability(
             &json!({"id":work_ref,"revision":work_revision}),
         )
     }));
+    let measurement_admissions: serde_json::Map<String, Value> = assurance["requirements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| {
+            (
+                row["id"].as_str().unwrap().to_owned(),
+                crate::native_measurement::admit(row, &evidence),
+            )
+        })
+        .collect();
+    // Raw producer output stays in the hashed private execution artifact.
+    for item in &mut evidence {
+        item.as_object_mut()
+            .unwrap()
+            .remove("measurement_observations");
+    }
     for check in &mut instruction_checks {
         if check["status"] == "evidence-required" {
             let commands =
@@ -1273,7 +1369,11 @@ pub(crate) fn view_with_applicability(
         subject,
         &strategy,
         proof_choice.as_ref(),
-        reported_observation.as_ref(),
+        crate::native_proof::SelectionMode {
+            report: reported_observation.as_ref(),
+            alternatives: applicability.detail
+                || (applicability.proof && proof_choice.is_none() && !requested),
+        },
     )?;
     let execution_actions = crate::native_proof::action(
         target,
@@ -1286,6 +1386,7 @@ pub(crate) fn view_with_applicability(
         .as_array()
         .into_iter()
         .flatten()
+        .filter(|_| applicability.detail || applicability.proof)
         .map(|choice| {
             let mut request = template.clone();
             request["request_kind"] = json!("verification/execute-selected/v1");
@@ -1296,7 +1397,10 @@ pub(crate) fn view_with_applicability(
         .collect();
     let mut record_requests: Vec<Value> = execution_requests
         .iter()
+        .filter(|_| applicability.detail)
         .map(|request| {
+            #[cfg(test)]
+            crate::native_frontier::built("proof-report");
             let mut request = request.clone();
             request["request_kind"] = json!("verification/record-receipt/v1");
             request["id"] = json!("verification/record-receipt/v1");
@@ -1309,7 +1413,9 @@ pub(crate) fn view_with_applicability(
     report_request["request_kind"] = json!("verification/record-receipt/v1");
     report_request["arguments"] =
         json!({"route_id":"unresolved","command":"<reported-command>","result":"failed"});
-    record_requests.push(report_request);
+    if applicability.detail {
+        record_requests.push(report_request);
+    }
     let mut prerequisite_requests = Vec::new();
     if strategy_assessment.is_some() {
         prerequisite_requests.push(strategy_request.clone());
@@ -1327,7 +1433,7 @@ pub(crate) fn view_with_applicability(
     };
     let execution_requests: Vec<Value> =
         execution_requests.into_iter().map(&with_context).collect();
-    let record_requests: Vec<Value> = record_requests.into_iter().map(with_context).collect();
+    let record_requests: Vec<Value> = record_requests.into_iter().map(&with_context).collect();
     let visible_strategy = visible_strategy(
         &strategy,
         if execution["status"] == "selected" {
@@ -1354,7 +1460,7 @@ pub(crate) fn view_with_applicability(
             gaps.push("current-task-strategy-requires-owner-judgment".into());
         }
     }
-    let packet = applicable.then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
+    let packet = (applicable && applicability.detail).then(|| json!({"task":task,"changed_paths":changed,"claim_class":"slice_complete",
         "task_identity":current_work,"task_claim_identity":direct_subject,"work_ref":work_ref,"work_revision":work_revision,"planning_subject":planning_subject,
         "acceptance_source":{"source":"current-task","requested_outcome":task},
         "strategy":visible_strategy,"strategy_revision":strategy_revision,
@@ -1411,6 +1517,12 @@ pub(crate) fn view_with_applicability(
         blockers.as_array_mut().unwrap().push(json!({"code":format!("profile-proof-required:{}",obligation["profile_id"].as_str().unwrap()),"message":"Selected proof profile requires current admitted command evidence; selection is not proof.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
     }
     let mut decisions = serde_json::Map::new();
+    for (id, row) in proof_scope.as_object().unwrap() {
+        if row["status"] == "unresolved" {
+            decisions.insert(id.clone(), json!("unresolved"));
+            blockers.as_array_mut().unwrap().push(json!({"code":format!("proof-scope-unresolved:{id}"),"message":"Named proof scope requires current applicability judgment; selection grants no proof or claim authority.","affects":["claim:complete","claim:claim-work-complete","claim:claim-slice-complete"]}));
+        }
+    }
     for row in assurance["requirements"].as_array().unwrap() {
         if row["status"] == "unresolved" {
             decisions.insert(row["id"].as_str().unwrap().into(), json!("unresolved"));
@@ -1473,19 +1585,136 @@ pub(crate) fn view_with_applicability(
     let assurance_gaps: Vec<Value> = assurance["requirements"].as_array().unwrap().iter().filter(|row| row["status"]!="not-applicable").map(|row| {
         let source = &row["source_requirement"];
         let mut missing = vec!["required-evidence-not-admitted"];
-        if source.get("measurement").is_some() { missing.push("measurement-owner-result-unavailable"); }
+        let measurement = &measurement_admissions[row["id"].as_str().unwrap()];
+        if source.get("measurement").is_some() {
+            if measurement["status"] != "current-measurement-satisfied" { missing.push("measurement-owner-result-unavailable"); }
+            else if source["required_evidence"].as_array().is_some_and(|labels| labels.iter().all(|label| *label == source["measurement"]["evidence_label"])) { missing.retain(|gap| *gap != "required-evidence-not-admitted"); }
+        }
         if source.get("review_owner").is_some() { missing.push("required-reviewer-result-not-admitted"); }
         if source.get("source_intent_ref").is_some() { missing.push("source-intent-reconciliation-not-admitted"); }
-        json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":source,"missing_admissions":missing,"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})
+        json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":source,"measurement_admission":measurement,"missing_admissions":missing,"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})
     }).collect();
+    let sole = sole_required_choice(
+        &strategy,
+        &strategy_control,
+        &strategy_policy,
+        &instruction_checks,
+        &evidence,
+        !assurance_request.is_null()
+            || gaps.iter().any(|g| {
+                !matches!(
+                    g.as_str(),
+                    "current-task-claim-judgment-not-admitted"
+                        | "current-task-strategy-requires-owner-judgment"
+                )
+            }),
+    );
+    let required_execution = if let Some(choice) = sole {
+        let mut request = template.clone();
+        request["id"] = json!("verification/execute-selected/v1");
+        request["request_kind"] = json!("verification/execute-selected/v1");
+        request["arguments"] = choice;
+        json!({"status":"unique-required-action","request":with_context(request),
+            "authority":"Selection is settled by current Verification requirements; native action admission and remaining claim judgment still apply."})
+    } else {
+        json!({"status":"not-settled","request":null})
+    };
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
-        "strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),
     )
+}
+
+// This is Verification policy, not a skill-side interpretation of rendered
+// choices. Inspect complete current routes, including alternatives omitted by
+// presentation limits. Required means an admitted instruction check or a
+// selected profile obligation, never merely one protocol candidate.
+fn sole_required_choice(
+    strategy: &Value,
+    control: &Value,
+    policy: &Value,
+    checks: &[Value],
+    evidence: &[Value],
+    unresolved: bool,
+) -> Option<Value> {
+    if unresolved
+        || control["execution_blocked"] == true
+        || control["gaps"].as_array().is_none_or(|v| !v.is_empty())
+        || checks
+            .iter()
+            .any(|c| !matches!(c["status"].as_str(), Some("current" | "evidence-required")))
+    {
+        return None;
+    }
+    // An unselected profile is a possible strategy choice; do not equate the
+    // selected catalogue with the complete source universe.
+    if policy["profiles"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .any(|(id, _)| {
+            !control["selected_profiles"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|p| p["id"] == *id)
+        })
+    {
+        return None;
+    }
+    let mut required = std::collections::BTreeSet::<(String, String)>::new();
+    for obligation in control["obligations"].as_array().into_iter().flatten() {
+        for command in obligation["missing_commands"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            required.insert((
+                format!("profile:{}", obligation["profile_id"].as_str()?),
+                command.to_owned(),
+            ));
+        }
+    }
+    for check in checks.iter().filter(|c| c["status"] == "evidence-required") {
+        let route = check["route_id"].as_str()?;
+        for command in strategy["proof_routes"][route]["commands"]
+            .as_array()?
+            .iter()
+            .filter_map(Value::as_str)
+        {
+            if !evidence.iter().any(|e| {
+                e["checked_scope"]["claim"] == "selected-command-passed"
+                    && e["runtime_admission"]["command_coverage"]
+                        == json!({"route_id":route,"command":command})
+            }) {
+                required.insert((route.to_owned(), command.to_owned()));
+            }
+        }
+    }
+    if required.len() != 1 {
+        return None;
+    }
+    let (route, command) = required.into_iter().next()?;
+    // Stop at the first different candidate; no alternative objects are built.
+    if strategy["proof_routes"]
+        .as_object()?
+        .iter()
+        .any(|(id, row)| {
+            row["commands"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|c| *id != route || *c != command)
+        })
+    {
+        return None;
+    }
+    Some(json!({"route_id":route,"command":command}))
 }
 
 pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Carry exact issue creation requests and reobserve external outcomes without effect replay."
+issues = [3264, 3277]

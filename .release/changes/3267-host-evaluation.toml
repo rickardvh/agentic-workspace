@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Record the matched richer-host evaluation against the portable lazy proof baseline; no adapter is needed for this journey."
+issues = [3267, 3277]

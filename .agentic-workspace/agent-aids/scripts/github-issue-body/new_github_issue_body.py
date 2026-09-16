@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -255,6 +256,127 @@ def render_issue(*, kind: str, title: str, fields: dict[str, str], target_root: 
     )
 
 
+def prepare_creation(payload: dict[str, Any], *, repository: str, task: str, target_root: Path = REPO_ROOT) -> dict[str, Any]:
+    """Pure external request; the caller's transport owns write authorization."""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository) or not task.strip():
+        raise ValueError("An exact owner/repository and nonblank task are required")
+    prepared = render_issue_request(payload, target_root=target_root)
+    if prepared["status"] != "prepared":
+        return prepared
+    material = {
+        "repository": repository,
+        "task": task,
+        "preparation": prepared,
+        "write": {key: prepared[key] for key in ("title", "body", "labels")},
+    }
+    return {
+        "kind": "agentic-workspace/issue-creation-request/v1",
+        "status": "prepared",
+        "request_id": _digest(json.dumps(material, sort_keys=True, ensure_ascii=False).encode()),
+        "material": material,
+        "authority": "No write authority; an authorized actor must carry this exact request through its GitHub transport.",
+        "recovery": "After a possibly committed attempt, reobserve the issue; never retry creation from this packet alone.",
+    }
+
+
+def validate_creation_request(request: dict[str, Any]) -> dict[str, Any]:
+    material = request.get("material")
+    if request.get("kind") != "agentic-workspace/issue-creation-request/v1" or not isinstance(material, dict):
+        raise ValueError("Expected the exact prepared creation request")
+    expected = _digest(json.dumps(material, sort_keys=True, ensure_ascii=False).encode())
+    if request.get("request_id") != expected:
+        raise ValueError("Creation material changed; prepare again before effect")
+    if material.get("write") != {key: material["preparation"].get(key) for key in ("title", "body", "labels")}:
+        raise ValueError("Creation request and prepared issue disagree")
+    return material
+
+
+def observe_created_issue(repository: str, number: int) -> dict[str, Any]:
+    """Read one exact object through the caller's existing GitHub transport."""
+    response = subprocess.run(
+        ["gh", "api", f"repos/{repository}/issues/{number}"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=60,
+        check=True,
+    )
+    return json.loads(response.stdout)
+
+
+def continue_creation(
+    request: dict[str, Any],
+    result: dict[str, Any],
+    *,
+    current: dict[str, Any] | None = None,
+    observer=None,
+    continuation=None,
+) -> dict[str, Any]:
+    """Admit an actor's effect report by reobservation; never perform creation."""
+    material = validate_creation_request(request)
+    observer = observer or observe_created_issue
+    if result.get("request_id") != request["request_id"]:
+        raise ValueError("External result belongs to a different creation request")
+    outcome = result.get("outcome")
+    if outcome not in {"rejected-before-effect", "confirmed", "uncertain"}:
+        raise ValueError("External actor must distinguish rejection, confirmed effect and uncertainty")
+    response: dict[str, Any] = {
+        "kind": "agentic-workspace/issue-creation-result/v1",
+        "request_id": request["request_id"],
+        "retry_creation": False,
+        "effect_outcome": "unknown",
+        "status": "effect-uncertain",
+        "continuation": {"status": "not-requested"},
+        "currentness": "current" if current and current.get("request_id") == request["request_id"] else "stale-or-unavailable",
+    }
+    if outcome == "rejected-before-effect":
+        if result.get("effect_attempted") is not False or not result.get("reason"):
+            raise ValueError("Rejection requires the authorized actor's explicit no-effect report and reason")
+        response.update(status="rejected-before-effect", effect_outcome="not-committed", reason=result["reason"])
+        return response
+    number = result.get("number")
+    if type(number) is not int or number <= 0:
+        response["recovery"] = (
+            "Ask the authorized transport to reobserve the possibly created issue and return its exact number; do not repeat create."
+        )
+        return response
+    try:
+        observed = observer(material["repository"], number)
+        expected_url = f"https://github.com/{material['repository']}/issues/{number}"
+        if observed.get("number") != number or observed.get("html_url") != expected_url or observed.get("pull_request"):
+            raise ValueError("Reobserved object does not match the exact repository/issue")
+        actual = {
+            "title": observed.get("title"),
+            "body": observed.get("body"),
+            "labels": sorted(label["name"] for label in observed.get("labels", [])),
+        }
+        expected = {**material["write"], "labels": sorted(material["write"]["labels"])}
+        if actual != expected:
+            response.update(
+                status="external-result-mismatch",
+                observed_issue={"number": number, "url": expected_url},
+                recovery="Reconcile this observed object with the authorized actor; a mismatch is not permission to create again.",
+            )
+            return response
+        response.update(status="created", effect_outcome="committed", issue={"number": number, "url": expected_url, **actual})
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as error:
+        response["recovery"] = "Reobserve the exact issue through the authorized transport; creation must not be replayed."
+        response["observation_error"] = type(error).__name__
+        return response
+    if continuation is not None:
+        if response["currentness"] != "current":
+            response["continuation"] = {
+                "status": "unavailable",
+                "reason": "Reprepare current owner continuation after material drift; creation remains committed.",
+            }
+        else:
+            try:
+                response["continuation"] = {"status": "returned-owner-result", "result": continuation(response["issue"])}
+            except (OSError, subprocess.SubprocessError, ValueError) as error:
+                response["continuation"] = {"status": "unavailable", "reason": type(error).__name__}
+    return response
+
+
 def _parse_field(value: str) -> tuple[str, str]:
     if "=" not in value or not value.split("=", 1)[0].strip():
         raise argparse.ArgumentTypeError("fields must use nonblank id=value")
@@ -270,6 +392,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--field", action="append", type=_parse_field, default=[])
     parser.add_argument("--target", default=str(REPO_ROOT), help="Repository containing the current forms and local source refs.")
     parser.add_argument("--previous", default="", metavar="PATH", help="Compare a prior preparation; always prepare fresh.")
+    parser.add_argument("--repository", default="", help="Exact owner/repo for compound preparation.")
+    parser.add_argument("--task", default="", help="Work identity for compound preparation.")
+    parser.add_argument("--creation-request", default="", help="Exact prior compound request; compare before effect or resume after it.")
+    parser.add_argument("--external-result", default="", help="Actor report bound to request_id; this helper only reobserves GitHub.")
+    parser.add_argument(
+        "--continuation-input", default="", help="Separately authorized current native owner request; never inferred from creation."
+    )
+    parser.add_argument("--native-cli", default="agentic-workspace")
     parser.add_argument("--format", choices=("body", "json"), default="json")
     args = parser.parse_args(argv)
     try:
@@ -278,9 +408,14 @@ def main(argv: list[str] | None = None) -> int:
         if len(dict(args.field)) != len(args.field):
             raise ValueError("duplicate --field values are ambiguous")
         if args.input_json:
-            payload = _load_request(args.input_json)
+            try:
+                payload = _load_request(args.input_json)
+            except (ValueError, OSError):
+                if not args.external_result:
+                    raise
+                payload = {}  # Still reobserve a possibly committed external effect.
         else:
-            if not args.kind:
+            if not args.kind and not args.external_result:
                 raise ValueError("--kind or --input-json is required")
             payload = {
                 "kind": "agentic-workspace/issue-body-request/v1",
@@ -288,9 +423,63 @@ def main(argv: list[str] | None = None) -> int:
                 "title": args.title,
                 "fields": {key: {"kind": "markdown", "value": value} for key, value in args.field},
             }
-        result = render_issue_request(
-            payload, target_root=Path(args.target), previous=_load_request(args.previous) if args.previous else None
-        )
+        if args.external_result and not args.creation_request:
+            raise ValueError("External result requires its exact creation request")
+        if args.continuation_input and not args.external_result:
+            raise ValueError("Owner continuation requires a confirmed external result")
+        if args.repository or args.creation_request:
+            prior = _load_request(args.creation_request) if args.creation_request else None
+            try:
+                current = prepare_creation(payload, repository=args.repository, task=args.task, target_root=Path(args.target))
+            except (ValueError, OSError, yaml.YAMLError):
+                if not args.external_result:
+                    raise
+                current = None  # A later preparation error cannot erase an external effect.
+            if args.external_result:
+
+                def owner_continuation(issue):
+                    # The owner receives only its exact caller-supplied request. An
+                    # issue result never fabricates an owner ingestion operation.
+                    response = subprocess.run(
+                        [
+                            args.native_cli,
+                            "start",
+                            "--target",
+                            args.target,
+                            "--task",
+                            args.task,
+                            "--input",
+                            args.continuation_input,
+                            "--format",
+                            "json",
+                        ],
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        timeout=60,
+                        check=True,
+                    )
+                    return json.loads(response.stdout)
+
+                result = continue_creation(
+                    prior,
+                    _load_request(args.external_result),
+                    current=current,
+                    continuation=owner_continuation if args.continuation_input else None,
+                )
+            elif prior:
+                validate_creation_request(prior)
+                result = (
+                    current
+                    if current and current.get("request_id") == prior["request_id"]
+                    else {"status": "stale", "retry_creation": False, "reason": "Reprepare and renew authorization before any effect."}
+                )
+            else:
+                result = current
+        else:
+            result = render_issue_request(
+                payload, target_root=Path(args.target), previous=_load_request(args.previous) if args.previous else None
+            )
     except (ValueError, OSError, yaml.YAMLError) as exc:
         print(
             json.dumps(
@@ -300,13 +489,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
     if args.format == "body":
-        if result["body"] is not None:
+        if result.get("body") is not None:
             sys.stdout.write(result["body"])
         else:
             print(json.dumps(result), file=sys.stderr)
     else:
         print(json.dumps(result, indent=2, ensure_ascii=False))
-    return 0 if result["status"] == "prepared" else 2
+    return 0 if result["status"] in {"prepared", "created", "rejected-before-effect"} else 2
 
 
 if __name__ == "__main__":

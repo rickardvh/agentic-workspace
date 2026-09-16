@@ -65,14 +65,13 @@ fn compose(mut value: Value, input: &Input) -> Result<Value, CoreError> {
             "effect_outcome":"not-required","owner_calls":0,"authority_effect":"none"}),
         );
     }
-    let available =
-        crate::native_routes::procedure(Path::new(&input.target), "workspace-resources")?;
-    let executable = &available["procedures"][0]["executable"];
-    if available["status"] != "current"
-        || executable["status"] != "current"
-        || executable["entrypoint"]["kind"] != "native"
-        || executable["entrypoint"]["command"] != "resources"
-    {
+    let available = crate::native_methods::selected(
+        Path::new(&input.target),
+        "workspace-resources",
+        "resources",
+    )?;
+    let executable = &available;
+    if available["status"] != "current" {
         return Ok(
             json!({"kind":"agentic-workspace/resource-procedure-result/v1","status":"unavailable",
             "effect_outcome":"not-invoked","availability":available,"owner_calls":0,
@@ -88,7 +87,11 @@ fn compose(mut value: Value, input: &Input) -> Result<Value, CoreError> {
     // Reobserve executable material immediately before crossing the effect
     // boundary. The resource owner independently revalidates policy/resource
     // identity and retains all its preservation/recovery checks.
-    let current = crate::native_routes::procedure(Path::new(&input.target), "workspace-resources")?;
+    let current = crate::native_methods::selected(
+        Path::new(&input.target),
+        "workspace-resources",
+        "resources",
+    )?;
     if current != available {
         proposal.as_object_mut().unwrap().remove("action");
         proposal["composition"] = json!({"status":"stale","owner_calls":1,"recovery":"Reobserve current skill material and the same exact resource before continuing."});

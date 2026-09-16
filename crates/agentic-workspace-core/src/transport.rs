@@ -10,11 +10,8 @@ pub fn run_stdio() {
         Err(error) => fail("invalid-json", &error.to_string()),
     };
     let started = std::time::Instant::now();
-    let result = if request
-        .as_object()
-        .is_some_and(|v| v.len() == 1 && v.contains_key("resources"))
-    {
-        crate::native_resources::view(request["resources"].clone())
+    let result = if let Some(result) = crate::native_methods::dispatch(&request) {
+        result
     } else if request
         .as_object()
         .is_some_and(|v| v.len() == 1 && v.contains_key("worker"))

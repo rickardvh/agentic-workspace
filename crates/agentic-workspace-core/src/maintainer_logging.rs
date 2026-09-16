@@ -41,6 +41,12 @@ pub fn policy(input: Value) -> Result<Value, CoreError> {
         json!({"enabled":settings["enabled"] == true && input["disable_override"] != "1", "path_mode":mode}),
     )
 }
+pub(crate) fn effective_policy(target: &Path) -> Result<Value, CoreError> {
+    let local = crate::native_assignment_policy::load(target)?.effective;
+    policy(
+        json!({"local":local,"disable_override":std::env::var("AW_SESSION_LOGGING_DISABLE").unwrap_or_default()}),
+    )
+}
 fn trim_identity(value: &str) -> &str {
     value.trim_matches(|c: char| c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c))
 }

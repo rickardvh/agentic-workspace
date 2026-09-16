@@ -23,7 +23,8 @@
     ".agentic-workspace/system-intent/WORKFLOW.md",
     ".agentic-workspace/skills/workspace-resources/SKILL.md",
     ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
-    ".agentic-workspace/skills/workspace-intent-discovery/prepare.py"
+    ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
   ],
   "payload_schema": "agentic-workspace/payload/v1",
   "release_identity": {

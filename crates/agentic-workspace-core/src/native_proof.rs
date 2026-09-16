@@ -75,17 +75,9 @@ fn runtime(strategy: &Value) -> Result<Value, CoreError> {
         "nested_tool_runtime":"unobserved"}),
     )
 }
-/// Only exact source commands are constructible. Template resolution belongs to
-/// the existing strategy owner and remains an explicit gap here.
-pub(crate) fn selected(
-    target: &Path,
-    task: &str,
-    changed: &[String],
-    work: &Value,
-    strategy: &Value,
-    choice: Option<&Value>,
-) -> Result<Value, CoreError> {
-    select_mode(target, task, changed, work, strategy, choice, None)
+pub(crate) struct SelectionMode<'a> {
+    pub report: Option<&'a Value>,
+    pub alternatives: bool,
 }
 pub(crate) fn select_mode(
     target: &Path,
@@ -94,8 +86,12 @@ pub(crate) fn select_mode(
     work: &Value,
     strategy: &Value,
     choice: Option<&Value>,
-    report: Option<&Value>,
+    mode: SelectionMode<'_>,
 ) -> Result<Value, CoreError> {
+    let SelectionMode {
+        report,
+        alternatives,
+    } = mode;
     if report
         .is_some_and(|value| serde_json::to_vec(value).map_or(true, |bytes| bytes.len() > 262144))
     {
@@ -108,7 +104,10 @@ pub(crate) fn select_mode(
     let mut profile_count = 0usize;
     let mut omitted_profile_commands = 0usize;
     let mut omitted_domain_commands = 0usize;
-    if let Some(routes) = strategy["proof_routes"].as_object() {
+    if let Some(routes) = strategy["proof_routes"]
+        .as_object()
+        .filter(|_| alternatives)
+    {
         for (id, route) in routes {
             for command in route["commands"]
                 .as_array()
@@ -133,6 +132,8 @@ pub(crate) fn select_mode(
                     }
                     profile_count += 1;
                 }
+                #[cfg(test)]
+                crate::native_frontier::built("proof-choice");
                 available.push(json!({"route_id":id,"command":command}));
             }
         }
@@ -276,25 +277,47 @@ pub(crate) fn freshness(
             json!({"status":"unproven","strategy_coverage":"unproven","reason":"legacy-proof-recorder-runtime-unobserved"}),
         );
     }
-    let choices = selected(target, task, changed, work, strategy, None)?;
-    for choice in choices["choices"].as_array().into_iter().flatten() {
-        if choice["command"] != receipt["command"] {
-            continue;
-        }
-        let current = selected(target, task, changed, work, strategy, Some(choice))?;
-        if current["status"] != "selected" {
-            continue;
-        }
-        let comparison = proof_subject::compare(
-            &receipt["proof_subject"],
-            &current["selection"]["proof_subject"],
-            receipt["command"].as_str().unwrap_or(""),
+    // The publication's authenticated native custody already identifies the
+    // selected route and command. Revalidate that exact selection, never a
+    // catalogue of hypothetical alternatives (including same-command aliases).
+    let Some(committed) = committed_publication(target, receipt)? else {
+        return Ok(
+            json!({"status":"unproven","strategy_coverage":"unproven","reason":"native-selected-receipt-custody-unavailable"}),
         );
-        if comparison["status"] == "reusable" {
-            return Ok(
-                json!({"status":if current["gaps"].as_array().is_some_and(Vec::is_empty) {"reusable"} else {"unproven"},"strategy_coverage":"selected-command-covered","command_coverage":choice,"comparison":comparison,
-                "environment_scope":"producer-and-declared-shell","remaining_gaps":current["gaps"],"nested_tool_runtime":"unobserved"}),
+    };
+    let choice = &committed["invocation"]["arguments"]["selection"]["choice"];
+    let declared = strategy["proof_routes"]
+        .get(choice["route_id"].as_str().unwrap_or(""))
+        .is_some_and(|route| {
+            route["commands"]
+                .as_array()
+                .is_some_and(|commands| commands.contains(&choice["command"]))
+        });
+    if declared {
+        let current = select_mode(
+            target,
+            task,
+            changed,
+            work,
+            strategy,
+            Some(choice),
+            SelectionMode {
+                report: None,
+                alternatives: false,
+            },
+        )?;
+        if current["status"] == "selected" {
+            let comparison = proof_subject::compare(
+                &receipt["proof_subject"],
+                &current["selection"]["proof_subject"],
+                receipt["command"].as_str().unwrap_or(""),
             );
+            if comparison["status"] == "reusable" {
+                return Ok(
+                    json!({"status":if current["gaps"].as_array().is_some_and(Vec::is_empty) {"reusable"} else {"unproven"},"strategy_coverage":"selected-command-covered","command_coverage":choice,"comparison":comparison,
+                    "environment_scope":"producer-and-declared-shell","remaining_gaps":current["gaps"],"nested_tool_runtime":"unobserved"}),
+                );
+            }
         }
     }
     let reason = if receipt["proof_subject"]["runtime"]["producer"]
@@ -473,7 +496,7 @@ pub(crate) fn execute(
     )?;
     if admission["disposition"] == "replay" {
         return Ok(
-            json!({"status":admission["record"]["outcome"]["status"],"effects":admission["record"]["outcome"]["effects"],"value":admission["record"]["outcome"]["value"],"custody":admission["custody"]}),
+            json!({"status":admission["record"]["outcome"]["status"],"effects":admission["record"]["outcome"]["effects"],"value":admission["record"]["outcome"]["value"],"custody":admission["custody"],"post_effect_changed_paths":[]}),
         );
     }
     if admission["disposition"] != "execute" {
@@ -481,7 +504,7 @@ pub(crate) fn execute(
             crate::proof_publication::recover(target, invocation, &mut revalidate)?
         {
             return Ok(
-                json!({"status":committed["record"]["outcome"]["status"],"effects":committed["record"]["outcome"]["effects"],"value":committed["record"]["outcome"]["value"],"custody":committed["custody"]}),
+                json!({"status":committed["record"]["outcome"]["status"],"effects":committed["record"]["outcome"]["effects"],"value":committed["record"]["outcome"]["value"],"custody":committed["custody"],"post_effect_changed_paths":[]}),
             );
         }
         return Err(err(
@@ -569,7 +592,10 @@ pub(crate) fn execute(
     let mut final_run = run;
     final_run["custody"] = committed["custody"].clone();
     create(&root, &format!("{path}.completed.json"), &final_run)?;
+    // Proof publication adds evidence outputs, not semantic source inputs.
+    // Command mutation of declared inputs already makes source_current false;
+    // arbitrary nested command effects are not authenticated source edits.
     Ok(
-        json!({"status":"applied","effects":["proof-execution"],"value":value,"custody":committed["custody"]}),
+        json!({"status":"applied","effects":["proof-execution"],"value":value,"custody":committed["custody"],"post_effect_changed_paths":[]}),
     )
 }

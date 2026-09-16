@@ -5,150 +5,93 @@ description: Help configure Agentic Workspace through current source-owned decis
 
 # Configure Agentic Workspace
 
-Use this procedure when the user asks for configuration help or the current
-operating decision routes a configuration concern here. It is a judgment aid;
-the responsible owner supplies current questions, operations and authority.
+Use this skill when the user asks for configuration help or a current owner
+routes a configuration concern here. Start with the desired behavior. Select
+only the relevant concern; a setup request does not authorize enabling every
+module, choosing providers, changing proof floors or replacing repository policy.
 
-Start with the user's outcome, not a list of configuration fields. For example,
-"use this checkout's build" concerns invocation; "use our existing instructions"
-concerns the instruction source; "remember this repository's decisions" concerns
-Memory's current admission and source choices. Discover only that owner's current
-capability and requests. A high-level request is not permission to enable every
-module, choose a provider, or replace repository policy.
+## Selected executable method
 
-Before an irreducible question, compare the existing value with the requested
-outcome and inspect the named repository/runtime facts. Apply an inferable value
-only when the current owner admits the existing human authorization or explicit
-agent grant. A missing value alone is not a required configuration decision.
-If no applicable concern remains, finish without creating configuration or state.
+Run this bundle's `prepare.py` with the configured `--native-cli`, repository
+`--target`, exact `--task` and any `--changed` paths. It uses the existing native
+request/action/result boundary; it does not parse config, edit sources, answer
+owner questions or execute a primary-action loop.
 
-1. Use the invocation already selected by the adapter. Run
-   `start --target . --task "<configuration outcome>" --format json` and read its
-   `decision_packet`. Preserve any required source-read or Planning request.
-2. Inspect only the current concern and its named source. Derive technical facts
-   before asking questions; a cheap current fact need not be persisted. If the
-   requested outcome is already represented, leave configuration alone.
-3. Use an exact owner-returned request. For a configuration edit, select the
-   matching `configuration_write.requests` entry and supply the intended value.
-   If the canonical source is absent, first submit the returned
-   `configuration_write.creation_discovery_request` through `start` with the same
-   context. Select the matching `configuration_write.creation_requests` entry
-   from that response. This read-only discovery creates no source and does not
-   recommend enabling a capability; source or policy drift requires a fresh request.
-   Run `start --input <request.json>` with the same context and `--format json`.
-   The current writer supports canonical shared/local invocation, shared module
-   selection, instruction and intent source choices, and local command/review
-   safety ceilings. The returned schema binds each field to its source and type.
-   Existing bytes are preserved; absent sources require exact creation authority.
-   An unavailable control remains an owner gap; this procedure supplies no
-   blanket edit or capability-enablement authority.
-4. Present only the returned irreducible decision, including the exact source,
-   affected key, intended value and complete proposed source. A previously explicit human answer may be
-   supplied only if it authorizes that exact current proposal. Keep all binding
-   fields; drift requires a fresh request. Guided use follows the same decisions.
-5. Invoke only the returned `primary_action` through
-   `invoke --input <action.json>` with the same context and `--format json`.
-   Resolve again to verify the result. Use a returned recovery request if a write
-   was interrupted. A successful write grants no continuing source custody.
-6. A returned `defer` answer changes no human configuration. Invoke its exact
-   `configuration.defer-choice` action when the unresolved choice needs to survive
-   this interaction. The configuration owner stores only that current choice and
-   its binding under `.agentic-workspace/local/configuration/`, using existing
-   attempt custody. Fresh resolution exposes `configuration_write.deferred_choices`.
-   Use the returned `resume_request` to obtain a current postimage and decision;
-   `changed-context` requires fresh judgment. No old answer is standing authority.
-   A successful corresponding edit consumes the owner continuation. One current
-   continuation per source/key replaces questionnaire history.
-7. Current shared policy can delegate an exact configuration source to the acting
-   agent for ordinary durable choices. Apply already-authorized choices first;
-   capability enablement and delegation-policy editing still require the exact
-   human answer. Never create a grant just to automate setup.
-8. For package-managed payload refresh, submit the Configuration owner's
-   `payload_discovery_request`. Its `payload_choices` name only files declared
-   by the current artifact. Inspect each `refresh-available` row's exact proposal;
-   an authorized answer permits that file's refresh through the existing writer.
-   It does not authorize replacing unrelated repository, human or local state.
-   Re-resolve after each write and follow an offered `recovery_request` after
-   interrupted publication. A second pass with every row `current` needs no writes.
-   Byte convergence does not settle unresolved semantic source dispositions or
-   establish proof, review acceptance or completion of broader adoption intent.
+- `--concern instructions|diagnostics|assignment|modules|invocation|preferences`
+  obtains fresh current behavior and its remaining gaps from the responsible
+  native owner. Select by the human outcome, not task-word matching.
+- `--input <request.json>` carries an exact Configuration request, a current
+  request set containing that concern and supplied affected-owner judgments, or
+  one **already-authorized** Configuration action. Native source/work admission
+  remains mandatory. It does not manufacture absent edit requests.
+- `--no-change` is a successful zero-owner-call, no-retention disposition when
+  the concern is already settled or a one-off observation has no durable value.
+- `--expected-method-revision <returned revision>` rejects carried preparation
+  after this helper or skill changes. Native owners separately revalidate source,
+  policy, task and action currentness. A changed method is not a hot-patch permit.
 
-## Configuration grammar
+Use `configuration_write.behavior_request` directly through ordinary native
+`start` when the host does not run Python. The same current owner observations
+and effect restrictions apply. The native writer also attaches selected behavior
+observations after a supported write, so bypassing this optional helper does not
+bypass the responsible owners.
 
-Shared and local sources use their single closed schemas, with no version marker.
-Unknown fields are rejected. Exact edits preserve unrelated current choices and
-comments. An unavailable edit request grants no source or trust authority.
+## Questions, writes and consequences
 
-Local enabled/cli_invoke override shared availability/invocation defaults, including
-shared-local then checkout-local precedence. Independent proof, source admission,
-module grants and local safety remain binding. Shared-local sources are read
-inputs; the canonical writer does not acquire user-file write authority. Use
-session_logging.enabled/path_mode for diagnostics and clarification.mode only
-as an advisory preference. Use existing defer/recovery for continuation, not setup
-fields. Never derive instruction or decision trust pins from HEAD or source hashes.
+Discover the relevant current Configuration choice through `start`; use its exact
+returned read/edit/creation request and schema. Compare the existing value with
+the outcome and establish cheap current facts before asking an irreducible
+question. Supply an existing human answer only when it authorizes this exact
+current proposal. Explicit source delegations may admit ordinary agent choices;
+capability enablement and delegation-policy changes keep their own authority.
 
-## Source and capability convergence
+Pass the returned exact action to the method. It carries one invocation and
+returns native `effect_outcome`, `configuration_behavior`, actual `session_capture`
+when available, and continuation/reentry. Interpret the **affected owner's**
+observation: exact instruction delivery or read requirement, effective diagnostic
+privacy and capture outcome, eligible Assignment configurations or missing
+capabilities, or the selected module's admission/policy gap. Saved bytes alone do
+not establish the human outcome. A configured invocation string is not an
+executable-launch test; enabled logging is not successful capture.
 
-In a source checkout, run the documented `cargo build --locked --workspace --bins`
-preparation. `scripts/run_agentic_workspace.py` selects that checkout's paired
-`target/debug` binaries by default. A custom build directory uses an explicit
-`AGENTIC_WORKSPACE_CORE_BINARY`; missing either binary requires rebuilding the
-pair. An unavailable runtime supplies no Assignment or configuration permission.
-Installed bindings continue to use their artifact-verified native distribution.
+Preserve confirmed source effects when continuation fails. Use fresh owner
+observation or the exact recovery request, never replay the write to obtain a
+post-write answer. A current observation can still leave semantic judgment or
+proof unresolved. Unknown, disabled and unavailable are not successful adoption.
+Do not broaden the writer into Assignment declarations, module manifests,
+operational state, learned outcomes or trust pins just to remove a gap.
 
-For a relevant independent module, use its returned `configuration_request` and
-`configuration_schema`. Supply only the missing owner-specific settings through
-the resulting Configuration edit; retain unrelated module admissions. Do not add
-module-name branches or a fixed module questionnaire to this procedure.
+A deferred optional choice uses the existing `configuration.defer-choice` action
+and `deferred_choices.resume_request`. It changes no human config and keeps only
+one current source/key continuation. Changed context needs fresh judgment; an
+old answer is not standing authorization. Settled or unrelated work needs no
+configuration write or retained lesson.
 
-Read Assignment's execution configurations for actual constructibility and its
-named gaps. A declared internal transport is not evidence that the host session permits dispatch. Report visibility,
-persistence, resumability and cleanup as unknown unless the current adapter
-guarantees them. Discovery must not create provider work. Any real probe uses
-the existing bounded Assignment/transport operation and its cleanup owner.
+## Package and host exposure
 
-After a capability or source change, revisit the affected current request; never
-replay a stale answer or rewrite settled unrelated choices. A second resolution
-should need no writes for settled choices. Deferred optional choices stay with
-their existing owner and do not force unrelated direct work through this skill.
+For artifact refresh, use `payload_discovery_request` and each current
+`payload_choices` proposal. Only the exact authorized artifact-owned file is
+written. Reobserve after interruption; byte convergence does not settle source
+admissions, review or broader adoption intent.
 
-Shared policy stays stronger than local preference. Preserve unrelated keys,
-comments and files.
+For host discovery, use `skill_exposure_request` and its exact expose/remove or
+recovery request. `.agents/skills` links point to canonical bundles: relative
+symlinks on Unix, NTFS junctions on Windows. Canonical updates need no body copy.
+Collisions and unsupported filesystems remain explicit gaps. Preserve the small
+mixed-reader pointer. Reconcile moved Windows checkout junctions explicitly;
+remove only authenticated matching exposure, preferably before payload teardown.
+Retired owned links remain removable. Discovery/selection grants no authority.
 
-Keep task answers with Assignment, learned outcomes with target evidence, and
-proof strategy/evidence with Verification. Shared/local config holds durable
-human choices and necessary environment declarations. Do not seed generic
-obligations, copy package-repository policy, or tune human priors from outcomes.
+## Source boundaries
 
-Report the exact configuration effect and remaining concern. A successful edit
-is not evidence that broader configure-once, proof or completion intent is met.
+Use the repository's configured invocation. Source checkouts build the native
+pair with `cargo build --locked --workspace --bins`; installed clients use the
+artifact-verified distribution. An unavailable runtime supplies no configuration
+or Assignment permission. Follow the main skill's read-only fallback.
 
-Verification policy definitions are authored in the existing Verification manifest,
-using its package-owned assurance schema. Only proof_profiles, domain_proof_lanes,
-requirements and subsystem_profiles belong there. Task-bound waivers and source
-currentness are owner judgments, never configuration fields.
-
-Author and preserve `assurance.strict_closeout` as current shared configuration
-policy. When true, it requires a current task-bound Verification claim judgment
-before completion, including work with no matching protocol. False does not waive
-independently binding proof or review requirements. Local config cannot override
-this floor; disabling Verification leaves it unresolved. Use the existing
-Verification claim-review owner to establish judgment, never config as evidence.
-
-For an independent module, read the modules.independent choice and name
-selected_owner. Inspect the exact prepared binding, requested footprint and
-owner settings schema. Preserve existing grants/scope/settings; omitted grants
-are refused. Add only independently authorized grants and approve the exact
-proposal through Configuration. Installation and a descriptor update grant
-nothing. Never fill missing grants merely to make a module executable.
-
-For Assignment, author canonical transports with the selected adapter's validated
-parameters. Keep repository requirements/preferences separate from local identity,
-capability declarations and hard prohibitions. Keep confidence/provenance as human
-priors and cost/latency as rough preferences. Observed outcomes/economics belong
-to their evidence owner. Do not replace human ranking preferences with invented
-guarantees. Durable selection guidance belongs to scoped instructions.
-
-Keep payload target_release/minimum_capabilities/policy as deliberate requirements.
-Artifact contents, identity and reader facts come from the executing artifact.
-Payload choices name only artifact-owned files; private state stays with its owner.
+Repository policy remains stronger than local preferences. Preserve unrelated
+keys, comments, files and owner state. Keep task judgments with Assignment,
+learned evidence with its owner, and proof/claim judgments with Verification.
+Module installation and descriptor changes grant nothing by themselves. Report
+the established effect, actual consumer behavior, remaining judgment and exact
+gaps separately. The method never claims independent review or task completion.

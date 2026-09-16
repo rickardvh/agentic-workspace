@@ -244,6 +244,11 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_CREATION,"result_kind":"agentic-workspace/configuration-creation-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ_PAYLOAD,"result_kind":"agentic-workspace/configuration-payload-choices/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"properties":{}}}));
     owner["requests"].as_array_mut().unwrap().push(json!({"kind":READ,"result_kind":"agentic-workspace/configuration-choice/v1","input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,"required":["source","key"],"properties":{"source":{"enum":[SHARED,LOCAL]},"key":{"type":"string"},"selected_owner":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,63}$"}}}}));
+    owner["requests"]
+        .as_array_mut()
+        .unwrap()
+        .push(crate::native_configuration_procedure::declaration());
+    crate::native_skill_exposure::declarations(&mut owner);
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
@@ -321,6 +326,17 @@ pub(crate) fn view(
     contract: &Value,
     request: Option<&Value>,
 ) -> Result<Value, CoreError> {
+    view_selected(target, work, config, contract, request, true)
+}
+
+pub(crate) fn view_selected(
+    target: &Path,
+    work: &Value,
+    config: &Value,
+    contract: &Value,
+    request: Option<&Value>,
+    detail: bool,
+) -> Result<Value, CoreError> {
     let owner = contract["owners"]
         .as_array()
         .unwrap()
@@ -343,7 +359,12 @@ pub(crate) fn view(
     let binding = json!({"sources":current,"effective_policy_revision":config["revision"],"capability_revision":contract["revision"]});
     result["contribution"]["revision"] = json!(digest(&binding)?);
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
+    result["behavior_request"] = template(
+        crate::native_configuration_procedure::READ,
+        json!({"concern":"instructions"}),
+    );
     result["payload_discovery_request"] = template(READ_PAYLOAD, json!({}));
+    result["skill_exposure_request"] = template(crate::native_skill_exposure::READ, json!({}));
     result["choice_requests"] = json!(
         PROGRESSIVE_CHOICES
             .iter()
@@ -388,35 +409,39 @@ pub(crate) fn view(
         if let Some((v, revision)) =
             crate::native_config::load(&root, source, source_schema(source)?).map_err(err)?
         {
-            let value = v["workspace"]["cli_invoke"]
-                .as_str()
-                .or(config["cli_invoke"].as_str())
-                .unwrap_or("agentic-workspace");
-            result["requests"].as_array_mut().unwrap().push(template(
-                EDIT,
-                json!({"source":source,"key":"workspace.cli_invoke","value":value}),
-            ));
-            for (choice_source, key) in CHOICES.iter().filter(|(s, k)| {
-                *s == source && *k != "workspace.cli_invoke" && !PROGRESSIVE_CHOICES.contains(k)
-            }) {
-                let (section, field) = key.split_once('.').unwrap();
-                let schema = choice_schema(choice_source, key)?;
-                let value = if !v[section][field].is_null() {
-                    v[section][field].clone()
-                } else if !schema["default"].is_null() {
-                    schema["default"].clone()
-                } else if schema["type"] == "boolean" {
-                    json!(false)
-                } else if schema["type"] == "array" {
-                    json!([])
-                } else {
-                    json!("<explicit-source-choice>")
-                };
-                // Discovery is not a recommendation or standing permission.
+            if detail {
+                #[cfg(test)]
+                crate::native_frontier::built("configuration-fields");
+                let value = v["workspace"]["cli_invoke"]
+                    .as_str()
+                    .or(config["cli_invoke"].as_str())
+                    .unwrap_or("agentic-workspace");
                 result["requests"].as_array_mut().unwrap().push(template(
                     EDIT,
-                    json!({"source":source,"key":key,"value":value}),
+                    json!({"source":source,"key":"workspace.cli_invoke","value":value}),
                 ));
+                for (choice_source, key) in CHOICES.iter().filter(|(s, k)| {
+                    *s == source && *k != "workspace.cli_invoke" && !PROGRESSIVE_CHOICES.contains(k)
+                }) {
+                    let (section, field) = key.split_once('.').unwrap();
+                    let schema = choice_schema(choice_source, key)?;
+                    let value = if !v[section][field].is_null() {
+                        v[section][field].clone()
+                    } else if !schema["default"].is_null() {
+                        schema["default"].clone()
+                    } else if schema["type"] == "boolean" {
+                        json!(false)
+                    } else if schema["type"] == "array" {
+                        json!([])
+                    } else {
+                        json!("<explicit-source-choice>")
+                    };
+                    // Discovery is not a recommendation or standing permission.
+                    result["requests"].as_array_mut().unwrap().push(template(
+                        EDIT,
+                        json!({"source":source,"key":key,"value":value}),
+                    ));
+                }
             }
             if let Some(record) = retained(target, source, &revision)? {
                 let prepared = crate::attempt_store::prepare_commit(
@@ -467,6 +492,18 @@ pub(crate) fn view(
         return Err(err(
             "configuration source, policy or capability changed; resolve a fresh request",
         ));
+    }
+    if matches!(
+        request["request_kind"].as_str(),
+        Some(crate::native_skill_exposure::READ | crate::native_skill_exposure::EDIT)
+    ) {
+        crate::native_skill_exposure::view(target, request, &binding, &template, &mut result)?;
+        return Ok(result);
+    }
+    if request["request_kind"] == crate::native_configuration_procedure::READ {
+        result["status"] = json!("behavior-requested");
+        result["requested_behavior"] = request["arguments"]["concern"].clone();
+        return Ok(result);
     }
     if request["request_kind"] == READ_PAYLOAD {
         let mut choices = Vec::new();
@@ -696,6 +733,9 @@ pub(crate) fn view(
     Ok(result)
 }
 pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
+    if action["operation_id"] == crate::native_skill_exposure::OP {
+        return crate::native_skill_exposure::write_scope(action);
+    }
     let args = &action["arguments"]["request"]["arguments"];
     let source = args["source"]
         .as_str()
@@ -725,6 +765,9 @@ pub(crate) fn execute(
     invocation: &Value,
     mut revalidate: impl FnMut() -> Result<(), CoreError>,
 ) -> Result<Value, CoreError> {
+    if invocation["operation_id"] == crate::native_skill_exposure::OP {
+        return crate::native_skill_exposure::execute(target, decision, invocation, revalidate);
+    }
     let mut result = execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
         Ok(())
     })?;

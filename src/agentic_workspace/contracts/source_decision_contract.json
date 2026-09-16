@@ -10,36 +10,73 @@
     "capability_contract": "agentic-workspace/capability-contract/v1",
     "public_request": "agentic-workspace/public-request/v1"
   },
-  "statuses": ["direct", "actionable", "decision", "blocked", "terminal"],
+  "statuses": [
+    "direct",
+    "actionable",
+    "decision",
+    "blocked",
+    "terminal"
+  ],
   "consequences": {
     "task": "task",
-    "prefixes": ["action:", "decision:", "effect:", "claim:", "outcome:"],
-    "action_identity_fields": ["owner", "revision", "operation_id", "arguments", "effects", "authority"]
+    "prefixes": [
+      "action:",
+      "decision:",
+      "effect:",
+      "claim:",
+      "outcome:"
+    ],
+    "action_identity_fields": [
+      "owner",
+      "revision",
+      "operation_id",
+      "arguments",
+      "effects",
+      "authority"
+    ]
   },
   "semantic_routes": {
     "selection_owner": "acting-agent",
-    "currentness": ["current-work identity", "route-source revision", "current declared route"],
+    "currentness": [
+      "current-work identity",
+      "route-source revision",
+      "current declared route"
+    ],
     "authority_effect": "applicability-only",
     "persistent_history": "none"
   },
   "public_requests": {
     "selection_owner": "acting-agent-or-human",
-    "binding": ["current-work identity", "capability-contract revision", "capability-owner revision", "source-contribution revision"],
+    "binding": [
+      "current-work identity",
+      "capability-contract revision",
+      "capability-owner revision",
+      "source-contribution revision"
+    ],
     "constructibility": "owner intention kind plus arguments validated by its declared JSON Schema Draft 2020-12",
     "resolution": "responsible owner derives a separately declared operation and exact arguments, decision, blocker, or settled response",
     "schema_authority": "self-contained input_schema in the revision-bound capability contract; external retrieval disabled",
-    "owner_responses": ["action", "decision", "blocked", "settled"],
+    "owner_responses": [
+      "action",
+      "decision",
+      "blocked",
+      "settled"
+    ],
     "unknown_variants": "fail-closed",
     "execution": "invoke only the exact returned operation envelope"
   },
   "operating_projections": {
     "default": "compact",
     "full": "Original current owner views and capability/detail contracts.",
-    "compact": "Decision-bearing material and exact selected executable envelope; no required action-detail fetch.",
-    "carried": "Separate model-facing view and disposable host carriage; only the view belongs in model context.",
+    "compact": "Resolve current mandatory owner contributions and exact selected envelopes; defer optional configuration fields, proof alternatives and Planning portability. No required action-detail fetch.",
+    "carried": "Separate model-facing view and disposable carriage of exact selected actions/questions plus small lazy owner descriptors; no full top-level owner objects. Only the view belongs in model context.",
     "session_capture": "Opted-in native transport observation: capturing, identity-unavailable (requirement: AW_SESSION_LOGICAL_IDENTITY), or capture-failed, with authoritative: false. Absent when disabled. Attached after capture to the result or carried model-facing view, never semantic inputs or immutable carriage. Replaces the previous observation without warnings or history; recovery is prospective.",
-    "reference_identity": ["exact immutable envelope", "selector", "original work context"],
-    "admission": "Digest is identity, not authority. Rust reobserves questions/detail and executes exact actions through current native admission.",
+    "reference_identity": [
+      "exact immutable action/question envelope, or lazy owner source identity",
+      "selector",
+      "original work context"
+    ],
+    "admission": "References are opaque identity, not authority. Rust addresses selected owner detail before optional hydration, reobserves mandatory dependency contributions, and executes exact actions through current native admission. Compact/carried post-effect continuation uses the same frontier boundary.",
     "bounded_answer": "Fill only the absent answer slot of the exact current selected decision; preserve every supplied owner argument.",
     "context": "Carry unchanged target/task/changed/request; explicit differences require fresh start.",
     "source_delivery": "Optional delivered refs suppress only exact unchanged source prose after fresh owner resolution. delivery_refs bind work, source material and producing implementation. They never acknowledge understanding, reconciliation, proof or effects.",
@@ -72,6 +109,12 @@
       {
         "name": "resources",
         "description": "Inspect local hygiene or propose/execute one current resource operation; optional compose carries one exact action after current admission.",
+        "input_field": "request",
+        "input_required": true
+      },
+      {
+        "name": "proof-procedure",
+        "description": "Prepare selected proof context, or carry one exact native check through execution and current evidence admission.",
         "input_field": "request",
         "input_required": true
       },
@@ -120,7 +163,11 @@
       {
         "flag": "--projection",
         "field": "projection",
-        "choices": ["compact", "full", "carried"],
+        "choices": [
+          "compact",
+          "full",
+          "carried"
+        ],
         "description": "Compact executable decision (default), full detail, or view plus disposable exact carriage for a thin host."
       },
       {
@@ -149,7 +196,17 @@
   "authority": {
     "data_shapes": "this JSON contract and referenced JSON Schema",
     "executable_semantics": "crates/agentic-workspace-core",
-    "bindings": ["src/agentic_workspace/decision.py", "bindings/node/semantic-decision.mjs"],
+    "bindings": [
+      "src/agentic_workspace/decision.py",
+      "bindings/node/semantic-decision.mjs"
+    ],
     "json_transport": "agentic-workspace-core binary stdin/stdout"
+  },
+  "proof_procedure": {
+    "request": "operation: prepare, execute or direct; request carries exact owner requests; invocation carries one exact native proof action. expected_revision optionally binds selected method material.",
+    "composition": "One explicitly selected check or one owner-established unique missing required check, exact native admission, bounded exact receipt observation, then remaining owner judgment. A sole candidate is not required; complete current alternatives and unresolved scope prevent automatic selection. Never a primary-action loop or automatic sufficiency answer.",
+    "recovery": "Confirmed effect remains in effect even when continuation fails. Uncertain execution requires exact native custody reentry, never a newly prepared retry.",
+    "direct": "Zero owner calls; no proof or claim authority.",
+    "cost": "public_owner_calls counts explicit public calls. Native invoke separately resolves pre-effect admission and post-effect continuation; no parallel batch or hidden automatic retry."
   }
 }

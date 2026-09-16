@@ -47,6 +47,7 @@ pub(crate) fn view(
     assurance: &Value,
     planning: Option<&Value>,
     assessment: Option<&Value>,
+    detail: bool,
 ) -> Result<Value, CoreError> {
     let baseline = policy["baseline"].as_str().unwrap();
     let required_level = assurance["requirements"]
@@ -207,9 +208,9 @@ pub(crate) fn view(
     if denied_level {
         level = source_level;
     }
-    let available: Vec<Value> = policy["profiles"].as_object().into_iter().flatten().take(32).map(|(id,profile)|json!({"id":id,"revision":digest(profile).expect("source JSON hashes")})).collect();
+    let available: Vec<Value> = policy["profiles"].as_object().into_iter().flatten().filter(|_| detail).take(32).map(|(id,profile)|json!({"id":id,"revision":digest(profile).expect("source JSON hashes")})).collect();
     Ok(
-        json!({"kind":"agentic-workspace/verification-strategy/v1","configured":policy["configured"],"source_revision":policy["revision"],"baseline_level":baseline,"required_level":required_level,"effective_level":level,"level_status":if denied_level{"rejected"}else if assessment.is_some(){"agent-assessed"}else if rank(required_level)>rank(baseline){"source-required-level"}else{"source-default-guidance"},"assessment":assessment,"available_profiles":available,"omitted_profile_count":policy["profiles"].as_object().map_or(0,|p|p.len().saturating_sub(32)),"selected_profiles":profiles,"recommended_profiles":recommended,"obligations":obligations,"disallowed_commands":disallowed,"routes":routes,"execution_blocked":invalid||denied_level,"gaps":gaps,"authority_boundary":"Guidance/profile selection does not waive source requirements or establish proof, task judgment, review or completion."}),
+        json!({"kind":"agentic-workspace/verification-strategy/v1","configured":policy["configured"],"source_revision":policy["revision"],"baseline_level":baseline,"required_level":required_level,"effective_level":level,"level_status":if denied_level{"rejected"}else if assessment.is_some(){"agent-assessed"}else if rank(required_level)>rank(baseline){"source-required-level"}else{"source-default-guidance"},"assessment":assessment,"available_profiles":available,"omitted_profile_count":policy["profiles"].as_object().map_or(0,|p|if detail {p.len().saturating_sub(32)} else {p.len()}),"selected_profiles":profiles,"recommended_profiles":recommended,"obligations":obligations,"disallowed_commands":disallowed,"routes":routes,"execution_blocked":invalid||denied_level,"gaps":gaps,"authority_boundary":"Guidance/profile selection does not waive source requirements or establish proof, task judgment, review or completion."}),
     )
 }
 pub(crate) fn public_view(view: &Value) -> Value {

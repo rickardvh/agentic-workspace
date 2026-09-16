@@ -20,7 +20,8 @@
     ".agentic-workspace/system-intent/WORKFLOW.md",
     ".agentic-workspace/skills/workspace-resources/SKILL.md",
     ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
-    ".agentic-workspace/skills/workspace-intent-discovery/prepare.py"
+    ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
   ],
   "necessary_surface_files": [
     ".agentic-workspace/READING.json",
@@ -41,7 +42,8 @@
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
     ".agentic-workspace/skills/workspace-resources/SKILL.md",
     ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
-    ".agentic-workspace/skills/workspace-intent-discovery/prepare.py"
+    ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
   ],
   "necessary_surface_roots": [
     ".agentic-workspace/docs",
@@ -597,6 +599,26 @@
     {
       "source": ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
       "target": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+      "kind": "installed-local",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/REGISTRY.json",
+      "target": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "kind": "installed-local",
+      "profiles": [
+        "necessary-surfaces",
+        "full-mirror"
+      ],
+      "modules": []
+    },
+    {
+      "source": ".agentic-workspace/skills/REGISTRY.json",
+      "target": ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py",
       "kind": "installed-local",
       "profiles": [
         "necessary-surfaces",

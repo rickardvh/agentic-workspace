@@ -182,6 +182,14 @@
           "validation passed but completion may not be justified",
           "skips, retries, warnings, crashes, or negative evidence need interpretation"
         ]
+      },
+      "executable": {
+        "entrypoint": {
+          "kind": "native",
+          "command": "proof-procedure",
+          "required_capability": "proof-procedure-v1"
+        },
+        "dependencies": []
       }
     },
     {
@@ -266,6 +274,15 @@
           "Agentic Workspace was newly installed or adopted in a lived-in repo",
           "workspace surfaces need to be populated after init or install",
           "mature repo discovery needs bounded pre-seed routing"
+        ]
+      },
+      "executable": {
+        "entrypoint": {
+          "kind": "file",
+          "path": ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
+        },
+        "dependencies": [
+          ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md"
         ]
       }
     },

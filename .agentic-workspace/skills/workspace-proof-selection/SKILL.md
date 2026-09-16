@@ -5,112 +5,87 @@ description: Select and interpret proof for a routed claim level. Use when valid
 
 # Workspace Proof Selection
 
-This is a package-managed workspace skill installed under `.agentic-workspace/skills/`.
+This package-managed standard Agent Skill supplies a replaceable method over
+Verification. Repository instructions/config own policy; current owners supply
+scope, strategy, evidence and claims. The agent supplies semantic judgment.
 
-Use it after the main AW operating skill or compact router points at proof selection. It is not a test-running checklist or a general completion policy; it decides what evidence is meaningful for the claim being made.
+## Callable path
 
-## Workflow
+Use the configured native invocation with `proof-procedure --target . --task
+"<task>" --changed <path> --input <step.json> --format json`. Repeat `--changed`
+for known paths. This command consumes one step, not a workflow program:
 
-1. Identify the claim level:
-   - task
-   - bounded slice
-   - lane
-   - epic
-   - regression guard
-2. Resolve with the configured AW invocation:
-   `start --target . --task "<task>" --changed <path> --format json`.
-   Repeat `--changed` for each known path; omit it when no paths are known.
-   Read `decision_packet` first, then the current Verification strategy and
-   owner-returned requests. Preserve any selected Planning subject and blockers.
-   Supply only bounded answers in the returned request through
-   `start --input <request.json>` with the same context. Execute only the returned
-   `primary_action` through `invoke --input <action.json>`, then use its current
-   continuation or exact re-entry. Effect outcome and continuation availability
-   are separate; continuation failure never authorizes retrying a committed effect.
-   Source-read and other prerequisite requests may be combined in an array.
-   An unavailable proof route remains an owner gap; retired commands are not a fallback.
-3. Select proof for both behavior and intent:
-   - command success for changed behavior
-   - targeted tests for the touched surface
-   - contract/schema checks for structured outputs
-   - lint/type checks when the slice changes static interfaces
-   - manual inspection only when the expected result is documentation, prose, or routing metadata
-4. Classify the proof result:
-   - `passed`
-   - `passed_with_warning`
-   - `retried_then_passed`
-   - `skipped`
-   - `crashed`
-   - `not_run`
-   - `incomplete`
-   - `negative_proof_found`
-5. Report proof adequacy separately from completion permission:
-   - proof can support the claim level only when it covers the changed behavior and requested intent
-   - proof is insufficient when it is missing, stale, too narrow, skipped without justification, or contradicts the intended outcome
-   - completion permission still belongs to the routed closeout/claim boundary, not this subskill alone
-6. Route gaps instead of hiding them:
-   - run the missing focused proof
-   - report the bounded proof without substituting it for the requested completion
-   - update the active plan with the gap
-   - open or link follow-up work when the gap belongs outside the slice
+- `{"operation":"prepare"}` returns selected proof context, exact owner requests,
+  the current operating decision and `procedure_revision`.
+- Supply an owner-returned request or request array in `request`, with only its
+  requested judgment filled, to another `prepare`. Existing operating `reference`
+  and `answer` carriage can answer an exact current question. No effect runs.
+- `{"operation":"execute"}` can carry one missing required check when current
+  Verification returns `required_execution.status=unique-required-action`. The owner
+  checks complete current scope and strategy, including lazy alternatives. One
+  candidate alone is not a requirement. Multiple methods or unresolved applicability,
+  strategy or authority yield for judgment; do not choose the first or shortest check.
+- Otherwise choose a relevant `proof.execution_requests` item. Pass it unchanged in
+  `{"operation":"execute","request":<exact item>,"expected_revision":<revision>}`.
+  The method resolves that selection, invokes only its exact authorized native
+  check, and carries its receipt into current Verification. It returns the
+  remaining claim/source/reviewer obligations. No arbitrary next action runs.
+- An exact previously returned `proof.report` action may instead be supplied in
+  `invocation` for native custody reentry. Keep the full selected request set when
+  a strategy assessment is needed; the method will not reconstruct its envelope.
+- `{"operation":"direct"}` makes zero owner calls. Ordinary no-proof work need
+  not call the method at all.
 
-## Current native judgments
+Retain exact work/request and method identity in disposable caller carriage.
+There is no durable skill cursor. Preparation and continuation use the shared
+current decision frontier. Receipt admission checks the exact authenticated route
+and command without rebuilding untaken alternatives. Optional profile catalogues and full diagnostics remain
+behind `operating.detail_refs`; a nonzero `omitted_profile_count` means more profiles
+are available through the Verification detail reference. After relevant procedure drift, reread the
+current skill; after policy, subject or source-set drift, use the returned owner
+recovery. Unrelated files do not invalidate selected method material.
 
-For instruction checks, select the current `verification.execution_requests`
-command and consume its native receipt. Named and inline checks share the existing
-Verification producer; a check pass does not satisfy source reconciliation.
+Inspect `effect` independently from preparation. A committed check stays committed
+when later resolution fails. `reentry-required` preserves the exact native action
+and diagnostic; `retry_effect=false` forbids assuming absence or preparing a new
+run. Unknown effects use the existing native custody recovery. Batch execution
+and automatic strategy/sufficiency answers are intentionally unsupported.
 
-For resulting-work consistency, use the exact
-`verification.source_reconciliation.requests` material request and supply
-`updated` or `reviewed-current` with a reason for each named source. Verification
-requests an exact human confirmation unless a current explicit policy grant
-already authorizes the acting agent for the exact source/work path set.
+## Judgment boundary
 
-For semantic claim sufficiency, use `verification.claim_review.request` with the
-current evidence refs and the bounded judgment/reason. Return its exact authorized
-answer; inspect remaining claim blockers. Preserve the answer in ordinary caller
-carriage only while current; a fresh consumer revalidates postimages, strategy,
-evidence and policy. This is not independent-review admission or authority to
-close unfinished Planning work. Missing required reviewer custody remains a gap.
+Select evidence for the actual task, slice, lane or epic claim. Read the selected
+protocol purpose, expected observations, escalation and review aids when judging
+adequacy. Baseline and escalation/de-escalation permissions come from Verification.
+Source commands and numeric ordering do not decide that judgment.
 
-## Guardrails
+Classify failed, warning, skipped, retried, crashed, unavailable or incomplete
+results honestly. A selected check's exit zero is not intent satisfaction.
+Measurement admission comes from the native owner and its current private receipt,
+not labels or helper arithmetic. Semantic protocol/domain applicability comes
+from exact current judgments; never match task words or reinterpret the manifest.
 
-- Red flag: Tests passed, so completion is claimable.
-- Use instead: Admit current proof through Verification, inspect `decision_packet.claim_boundary`, and reconcile remaining intent before claiming completion.
-- A manually reported result is an interoperability observation, not authenticated native execution. A command receipt does not grant task judgment, independent review or completion.
-- Do not claim a lane or epic complete from proof that only covers a local slice.
-- Do not treat passing self-authored tests as sufficient when the parent intent, negative invariant, or user-visible behavior is unverified.
-- Do not ignore warnings, skipped tests, retries, crashes, or environment failures; classify them.
-- Do not replace proof with a review artifact unless the requested surface is review-only.
-- Do not run broad validation first when a structured proof selector names a narrower command.
+Use current `proof.claim_review.request` to propose a bounded judgment with the
+actual evidence refs and reason. Return its authorized answer through `prepare`.
+Required source reconciliation and independent reviewer custody stay separate.
+`strict_closeout` still requires a task claim judgment with no matching protocol.
+A method's availability, skill identity or completion never grants proof or claims.
 
-## Behavior-Impact Evidence
+## Direct and unavailable paths
 
-Changes to this skill must name the behavior being steered and cite the command/output that proves the proof route, allowed action, or completion claim still behaves correctly.
+A knowledgeable agent can use `start` / `invoke` with the same exact owner requests,
+policy and claim boundary without selecting this optional method. If the method
+or compatible runtime is absent, read this Markdown and applicable repository
+sources; current execution, evidence admission and claim authority remain unknown.
+Do not emulate owners, fabricate waivers or advance source trust to clear a gap.
 
-## Typical outputs
+## Evidence and retention
 
-- selected proof command or inspection route
-- claim level covered by that proof
-- proof result classification
-- `completion_claim_allowed=<true|false>`
-- unresolved proof gaps and their owner
+Run the lowest sufficient current proof selected for the changed behavior and
+requested outcome. Broaden only for a named unresolved risk. Distinguish validation,
+issue completion, intent satisfaction and total operating cost. Reconcile actionable
+remaining gaps through their existing owner; retain only knowledge that prevents
+rediscovery. Do not infer lane completion from a local check or self-review.
 
-## Admitted declaration detail
-
-Use only the native admitted strategy and selected command detail. Inspect selected
-protocol purpose/steps, scenario observations and evidence labels, review aids,
-authority refs and claim limits when judging adequacy. Profile references suggest
-methods; source requirements and reviewer boundaries remain binding independently.
-Use selected lane escalation and review guidance to judge composition and whether
-the focused route is sufficient. Numeric ordering, role labels or a successful
-command cannot establish that judgment. Retention preferences in review aids do
-not change native receipt retention or authorize evidence deletion.
-
-Unknown fields, conflicting command roles or dangling declaration references are
-source-repair errors. Preserve restrictions while the responsible owner repairs
-the source. Semantic task markers require owner judgment; do not match task text.
-Measurement/source-intent fields in an assurance gap describe still-unsatisfied
-conditions, not admitted evidence. Native measurement admission remains a named
-capability gap until its owner supplies a current result. Do not reparse the
-manifest in a helper, fabricate a waiver or advance source trust to clear it.
+The native composition and resource-method tests protect exact effects, currentness,
+strict closeout and confirmed-effect recovery. Changes to this procedure must
+cite behavior-impact evidence and update its canonical/payload surfaces together.

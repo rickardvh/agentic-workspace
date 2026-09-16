@@ -1,5 +1,5 @@
 //! Presentation and immutable transport over native owners, never an authority.
-use crate::{CoreError, digest, native_public};
+use crate::{CoreError, digest, native_frontier::Resolution, native_public};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -30,7 +30,17 @@ struct Carriage {
 }
 
 fn reference(context: &Value, selector: &str, envelope: &Value) -> Result<String, CoreError> {
-    digest(&json!({"kind":CARRIAGE,"context":context,"selector":selector,"envelope":envelope}))
+    let hash = digest(
+        &json!({"kind":CARRIAGE,"context":context,"selector":selector,"envelope":envelope}),
+    )?;
+    if envelope["kind"] == "agentic-workspace/lazy-owner-detail/v1" {
+        Ok(format!(
+            "detail:{}:{hash}",
+            selector.strip_prefix('/').unwrap_or(selector)
+        ))
+    } else {
+        Ok(hash)
+    }
 }
 
 fn entry(context: &Value, selector: &str, envelope: &Value) -> Result<Value, CoreError> {
@@ -63,11 +73,20 @@ fn entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
             )?);
         }
     }
-    // Exact top-level selectors expose optional detail without a catalogue of
-    // every nested schema/procedure. Their bytes remain in this local carrier.
+    // Optional owner values are not carried. Bind exact lazy source identities;
+    // reentry addresses that owner before any optional detail is constructed.
     for (key, value) in full.as_object().into_iter().flatten() {
+        if key.starts_with('_') {
+            continue;
+        }
         let selector = format!("/{}", key.replace('~', "~0").replace('/', "~1"));
-        result.push(entry(context, &selector, value)?);
+        let revision = match full["_detail_bindings"].get(key) {
+            Some(revision) => revision.clone(),
+            None => json!(digest(value)?),
+        };
+        let descriptor =
+            json!({"kind":"agentic-workspace/lazy-owner-detail/v1","revision":revision});
+        result.push(entry(context, &selector, &descriptor)?);
     }
     Ok(result)
 }
@@ -110,7 +129,8 @@ fn consequence_recovery(full: &Value, context: &Value) -> Result<Vec<Value>, Cor
             }
             if has_request(value, &owner) {
                 let selector = format!("/{}", key.replace('~', "~0").replace('/', "~1"));
-                routes.push(json!({"selector":selector,"reference":reference(context, &selector, value)?}));
+                let selected = entries(full, context)?.into_iter().find(|e| e["selector"] == selector).unwrap();
+                routes.push(json!({"selector":selector,"reference":selected["reference"]}));
             }
         }
         if routes.is_empty() {
@@ -284,16 +304,22 @@ fn select_entry(full: &Value, context: &Value, selected: &Value) -> Result<Value
 fn use_selected(
     context: Value,
     current: Value,
-    selected: Value,
     selected_entry: Value,
     answer: Option<Value>,
     invoking: bool,
     projection: &Value,
+    detail: Option<Option<&str>>,
 ) -> Result<Value, CoreError> {
     let selector = selected_entry["selector"]
         .as_str()
         .ok_or_else(|| error("invalid selector"))?;
-    if current.pointer(selector) != Some(&selected_entry["envelope"]) {
+    let selected = selected_entry["reference"].clone();
+    let lazy = selected_entry["envelope"]["kind"] == "agentic-workspace/lazy-owner-detail/v1";
+    if if lazy {
+        select_entry(&current, &context, &selected).ok().as_ref() != Some(&selected_entry)
+    } else {
+        current.pointer(selector) != Some(&selected_entry["envelope"])
+    } {
         return Err(error("operating reference stale or not owner-issued"));
     }
     if invoking {
@@ -308,8 +334,9 @@ fn use_selected(
         // Native admission reobserves the execution snapshot; the reference is
         // only immutable transport and never a grant.
         return Ok(project_invocation(
-            native_public::invoke_operating(execution),
+            native_public::invoke_selected(execution, &resolution(projection, detail)),
             projection,
+            detail,
         ));
     }
     if selector == "/decision_packet/decision_request" {
@@ -342,7 +369,7 @@ fn use_selected(
         requests.push(answered);
         next["request"] = json!(requests);
         next["projection"] = projection.clone();
-        return operate(next, false);
+        return operate_selected(next, false, detail);
     }
     if answer.is_some() || action_selector(selector) {
         return Err(error(
@@ -350,7 +377,7 @@ fn use_selected(
         ));
     }
     Ok(
-        json!({"reference":selected,"selector":selector,"value":selected_entry["envelope"],"currentness":"reobserved","authority":"detail-only"}),
+        json!({"reference":selected,"selector":selector,"value":if lazy {current.pointer(selector).cloned().unwrap_or(Value::Null)} else {selected_entry["envelope"].clone()},"currentness":"reobserved","authority":"detail-only"}),
     )
 }
 
@@ -383,14 +410,43 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
     }
 }
 
-fn operate(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
+fn operate(value: Value, invoking: bool) -> Result<Value, CoreError> {
+    operate_selected(value, invoking, None)
+}
+// Executable procedures select their certainly-required owner context through
+// the same private resolution boundary; no separate proof resolver or cache.
+pub(crate) fn start_owner(value: Value, owner: Option<&str>) -> Result<Value, CoreError> {
+    operate_selected(value, false, Some(owner))
+}
+pub(crate) fn invoke_owner(value: Value, owner: Option<&str>) -> Result<Value, CoreError> {
+    operate_selected(value, true, Some(owner))
+}
+fn resolution(projection: &Value, detail: Option<Option<&str>>) -> Resolution {
+    match detail {
+        Some(owner) => Resolution::Frontier(owner.map(str::to_owned)),
+        None if projection == "full" => Resolution::Full,
+        None => Resolution::Frontier(None),
+    }
+}
+fn selected_owner(reference: &Value) -> Option<&str> {
+    reference
+        .as_str()?
+        .strip_prefix("detail:")?
+        .split(':')
+        .next()
+}
+fn operate_selected(
+    mut value: Value,
+    invoking: bool,
+    detail: Option<Option<&str>>,
+) -> Result<Value, CoreError> {
     let delivered = value.as_object_mut().and_then(|v| v.remove("delivered"));
     let delivered: Vec<String> = serde_json::from_value(delivered.unwrap_or(json!([])))
         .map_err(|_| error("delivered must be an array of exact source delivery refs"))?;
     if delivered.len() > 256 {
         return Err(error("source delivery refs exceed bounded carriage"));
     }
-    let mut result = operate_current(value, invoking)?;
+    let mut result = operate_current(value, invoking, detail)?;
     apply_delivery(&mut result, &delivered)?;
     if let Some(continuation) = result
         .get_mut("continuation")
@@ -461,7 +517,11 @@ fn delivery_producer() -> &'static str {
     &REVISION
 }
 
-fn operate_current(mut value: Value, invoking: bool) -> Result<Value, CoreError> {
+fn operate_current(
+    mut value: Value,
+    invoking: bool,
+    detail: Option<Option<&str>>,
+) -> Result<Value, CoreError> {
     let (projection, selected, answer) = {
         let object = value
             .as_object_mut()
@@ -551,19 +611,27 @@ fn operate_current(mut value: Value, invoking: bool) -> Result<Value, CoreError>
                 execution.as_object_mut().unwrap().remove("request");
                 execution["invocation"] = selected_entry["envelope"].clone();
                 return Ok(project_invocation(
-                    native_public::invoke_operating(execution),
+                    native_public::invoke_selected(execution, &resolution(&projection, detail)),
                     &projection,
+                    detail,
                 ));
             }
-            let current = native_public::start(carrier.context.clone())?;
+            let current = native_public::start_selected(
+                carrier.context.clone(),
+                &Resolution::Frontier(
+                    selected_owner(&selected)
+                        .or(detail.flatten())
+                        .map(str::to_owned),
+                ),
+            )?;
             return use_selected(
                 carrier.context,
                 current,
-                selected,
                 selected_entry,
                 answer,
                 invoking,
                 &projection,
+                detail,
             );
         }
 
@@ -576,16 +644,23 @@ fn operate_current(mut value: Value, invoking: bool) -> Result<Value, CoreError>
             ));
         }
         let context = normalize_context(value)?;
-        let current = native_public::start(context.clone())?;
+        let current = native_public::start_selected(
+            context.clone(),
+            &Resolution::Frontier(
+                selected_owner(&selected)
+                    .or(detail.flatten())
+                    .map(str::to_owned),
+            ),
+        )?;
         let selected_entry = select_entry(&current, &context, &selected)?;
         return use_selected(
             context,
             current,
-            selected,
             selected_entry,
             answer,
             invoking,
             &projection,
+            detail,
         );
     }
     if answer.is_some() {
@@ -593,19 +668,32 @@ fn operate_current(mut value: Value, invoking: bool) -> Result<Value, CoreError>
     }
     if invoking {
         return Ok(project_invocation(
-            native_public::invoke_operating(value),
+            native_public::invoke_selected(value, &resolution(&projection, detail)),
             &projection,
+            detail,
         ));
     }
-    let full = native_public::start(value.clone())?;
-    project_start(full, value, &projection)
+    let full = native_public::start_selected(value.clone(), &resolution(&projection, detail))?;
+    if projection == "full" && detail.is_some() {
+        Ok(full)
+    } else {
+        project_start(full, value, &projection)
+    }
 }
 
-fn project_invocation(mut result: Value, projection: &Value) -> Value {
+fn project_invocation(
+    mut result: Value,
+    projection: &Value,
+    detail: Option<Option<&str>>,
+) -> Value {
     if result["continuation"]["status"] == "current" {
         let full = result["continuation"]["result"].take();
         let context = result["continuation"]["context"].clone();
-        match project_start(full, context, projection) {
+        match if projection == "full" && detail.is_some() {
+            Ok(full)
+        } else {
+            project_start(full, context, projection)
+        } {
             Ok(projected) => result["continuation"]["result"] = projected,
             Err(failure) => {
                 result["continuation_status"] = json!("unavailable");
@@ -621,12 +709,19 @@ fn project_invocation(mut result: Value, projection: &Value) -> Value {
     result
 }
 
-fn project_start(mut full: Value, value: Value, projection: &Value) -> Result<Value, CoreError> {
+pub(crate) fn project_start(
+    mut full: Value,
+    value: Value,
+    projection: &Value,
+) -> Result<Value, CoreError> {
     if projection == "full" {
         let context = normalize_context(value)?;
         let recovery = consequence_recovery(&full, &context)?;
         if !recovery.is_empty() {
             full["consequence_recovery"] = json!(recovery);
+        }
+        if let Some(object) = full.as_object_mut() {
+            object.remove("_detail_bindings");
         }
         return Ok(full);
     }

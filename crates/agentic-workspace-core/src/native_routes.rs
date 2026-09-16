@@ -127,11 +127,7 @@ fn executable(target: &Path, root: &Dir, declaration: &Value, procedure: &Value)
                 command,
                 required_capability,
             } => {
-                // This pilot references the existing native resource command, not
-                // arbitrary command discovery or a package dependency resolver.
-                if command != "resources" {
-                    return Err(error("unsupported native executable command"));
-                }
+                packaged = crate::native_methods::descriptor(&command)?;
                 runtime = crate::runtime_compatibility::native(target)?;
                 if let Some(required) = required_capability
                     && !runtime["observed_runtime"]["reader_capabilities"]
@@ -141,9 +137,6 @@ fn executable(target: &Path, root: &Dir, declaration: &Value, procedure: &Value)
                     runtime["status"] = json!("blocked");
                     runtime["missing_reader_capabilities"] = json!([required]);
                 }
-                packaged = json!({"command":"resources",
-                    "implementation_revision":hash(include_bytes!("native_resources.rs")),
-                    "contract_revision":hash(include_bytes!("../../../src/agentic_workspace/contracts/source_decision_contract.json"))});
             }
         }
         if dependencies.len() > 32 {
@@ -729,6 +722,29 @@ mod tests {
         assert_eq!(executable["dependencies"], json!([]));
         // No product sources or binaries must be copied into the host repository.
         assert!(!target.0.join("crates").exists());
+        target.write(
+            ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
+            include_str!("../../../.agentic-workspace/skills/workspace-proof-selection/SKILL.md"),
+        );
+        let proof = procedure(&target.0, "workspace-proof-selection").unwrap();
+        assert_eq!(proof["procedures"][0]["executable"]["status"], "current");
+        assert_eq!(
+            proof["procedures"][0]["executable"]["packaged"]["command"],
+            "proof-procedure"
+        );
+        target.write(
+            ".agentic-workspace/skills/workspace-resources/SKILL.md",
+            "Updated resource procedure",
+        );
+        assert_ne!(first, procedure(&target.0, "workspace-resources").unwrap());
+        assert_eq!(
+            proof,
+            procedure(&target.0, "workspace-proof-selection").unwrap()
+        );
+        target.write(
+            ".agentic-workspace/skills/workspace-resources/SKILL.md",
+            include_str!("../../../.agentic-workspace/skills/workspace-resources/SKILL.md"),
+        );
         let registry = include_str!("../../../.agentic-workspace/skills/REGISTRY.json");
         target.write(
             ".agentic-workspace/skills/REGISTRY.json",
