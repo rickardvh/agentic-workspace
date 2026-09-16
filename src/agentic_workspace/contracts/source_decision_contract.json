@@ -223,5 +223,11 @@
       "authority": "Untrusted nomination only; agent supplies materiality and strongest-owner disposition, existing capture owner requires publication authorization.",
       "continuity": "Exact Verification prerequisites travel in the disposition request; an unresolved candidate restricts claim:complete. No signal is quiet."
     }
+  },
+  "execution_continuity": {
+    "binding_dispatch": "Carry exact ready dispatch only for binding nonlocal current Assignment and supported selected transport; no automatic invoke. Exact in-flight custody blocks relaunch.",
+    "planning_continuity": "Current admitted owner custody carries exact sealed-handoff retention, admitted integrated return adoption and same-owner pending-update recovery. Semantic relation, selector permission and new plan material remain explicit.",
+    "no_op": "Identical retained handoff or consumed result does not synthesize a new durable update.",
+    "authority": "No new proof, worker-result trust, completion or source admission."
   }
 }

@@ -574,7 +574,7 @@ fn resolve_context(
         adoption_declaration,
         handoff_declaration
     ]))?;
-    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,posture_declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task"]}]});
+    let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[{"owner":"planning","revision":owner_revision,"requests":[declaration,posture_declaration,creation_declaration,update_declaration,recovery_declaration,adoption_declaration,handoff_declaration]}],"restriction_authorities":[{"owner":"planning","affects":["task","effect:planning-state","claim:complete"]}]});
     {
         contract["owners"][0]["effects"] = json!([{"id":"planning-state","domain":"planning"}]);
         contract["owners"][0]["domains"] = json!(["planning"]);

@@ -32,7 +32,9 @@ skill consumes their result and never recomputes it.
 2. Preserve the assigned slice, target, proof requirements, stop conditions,
    and return contract exactly. Do not rerank targets, repeat capability or cost
    comparison, or reinterpret a binding non-local assignment as local work.
-3. Execute only the transport or dispatch route admitted by the current action:
+3. A current sealed binding assignment with a supported transport exposes its exact
+   dispatch action directly; no separate delegation request is needed. Execute
+   only the transport or dispatch route admitted by the current action:
    - use the host's typed internal/automatic dispatch action when present;
    - route admitted manual transport to `planning-manual-delegation` and the
      canonical `assignment.export` / `assignment.import` operations;
@@ -48,8 +50,12 @@ skill consumes their result and never recomputes it.
 6. After admitted integration, run AW-owned proof, route semantic satisfaction
    to `planning-intent-verification`, and route closeout mechanics to
    `planning-closeout-trust`. Worker claims cannot authorize those transitions.
-7. Reconcile durable residue and the assignment outcome into the checked-in
-   owner before review, handoff, or session end.
+7. Planning exposes the exact continuity update when it is already entitled to
+   retain the sealed handoff or admitted return. Invoke that current action; do
+   not reconstruct a retention/adoption request. A current same-owner continuation
+   likewise exposes exact pending-update recovery. Preserve unresolved relation,
+   custody, integration or unknown-observation questions. Reconcile remaining
+   durable residue before review, handoff, or session end.
 
 ## Binding Boundary
 

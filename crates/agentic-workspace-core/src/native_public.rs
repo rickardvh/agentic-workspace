@@ -1165,10 +1165,19 @@ fn resolve_selected(
         target, &work, &contract, &planning, &admission, &requests,
     )?;
     planning["adoption_requests"] = adopted["requests"].clone();
-    let retained_handoff = if executing
+    let retained_handoff = if adopted["action"].is_object()
+        || adopted["status"] == "already-current"
+        || (requirements["patch_integration"]["action"].is_object()
+            && !requests
+                .iter()
+                .any(|r| r["request_kind"] == "planning/retain-handoff/v1"))
+    {
+        json!({"requests":[],"action":null})
+    } else if executing
         && input.invocation.as_ref().is_some_and(|i| {
             i["arguments"]["retained_handoff"].is_object() && update["retained"]["invocation"] == *i
-        }) {
+        })
+    {
         let mut action = update["action"].clone();
         action["source_requests"] = json!(requests);
         json!({"requests":[],"action":action})
@@ -1183,6 +1192,8 @@ fn resolve_selected(
         )?
     };
     planning["handoff_retention_requests"] = retained_handoff["requests"].clone();
+    planning["continuity_unresolved"] =
+        json!({"handoff":retained_handoff["unresolved"],"adoption":adopted["unresolved"]});
     let planning_action = if adopted["action"].is_object() {
         &adopted["action"]
     } else {
@@ -1198,6 +1209,15 @@ fn resolve_selected(
         owner["blockers"] = json!([]);
         owner["settled"] = json!(false);
         owner["revision"] = json!(digest(&json!([owner["revision"], planning_action]))?);
+    }
+    if (adopted["unresolved"].is_string() || retained_handoff["unresolved"].is_string())
+        && let Some(owner) = contributions.iter_mut().find(|c| c["owner"] == "planning")
+    {
+        if !owner["blockers"].is_array() {
+            owner["blockers"] = json!([]);
+        }
+        owner["blockers"].as_array_mut().unwrap().push(json!({"code":"planning-continuity-unresolved","message":planning["continuity_unresolved"].to_string(),"affects":["effect:planning-state","claim:complete"]}));
+        owner["settled"] = json!(false);
     }
     requirements["assignment"]["result_admission"] = admission;
     contributions.push(delegation["contribution"].clone());
@@ -1355,7 +1375,22 @@ fn resolve_selected(
             .unwrap() = instructions["contribution"].clone();
     }
     let decision_context = owner_input["decision_context"].clone();
-    let decision = compile_value(owner_input)?;
+    let mut decision = compile_value(owner_input.clone())?;
+    if !executing {
+        let pending = crate::native_delegation::pending_launch(target, &decision)?;
+        if pending.is_object() {
+            if let Some(owner) = owner_input["contributions"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|o| o["owner"] == "delegation")
+            {
+                owner["blockers"] = json!([pending]);
+                owner["settled"] = json!(false);
+            }
+            decision = compile_value(owner_input)?;
+        }
+    }
     let mut decision_sources = decision_source::public_read(
         target,
         &decision_context,

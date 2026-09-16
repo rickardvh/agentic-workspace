@@ -103,8 +103,7 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     assessment = call(inputs)["task_requirements"]["assignment"]["requests"][0]
     assessment[-1]["arguments"].update(alternative="expert:cli", reason="Use the feasible configured process for this exact patch.")
     export = call(assessment)["task_requirements"]["handoff"]["requests"][0]
-    dispatch = call(export)["task_requirements"]["delegation"]["requests"][0]
-    action = call(dispatch)["decision_packet"]["primary_action"]
+    action = next(a for a in call(export)["decision_packet"]["ready_actions"] if a["operation_id"] == "delegation.dispatch")
     assert action["operation_id"] == "delegation.dispatch"
     sealed = action["arguments"]["packet"]
     assert sealed["assignment_identity"]["mutation_paths"] == ["src/main.txt", "src/sibling.txt"]
@@ -255,15 +254,10 @@ def test_patch_return_preserves_concurrent_work_and_replays(tmp_path, shared_cor
     assert sibling.read_bytes() == b"sibling\n"
     assert (tmp_path / "launches.txt").read_text() == "once\n"
     if plan_path is not None:
-        retention = call(integrated["value"]["reentry"]["request"])["planning"]["handoff_retention_requests"][0]
-        call(invocation=call(retention)["decision_packet"]["primary_action"])
-        fresh = call()
-        call(invocation=call(fresh["planning"]["requests"][0])["decision_packet"]["primary_action"])
-        held = call()["planning"]["handoff_continuation"]["retained"]
-        assert held["status"] == "returned"
-        assert "integration_pending" not in json.loads(plan_path.read_bytes())["relationships"]
-        adoption = call(integrated["value"]["reentry"]["request"])["planning"]["adoption_requests"][0]
-        adopt_action = call(adoption)["decision_packet"]["primary_action"]
+        adopted_view = call(integrated["value"]["reentry"]["request"])
+        adoption = adopted_view["planning"]["adoption_requests"][0]
+        adopt_action = next(a for a in adopted_view["decision_packet"]["ready_actions"] if a["operation_id"] == "planning.update")
+        assert adopt_action == call(adoption)["decision_packet"]["primary_action"]
         assert adopt_action["operation_id"] == "planning.update"
         assert adopt_action["arguments"]["consumed_return"]["integration"]["changed_paths"] == ["src/main.txt", "src/sibling.txt"]
         call(invocation=adopt_action)
