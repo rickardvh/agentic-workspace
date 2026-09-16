@@ -81,8 +81,8 @@ repository instructions and config remain the policy owners. If there is no
 runtime, use that same skill's selective read-only fallback; it cannot establish
 live effect admission, retention or proof.
 
-The native executable currently exposes `start`, `invoke`, `resources` and
-`worker`. Check `agentic-workspace --help` from the selected installed artifact.
+The native executable currently exposes `start`, `invoke`, `resources`,
+`proof-procedure` and `worker`. Check `agentic-workspace --help` from the selected installed artifact.
 There is no native `defaults`, `init`, `upgrade`, `remove-legacy` or module CLI
 family. Historical source-maintenance lifecycle tooling is not an installation
 fallback. If the selected preview does not provide the required bootstrap or

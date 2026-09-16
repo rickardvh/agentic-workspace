@@ -11,6 +11,9 @@ from tests.test_native_public_cli import native_cli as native_cli
 
 
 def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_core_binary, native_cli):
+    initial = consume("native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Configure repository integration"})
+    assert "repository_adoption_request" not in initial["configuration_write"]
+    assert not (tmp_path / ".agentic-workspace").exists()
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     instructions = tmp_path / "AGENTS.md"
     instructions.write_text("# Repository policy\nPreserve this text.\n", encoding="utf-8")

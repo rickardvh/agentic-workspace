@@ -366,7 +366,20 @@ pub(crate) fn view_selected(
     );
     result["payload_discovery_request"] = template(READ_PAYLOAD, json!({}));
     result["skill_exposure_request"] = template(crate::native_skill_exposure::READ, json!({}));
-    result["repository_adoption_request"] = template(crate::native_adoption::READ, json!({}));
+    // Advertise repository foothold work only for a root-shaped Git target or
+    // retained adoption subject. This is discovery, not Git/custody admission;
+    // the adoption owner still validates both on every exact request. Unrelated
+    // directory queries must not pay for a repository-only capability invitation.
+    if [
+        ".git",
+        ".agentic-workspace/adoption.json",
+        ".agentic-workspace/local/effects/adoption.prepared.json",
+    ]
+    .iter()
+    .any(|path| std::fs::symlink_metadata(target.join(path)).is_ok())
+    {
+        result["repository_adoption_request"] = template(crate::native_adoption::READ, json!({}));
+    }
     result["choice_requests"] = json!(
         PROGRESSIVE_CHOICES
             .iter()
