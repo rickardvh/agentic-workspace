@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 import pytest
+from tests.test_native_proof_procedure import install, procedure
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -23,6 +24,7 @@ def test_named_scope_journey_and_stale_controls(tmp_path: Path, shared_core_bina
     )
     (tmp_path / "a.txt").write_text("subject")
     context = {"target": str(tmp_path), "task": "semantic task domain task", "changed": ["a.txt"]}
+    install(tmp_path)
 
     def call(value):
         return consume("native", shared_core_binary, native_cli, value, host_path=os.environ["PATH"])
@@ -41,6 +43,9 @@ def test_named_scope_journey_and_stale_controls(tmp_path: Path, shared_core_bina
     assert result["value"]["process"]["status"] == "passed"
     assert result["value"]["claim_boundary"]["completion_claim_allowed"] is False
     assert call({**context, "invocation": action})["value"] == result["value"]
+    composed = procedure(shared_core_binary, context, "execute", request=exact)
+    assert composed["proof"]["evidence"][0]["checked_scope"]["claim"] == "selected-command-passed"
+    assert composed["effect"]["value"] == result["value"]
     rejected = copy.deepcopy(scope)
     rejected["arguments"]["decisions"] = {key: "not-applicable" for key in scope["arguments"]["decisions"]}
     negative = call({**context, "request": rejected})["verification"]

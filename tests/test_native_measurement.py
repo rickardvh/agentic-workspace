@@ -8,6 +8,7 @@ import shlex
 import sys
 from pathlib import Path
 
+from tests.test_native_proof_procedure import install, procedure
 from tests.test_native_public_cli import consume
 from tests.test_native_public_cli import native_cli as native_cli
 
@@ -88,12 +89,17 @@ def test_measurement_output_admission_and_remaining_review(tmp_path: Path, share
         return result["verification"]
 
     write(measurement)
+    install(tmp_path)
     direct = call({**context, "changed": []})["verification"]
     assert direct["execution_requests"] == [] and direct["assurance_owner_gaps"] == []
     assert not (tmp_path / ".agentic-workspace/local/proof-receipts").exists()
     assert claim(run(manual=True))["assurance_owner_gaps"][0]["measurement_admission"]["status"] == "measurement-not-admitted"
     reference = run()
     admitted = claim(reference)
+    preparation = procedure(shared_core_binary, context, "prepare")
+    composed = procedure(shared_core_binary, context, "execute", request=preparation["proof"]["execution_requests"][0])
+    assert composed["proof"]["assurance_owner_gaps"][0]["measurement_admission"]["status"] == "current-measurement-satisfied"
+    assert composed["effect"]["value"]["publication"]["reference"] == reference
     gap = admitted["assurance_owner_gaps"][0]
     assert gap["measurement_admission"]["status"] == "current-measurement-satisfied"
     assert gap["missing_admissions"] == ["required-reviewer-result-not-admitted", "source-intent-reconciliation-not-admitted"]

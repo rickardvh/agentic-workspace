@@ -3,9 +3,9 @@
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
 
-- Contract digest: `sha256:907928a390a8ca3e2418509f96c255a178d8e6334412fc2d0251f0e97faa2246`
+- Contract digest: `sha256:74c52e966b02a953d1eec096d5c1409d919502cf05b01e64ffb20d26846691f0`
 - Program: `agentic-workspace`
-- Command count: 4
+- Command count: 5
 
 ## Commands
 
@@ -13,6 +13,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | --- | --- | --- |
 | `agentic-workspace worker` | yes | Project bounded worker entry, expand an exact captured input, or assemble unproven return re-entry from a sealed Assignment packet. |
 | `agentic-workspace resources` | yes | Inspect local hygiene or propose/execute one current resource operation; optional compose carries one exact action after current admission. |
+| `agentic-workspace proof-procedure` | yes | Prepare selected proof context, or carry one exact native check through execution and current evidence admission. |
 | `agentic-workspace start` | no | Resolve the current operating decision. |
 | `agentic-workspace invoke` | yes | Invoke the exact operation returned by the current owner. |
 

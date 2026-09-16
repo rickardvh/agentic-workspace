@@ -621,7 +621,11 @@ fn project_invocation(mut result: Value, projection: &Value) -> Value {
     result
 }
 
-fn project_start(mut full: Value, value: Value, projection: &Value) -> Result<Value, CoreError> {
+pub(crate) fn project_start(
+    mut full: Value,
+    value: Value,
+    projection: &Value,
+) -> Result<Value, CoreError> {
     if projection == "full" {
         let context = normalize_context(value)?;
         let recovery = consequence_recovery(&full, &context)?;

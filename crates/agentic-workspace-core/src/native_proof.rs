@@ -473,7 +473,7 @@ pub(crate) fn execute(
     )?;
     if admission["disposition"] == "replay" {
         return Ok(
-            json!({"status":admission["record"]["outcome"]["status"],"effects":admission["record"]["outcome"]["effects"],"value":admission["record"]["outcome"]["value"],"custody":admission["custody"]}),
+            json!({"status":admission["record"]["outcome"]["status"],"effects":admission["record"]["outcome"]["effects"],"value":admission["record"]["outcome"]["value"],"custody":admission["custody"],"post_effect_changed_paths":[]}),
         );
     }
     if admission["disposition"] != "execute" {
@@ -481,7 +481,7 @@ pub(crate) fn execute(
             crate::proof_publication::recover(target, invocation, &mut revalidate)?
         {
             return Ok(
-                json!({"status":committed["record"]["outcome"]["status"],"effects":committed["record"]["outcome"]["effects"],"value":committed["record"]["outcome"]["value"],"custody":committed["custody"]}),
+                json!({"status":committed["record"]["outcome"]["status"],"effects":committed["record"]["outcome"]["effects"],"value":committed["record"]["outcome"]["value"],"custody":committed["custody"],"post_effect_changed_paths":[]}),
             );
         }
         return Err(err(
@@ -569,7 +569,10 @@ pub(crate) fn execute(
     let mut final_run = run;
     final_run["custody"] = committed["custody"].clone();
     create(&root, &format!("{path}.completed.json"), &final_run)?;
+    // Proof publication adds evidence outputs, not semantic source inputs.
+    // Command mutation of declared inputs already makes source_current false;
+    // arbitrary nested command effects are not authenticated source edits.
     Ok(
-        json!({"status":"applied","effects":["proof-execution"],"value":value,"custody":committed["custody"]}),
+        json!({"status":"applied","effects":["proof-execution"],"value":value,"custody":committed["custody"],"post_effect_changed_paths":[]}),
     )
 }
