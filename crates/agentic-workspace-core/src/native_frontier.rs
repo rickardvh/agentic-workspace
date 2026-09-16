@@ -51,6 +51,22 @@ mod tests {
         .unwrap();
         std::fs::write(root.join("a.txt"), "subject").unwrap();
         let context = json!({"target":root,"task":"Prove selected work","changed":["a.txt"]});
+        for (path, bytes) in [
+            (
+                ".agentic-workspace/skills/REGISTRY.json",
+                include_str!("../../../.agentic-workspace/skills/REGISTRY.json"),
+            ),
+            (
+                ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
+                include_str!(
+                    "../../../.agentic-workspace/skills/workspace-proof-selection/SKILL.md"
+                ),
+            ),
+        ] {
+            let path = root.join(path);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, bytes).unwrap();
+        }
         for count in [1, 128] {
             let commands: Vec<String> = (0..count).map(|i| format!("echo check-{i}")).collect();
             std::fs::write(root.join(".agentic-workspace/verification/manifest.toml"), format!("schema_version='agentic-workspace/verification-manifest/v1'\n[proof_routes]\n[protocols.example]\napplies_to_paths=['a.txt']\ncommands={}\n",serde_json::to_string(&commands).unwrap())).unwrap();
@@ -96,7 +112,7 @@ mod tests {
             );
             assert!(config_work.contains(&"configuration-fields"));
             assert!(!config_work.contains(&"proof-choice"));
-            if count == 1 {
+            {
                 BUILT.with(|v| v.borrow_mut().clear());
                 let effect = crate::native_public::invoke_selected(
                     json!({"target":root,"task":context["task"],"changed":context["changed"],"invocation":selected_proof["decision_packet"]["primary_action"]}),
@@ -110,6 +126,48 @@ mod tests {
                     .position(|v| *v == "post-effect-continuation")
                     .unwrap();
                 assert_eq!(&work[boundary + 1..], &["verification-contribution"]);
+                let mut claim =
+                    effect["continuation"]["result"]["verification"]["requests"][0].clone();
+                claim["arguments"]["evidence_refs"] =
+                    json!([effect["value"]["publication"]["reference"]]);
+                let mut admitted_context = context.clone();
+                admitted_context["request"] = claim;
+                let (admitted, admission_work) =
+                    observe(admitted_context.clone(), Resolution::Frontier(None));
+                assert_eq!(admission_work, vec!["verification-contribution"]);
+                assert_eq!(
+                    admitted["verification"]["evidence"][0]["checked_scope"]["claim"],
+                    "selected-command-passed"
+                );
+                let (full_admitted, _) = observe(admitted_context.clone(), Resolution::Full);
+                assert_eq!(
+                    admitted["decision_packet"],
+                    full_admitted["decision_packet"]
+                );
+                let (_, selected_admission_work) =
+                    observe(admitted_context, Resolution::Frontier(Some("proof".into())));
+                assert_eq!(selected_admission_work, vec!["verification-contribution"]);
+                if count == 128 {
+                    BUILT.with(|v| v.borrow_mut().clear());
+                    let composed = crate::native_proof_procedure::view(json!({"target":root,"task":context["task"],"changed":context["changed"],"request":{"operation":"execute","request":full["verification"]["execution_requests"][0]}})).unwrap();
+                    assert_eq!(
+                        composed["proof"]["evidence"][0]["checked_scope"]["claim"],
+                        "selected-command-passed",
+                        "{composed}"
+                    );
+                    let work = BUILT.with(|v| v.borrow().clone());
+                    let boundary = work
+                        .iter()
+                        .position(|v| *v == "post-effect-continuation")
+                        .unwrap();
+                    assert!(
+                        work[boundary + 1..]
+                            .iter()
+                            .all(|v| *v == "verification-contribution"),
+                        "{work:?}"
+                    );
+                    assert_eq!(work[boundary + 1..].len(), 2);
+                }
             }
             eprintln!(
                 "frontier-work commands={count} full_build_events={} compact_build_events={} selected_proof_build_events={}",

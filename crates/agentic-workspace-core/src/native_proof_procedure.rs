@@ -54,6 +54,7 @@ fn present(full: Value, context: Value, method: &Value, calls: usize) -> Result<
         "strategy_request",
         "assurance_request",
         "execution_requests",
+        "required_execution",
         "evidence",
         "assurance_owner_gaps",
         "evidence_gaps",
@@ -130,7 +131,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         }
         let mut full_input = context.clone();
         full_input["projection"] = json!("full");
-        let full = operating::start_owner(full_input, "proof")?;
+        let full = operating::start_owner(full_input, Some("proof"))?;
         return present(full, context, &method, 1);
     }
     if step.reference.is_some() || step.answer.is_some() {
@@ -139,24 +140,39 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         ));
     }
     let mut calls = 0;
+    let mut carried_requests = requests(step.request.as_ref());
     let action = if let Some(invocation) = &step.invocation {
         invocation.clone()
     } else {
-        let supplied = requests(step.request.as_ref());
-        if supplied
+        let selected_count = carried_requests
             .iter()
             .filter(|r| r["request_kind"] == "verification/execute-selected/v1")
-            .count()
-            != 1
-        {
-            return Err(err(
-                "execute requires exactly one owner-returned selected-check request or exact invocation",
-            ));
+            .count();
+        if selected_count > 1 {
+            return Err(err("execute accepts at most one selected-check request"));
         }
         let mut full_input = context.clone();
         full_input["projection"] = json!("full");
-        let full = operating::start_owner(full_input, "proof")?;
+        let mut full = operating::start_owner(full_input, Some("proof"))?;
         calls += 1;
+        if selected_count == 0 {
+            let required = &full["verification"]["required_execution"];
+            if required["status"] != "unique-required-action" {
+                return present(full, context, &method, calls);
+            }
+            for request in requests(required.get("request")) {
+                carried_requests.retain(|old| {
+                    !(old["owner"] == request["owner"]
+                        && old["request_kind"] == request["request_kind"])
+                });
+                carried_requests.push(request);
+            }
+            context["request"] = json!(carried_requests);
+            let mut query = context.clone();
+            query["projection"] = json!("full");
+            full = operating::start_owner(query, Some("proof"))?;
+            calls += 1;
+        }
         let candidates: Vec<Value> = full["decision_packet"]["ready_actions"]
             .as_array()
             .into_iter()
@@ -183,7 +199,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         );
     }
     let mut execution = json!({"target":input.target,"task":input.task,"changed":input.changed,"invocation":action,"projection":"full"});
-    let result = operating::invoke_owner(execution.clone(), "proof")?;
+    let result = operating::invoke_owner(execution.clone(), None)?;
     calls += 1;
     // Retain the exact effect even if later current resolution or evidence
     // admission fails. Reentry uses owner custody; no automatic retry.
@@ -192,7 +208,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
             return Err(err("owner continuation unavailable"));
         }
         let mut next = result["continuation"]["context"].clone();
-        let mut prerequisites = requests(step.request.as_ref());
+        let mut prerequisites = carried_requests.clone();
         prerequisites.retain(|r| {
             !matches!(
                 r["request_kind"].as_str(),
@@ -221,7 +237,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
             let mut query = next.clone();
             query["projection"] = json!("full");
             calls += 1;
-            operating::start_owner(query, "proof")?
+            operating::start_owner(query, None)?
         };
         let mut claim = current["verification"]["requests"][0].clone();
         if claim.is_null() {
@@ -242,12 +258,7 @@ pub(crate) fn view(value: Value) -> Result<Value, CoreError> {
         let mut query = next.clone();
         query["projection"] = json!("full");
         calls += 1;
-        present(
-            operating::start_owner(query, "proof")?,
-            next,
-            &method,
-            calls,
-        )
+        present(operating::start_owner(query, None)?, next, &method, calls)
     })();
     // Return compact owner effect data, leaving bulky current context in the
     // selected preparation instead of copying it a second time.

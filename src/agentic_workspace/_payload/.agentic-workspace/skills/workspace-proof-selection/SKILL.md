@@ -20,7 +20,12 @@ for known paths. This command consumes one step, not a workflow program:
 - Supply an owner-returned request or request array in `request`, with only its
   requested judgment filled, to another `prepare`. Existing operating `reference`
   and `answer` carriage can answer an exact current question. No effect runs.
-- Choose a relevant `proof.execution_requests` item. Pass it unchanged in
+- `{"operation":"execute"}` can carry one missing required check when current
+  Verification returns `required_execution.status=unique-required-action`. The owner
+  checks complete current scope and strategy, including lazy alternatives. One
+  candidate alone is not a requirement. Multiple methods or unresolved applicability,
+  strategy or authority yield for judgment; do not choose the first or shortest check.
+- Otherwise choose a relevant `proof.execution_requests` item. Pass it unchanged in
   `{"operation":"execute","request":<exact item>,"expected_revision":<revision>}`.
   The method resolves that selection, invokes only its exact authorized native
   check, and carries its receipt into current Verification. It returns the
@@ -33,7 +38,8 @@ for known paths. This command consumes one step, not a workflow program:
 
 Retain exact work/request and method identity in disposable caller carriage.
 There is no durable skill cursor. Preparation and continuation use the shared
-current decision frontier. Optional profile catalogues and full diagnostics remain
+current decision frontier. Receipt admission checks the exact authenticated route
+and command without rebuilding untaken alternatives. Optional profile catalogues and full diagnostics remain
 behind `operating.detail_refs`; a nonzero `omitted_profile_count` means more profiles
 are available through the Verification detail reference. After relevant procedure drift, reread the
 current skill; after policy, subject or source-set drift, use the returned owner

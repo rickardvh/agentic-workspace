@@ -1371,7 +1371,8 @@ pub(crate) fn view_with_applicability(
         proof_choice.as_ref(),
         crate::native_proof::SelectionMode {
             report: reported_observation.as_ref(),
-            alternatives: applicability.detail || (applicability.proof && proof_choice.is_none()),
+            alternatives: applicability.detail
+                || (applicability.proof && proof_choice.is_none() && !requested),
         },
     )?;
     let execution_actions = crate::native_proof::action(
@@ -1432,7 +1433,7 @@ pub(crate) fn view_with_applicability(
     };
     let execution_requests: Vec<Value> =
         execution_requests.into_iter().map(&with_context).collect();
-    let record_requests: Vec<Value> = record_requests.into_iter().map(with_context).collect();
+    let record_requests: Vec<Value> = record_requests.into_iter().map(&with_context).collect();
     let visible_strategy = visible_strategy(
         &strategy,
         if execution["status"] == "selected" {
@@ -1593,14 +1594,127 @@ pub(crate) fn view_with_applicability(
         if source.get("source_intent_ref").is_some() { missing.push("source-intent-reconciliation-not-admitted"); }
         json!({"requirement_id":row["id"],"status":"owner-evidence-not-admitted","source_requirement":source,"measurement_admission":measurement,"missing_admissions":missing,"rule":"Applicability never satisfies evidence, measurement, review, waiver or recommended-method semantics."})
     }).collect();
+    let sole = sole_required_choice(
+        &strategy,
+        &strategy_control,
+        &strategy_policy,
+        &instruction_checks,
+        &evidence,
+        !assurance_request.is_null()
+            || gaps.iter().any(|g| {
+                !matches!(
+                    g.as_str(),
+                    "current-task-claim-judgment-not-admitted"
+                        | "current-task-strategy-requires-owner-judgment"
+                )
+            }),
+    );
+    let required_execution = if let Some(choice) = sole {
+        let mut request = template.clone();
+        request["id"] = json!("verification/execute-selected/v1");
+        request["request_kind"] = json!("verification/execute-selected/v1");
+        request["arguments"] = choice;
+        json!({"status":"unique-required-action","request":with_context(request),
+            "authority":"Selection is settled by current Verification requirements; native action admission and remaining claim judgment still apply."})
+    } else {
+        json!({"status":"not-settled","request":null})
+    };
     Ok(
         json!({"kind":"agentic-workspace/native-verification-view/v1","status":if applicable || !assurance_gaps.is_empty() {"unresolved"} else {"not-applicable"},
         "source":{"reference":MANIFEST,"revision":source_revision,"manifest_revision":manifest_revision},"strategy":visible_strategy,"strategy_revision":strategy_revision,
-        "strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
+        "required_execution":required_execution,"strategy_control":crate::verification_strategy::public_view(&strategy_control),"strategy_request":if strategy_policy["configured"]==true {strategy_request}else{Value::Null},"domain_proof_candidates":domain_descriptors,"claim_review":claim_review,"execution":execution,"instruction_checks":instruction_checks,"execution_requests":execution_requests,"record_requests":record_requests,"requests":[template],"assurance_applicability":assurance,"assurance_owner_gaps":assurance_gaps,"assurance_request":assurance_request,"authentication_request":authentication_request,"host_authentication":authentication,"capability_contract":contract,"evidence":evidence,"evidence_gaps":gaps,"selector_gaps":selector_gaps,
         "applicability_boundary":"Existing manifest path selectors only; task-marker and other configured owner applicability require current owner judgment, not native prose inference.",
         "judgment_request":packet,"contribution":{"owner":"verification","revision":source_revision,"decisions":claim_review["decisions"],"blockers":blockers,"actions":execution_actions},
         "authority_effect":"read-only-no-claim-grants"}),
     )
+}
+
+// This is Verification policy, not a skill-side interpretation of rendered
+// choices. Inspect complete current routes, including alternatives omitted by
+// presentation limits. Required means an admitted instruction check or a
+// selected profile obligation, never merely one protocol candidate.
+fn sole_required_choice(
+    strategy: &Value,
+    control: &Value,
+    policy: &Value,
+    checks: &[Value],
+    evidence: &[Value],
+    unresolved: bool,
+) -> Option<Value> {
+    if unresolved
+        || control["execution_blocked"] == true
+        || control["gaps"].as_array().is_none_or(|v| !v.is_empty())
+        || checks
+            .iter()
+            .any(|c| !matches!(c["status"].as_str(), Some("current" | "evidence-required")))
+    {
+        return None;
+    }
+    // An unselected profile is a possible strategy choice; do not equate the
+    // selected catalogue with the complete source universe.
+    if policy["profiles"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .any(|(id, _)| {
+            !control["selected_profiles"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|p| p["id"] == *id)
+        })
+    {
+        return None;
+    }
+    let mut required = std::collections::BTreeSet::<(String, String)>::new();
+    for obligation in control["obligations"].as_array().into_iter().flatten() {
+        for command in obligation["missing_commands"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            required.insert((
+                format!("profile:{}", obligation["profile_id"].as_str()?),
+                command.to_owned(),
+            ));
+        }
+    }
+    for check in checks.iter().filter(|c| c["status"] == "evidence-required") {
+        let route = check["route_id"].as_str()?;
+        for command in strategy["proof_routes"][route]["commands"]
+            .as_array()?
+            .iter()
+            .filter_map(Value::as_str)
+        {
+            if !evidence.iter().any(|e| {
+                e["checked_scope"]["claim"] == "selected-command-passed"
+                    && e["runtime_admission"]["command_coverage"]
+                        == json!({"route_id":route,"command":command})
+            }) {
+                required.insert((route.to_owned(), command.to_owned()));
+            }
+        }
+    }
+    if required.len() != 1 {
+        return None;
+    }
+    let (route, command) = required.into_iter().next()?;
+    // Stop at the first different candidate; no alternative objects are built.
+    if strategy["proof_routes"]
+        .as_object()?
+        .iter()
+        .any(|(id, row)| {
+            row["commands"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|c| *id != route || *c != command)
+        })
+    {
+        return None;
+    }
+    Some(json!({"route_id":route,"command":command}))
 }
 
 pub(crate) fn disabled(target: &std::path::Path) -> Result<Value, CoreError> {
