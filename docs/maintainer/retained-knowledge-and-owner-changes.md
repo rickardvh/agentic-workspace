@@ -58,7 +58,7 @@ fit within the existing ordinary projection bound without copying every choice
 schema into unrelated work.
 
 Current `workspace.improvement_latitude` controls opportunity proposals. `none`
-and `reporting` produce reports; `conservative`/`balanced` allow proposals within
+and `reporting` produce reports; `conservative` allows proposals within
 current work; `proactive` also permits proactive proposals. None grants mutation.
 The destination's exact current delegation or bounded human answer is still
 required. Package defects report to the package owner rather than borrowing
