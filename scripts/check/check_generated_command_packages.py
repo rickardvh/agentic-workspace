@@ -3880,7 +3880,10 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         matched_categories = _python_executable_behavior_categories(text)
-        if relative_path == "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-intent-discovery/prepare.py":
+        if relative_path in {
+            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py",
+        }:
             # This registry-selected procedure prepares judgment from fresh native
             # results. Its bounded argument parser is not generated CLI ownership.
             # Generic dispatch and subcommand ownership remain prohibited.

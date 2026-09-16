@@ -68,33 +68,6 @@
     },
     {
       "path": "packages/planning/scripts/check/check_planning_surfaces.py",
-      "function": "_check_startup_policy",
-      "variable": "required_agents_fragments",
-      "classification": "advisory-diagnostic",
-      "authority": "The table validates required startup-policy documentation fragments in a checker.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "packages/planning/scripts/check/check_planning_surfaces.py",
-      "function": "_check_startup_policy",
-      "variable": "required_contributor_fragments",
-      "classification": "advisory-diagnostic",
-      "authority": "The table validates required startup-policy documentation fragments in a checker.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "packages/planning/scripts/check/check_planning_surfaces.py",
-      "function": "_check_startup_policy",
-      "variable": "required_readme_fragments",
-      "classification": "advisory-diagnostic",
-      "authority": "The table validates required startup-policy documentation fragments in a checker.",
-      "decision_authority": "advisory-only",
-      "agent_judgment_boundary": "The table may surface evidence or diagnostics; the agent decides semantic task fit, owner, proof sufficiency, and action."
-    },
-    {
-      "path": "packages/planning/scripts/check/check_planning_surfaces.py",
       "function": "_looks_like_freehand_planning_artifact",
       "variable": "plan_markers",
       "classification": "advisory-diagnostic",
