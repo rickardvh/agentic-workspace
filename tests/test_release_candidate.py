@@ -266,7 +266,7 @@ def test_packed_node_consumer_preserves_exact_rc_native_mapping(packed, tmp_path
     native_path.write_text(json.dumps(native))
     # Exercise manifest admission using already-proven binary bytes; this does
     # not claim those source-test binaries were compiled as an RC release.
-    script = "import {start} from './src/native/semantic-decision.mjs'; console.log(JSON.stringify(start({target:process.cwd(),task:'Inspect'})));"
+    script = "import {start} from './src/native/operating.mjs'; console.log(JSON.stringify(start({target:process.cwd(),task:'Inspect'})));"
     env = {k: v for k, v in os.environ.items() if k != "AGENTIC_WORKSPACE_CORE_BINARY"}
     result = subprocess.run(
         [shutil.which("node"), "--input-type=module", "-e", script], cwd=package, env=env, capture_output=True, text=True
