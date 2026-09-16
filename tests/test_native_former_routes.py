@@ -94,7 +94,8 @@ def test_former_selection_requires_exact_current_agent_request(
     # Full detail includes every declared API schema, including passive skill
     # exposure. Bound that explicit introspection separately from current state
     # and the ordinary compact response; new APIs must not inflate the latter.
-    assert len(json.dumps(first["capability_contract"])) < 76_000
+    # Explicit future-value disposition adds a bounded declared API schema.
+    assert len(json.dumps(first["capability_contract"])) < 78_000
     state = {key: value for key, value in first.items() if key != "capability_contract"}
     assert len(json.dumps(state)) < 28_000, {key: len(json.dumps(value)) for key, value in state.items()}
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})
