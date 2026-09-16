@@ -2,8 +2,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "accepted_progress": "Validation is recorded per PR. Issue closure, independent review, merge, and release admission remain distinct and are not claimed. Triage #3381 records the unexplained host rejection; smaller calls resumed successfully. A bounded Planning successor normalization fixes the current owner-progress blocker. Additional operating cost included source-maintenance subtraction, one interrupted native JSON test, isolated revalidation, and repairing the Planning blocker; no whole-task log-completeness claim. The #3383 layer passed 84 affected cases across the bounded run and corrected-case reruns, generated static proof and commit hooks. First-run failures included fixture source-restoration ordering and stale transport/packed-binding assumptions; they were corrected and rerun. Actual current host discovery admitted Sol as a feasible implementation alternative, with local execution selected by current comparative judgment. No paid worker turn, economic benchmark, independent review, merge or release is claimed. Additional cost included host discovery, stale-check correction and focused reruns. Review follow-through: #3384 passed 30 route/adoption tests; #3385 passed 53 adaptation/route tests; the rebased top passed 32 affected adaptation, route-budget and host-binding tests. Commit hooks passed. Two stale proof-maintenance fixtures expected a retired configuration field; they now prove current-schema rejection and preservation instead of reintroducing that field. GitHub has not yet created fresh runs for pushed heads; missing checks are not green proof. Existing #3382 independent review disposition remains on its unchanged exact head.",
-    "frontier": "Independent review feedback addressed in each owning layer: #3384 keeps repository-adoption invitations out of unrelated directory queries without raising the 28 KB state ceiling and lists all five native commands; #3385 preserves explicit maintenance execution classification and current-schema rejection for retired proof fields. #3386 is rebased above both. Ready for independent review, with hosted CI still unresolved."
+    "accepted_progress": "Validation is recorded per PR. Issue closure, independent review, merge, and release admission remain distinct and are not claimed. Triage #3381 records the unexplained host rejection; smaller calls resumed successfully. A bounded Planning successor normalization fixes the current owner-progress blocker. Additional operating cost included source-maintenance subtraction, one interrupted native JSON test, isolated revalidation, and repairing the Planning blocker; no whole-task log-completeness claim. The #3383 layer passed 84 affected cases across the bounded run and corrected-case reruns, generated static proof and commit hooks. First-run failures included fixture source-restoration ordering and stale transport/packed-binding assumptions; they were corrected and rerun. Actual current host discovery admitted Sol as a feasible implementation alternative, with local execution selected by current comparative judgment. No paid worker turn, economic benchmark, independent review, merge or release is claimed. Additional cost included host discovery, stale-check correction and focused reruns. Review follow-through: #3384 passed 30 route/adoption tests; #3385 passed 53 adaptation/route tests; the rebased top passed 32 affected adaptation, route-budget and host-binding tests. Commit hooks passed. Two stale proof-maintenance fixtures expected a retired configuration field; they now prove current-schema rejection and preservation instead of reintroducing that field. GitHub has not yet created fresh runs for pushed heads; missing checks are not green proof. Existing #3382 independent review disposition remains on its unchanged exact head. Further hosted failures exposed omitted sealed-bridge wheel inputs and malformed Verification declarations. Corrected bridge packaging and fingerprints in #3384; fixed both malformed detail routes, duplicate declarations and maintenance-status checking in #3385, retaining installed bridge regression coverage. The rebased top passed 44 combined affected cases. Generated adapter conformance passed with an explicit development core binary. Live native start accepted the repaired Verification source. Additional cost included two fingerprint refreshes, repeated rebases, stale documentation-assertion repairs, and two dispatches supplied with short hashes (one failed admission and one was cancelled), replaced by full-hash dispatches. Hosted exhaustive proof remains pending and skips Merge sufficiency; neither issue closure nor independent approval nor complete hosted proof is claimed.",
+    "frontier": "All received review comments implemented in their owning PR layers; stack rebased and ready for independent review. Fresh exact-head hosted validation is pending; PR-triggered Merge sufficiency has not appeared."
   },
   "creation_provenance": {
     "custody": {
@@ -35,7 +35,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Fresh hosted CI on corrected PRs #3384/#3385/#3386, then externally initiated independent re-review. No implementation-agent approval or merge.",
+  "next_action": "Observe fresh exact-head hosted proof and obtain externally initiated independent review; missing Merge sufficiency is unresolved. Implementation agent does not approve or merge.",
   "owner_level": "lane",
   "parent": {},
   "phase": "closeout",
@@ -61,7 +61,7 @@
     "docs/reviews/host-feasibility-3383-2026-09-16.md"
   ],
   "relationships": {},
-  "revision": 5,
+  "revision": 6,
   "scope": {
     "excluded": [
       "Review or approve implementation PRs",
@@ -85,18 +85,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/b63732035adacffac88f16d97ebb8affd208b327905d0769d69c4899127ce05c.attempt.json",
-        "revision": "sha256:fdc6a9cd7a8e0e4f5548687098bbb905f2bd6df654476c7b86ec649b05f56d5a",
+        "path": ".agentic-workspace/local/effects/c76298c1e1afafcd2377aceb9634ad8408eb781aa62ddf03f5b40da4732c39ad.attempt.json",
+        "revision": "sha256:1587915dff1b12a1c438167cd0bbe660f222cf1bf9bcaf376dc584e42cc82126",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/b63732035adacffac88f16d97ebb8affd208b327905d0769d69c4899127ce05c.result.json",
-        "revision": "sha256:3cfb82900ca1f3a07162b4dfc94fd9e432d3f341f43deea7dc75d2fbb8c3deba",
+        "path": ".agentic-workspace/local/effects/c76298c1e1afafcd2377aceb9634ad8408eb781aa62ddf03f5b40da4732c39ad.result.json",
+        "revision": "sha256:87ea01cb91985d76aae847c7005902e51bb88d8e3e7571eac734471459ee3ba5",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:dd7b58befc68fe01e25183eed237a8467b3625882f97254eb33e4939df48c776",
+    "invocation_revision": "sha256:a57b0d7a86adb58fbc8435de3883289aebd5427b694db44d7287264d028277ff",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -104,7 +104,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:297b8f41b01945bc6a39daa6eab1555ff18c005181cdd0142b1a954c10f99341",
+        "document_revision": "sha256:3d25e4d0179b258d6aa684e7aa8df5582198ecb0447f28b92ba4a36c7274a252",
         "owner_id": "work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860",
         "owner_path": ".agentic-workspace/planning/execplans/work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860.plan.json"
       }
