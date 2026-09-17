@@ -76,6 +76,9 @@ def test_registry_requires_exact_admitted_subject(tmp_path, tag):
     manifest_name = (
         "agentic-workspace-release-manifest.json" if identity["support_bearing"] else "agentic-workspace-preview-release-manifest.json"
     )
+    extra = tmp_path / "windows-wheel"
+    extra.write_bytes(b"windows wheel")
+    packages[0]["wheels"] = [packages[0]["wheel"], {"asset": extra.name, "sha256": registry.sha256(extra)}]
     (tmp_path / manifest_name).write_text(json.dumps({**identity, "source_commit": source, "packages": packages}))
     (tmp_path / "security-supply-chain-readiness.json").write_text(json.dumps({"status": "ready", "subject": {"source_identity": source}}))
     for name in ("distribution-install-readiness.json", "redistributable-package-readiness.json"):
@@ -83,7 +86,7 @@ def test_registry_requires_exact_admitted_subject(tmp_path, tag):
     if identity["support_bearing"]:
         (tmp_path / "support-bearing-promotion.json").write_text(json.dumps({"status": "passed", "source_commit": source}))
     (tmp_path / "SHA256SUMS").write_text("".join(f"{registry.sha256(p)}  {p.name}\n" for p in tmp_path.iterdir()))
-    assert len(registry.admitted_artifacts(tmp_path, tag, source)[1]) == 3
+    assert len(registry.admitted_artifacts(tmp_path, tag, source)[1]) == 4
     with pytest.raises(ValueError, match="source"):
         registry.admitted_artifacts(tmp_path, tag, "b" * 40)
     (tmp_path / "wheel").write_bytes(b"changed")
@@ -105,6 +108,7 @@ def test_registry_workflow_is_gated_projection_without_rebuild():
 def test_linux_wheel_tag_requires_abi_evidence(tmp_path, monkeypatch):
     import admit_linux_wheel
 
+    monkeypatch.setattr(admit_linux_wheel.platform, "machine", lambda: "x86_64")
     wheel = tmp_path / "agentic_workspace-1.0.0-py3-none-linux_x86_64.whl"
     wheel.write_bytes(b"fixture")
     calls = []

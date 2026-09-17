@@ -21,6 +21,9 @@ def _sha256(path: Path) -> str:
 
 def _unique_artifact(dist: Path, pattern: str) -> Path:
     matches = sorted(dist.glob(pattern))
+    if len(matches) > 1 and (dist / "platform-release-manifest.json").exists():
+        from platform_release import primary
+        return primary(matches)
     if len(matches) != 1:
         raise SystemExit(f"Expected exactly one preview artifact matching {pattern!r}, got {[path.name for path in matches]}")
     return matches[0]
@@ -209,7 +212,7 @@ def build_preview_manifest(*, tag: str, artifact_dir: Path) -> dict[str, Any]:
     )
     expected_assets.update({distribution_receipt, redistributable_receipt})
 
-    native_paths = list(dist.glob(f"agentic-workspace-native-{version}-*.zip"))
+    native_paths = [_unique_artifact(dist, f"agentic-workspace-native-{version}-*.zip")]
     if len(native_paths) != 1:
         raise SystemExit("Expected exactly one paired native archive")
     native_archive = {"asset": native_paths[0].name, "sha256": _sha256(native_paths[0])}

@@ -30,9 +30,9 @@ def inventory(directory: Path) -> list[dict[str, str]]:
         "agentic-workspace-native-*.zip",
     ):
         paths = list(directory.glob(pattern))
-        if len(paths) != 1:
+        if not paths or (len(paths) != 1 and not (directory / "platform-release-manifest.json").exists()):
             raise ValueError(f"Expected exactly one {pattern} in {directory}")
-        entries.append({"asset": paths[0].name, "sha256": digest(paths[0])})
+        entries.extend({"asset": path.name, "sha256": digest(path)} for path in paths)
     return sorted(entries, key=lambda entry: entry["asset"])
 
 

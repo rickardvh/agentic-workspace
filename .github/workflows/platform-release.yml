@@ -1,0 +1,122 @@
+name: Compiler-free platform packages
+on:
+  pull_request:
+    paths:
+      - .github/release-platforms.json
+      - .github/workflows/platform-release.yml
+      - scripts/release/platform_release.py
+      - scripts/release/stage_native_npm.py
+      - scripts/release/admit_linux_wheel.py
+      - bindings/node/_transport.mjs
+      - hatch_build.py
+  workflow_call:
+    inputs:
+      source_ref:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact source commit to validate without publication
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      platforms: ${{ steps.matrix.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: matrix
+        run: echo "platforms=$(python scripts/release/platform_release.py matrix)" >> "$GITHUB_OUTPUT"
+  build:
+    needs: matrix
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.platforms) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - name: Build native platform packages
+        run: python scripts/release/platform_release.py build --artifact-dir platform-dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-${{ matrix.target }}
+          path: platform-dist/*
+          if-no-files-found: error
+  assemble:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: platform-*
+          path: platform-inputs
+      - name: Assemble complete platform inventory and universal npm package
+        run: python scripts/release/platform_release.py assemble --inputs platform-inputs --artifact-dir dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: complete-platform-packages
+          path: dist/*
+          if-no-files-found: error
+  consumer:
+    needs: [matrix, assemble]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.platforms) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.13'
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-platform-packages
+          path: dist
+      - name: Install exact assembled packages without a compiler
+        run: python scripts/release/platform_release.py smoke --artifact-dir dist --receipt platform-consumer-${{ matrix.target }}.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: platform-consumer-${{ matrix.target }}
+          path: platform-consumer-${{ matrix.target }}.json
+          if-no-files-found: error

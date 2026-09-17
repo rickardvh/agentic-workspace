@@ -295,7 +295,8 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "EXPECTED_SOURCE_COMMIT" in workflow
     assert "must point at a commit reachable from origin/master" in workflow
     assert 'coordinated_release.py verify --tag "${RELEASE_TAG}"' in workflow
-    assert "uv build --wheel --sdist --out-dir dist" in workflow
+    assert "platform_release.py verify --artifact-dir dist" in workflow
+    assert "uses: ./.github/workflows/platform-release.yml" in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/memory" not in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/planning" not in workflow
     assert "uv build --wheel --sdist --out-dir dist packages/verification" not in workflow
@@ -303,7 +304,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "release-asset-base-url" not in workflow
     assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0" in workflow
     assert 'node-version: "24"' in workflow
-    assert "npm test && npm pack --pack-destination" in workflow
+    assert "name: complete-platform-packages" in workflow
     assert "typescript_packages" in workflow
     assert "agentic-workspace-release-manifest.json" in workflow
     assert "source_commit" in workflow
@@ -325,7 +326,7 @@ def test_manual_release_workflow_verifies_all_package_versions_and_assets() -> N
     assert "fail_on_unmatched_files: true" in workflow
     assert "support-bearing-promotion.json" in workflow
     assert "support_bearing_promotion.py compose" in workflow
-    assert "needs: [promotion-admission, release-runtime-matrix]" in workflow
+    assert "needs: [promotion-admission, release-runtime-matrix, platform-packages]" in workflow
     assert 'python: "3.14"' in workflow
     assert 'python: "3.11"' in workflow
     assert 'python: "3.13"' in workflow

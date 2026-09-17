@@ -59,8 +59,7 @@ hosted proof and registry publication, Linux wheels are audited against
 `manylinux_2_39_x86_64`; only compatible wheels are relabelled, with their native
 executable bytes unchanged. Source builds alone do not establish that ABI. The
 release matrix runs the same isolated native proof per host/runtime, and final
-release/preview checks prove the bytes actually published. The admitted published class is Linux x64 only. Windows and macOS are not
-supported release classes; local Windows validation is development evidence. Preview assets remain non-support-bearing; stable
+release/preview checks prove the bytes actually published. The required publication set is Windows, macOS and Linux on x64 and ARM64, declared in `.github/release-platforms.json`. Each platform builds natively and installs the assembled Python, npm and standalone artifacts with Rust absent from the consumer PATH. Previously published Linux-only artifacts retain their original boundary. Preview assets remain non-support-bearing; stable
 promotion still requires the separate exact-subject server, runtime, install,
 redistribution and security receipts. Implementation completion does not grant
 independent review acceptance, merge readiness or parent-issue closure.
