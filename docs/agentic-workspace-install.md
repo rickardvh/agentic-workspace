@@ -1,220 +1,202 @@
-# Installing Agentic Workspace
+# Installing and adopting Agentic Workspace
 
-Use this page for installing or adopting Agentic Workspace in a host repository. The repository link is documentation and package source; do not clone this source repository merely to copy payload files into the target.
+Use this page to select an Agentic Workspace release, understand its support boundary, and use it in a host repository. The source repository is documentation and package source; cloning it and copying payload files is not the normal installation or adoption path.
+
+Installation and repository adoption are distinct. Installing AW gives you the selected runtime/artifacts. Adoption establishes the small package-owned foothold that lets ordinary skills-first operation begin.
 
 ## Before execution: trust boundary
 
 **Agentic Workspace is not a sandbox.** Review and trust the host repository before allowing AW to execute repository-configured proof routes or explicitly supplied executor commands. Those admitted shell routes inherit the caller's filesystem and credential authority.
 
-External issue/PR/service text is data, not execution permission. Credentials should remain in the platform/environment credential boundary rather than checked-in AW state.
+External issue, PR, and service text is data, not execution permission. Credentials should remain in the platform/environment credential boundary rather than checked-in AW state.
 
-See [Threat model and supply-chain boundary](security/threat-model.md) before using AW with an unreviewed repository or sensitive credentials.
+See the [threat model and supply-chain boundary](security/threat-model.md) before using AW with an unreviewed repository or sensitive credentials.
 
-## Preview / external testing
+## Choose a release identity
 
-During reconstruction, a maintainer may publish an immutable GitHub prerelease tagged `preview-vMAJOR.MINOR.PATCH`. This is the provisional external-testing path, not the Stable/1.0 or support-bearing install path.
+Use an immutable published release identity. Do not infer installable or support-bearing bytes from a branch, source checkout, proposed version, or CI build.
 
-A public preview exists only when that GitHub prerelease has actually been published. Do not infer a preview identity from `reconstruct/first-stable`, another mutable branch, a source checkout, or a proposed version.
+### Stable / support-bearing
 
-For an explicitly published preview:
+For ordinary supported use, start with the generated [support-bearing install projection](reference/support-bearing-install.md). It identifies the current stable GitHub Release and its `distribution-install-readiness.json` receipt, including the exact hash-bound root-wheel installation command.
 
-1. Open that exact `preview-vMAJOR.MINOR.PATCH` GitHub prerelease.
-2. Read `agentic-workspace-preview-release-manifest.json` and confirm it identifies the intended tag plus exact reconstruction-source and normalized artifact commits, with `release_class` set to `preview` and `support_bearing` set to `false`.
-3. Read `distribution-install-readiness.json` from the same release. It must identify the same preview tag/version and carry the same non-support-bearing disposition.
-4. Run the receipt's exact hash-bound root-wheel install command unchanged.
-5. In a target Git repository, follow its bootstrap to the canonical AW skill. For an exact current tool answer, use the installed native boundary:
+The release receipt is the installation authority. A source checkout can contain newer capabilities than the current stable release and does not upgrade the published support contract. If the generated projection still names an older stable release while a new major release is being prepared, that is preferable to guessing a future install identity.
 
-   ```bash
-   agentic-workspace start --target . --task "Inspect this repository" --format json
-   ```
+Stable language-registry artifacts are projections of the same admitted release only after `registry-publication.json` confirms their exact versions and digests. Registry publication does not create a second semantic release. Cargo distribution likewise belongs to the coordinated release and uses the release-declared same-version core/CLI pair and its publication evidence.
 
-Use only the asset/dependency set declared by that exact preview. The admitted native reconstruction ships a root wheel/source archive, npm package and native CLI/core archive; separate Memory, Planning and Verification packages are source-development fixtures, not native release dependencies. Preview versions are immutable public identities and are not later reused for different stable or preview bytes.
+### Release candidates
 
-A preview is intentionally unstable. Interfaces and behavior may change before first stable; the preview establishes no blanket OS, shell, provider, production-readiness, Stable/1.0, or support-bearing guarantee. Its purpose is to make exact packaged reconstruction bytes available for external testing while preserving those boundaries.
+An explicitly published `v1.0.0-rc.N` is a prerelease identity for final external validation before `v1.0.0`. Its release class is `release-candidate` and it is **not support-bearing**.
 
-## Stable/support-bearing prerequisites
+Use the exact install information attached to that RC. Do not substitute the stable tag, a different version spelling, or registry resolution without the corresponding publication receipt. RC Python, npm, Cargo, and native projections are one coordinated prerelease subject, not independent release authorities.
 
-### First-stable release candidates
+See the [release and versioning contract](release-and-versioning.md#first-stable-release-candidates) for RC/promotion mechanics.
 
-An explicitly published `v1.0.0-rc.N` uses the same immutable prerelease assets and
-receipt-based install procedure above. Its manifest class is `release-candidate`,
-its target stable tag is `v1.0.0`, and `support_bearing` remains `false`. The Python
-version is `1.0.0rcN`; npm uses `1.0.0-rc.N`. Use the exact hash-bound install
-command from that RC's receipt, without substituting a version spelling or tag.
-An RC is not stable support, and its existence must not be inferred from a branch
-or a proposed tag. See the [RC/promotion contract](release-and-versioning.md#first-stable-release-candidates).
+### Exploratory previews
 
-### Runtime prerequisites
+An explicitly published `preview-vMAJOR.MINOR.PATCH` GitHub prerelease is an immutable exploratory testing identity. It is intentionally **non-support-bearing**.
 
-The native root wheel declares **Python 3.11 or newer**. The admitted runtime range is Python 3.11–3.14; a metadata lower bound does not prove future Python versions. The npm projection has evidence for Node 20, 24 and 25. Standalone native execution requires neither Python nor Node.
+For a preview:
 
-Building from source additionally requires the exact repository toolchain in
-`rust-toolchain.toml`; no lower Rust MSRV is currently supported. Installed native
-artifacts do not require Cargo. See the [maintainer toolchain contract](maintainer/rust-toolchain.md).
+1. open the exact preview GitHub prerelease;
+2. read its `agentic-workspace-preview-release-manifest.json`;
+3. read `distribution-install-readiness.json` from the same release;
+4. verify both name the same preview subject and non-support-bearing release class;
+5. run only the exact install command from that receipt.
 
-This page is the canonical support/prerequisite owner. Exact release identity is projected separately so changing releases does not require copying commands through conceptual prose.
+Previews may prove useful packaged behavior, but they do not establish stable compatibility, production support, registry availability, or broader platform support.
 
-| Concern | Supported contract | Unknown or excluded |
+### Source and debug routes
+
+Editable installs, source-checkout invocation, `uvx`, `pipx run`, and other development/debug routes can be useful for maintainers. They are not support-bearing installation identities unless a release policy explicitly says otherwise.
+
+## Runtime prerequisites and support boundary
+
+This page owns the current native prerequisite model; the selected immutable release and its receipts own the exact public support claim for those bytes.
+
+| Concern | Current native contract | Unknown or excluded unless a selected release says otherwise |
 | --- | --- | --- |
-| Python | 3.11–3.14; 3.11/3.13/3.14 exercised, 3.12 bounded by minimum/primary lanes | later versions and alternative implementations are unproven |
-| Node | npm projection: majors 20, 24 and 25 exercised | other majors are unproven |
-| Installer | `uv tool install` using the exact hash-bound stable release receipt command | exact registry versions require `registry-publication.json`; mutable branches and editable/source installs are not support-bearing |
-| Git/repository | a Git working tree for shared checked-in operating context and ownership | non-Git hosts are not part of the current public adoption contract |
-| Network | required to obtain release assets and for explicitly configured external adapters | ordinary local resolve/act/reconcile does not imply a network service |
-| OS/shell | native reconstruction: Linux x64, GNU target, `linux_x86_64` wheel | no manylinux, Windows, macOS, ARM or blanket shell/container/runner guarantee |
-| Credentials | remain in caller/platform boundaries | AW is not a credential host or sandbox |
-| Runtime tools | repository-configured commands run with caller authority | arbitrary host tools are not bundled or silently trusted |
+| Python | 3.11–3.14; 3.11/3.13/3.14 exercised, 3.12 bounded by the minimum/primary lanes | later versions and alternative implementations |
+| Node | npm projection exercised on majors 20, 24 and 25 | other majors |
+| Git/repository | Git working tree for shared checked-in operating context and ownership | non-Git hosts |
+| Network | required to obtain release assets and for explicitly configured external adapters | ordinary local operation does not imply a network service |
+| OS/architecture | native artifact evidence for Linux x64 / GNU target | Windows, macOS, ARM, manylinux or blanket shell/container/runner support |
+| Credentials | remain in caller/platform boundaries | AW as a credential host or sandbox |
+| Runtime tools | repository-configured commands run with caller authority | arbitrary host tools being bundled or silently trusted |
 
-The [checked-in install projection](reference/support-bearing-install.md) tracks the current stable release, `v0.51.0`, which predates the native reconstruction. It must not be used as an install identity for the native behavior described here. Exact reconstruction admission is recorded in [#2990](https://github.com/rickardvh/agentic-workspace/issues/2990); admission and canonical branch cutover do not themselves publish native stable assets. Until an immutable native release exists, use an explicitly published preview only for its own documented behavior.
+The root wheel declares Python 3.11 or newer. Standalone native execution requires neither Python nor Node. Building AW from source additionally requires the repository's exact `rust-toolchain.toml`; installed native artifacts do not require Cargo merely because AW itself is implemented in Rust.
 
-The support-bearing public installation identity is a **stable versioned GitHub Release** and the exact command recorded in that release's `distribution-install-readiness.json`. That receipt currently owns the canonical `uv tool install` command, exact root-wheel release URL, and SHA-256 binding. Therefore the support-bearing public path requires a working `uv` installation capable of executing that receipt command.
+Do not widen a release's support boundary from this source table. If the selected release omits a platform or runtime guarantee, treat it as unproven.
 
-Mutable branches are not support-bearing installation identities. Exact PyPI/npm versions are supported distribution projections only after the corresponding registry receipt and stable admission pass. RC registry versions remain non-support-bearing. `uvx`, `pipx run`, editable installs, and source-checkout commands are useful development/debug routes but should not be confused with the support-bearing release identity.
+See [Evidence and support](evidence-and-support.md) for how deterministic proof, release support, and live-agent evidence differ.
 
-Operating-system and shell portability should not be inferred from this page beyond what the selected stable release and its test evidence actually cover. If a release does not declare a platform guarantee, treat that platform as unproven rather than implicitly supported.
+## Adopt a target repository
 
-## Current native adoption boundary
+The target is the Git repository where the agent will work. Runtime installation does not silently mutate the current directory.
 
-The target is the repository where the agent will work. Follow its existing tiny
-bootstrap to the canonical `workspace-startup` skill. The skill is procedure;
-repository instructions and config remain the policy owners. If there is no
-runtime, use that same skill's selective read-only fallback; it cannot establish
-live effect admission, retention or proof.
+Run ordinary current resolution against the target:
 
-The native executable currently exposes `start`, `invoke`, `resources`,
-`proof-procedure` and `worker`. Check `agentic-workspace --help` from the selected installed artifact.
-There is no native `defaults`, `init`, `upgrade`, `remove-legacy` or module CLI
-family. Historical source-maintenance lifecycle tooling is not an installation
-fallback. If the selected preview does not provide the required bootstrap or
-adoption surface, report that exact limitation instead of copying managed payload
-files or invoking a former host.
+```bash
+agentic-workspace start --target . --task "Inspect this repository" --format json
+```
 
-On builds containing the repository adoption owner, a plain Git working tree can resolve `start`, follow Configuration's `repository_adoption_request`, and select the returned exact adoption request. Inspect its bounded proposal and invoke the authorized action. The same owner returns removal and interrupted-recovery requests. See [repository lifecycle](package/lifecycle.md). This source behavior does not imply it is present in an older published artifact.
+On artifacts containing the current repository-adoption owner, an unadopted target exposes Configuration's `repository_adoption_request`. Follow that exact request, inspect the bounded proposal, supply only the requested authorization, and execute the returned action through `invoke`.
 
-A published artifact's install receipt establishes installation of its declared
-bytes; it does not establish arbitrary target initialization or support on an
-untested platform. Published previews retain their own exact source/artifact
-identities; a newer reconstruction branch or this guide does not upgrade those
-bytes or establish publication of the next candidate.
+The adoption operation owns the public host footprint. It establishes package-managed skills, ownership/read-profile metadata, provenance, adoption identity, and the declared managed fence in `AGENTS.md`. It does **not** create `.agentic-workspace/config.toml`, choose optional modules/providers, initialize Planning/Memory/Verification state, or treat existing repository content as package-owned.
 
-For an already bootstrapped repository, read the canonical skill, then use exact
-current tools as needed. See [everyday use](everyday-use.md) and the generated
-[native CLI reference](reference/cli-catalogue.md). Choose module capabilities
-only when they repay recurring context, continuity or proof costs; direct work
-need not create module state.
+Edited, unowned, conflicting, or unsafe destinations are preserved and reported. Interrupted publication uses the same owner's exact recovery path. An already-adopted/current repository is a no-op rather than a recurring setup phase.
 
-## Installed footprint
+Historical `init`, `install`, `setup`, `upgrade`, or module lifecycle command families are not the v1 adoption model.
 
-The current implementation establishes one small public footprint: a managed startup fence, repository-local skills and dependencies, ownership/read-profile metadata, provenance, and an adoption identity. It creates no config or domain state. Configuration uses this same contract for refresh and removal; unknown and independently owned content is preserved.
+## Use an adopted repository
 
-Payload-mirroring profiles describe source-maintenance packaging. They are not native CLI flags or permission to copy managed state into another repository.
+Follow the target's small entry point to the canonical `workspace-startup` skill. The skill owns reusable procedure; repository instructions/config own policy; domain owners own current state/evidence.
 
-The retained bounded-adaptation Python path also operates only in source
-maintenance. Its explicit adapters for proof-route, instruction and Memory work
-require `source-maintenance-only` contracts and preserve their existing owner
-admission and revision checks. The projection reports
-`operation_maintenance_executable`; it does not claim public native execution.
-Current source schemas still apply: a maintenance adapter cannot restore retired
-`assurance.domain_proof_lanes` authoring. Such a proposal is rejected with source
-bytes preserved; current proof-route changes belong to the Verification source.
+The native executable exposes:
 
-Exact installed files and required/optional degraded references are generated in the [current installed-surface catalogue](reference/installed-surface-catalogue.md).
+- `start`
+- `invoke`
+- `resources`
+- `proof-procedure`
+- `worker`
 
-## Stable invocation after bootstrap
+Use `agentic-workspace --help` from the selected artifact for exact current options. The [generated native CLI catalogue](reference/cli-catalogue.md) owns the source-bound command reference.
 
-The native `agentic-workspace` CLI remains the ordinary deterministic product authority after bootstrap unless the host uses another supported thin external-consumer projection. Do not assume installation is a one-shot file-copy operation.
+If executable AW is unavailable, the same canonical skill defines a bounded repository-only read path using `.agentic-workspace/READING.json`. That path can recover repository-recorded context but cannot establish machine-local state, fresh proof, runtime capability, mutation permission, or completion.
 
-The repo-owned compatibility/config surfaces identify the expected contract and configured invocation posture. Ordinary startup should inspect that identity without silently rewriting dependency locks or moving VCS/source revisions. Installing a new artifact does not reconcile the target's managed payload. If the selected artifact exposes no supported operation for that target change, preserve the sources and report the missing owner operation.
+After adoption, continue giving your agent ordinary tasks. The skill and current owner results should make AW disappear from attention when it has nothing relevant to add.
 
-If the target owns a dependency lock, use the supported environment-manager mode that preserves it (for example a frozen `uv` invocation when that is the configured adapter). Machine-local executable paths and credentials should not become durable shared repo state.
+## Public host footprint
+
+The current public host footprint has one Configuration-owned contract. Adoption, refresh, and removal use the same declared file set; optional domain state is never established merely because the repository adopts AW.
+
+The generated [installed-surface catalogue](reference/installed-surface-catalogue.md) is the exact authority for those files and their lifetimes.
+
+In summary:
+
+- package-managed integration includes `READING.json`, `OWNERSHIP.toml`, the repository-local AW skill registry/bundles, adoption identity, payload provenance, and the managed `AGENTS.md` fence;
+- repo-owned config/instructions remain repo-owned;
+- Planning, Memory, and Verification retain their own domain state;
+- `.agentic-workspace/local/` remains machine-local;
+- promoted repository output remains with its promoted owner;
+- unknown paths are preserved.
+
+Historical payload-mirroring profiles and executable fallback maintenance are source-maintenance concerns, not public host profiles or native CLI commands.
+
+## Refresh managed payload
+
+An adopted repository can require package-managed files and provenance to match the selected artifact's shipped bytes.
+
+When refresh is supported, Configuration exposes `payload_discovery_request` with exact per-file proposals. Inspect those proposals, supply only the bounded authorization requested, execute the returned exact action through `invoke`, and resolve again. Interrupted publication uses the same owner's recovery path.
+
+This operation is bounded to the artifact's declared package files. It cannot accept arbitrary replacement paths/bytes, initialize human policy, reset domain state, or turn unknown ownership into deletion authority. Preserve useful target-specific meaning before authorizing replacement.
+
+Installing a newer runtime artifact does not itself reconcile the target's checked-in package surfaces.
+
+## Remove AW from a repository
+
+Repository removal uses the same current ownership model rather than a separate legacy uninstaller.
+
+Configuration can expose the repository-adoption owner's exact removal and recovery requests. Before removing canonical skill targets, remove authenticated `.agents/skills/<name>` discovery links through their existing skill-exposure owner.
+
+Removal deletes only package-owned integration whose custody/currentness still matches. It preserves repo-owned configuration and instructions outside the managed fence, Planning/Memory/Verification state, local state, promoted output, and unknown content. Edited package surfaces or ambiguous custody block deletion instead of widening ownership from path recognition.
+
+A successful removal leaves the repository unadopted. Re-adoption later uses the normal adoption path and does not depend on a persistent removal ledger.
+
+Package-manager uninstallation and repository de-adoption are distinct: uninstalling the executable does not by itself remove the repository's checked-in AW integration.
+
+## Standard project skill discovery
+
+In an adopted repository, Configuration can expose the current package registry's main and specialized product skills through `skill_exposure_request`. Submit the exact current request, use an offered `expose_request`, supply the authorized answer, and execute the returned action through `invoke`. The same owner provides authenticated removal and interrupted-result recovery.
+
+Exposure uses `.agents/skills/<name>` links to canonical `.agentic-workspace/skills/<name>` bundles. Unix uses relative symlinks; Windows uses NTFS junctions because ordinary symlink creation can require privileges. Canonical updates and bundle-relative resources remain visible without maintaining a second copy. Reference-only and maintainer skills are not exported.
+
+A filesystem that cannot create the applicable link returns an explicit gap. Never replace a colliding host skill. Reconcile that path explicitly before requesting exposure again. Do not recursively delete `.agents/skills`.
+
+Listing or exposing a skill is procedure discovery. It does not establish policy applicability, effect permission, evidence, or issue closure.
+
+## Stable invocation after adoption
+
+The native `agentic-workspace` boundary remains the ordinary deterministic product authority unless the host uses another supported thin projection over the same Rust-owned operations.
+
+Repository compatibility/config surfaces identify the expected invocation and contract. Machine-local executable paths and credentials should not become durable shared repository state. If the target owns a dependency lock, use the repository's supported environment-manager mode without silently rewriting that lock merely to invoke AW.
 
 ## If the CLI is missing
 
-Recover through the exact install receipt for the selected immutable release class: the published preview receipt when deliberately testing a preview, or the support-bearing stable receipt when using a stable release. Then return to the canonical skill and the operations actually exposed by that artifact.
+Recover through the exact install receipt for the release class you deliberately selected:
 
-Prefer the host repo's normal tool/dependency convention when it can preserve the same compatible installed identity. Use `uvx` or `pipx run` only as explicit temporary/debug fallback routes; repeated ordinary work should have a stable configured invocation.
+- stable: the [support-bearing install projection](reference/support-bearing-install.md) and its immutable stable release receipt;
+- release candidate: the exact RC release receipt;
+- preview: the exact preview release receipt.
 
-## Do not
+Then return to the canonical skill and the operations exposed by those bytes.
 
-- clone the AW source repository into a temporary folder as the normal bootstrap strategy;
-- hand-copy package payload into the host repo;
-- substitute a mutable branch for the selected immutable preview or stable release;
-- let package-level module CLIs become the normal host-repo front door when the root Workspace CLI is available;
-- treat a successful bootstrap process as proof that later agents can resolve the same compatible runtime;
-- treat local logs, caches, or scratch files as shared proof or Planning authority.
+Prefer a repository's normal tool/dependency convention when it can preserve the same compatible installed identity. Temporary/debug runners remain temporary routes, not evidence that a repeatable installation has been established.
 
-## Follow-up checks
+## A small repository journey
 
-For an already bootstrapped target, inspect current sources and remaining owner concerns through the configured native invocation. For example:
-
-```bash
-agentic-workspace start --target . --task "Inspect this repository's current configuration and owner concerns" --format json
-```
-
-Use the canonical skill to interpret the returned current facts and exact owner requests. A successful query does not install or synchronize payload, discharge proof obligations, or establish adoption completion.
-
-Temporary finishing briefs or diagnostics under `.agentic-workspace/local/` are local-only and should not be checked in. Mirrored-payload profiles may have additional explicit managed artifacts; their ownership should remain visible in the installed-surface contract.
-
-An existing payload policy can require installed files and provenance to match the
-native artifact's shipped bytes. Startup checks this read-only; provenance labels
-alone cannot satisfy it. The current Configuration owner exposes a
-`payload_discovery_request` with exact per-file refresh proposals. Inspect each
-proposal and authorize its exact artifact bytes through the returned decision;
-then invoke the returned action and resolve again. Interrupted publication uses
-that same owner's recovery request. A second discovery reports current files
-without writing them.
-
-This bounded refresh applies only to the artifact's declared package files. It
-cannot accept arbitrary paths or caller-supplied replacement bytes, initialize
-human policy, or reset domain state. Preserve useful target-specific meaning
-before authorizing a package-file replacement; unknown ownership is not deletion
-authority. See the canonical setup skill for this procedure. Earlier published
-artifacts may lack the operation; their actual contract remains authoritative.
-
-## Worked example for an already bootstrapped target
-
-1. Install with the exact receipt for the immutable release class you intend to exercise. For ordinary support-bearing use, follow [current support-bearing install](reference/support-bearing-install.md); for external preview testing, use only the receipt from the exact published `preview-v...` prerelease.
-2. Follow the target's existing bootstrap to the canonical skill. For an unbootstrapped target, first establish whether the selected artifact supplies a supported adoption operation; stop at the exact limitation if it does not. Do not copy payload or invoke a historical initialization command.
-3. Start a small direct task:
+1. Install the immutable release class you intend to exercise using its exact receipt.
+2. Run `start` in the target repository. If Configuration returns `repository_adoption_request`, follow the exact request/action to establish the public footprint.
+3. Follow the repository entry point to the canonical skill.
+4. Start a direct task:
 
    ```bash
    agentic-workspace start --target . --task "Clarify one README sentence" --format json
    ```
 
-   The resolved contract can remain direct: edit the canonical README, run proportionate validation, reconcile the bounded result, and create no Planning/Memory/Verification artifact when no future-relevant residue exists.
-4. Start a continuity-sensitive task, such as preparing a multi-slice import feature. Progressive discovery may make Planning relevant; follow the typed Planning operation supplied by the current decision rather than learning a second workflow. Planning owns the continuation, not the source implementation.
-5. After acting, reconcile the result: passing proof supports only its bounded claim; unfinished parent intent stays with its owner; durable anti-rediscovery residue may route to Memory; Verification contributes evidence only if configured and relevant. Resolve again when a constructible next action remains.
+   The current contract may remain direct: edit the canonical README, run proportionate validation, reconcile the bounded result, and create no Planning/Memory/Verification artifact when there is no future-relevant residue.
+5. For continuity-sensitive work, Planning may become relevant through progressive discovery. Follow the current owner operation rather than learning a second mandatory workflow.
+6. After acting, reconcile only what changed: passing proof supports its bounded claim; unfinished parent intent stays unfinished; useful anti-rediscovery residue may route to Memory; Verification contributes evidence only when configured and relevant.
 
-This example intentionally omits an exhaustive command or footprint list. Exact current commands are in the [CLI catalogue](reference/cli-catalogue.md), and exact installed files are in the [surface catalogue](reference/installed-surface-catalogue.md).
+Exact current commands are in the [CLI catalogue](reference/cli-catalogue.md). Exact installed files are in the [surface catalogue](reference/installed-surface-catalogue.md). Exact public release identity belongs to the selected immutable release and its receipts.
 
-## Standard project skill discovery
+## Do not
 
-In an adopted repository, Configuration returns `skill_exposure_request` from
-`start --projection full`. Submit that exact request through `start --input` to
-inspect the current package registry's main and specialized product bundles.
-Use an offered `expose_request`, supply the authorized answer, and execute the
-returned exact action through `invoke`. The same owner offers removal and
-interrupted-result recovery. These are Configuration operations, not a restored
-legacy install/uninstall CLI.
-
-Exposure uses `.agents/skills/<name>` directory links to canonical
-`.agentic-workspace/skills/<name>` bundles. Unix uses relative symlinks; Windows
-uses NTFS junctions because ordinary symlink creation can require privileges.
-Canonical updates and bundle-relative resources remain visible without another
-maintained body. Reference-only and maintainer skills are not exported.
-The current Codex 0.154.0 Windows discovery/activation observation is recorded in
-[the exposure evidence](maintainer/skill-exposure-3325.md); it is not a general
-Windows distribution support claim or a guarantee about other hosts.
-
-A filesystem that cannot create the applicable link returns an explicit gap.
-Keep the small `AGENTS.md` pointer for mixed readers and unavailable runtimes.
-Never replace a colliding host skill. Reconcile/move that path explicitly and
-request fresh exposure. A moved Windows checkout can retain absolute junctions
-to its old location; preserve and explicitly reconcile those links before
-readoption. Removal deletes only an authenticated, matching discovery link.
-It preserves canonical edits, unrelated skills, and owner state. Prefer removal
-before payload teardown; previously owned retired links remain discoverable for
-removal after registry changes. Do not recursively delete `.agents/skills`.
-
-Listing skills is passive. Host selection is procedure discovery; it cannot
-establish policy applicability, effect permission, evidence or issue closure.
+- clone the AW source repository into a temporary directory as the normal installation strategy;
+- hand-copy package payload into a host repository;
+- substitute a mutable branch for an immutable stable or prerelease identity;
+- use historical `init`/upgrade/module command families as an adoption fallback;
+- treat a successful runtime install as proof that the repository has been adopted;
+- treat package-manager uninstallation as repository de-adoption;
+- delete `.agentic-workspace/` wholesale to remove AW;
+- treat local logs, caches, scratch files, or copied plan material as shared proof or current owner authority.

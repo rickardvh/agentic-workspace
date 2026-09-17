@@ -1,126 +1,184 @@
 # Agentic Workspace
 
-Agentic Workspace helps AI coding agents work consistently in a repository across sessions, tools, and models.
+**Persistent operating context and dynamic control for coding agents.**
 
-It gives the repository a small agent-facing layer for instructions, relevant context, reusable procedures, verification expectations, and continuation state. Instead of loading one large static guide for every task, an agent can ask what matters now and get a compact route to the context and actions that apply.
+Agentic Workspace (AW) helps coding agents enter a repository with the right guidance, continue unfinished work across sessions, and preserve useful lessons without turning every task into a workflow.
 
-Use it when agents repeatedly rediscover the same repository knowledge, important intent lives only in conversation, different parts of the repo need different procedures or checks, or work needs to survive handoffs and restarts. If ordinary docs, tests, and a short task are already enough, Agentic Workspace should stay unnecessary or minimal.
+It builds on repository instructions and skills with persistent, source-owned context and a small Rust-backed tool surface for exact current information and bounded operations. Keep your existing agent, editor, source tree, tests, and review process; AW connects them to the operating context that matters for the task at hand.
 
-## What changes for an agent
+[Get started](#get-started) · [Everyday use](docs/everyday-use.md) · [Documentation](docs/index.md) · [Releases](https://github.com/rickardvh/agentic-workspace/releases)
 
-An AW-enabled repository has a tiny bootstrap pointing to one canonical
-[AW operating skill](.agentic-workspace/skills/workspace-startup/SKILL.md).
-That skill teaches the agent how to work with current repository instructions,
-configuration and owner state. Relevant specialized procedures are loaded only
-when useful. Direct work stays direct.
+## Why AW?
 
-For example, when changing authentication, the agent reads the applicable repo
-policy, obtains current constraints or proof requirements when needed, makes the
-change, and checks what the responsible owners can establish. A precise tool call
-may help:
+A repository instruction file can explain how to work in a project. By itself, it cannot tell a new session where a multi-step task stopped, which retained lesson is relevant now, whether earlier verification still supports a claim, or which deeper procedure is worth loading for this change.
 
-```bash
-agentic-workspace start --target . --task "Update authentication token handling" --format json
-```
+As work spans sessions and agents, that context has to come from somewhere. Without a deliberate home, it tends to disappear into chat, duplicate into prose, or be reconstructed from source, issues, and history.
 
-The tool carries exact requests, actions and currentness. The agent supplies
-intent, unresolved judgment and new material; it does not memorize a packet
-protocol. A tool succeeding is separate from the requested outcome being complete.
-See [everyday use](docs/everyday-use.md) for small practical examples.
+AW keeps only the operating context whose availability can materially change agent behavior, then makes the relevant part cheap to reach:
 
-An agent with only repository read access uses the same skill and its generated
-read profile to reach relevant owner sources. It can recover recorded intent and
-context, while runtime availability, local state and fresh proof remain unknown.
-This read path grants no permission to mutate or approve work.
+| Need | What AW provides |
+| --- | --- |
+| Find the right guidance | Task-relevant instructions, source references, and reusable skills. |
+| Continue interrupted work | Retained outcomes, constraints, accepted progress, blockers, and next actions. |
+| Know what to verify | Relevant checking procedures, recorded evidence, and visible gaps. |
+| Hand work to another agent | Bounded assignments with explicit context, constraints, and return expectations. |
+| Avoid repeated rediscovery | Useful lessons and corrections retained with the appropriate owner. |
 
-## First-party modules
+The goal is less repeated explanation, searching, handoff reconstruction, and repair—not a larger prompt or a new workflow to manage.
 
-Most of Agentic Workspace's current higher-level functionality is provided by three first-party modules. They are independently selectable rather than mandatory: a repository can use the Workspace routing/control layer on its own or add the modules that solve recurring problems.
+**Small tasks stay small.** A typo fix does not need Planning, Memory, Verification, delegation, or another artifact merely because those capabilities are available.
 
-- **Memory** preserves repository knowledge that is costly to rediscover, so later agents can recover useful lessons, constraints, and orientation without repeating the same investigation.
-- **Planning** preserves active work and execution continuity across sessions and agents: what is being worked on, the intent and boundaries that matter, what remains, and where continuation belongs.
-- **Verification** preserves reusable verification procedures, evidence, and known gaps so agents can apply the right checks and keep completion claims aligned with what has actually been established.
+## What using it looks like
 
-Workspace connects these capabilities with task-shaped routing, repository instructions, ownership, and current action and completion boundaries. A module becomes relevant when its capability matters without making unrelated tasks carry its terminology or procedure.
+Imagine an API change that spans two sessions:
 
-See [`docs/package/modules.md`](docs/package/modules.md) for module roles and ownership.
+> Add pagination to the users API without breaking existing clients.
 
-## What Workspace provides
+In a repository with API guidance and verification procedures configured, the agent can use AW to find the relevant contract, load a useful implementation procedure, and identify the checks expected for the change. It still reads the source, reasons about the design, and implements with its ordinary tools.
 
-The Workspace layer provides the common operating path around those capabilities:
+If work stops partway through, Planning can preserve the intended outcome, accepted progress, unresolved questions, and next action.
 
-- **Task-shaped repository guidance** — apply scoped instructions, ownership, policy, and procedures only when they matter to the current work.
-- **Compact routing** — start from one current answer instead of reconciling several instruction and state surfaces manually.
-- **Reusable procedures and actions** — route agents to maintained skills and supported operations instead of relying on remembered command sequences.
-- **Repository-specific control** — let repo-owned configuration and instructions affect agent behavior while keeping the acting agent focused on what applies now.
-- **Progressive detail** — keep unrelated module state, diagnostics, and deeper procedures out of first contact until the task needs them.
+In a later session:
+
+> Continue the pagination work.
+
+The next agent can recover that continuation rather than reconstructing the previous conversation. Changed assumptions and missing evidence remain things to check; a recorded result is not automatically fresh proof.
+
+The same principle applies to a handoff: preserve enough for the receiving agent to do bounded work without copying the entire parent session. Returned work still needs appropriate integration and verification.
+
+[See everyday examples →](docs/everyday-use.md)
 
 ## How it works
 
-Agentic Workspace treats the repository as the durable home of the context that should govern agent work. That can include system intent, ownership, scoped instructions, current work, learned lessons, verification requirements, and other source-owned facts or procedures.
+**Skills teach procedure. Repository instructions and configuration set policy. Domain owners hold current state and evidence. Tools provide exact current information and controlled operations. The agent supplies judgment.**
 
-AW does not need to copy or model the whole repository. Source code, ordinary documentation, tests, and other canonical content remain where they already belong. Workspace selects the small amount of operating context that can change the current decision and routes deeper material only when needed.
+A small repository entry point leads the agent to AW's canonical `workspace-startup` skill. That skill explains how to reach relevant sources, ask the runtime for current facts when they matter, and load specialized procedures only when useful.
 
-The main skill supplies procedure; repository instructions and configuration
-supply policy; Planning, Memory and Verification retain their own state and
-evidence. Rust-backed tools answer exact current questions and perform admitted
-bounded operations. These roles stay separate, without a required resolve/act/
-reconcile phase machine for every task.
+The underlying model is deliberately small:
 
-Repository instructions can also be dynamic rather than purely static: repo-owned configuration, scoped guidance, skills, verification rules, and capability state can change what AW surfaces or requires for a particular task. The deeper architecture for programmable instruction composition is described in [`docs/architecture.md`](docs/architecture.md).
+```text
+Find the relevant context → Do the work → Update what matters
+```
 
-## Interfaces and implementation authority
+Internally, AW resolves a compact operating contract, exposes supported actions, and reconciles their consequences afterward. That machinery is a substrate for the agent, not a phase machine the user has to operate around every task.
 
-The ordinary deterministic product authority is the **native Rust CLI/core**. Public operations resolve and execute through that shared native authority rather than through independent language-specific implementations.
+Source code, documentation, tests, decisions, and other canonical repository material remain in their existing homes. AW routes to those sources rather than importing the repository into a second knowledge system.
 
-The root Python distribution and single generated TypeScript CLI package carry the paired native CLI/core executables. The release also provides a native archive. Python, TypeScript and JSON `start`/`invoke` envelopes are thin first-class projections/adapters over the same Rust-owned operation semantics. They are not peer semantic runtimes, and adapter-specific code should not become a second source of ordinary domain behavior.
+[Product model](docs/package/overview.md) · [Architecture](docs/architecture.md)
 
-See [`docs/package/contracts.md`](docs/package/contracts.md) for the current contract and generated-interface model.
+## Get started
 
-## Getting started
+Use the [installation and adoption guide](docs/agentic-workspace-install.md) for the release class you intend to run. Stable support, release candidates, and previews have different evidence and support boundaries; exact install commands and platform claims belong to the selected release and its receipts rather than this README.
 
-Use the installation guide for current installation and adoption guidance:
+### Adopt a repository
 
-[`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md)
+Installing the runtime and adopting a repository are separate operations. After installing the selected artifact, run ordinary `start` against the target Git repository:
 
-During reconstruction, an explicitly published `preview-vMAJOR.MINOR.PATCH` GitHub prerelease may be used for external testing. Its `agentic-workspace-preview-release-manifest.json` and `distribution-install-readiness.json` identify the exact immutable preview subject and hash-bound root-wheel install command. A preview is unstable and **non-support-bearing**: it does not establish Stable/1.0 status or a general platform-support claim. If no such prerelease has been published, there is no public preview install identity to infer from the reconstruction branch.
+```bash
+agentic-workspace start --target . \
+  --task "Inspect this repository" \
+  --format json
+```
 
-The native reconstruction has passed [exact artifact admission](https://github.com/rickardvh/agentic-workspace/issues/2990), with Linux x64 as its evidenced platform. Admission and a canonical branch move do not publish a stable release or change package maturity. The install reference tracks the latest stable release, `v0.51.0`, which predates this native implementation; see the [installation guide](docs/agentic-workspace-install.md) before selecting bytes.
+If the repository is not yet adopted and the selected artifact includes the current adoption owner, Configuration returns the exact repository-adoption request. Follow that request and execute only the returned authorized action. Adoption establishes the small package-owned host footprint and managed `AGENTS.md` fence; it does **not** invent repository policy, choose optional modules, or create Planning, Memory, or Verification state.
 
-The later support-bearing install path is a stable `vMAJOR.MINOR.PATCH` GitHub Release. Each coordinated stable release publishes `distribution-install-readiness.json`, which identifies the project-controlled root wheel and its SHA-256-bound install command; mutable branches are not support-bearing identities. RC/stable PyPI and npm versions project these same admitted artifacts, with public digests and clean-install evidence in `registry-publication.json`.
+Historical `init`/setup command families are not the v1 adoption model.
 
-After adoption, use the canonical skill and the installed CLI's `--help`.
-The native tools are `start`, `invoke`, `resources` and `worker`; domain requests
-come from their current owners. Historical `init`, `defaults`, `implement`,
-`proof` and module subcommands are not an installed native adoption procedure.
-The [installation guide](docs/agentic-workspace-install.md) states the current
-preview and bootstrap limitations explicitly.
+### In an adopted repository
 
-Agentic Workspace keeps its checked-in footprint deliberately small. Selected modules add their own owned state, while implementation packages, generated clients, caches, and local diagnostics keep separate ownership and lifecycle boundaries.
+The repository's small entry point leads to the canonical `workspace-startup` skill. Agent hosts with supported native skill discovery can expose the same skill directly.
 
-See [`docs/package/installed-surfaces.md`](docs/package/installed-surfaces.md) for the installed-footprint model.
+For an initial check, ask your agent:
 
-## Scope and trust
+> Use this repository's Agentic Workspace setup to identify the guidance and checks relevant to an API change. Do not modify anything yet.
 
-Agentic Workspace complements the repository's existing source, documentation, tests, review process, and issue tracker. It does not replace them or turn the repository into a separate knowledge database or task-management system. It guides and constrains how an agent operates without scripting ordinary implementation choices.
+For direct inspection, use the same `start` boundary with the actual task. After adoption, continue giving your agent ordinary work; the canonical skill teaches it when AW is useful, so you should not need to run a manual command sequence around every change.
 
-**Agentic Workspace is not a sandbox.** Treat the repository and its configured verification or executor commands as trusted before allowing AW to execute them. Admitted shell routes inherit the caller's filesystem and credential authority, and external issue, PR, or service text should be treated as data rather than execution permission.
+[Installation and adoption](docs/agentic-workspace-install.md) · [Everyday use](docs/everyday-use.md) · [CLI reference](docs/reference/cli-catalogue.md)
 
-See [`docs/security/threat-model.md`](docs/security/threat-model.md) for the full trust and supply-chain boundary.
+## Your repository, your rules
+
+AW is designed to fit around the project rather than reorganize it.
+
+A simplified host repository looks like this:
+
+```text
+your-repository/
+├── AGENTS.md              # Small managed entry point inside a repo-owned file
+├── src/, docs/, tests/    # Existing project contents
+└── .agentic-workspace/    # Package integration plus optional owner state
+```
+
+The current public adoption footprint is Configuration-owned and deliberately small. Package-managed skills, ownership/read-profile metadata, provenance, and adoption identity stay distinct from repo-owned configuration, module-owned state, local data, and promoted output.
+
+You can express a repository-wide correction in ordinary language:
+
+> For this repository, read the API contract before changing public response fields.
+
+Or make the scope explicitly local:
+
+> Only on this machine, use this executable path when invoking AW.
+
+The agent can route the change to the appropriate instruction or configuration owner and verify whether it was retained. A promise in chat is not a saved rule, and a local preference should not silently become shared repository policy.
+
+Reusable methods belong in skills. Binding rules belong in instructions or configuration. Current work and evidence stay with the capabilities responsible for them.
+
+The same Configuration-owned footprint is used for adoption, refresh, and removal. De-adoption removes only authenticated package-owned integration, preserves repo-owned configuration and domain state, and refuses to erase edited or unowned content merely because it sits under an AW path.
+
+[Configuration reference](docs/reference/workspace-config.md) · [Repository footprint](docs/reference/installed-surface-catalogue.md)
+
+## Add structure where it helps
+
+AW includes optional first-party capabilities for recurring coordination costs:
+
+**Planning** preserves execution continuity: intended outcome, constraints, progress, blockers, and next action.
+
+**Memory** retains useful observations and lessons that would otherwise be expensive to rediscover. Advice can be reconsidered when its dependencies change; a note is not automatically policy.
+
+**Verification** makes checking procedures, evidence, and known gaps reusable. Passing a check supports the claim it actually tests, not every claim about the finished work.
+
+These are peer capabilities, not mandatory workflow stages. Repositories can use what repays its cost and leave unrelated capabilities out of the current task's context.
+
+Repository-specific rules and procedures do not require a new module. Modules are for independently reusable capabilities with their own domain state or operations.
+
+[Modules and extensions →](docs/package/modules.md)
+
+## Works with agents rather than replacing them
+
+Agentic Workspace is not an autonomous coding agent. It gives the agent already working in the repository better operating context and safer repository-native control.
+
+An agent with runtime access can query current owner state and use supported operations. A repository-only reviewer can follow the same canonical skill and generated read profile to recover relevant recorded intent, constraints, progress, and advice, while live machine state, fresh proof, and effect permission remain unknown.
+
+The ordinary deterministic product semantics live in a shared Rust core. Native, Python, TypeScript, and JSON-facing surfaces project or bind that authority rather than defining separate workflow behavior. The host project's implementation language does not need to match AW's runtime implementation.
+
+Host integrations still differ. Provider independence does not mean every agent host discovers skills identically or every model follows repository guidance perfectly; current support and evidence remain release- and environment-bound.
+
+[Evidence and support →](docs/evidence-and-support.md)
+
+## Trust and support
+
+**AW is not a sandbox.** Repository-configured commands run with the caller's filesystem and credential authority. Review the repository and its execution routes before allowing them to run. Credentials belong in the host or environment's credential facilities, not checked-in AW state.
+
+AW's operation boundaries and verification support do not replace human judgment, independent review, or existing security controls.
+
+Exact package identities, installation commands, runtime versions, operating-system support, and prerelease/stable status are deliberately kept in release-bound or generated owners instead of copied into this landing page.
+
+[Installation and adoption](docs/agentic-workspace-install.md) · [Threat model](docs/security/threat-model.md) · [Evidence and support](docs/evidence-and-support.md)
 
 ## Learn more
 
-- [`docs/package/overview.md`](docs/package/overview.md) — product model and source ownership.
-- [`docs/agentic-workspace-install.md`](docs/agentic-workspace-install.md) — installation and adoption.
-- [`docs/package/modules.md`](docs/package/modules.md) — first-party modules and ownership.
-- [`docs/architecture.md`](docs/architecture.md) — operating context, dynamic control, programmable instructions, and extension boundaries.
-- [`docs/extension-boundary.md`](docs/extension-boundary.md) — module and external-extension architecture.
-- [`docs/glossary.md`](docs/glossary.md) — stable public vocabulary.
-- [`docs/evidence-and-support.md`](docs/evidence-and-support.md) — deterministic and live evidence plus support limits.
-- [`docs/security/threat-model.md`](docs/security/threat-model.md) — trust and supply-chain boundary.
-- [`docs/package/contracts.md`](docs/package/contracts.md) — machine-readable contracts and generated references.
-- [`docs/index.md`](docs/index.md) — full documentation map.
+**Use AW:** [Installation and adoption](docs/agentic-workspace-install.md) · [Everyday use](docs/everyday-use.md) · [Configuration](docs/reference/workspace-config.md)
 
-Exact current values live in the [CLI catalogue](docs/reference/cli-catalogue.md), [installed-surface catalogue](docs/reference/installed-surface-catalogue.md), and [support-bearing install reference](docs/reference/support-bearing-install.md), rather than duplicated conceptual prose.
+**Understand AW:** [Product overview](docs/package/overview.md) · [Architecture](docs/architecture.md) · [Design principles](docs/design-principles.md) · [Modules](docs/package/modules.md)
 
-When maintaining Agentic Workspace itself rather than using it in another repository, follow [`AGENTS.md`](AGENTS.md) and the [`maintainer documentation`](docs/maintainer/index.md).
+**Look up details:** [CLI reference](docs/reference/cli-catalogue.md) · [Installed surfaces](docs/reference/installed-surface-catalogue.md) · [Full documentation](docs/index.md)
+
+## Contributing
+
+For changes to Agentic Workspace itself, start with the [contributor playbook](docs/maintainer/contributor-playbook.md). Use the repository's [issue templates](https://github.com/rickardvh/agentic-workspace/issues/new/choose) to report a problem or propose a change.
+
+Contributions should make useful work easier to complete, continue, or verify while keeping unnecessary context, framework surface, and repository residue low.
+
+## License
+
+[MIT](LICENSE).

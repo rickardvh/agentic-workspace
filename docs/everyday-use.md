@@ -62,11 +62,11 @@ policy can attach provider-neutral requirements to a semantic route; local
 configuration supplies available targets and transports. Assignment applies
 eligibility before preferences or cost. A configured process can return read-only
 material or an unapplied patch; the Codex app-server bridge supports read-only
-material. The responsible owner
-must still admit the return, integrate any patch, and establish the required proof.
-Manual export remains a valid outcome when automatic execution is unavailable.
-See the [transport boundaries](maintainer/consequential-delegation.md) before
-configuring a host; credentials and current provider availability stay local.
+material. The responsible owner must still admit the return, integrate any patch,
+and establish the required proof. Manual export remains a valid outcome when
+automatic execution is unavailable. See the
+[transport boundaries](maintainer/consequential-delegation.md) before configuring
+a host; credentials and current provider availability stay local.
 
 ## Preserve a useful lesson or decision
 
@@ -122,10 +122,10 @@ uncertain effect, recover through its owner instead of repeating execution.
 These are tool affordances for the main skill, not mandatory phases for all work.
 
 See the [generated native tool reference](reference/cli-catalogue.md),
-[installation limits](agentic-workspace-install.md), and
-[evidence and trust](evidence-and-support.md). This page describes the reconstruction
-source capability set. An earlier published preview may not contain these later
-additions; use the documentation and receipts for the exact version installed.
-No source-checkout result establishes a published preview or stable/support-bearing
-release. API/JSON-file transports, autonomous improvement queues and runtime
-authority from static reads are not claimed capabilities.
+[installation and support boundaries](agentic-workspace-install.md), and
+[evidence and trust](evidence-and-support.md) for the selected release. A source
+checkout may contain capabilities newer than the latest published release; source
+results do not establish publication, stable support, registry availability, or
+platform support. API/JSON-file transports, autonomous improvement queues and
+runtime authority from static reads are not claimed capabilities unless their
+current owner and selected release explicitly provide them.
