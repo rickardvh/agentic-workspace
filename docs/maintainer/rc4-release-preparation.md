@@ -11,6 +11,9 @@ next candidate; it does not announce publication or stable support.
   six-platform npm archive.
 - Use the same product summary for Python and npm. Cargo retains the descriptions
   of its separate core and CLI packages.
+- Keep the shared release-candidate notice version-neutral and link to GitHub
+  Releases. Immutable RC4 packages must not advertise RC3 or depend on a README
+  update after publication.
 
 ## Version and publication
 
@@ -30,5 +33,6 @@ and existing environment approvals.
 Before publication, inspect the final npm tarball's `package/README.md`, the
 Python wheel's description metadata, and both Cargo archives' `README.md`.
 After publication, check that each registry renders the description and its
-documentation links. Update the repository's RC3 download notice to RC4 only
-once the RC4 GitHub release is available.
+documentation links. Keep numbered current-RC announcements in release pages,
+not in this shared README: all three registries embed it before publication,
+and changing the source branch afterward cannot repair those immutable bytes.

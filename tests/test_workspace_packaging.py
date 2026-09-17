@@ -23,6 +23,8 @@ PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
 
 def test_registry_readme_links_are_portable_and_documentation_targets_exist() -> None:
     readme = (WORKSPACE_ROOT / "README.md").read_text(encoding="utf-8")
+    # Immutable packages must not inherit a mutable "current RC" announcement.
+    assert not re.search(r"\b\d+\.\d+\.\d+(?:-rc\.|rc)\d+\b", readme)
     links = re.findall(r"\]\(([^)]+)\)", readme)
     assert links
     for link in links:

@@ -5,7 +5,7 @@
 [![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/crates/agentic-workspace-cli)
 
 > [!IMPORTANT]
-> **v1.0 release candidate:** [Download v1.0.0-rc.3](https://github.com/rickardvh/agentic-workspace/releases/tag/v1.0.0-rc.3), with prebuilt packages for Windows, macOS, and Linux on x64 and ARM64. Also available on PyPI, npm, and crates.io. This is a prerelease intended for testing.
+> **v1.0 release candidates:** Find candidate downloads and release-specific installation instructions on [GitHub Releases](https://github.com/rickardvh/agentic-workspace/releases). Release candidates are prereleases intended for testing.
 
 **Persistent operating context and dynamic control for coding agents.**
 
