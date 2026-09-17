@@ -195,7 +195,7 @@ transports = [{kind="manual"}]
 
 
 def test_persisted_guarantee_requires_provider_confirmation_before_turn(tmp_path: Path, monkeypatch) -> None:
-    from agentic_workspace import native_transport as native
+    from agentic_workspace import codex_provider as native
 
     calls = []
 

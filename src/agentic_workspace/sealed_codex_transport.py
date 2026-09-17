@@ -13,8 +13,23 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace import native_transport
-from agentic_workspace.decision import assignment_packet
+from agentic_workspace import codex_provider as native_transport
+from agentic_workspace.native_core import core_binary
+
+
+def assignment_packet(context: dict[str, Any]) -> dict[str, Any]:
+    """Forward packet admission to the paired core; never interpret it in Python."""
+    result = subprocess.run(
+        [str(core_binary())],
+        input=json.dumps({"assignment_packet": context}),
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode:
+        raise ValueError(result.stderr.strip())
+    return json.loads(result.stdout)
 
 
 def capability(root: Path, parameters: dict[str, Any]) -> dict[str, Any]:

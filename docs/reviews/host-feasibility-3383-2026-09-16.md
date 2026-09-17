@@ -53,3 +53,19 @@ worker turn or completion-cost benchmark was run. Provider failure remains an
 execution outcome and cannot become proof of target quality or issue completion.
 Implementation is offered for independent review; this report is not a PR review,
 approval, merge, or release verdict.
+# Installed host-adapter distribution disposition
+
+The #3383 layer owns the installed Codex bridge. Lower adoption and public-procedure
+layers retain the four-file Python binding/launcher plus paired Rust executables.
+This layer deliberately includes `sealed_codex_transport.py` and `codex_provider.py`
+in the root wheel and sdist. The former forwards packet entry/return to the paired
+core; the latter contains provider protocol I/O extracted from the source-only
+transport module. Neither `decision.py` nor the old `native_transport.py` ships.
+The adapter has no third-party Python dependencies or source-checkout fallback.
+
+The release-topology proof admits exactly these two adapter files and checks their
+installed capability response, rejection of forged packets, and rejection of a
+corrupted core. The existing sealed handoff fixtures retain dispatch/return and
+owner admission coverage. This fixes constructibility of the documented host route;
+it adds no AW public operation or independent Python semantic authority. The patch
+classification is retained for that bounded installation correction.

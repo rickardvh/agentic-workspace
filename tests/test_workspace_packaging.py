@@ -212,6 +212,8 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
         "crates/agentic-workspace-cli/Cargo.toml",
         "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json",
         "bindings/python/_binding.py",
+        "src/agentic_workspace/codex_provider.py",
+        "src/agentic_workspace/sealed_codex_transport.py",
     ):
         assert any(name.endswith(f"/{path}") for name in inventory), path
 
