@@ -452,8 +452,7 @@ without reconstructing state from release notes or package filenames.
 
 RC and stable publication project the same admitted wheel/sdist/npm tarball to
 PyPI and npm after the existing publisher succeeds. Exploratory `preview-v0.x`
-releases remain GitHub-only. `registry-release.yml` is called by those publishers;
-it has no independent release trigger, version source or rebuild step. It verifies
+releases remain GitHub-only. The language publish jobs run directly in `preview-release.yml` and `release.yml`, because PyPI trusted publishing does not support reusable workflows. `registry-release.yml` retains the reusable Cargo publisher. None has an independent version source or rebuild step for Python/npm. It verifies
 the GitHub attestation signer, manifest/source, checksums and admission before
 observing registry state. Matching immutable bytes are reusable; only definite
 absence enters an upload directory. Conflicts or transport uncertainty stop the
