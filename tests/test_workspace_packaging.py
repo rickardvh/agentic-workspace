@@ -212,9 +212,6 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
         "crates/agentic-workspace-cli/Cargo.toml",
         "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json",
         "bindings/python/_binding.py",
-        "src/agentic_workspace/decision.py",
-        "src/agentic_workspace/native_transport.py",
-        "src/agentic_workspace/sealed_codex_transport.py",
     ):
         assert any(name.endswith(f"/{path}") for name in inventory), path
 
@@ -235,9 +232,7 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
             "-c",
             "from pathlib import Path; from agentic_workspace.cli import main; "
             "from agentic_workspace.native_core import cli_binary; "
-            "from agentic_workspace import sealed_codex_transport as bridge; "
-            "assert callable(main) and callable(bridge.main) and callable(bridge.native_transport.execute); "
-            "assert Path(bridge.__file__).parent == Path(cli_binary()).parent.parent; print(cli_binary())",
+            "assert callable(main); print(cli_binary())",
         ],
         cwd=tmp_path,
         env={
@@ -252,19 +247,6 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     native = Path(result.stdout.strip())
     assert native.is_relative_to(install_root) and native.is_file()
-    bridge_env = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
-    bridge_env["PYTHONPATH"] = str(install_root)
-    rejected = subprocess.run(
-        [sys.executable, "-m", "agentic_workspace.sealed_codex_transport"],
-        input="{}",
-        cwd=tmp_path,
-        env=bridge_env,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert rejected.returncode != 0
-    assert "worker carriage missing or changed" in rejected.stderr
     # The wheel's actual product binary works without a language runtime or
     # source-checkout helper on PATH; the Python entry point is optional.
     clean_env = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}

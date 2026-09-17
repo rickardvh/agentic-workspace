@@ -125,7 +125,8 @@
             "enum": [
               "draft-contract-only",
               "validated-contract",
-              "runtime-consumed"
+              "runtime-consumed",
+              "source-maintenance-only"
             ],
             "description": "Maturity or migration state for this contract entry."
           }
