@@ -43,6 +43,10 @@ Prefer:
 
 Avoid broad reading lists and always-loaded capability manuals.
 
+Of several relevant unknowns, prefer the observation that can change the next action or prevent expensive downstream rework. A compatibility requirement may determine whether an implementation is viable; formatting detail usually does not. This is decision-relevant information gain, not a requirement to calculate entropy or rank every source. The agent judges semantic value; owners expose trustworthy facts, consequences and exact routes.
+
+Small certainly-needed context can be cheaper to deliver now than behind another selector. Independent reads may be batched when that helps; progressive disclosure is not one fact per turn. A useful negative result or newly discovered conflict may increase acknowledged uncertainty rather than reduce it.
+
 ### 4. One operating decision, many source owners
 
 Repository and module sources keep semantic authority. Workspace composes their current effect; it should not create a second source of truth.
@@ -61,6 +65,8 @@ Good dynamic control should normally end in something the agent can actually do:
 - or an explicit human decision with the relevant facts.
 
 A transition name without a supported route is not an adequate instruction.
+
+A question should identify what is unresolved, why it changes the action or claim, and what bounded answer is needed. Do not ask the human to repeat facts available from current sources or decisions already admitted by standing authority. Preserve a truthful insufficient-evidence path rather than forcing a choice. Carry a uniquely determined authorized action without a model turn just to select it; genuinely different choices must remain visible.
 
 ### 6. Use one generic loop
 
@@ -113,7 +119,7 @@ Measure the whole path: rereads, rediscovery, clarification, retries, route reve
 
 Token count, bytes, latency, commands, and file count are useful proxies only when they improve the total path to a correct result.
 
-Do not save model tokens by creating human bureaucracy.
+Do not save model tokens by creating human bureaucracy. Do not replace total completion cost with a greedy information-per-call metric: some valuable steps perform work, establish custody, or protect future continuation rather than resolve a new question. Stop optional discovery when it will not materially improve the supported decision, not when all conceivable uncertainty is gone. Required work, currentness, authority and proof remain binding.
 
 ### 13. Improve the deterministic owner before compensating elsewhere
 
@@ -205,13 +211,15 @@ Features that claim to reduce restart cost, context cost, handoff burden, or age
 
 Keep weak, negative, and unavailable evidence visible rather than averaging it into a broad success claim.
 
+Select proof for the claims and failure modes still unresolved, not the number of commands available. Checks with similar names or the same claimed goal need not supply equivalent evidence; correlation and different failure coverage matter. Reuse valid evidence and avoid demonstrated duplication without weakening independent review or source-required checks. Empirical lessons may improve a method, but repetition alone cannot promote advice into human-owned policy.
+
 ## Design tests
 
 A change is moving in the right direction when it helps answer yes to questions such as:
 
 - Does this preserve or route operating context that materially changes behavior?
-- Does the right information arrive later and more selectively than before?
-- Does the current agent get one coherent, constructible next action?
+- Does the information arrive when it can change a decision, without unnecessary discovery hops?
+- Does the current agent get a constructible action, real choice, bounded question, or recovery rather than a forced primary action?
 - Does source ownership remain explicit?
 - Does this reduce total successful-completion cost rather than shifting it elsewhere?
 - Can direct work ignore the capability entirely?
@@ -235,6 +243,7 @@ A change is suspicious when it tends to:
 
 Use narrower owner docs for maintainer procedure and implementation details:
 
+- [Operational affordance design](maintainer/operational-affordance-design.md) for interaction design and consequence-based evidence;
 - `docs/maintainer/contributor-playbook.md` for maintainer routing and validation;
 - `docs/maintainer/dogfooding-feedback.md` for dogfooding/product-friction routing;
 - `.agentic-workspace/docs/` contracts for installed/source-checkout tactical details;

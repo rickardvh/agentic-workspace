@@ -64,6 +64,8 @@ A durable plan or prior work binding does not implicitly become the current task
 
 First contact should contain only information that can change the current decision. The canonical main skill is the stable procedure entry point; deeper context, specialized procedures, evidence, diagnostics, and module detail should remain behind exact selectors, semantic skill routes, operations, or owners until relevant.
 
+Relevance alone does not determine delivery order. Prefer a trustworthy observation that can change an imminent action, prevent costly rework, or resolve a material claim over detail that only enriches a still-contingent branch. Expose the affected decision and a useful source, operation, or bounded question; leave semantic prioritization with the agent. Deliver small certainly-required context together when another discovery turn adds no choice. Keep optional detail lazy without hiding restrictions or competing legitimate actions.
+
 The right information at the wrong time is still a product failure. Installing another capability should not proportionally enlarge ordinary startup or the agent's mental model. Specialized skills should be justified by reusable procedure, not by the existence of an internal owner/module/command.
 
 ### 3. Make control programmable and actionable
@@ -90,7 +92,7 @@ A blocker or unresolved decision constrains only the action, effect, or claim th
 
 An exact typed operation means the complete current action selected by its owner: operation and source identity, arguments, target, effects, handoff, currentness, and idempotency. A caller cannot retain the operation name while substituting other schema-valid effect-bearing values.
 
-A bounded human or domain judgment must be constructible from the public request. The owner supplies currentness, authority, and every effect-bearing field; the human supplies only the bounded answer.
+A bounded human or domain judgment must be constructible from the public request. Name the unresolved question, the action or claim it affects, and the answer needed after available current sources and standing authority have been considered. The owner supplies currentness, authority, and every effect-bearing field; the human supplies only the bounded answer. A small answer space must not force a choice when evidence or legitimate alternatives are missing.
 
 Do not create a second instruction compiler, skills runtime, or general-purpose policy/rule language. Existing specialized mechanisms—workflow obligations, assurance/proof declarations, scoped instructions, semantic skill routing, target/correction guidance, and module relevance—should converge on or compile through a shared internal control normal form where their semantics overlap. They may retain domain-specific authoring surfaces when those surfaces carry genuine domain meaning.
 
@@ -107,6 +109,8 @@ Make settled project knowledge directly usable through its strongest appropriate
 Repeated correct but expensive rediscovery can justify improvement even without a failure or correction. One-off or weakly evidenced reasoning does not become durable doctrine. AW does not archive hidden reasoning, prescribe a generic reasoning algorithm, or compete with model-level reasoning research.
 
 Prompt size, token count, latency, command count, and file count are useful only when they improve the total path to a correct result. A local optimization that makes another stage heavier is not a product improvement.
+
+Decision-relevant information gain is a qualitative design test within that objective, not a mathematical runtime model or a demand that every interaction reduce uncertainty. Prefer information whose expected contribution to safe completion repays its acquisition and maintenance cost; an observation that exposes a mistaken assumption or missing evidence can be valuable even when confidence falls. Execution and required custody updates also have value without teaching the agent something new. Do not add probability scores, an uncertainty store, a ranking engine, or a mandatory information-gathering phase. Stop optional investigation when further information is unlikely to change the supported decision; never trade away required work, authority, independent review, or proof floors.
 
 Delegation follows the same measure: bounded self-sufficient worker context and observable expected total successful-completion burden, not declared price alone. A host or shared-worktree transport must carry a complete public assignment and return contract; hidden orchestrator relay is not semantic completion.
 
@@ -210,7 +214,7 @@ A change is not validated merely because its requested slice landed. Ask whether
 - improved the repository's ability to preserve useful operating context or apply it to current agent behavior;
 - kept one canonical skills-first ordinary agent procedure while progressively disclosing specialized procedure only when useful;
 - allowed a new bounded repo control relationship to be expressed without an unnecessary new runtime branch or framework concept;
-- surfaced less but better context at the right decision point;
+- made useful decision-changing information cheaper to obtain without hiding constraints or adding lower-value discovery steps;
 - produced an exact supported next action rather than another instruction to infer;
 - respected source ownership and provenance;
 - preserved recognized current authority before retiring its representation or custody;

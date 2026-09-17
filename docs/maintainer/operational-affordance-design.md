@@ -2,217 +2,88 @@
 
 ## Purpose
 
-This document records a durable product principle for Agentic Workspace:
-
-```text
-A new agent should not have to understand the system before it can use it.
-The system should carry the agent into the correct next step with minimal cognitive effort.
-```
-
-Correct-by-design applies not only to structured files and validation. It applies to operations, processes, workflows, startup, recovery, closeout, proof, lifecycle management, and handoff.
-
-The ideal operating path should feel less like rowing against the stream and more like being carried along by it.
+Design AW interactions so an agent can do useful work without first learning the package's internal architecture. This guide applies the [design principles](../design-principles.md) to source delivery, questions, actions, proof and continuation. The [canonical skill](../../.agentic-workspace/skills/workspace-startup/SKILL.md) remains the ordinary agent procedure; this is maintainer design guidance, not another operating loop.
 
 ## Core principle
 
-Operational surfaces should be designed as affordances.
+An affordance should make the next useful decision or authorized action understandable and constructible. Ask what uncertainty the interaction addresses, which decision it can change, and whether a cheaper trustworthy route would suffice.
 
-An affordance is not just information. It makes the next correct action obvious, cheap, and hard to confuse with adjacent actions.
+Use decision-relevant information gain as a design heuristic, not a score to compute. A failed test or contradictory source may reveal that the agent knew less than it thought. That is useful information, not a failure to reduce uncertainty. Executing work and recording required effect custody can also be necessary without producing new knowledge.
 
-The product should prefer:
-
-```text
-self-routing workflows
-one obvious primary next action
-resolved commands using current config
-small first-contact outputs
-progressive disclosure
-structured action objects
-safe dry-run/apply paths
-writer/scaffold helpers
-validation as confirmation
-```
-
-over:
-
-```text
-broad instructions
-multiple equivalent doors
-raw file archaeology
-manual sequencing
-hand-authored structured records
-validation repair loops
-large prose explanations before action
-```
+Authority, safety, currentness and mandatory proof constrain the available choices. Apparent information value cannot authorize an effect or replace required review.
 
 ## Design target
 
-A capable but unfamiliar agent should be able to start work by following compact affordances without first learning Agentic Workspace concepts such as workspace, planning, memory, profiles, resources, tools, prompts, execplans, residues, or ownership classes.
+Prefer the current decision frontier over an inventory of everything AW can do. The frontier may expose direct work, one exact action, several legitimate alternatives, a bounded judgment, or recovery. Do not invent a single primary action when the owner has not settled the choice.
 
-Those concepts may exist internally, but they should be revealed only when needed.
-
-The ordinary path should be:
-
-```text
-orient
--> select one next action
--> act safely
--> validate
--> close or continue
--> route durable residue
-```
-
-Each step should produce the affordance for the next step.
+Skills teach reusable methods. Owners supply current facts, requests, effects and claim limits. The agent supplies semantic judgment. Deterministic helpers may carry already-selected and authorized mechanics until a real judgment, currentness or authority boundary appears; they must not become blind action loops.
 
 ## Operational affordance review
 
-Every operational surface should answer these questions:
+For the changed surface, ask:
 
-- What is the obvious next action?
-- Is there exactly one primary action?
-- Are irrelevant actions hidden, demoted, or placed behind selectors?
-- Does the output use resolved repo/local config?
-- Does it prevent common mistakes before validation?
-- Does it require understanding internal architecture?
-- Can a weak or generic agent follow it without reading docs?
-- Can a strong agent inspect, override, or bypass safely when needed?
-- Does it expose raw files only after compact outputs point there?
-- Does it keep historical evidence from looking like live work?
+- What does the consumer need to decide or do now, and which missing fact could change that?
+- Is there an exact source, operation or bounded question that can resolve it without broad discovery?
+- Could a cheap upstream observation prevent expensive work on an invalid branch?
+- Are mandatory restrictions and legitimate alternatives visible, even when deeper detail is lazy?
+- Is small certainly-required material delivered together, while optional material stays selective?
+- Can a knowledgeable agent use a known route directly, and can an unfamiliar agent discover it without protocol reconstruction?
+- Does the proposed saving include interpretation, tool calls, retries, human attention, proof and later maintenance rather than just displayed bytes?
+
+These are design questions, not fields to add to every response or a checklist every task must execute. Independent observations may be batched when that is cheaper; dependency ordering does not imply one observation per model turn or a universal ranking algorithm.
 
 ## Warning and Gate Posture
 
-Ordinary warnings and gates should be action-changing or selector-backed. A caution signal belongs in first-line output only when it changes at least one of these:
+Show a warning when it changes an action, a claim, a required observation, or an explicit trust boundary. Explain the affected scope and route to the responsible owner. Uncertainty should constrain only the dependent action or claim unless governing authority makes it task-global.
 
-- what action remains allowed now
-- what action or claim is blocked until reconciliation
-- what proof burden or closeout boundary changed
-- which owner surface or selector resolves the signal
-- whether skipping the signal lowers trust, blocks edits, or only blocks final claims
-
-When a caution is only background concern, route it behind a selector, review artifact, or maintainer diagnostic instead of making ordinary agents stop and reread. False-positive-prone signals should prefer typed posture over broad prose. For example, PR/review references should not become unknown issue-scope gates when the task is clearly PR-oriented, and objective-drift checks should classify explicit replacement or removal terms before warning that the retired term disappeared.
+Advisory background stays optional. Semantic applicability is agent judgment admitted through current contracts, not inferred as hard policy from keyword matches. Unknown, absent, inapplicable and conflicting remain different observations.
 
 ## Examples
 
+These are interaction-design examples, not new command or packet schemas.
+
 ### Startup
 
-Poor affordance:
+Instead of a fixed reading list, let the canonical skill and current task identify useful sources. Use `start` when current composition is needed; a known exact source or dedicated operation may be sufficient. A direct task need not acquire a plan or an uncertainty-assessment step.
 
-```text
-Read AGENTS.md, SYSTEM_INTENT.md, state.toml, report docs, and planning docs to understand what to do.
-```
+### Human clarification
 
-Better affordance:
-
-```text
-Run the configured start command.
-It returns the current situation, one primary next action, and optional deeper resources.
-```
+Instead of “clarify the API change,” explain: “The current contract does not settle whether existing clients must keep accepting the response. That determines whether this proposed response shape is admissible.” Request the bounded compatibility decision only when current sources and standing authority cannot settle it. Do not force a binary answer when the alternatives are incomplete; preserve clarification or insufficient evidence as appropriate.
 
 ### Proof
 
-Poor affordance:
-
-```text
-Here are possible proof routes. Decide what to run.
-```
-
-Better affordance:
-
-```text
-Here is an ordered validation plan with required/optional commands, working directories, and copyable execution form.
-```
+Instead of returning every available check, show which unresolved claim or failure mode each applicable method addresses and which current evidence already contributes. A compatibility check may answer a question that another generic test run does not. Similar scope alone does not prove redundancy. The owner keeps mandatory floors; the agent judges genuine sufficiency or method alternatives. A genuinely sole required, authorized executable action needs no model selection ritual.
 
 ### Closeout
 
-Poor affordance:
-
-```text
-Update state.toml, create/archive a closeout record, route residue, validate schemas, and post a comment.
-```
-
-Better affordance:
-
-```text
-Run a closeout helper with explicit fields. It writes valid state, renders optional prose, and verifies the result.
-```
+Instead of an unconditional closeout-helper sequence, show the consequence of the admitted result and what remains required. “Selected check passed; independent review remains” is different from “task complete.” Stop optional investigation when it cannot materially change the supported outcome, without waiving work, review, proof or required reconciliation.
 
 ### Planning state
 
-Poor affordance:
-
-```text
-Open raw state and infer whether rows are active, deferred, closed, or historical.
-```
-
-Better affordance:
-
-```text
-Summary says active, ready, blocked, deferred, and historical separately. Raw state is a follow-up inspection surface only.
-```
+Separate intended outcome, accepted progress, assumptions, blockers and next useful work from activity history. Retain only what helps continuation or verification. Do not make a feature branch mirror changing PR, CI or provider status; obtain those observations from their current owners when needed.
 
 ## Relationship to validation
 
-Validation remains necessary, but it should confirm correct construction rather than teach agents how to construct.
+Apply the [testing strategy](testing-strategy.md): evidence design, current validation and permanent retention are different decisions. Inspect existing owner and integration evidence before adding tests. A missing observation in this audit is not automatically a missing implementation.
 
-If validation repeatedly catches the same mistake, treat that as an affordance failure. The likely remedy is one of:
+For an information-efficiency change, use a representative choice where an early observation can rule out costly downstream work, plus a direct or unrelated control. Observe the action or claim consequence, not just whether a resource was read. Reuse existing frontier, proof and continuation cases when they cover the same failure class. Additional permanent coverage must protect a distinct durable risk.
 
-- remove the confusing path
-- merge or demote a surface
-- add an alias or route suggestion
-- add a scaffold or writer helper
-- add a constrained template
-- add an action object or execution plan
-- create a local or checked-in reusable aid
-- make a lifecycle operation atomic
+Compare total observable burden with equal access to authoritative information. Do not give one comparison an oracle-selected answer or forbid ordinary repository improvements in the baseline. Report missing costs as unknown and negative results honestly. No numerical entropy measurement, model-confidence estimate, transcript capture or production telemetry is required.
 
-Adding more validation is not enough if the interface still invites the wrong action.
+A source audit can identify a likely seam and shape a focused test. It cannot claim a runtime defect, improvement or universal attention-model benefit without corresponding evidence. Broad ordinary-use payoff belongs to the existing evaluation owners, not a new release gate.
 
 ## Relationship to prose reduction
 
-Operational affordances should reduce the amount of prose an agent must write.
-
-Agents should author structured intent, evidence, decisions, and routing first. Prose should be generated, constrained, optional, or reserved for genuinely explanatory content.
-
-Do not solve prose burden by adding a new prose-heavy meta-surface.
+Return enough context to interpret the decision and exact references to inspect it. Let tools carry immutable protocol fields rather than requiring the model to reproduce them. Do not remove purpose, scope or claim limits merely to shorten output. A compact response that needs several reconstruction calls can be more expensive than a slightly larger sufficient one.
 
 ## Relationship to Memory and Planning
 
-Affordance failures are improvement signals.
-
-- If the issue is active or future work, route it to Planning.
-- If the issue is durable but not yet canonical understanding, route it to Memory.
-- If the issue is a stable rule, promote it to docs, contracts, checks, or code.
-- If the issue is merely evidence, keep it in archives or reviews.
-
-Planning archives are not the working memory of the system.
+Use the strongest appropriate existing owner for a useful consequence. Work continuity belongs with Planning; advice with Memory; reusable procedure with skills; binding policy with its repository or human authority. Code, tests or documentation may absorb a recurring lesson more directly. Recurrence does not turn advisory evidence into policy. No retention is a valid outcome; neither Memory nor Planning is a mandatory sink.
 
 ## Anti-patterns
 
-Avoid these patterns:
-
-- presenting raw files before compact commands
-- asking agents to choose among several equivalent first commands
-- exposing historical evidence as live work
-- requiring agents to hand-author schema-heavy records
-- making validation errors the main authoring guide
-- adding report sections or inventories that do not reduce operating cost
-- preserving closed work in first-line state when it is reconstructable
-- making local/runtime-specific helpers appear canonical
-- requiring a new agent to understand package architecture before acting
+Avoid forced primary actions, full inventories followed by model filtering, repeated requests for an already-settled choice, proof selected by command count, and new scoring or uncertainty stores. Do not fix a deterministic owner defect with permanent warnings elsewhere. Never mistake delivery, helper success or owner-local quietness for whole-task completion.
 
 ## Success signal
 
-A new agent should be able to say:
-
-```text
-I did not need to understand the system first.
-The system showed me what to do next.
-The next step was safe, specific, and easy to follow.
-```
-
-A strong agent should be able to say:
-
-```text
-The system did not get in my way.
-It exposed enough structure to inspect, override, and improve the workflow without broad rereads.
-```
+An unfamiliar agent can identify the current decision, reach its useful evidence and act within the actual constraints. A knowledgeable agent can go directly to sufficient sources and tools. Both can stop at a supported outcome without a mandatory discovery, planning or retrospective ceremony.
