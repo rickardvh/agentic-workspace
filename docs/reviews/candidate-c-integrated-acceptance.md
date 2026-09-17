@@ -1,18 +1,24 @@
 # Candidate C integrated acceptance input
 
+The original aggregate below was accepted through merged
+[#3359](https://github.com/rickardvh/agentic-workspace/pull/3359), closing #3260.
+Its dates, measurements and source-reconciliation observations retain their
+original subjects. See [the post-implementation reconciliation](#post-implementation-reconciliation--2026-09-17)
+for the current #3277 implementation and publication boundary.
+
 Date: 2026-09-16. Runtime subject: master
 `d0423df70161cb5565792f1789ec707f3e7f376d`, after merged #3357.
-The original aggregate adds evidence and reconciles documentation/retained
-interpretation. Its review correction also adds a bounded runtime discovery path
+The original aggregate added evidence and reconciled documentation/retained
+interpretation. Its review correction also added a bounded runtime discovery path
 for semantic correction of a retained interpretation whose source hashes match,
-as described below. It is **ready for independent review**.
+as described below. That aggregate was independently accepted in #3359.
 
 This is a finite aggregation for [#3277](https://github.com/rickardvh/agentic-workspace/issues/3277)
 and the administrative closeout of
 [#3260](https://github.com/rickardvh/agentic-workspace/issues/3260).
 It does not supply implementation-author approval, preview publication, stable
-admission, or whole-#2985 completion. Independent acceptance of this aggregate
-remains pending; required leaves already have accepted closure.
+admission, or whole-#2985 completion. Acceptance of that original aggregate does
+not independently accept the later implementation subject reconciled below.
 
 ## Accepted constituent evidence
 
@@ -202,9 +208,9 @@ The first local write invocation omitted task context and was rejected before
 any effect; the task-bound invocation then committed successfully. These retries
 are operating cost, not additional proof coverage.
 
-Independent aggregate acceptance permits administrative #3260 closure. This
-PR is the reviewable closeout proposal with a bounded retained-intent correction
-path fix. The remaining #3277 release gates are #3358 for canonical Python/npm/Cargo
+Independent aggregate acceptance in #3359 permitted administrative #3260 closure.
+That closeout included the bounded retained-intent correction path fix. At that
+point, the remaining #3277 release gates were #3358 for canonical Python/npm/Cargo
 RC identity, #3363 for structural wrapper façade parity, #3364 for shipped-wrapper
 subtraction, and #3361/#3362 for registry publication and exact public-byte proof.
 The P0 wrapper gates #3363/#3364 must be accepted before first registry publication
@@ -217,3 +223,114 @@ a later RC. #2985 remains open for fresh exact stable preparation/admission/
 publication from the accepted RC. Stale #3283 is
 not fresh admission. #3347–#3351 and Set D remain post-v1. No new release, support
 platform, maturity label or source trust revision is asserted here.
+
+## Post-implementation reconciliation — 2026-09-17
+
+Integrated implementation subject: `7c73bc6ca95075b02b6749a1d5967637a6daa34b`
+(master after #3389). This update is a release-readiness proposal for independent
+review, not implementation-author approval of the aggregate or permission to
+publish. It changes no runtime, release identity, proof requirement or CI floor.
+
+### Implementation frontier
+
+The outstanding implementation sequence recorded by the original aggregate has
+landed. #3360 supplies canonical RC identity; #3365–#3367 supply the public
+facades, exact PyPI/npm artifact projection and independently packaged Cargo
+pair. Their implementation reviews distinguish repository proof from account
+bootstrap and actual public-registry acceptance. #3361 and #3362 are reopened:
+their repository implementations are merged, but their existing completion rules
+still own first publication, trusted-publisher configuration and exact public-byte
+and clean-install evidence. No new follow-up issue or narrower closure boundary
+replaces those outcomes.
+
+The later ordinary-use corrections also landed: #3382 provides source-aware
+System Intent publication and bounded scratch pruning; #3384/#3385 provide
+adoption/removal, public-versus-maintenance separation and owner-currentness
+review procedure; #3386 makes a real host worker a constructible Assignment
+alternative. #3371 updates first-contact documentation. #3389 closes #3376's
+remaining active command-guidance contradiction without restoring removed
+commands. Its final CI follow-up narrows the permanent merge addition to the
+command-authority inventory and native-help tests.
+
+These are implementation/merge observations, not a new review of those PRs.
+The [parent's frontier disposition](https://github.com/rickardvh/agentic-workspace/issues/3277#issuecomment-5712217610)
+named #3376 as the remaining product blocker. That bounded blocker is now merged;
+no new runtime implementation is proposed by this reconciliation.
+
+### Aggregate criteria and evidence reuse
+
+This finite mapping addresses the parent's aggregate checklist. It reuses the
+accepted constituent evidence above and names the later changes that matter;
+it does not establish a recurring field ledger or reapprove implementation.
+
+| Aggregate obligation | Evidence and current disposition |
+| --- | --- |
+| Retained shared/local fields and built-in declarations have consumers | The Configuration effectiveness section above maps the surviving families to native consumers, with #3320–#3323, #3328/#3333 and #3343 proof. #3384 adds current repository adoption/removal rather than resurrecting installer commands. |
+| Skills consume native meaning; material consequences and settled mechanics reach actions | #3331/#3335 and #3344/#3345 cover standard resources, sole-required proof, Memory recovery, binding dispatch and Planning continuity. #3386 repairs host feasibility while preserving explicit comparative judgment. Genuine alternatives and claim sufficiency remain judgments. |
+| Advisory delivery, observable learning and no-retention | #3344's ordinary-prompt nomination/capture/fresh-use and stronger-owner/no-retention journeys remain the evidence. Advice is not acknowledgment or proof; hidden reasoning/transcript capture is not introduced. The latest dogfood did not exercise these journeys and adds no live-model effectiveness claim. |
+| Lazy frontier, dependent currentness and confirmed-effect preservation | #3335's construction/transport observations above, #3330/#3332 recovery, and #3382's exact source-aware publication/pruning corrections. Repeated full queries in the dogfood were predominantly caller-side response loss, not proof of a new runtime caching defect. |
+| No blind replay and quiet direct/no-signal/local/no-runtime paths | Reuse the existing external-effect, resources, Memory, proof, Planning and no-runtime controls above. #3386 preserves unknown/unavailable/local distinctions. Diagnostic capture failure remains visible and does not manufacture authority. |
+| Canonical procedure, host bundles, schemas, examples and bindings converge | #3360/#3365–#3367 establish the release/distribution contract; #3384/#3385 establish current host authority; #3389 covers active command-bearing guidance, native recovery, maintenance producers and generated metadata. Retained source-maintenance catalogs do not become public commands. |
+
+The [ordinary-use disposition](https://github.com/rickardvh/agentic-workspace/issues/3277#issuecomment-5704330451)
+and [follow-up evidence](https://github.com/rickardvh/agentic-workspace/issues/3277#issuecomment-5712017888)
+support currentness/effect safety, honest claims, selective Planning and actual
+skill discovery. The later Assignment observation demonstrates a constructible
+Sol alternative followed by explicit local selection; it does not prove optimal
+economics or real non-local execution. Memory marginal value, repository-lifetime
+payoff and delegation economics remain with #3191/#3192 and the post-v1 owners.
+
+### Release handoff and remaining evidence
+
+Master [CI](https://github.com/rickardvh/agentic-workspace/actions/runs/35213952642)
+and [Security baseline](https://github.com/rickardvh/agentic-workspace/actions/runs/35213952696)
+passed for the exact implementation subject above. These are source checks, not
+RC artifact, registry or support-bearing receipts. The finite aggregate remains
+reviewable independently; its acceptance is not inferred from these green runs.
+
+Read-only publication observations on 2026-09-17 found no `v1.0.0-rc.1` release
+and zero GitHub repository environments. The workflows name `package-registries`
+and `cargo-registry`; their intended protection and registry publisher bindings
+must be established by the release owner. Registry account ownership and trusted
+publisher state were not observed in this task and remain unknown.
+
+After independent acceptance and merge of this reconciliation:
+
+1. Resolve the fresh accepted master SHA. Use the existing
+   `scripts/release/preview_release.py --rc v1.0.0-rc.1 --source-commit <accepted-sha>`
+   preparation path and current resource-policy judgment. Inspect its exact
+   release-only child before adding `--push`. Do not freeze an RC from the older
+   source named in this report merely to bypass the final reconciliation.
+2. Complete open #3361 through the existing [language-registry bootstrap](../release-and-versioning.md#public-language-registries)
+   and open #3362 through the [paired Cargo bootstrap](../maintainer/native-release-topology.md#coordinated-cargo-distribution).
+   First-publication credentials, if required, apply only to the admitted bytes;
+   ordinary publication uses the configured trusted identities. Recover the same
+   immutable tag and artifacts after partial publication.
+3. Collect the exact GitHub prerelease, PyPI/npm/Cargo byte and public-install
+   receipts together with hosted runtime, provenance, security and checksums.
+   Keep #3361/#3362 open until their own external publication, trusted-publisher
+   and public-install requirements are evidenced and independently accepted.
+   Local source tests do not substitute for Linux hosted/package proof.
+4. Only after independent RC acceptance may #2985 prepare a fresh stable subject
+   from that RC, admit it independently, and publish/verify stable bytes.
+
+Closed pre-C PR #3283 is superseded and must not be reopened or reused as the
+stable source. #3378/#3388 remain optional maintainer-diagnostic P2 work unless
+a concrete release admission depends on their claims. #3347–#3351, #3278/#3279
+and Set D remain post-v1. No issue is closed, release/tag created, registry account
+changed, or trust revision advanced by this report. #3277 remains open for its
+explicit RC/stable publication outcome.
+
+Validation for this documentation handoff reuses accepted native/installed proof
+and the existing RC identity, immutable recovery, registry projection and paired
+Cargo-order tests: **35 passed** in 38.72 seconds on the Windows source checkout.
+The paired native build and `make maintainer-surfaces` also passed. This selection
+includes `test_release_candidate.py`, `test_registry_release.py`,
+`test_cargo_release.py`, the existing immutable-tag recovery/trusted-dispatch
+cases in `test_preview_release.py`, and the active command-authority inventory.
+It does not publish a candidate or stand in for hosted artifact proof.
+No new test or permanent CI step is warranted: the changed
+claim is a truthful implementation frontier and release handoff. Stop after that
+bounded evidence and documentation checks; escalate only a named new source,
+artifact, registry-identity or recovery defect. Historical timings above are not
+fresh cost measurements or whole-task savings.
