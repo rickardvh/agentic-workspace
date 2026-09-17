@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agentic-workspace-cli"
-version = "0.51.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "process-wrap",
  "serde_json",
@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "agentic-workspace-core"
-version = "0.51.0"
+version = "1.0.0-rc.1"
 dependencies = [
  "base64",
  "cap-std",
