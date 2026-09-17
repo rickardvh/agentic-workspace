@@ -1,0 +1,14 @@
+{
+  "kind": "agentic-workspace/coordinated-preview-subject/v1",
+  "package_versions": {
+    "cargo": "1.0.0-rc.2",
+    "npm": "1.0.0-rc.2",
+    "python": "1.0.0rc2"
+  },
+  "reconstruction_source_commit": "be2f1ad47add5cb5c7090d59510f5fe19c25ed54",
+  "release_class": "release-candidate",
+  "support_bearing": false,
+  "tag": "v1.0.0-rc.2",
+  "target_stable_tag": "v1.0.0",
+  "version": "1.0.0rc2"
+}
