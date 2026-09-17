@@ -75,6 +75,10 @@ def load(directory, *, require=True):
     item = data["npm"]
     if Path(item["asset"]).name != item["asset"] or digest(directory / item["asset"]) != item["sha256"]:
         raise ValueError("Universal npm artifact digest mismatch")
+    expected = {p["asset"] for p in entries(data)} | {item["asset"]}
+    actual = {p.name for pattern in ("*.whl", "*.zip", "*.tgz") for p in directory.glob(pattern)}
+    if expected != actual:
+        raise ValueError("Platform inventory does not cover the exact published packages")
     return data
 
 

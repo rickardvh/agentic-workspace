@@ -77,6 +77,7 @@ def inventory(tmp_path):
         "missing-proof",
         "stale-proof",
         "compiler-present",
+        "extra-artifact",
     ],
 )
 def test_publication_requires_complete_exact_platforms_and_compiler_free_proof(inventory, failure):
@@ -96,6 +97,8 @@ def test_publication_requires_complete_exact_platforms_and_compiler_free_proof(i
         (root / item["asset"]).write_bytes(b"changed")
     elif failure == "missing-proof":
         receipt_path.unlink()
+    elif failure == "extra-artifact":
+        (root / "unadmitted.whl").write_bytes(b"unadmitted")
     elif failure in {"stale-proof", "compiler-present"}:
         receipt = json.loads(receipt_path.read_text())
         receipt["inventory_sha256" if failure == "stale-proof" else "rust_available"] = "old" if failure == "stale-proof" else True
