@@ -70,6 +70,8 @@ Source code, documentation, tests, decisions, and other canonical repository mat
 
 Use the [installation and adoption guide](docs/agentic-workspace-install.md) for the release class you intend to run. Stable support, release candidates, and previews have different evidence and support boundaries; exact install commands and platform claims belong to the selected release and its receipts rather than this README.
 
+For support-bearing installs, follow the [generated install projection](docs/reference/support-bearing-install.md) to the selected release's `distribution-install-readiness.json` receipt and its exact installation command.
+
 ### Adopt a repository
 
 Installing the runtime and adopting a repository are separate operations. After installing the selected artifact, run ordinary `start` against the target Git repository:
