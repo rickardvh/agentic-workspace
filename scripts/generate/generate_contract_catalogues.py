@@ -100,11 +100,15 @@ def render_surface_catalogue() -> str:
         "",
         f"- Contract digest: `sha256:{_digest([SURFACES_PATH])}`",
         "",
-        "| Surface | Ownership | Lifetime | Establish / refresh / remove | Consumer |",
-        "| --- | --- | --- | --- | --- |",
+        "| Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     for row in surfaces["surfaces"]:
-        lines.append(f"| `{row['path']}` | {row['ownership']} | {row['lifetime']} | `{row['establish']}` | {row['justification']} |")
+        lines.append(
+            f"| `{row['path']}` | {row['ownership']} | {row['materialization']['mode']} | {row['lifetime']} | `{row['establish']}` | {row['justification']} |"
+        )
+    lines.extend(["", surfaces["derivation"]["rule"], "", "Portable source promotions:", ""])
+    lines.extend(f"- `{path}`" for path in surfaces["derivation"]["portable_sources"])
     lines.extend(
         [
             "",

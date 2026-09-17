@@ -100,6 +100,49 @@ def _wheel_inventory(path: Path) -> set[str]:
         }
 
 
+def test_packed_host_derivation_excludes_poisoned_producer_policy(workspace_sdist: Path, tmp_path: Path) -> None:
+    """One packed alien-host journey protects the producer/host dependency cut."""
+    from tests.test_native_repository_adoption import test_host_ownership_composition_and_profile_converge
+    from tests.test_skills_first_interface import generator
+
+    with tarfile.open(workspace_sdist, "r:gz") as archive:
+        archive.extractall(tmp_path / "producer", filter="data")
+    producer = next((tmp_path / "producer").iterdir())
+    sentinel = "ALIEN_PRODUCER_SENTINEL"
+    source = producer / ".agentic-workspace/OWNERSHIP.toml"
+    source.parent.mkdir(exist_ok=True)
+    source.write_text(
+        f'schema_version=1\n[[subsystems]]\nid="{sentinel}"\npaths=["maintainer/{sentinel}/**"]\n'
+        f'proof=["{sentinel}-check"]\n[[authority_surfaces]]\nconcern="{sentinel}-authority"\n'
+        f'owner="producer"\nread={{refs=["maintainer/{sentinel}.md"],select="Producer policy",unknown=[]}}\n'
+    )
+    outputs = generator.render_host_payload(producer)
+    for reference, content in outputs.items():
+        assert sentinel not in content
+        (producer / "src/agentic_workspace/_payload" / reference).write_text(content, encoding="utf-8", newline="\n")
+    # Reuse the build cache, not source artifacts: the fixture has an independent
+    # source tree, and Cargo revalidates every embedded input from that tree.
+    output = tmp_path / "artifacts"
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("CARGO_TARGET_DIR", str(WORKSPACE_ROOT / "target"))
+        wheel = _build_artifact_from(producer, str(output), "wheel")
+    native = tmp_path / "native"
+    native.mkdir()
+    suffix = ".exe" if os.name == "nt" else ""
+    with ZipFile(wheel) as archive:
+        for name in ["agentic-workspace", "agentic-workspace-core"]:
+            executable = native / (name + suffix)
+            executable.write_bytes(archive.read("agentic_workspace/_native/" + name + suffix))
+            executable.chmod(0o755)
+    host = tmp_path / "unrelated-host"
+    host.mkdir()
+    test_host_ownership_composition_and_profile_converge(
+        host, native / ("agentic-workspace-core" + suffix), native / ("agentic-workspace" + suffix), True
+    )
+    for reference in [".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/READING.json"]:
+        assert sentinel not in (host / reference).read_text()
+
+
 def _sdist_inventory(path: Path) -> set[str]:
     with tarfile.open(path, "r:gz") as archive:
         root_dir = archive.getnames()[0].split("/")[0]

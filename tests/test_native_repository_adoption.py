@@ -98,8 +98,6 @@ def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_b
         assert call()["verification"]["assurance_applicability"]["requirements"][0]["id"] == "subsystem:backend"
     else:
         assert not actual.get("subsystems")
-    for marker in ["planning-records", "workspace-cli-runtime", "model-cli-harness", "make check-", "tools/skills", "packages/"]:
-        assert marker not in ledger.read_text() + profile.read_text()
     before = {path: path.read_bytes() for path in [ledger, profile, root / "adoption.json"]}
     assert adopt()["configuration_write"]["status"] == "already-current"
     assert all(row["status"] == "current" for row in payload())

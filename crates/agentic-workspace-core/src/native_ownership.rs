@@ -13,10 +13,15 @@ fn err(e: impl ToString) -> CoreError {
 }
 
 pub(crate) fn baseline() -> Value {
-    parse(include_str!(
-        "../../../src/agentic_workspace/contracts/portable_ownership.toml"
-    ))
-    .expect("portable ownership contract")
+    parse(&baseline_text()).expect("portable ownership contract")
+}
+
+fn baseline_text() -> String {
+    String::from_utf8(
+        crate::native_payload::seed(LEDGER, crate::native_payload::Materialization::HostComposed)
+            .expect("declared ownership materializer"),
+    )
+    .expect("portable ownership UTF-8")
 }
 
 pub(crate) fn has_host_meaning(text: &str) -> bool {
@@ -153,10 +158,7 @@ fn compose_value(
 pub(crate) fn compose(before: Option<&str>, prior: &Value) -> Result<String, CoreError> {
     let package = baseline();
     let Some(before) = before else {
-        return Ok(include_str!(
-            "../../../src/agentic_workspace/contracts/portable_ownership.toml"
-        )
-        .replace("\r\n", "\n"));
+        return Ok(baseline_text());
     };
     let original = parse(before)?;
     let mut resulting = original.clone();
@@ -171,8 +173,11 @@ pub(crate) fn compose(before: Option<&str>, prior: &Value) -> Result<String, Cor
 
 pub(crate) fn profile(ledger: &str) -> Result<String, CoreError> {
     let parsed = parse(ledger)?;
-    let mut profile: Value =
-        serde_json::from_slice(&crate::native_payload::shipped(PROFILE)?).map_err(err)?;
+    let mut profile: Value = serde_json::from_slice(&crate::native_payload::seed(
+        PROFILE,
+        crate::native_payload::Materialization::TargetDerived,
+    )?)
+    .map_err(err)?;
     // Git blob identity only, never a security or custody digest.
     let mut blob = Sha1::new();
     blob.update(format!("blob {}\0", ledger.len()).as_bytes());
@@ -214,8 +219,11 @@ pub(crate) fn admit_profile(before: Option<&str>) -> Result<(), CoreError> {
         return Ok(());
     };
     let mut value: Value = serde_json::from_str(before).map_err(err)?;
-    let mut template: Value =
-        serde_json::from_slice(&crate::native_payload::shipped(PROFILE)?).map_err(err)?;
+    let mut template: Value = serde_json::from_slice(&crate::native_payload::seed(
+        PROFILE,
+        crate::native_payload::Materialization::TargetDerived,
+    )?)
+    .map_err(err)?;
     if value["source"]["path"] != LEDGER
         || !value["source"]["git_blob_sha1"]
             .as_str()
@@ -255,6 +263,8 @@ mod tests {
 
     #[test]
     fn package_fact_refresh_requires_prior_custody_and_preserves_host_meaning() {
+        assert!(crate::native_payload::shipped(LEDGER).is_err());
+        assert!(crate::native_payload::shipped(PROFILE).is_err());
         let mut prior = baseline();
         prior["module_roots"][0]["uninstall_policy"] = json!("previous-package-policy");
         let mut host = prior.clone();

@@ -25,6 +25,11 @@ class CustomBuildHook(BuildHookInterface):
             projection.parent.mkdir(parents=True, exist_ok=True)
             projection.write_text(metadata, encoding="utf-8")
             build_data.setdefault("force_include", {})[str(projection)] = "pyproject.toml"
+            # The build validates each package seed against its explicitly
+            # portable input. Source-maintenance policy is not a build input.
+            host = json.loads((root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+            for reference in host["derivation"]["portable_sources"]:
+                build_data.setdefault("force_include", {})[str(root / reference)] = reference
             # Preserve exact compile-time Rust inputs, not the former Python host.
             for source in (root / "crates").rglob("*.rs"):
                 for reference in re.findall(r'include_(?:str|bytes)!\(\s*"([^"]+)"', source.read_text(encoding="utf-8")):

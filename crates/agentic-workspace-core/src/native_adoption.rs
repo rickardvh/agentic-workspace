@@ -192,8 +192,8 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
             if package
                 && before.is_some()
                 && mode == "adopt"
-                && path != crate::native_ownership::LEDGER
-                && path != crate::native_ownership::PROFILE
+                && crate::native_payload::materialization(path)?
+                    == crate::native_payload::Materialization::PackageVerbatim
             {
                 // Existing package content needs exact prior adoption custody.
                 let owned = held.as_ref().and_then(|r| {
@@ -225,20 +225,25 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
             add(path, bytes(&root, path)?, true)?;
             continue;
         }
-        let mut shipped = String::from_utf8(crate::native_payload::shipped(path)?).map_err(err)?;
-        if !removing && path == crate::native_ownership::LEDGER {
-            shipped = composed
+        let mode = crate::native_payload::materialization(path)?;
+        let mut shipped = match mode {
+            crate::native_payload::Materialization::PackageVerbatim => {
+                String::from_utf8(crate::native_payload::shipped(path)?).map_err(err)?
+            }
+            crate::native_payload::Materialization::HostComposed => composed
                 .clone()
                 .or_else(|| ledger_before.clone())
-                .unwrap_or(shipped);
-        }
-        if !removing && path == crate::native_ownership::PROFILE {
-            shipped = profile.clone().unwrap_or(shipped);
-            if let Some(current) = bytes(&root, path)?
-                && crate::native_ownership::profile_matches(&current, &shipped)
-            {
-                shipped = current;
+                .unwrap_or_default(),
+            crate::native_payload::Materialization::TargetDerived => {
+                profile.clone().or(bytes(&root, path)?).unwrap_or_default()
             }
+        };
+        if !removing
+            && mode == crate::native_payload::Materialization::TargetDerived
+            && let Some(current) = bytes(&root, path)?
+            && crate::native_ownership::profile_matches(&current, &shipped)
+        {
+            shipped = current;
         }
         installed.insert(
             path.to_owned(),
