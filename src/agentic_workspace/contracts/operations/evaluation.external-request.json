@@ -6,7 +6,7 @@
     "format_option": "format",
     "subcommand": "external-request"
   },
-  "summary": "Create the current per-sink external report delivery request.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Create the current per-sink external report delivery request.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -80,5 +80,5 @@
     "evaluation unit tests",
     "operation contract validates against operation.schema.json"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "source-maintenance-only"
 }

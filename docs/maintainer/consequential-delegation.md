@@ -76,10 +76,37 @@ module (`python -m agentic_workspace.sealed_codex_transport`), and `parameters`
 containing the locally selected `model` and any supported `reasoning_effort`.
 Use the actual local interpreter executable and set `timeout_seconds` on the
 transport. The bridge requires the existing Codex CLI/app-server and credentials.
-The executable check establishes bridge constructibility; immediately before the
-provider turn, discovery validates the exact parameters against current installed
-protocol/model availability. Runtime quota or provider failure remains execution
-failure, not negative target-quality evidence.
+For a best-fit comparison, the native owner observes the configured executable
+and calls that bridge with `--aw-capability`, sending only its exact parameters on
+stdin. The bridge checks the installed protocol and current model availability
+without starting a worker turn or retaining a capability file. The bounded result
+binds the adapter implementation, provider capability revision and parameters into
+the execution configuration. Assignment and dispatch reobserve those facts;
+changed capability requires fresh comparison. Immediately before the provider
+turn, the bridge checks the same capability again. Runtime quota or provider
+failure remains execution failure, not negative target-quality evidence.
+
+A non-current `internal` declaration has no portable launch or typed return
+binding. Under `required-best-fit`, an otherwise eligible unbound internal target
+remains an explicit unresolved alternative and prevents local admission. Replace
+that declaration in the machine-local source with a concrete supported transport;
+do not add a static capability flag or infer a binding from a model name. For the
+supported Codex host, one target can be configured as follows, using the actual
+interpreter and a model validated by current host discovery:
+
+```toml
+[delegation_targets.worker]
+target_id = "local:worker"
+transports = [{ kind = "native", adapter = "codex-app-server/v1", command = ["/actual/python", "-m", "agentic_workspace.sealed_codex_transport"], parameters = { model = "<current-host-model>" }, timeout_seconds = 1800 }]
+```
+
+The source declaration selects the binding; the current host observation supplies
+feasibility. A confirmed absent executable or unsupported model is unavailable,
+so local may win among the remaining feasible alternatives. Interrupted discovery,
+malformed responses and unbound internal capability remain unknown; they cannot
+be dismissed as unavailable. Source prohibitions and command safety are checked
+before probing. A retained-local policy does not probe host workers. Discovery
+does not create a worker session, Assignment ledger, queue or provider registry.
 
 The bridge receives the sealed captured inputs, validates entry and constructs
 return identity through Rust. It neither inherits parent chat nor uses the former

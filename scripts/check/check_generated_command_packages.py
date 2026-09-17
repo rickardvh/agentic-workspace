@@ -3889,7 +3889,8 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             # results. Its bounded argument parser is not generated CLI ownership.
             # Generic dispatch and subcommand ownership remain prohibited.
             matched_categories = [
-                category for category in matched_categories
+                category
+                for category in matched_categories
                 if category not in {"console entrypoint", "parser construction", "command parsing"}
             ]
         if relative_path == "src/agentic_workspace/sealed_codex_transport.py" and "console entrypoint" in matched_categories:
@@ -3897,7 +3898,12 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             # generated CLI or fallback runtime. Admit only its exact wrapper;
             # parser/executor markers elsewhere in the module remain errors.
             expected = ast.parse(
-                "def main() -> None:\n    packet = json.load(sys.stdin)\n    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
+                "def main() -> None:\n"
+                "    if sys.argv[1:] == ['--aw-capability']:\n"
+                "        print(json.dumps(capability(Path.cwd(), json.load(sys.stdin))))\n"
+                "        return\n"
+                "    packet = json.load(sys.stdin)\n"
+                "    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
             ).body[0]
             entries = [node for node in ast.walk(ast.parse(text)) if isinstance(node, ast.FunctionDef) and node.name == "main"]
             if len(entries) == 1 and ast.dump(entries[0]) == ast.dump(expected):
@@ -4139,8 +4145,10 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
 
     operations_by_id = {operation_id: _load_json(f"operations/{operation_id}.json") for operation_id in ir_consumed_operations}
     for operation_id, operation in operations_by_id.items():
-        if operation.get("migration_status") != "runtime-consumed":
-            errors.append(f"operations/{operation_id}.json must be marked runtime-consumed")
+        root_model = REPO_ROOT / "src/agentic_workspace/contracts/operations" / f"{operation_id}.json"
+        expected_migration = "source-maintenance-only" if root_model.is_file() else "runtime-consumed"
+        if operation.get("migration_status") != expected_migration:
+            errors.append(f"operations/{operation_id}.json must be marked {expected_migration}")
         ir_plan = operation.get("ir_plan", {})
         if not isinstance(ir_plan, dict) or ir_plan.get("status") not in {"representative", "complete"}:
             errors.append(f"{operation_id} must keep a representative or complete ir_plan")

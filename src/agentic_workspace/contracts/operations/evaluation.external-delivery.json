@@ -6,7 +6,7 @@
     "format_option": "format",
     "subcommand": "external-delivery"
   },
-  "summary": "Admit one external report delivery result from a current producer-owned adapter receipt.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Admit one external report delivery result from a current producer-owned adapter receipt.",
   "classification": "local-record-append",
   "inputs": [
     {
@@ -95,5 +95,5 @@
     "evaluation unit tests",
     "operation contract validates against operation.schema.json"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "source-maintenance-only"
 }

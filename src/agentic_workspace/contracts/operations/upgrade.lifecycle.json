@@ -4,7 +4,7 @@
   "command_surface": {
     "command": "upgrade"
   },
-  "summary": "Refresh managed surfaces for selected installed modules.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Refresh managed surfaces for selected installed modules.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -150,5 +150,5 @@
     "upgrade.lifecycle.dry-run.process proves dry-run plan shape and no filesystem writes",
     "upgrade.lifecycle.strict-preflight-refusal.process proves strict preflight refuses before mutation without writes"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

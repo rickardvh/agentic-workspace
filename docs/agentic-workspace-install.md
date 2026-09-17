@@ -81,13 +81,15 @@ repository instructions and config remain the policy owners. If there is no
 runtime, use that same skill's selective read-only fallback; it cannot establish
 live effect admission, retention or proof.
 
-The native executable currently exposes `start`, `invoke`, `resources` and
-`worker`. Check `agentic-workspace --help` from the selected installed artifact.
+The native executable currently exposes `start`, `invoke`, `resources`,
+`proof-procedure` and `worker`. Check `agentic-workspace --help` from the selected installed artifact.
 There is no native `defaults`, `init`, `upgrade`, `remove-legacy` or module CLI
 family. Historical source-maintenance lifecycle tooling is not an installation
 fallback. If the selected preview does not provide the required bootstrap or
 adoption surface, report that exact limitation instead of copying managed payload
 files or invoking a former host.
+
+On builds containing the repository adoption owner, a plain Git working tree can resolve `start`, follow Configuration's `repository_adoption_request`, and select the returned exact adoption request. Inspect its bounded proposal and invoke the authorized action. The same owner returns removal and interrupted-recovery requests. See [repository lifecycle](package/lifecycle.md). This source behavior does not imply it is present in an older published artifact.
 
 A published artifact's install receipt establishes installation of its declared
 bytes; it does not establish arbitrary target initialization or support on an
@@ -103,9 +105,18 @@ need not create module state.
 
 ## Installed footprint
 
-Ordinary bootstrap should keep the checked-in footprint small: repo-owned config/startup, ownership/routing surfaces, a compact adoption identity, and selected module state anchors. Generic package docs, templates, schemas, bundled skills, and runtime implementation stay package-owned unless a profile explicitly mirrors them.
+The current implementation establishes one small public footprint: a managed startup fence, repository-local skills and dependencies, ownership/read-profile metadata, provenance, and an adoption identity. It creates no config or domain state. Configuration uses this same contract for refresh and removal; unknown and independently owned content is preserved.
 
 Payload-mirroring profiles describe source-maintenance packaging. They are not native CLI flags or permission to copy managed state into another repository.
+
+The retained bounded-adaptation Python path also operates only in source
+maintenance. Its explicit adapters for proof-route, instruction and Memory work
+require `source-maintenance-only` contracts and preserve their existing owner
+admission and revision checks. The projection reports
+`operation_maintenance_executable`; it does not claim public native execution.
+Current source schemas still apply: a maintenance adapter cannot restore retired
+`assurance.domain_proof_lanes` authoring. Such a proposal is rejected with source
+bytes preserved; current proof-route changes belong to the Verification source.
 
 Exact installed files and required/optional degraded references are generated in the [current installed-surface catalogue](reference/installed-surface-catalogue.md).
 

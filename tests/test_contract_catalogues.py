@@ -2,12 +2,33 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts/generate/generate_contract_catalogues.py"
+
+
+def test_active_executable_examples_agree_with_native_command_authority():
+    contract = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
+    commands = {row["name"] for row in contract["native_cli"]["commands"]}
+    files = [
+        *REPO_ROOT.glob("docs/*.md"),
+        *REPO_ROOT.glob("docs/package/*.md"),
+        *REPO_ROOT.glob("docs/maintainer/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/skills/*/SKILL.md"),
+    ]
+    unsupported = []
+    for path in files:
+        for block in re.findall(r"```[^\n]*\n(.*?)```", path.read_text(encoding="utf-8"), re.S):
+            for command in re.findall(r"(?:^|\s)agentic-workspace\s+([a-z][\w-]*)", block):
+                if command not in commands:
+                    unsupported.append(f"{path.relative_to(REPO_ROOT)}: {command}")
+    assert unsupported == []
+    for path in (REPO_ROOT / "src/agentic_workspace/contracts/operations").glob("*.json"):
+        assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
 
 
 def _module():
@@ -29,13 +50,15 @@ def test_cli_catalogue_renders_current_values_and_local_effect_boundary() -> Non
     assert "Contract digest: `sha256:" in text
 
 
-def test_surface_catalogue_renders_profile_cells_and_selected_unconfigured_state() -> None:
+def test_surface_catalogue_separates_public_footprint_from_maintenance_profiles() -> None:
     text = _module().render_surface_catalogue()
     assert "# Current Installed-Surface Catalogue" in text
-    assert "### `necessary-surfaces` + `planning,memory,verification`" in text
-    assert "`.agentic-workspace/verification/manifest.toml`" in text
-    assert "selected-but-unconfigured" in text
-    assert "| Module-owned |" in text
+    assert "configuration.repository-adoption" in text
+    assert "Optional domain state is never established" in text
+    assert "### `necessary-surfaces`" not in text
+    maintenance = _module().render_maintenance_catalogue()
+    assert "### `necessary-surfaces` + `planning,memory,verification`" in maintenance
+    assert "selected-but-unconfigured" in maintenance
 
 
 @pytest.mark.parametrize("line_ending", [b"\n", b"\r\n"], ids=["lf-checkout", "crlf-checkout"])
@@ -53,7 +76,7 @@ def test_checked_in_catalogues_are_fresh(tmp_path: Path, line_ending: bytes) -> 
     module._write_or_check(module.SURFACES_OUTPUT, content, check=False)
     assert (tmp_path / module.SURFACES_OUTPUT).read_bytes() == content.encode("utf-8")
     source = tmp_path / module.SURFACES_PATH
-    source.write_bytes(source.read_bytes().replace(b"necessary-surfaces", b"changed-profile"))
+    source.write_bytes(source.read_bytes().replace(b"adopted-host", b"changed-lifetime"))
     assert module.render_surface_catalogue() != content
 
 

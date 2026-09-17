@@ -80,7 +80,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/startup_context.schema.json"
@@ -142,6 +142,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Return the minimum safe startup context for beginning work in a target repository.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Return the minimum safe startup context for beginning work in a target repository.",
   "writes": []
 }

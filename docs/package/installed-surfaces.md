@@ -1,47 +1,11 @@
-# Installed Surfaces
+# Installed surfaces
 
-An installed repository gets a small checked-in control enclave plus thin routing adapters. The surface exists to preserve only control-relevant operating context; it does not mirror ordinary source, documentation, tests, or repository knowledge for search.
+The public host footprint contains a managed instruction fence, repository-local skills and their declared dependencies, source ownership/read-profile metadata, payload provenance, and an adoption identity. Configuration establishes, refreshes, and removes this same set through exact current requests/actions.
 
-For the exact package-managed file set in every supported footprint/module cell, required versus optional references, ownership classes, and selected-but-unconfigured behavior, use the generated [current installed-surface catalogue](../reference/installed-surface-catalogue.md). The [workspace-surfaces schema](../reference/workspace-surfaces-manifest.md) explains contract shape rather than current values.
+The generated [installed-surface catalogue](../reference/installed-surface-catalogue.md) lists every path, owner, lifetime, consumer, and retired preimage. It is generated from `workspace_surfaces.json`, which also drives native payload compilation. There are no public footprint profiles or implicit module selections.
 
-## Installed surface map
+Repository config and instructions outside the managed fence remain repository-owned. Planning, Memory, Verification, promoted outputs, and local state retain their independent owners and lifetimes. Adoption creates none of these domain records; removal preserves them. Unknown and edited content remains in place for source-owner reconciliation.
 
-| Surface | Owner | Purpose |
-| --- | --- | --- |
-| `AGENTS.md` | repo-owned adapter with managed fences | first file an agent can read; points to the canonical workspace skill |
-| `.agentic-workspace/` | product-managed enclave | shared workspace configuration, contracts, module roots, and local boundaries |
-| `.agentic-workspace/config.toml` | repo-owned config | selected modules, posture, specialized stage-bound compatibility obligations, and repo-specific settings |
-| `.agentic-workspace/instructions/*.md` | repo-owned scoped guidance | Markdown guidance plus optional `paths`, `read`, `use`, `checks`, and `protect` |
-| `.agentic-workspace/OWNERSHIP.toml` | package-managed base with repo-owned subsystem declarations | managed paths, fences, and authority metadata |
-| `.agentic-workspace/READING.json` | generated from ownership metadata | compact repository-only read refs and explicit unknowns, bound to the source ledger's Git blob |
-| `.agentic-workspace/WORKFLOW.md` | product-managed compatibility pointer | points to the same canonical skill |
-| `.agentic-workspace/docs/module-map.md` | product-managed module router | compact abstraction ladder for Workspace, Planning, Memory, Verification, and generated references |
-| `.agentic-workspace/skills/` | product-managed workspace skills | first-contact workflow skills for startup, routing, proof, closeout, and module boundaries |
-| `.agentic-workspace/local/` | local-only ignored area | machine-local overrides, caches, and non-shared runtime aids |
+Repository-only readers use the same startup skill and its ownership-bound read profile. Executable fallback rendering and historical mirrored docs/templates belong only to the separate [source-maintenance inventory](../reference/source-maintenance-surface-catalogue.md).
 
-## Conceptual ownership
-
-| Class | Owner and role |
-| --- | --- |
-| Repo-owned | `AGENTS.md` outside managed fences, config, canonical docs/source/tests, and host policy remain repository truth. |
-| Package-managed | The base `.agentic-workspace/` routing/contract payload is installed and refreshed by explicit lifecycle operations. |
-| Module-owned | Selected modules own only their declared roots and effects. Planning, Memory, and Verification are peer examples. |
-| Generated/derived | References and adapters are rebuilt from their named source contract; edit the source, not the projection. |
-| Local-only | Ignored overrides, diagnostics, logs, and caches are machine state, not shared authority. |
-| Optional/degraded | Absence remains explicit and produces the declared degraded behavior rather than invented policy. |
-| Promoted output | A result becomes durable only through an explicit repository or module owner operation. |
-
-The ordinary `necessary-surfaces` profile keeps the checked-in footprint small. `full-mirror` is an explicit larger profile, not a prerequisite for runtime semantics. External clients consume stable package/runtime contracts and do not require a host repository to mirror the full payload.
-
-## Selected but unconfigured
-
-Module selection and repository-owned domain configuration are separate. In particular, selecting Verification does not invent `.agentic-workspace/verification/manifest.toml`; the module reports selected-but-unconfigured and keeps repository proof policy absent until the host supplies it. The generated catalogue exposes this mechanically for every optional reference.
-
-## Ordinary discovery
-
-Start from the repository adapter and canonical skill. Use the current native
-`start` tool when executable owner resolution matters; use the generated read
-profile when only repository reads are available. Open only the relevant source
-refs. The historical `ownership` subcommand is not an installed native operation.
-
-For the trust boundary around installed code and repo-configured commands, see [Threat model](../security/threat-model.md). For support-bearing installation, see [Installing Agentic Workspace](../agentic-workspace-install.md).
+See [repository lifecycle](lifecycle.md) for first adoption, convergence, recovery, and removal; see [installation](../agentic-workspace-install.md) for acquiring an exact published artifact. Documentation on a newer branch does not upgrade installed release bytes.

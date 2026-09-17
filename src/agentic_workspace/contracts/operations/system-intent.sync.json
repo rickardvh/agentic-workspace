@@ -5,7 +5,7 @@
     "command": "system-intent",
     "format_option": "format"
   },
-  "summary": "Show or refresh the workspace-owned compiled system-intent declaration metadata.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Show or refresh the workspace-owned compiled system-intent declaration metadata.",
   "classification": "metadata-refresh",
   "inputs": [
     {
@@ -117,7 +117,7 @@
       "instruction_summary": "Use this operation to refresh source metadata while leaving interpretation to the agent and human review."
     }
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "ir_plan": {
     "status": "representative",
     "summary": "System-intent sync executes generated operation IR through codegen-owned primitive dataflow while workspace runtime refreshes conservative source metadata and emits the compatibility payload.",

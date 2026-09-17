@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:5c3abe5e97bb303d4cb2d0f5bbbc7eea63575500bb813491a5e333f6a9aadbf3",
+  "profile_fingerprint": "sha256:17f0469586261ab11b2e4ead97a11241fc3ff5e0c3cf3c46ff6f4ee960c42be4",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -20,7 +20,7 @@
     "agent-guidance.delete": {
       "identity": "agent-guidance.delete",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:e601de8facc0995893161f0ff01c57b57e89d4dadc0797b6c6bae50aa87b8970",
+      "fingerprint": "sha256:4cdafc73154d107ffa98599ae51e276b2c96434fe06408b1a952ca0a74bc056b",
       "compatibility_fingerprint": "sha256:1c2ddc5ed7760dd19dd87cfd12b07329eaceae1db09c48c98ed0c3869d03c61a",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -150,7 +150,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -184,7 +184,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Delete guidance routing while retaining mutation receipt provenance.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Delete guidance routing while retaining mutation receipt provenance.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -564,7 +564,7 @@
     "agent-guidance.edit": {
       "identity": "agent-guidance.edit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6d519df7e16c36cd9235b503e7ded8a9b1d5cb98724ce4ff88700a32f3f0767c",
+      "fingerprint": "sha256:f414591b269907b0d315af595888b0afb6c03ce1e3c5fdb2679bca4260f04e56",
       "compatibility_fingerprint": "sha256:5824b15b1829cbe105a853cc410d4e9340910277d337f7bd22d74ab062e36da8",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -695,7 +695,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -729,7 +729,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Edit one guidance record while preserving provenance and revision history.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Edit one guidance record while preserving provenance and revision history.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -1110,7 +1110,7 @@
     "agent-guidance.merge": {
       "identity": "agent-guidance.merge",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:a83cbb73cedd99eb0e55e286868db9ab3a3e353bb276852bcfc978f5e8c49086",
+      "fingerprint": "sha256:6d0515f6e1b0b457f25d89090fff4fa8bda895c4fca6a7c4bc51ea15bacdd172",
       "compatibility_fingerprint": "sha256:b3c2f12bf925c80934f267d96827b3df376848fe5ed7b705d2a29e1a3b54aee1",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -1241,7 +1241,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -1275,7 +1275,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Merge guidance records and preserve source lineage.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Merge guidance records and preserve source lineage.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -1656,7 +1656,7 @@
     "agent-guidance.promote": {
       "identity": "agent-guidance.promote",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:20c7ca9b7496178fd9f251ca4efb3b770beae3d3a79f0468112c1cce04efa81e",
+      "fingerprint": "sha256:b276580b66ceee2ece2a578dd240ddcbf5fdf3713ade360f8e6a278c4094780a",
       "compatibility_fingerprint": "sha256:fae32d22ddce6b33a056c89efb6c23e1122e24c8a9828487a6b7f7b1ee8160f6",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -1786,7 +1786,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -1820,7 +1820,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Promote one authorised guidance candidate into its lifecycle store.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Promote one authorised guidance candidate into its lifecycle store.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -2200,7 +2200,7 @@
     "agent-guidance.retire": {
       "identity": "agent-guidance.retire",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3d95a8246a41fbbcdab1a54cf2fba6e6b09dcc55b0c2b7515ad295e4e0ea8428",
+      "fingerprint": "sha256:3d93e8259c046436069791f2bed9ca48f165ee77d5311cba0fcec58ada220500",
       "compatibility_fingerprint": "sha256:f1581c9a791a42c38fc170711edca0f30d6aa7a4079059fb243a5a4904a71884",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -2330,7 +2330,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -2364,7 +2364,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Retire guidance from future routing.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Retire guidance from future routing.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -2744,7 +2744,7 @@
     "agent-guidance.revalidate": {
       "identity": "agent-guidance.revalidate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:26f4d5de58e3f4e08479b4d889565224058b7b2dca669bedd20657a70368095d",
+      "fingerprint": "sha256:76926c971a188670eb2b39fb2a8778c198925ff9872b7a2b7de655b95a3f24bf",
       "compatibility_fingerprint": "sha256:e367aeb7b9fe4f82b0dbb859adb98161d9460ef66ec21f304d68c0d022808b1b",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -2874,7 +2874,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -2908,7 +2908,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Revalidate guidance against the current target identity.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Revalidate guidance against the current target identity.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -3288,7 +3288,7 @@
     "agent-guidance.split": {
       "identity": "agent-guidance.split",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:82b226a6c1bbbe58e32cdc8ffc178fe980d1160055352582d4ccfd78c12c43c7",
+      "fingerprint": "sha256:70f8a0a4c6a1bbeb29c9877138f41c75ec00ea644350e7960afcdd4f882ddd23",
       "compatibility_fingerprint": "sha256:063e828e8378ff26627fc50ab2fefe9167cb21d1e698eefe7e23ac018bca4964",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -3419,7 +3419,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -3453,7 +3453,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Split one guidance record into replacement records.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Split one guidance record into replacement records.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -3834,7 +3834,7 @@
     "agent-guidance.supersede": {
       "identity": "agent-guidance.supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b62d639f91a0a3870fe627d613a7cb2f38a2dfbcede13cad2d35354a4bfe55e7",
+      "fingerprint": "sha256:9cb7505a51bd967d1144c541777a93a284bd3057b8d835e3e15cf40a8eb0c15d",
       "compatibility_fingerprint": "sha256:14199f223fe128ec3815e39b328617ed27f43d11f5762d2e69aece06c231a5d5",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -3965,7 +3965,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -3999,7 +3999,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Supersede guidance with a replacement record.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Supersede guidance with a replacement record.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -4380,7 +4380,7 @@
     "agent-guidance.suppress": {
       "identity": "agent-guidance.suppress",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:8a173a9c2a7b07549bbe2f759ee72c707a8e65015ed91dcdcbbe32c2c13157a1",
+      "fingerprint": "sha256:87c81c2569d89cd780718aa12015df54936cc009365c57158a71a9349f8a0d79",
       "compatibility_fingerprint": "sha256:a925b0b8a985c9c99ca20dbf5393012c127298aeb05e2254959dce4964b88da4",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -4510,7 +4510,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -4544,7 +4544,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Suppress guidance without deleting provenance.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Suppress guidance without deleting provenance.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -4924,7 +4924,7 @@
     "agent-guidance.weaken": {
       "identity": "agent-guidance.weaken",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1371529ddbff45ff595bbe6be57ec34e2ce400242c254787ba42b91b14edd84a",
+      "fingerprint": "sha256:5dcbbc32ea0d8ee3f4850431108bb5de581afea91f036a3a4f772ef3df8b6891",
       "compatibility_fingerprint": "sha256:70839847c941c6a0bd4cfdc69cdbce714577cd184c7800455ec1e2a491d03e52",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -5054,7 +5054,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/guidance_lifecycle_result.schema.json"
@@ -5088,7 +5088,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Weaken guidance to advisory-only routing.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Weaken guidance to advisory-only routing.",
         "writes": [
           {
             "description": "bounded local guidance lifecycle store and receipts",
@@ -5468,7 +5468,7 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:da4aae5b1cd2341d20a3858ee34c1be24854c23a82d540b2b77406e60db25c60",
+      "fingerprint": "sha256:18d0e0f8aa4e3f2183f2e7464c4415b3fb95a1b66dae06301039f50a048b6615",
       "compatibility_fingerprint": "sha256:db7f3d4f52345c9df058254878377a8799d27ba8017c171ce112eeac54617891",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -5631,7 +5631,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -5679,7 +5679,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Record an AW-owned admission decision after current authority revalidation.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Record an AW-owned admission decision after current authority revalidation.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
@@ -6217,7 +6217,7 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:749cb4b09f21e0584657895d1b2771165075ab002e7e0d53222bd8d14172ec02",
+      "fingerprint": "sha256:19a0cea2db855a7c0a4d3e8fce949a453a030a71990f00715833a0eb64ea4fd3",
       "compatibility_fingerprint": "sha256:cc159797c6062d92be2923ca72b271ee309d4debc5017347ac0676602506f9b8",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -6352,7 +6352,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -6398,7 +6398,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Archive disposable local assignment run artifacts after closeout.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Archive disposable local assignment run artifacts after closeout.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
@@ -6908,7 +6908,7 @@
     "assignment.dispatch": {
       "identity": "assignment.dispatch",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:2333c6a2b5da81f162693cef88d9ed50b9cfe673c4d8dcc4b68ff74624d17e9e",
+      "fingerprint": "sha256:4d09b0632c258a872d18d9429c4d75c11289fbf270e1a961dfbdc08bea475975",
       "compatibility_fingerprint": "sha256:9829e841836b65bfaec2e4b4c4e96823cdb2279d05a0d0120f493244bf8832e1",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -7037,7 +7037,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -7077,7 +7077,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Execute one configured automatic assignment transport and capture its return for admission.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Execute one configured automatic assignment transport and capture its return for admission.",
         "writes": [
           {
             "description": "materialized assignment authority when invoked before it exists",
@@ -7587,7 +7587,7 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6eb95ccbb912c4fa16e37dddfc3e76514e246d9dfc584447266d42e05e695a9c",
+      "fingerprint": "sha256:596a462531183203a0601c1510796d7c631129ef151c84ff474d29bbe8f16e43",
       "compatibility_fingerprint": "sha256:a4057b2cf92df76148624dd59b9071fe507bd2773e45aa07fd83997f0721482f",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -7752,7 +7752,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -7798,7 +7798,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
         "writes": [
           {
             "description": "When no assignment id is supplied, export first materializes the live task-bound Planning assignment and structural identity receipt.",
@@ -8344,7 +8344,7 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:d528fbc3484fa37f90dcb51200d7a98482e695d85e6f19efd4a7ba8cb5dd262a",
+      "fingerprint": "sha256:5e081af7e82fe9c858a7d109091cbaf7fa6413c7d450333ca0108630a48da62f",
       "compatibility_fingerprint": "sha256:fba81fafe22e955dd5d0762e174ed0e4fc7c89d6ec1b7f18127e7febfbf831a5",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -8484,7 +8484,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -8530,7 +8530,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Import returned delegated work into received/awaiting-admission without proof or integration.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Import returned delegated work into received/awaiting-admission without proof or integration.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
@@ -9045,7 +9045,7 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:d7fb3d18fe45a38478a8aed1e598f43b28be07c6839f966fee0d99d0ae6080c6",
+      "fingerprint": "sha256:0c0a2bde53f8913dacd4d9590991c449e314a4ca959b47b51abf448897750d05",
       "compatibility_fingerprint": "sha256:99e2e89c9061c787701ff167579427e75d1d03ec64637c42cba024d5464fae08",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -9180,7 +9180,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -9226,7 +9226,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Move an admitted return through the protected integration boundary.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Move an admitted return through the protected integration boundary.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
@@ -9736,7 +9736,7 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6220415a8242e3a8e4e481f76db3653a4425caee4efddbc133df37c6818c470f",
+      "fingerprint": "sha256:1bd5a3ba588fc9c632a1c425b23fdc9a08794da674650434be0359d7928d1e62",
       "compatibility_fingerprint": "sha256:2dd31b12b5fa1f22c56a9daf6bdf04da8833246b2866b5624868ba460e66e7db",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -9871,7 +9871,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -9917,7 +9917,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Record a scoped authorised human override with expiry and proof/claim consequences.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Record a scoped authorised human override with expiry and proof/claim consequences.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
@@ -10427,7 +10427,7 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:07ceafb3765f0bccf418ce673017b6047c83c352b92ac85ccfe65e7ad0f8de3e",
+      "fingerprint": "sha256:7e6260f61b464595d03f0ca06cd6b4ecca0e26f5afc2478cd91686f12a1301c7",
       "compatibility_fingerprint": "sha256:f6a1ceef5dc9d3bf6c76fcd6e06603cbd64e71ed83232dae088ec73774103306",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -10562,7 +10562,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -10608,7 +10608,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Reject a returned assignment result with stable recovery evidence.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Reject a returned assignment result with stable recovery evidence.",
         "writes": [
           {
             "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
@@ -11118,7 +11118,7 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:2d29442b11697adb4a2c31a2a9e23778ad86fd293e60a3ad4393fa2a940f7908",
+      "fingerprint": "sha256:9bcbe77faf4bc346b8b3502151b8fe55a86bf789fcf7e58a4fcbc942f3e974d7",
       "compatibility_fingerprint": "sha256:c7995bd449b3e6ed48545fdebdc7ff603c45ae5b3eb8e477d9c7e5357d6ebfbd",
       "contract": {
         "classification": "lifecycle-mutation",
@@ -11253,7 +11253,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -11299,7 +11299,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Request repair for a returned assignment result without admitting mutation.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Request repair for a returned assignment result without admitting mutation.",
         "writes": [
           {
             "surface": ".agentic-workspace/local/transport-continuations/",
@@ -11815,7 +11815,7 @@
     "assignment.status": {
       "identity": "assignment.status",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:17a361c95fc63cefcba583254de06205fe78a82fec2c0c45dda8994d38cac7db",
+      "fingerprint": "sha256:50f2b0ce6b96593aac666f8de2335ab37098b66c36169d0a5bc90917041509bd",
       "compatibility_fingerprint": "sha256:a716db21bbce970cab12bc72d3c958ba8c2056d1a636902eff317ea2663f2548",
       "contract": {
         "classification": "read-only-report",
@@ -11899,7 +11899,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
@@ -11938,7 +11938,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Inspect one exact assignment run and return its current lifecycle and recovery action.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Inspect one exact assignment run and return its current lifecycle and recovery action.",
         "writes": []
       },
       "schemas": [
@@ -12390,7 +12390,7 @@
     "config.report": {
       "identity": "config.report",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1bdb54273a28b624bba4609355f7bc5699491f8e0bdfbe2e860de0afcef39df2",
+      "fingerprint": "sha256:366caa1d0f7391af8daee3ea8010c362c78edb6a60206b6cd50f6047108c91ca",
       "compatibility_fingerprint": "sha256:eaabae61a4c3fab20ce111cb3c311830bce39f00e28311abb3a1d4e97667f8fa",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -12399,7 +12399,7 @@
           "command": "config",
           "format_option": "format"
         },
-        "summary": "Show the resolved repo-owned workspace config layered onto product defaults.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Show the resolved repo-owned workspace config layered onto product defaults.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -12511,7 +12511,7 @@
             "instruction_summary": "Use this operation when an agent needs the effective workspace config."
           }
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "ir_plan": {
           "status": "representative",
           "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow; payload.project owns exact selected-output projection and output.emit consumes contract-declared config text views.",
@@ -12892,7 +12892,7 @@
     "correction-event.correct-dispute": {
       "identity": "correction-event.correct-dispute",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c6e1e17da47a18ea5d35012cc13c995932107bc061cccd582c81267c44651a79",
+      "fingerprint": "sha256:c3cd9deda6af9ce668700948019ae1ec39109e510e5ae4cc66a746944a407b52",
       "compatibility_fingerprint": "sha256:47b71d5315722486fa7068b042a27d3d251237fccff9c9d68501af136a05976b",
       "contract": {
         "classification": "local-record-append",
@@ -13077,7 +13077,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/correction_event_result.schema.json"
@@ -13111,7 +13111,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Record a dispute/correction transition for a prior correction event.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Record a dispute/correction transition for a prior correction event.",
         "writes": [
           {
             "description": "bounded local correction-event store and receipts",
@@ -13558,12 +13558,12 @@
     "correction-event.identity-init": {
       "identity": "correction-event.identity-init",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b7ea2b93b469c1c653be91f86fd32929bacc79258e57245f8026b8a4b37bccc5",
+      "fingerprint": "sha256:1fb94bd2e7a40b27d54533d252b6abbf3addb9e3e95c24d6c398c8be63cc5b8d",
       "compatibility_fingerprint": "sha256:402008683df3ddef3e6b16424c069a9dc15129b0994e7a4e539e44e3c65f0313",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "correction-event.identity-init",
-        "summary": "Initialize one stable configured target identity in ignored local config.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Initialize one stable configured target identity in ignored local config.",
         "intent": "Make correction-event, target-guidance, and suitability identity constructible without inventing a target id or adding checked-in target residue.",
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -13690,7 +13690,7 @@
           "Generated Python and TypeScript clients exercise dry-run, apply, idempotency, collision, and rename-continuity behavior.",
           "Config projection exposes the same repair operation before correction submission."
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "correction_event_input.schema.json",
@@ -14034,7 +14034,7 @@
     "correction-event.prune-compact": {
       "identity": "correction-event.prune-compact",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:fe79c1fab12dd0b7b05e448b36f95bf2d36a0b2553ebfbad7cdf72ec77525cbf",
+      "fingerprint": "sha256:cbc81940819ca6f98ef968b2e2f5914af250ee66048bb56b31b278e36c40e27b",
       "compatibility_fingerprint": "sha256:5883d86c25941707cc007ac3b8b84e46448ab9aeece99b819afeeeaebbf8f0d3",
       "contract": {
         "classification": "local-record-append",
@@ -14219,7 +14219,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/correction_event_result.schema.json"
@@ -14253,7 +14253,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Compact bounded local correction-event storage while preserving lineage.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Compact bounded local correction-event storage while preserving lineage.",
         "writes": [
           {
             "description": "bounded local correction-event store and receipts",
@@ -14700,7 +14700,7 @@
     "correction-event.query": {
       "identity": "correction-event.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:acea8d8788aa7f6308261a3c9783857e906a3f970b4c06e71e8d16247613be6e",
+      "fingerprint": "sha256:9e0260ffa5b32e14f4d3c2e9aecf0ddb460c7166b40f20a66e59160617191399",
       "compatibility_fingerprint": "sha256:8ad03b6dd6e06f3d138fc4148d7685c740bb4260829a91ae714b1f7dc75c7165",
       "contract": {
         "classification": "read-only-report",
@@ -14900,7 +14900,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/correction_event_result.schema.json"
@@ -14934,7 +14934,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Query admitted and low-authority correction events from bounded local storage.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Query admitted and low-authority correction events from bounded local storage.",
         "writes": [
           {
             "description": "bounded local correction-event store and receipts",
@@ -15396,7 +15396,7 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f41d786bb2de69a56187f101929e02f8f4604384dd74bb59e67cdbaa34d7e387",
+      "fingerprint": "sha256:5970fc70105d8f684073e734e5fbddd1276761a8057d47d57f12ca4ee4ba7867",
       "compatibility_fingerprint": "sha256:11b5cbdfb3b7c608bef6dd878327e4a7bcdfa2b52725213f79dee0cc621a094f",
       "contract": {
         "classification": "local-record-append",
@@ -15626,7 +15626,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/correction_event_result.schema.json"
@@ -15666,7 +15666,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Preserve or normalize a correction through the public local operation boundary.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Preserve or normalize a correction through the public local operation boundary.",
         "writes": [
           {
             "description": "bounded local correction-event store and receipts",
@@ -16168,7 +16168,7 @@
     "correction-event.withdraw-supersede": {
       "identity": "correction-event.withdraw-supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:c96afa87fadadb67e02442fa19b295bac81a026f3e8daa14981671a47fc22f0a",
+      "fingerprint": "sha256:6c640db683114ee88530f2d60b30b7a8e17adb0d4c4c14b78a3840a10bac1624",
       "compatibility_fingerprint": "sha256:3de737b501c66d9b0a4baf3823cc02a9cffd7b64c79541c6d62a086b70f0f27d",
       "contract": {
         "classification": "local-record-append",
@@ -16353,7 +16353,7 @@
           "outside_repo_writes": "forbidden",
           "requires_repo": true
         },
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "output": {
           "kind": "text-or-json",
           "schema_ref": "schemas/correction_event_result.schema.json"
@@ -16387,7 +16387,7 @@
             "uses": "output.emit"
           }
         ],
-        "summary": "Withdraw or supersede a prior correction event.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Withdraw or supersede a prior correction event.",
         "writes": [
           {
             "description": "bounded local correction-event store and receipts",
@@ -16834,7 +16834,7 @@
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:ac517e97544a68c89da1eca0b23eb9b2e1cc4d9ac39f8a0968dd865bec7fb3c3",
+      "fingerprint": "sha256:bd917cb00871313d036fb9c95d606cb607d656ad7656c642431c1d0ae8c6ac36",
       "compatibility_fingerprint": "sha256:c56828648019b878bc61b56fda53b942086095c9f75ab3579a7d9f4c04105f27",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -16843,7 +16843,7 @@
           "command": "note-delegation-outcome",
           "format_option": "format"
         },
-        "summary": "Append one local-only delegation outcome record for target-profile tuning.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Append one local-only delegation outcome record for target-profile tuning.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -17060,7 +17060,7 @@
           "delegation outcome append tests remain compatible",
           "delegation outcome text output stays in generated output rather than lifecycle text fallback"
         ],
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "ir_plan": {
           "status": "representative",
           "summary": "Delegation outcome append executes generated operation IR through codegen-owned primitive dataflow while workspace runtime performs the local-only append compatibility operation and generated output owns the text result.",
@@ -17556,7 +17556,7 @@
     "evaluation.authority-refresh": {
       "identity": "evaluation.authority-refresh",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:967386566bd2f51c9db0bc67a5849cd35d4e77fcc84f6a8ed4c10c26d8d8ece7",
+      "fingerprint": "sha256:3ff4e73e4579878d9790196be2247d62a43abad04fd3cb0e16a54f0775b9178a",
       "compatibility_fingerprint": "sha256:be97666c806af5f000e61b616b3716b359fb49734efbf00d9b2abfaed4856ae1",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -17566,7 +17566,7 @@
           "format_option": "format",
           "subcommand": "authority-refresh"
         },
-        "summary": "Refresh evaluation observation authority from one live assignment or an explicitly selected active Planning owner plus an admitted public proof receipt.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Refresh evaluation observation authority from one live assignment or an explicitly selected active Planning owner plus an admitted public proof receipt.",
         "classification": "metadata-refresh",
         "inputs": [
           {
@@ -17654,7 +17654,7 @@
           "evaluation authority tests",
           "CLI/Python/TypeScript generated client parity"
         ],
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "ir_plan": {
           "status": "partial",
           "summary": "Generated command packages invoke the runtime-owned authority refresh transition.",
@@ -17906,7 +17906,7 @@
     "evaluation.delivery-status": {
       "identity": "evaluation.delivery-status",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f133931aefe361f1f0c6ca00107e369cc26768b67b88c5092b8a054c92be42f4",
+      "fingerprint": "sha256:5b92b30df8114886775820b79b677c840dac09bf7fcdb9d053b357acb82ba716",
       "compatibility_fingerprint": "sha256:3a9833144d38989ed074339f77040144c79be3462db11cafb211aac08c970427",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -17916,7 +17916,7 @@
           "format_option": "format",
           "subcommand": "delivery-status"
         },
-        "summary": "Project per-sink report delivery status from local compilation and admitted producer receipts.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Project per-sink report delivery status from local compilation and admitted producer receipts.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -17994,7 +17994,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -18191,7 +18191,7 @@
     "evaluation.external-adapter-receipt": {
       "identity": "evaluation.external-adapter-receipt",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0ac4d45e8b97affb3943db032eb0ef370e1ae20c7ee0955048ae09e852fd5869",
+      "fingerprint": "sha256:ab6077ab41058864486f178d5ddd57259d0d80857ff847221620514a7071011c",
       "compatibility_fingerprint": "sha256:4e2e602f8cd88c8bbfdd82bdbf1d0ad41a85314d709ed5813c0be84eab48c791",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -18201,7 +18201,7 @@
           "format_option": "format",
           "subcommand": "external-adapter-receipt"
         },
-        "summary": "Record a producer-owned external adapter attempt/result receipt for later delivery admission.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Record a producer-owned external adapter attempt/result receipt for later delivery admission.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -18335,7 +18335,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -18583,7 +18583,7 @@
     "evaluation.external-delivery": {
       "identity": "evaluation.external-delivery",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9c227488a1aa61e7e74e6fe6072d3634a9e423f4308692d05cbedb8bc6a64e75",
+      "fingerprint": "sha256:a0dbb0a2f325c972e2d5b19f91b7418a1cb0d5c9c82c4441b0df1fd1a3fe7153",
       "compatibility_fingerprint": "sha256:594703befea0ca856b7ab6f2ff5c4c1fb8e1c1f3a966e2e57d5afb46deca6ef1",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -18593,7 +18593,7 @@
           "format_option": "format",
           "subcommand": "external-delivery"
         },
-        "summary": "Admit one external report delivery result from a current producer-owned adapter receipt.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Admit one external report delivery result from a current producer-owned adapter receipt.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -18682,7 +18682,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -18885,7 +18885,7 @@
     "evaluation.external-host-result-import": {
       "identity": "evaluation.external-host-result-import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f8625d86de7fc31a68d5764b5e91f0d31eeb7032127dce85bb59e241cdfa555f",
+      "fingerprint": "sha256:b8240e489aa3677463562728e3ce5a71a189795c239a65b7fdd1be2229e7b80c",
       "compatibility_fingerprint": "sha256:fba257a87171bfac7fb71471fc4ab4ea35c7e1bd46eb5e97b75568502aa441e0",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -18895,7 +18895,7 @@
           "format_option": "format",
           "subcommand": "external-host-result-import"
         },
-        "summary": "Import one provider-owned external evaluation host result by opaque reference after host admission verification.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Import one provider-owned external evaluation host result by opaque reference after host admission verification.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -19008,7 +19008,7 @@
           "operation contract validates against operation.schema.json",
           "generated external consumer profile includes the operation"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -19216,7 +19216,7 @@
     "evaluation.external-request": {
       "identity": "evaluation.external-request",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1cde3cfac055af5f35056585cd65f64aa12bc5a042767433b0744e714f5afa50",
+      "fingerprint": "sha256:d6f8947ca9ee127ffd11d3010344ab8d3c60f343fb54cf555bf217b0adc422b9",
       "compatibility_fingerprint": "sha256:0cd5f058a339a067790fd89df91cf862654490d44ddf8d88cf34a7089af99237",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -19226,7 +19226,7 @@
           "format_option": "format",
           "subcommand": "external-request"
         },
-        "summary": "Create the current per-sink external report delivery request.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Create the current per-sink external report delivery request.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -19300,7 +19300,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -19497,7 +19497,7 @@
     "evaluation.local-delivery": {
       "identity": "evaluation.local-delivery",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:1df01375c62bbf5d8b0d56cc5db963fdb2710db9fbcb8adf341f25e6cc8d917c",
+      "fingerprint": "sha256:e1e6d66f305fa98dc17114d652567b5c4f2b3253cdd940d5d9dc8e24d3f2ad40",
       "compatibility_fingerprint": "sha256:14e1f4d5d33701508d6dc6e4b35d2be45c0b7cd4b8d203a635c17dce8385da30",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -19507,7 +19507,7 @@
           "format_option": "format",
           "subcommand": "local-delivery"
         },
-        "summary": "Record a local report compilation receipt without claiming external sink delivery.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Record a local report compilation receipt without claiming external sink delivery.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -19586,7 +19586,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -19783,7 +19783,7 @@
     "evaluation.observe": {
       "identity": "evaluation.observe",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:e3355d074f714ee74947948184a8eee7129a1aec291a5f4536a9d1389f6bed94",
+      "fingerprint": "sha256:de135f4cf65c81a97af1e91e4e134a59a798849e08c773800d5176f30b2c1ac4",
       "compatibility_fingerprint": "sha256:dbc2bb661eef18d44404bc000828908057b8928ebe6a550ca97823fa8857d073",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -19793,7 +19793,7 @@
           "format_option": "format",
           "subcommand": "observe"
         },
-        "summary": "Append one local-first evaluation observation after resolving current assignment, proof, and mutation authority.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Append one local-first evaluation observation after resolving current assignment, proof, and mutation authority.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -19920,7 +19920,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed",
+        "migration_status": "source-maintenance-only",
         "ir_plan": {
           "status": "representative",
           "summary": "Generated command packages execute the evaluation observation operation through runtime-owned evaluation primitives.",
@@ -20322,7 +20322,7 @@
     "evaluation.report-preview": {
       "identity": "evaluation.report-preview",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5098e2fd328cf47c37fd259b69233aea20c4cd878928fbb25e684f17e9717f07",
+      "fingerprint": "sha256:e8000d7ce353664e14313051da1a346e0bf60836a8aabc23589f31187f290e42",
       "compatibility_fingerprint": "sha256:b65429e21d50aa7f73d5861660699041113a163c2ebf21cde166e1cf0e0fcb91",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -20332,7 +20332,7 @@
           "format_option": "format",
           "subcommand": "report-preview"
         },
-        "summary": "Compile current evaluation report authority without claiming external delivery.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Compile current evaluation report authority without claiming external delivery.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -20410,7 +20410,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -20607,7 +20607,7 @@
     "evaluation.retry": {
       "identity": "evaluation.retry",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b53bc43779e85b8a2f6965ec58bb5c1df7f151a68376a4026fefd7b751ee5f27",
+      "fingerprint": "sha256:8232763ffb46909f6cf926aeb49858628c9ed409dd6a2370a5cd9ec856d8a025",
       "compatibility_fingerprint": "sha256:d32cbc87fd6d701abbc58ac46e6d8a9e87cfd09afd274ebc92f67b4c1da4b88c",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -20617,7 +20617,7 @@
           "format_option": "format",
           "subcommand": "retry"
         },
-        "summary": "Return the current retryable external delivery request for failed or pending sinks.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Return the current retryable external delivery request for failed or pending sinks.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -20691,7 +20691,7 @@
           "evaluation unit tests",
           "operation contract validates against operation.schema.json"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "evaluation_report_delivery_input.schema.json",
@@ -20888,7 +20888,7 @@
     "external-evidence.query": {
       "identity": "external-evidence.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7fd208825573e2cd50c7c6d51d7a6c0e38b0bd0937be16975fa52be9e9781109",
+      "fingerprint": "sha256:6388c9cc80f34353a354c9be4e241c66dfe376d0efc3c54eaaf64ccf7d22787e",
       "compatibility_fingerprint": "sha256:bda8fed87f7ebdaf8cc5af82570648fd38fd40196b638963c76c3f8bade79765",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -20897,7 +20897,7 @@
           "command": "external-evidence-query",
           "format_option": "format"
         },
-        "summary": "Query and revalidate one external proof candidate and opaque host result.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Query and revalidate one external proof candidate and opaque host result.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -20978,7 +20978,7 @@
           "independent generated-client fixture",
           "operation contract validation"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "external_evidence_operation_input.schema.json",
@@ -21217,7 +21217,7 @@
     "external-evidence.submit": {
       "identity": "external-evidence.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:781c7effaf3a25f7316b5ed6881cf349e961856ba4c8dd99175b95066c91949f",
+      "fingerprint": "sha256:a7b5af6b438c8ec67832c021fa83628f72ed0dd5e72e228cfae85773e5028288",
       "compatibility_fingerprint": "sha256:42c7818a5bd27be914d7baa8eaab4d620e965bba9237cc98c8f9151545c37d85",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -21226,7 +21226,7 @@
           "command": "external-evidence-submit",
           "format_option": "format"
         },
-        "summary": "Submit externally produced proof through an opaque package-trusted host result.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Submit externally produced proof through an opaque package-trusted host result.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -21310,7 +21310,7 @@
           "independent generated-client fixture",
           "operation contract validation"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "external_evidence_operation_input.schema.json",
@@ -21552,7 +21552,7 @@
     "instructions.check": {
       "identity": "instructions.check",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:123038dce55d67d5da4c8ef6298bc05a0e1eb5fb18159f9e916174be56f3b818",
+      "fingerprint": "sha256:fd444b4b9d1131d52ec95002eb6eec1640776ff90e4c27181e4efd9932fbb119",
       "compatibility_fingerprint": "sha256:99afb3848f514a46a646e233e5aceaf57044065942399ecfcdbcc7ce9ae52b17",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -21562,7 +21562,7 @@
           "subcommand": "check",
           "format_option": "format"
         },
-        "summary": "Validate scoped instruction syntax and references without executing declared checks.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Validate scoped instruction syntax and references without executing declared checks.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -21653,7 +21653,7 @@
           "instructions.check.process",
           "negative fixtures prove malformed and ambiguous controls fail closed"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "operation_failure.schema.json",
@@ -21945,7 +21945,7 @@
     "instructions.create": {
       "identity": "instructions.create",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:eaab9e697a6889a6565dea37a614e6d6bafc132850a0ff586b283bdd8889323a",
+      "fingerprint": "sha256:fa57d3a13880dac8d0b744757df1e627390e8746980f22ec063b7cb30ae9fb87",
       "compatibility_fingerprint": "sha256:632cefe78212d34daa0113b516c1cb5c348975c8883a028ea02425f260ee4b7d",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -21955,7 +21955,7 @@
           "subcommand": "new",
           "format_option": "format"
         },
-        "summary": "Create one scoped Markdown instruction without overwriting an existing file, or apply one explicitly owner-admitted revision-guarded guidance append to an existing canonical instruction.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Create one scoped Markdown instruction without overwriting an existing file, or apply one explicitly owner-admitted revision-guarded guidance append to an existing canonical instruction.",
         "classification": "lifecycle-mutation",
         "inputs": [
           {
@@ -22127,7 +22127,7 @@
           "generated Python and TypeScript operation clients preserve the no-overwrite boundary",
           "bounded adaptation tests cover explicit admission, canonical mutation, fresh revision, static applicability, stale revision, unsafe rejection, rollback, quiet/superseded disposition, and no automatic promotion"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "operation_failure.schema.json",
@@ -22481,7 +22481,7 @@
     "instructions.explain": {
       "identity": "instructions.explain",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:28f2e36b0b3ef259d099bcb3e66b7cd6b0fd2e22d2dacea90c71f2c5e9b51a3c",
+      "fingerprint": "sha256:d429b4fbcb51393882c9f6dac7d127d3f74d4e9fc37d1eb8ac4109728305a565",
       "compatibility_fingerprint": "sha256:b490f565915a7e58e1bfd1a06f17e9eb9bf1292209d43d4b075d31976a090309",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -22491,7 +22491,7 @@
           "subcommand": "explain",
           "format_option": "format"
         },
-        "summary": "Explain task and path applicability without loading irrelevant instruction bodies.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Explain task and path applicability without loading irrelevant instruction bodies.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -22597,7 +22597,7 @@
           "instructions.explain.process",
           "positive and negative path fixtures prove progressive disclosure"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "operation_failure.schema.json",
@@ -22904,7 +22904,7 @@
     "instructions.list": {
       "identity": "instructions.list",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6d57cab0ce302b3b008d37219fde6bfd030c0c2f93fc9688603a26525b6a1cfa",
+      "fingerprint": "sha256:a3199fc803d74322f98f240612fce9511fb55ce79ead3385f1b6d6d0651f07c2",
       "compatibility_fingerprint": "sha256:777b8ca5598492d54e3ebc804f9f5ea37e793417469469cdf00968643580563e",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -22914,7 +22914,7 @@
           "subcommand": "list",
           "format_option": "format"
         },
-        "summary": "List scoped Markdown instructions without loading irrelevant bodies.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. List scoped Markdown instructions without loading irrelevant bodies.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -23005,7 +23005,7 @@
           "instructions.list.process",
           "generated Python and TypeScript operation clients consume the same result schema"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "operation_failure.schema.json",
@@ -23297,7 +23297,7 @@
     "instructions.migrate": {
       "identity": "instructions.migrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7d43be55c97f7aee4241b2f2f8a78ce221049cb291f070045645998348c12f7b",
+      "fingerprint": "sha256:42c33db972da4b90c31e4dcc20a4652cfe161cb664bd33fe746cb357c8f55b50",
       "compatibility_fingerprint": "sha256:d9711f71f02815a0558354a8104a13d5ded9cd0c6f65635b11c063d345af567d",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -23307,7 +23307,7 @@
           "subcommand": "migrate",
           "format_option": "format"
         },
-        "summary": "Return non-destructive incremental migration advice for a selected repository instruction source.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Return non-destructive incremental migration advice for a selected repository instruction source.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -23403,7 +23403,7 @@
           "instructions.migrate.process",
           "migration conformance asserts writes_applied=false and no filesystem mutation"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "operation_failure.schema.json",
@@ -23700,7 +23700,7 @@
     "instructions.route-select": {
       "identity": "instructions.route-select",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:93e9e1e0f004925716de9a1d2b851f45d5da4742fda747f3f75841494329105a",
+      "fingerprint": "sha256:31df060ca4fdae189db1736af3a93c3ca48250061ac1720d97d3fb8a29b8a115",
       "compatibility_fingerprint": "sha256:254a59541f368c923c3de549483462735390e6b8876caf41476c307e6225d207",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -23710,7 +23710,7 @@
           "subcommand": "select-route",
           "format_option": "format"
         },
-        "summary": "Select current-work-bound semantic task-route applicability facts with source revision guards.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Select current-work-bound semantic task-route applicability facts with source revision guards.",
         "classification": "local-record-append",
         "inputs": [
           {
@@ -23832,7 +23832,7 @@
           "instructions.route-select.process",
           "selected, none, unresolved, stale, replay, and current-work-switch fixtures"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "operation_failure.schema.json",
@@ -24149,7 +24149,7 @@
     "instructions.routes": {
       "identity": "instructions.routes",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:186a198d98785628595da2bae77d8a8cf6a76655d0280545b112bf9e8ab1c924",
+      "fingerprint": "sha256:3d170931f62324f0def612e6cfb6feae4b119111c801a02d645741295e8f1688",
       "compatibility_fingerprint": "sha256:29232962c6e5fae68971763b8edbef4b8533138d47ae52447fa7926a086a11da",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -24159,7 +24159,7 @@
           "subcommand": "routes",
           "format_option": "format"
         },
-        "summary": "Progressively discover repo-owned semantic task routes derived from registered capabilities.",
+        "summary": "Source-maintenance model only; not native/public runtime authority. Progressively discover repo-owned semantic task routes derived from registered capabilities.",
         "classification": "read-only-report",
         "inputs": [
           {
@@ -24260,7 +24260,7 @@
           "instructions.routes.process",
           "root, branch, and direct-leaf discovery fixtures"
         ],
-        "migration_status": "runtime-consumed"
+        "migration_status": "source-maintenance-only"
       },
       "schemas": [
         "operation_failure.schema.json",

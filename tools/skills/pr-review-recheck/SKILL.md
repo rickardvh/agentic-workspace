@@ -62,6 +62,23 @@ For any checkout isolation or temporary review material, use the shared `.agenti
 5. For first review, compare the diff against the linked issue's final intended outcome, non-solutions, and evidence requirements after the assumption and closure-shape audits.
 6. For recheck, start from the previous blocker or requested change, then inspect only the follow-up delta unless new evidence points wider.
 7. Check proof separately from intent satisfaction:
+   - Resolve every `owner_currentness` obligation in trusted preparation for this
+     PR's exact base and head. When a governing source changes, run its existing
+     owner/currentness check at that head and record the owner, check, base, head,
+     status (`current`, `stale`, or `unknown`) and evidence reference through
+     `--owner-evidence`. Use `--owner-obligations` for additional named owners
+     discovered from changed paths or review obligations; each entry supplies
+     `owner`, `check`, and `sources`. These are reviewer observations, never
+     arbitrary executable commands or a replacement domain interpreter.
+   - For independently mergeable stacked PRs, a downstream integration result
+     cannot satisfy a lower layer's obligation. Report the stale/unknown PR layer
+     separately from any current integration head. Reconcile in the introducing
+     layer, then rebase descendants and remove redundant downstream residue.
+     Recheck only affected owner-sensitive subjects. An unrelated stack needs no
+     all-owner matrix. Missing runtime, source objects, or owner evidence stays
+     `unknown` and cannot support merge readiness. Preparation selects System
+     Intent sources from the trusted owner's existing source records; it does not
+     infer currentness from whether a mirror file appears in the diff.
    - CI and reported validation;
    - focused tests for changed behavior;
    - generated/payload sync when shipped or mirrored surfaces changed;

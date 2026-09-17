@@ -19,6 +19,18 @@ def _load_module():
     return module
 
 
+def test_operation_registry_rejects_classification_drift() -> None:
+    module = _load_module()
+    registry = copy.deepcopy(module.operation_contracts_manifest())
+    assert module._validate_operation_registry(registry) == []
+    for operation_id in ("session-log.manage", "instructions.create", "workspace.memory-create-note.apply"):
+        entry = next(row for row in registry["operations"] if row["id"] == operation_id)
+        assert entry["migration_status"] == "source-maintenance-only"
+        entry["migration_status"] = "runtime-consumed"
+        assert any(operation_id in error and "migration_status" in error for error in module._validate_operation_registry(registry))
+        entry["migration_status"] = "source-maintenance-only"
+
+
 def test_documented_proof_command_inventory_rejects_stale_obsolete_command(tmp_path: Path) -> None:
     module = _load_module()
     docs = tmp_path / "docs" / "maintainer"

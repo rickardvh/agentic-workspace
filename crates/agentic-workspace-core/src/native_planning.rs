@@ -541,6 +541,15 @@ fn resolve_context(
             }
             let mut destination = previous.clone();
             destination.as_object_mut().unwrap().remove(RETAINED);
+            // These former producer annotations describe the prior selection,
+            // not the new owner's authority. The exact prior bytes and custody
+            // remain bound below; do not copy stale annotations into the strict
+            // current successor schema.
+            destination
+                .as_object_mut()
+                .unwrap()
+                .remove("planning_revision");
+            destination.as_object_mut().unwrap().remove("reason");
             destination["selected_owner"] = json!({"id":selected["id"],"ref":selected["ref"]});
             transition = json!({"prior_sha256":format!("sha256:{:x}",Sha256::digest(&prior)),"prior_custody":previous_retained["custody"],"selection":destination});
         }

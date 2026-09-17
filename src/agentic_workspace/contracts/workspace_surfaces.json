@@ -1,38 +1,9 @@
 {
-  "schema_version": "workspace-surfaces-manifest/v1",
+  "kind": "agentic-workspace/host-surfaces/v1",
+  "authority": "Current public repository adoption footprint; source maintenance has separate authority",
   "payload_files": [
     ".agentic-workspace/READING.json",
-    ".agentic-workspace/WORKFLOW.md",
     ".agentic-workspace/OWNERSHIP.toml",
-    ".agentic-workspace/docs/jumpstart-contract.md",
-    ".agentic-workspace/docs/module-map.md",
-    ".agentic-workspace/docs/setup-findings-contract.md",
-    ".agentic-workspace/docs/workspace-config-contract.md",
-    ".agentic-workspace/fallback/no-cli-policy.json",
-    ".agentic-workspace/fallback/no_cli_startup.py",
-    ".agentic-workspace/skills/REGISTRY.json",
-    ".agentic-workspace/skills/workspace-startup/SKILL.md",
-    ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
-    ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
-    ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
-    ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
-    ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-    ".agentic-workspace/system-intent/WORKFLOW.md",
-    ".agentic-workspace/skills/workspace-resources/SKILL.md",
-    ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
-    ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
-    ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
-  ],
-  "necessary_surface_files": [
-    ".agentic-workspace/READING.json",
-    ".agentic-workspace/WORKFLOW.md",
-    ".agentic-workspace/OWNERSHIP.toml",
-    ".agentic-workspace/docs/jumpstart-contract.md",
-    ".agentic-workspace/docs/module-map.md",
-    ".agentic-workspace/docs/setup-findings-contract.md",
-    ".agentic-workspace/docs/workspace-config-contract.md",
-    ".agentic-workspace/fallback/no-cli-policy.json",
-    ".agentic-workspace/fallback/no_cli_startup.py",
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
@@ -45,677 +16,192 @@
     ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
     ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
   ],
-  "necessary_surface_roots": [
-    ".agentic-workspace/docs",
-    ".agentic-workspace/skills"
-  ],
-  "module_surface_files": {
-    "memory": [
-      ".agentic-workspace/memory/WORKFLOW.md",
-      ".agentic-workspace/memory/SKILLS.md",
-      ".agentic-workspace/memory/repo/index.md"
-    ],
-    "planning": [
-      ".agentic-workspace/planning/execplans/README.md",
-      ".agentic-workspace/planning/execplans/TEMPLATE.plan.json"
-    ],
-    "verification": []
-  },
-  "required_references": [
+  "surfaces": [
     {
-      "source": ".agentic-workspace/docs/jumpstart-contract.md",
-      "target": ".agentic-workspace/adoption-receipt.json",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Treat configuration readiness as unresolved until install creates the adoption receipt."
+      "path": ".agentic-workspace/READING.json",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-only source orientation bound to the ownership ledger"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/OWNERSHIP.toml",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
+      "path": ".agentic-workspace/OWNERSHIP.toml",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Current source/lifetime declarations for runtime and repository-only readers"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/WORKFLOW.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
+      "path": ".agentic-workspace/skills/REGISTRY.json",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Passive route and executable procedure declarations"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/config.toml",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
+      "path": ".agentic-workspace/skills/workspace-startup/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/planning/state.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "planning"
-      ],
-      "degraded_behavior": "Treat active Planning state as absent until an owner is selected."
+      "path": ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/planning/execplans/*.plan.json",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "planning"
-      ],
-      "degraded_behavior": "Treat passive execplan record proof as not applicable when no records exist."
+      "path": ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/planning/integration-proposals/*.integration-proposal.json",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "planning"
-      ],
-      "degraded_behavior": "Treat target-integration proposal proof as not applicable when no proposals exist."
+      "path": ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/planning/integration-receipts/*.integration-receipt.json",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "planning"
-      ],
-      "degraded_behavior": "Treat target-integration receipt proof as not applicable when no receipts exist."
+      "path": ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/verification/manifest.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "verification"
-      ],
-      "degraded_behavior": "Treat Verification as selected but unconfigured until the repo supplies its manifest."
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/system-intent/WORKFLOW.md",
-      "kind": "installed-local",
-      "profiles": [
-        "full-mirror"
-      ],
-      "modules": []
+      "path": ".agentic-workspace/skills/workspace-resources/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/system-intent/intent.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Keep system intent unavailable until an authoritative mirror is installed."
+      "path": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "target": ".agentic-workspace/fallback/no_cli_startup.py",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
+      "path": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     },
     {
-      "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/fallback/no-cli-policy.json",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/fallback/no_cli_startup.py",
-      "target": ".agentic-workspace/fallback/no-cli-policy.json",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/fallback/no-cli-policy.json",
-      "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "target": ".agentic-workspace/docs/module-map.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/docs/setup-findings-contract.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/docs/jumpstart-contract.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/config.toml",
-      "target": ".agentic-workspace/docs/workspace-config-contract.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/docs/module-map.md",
-      "target": ".agentic-workspace/planning/execplans/*.plan.json",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "planning"
-      ]
-    },
-    {
-      "source": ".agentic-workspace/docs/module-map.md",
-      "target": ".agentic-workspace/verification/manifest.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "verification"
-      ],
-      "degraded_behavior": "Report Verification as selected but unconfigured until the repo owns a manifest."
-    },
-    {
-      "source": ".agentic-workspace/docs/module-map.md",
-      "target": ".agentic-workspace/verification/proof-strategy.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "verification"
-      ],
-      "degraded_behavior": "Use generic proof selection until the repo declares a Verification proof strategy."
-    },
-    {
-      "source": ".agentic-workspace/docs/workspace-config-contract.md",
-      "target": ".agentic-workspace/config.toml",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/docs/workspace-config-contract.md",
-      "target": ".agentic-workspace/config.local.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Use repo-owned config.toml when no machine-local override exists."
-    },
-    {
-      "source": ".agentic-workspace/docs/workspace-config-contract.md",
-      "target": ".agentic-workspace/OWNERSHIP.toml",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/docs/workspace-config-contract.md",
-      "target": ".agentic-workspace/verification/manifest.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "verification"
-      ],
-      "degraded_behavior": "Preserve shared assurance policy; absence of operational Verification declarations supplies no proof or completion authority."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
-      "target": ".agentic-workspace/WORKFLOW.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/OWNERSHIP.toml",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/config.toml",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/system-intent/intent.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Run the configured system-intent sync before treating an interpreted mirror as available."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/system-intent/subsystems.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Leave scoped subsystem intent absent until declared subsystem ownership exists."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/verification/manifest.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "verification"
-      ],
-      "degraded_behavior": "Do not seed Verification evidence until the repo supplies its manifest."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "target": ".agentic-workspace/verification/proof-strategy.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "verification"
-      ],
-      "degraded_behavior": "Do not seed repo proof policy until the repo supplies a Verification strategy."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "target": ".agentic-workspace/skills/workspace-resources/SKILL.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/fallback/no_cli_startup.py",
-      "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/READING.json",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/skills/REGISTRY.json",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/local/current-task-routes.json",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Absent former local route carriage supplies no current route selection; use the current routing owner."
-    },
-    {
-      "source": ".agentic-workspace/OWNERSHIP.toml",
-      "target": ".agentic-workspace/memory/repo/manifest.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [
-        "memory"
-      ],
-      "degraded_behavior": "Absent retained Memory state supplies no current knowledge; do not seed or promote material implicitly."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
-      "target": ".agentic-workspace/instructions/*.md",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Select existing canonical instruction sources through the instruction owner; an absent source needs its exact creation proposal."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
-      "target": ".agentic-workspace/local/instructions/*.md",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Local instructions may be absent; preserve the local scope and current owner creation boundary."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "target": ".agentic-workspace/OWNERSHIP.toml",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "target": ".agentic-workspace/READING.json",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "target": ".agentic-workspace/config.local.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "Absent local policy is not a discovered machine capability or an override of shared policy."
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-      "target": ".agentic-workspace/config.toml",
-      "kind": "optional",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": [],
-      "degraded_behavior": "A missing shared source remains absent; use current defaults or an exact Configuration creation request without inventing repository policy."
-    },
-    {
-      "source": ".agentic-workspace/skills/REGISTRY.json",
-      "target": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/REGISTRY.json",
-      "target": ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/REGISTRY.json",
-      "target": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
-      "target": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/REGISTRY.json",
-      "target": ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
-    },
-    {
-      "source": ".agentic-workspace/skills/REGISTRY.json",
-      "target": ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py",
-      "kind": "installed-local",
-      "profiles": [
-        "necessary-surfaces",
-        "full-mirror"
-      ],
-      "modules": []
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency"
     }
   ],
-  "reference_discovery": {
-    "source_globs": [
-      ".agentic-workspace/docs/**/*.md",
-      ".agentic-workspace/fallback/**/*.json",
-      ".agentic-workspace/fallback/**/*.py",
-      ".agentic-workspace/skills/**/*.json",
-      ".agentic-workspace/skills/**/*.md",
-      ".agentic-workspace/**/*.toml"
+  "identity": ".agentic-workspace/adoption.json",
+  "provenance": ".agentic-workspace/payload-provenance.json",
+  "local_ignore": {
+    "path": ".agentic-workspace/local/.gitignore",
+    "ownership": "local-only",
+    "lifetime": "independent local state",
+    "establish": "configuration.repository-adoption when absent",
+    "refresh": "preserve existing local policy",
+    "remove": "preserve with local records"
+  },
+  "instruction_fence": {
+    "path": "AGENTS.md",
+    "start": "<!-- agentic-workspace:workflow:start -->",
+    "end": "<!-- agentic-workspace:workflow:end -->",
+    "ownership": "managed-fence"
+  },
+  "preserved_classes": {
+    "repo-owned": [
+      ".agentic-workspace/config.toml",
+      ".agentic-workspace/config.local.toml",
+      "AGENTS.md"
     ],
-    "installed_source_roots": [
-      {
-        "repo_path": "src/agentic_workspace/_payload",
-        "installed_prefix": ""
-      },
-      {
-        "repo_path": "packages/memory/bootstrap",
-        "installed_prefix": ""
-      },
-      {
-        "repo_path": "packages/planning/bootstrap",
-        "installed_prefix": ""
-      }
+    "module-owned": [
+      ".agentic-workspace/planning",
+      ".agentic-workspace/memory",
+      ".agentic-workspace/verification"
     ],
-    "generated_source_authorities": [
-      {
-        "installed_source": ".agentic-workspace/config.toml",
-        "repo_path": "src/agentic_workspace/workspace_runtime_core.py",
-        "targets": [
-          ".agentic-workspace/docs/workspace-config-contract.md"
-        ]
-      }
+    "local-only": [
+      ".agentic-workspace/local"
+    ],
+    "promoted-output": [
+      "docs/decisions"
     ]
   },
-  "reference_resolution": {
-    "installed-local": "Target must be present in the selected installed footprint.",
-    "package-resource": "Target must use the package://agentic-workspace/ prefix and resolve through importlib.resources.",
-    "optional": "Reference must name a complete degraded_behavior field."
-  },
-  "no_cli_fallback": {
-    "entrypoint": ".agentic-workspace/fallback/no_cli_startup.py",
-    "policy": ".agentic-workspace/fallback/no-cli-policy.json",
-    "procedure": ".agentic-workspace/skills/workspace-startup/SKILL.md",
-    "authority": "none"
-  },
-  "system_intent_mirror_kind": "agentic-workspace/system-intent/v1",
-  "subsystem_intent_kind": "agentic-workspace/subsystem-intent-set/v1",
-  "default_agents_path": "AGENTS.md",
-  "handoff_surfaces": [
-    ".agentic-workspace/bootstrap-handoff.md",
-    ".agentic-workspace/bootstrap-handoff.json"
-  ],
-  "module_upgrade_source_paths": {
-    "planning": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
-    "memory": ".agentic-workspace/memory/UPGRADE-SOURCE.toml"
-  },
-  "proof_route_hints_path": ".agentic-workspace/proof-route-hints.json",
-  "setup_findings_path": "tools/setup-findings.json",
-  "mixed_agent_local_override_fields": [
-    "workspace.enabled",
-    "workspace.cli_invoke",
-    "workspace.shared_config_path",
-    "safety.safe_to_auto_run_commands",
-    "safety.requires_human_verification_on_pr",
-    "delegation.assignment_policy",
-    "delegation.transport_authority",
-    "delegation.current_target",
-    "delegation.human_override_policy",
-    "delegation.required_execution_guarantees",
-    "clarification.mode",
-    "session_logging.enabled",
-    "session_logging.path_mode",
-    "delegation_targets.<target>.target_id",
-    "delegation_targets.<target>.target_revision",
-    "delegation_targets.<target>.aliases",
-    "delegation_targets.<target>.identity_status",
-    "delegation_targets.<target>.execution_guarantees",
-    "delegation_targets.<target>.location",
-    "delegation_targets.<target>.confidence",
-    "delegation_targets.<target>.transports",
-    "delegation_targets.<target>.cost_class",
-    "delegation_targets.<target>.latency_class",
-    "delegation_targets.<target>.forbidden_task_classes",
-    "delegation_targets.<target>.confidence_source"
-  ],
-  "retired_surface_files": [
+  "source_maintenance_contract": "source_maintenance_surfaces.json",
+  "retired_package_surfaces": [
     {
-      "path": ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
-      "sha256": "130bafef8d7d713e15f1d4b45f461abb2427f8c28b40bf67d401cb3f19a75891",
-      "replacement": ".agentic-workspace/skills/workspace-startup/SKILL.md"
+      "path": ".agentic-workspace/WORKFLOW.md",
+      "sha256": "75162f6469347e428ab284a7e1478a0fdd62ab4f61897a8e913f5a5f6600afa7"
+    },
+    {
+      "path": ".agentic-workspace/docs/jumpstart-contract.md",
+      "sha256": "f37d653f52fdb3616758d8c5f31123f5d65d704e4c2cb971edd45f9729abbd4e"
+    },
+    {
+      "path": ".agentic-workspace/docs/module-map.md",
+      "sha256": "e87c87007f08021c0a9af478e758a784782c543cc427d1e07db9ea2e9ce869df"
+    },
+    {
+      "path": ".agentic-workspace/docs/setup-findings-contract.md",
+      "sha256": "33f5d6f2097ab9b1b8f4e0f32c2ea11b35c17afc9912df7815cb90c20bf7a698"
+    },
+    {
+      "path": ".agentic-workspace/docs/workspace-config-contract.md",
+      "sha256": "29a2e9f78f096a0c0be094d2970eebec6aeb99ca6755cb08b4568488fc2f4bc0"
+    },
+    {
+      "path": ".agentic-workspace/fallback/no-cli-policy.json",
+      "sha256": "a3e845b82cb0cd9d8a7fc3acdc7dcc7c416c2a47c5f37fa19a829634f8d9a450"
+    },
+    {
+      "path": ".agentic-workspace/fallback/no_cli_startup.py",
+      "sha256": "b22d032e2c3c40512f41e3b9091e105a7f800a001dfaba6f2ca3ee77d48d919c"
+    },
+    {
+      "path": ".agentic-workspace/system-intent/WORKFLOW.md",
+      "sha256": "93fab856c88682d958fdf817e15a8262e6a5a624b70fd7b6ef883cb6301f2d70"
     }
   ]
 }

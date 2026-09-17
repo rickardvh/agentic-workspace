@@ -162,22 +162,23 @@ def consume(
     elif surface == "json":
         command, stdin = [str(binary)], json.dumps({verb: context})
     elif surface == "python":
+        binding = "agentic_workspace" if installed else "agentic_workspace.decision"
         command = [
             *([str(installed["python"]), "-I"] if installed else [sys.executable]),
             "-c",
-            f"import json,sys; from agentic_workspace.decision import {verb}; print(json.dumps({verb}(json.load(sys.stdin))))",
+            f"import json,sys; from {binding} import {verb}; print(json.dumps({verb}(json.load(sys.stdin))))",
         ]
         stdin = encoded
         if reference_helper:
             command[-1] = (
-                "import json,sys; from agentic_workspace.decision import select_reference; "
+                f"import json,sys; from {binding} import select_reference; "
                 "c=json.load(sys.stdin); r=c.pop('reference'); "
                 "a={'answer':c.pop('answer')} if 'answer' in c else {}; "
                 "print(json.dumps(select_reference(c,r,**a)))"
             )
     else:
         module = (
-            (installed["package"] / "src/native/semantic-decision.mjs") if installed else (ROOT / "bindings/node/semantic-decision.mjs")
+            (installed["package"] / "src/native/operating.mjs") if installed else (ROOT / "bindings/node/semantic-decision.mjs")
         ).as_uri()
         command = [
             str(installed["node"]) if installed else "node",

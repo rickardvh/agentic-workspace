@@ -6,7 +6,7 @@
     "format_option": "format",
     "subcommand": "transition"
   },
-  "summary": "Apply a validated evaluation lifecycle transition.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Apply a validated evaluation lifecycle transition.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -94,7 +94,7 @@
     "evaluation unit tests",
     "operation contract validates against operation.schema.json"
   ],
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "ir_plan": {
     "status": "representative",
     "summary": "Generated command packages execute the evaluation transition operation through runtime-owned evaluation primitives.",

@@ -465,12 +465,13 @@ def test_issue_and_review_skills_audit_architectural_assumptions() -> None:
     assert "framework, registry, durable-state, or event-ledger growth" in issue_skill
     assert "repo/provider/dogfooding evidence" in issue_skill
     assert "one-off static comparison" in issue_skill
-    assert "use `github-issue-shaping` first" in creation_skill
+    assert "use `github-issue-shaping` first" in creation_skill.lower()
     assert "PR violates a sound issue requirement" in review_skill
     assert "issue requirement is wrong or too strong" in review_skill
     assert "every selector to be cheaper" in review_skill
-    assert "current agent did not implement, modify, or push the PR patch" in review_skill
-    assert "does not authorize implementation-agent self-review" in review_skill
+    assert "independent of the implementation lineage that produced it" in review_skill
+    assert "Delegation does not create independence." in review_skill
+    assert "Never use this skill as permission for an implementation agent" in review_skill
 
 
 def test_rendered_quickstart_routes_to_current_procedure_without_copying_doctrine() -> None:

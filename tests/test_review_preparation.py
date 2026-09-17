@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -6,6 +7,8 @@ import sys
 from pathlib import Path
 
 import pytest
+from tests.test_native_public_cli import consume
+from tests.test_native_public_cli import native_cli as native_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 PATH = ROOT / "tools/skills/pr-review-recheck/prepare.py"
@@ -13,6 +16,56 @@ SPEC = importlib.util.spec_from_file_location("review_preparation", PATH)
 review = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(review)
 BASELINE = "a" * 40
+
+
+def test_two_layer_currentness_uses_the_owner_at_each_subject(tmp_path, shared_core_binary, native_cli):
+    """One native owner scenario: upper repair cannot discharge lower source drift."""
+    mirror = ".agentic-workspace/system-intent/intent.toml"
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text('[system_intent]\nsources=["SYSTEM_INTENT.md"]\npreferred_source="SYSTEM_INTENT.md"\n')
+    source = tmp_path / "SYSTEM_INTENT.md"
+    source.write_text("Keep tools quiet.\n")
+    record = tmp_path / mirror
+    record.parent.mkdir()
+
+    def reconcile():
+        record.write_text(
+            'schema_version=1\nkind="agentic-workspace/system-intent/v1"\nsummary="Keep tools quiet"\nneeds_review=false\npreferred_source="SYSTEM_INTENT.md"\n[[source_records]]\npath="SYSTEM_INTENT.md"\npresent=true\nsha256="'
+            + hashlib.sha256(source.read_text().encode()).hexdigest()
+            + '"\n'
+        )
+
+    def observe(base, head):
+        owner = consume("native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Check layer owner currentness"})[
+            "system_intent"
+        ]
+        return {
+            "owner": "system_intent",
+            "check": "current source",
+            "base": base,
+            "head": head,
+            "status": "current" if owner["interpretation"]["source_currentness"] == "matched" else "stale",
+            "evidence_ref": owner["revision"],
+        }
+
+    declaration = [{"owner": "system_intent", "check": "current source", "sources": ["SYSTEM_INTENT.md", mirror]}]
+    changed = [{"filename": "SYSTEM_INTENT.md"}]
+    reconcile()
+    assert observe("root", "base")["status"] == "current"
+    source.write_text("Keep tools quiet; preserve human intent.\n")
+    lower = observe("base", "A")
+    assert lower["status"] == "stale"
+    reconcile()
+    upper = observe("A", "B")
+    assert upper["status"] == "current"
+    assert review.layer_currentness("base", "A", changed, declaration, [lower, upper])[0]["status"] == "stale"
+    assert review.layer_currentness("base", "A", changed, declaration, [upper])[0]["status"] == "unknown"
+    # Move the same reconciliation into A; rebased B adds no owner delta.
+    repaired = observe("base", "A-fixed")
+    assert review.layer_currentness("base", "A-fixed", changed, declaration, [repaired])[0]["status"] == "current"
+    assert review.layer_currentness("A-fixed", "B-rebased", [], declaration, []) == []
+    assert review.layer_currentness("base", "unrelated", [{"filename": "unrelated.txt"}], declaration, []) == []
 
 
 @pytest.fixture

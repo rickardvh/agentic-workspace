@@ -11,6 +11,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLI_PATH = Path("src/agentic_workspace/contracts/source_decision_contract.json")
 SURFACES_PATH = Path("src/agentic_workspace/contracts/workspace_surfaces.json")
+MAINTENANCE_PATH = Path("src/agentic_workspace/contracts/source_maintenance_surfaces.json")
 MODULES_PATH = Path("src/agentic_workspace/contracts/module_registry.json")
 SUPPORT_INSTALL_PATH = Path("src/agentic_workspace/contracts/support_bearing_install.json")
 CLI_OUTPUT = Path("docs/reference/cli-catalogue.md")
@@ -47,25 +48,41 @@ def render_cli_catalogue() -> str:
     manifest = _load(CLI_PATH)["native_cli"]
     lines = [
         "<!-- GENERATED FILE: edit source_decision_contract.json and rerun `make render-schema-reference`. -->",
-        "# Current CLI Catalogue", "",
-        "Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.", "",
+        "# Current CLI Catalogue",
+        "",
+        "Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.",
+        "",
         f"- Contract digest: `sha256:{_digest([CLI_PATH])}`",
         f"- Program: `{manifest['executable']}`",
-        f"- Command count: {len(manifest['commands'])}", "",
-        "## Commands", "",
-        "| Command | Requires JSON input | Purpose |", "| --- | --- | --- |",
+        f"- Command count: {len(manifest['commands'])}",
+        "",
+        "## Commands",
+        "",
+        "| Command | Requires JSON input | Purpose |",
+        "| --- | --- | --- |",
     ]
     for command in manifest["commands"]:
-        lines.append(f"| `{manifest['executable']} {command['name']}` | {_escape(command['input_required'])} | {_escape(command['description'])} |")
+        lines.append(
+            f"| `{manifest['executable']} {command['name']}` | {_escape(command['input_required'])} | {_escape(command['description'])} |"
+        )
     lines.extend(["", "## Options", "", "| Flag | Default | Choices | Purpose |", "| --- | --- | --- | --- |"])
     for option in manifest["options"]:
-        lines.append(f"| `{option['flag']}` | {_escape(option.get('default'))} | {_escape(option.get('choices'))} | {_escape(option['description'])} |")
-    lines.extend([
-        "", "Use `--help` for the installed artifact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.", "",
-        "`start` is current resolution; `invoke` consumes one exact returned action. `resources` and `worker` are bounded dedicated tools. A request, route, packet seal or successful process does not grant mutation, ownership, proof or completion authority. Optional machine-local diagnostics remain distinct from repository mutation.", "",
-        "The older `cli_commands.json` / `cli_option_groups.json` schemas describe retained source-maintenance and historical adapters. Their `init`, `defaults`, `implement`, `proof` and module command families are not native public commands. Do not switch to a former host to bypass native rejection.", "",
-        "See [installation](../agentic-workspace-install.md), [everyday use](../everyday-use.md) and the [shared authority graph](../architecture/shared-rust-core.md).", "",
-    ])
+        lines.append(
+            f"| `{option['flag']}` | {_escape(option.get('default'))} | {_escape(option.get('choices'))} | {_escape(option['description'])} |"
+        )
+    lines.extend(
+        [
+            "",
+            "Use `--help` for the installed artifact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.",
+            "",
+            "`start` is current resolution; `invoke` consumes one exact returned action. `resources` and `worker` are bounded dedicated tools. A request, route, packet seal or successful process does not grant mutation, ownership, proof or completion authority. Optional machine-local diagnostics remain distinct from repository mutation.",
+            "",
+            "The older `cli_commands.json` / `cli_option_groups.json` schemas describe retained source-maintenance and historical adapters. Their `init`, `defaults`, `implement`, `proof` and module command families are not native public commands. Do not switch to a former host to bypass native rejection.",
+            "",
+            "See [installation](../agentic-workspace-install.md), [everyday use](../everyday-use.md) and the [shared authority graph](../architecture/shared-rust-core.md).",
+            "",
+        ]
+    )
     return "\n".join(lines)
 
 
@@ -75,9 +92,63 @@ def _module_sets(names: list[str]) -> list[tuple[str, ...]]:
 
 def render_surface_catalogue() -> str:
     surfaces = _load(SURFACES_PATH)
+    lines = [
+        "<!-- GENERATED FILE: edit workspace_surfaces.json and rerun `make render-schema-reference`. -->",
+        "# Current Installed-Surface Catalogue",
+        "",
+        "The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.",
+        "",
+        f"- Contract digest: `sha256:{_digest([SURFACES_PATH])}`",
+        "",
+        "| Surface | Ownership | Lifetime | Establish / refresh / remove | Consumer |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for row in surfaces["surfaces"]:
+        lines.append(f"| `{row['path']}` | {row['ownership']} | {row['lifetime']} | `{row['establish']}` | {row['justification']} |")
+    lines.extend(
+        [
+            "",
+            f"Adoption identity: `{surfaces['identity']}`. Payload provenance: `{surfaces['provenance']}`. Both are package integration records with the same lifecycle.",
+            "",
+            "Only the declared workflow fence in `AGENTS.md` is managed. Text outside it remains repository-owned. Edited, unowned, or unsafe destinations are preserved and reported by Configuration.",
+            "",
+            "## Preserved classes",
+            "",
+        ]
+    )
+    for owner, paths in surfaces["preserved_classes"].items():
+        lines.append(f"- {owner}: " + ", ".join(f"`{path}`" for path in paths))
+    lines.append(
+        f"- Local diagnostic ignore rule: `{surfaces['local_ignore']['path']}`; created only when absent and preserved with local state on removal."
+    )
+    lines.extend(
+        [
+            "",
+            "Unknown paths are preserved. Skill-discovery links are removed through their authenticated Configuration exposure owner before removing their canonical targets.",
+            "",
+            "## Retired package surfaces",
+            "",
+            "Convergence removes only these exact source-contract preimages; edited or unknown content is preserved. These paths are not installed into new hosts.",
+            "",
+        ]
+    )
+    for row in surfaces["retired_package_surfaces"]:
+        lines.append(f"- `{row['path']}` -- `sha256:{row['sha256']}`")
+    lines.extend(
+        [
+            "",
+            "Historical profiles and executable fallback maintenance live in the separate [source-maintenance inventory](source-maintenance-surface-catalogue.md). They are not public host profiles or CLI commands.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def render_maintenance_catalogue() -> str:
+    surfaces = _load(MAINTENANCE_PATH)
     registry = _load(MODULES_PATH)
     modules = [str(item["name"]) for item in registry.get("modules", [])]
-    source_digest = _digest([SURFACES_PATH, MODULES_PATH])
+    source_digest = _digest([MAINTENANCE_PATH, MODULES_PATH])
     module_files = {key: sorted(value) for key, value in surfaces.get("module_surface_files", {}).items()}
     profiles = {
         "necessary-surfaces": sorted(surfaces.get("necessary_surface_files", [])),
@@ -85,9 +156,9 @@ def render_surface_catalogue() -> str:
     }
     lines = [
         "<!-- GENERATED FILE: edit the source contracts and rerun `make render-schema-reference`. -->",
-        "# Current Installed-Surface Catalogue",
+        "# Source-Maintenance Surface Inventory",
         "",
-        "Exact footprint, ownership, and availability values generated from `workspace_surfaces.json` and `module_registry.json`.",
+        "Exact footprint, ownership, and availability values generated from `source_maintenance_surfaces.json` and `module_registry.json`.",
         "",
         f"- Contract digest: `sha256:{source_digest}`",
         f"- Supported profiles: {', '.join(f'`{name}`' for name in profiles)}",
@@ -206,6 +277,7 @@ def main() -> int:
     outputs = {
         CLI_OUTPUT: render_cli_catalogue(),
         SURFACES_OUTPUT: render_surface_catalogue(),
+        Path("docs/reference/source-maintenance-surface-catalogue.md"): render_maintenance_catalogue(),
         SUPPORT_INSTALL_OUTPUT: render_support_install(),
     }
     stale = [path for path, content in outputs.items() if not _write_or_check(path, content, check=args.check)]

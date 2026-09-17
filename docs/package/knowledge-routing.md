@@ -216,7 +216,7 @@ The packet separates:
 The route command is selector-backed:
 
 ```bash
-agentic-workspace memory route --target . --stage implement --files <paths> --task "<task>" --format json
+agentic-workspace start --target . --task "<task>" --changed <path> --format json
 ```
 
 `--stage`, changed files, explicit surfaces, manifest metadata, and existing

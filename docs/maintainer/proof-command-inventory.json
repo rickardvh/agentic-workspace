@@ -15,7 +15,6 @@
       "command": "uv run python scripts/check/check_generated_command_packages.py",
       "status": "runnable",
       "source_refs": [
-        "docs/maintainer/contributor-playbook.md",
         "docs/maintainer/test-knowledge-inventory.md"
       ]
     },
@@ -24,7 +23,6 @@
       "command": "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
       "status": "runnable",
       "source_refs": [
-        "docs/maintainer/contributor-playbook.md",
         "docs/maintainer/maintainer-commands.md"
       ]
     },

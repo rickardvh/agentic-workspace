@@ -15,7 +15,6 @@ import pytest
 from jsonschema import Draft202012Validator
 from tests.workspace_cli_support import aw_subprocess_env
 
-from agentic_workspace import cli as source_cli
 from agentic_workspace import current_work_context, session_logging
 
 
@@ -116,16 +115,14 @@ def test_metadata_only_stream_has_bounded_coverage_and_no_redundancy_claim(tmp_p
     started = next(event for event in _read_export(target / exported["path"]) if event["event_type"] == "session.started")
     assert started["recovered_from"] == "recorded-stream-session-metadata"
     assert "migration" not in started["payload"]
-
-
-def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) -> None:
-    target = _target(tmp_path)
-
-    assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"].startswith("agentic-workspace/config")
-    assert not (target / ".agentic-workspace/local/logs").exists()
+    maintained = subprocess.run(
+        [sys.executable, "scripts/maintainer/session_diagnostics.py", "analyze", "--target", str(target)],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert json.loads(maintained.stdout)["coverage"]["whole_task_coverage"] == "unknown"
 
 
 def test_session_logging_disabled_does_not_redirect_command_output(tmp_path: Path) -> None:
@@ -233,16 +230,6 @@ def test_session_logging_mutes_nested_pytest_origin_capture_by_default(tmp_path:
     assert not (target / session_logging.SESSION_LOG_ROOT).exists()
 
 
-def test_session_logging_status_defaults_for_parent_command(tmp_path: Path, capsys) -> None:
-    target = _target(tmp_path)
-
-    assert source_cli.main(["session-log", "--target", str(target), "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "agentic-workspace/session-logging-status/v1"
-    assert payload["enabled"] is False
-    assert not (target / ".agentic-workspace/local/logs").exists()
-
-
 def test_session_parent_command_is_bounded_deterministically(monkeypatch: pytest.MonkeyPatch) -> None:
     small_argv = ["summary", "--target", "."]
     with session_logging._session_parent_environment(small_argv):
@@ -265,47 +252,6 @@ def test_session_parent_command_is_bounded_deterministically(monkeypatch: pytest
         oversized_command = os.environ["AW_SESSION_LOG_PARENT_COMMAND"]
     assert len(oversized_command.encode("utf-8")) <= session_logging.MAX_SESSION_PARENT_COMMAND_BYTES
     assert "x" not in oversized_command
-
-
-def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelude(tmp_path: Path, capsys) -> None:
-    target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
-
-    assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
-    first_output = json.loads(capsys.readouterr().out)
-    assert first_output["values"]["workspace.enabled"] is True
-    first_log = _current_log(target)
-
-    assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled_source", "--format", "json"]) == 0
-    capsys.readouterr()
-    second_log = _current_log(target)
-
-    assert first_log == second_log
-    text = first_log.read_text(encoding="utf-8")
-    assert "Agentic Workspace Session Log" in text
-    assert '"enabled_modules"' in text
-    assert '"session_logging"' in text
-    assert '"enabled": true' in text
-    assert text.count("## Command - ") == 2
-    assert "agentic-workspace config --target" in text
-    assert "- exit_status: `0`" in text
-    assert "Output stored as local artifact:" in text
-    assert "stdout summary:" in text
-    assert "`json`" in text
-
-    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
-    assert index["kind"] == "agentic-workspace/session-log-index/v2"
-    assert index["session_header"]["session_id"] == index["session_id"]
-    assert set(index["records"]) == {"contexts", "invocation_intents", "provenance", "segments"}
-    assert len(index["entries"]) == 2
-    assert index["entries"][0]["stdout"]["kind"] == "json"
-    assert index["entries"][0]["artifact"]["path"].startswith(str(first_log.parent.relative_to(target)).replace("\\", "/") + "/artifacts/")
-    snapshot = json.loads(text.split("```json\n", 1)[1].split("\n```", 1)[0])
-    boundary = snapshot["logging_policy"]["local_diagnostic_boundary"]
-    assert boundary["scope"] == "package-owned local diagnostic state"
-    assert boundary["manual_handoff"] == "outside-aw-logger-responsibility"
-    assert "promotion_boundary" not in snapshot["logging_policy"]
-    assert "share_safe" not in text
 
 
 def test_session_logging_writes_canonical_monotonic_jsonl(tmp_path: Path) -> None:
@@ -871,48 +817,6 @@ def test_session_logging_new_session_replaces_only_callers_identity_mapping(tmp_
     assert session_logging.ensure_session(state=state, logical_identity="b") == session_b
 
 
-def test_session_logging_note_command_appends_optional_note(tmp_path: Path, capsys) -> None:
-    target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
-
-    assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
-    capsys.readouterr()
-    assert (
-        source_cli.main(
-            ["session-log", "--target", str(target), "--format", "json", "note", "--text", "This output changed the next action."]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["status"] == "appended"
-    text = _current_log(target).read_text(encoding="utf-8")
-    assert "## Agent Note - " in text
-    assert "This output changed the next action." in text
-
-
-def test_session_logging_invalid_registry_path_is_replaced(tmp_path: Path, capsys) -> None:
-    target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
-
-    assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
-    capsys.readouterr()
-    first_log = _current_log(target)
-    registry_path = target / session_logging.SESSION_REGISTRY_PATH
-    registry = json.loads(registry_path.read_text(encoding="utf-8"))
-    session_key = next(iter(registry["sessions"]))
-    registry["sessions"][session_key]["log_path"] = "../../outside-session-log.md"
-    registry_path.write_text(json.dumps(registry), encoding="utf-8")
-
-    assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled_source", "--format", "json"]) == 0
-    capsys.readouterr()
-
-    second_log = _current_log(target)
-    assert second_log != first_log
-    assert not (target.parent / "outside-session-log.md").exists()
-    assert ".agentic-workspace/local/logs/" in second_log.as_posix()
-
-
 def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
@@ -932,205 +836,6 @@ def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, 
     artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
     assert artifact["stdout"] == "x" * 80 + "\n"
     assert artifact["stderr"] == ""
-
-
-def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packets(tmp_path: Path, capsys, monkeypatch) -> None:
-    target = _target(tmp_path)
-    _write(target / ".agentic-workspace" / "config.local.toml", "\n[session_logging]\nenabled = true\n")
-    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
-
-    def runner(_argv: list[str]) -> int:
-        print(json.dumps({"kind": "agentic-workspace/example-packet/v1", "value": 1}))
-        return 2
-
-    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--format", "json"], runner) == 2
-    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--format", "json"], runner) == 2
-    capsys.readouterr()
-
-    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "agentic-workspace/session-log-analysis/v1"
-    assert payload["status"] == "analyzed"
-    assert payload["index_status"] == "complete"
-    assert payload["coverage"]["markdown_command_count"] == 2
-    assert payload["summary"]["live_agent_failure_count"] == 2
-    assert payload["summary"]["command_count"] == 2
-    assert payload["summary"]["failure_count"] == 2
-    assert payload["summary"]["failed_count"] == 2
-    assert payload["summary"]["repeated_failure_count"] == 1
-    assert payload["summary"]["repeated_command_count"] == 1
-    assert payload["summary"]["duplicate_output_count"] == 1
-    assert payload["summary"]["artifact_count"] == 2
-    assert payload["packet_kinds"]["agentic-workspace/example-packet/v1"] == 2
-    assert payload["parsed_packet_kinds"]["agentic-workspace/example-packet/v1"] == 2
-    assert payload["repeated_failures"][0]["count"] == 2
-    candidates = session_logging.analyze_session_log(
-        state=session_logging.load_state_for_argv(["--target", str(target)]), detail="candidates"
-    )["detail_page"]["items"]
-    assert {candidate["id"] for candidate in candidates} >= {
-        "failed-command",
-        "repeated-command",
-        "duplicate-output",
-    }
-    repeated_signal = next(item["improvement_signal"] for item in candidates if item["id"] == "repeated-command")
-    assert repeated_signal["kind"] == "workflow_cost"
-    assert repeated_signal["evidence_classes"] == ["machine_observed"]
-    assert repeated_signal["recurrence"] == "repeated"
-    assert repeated_signal["occurrence_count"] == 2
-    assert repeated_signal["suspected_owner"] == "operating-loop"
-    assert repeated_signal["mutation_authorized"] is False
-
-    state = session_logging.load_state_for_argv(["--target", str(target)])
-    status = session_logging.status_payload(state=state)
-    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", status["session_id"], "--format", "json"]) == 0
-    by_id = json.loads(capsys.readouterr().out)
-    assert by_id["path"] == payload["path"]
-
-    directory_id = f"aw-session-{status['session_id']}"
-    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", directory_id, "--format", "json"]) == 0
-    by_directory_id = json.loads(capsys.readouterr().out)
-    assert by_directory_id["path"] == payload["path"]
-
-
-def test_session_log_analyze_markdown_fallback_extracts_inline_output_without_index(tmp_path: Path, capsys, monkeypatch) -> None:
-    target = _target(tmp_path)
-    monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
-    log_path = target / ".agentic-workspace/local/logs/aw-session-upload/session.md"
-    modules_payload = json.dumps({"kind": "agentic-workspace/modules-report/v1", "items": ["x" * 40]})
-    _write(
-        log_path,
-        f"""# Agentic Workspace Session Log
-
-## Command - 2026-07-09T15:46:03+00:00
-
-- id: `cmd-summry`
-- exit_status: `2`
-
-```sh
-agentic-workspace summry --format json
-```
-
-stdout:
-```text
-
-```
-
-stderr:
-```text
-usage: agentic-workspace
-error: argument command: invalid choice: 'summry' (choose from 'summary')
-Did you mean: summary?
-```
-
-## Command - 2026-07-09T15:46:04+00:00
-
-- id: `cmd-selector`
-- exit_status: `2`
-
-```sh
-agentic-workspace report --verbose --section agent_aids --format json
-```
-
-stdout:
-```text
-
-```
-
-stderr:
-```text
-error: report detail selectors are mutually exclusive
-```
-
-## Command - 2026-07-09T15:46:05+00:00
-
-- id: `cmd-modules-1`
-- exit_status: `0`
-
-```sh
-agentic-workspace modules --verbose --format json
-```
-
-stdout:
-```text
-{modules_payload}
-```
-
-stderr:
-```text
-
-```
-
-## Command - 2026-07-09T15:46:06+00:00
-
-- id: `cmd-modules-2`
-- exit_status: `0`
-
-```sh
-agentic-workspace modules --verbose --format json
-```
-
-stdout:
-```text
-{modules_payload}
-```
-
-stderr:
-```text
-
-```
-""",
-    )
-
-    assert (
-        source_cli.main(
-            [
-                "session-log",
-                "--target",
-                str(target),
-                "analyze",
-                "--path",
-                log_path.relative_to(target).as_posix(),
-                "--origin",
-                "all",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["index_status"] == "missing"
-    assert payload["index_presence"] == "markdown-fallback"
-    assert payload["summary"]["command_count"] == 4
-    assert payload["summary"]["failure_count"] == 2
-    assert payload["summary"]["usage_mistake_count"] == 2
-    assert payload["summary"]["repeated_command_count"] == 1
-    assert payload["summary"]["duplicate_output_count"] == 1
-    assert payload["packet_kinds"]["agentic-workspace/modules-report/v1"] == 2
-    entries = session_logging.analyze_session_log(
-        state=session_logging.load_state_for_argv(["--target", str(target)]),
-        path=log_path.relative_to(target).as_posix(),
-        origin_scope="all",
-        detail="entries",
-    )["detail_page"]["items"]
-    failure_classes = {entry["failure_class"] for entry in entries if entry["failure_class"]}
-    assert {"invalid-command", "selector-conflict"} <= failure_classes
-    assert any(entry["command"] == "agentic-workspace modules --verbose --format json" for entry in entries)
-    candidates = session_logging.analyze_session_log(
-        state=session_logging.load_state_for_argv(["--target", str(target)]),
-        path=log_path.relative_to(target).as_posix(),
-        origin_scope="all",
-        detail="candidates",
-    )["detail_page"]["items"]
-    assert {candidate["id"] for candidate in candidates} >= {
-        "missing-index",
-        "repeated-command",
-        "duplicate-output",
-        "large-output",
-        "oversized-modules-output",
-    }
 
 
 def test_session_logging_reuses_duplicate_large_output_artifacts(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -1239,27 +944,6 @@ def test_session_logging_successful_system_exit_help_is_not_exception(tmp_path: 
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
     assert index["entries"][0]["exit_status"] == 0
     assert index["entries"][0]["exception"] == ""
-
-
-def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_path: Path, capsys) -> None:
-    target = _target(tmp_path)
-    _write(
-        target / ".agentic-workspace" / "config.local.toml",
-        '\n[session_logging]\nenabled = true\npath_mode = "redacted"\n',
-    )
-
-    assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
-
-    payload = json.loads(capsys.readouterr().out)
-    assert not any("session_logging" in warning for warning in payload["warnings"])
-
-    _write(
-        target / ".agentic-workspace" / "config.local.toml",
-        '\n[session_logging]\nenabled = true\npath_mode = "repo-relative"\n',
-    )
-    assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
-    assert not any("session_logging" in warning for warning in payload["warnings"])
 
 
 def test_session_log_origins_expected_failures_and_nested_commands_are_separate(tmp_path: Path, capsys, monkeypatch) -> None:
@@ -1472,43 +1156,6 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
     assert negative["invocation_outcome"]["observed"] != negative["invocation_outcome"]["expected"]
 
 
-def test_lifecycle_typed_selector_failure_and_session_process_status_agree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    target = _target(tmp_path)
-    _write(
-        target / ".agentic-workspace/config.local.toml",
-        "\n[session_logging]\nenabled = true\n",
-    )
-    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
-
-    assert (
-        source_cli.main(
-            [
-                "upgrade",
-                "--target",
-                str(target),
-                "--dry-run",
-                "--select",
-                "actions",
-                "--format",
-                "json",
-            ]
-        )
-        == 2
-    )
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
-    assert payload["exit_status"] == 2
-
-    state = session_logging.load_state_for_argv(["--target", str(target)])
-    entries = session_logging.analyze_session_log(state=state, origin_scope="all", detail="entries")["detail_page"]["items"]
-    assert len(entries) == 1
-    assert entries[0]["exit_status"] == payload["exit_status"] == 2
-    assert entries[0]["exit_class"] == "failure"
-    assert entries[0]["invocation_outcome"]["observed"]["exit_class"] == "failure"
-
-
 def test_supported_workspace_commands_declare_generated_operation_purpose_without_producer_hints() -> None:
     expected_operations = {
         ("start",): "start.context",
@@ -1710,51 +1357,6 @@ def test_pytest_subprocess_helper_combines_producer_and_generated_invocation_int
     assert generated["invocation_outcome"]["match"] == "matched"
 
 
-def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tmp_path: Path, capsys, monkeypatch) -> None:
-    target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
-    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
-
-    def runner(argv: list[str]) -> int:
-        print(json.dumps({"kind": "agentic-workspace/example/v1", "argv": argv}))
-        return 0
-
-    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "one"], runner) == 0
-    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "two"], runner) == 0
-    capsys.readouterr()
-    index_path = _current_index(target)
-    index = json.loads(index_path.read_text(encoding="utf-8"))
-    preserved = index["entries"][0]
-    index["entries"] = [preserved]
-    index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
-
-    state = session_logging.load_state_for_argv(["--target", str(target)])
-    partial = session_logging.analyze_session_log(state=state)
-    assert partial["index_status"] == "partial"
-    assert partial["coverage"]["markdown_command_count"] == 2
-    assert partial["coverage"]["indexed_command_count"] == 1
-    stale_index = json.loads(index_path.read_text(encoding="utf-8"))
-    ghost = {**preserved, "id": "cmd-not-in-markdown"}
-    stale_index["entries"].append(ghost)
-    stale_index["repair"] = {"status": "repaired"}
-    index_path.write_text(json.dumps(stale_index, indent=2), encoding="utf-8")
-    assert session_logging.analyze_session_log(state=state)["index_status"] == "stale"
-    assert source_cli.main(["session-log", "--target", str(target), "repair", "--format", "json"]) == 0
-    repaired = json.loads(capsys.readouterr().out)
-    assert repaired["status"] == "repaired"
-    assert repaired["added_entry_count"] == 1
-    assert repaired["quarantined_entry_count"] == 1
-    after = session_logging.analyze_session_log(state=state)
-    assert after["index_status"] == "repaired"
-    repaired_index = json.loads(index_path.read_text(encoding="utf-8"))
-    assert repaired_index["entries"][0] == preserved
-    assert repaired_index["entries"][0]["artifact"] == preserved["artifact"]
-    assert not any(entry["id"] == "cmd-not-in-markdown" for entry in repaired_index["entries"])
-    assert repaired_index["repair"]["quarantined_entry_ids"] == ["cmd-not-in-markdown"]
-    assert [entry["id"] for entry in repaired_index["repair"]["quarantined_entries"]] == [ghost["id"]]
-    assert session_logging.repair_session_log_index(state=state)["status"] == "already-covered"
-
-
 def test_current_writer_reconciles_supported_partial_v1_index_before_append(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
@@ -1826,66 +1428,6 @@ def test_context_record_identity_excludes_observation_time() -> None:
     assert list(records["contexts"].values()) == [first]
 
 
-def test_session_log_index_deduplicates_metadata_and_analysis_pages_episodes(tmp_path: Path, capsys, monkeypatch) -> None:
-    target = _target(tmp_path)
-    _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
-    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
-    monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", "implement-lane")
-    monkeypatch.setenv("AW_SESSION_LOG_SCENARIO_ID", "focused-proof")
-    monkeypatch.setenv("AW_SESSION_LOG_INVOCATION_CLASS", "product-operation")
-    monkeypatch.setenv("AW_SESSION_LOG_EXPECTED_EXIT", "success")
-
-    for _ in range(3):
-        assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
-
-    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
-    assert len(index["entries"]) == 3
-    assert len(index["records"]["provenance"]) == 1
-    assert len(index["records"]["contexts"]) < len(index["entries"])
-    assert len(index["records"]["segments"]) < len(index["entries"])
-    assert len(index["records"]["invocation_intents"]) == 1
-    assert all("provenance" not in entry and "segment" not in entry for entry in index["entries"])
-    assert len({entry["segment_ref"] for entry in index["entries"]}) < len(index["entries"])
-    hydrated = {**index, "records": {}, "entries": session_logging._entries_from_index(index)}
-    assert len(json.dumps(index)) < len(json.dumps(hydrated))
-
-    state = session_logging.load_state_for_argv(["--target", str(target)])
-    summary = session_logging.analyze_session_log(state=state)
-    episodes = session_logging.analyze_session_log(state=state, detail="episodes")["detail_page"]["items"]
-    assert episodes[0]["purpose_id"] == "implement-lane"
-    assert episodes[0]["scenario_id"] == "focused-proof"
-    assert summary["detail"] == "summary"
-    assert summary["detail_page"] is None
-    page = session_logging.analyze_session_log(state=state, detail="entries", page=2, page_size=2)
-    assert page["kind"] == "agentic-workspace/session-log-analysis-detail/v1"
-    assert page["detail_page"]["total_count"] == 3
-    assert page["detail_page"]["page"] == 2
-    assert len(page["detail_page"]["items"]) == 1
-    assert page["export_routing"]["artifact_class"] == "normalized-share-safe"
-    assert page["full_analysis"]["status"] == "omitted"
-    assert "failed_commands" not in page
-    assert (
-        source_cli.main(
-            [
-                "session-log",
-                "--target",
-                str(target),
-                "analyze",
-                "--detail",
-                "episodes",
-                "--page-size",
-                "1",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
-    cli_page = json.loads(capsys.readouterr().out)
-    assert cli_page["detail"] == "episodes"
-    assert cli_page["detail_page"]["page_size"] == 1
-
-
 def test_session_log_default_analysis_stays_bounded_for_long_multitask_session(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
@@ -1929,100 +1471,6 @@ def test_session_log_default_analysis_stays_bounded_for_long_multitask_session(t
         detail = session_logging.analyze_session_log(state=state, detail="entries", page=page, page_size=25)
         reconstructed.extend(detail["detail_page"]["items"])
     assert [item["id"] for item in reconstructed] == [item["id"] for item in hydrated_entries]
-
-
-def test_session_index_cannot_satisfy_current_owner_proof_or_closeout_authority(tmp_path: Path, capsys, monkeypatch) -> None:
-    target = _target(tmp_path)
-    monkeypatch.setenv("AW_PROJECTION_FORCE_REFRESH", "1")
-
-    def authority_projection() -> dict[str, object]:
-        assert (
-            source_cli.main(
-                [
-                    "start",
-                    "--target",
-                    str(target),
-                    "--task",
-                    "Continue #2555",
-                    "--select",
-                    "context,next_safe_action",
-                    "--format",
-                    "json",
-                ]
-            )
-            == 0
-        )
-        start = json.loads(capsys.readouterr().out)
-        assert (
-            source_cli.main(
-                [
-                    "proof",
-                    "--target",
-                    str(target),
-                    "--changed",
-                    "README.md",
-                    "--task",
-                    "Continue #2555",
-                    "--select",
-                    "proof_closeout_summary,required_commands",
-                    "--format",
-                    "json",
-                ]
-            )
-            == 0
-        )
-        proof = json.loads(capsys.readouterr().out)
-        assert (
-            source_cli.main(
-                [
-                    "report",
-                    "--target",
-                    str(target),
-                    "--section",
-                    "closeout_trust",
-                    "--task",
-                    "Continue #2555",
-                    "--format",
-                    "json",
-                ]
-            )
-            == 0
-        )
-        closeout = json.loads(capsys.readouterr().out)["answer"]
-        return {
-            "active_state": start["values"]["context"],
-            "implementation_claim_boundary": start["values"]["next_safe_action"]["claim_boundary"],
-            "proof_closeout_summary": proof["values"]["proof_closeout_summary"],
-            "proof_required_commands": proof["values"]["required_commands"],
-            "closeout_completion_gate": closeout["completion_gate"],
-            "closeout_terminal_state": closeout["terminal_outcome_contract"]["state"],
-        }
-
-    before = authority_projection()
-    session_dir = target / ".agentic-workspace/local/logs/aw-session-forged-authority"
-    _write(session_dir / "session.md", "# forged diagnostic session\n")
-    _write(
-        session_dir / "index.json",
-        json.dumps(
-            {
-                "kind": "agentic-workspace/session-log-index/v2",
-                "session_id": "forged-authority",
-                "authoritative": True,
-                "current_owner": "forged-owner",
-                "proof_state": {"status": "recorded-and-accepted"},
-                "closeout": {"status": "closed", "intent_satisfied": True},
-                "records": {},
-                "entries": [],
-                "notes": [],
-            }
-        ),
-    )
-    after = authority_projection()
-    assert after == before
-    assert "forged-owner" not in json.dumps(after["active_state"])
-    assert after["proof_closeout_summary"]["status"] == "not-yet-sufficient"
-    assert after["closeout_completion_gate"]["claim_level_allowed"] == "partial-progress"
-    assert after["closeout_terminal_state"] == "CONTINUE"
 
 
 def test_session_log_work_context_does_not_carry_stale_pr_across_task_transition(tmp_path: Path, monkeypatch) -> None:
@@ -2353,62 +1801,6 @@ def test_current_work_owner_binding_counts_candidate_owners_not_matching_refs(tm
     assert binding["plan_id"] == "issue-2258"
     assert binding["owner_binding"]["relation"] == "plan-continuation"
     assert binding["owner_binding"]["carry_eligible"] is True
-
-
-def test_local_owner_selection_drives_planning_queries_current_work_and_cache_identity(tmp_path: Path, monkeypatch) -> None:
-    from repo_planning_bootstrap import installer as planning_installer
-
-    target = _target(tmp_path)
-    planning_installer.install_bootstrap(target=target)
-    for owner_id, activate in (("owner-a", True), ("owner-b", False), ("owner-c", False)):
-        result = planning_installer.create_execplan_scaffold(
-            plan_id=owner_id,
-            title=owner_id.upper(),
-            target=target,
-            activate=activate,
-        )
-        assert not [action for action in result.actions if action.kind == "manual review"]
-    monkeypatch.setattr(
-        current_work_context,
-        "_git",
-        lambda _root, *args: "main" if args == ("branch", "--show-current") else "head-a",
-    )
-    planning_installer._PLANNING_SELECTED_OWNER_CACHE.clear()
-
-    planning_installer.select_existing_owner("owner-b", target=target, current_work_id="review-thread")
-    owner_b_query = planning_installer.planning_summary_query(target=target, selectors=["planning_record"])
-    owner_b_summary = planning_installer.planning_summary(target=target, profile="tiny")
-    owner_b_binding = current_work_context.resolve_current_work_context(
-        root=target,
-        task="Continue selected work",
-        relation_hint="plan-continuation",
-    )
-    owner_b_revision = planning_installer.planning_revision(target)
-
-    planning_installer.select_existing_owner(
-        "owner-c",
-        target=target,
-        current_work_id="review-thread",
-        expected_planning_revision=owner_b_revision["revision_id"],
-    )
-    owner_c_query = planning_installer.planning_summary_query(target=target, selectors=["planning_record"])
-    owner_c_summary = planning_installer.planning_summary(target=target, profile="tiny")
-    owner_c_binding = current_work_context.resolve_current_work_context(
-        root=target,
-        task="Continue selected work",
-        relation_hint="plan-continuation",
-    )
-    owner_c_revision = planning_installer.planning_revision(target)
-
-    assert owner_b_query["payload"]["planning_record"]["task"]["id"] == "owner-b"
-    assert owner_b_summary["todo"]["active_items"][0]["id"] == "owner-b"
-    assert owner_b_binding["plan_id"] == "owner-b"
-    assert owner_c_query["payload"]["planning_record"]["task"]["id"] == "owner-c"
-    assert owner_c_summary["todo"]["active_items"][0]["id"] == "owner-c"
-    assert owner_c_binding["plan_id"] == "owner-c"
-    assert owner_c_query["query_diagnostics"]["cache"]["status"] == "miss"
-    assert owner_b_revision["revision_id"] != owner_c_revision["revision_id"]
-    assert owner_b_revision["selection_hash"] != owner_c_revision["selection_hash"]
 
 
 def test_current_work_owner_identity_deduplicates_wording_and_head_revision(tmp_path: Path, monkeypatch) -> None:

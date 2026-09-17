@@ -48,13 +48,7 @@ agentic-workspace start --target ./repo --format json
 
 Use a projection only when the compact answer, task shape, or closeout question needs it:
 
-```bash
-agentic-workspace report --target ./repo --section completion_contract --format json
-agentic-workspace report --target ./repo --section external_evidence_safety --format json
-agentic-workspace report --target ./repo --section workflow_compliance_summary --format json
-agentic-workspace report --target ./repo --section continuation_next_actions --format json
-agentic-workspace report --target ./repo --section section_catalog --format json
-```
+Use the current `start` result and its exact owner request/action; see the [native CLI catalogue](/docs/reference/cli-catalogue.md).
 
 For closeout, preserve the completion boundary explicitly:
 

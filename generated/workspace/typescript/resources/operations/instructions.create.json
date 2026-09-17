@@ -124,7 +124,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "description": "Scaffold results preserve the no-overwrite fields; adaptation results additionally expose status, mutation_applied, expected/current/post authority revisions, owner admission, validation status/failures, and rollback restoration fields.",
     "kind": "text-or-json",
@@ -164,7 +164,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Create one scoped Markdown instruction without overwriting an existing file, or apply one explicitly owner-admitted revision-guarded guidance append to an existing canonical instruction.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Create one scoped Markdown instruction without overwriting an existing file, or apply one explicitly owner-admitted revision-guarded guidance append to an existing canonical instruction.",
   "writes": [
     {
       "description": "one new scoped instruction scaffold",

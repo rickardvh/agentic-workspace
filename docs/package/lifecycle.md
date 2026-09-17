@@ -1,59 +1,15 @@
-# Lifecycle And Context Commands
+# Repository integration lifecycle
 
-The `agentic-workspace` CLI has two jobs:
+Configuration owns first adoption, refresh, removal, and interrupted recovery through current requests and actions returned by `start`. The native CLI catalogue remains the command authority; historical `init`, `install`, `upgrade`, and `uninstall` are not public commands.
 
-- mutate managed repository surfaces through explicit lifecycle commands;
-- answer compact context questions so agents do not need to scan raw files first.
+In a plain Git working tree, resolve `start` and follow Configuration's `repository_adoption_request`. Select its exact adoption request, inspect the proposed files and preserved state, supply the authorization judgment, and invoke the returned action. Existing user instructions remain outside the managed fence. No config, optional modules, Planning, Memory, or Verification state is created.
 
-## Lifecycle Commands
+An absent `.agentic-workspace/local/.gitignore` receives `*` so the local effect records remain ignored in a plain host. Existing local ignore policy is preserved. The local rule survives removal with the independent machine-local state.
 
-| Command | Role | Mutates files | Use when |
-| --- | --- | --- | --- |
-| `init` | conservative bootstrap or adopt front door | yes | setting up a repo from a preset |
-| `install` | install selected modules | yes | adding one or more modules explicitly |
-| `upgrade` | refresh managed surfaces | yes | updating package-managed files in an installed repo |
-| `uninstall` | remove managed surfaces conservatively | yes | removing the workspace install or selected modules |
-| `status` | read installed module state | no | checking what is installed |
-| `doctor` | inspect drift and remediation | no | diagnosing missing, stale, or conflicting surfaces |
+Repeat adoption to converge the same public footprint. A current footprint is a no-op. A stale request or modified owned surface requires fresh resolution; unknown and edited content is preserved. Retired source-maintenance payload is removed only when its bytes match the contract's exact known preimage.
 
-Mutating commands are conservative. They operate on package-owned surfaces, managed fences, and module-owned directories, and report manual-review cases instead of blindly rewriting repo-owned content.
+Removal uses the same discovery and exact removal request, with an explicit preserve disposition for independent repository, domain, and local state. Remove authenticated native skill-discovery links through their existing Configuration requests first. Removal preserves unknown files and all text outside the managed instruction fence. It does not reset domain history or delete the `.agentic-workspace` tree recursively.
 
-`init` and `install` use the necessary-surface footprint by default. They write repo-owned config/startup, a compact adoption receipt, and the smallest selected module state anchors while preserving durable pre-existing Planning, Memory, and Verification state. Generic package docs, templates, schemas, bundled skills, payload provenance, and upgrade-source provenance remain package-owned and are read from the installed package, dev dependency, editable install, or source checkout at runtime.
+An interrupted effect exposes an exact recovery request bound to its original custody and preimages. Recovery accepts only the recorded preimage or intended postimage. A conflicting edit is preserved. After removal, deliberate adoption works again without a tombstone reset.
 
-Use `--mirror-payload` only when a host repo explicitly wants the full package payload checked in for offline or tool-agnostic operation. Ordinary handoff files are written under `.agentic-workspace/local/scratch/` and should not become durable tracked state.
-
-Existing repositories that adopted AW before the necessary-surface default may still have checked-in generic package payload. Inspect that footprint with `agentic-workspace report --target . --section bootstrap_footprint --format json`. The dry-run classifies exact preserve, remove, and receipt-write actions. Apply the reviewed plan with `agentic-workspace upgrade --target . --to-necessary-surfaces --format json`. The migration preserves repo-owned config/startup and adopted Planning, Memory, and Verification state, removes known package-owned docs/templates/schemas/skill trees/provenance, refreshes the adoption receipt, and refuses to reduce an explicit full-payload mirror receipt automatically.
-
-## Context Commands
-
-| Command | First question answered |
-| --- | --- |
-| `start` | What is the minimum safe startup context for this repository? |
-| `summary` | What active planning or handoff state matters now? |
-| `preflight` | What startup, config, and active state should a takeover load together? |
-| `report` | What installed modules, warnings, selectors, and next actions are visible? |
-| `proof` | Which proof or validation lane fits these changed paths? |
-| `ownership` | Which surface owns this concern or path? |
-| `config` | What repo and local workspace posture is resolved now? |
-| `defaults` | What default policy or routing contract answers this class of question? |
-| `modules` | Which modules are available or installed? |
-| `skills` | Which package or repo skills are registered for this task? |
-
-These commands are router views over checked-in state and package contracts. They should be queried before opening raw planning, memory, ownership, or contract files. When known sources may change task interpretation, proof, work shape, or completion claims, commands may surface compact [pre-work knowledge gates](knowledge-gates.md) instead of broad reading lists.
-
-The command list is not the ordinary workflow. The canonical [package overview](overview.md) owns the `resolve -> act -> reconcile` model; the generated [current CLI catalogue](../reference/cli-catalogue.md) owns exact command classification.
-
-Exact output contracts are documented in the generated [Startup context](../reference/startup-context.md), [Workspace report](../reference/workspace-report.md), [Workspace config](../reference/workspace-config.md), [Workspace local override](../reference/workspace-local-override.md), [Proof selection rules](../reference/proof-selection-rules.md), and [Preflight policy](../reference/preflight-policy.md) references.
-
-## Optional Diagnostic Commands
-
-Some commands are useful in advanced host repositories but are not ordinary startup input:
-
-- `setup`: agent-routed post-bootstrap reconciliation detail. Ordinary users begin with `start`; fresh or stale readiness returns this exact continuation when needed, so users do not discover or administer `setup` manually.
-- `reconcile`: stale planning state against provider-agnostic external work evidence.
-- `external-intent refresh-github`: optional GitHub issue evidence refresh.
-- `note-delegation-outcome`: local-only delegation outcome tuning.
-
-## Command Contracts
-
-The declared root command surface lives in `src/agentic_workspace/contracts/cli_commands.json`. Use the [current CLI catalogue](../reference/cli-catalogue.md) for values and [CLI commands](../reference/cli-commands.md) for schema shape. Runtime behavior remains in the package code.
+See the [public surface catalogue](../reference/installed-surface-catalogue.md) for current file ownership and the [source-maintenance inventory](../reference/source-maintenance-surface-catalogue.md) for historical maintenance profiles. Those profiles do not describe the public host contract.

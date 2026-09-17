@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def synchronize(*, check: bool = False) -> list[str]:
-    manifest = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    manifest = json.loads((ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
     payload = ROOT / "src/agentic_workspace/_payload"
     from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
 

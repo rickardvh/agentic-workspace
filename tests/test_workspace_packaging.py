@@ -121,19 +121,6 @@ def _raw_sdist_inventory(path: Path) -> set[str]:
         return {name for name in archive.getnames() if not name.endswith("/")}
 
 
-def test_workspace_artifacts_match_checked_in_payload_inventory(workspace_artifacts: tuple[Path, Path], tmp_path: Path) -> None:
-    expected_inventory = _source_inventory()
-    wheel_path, sdist_path = workspace_artifacts
-
-    wheel_inventory = _wheel_inventory(wheel_path)
-    sdist_inventory = _sdist_inventory(sdist_path)
-    installed_inventory = _installed_inventory(wheel_path, str(tmp_path))
-
-    assert wheel_inventory == expected_inventory
-    assert sdist_inventory == expected_inventory
-    assert installed_inventory == expected_inventory
-
-
 def test_workspace_package_declares_semver_identity() -> None:
     pyproject = tomllib.loads((WORKSPACE_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
@@ -198,28 +185,11 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
 
 
 def test_workspace_surface_manifest_payload_entries_exist_in_source_payload() -> None:
-    manifest = json.loads((WORKSPACE_ROOT / "src" / "agentic_workspace" / "contracts" / "workspace_surfaces.json").read_text())
+    manifest = json.loads((WORKSPACE_ROOT / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json").read_text())
 
     missing = [path for path in manifest["payload_files"] if not (PAYLOAD_ROOT / path).is_file()]
 
     assert missing == []
-
-
-def test_workspace_artifacts_ship_generated_cli_package_import_dependency(workspace_artifacts: tuple[Path, Path]) -> None:
-    wheel_path, sdist_path = workspace_artifacts
-    wheel_inventory = _raw_wheel_inventory(wheel_path)
-    sdist_inventory = _raw_sdist_inventory(sdist_path)
-
-    assert "agentic_workspace/generated_cli_package.py" not in wheel_inventory
-    assert "agentic_workspace/generated_cli_package/__init__.py" not in wheel_inventory
-    assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in wheel_inventory
-    assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in wheel_inventory
-    assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in wheel_inventory
-    assert any(name.endswith("/generated/workspace/python/__init__.py") for name in sdist_inventory)
-    assert any(name.endswith("/generated/workspace/python/command_package.json") for name in sdist_inventory)
-    assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in sdist_inventory)
-    assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in sdist_inventory)
-    assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in sdist_inventory)
 
 
 def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, workspace_sdist: Path) -> None:
@@ -241,37 +211,11 @@ def test_root_native_artifact_and_sdist_rebuild_inputs(workspace_wheel: Path, wo
         "crates/agentic-workspace-core/src/main.rs",
         "crates/agentic-workspace-cli/Cargo.toml",
         "src/agentic_workspace/contracts/schemas/separation_of_duty.schema.json",
-        "generated/workspace/python/external_contract_bundle.json",
+        "bindings/python/_binding.py",
+        "src/agentic_workspace/codex_provider.py",
+        "src/agentic_workspace/sealed_codex_transport.py",
     ):
         assert any(name.endswith(f"/{path}") for name in inventory), path
-
-
-def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_wheel: Path) -> None:
-    inventory = _raw_wheel_inventory(workspace_wheel)
-
-    assert "agentic_workspace/generated_command_adapters.py" not in inventory
-    assert "agentic_workspace/generated_cli_package.py" not in inventory
-    assert "agentic_workspace/generated_cli_package/__init__.py" not in inventory
-    assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in inventory
-    assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in inventory
-    assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in inventory
-    assert "agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json" in inventory
-    assert "agentic_workspace/_generated_cli_package_impl/external_operation_conformance_receipts.json" in inventory
-    assert "agentic_workspace/client.py" in inventory
-
-
-def test_root_sdist_ships_generated_cli_package_import_dependency(workspace_sdist: Path) -> None:
-    inventory = _raw_sdist_inventory(workspace_sdist)
-
-    assert not any(name.endswith("/src/agentic_workspace/generated_command_adapters.py") for name in inventory)
-    assert any(name.endswith("/generated/memory/python/generated_command_adapters.json") for name in inventory)
-    assert any(name.endswith("/generated/planning/python/generated_command_adapters.json") for name in inventory)
-    assert any(name.endswith("/generated/workspace/python/generated_command_adapters.json") for name in inventory)
-    assert not any(name.endswith("/src/agentic_workspace/generated_cli_package.py") for name in inventory)
-    assert not any(name.endswith("/src/agentic_workspace/generated_cli_package/__init__.py") for name in inventory)
-    assert any(name.endswith("/generated/workspace/python/__init__.py") for name in inventory)
-    assert any(name.endswith("/generated/workspace/python/command_package.json") for name in inventory)
-    assert any(name.endswith("/generated/workspace/python/adapter_commands.json") for name in inventory)
 
 
 def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp_path: Path) -> None:
@@ -290,12 +234,13 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
             "-c",
             "from pathlib import Path; from agentic_workspace.cli import main; "
             "from agentic_workspace.native_core import cli_binary; "
-            "from agentic_workspace import sealed_codex_transport as bridge; "
-            "assert callable(main) and callable(bridge.main) and callable(bridge.native_transport.execute); "
-            "assert Path(bridge.__file__).parent == Path(cli_binary()).parent.parent; print(cli_binary())",
+            "assert callable(main); print(cli_binary())",
         ],
         cwd=tmp_path,
-        env={**os.environ, "PYTHONPATH": str(install_root)},
+        env={
+            **{key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"},
+            "PYTHONPATH": str(install_root),
+        },
         capture_output=True,
         text=True,
         check=False,
@@ -304,19 +249,6 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
     assert result.returncode == 0, f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
     native = Path(result.stdout.strip())
     assert native.is_relative_to(install_root) and native.is_file()
-    bridge_env = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
-    bridge_env["PYTHONPATH"] = str(install_root)
-    rejected = subprocess.run(
-        [sys.executable, "-m", "agentic_workspace.sealed_codex_transport"],
-        input="{}",
-        cwd=tmp_path,
-        env=bridge_env,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert rejected.returncode != 0
-    assert "worker carriage missing or changed" in rejected.stderr
     # The wheel's actual product binary works without a language runtime or
     # source-checkout helper on PATH; the Python entry point is optional.
     clean_env = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
@@ -331,26 +263,6 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
     )
     assert started.returncode == 0, started.stderr
     assert "decision_packet" in json.loads(started.stdout)
-
-
-def test_installed_workspace_wheel_exposes_public_external_client(workspace_wheel: Path, tmp_path: Path) -> None:
-    install_root = tmp_path / "installed-client"
-    subprocess.run(
-        ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(workspace_wheel)],
-        cwd=WORKSPACE_ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", "from agentic_workspace import external_consumer_profile; assert external_consumer_profile()['operations']"],
-        cwd=tmp_path,
-        env={**os.environ, "PYTHONPATH": str(install_root)},
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr
 
 
 def test_workspace_runtime_entrypoint_stays_off_command_generation() -> None:

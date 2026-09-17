@@ -141,12 +141,33 @@
       "description": "Selector-specific input requirements owned by this operation contract.",
       "items": {
         "type": "object",
-        "required": ["selector", "selector_value", "required_inputs", "semantics"],
+        "required": [
+          "selector",
+          "selector_value",
+          "required_inputs",
+          "semantics"
+        ],
         "properties": {
-          "selector": {"type": "string", "minLength": 1},
-          "selector_value": {"type": "string", "minLength": 1},
-          "required_inputs": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
-          "semantics": {"type": "string", "minLength": 1}
+          "selector": {
+            "type": "string",
+            "minLength": 1
+          },
+          "selector_value": {
+            "type": "string",
+            "minLength": 1
+          },
+          "required_inputs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "semantics": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "additionalProperties": false
       }
@@ -475,7 +496,9 @@
               "oneOf": [
                 {
                   "type": "object",
-                  "required": ["from"],
+                  "required": [
+                    "from"
+                  ],
                   "properties": {
                     "from": {
                       "type": "string",
@@ -487,7 +510,9 @@
                 },
                 {
                   "type": "object",
-                  "required": ["literal"],
+                  "required": [
+                    "literal"
+                  ],
                   "properties": {
                     "literal": {
                       "description": "Literal argument value."
@@ -503,7 +528,10 @@
           "result_admission": {
             "type": "object",
             "description": "Result envelope and statuses accepted when the destination operation returns.",
-            "required": ["kind", "accepted_statuses"],
+            "required": [
+              "kind",
+              "accepted_statuses"
+            ],
             "properties": {
               "kind": {
                 "type": "string",
@@ -533,7 +561,8 @@
       "enum": [
         "draft-contract-only",
         "validated-contract",
-        "runtime-consumed"
+        "runtime-consumed",
+        "source-maintenance-only"
       ],
       "description": "Maturity of the operation contract relative to implementation."
     }

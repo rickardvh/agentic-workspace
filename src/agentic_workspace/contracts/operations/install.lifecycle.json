@@ -4,7 +4,7 @@
   "command_surface": {
     "command": "install"
   },
-  "summary": "Bootstrap selected modules into a target repository.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Bootstrap selected modules into a target repository.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -118,5 +118,5 @@
     "install lifecycle tests remain compatible",
     "install.lifecycle.dry-run.process proves dry-run plan shape and no filesystem writes"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

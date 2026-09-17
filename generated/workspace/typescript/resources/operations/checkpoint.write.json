@@ -108,7 +108,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/local_chat_checkpoint_write_result.schema.json"
@@ -142,7 +142,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Write or refresh the ignored local chat checkpoint.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Write or refresh the ignored local chat checkpoint.",
   "writes": [
     {
       "required": true,

@@ -8,17 +8,7 @@ Use `docs/maintainer/maintainer-commands.md` when you need the literal command t
 
 This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
 
-Use `docs/design-principles.md` when a change affects product shape, ownership, lifecycle behavior, or the amount of ceremony the repo imposes on normal work.
-Use `docs/maintainer/operational-affordance-design.md` when a change affects startup, recovery, proof, closeout, lifecycle, Memory, planning, agent-aid, or other operational surfaces that should carry agents to the next correct action.
-Use `docs/maintainer/dogfooding-feedback.md` when the missing judgment is whether repo friction should become product work, how to classify it, or whether it has earned queue entry.
-Use `docs/maintainer/testing-strategy.md` before adding or pruning tests, especially when a narrow regression could instead become a primitive, fragment, operation, or contract-owned conformance case.
-Use `agentic-workspace defaults --section improvement_intake --format json` when the question is how to route setup findings, dogfooding friction, review findings, validation friction, or Memory improvement signals through one shared decision model.
-Use `.agentic-workspace/docs/compatibility-policy.md` when you need to judge whether a surface is stable, mutable, or generated before making the change.
-Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` when you need the canonical root `init` mode matrix, configuration rules, or prompt semantics.
-Use `.agentic-workspace/docs/execution-flow-contract.md` when you are delegating a bounded slice, handling intent continuity, or managing resumable milestones.
-Use `.agentic-workspace/docs/generated-surface-trust.md` when a change touches generated docs, mirrors, or rerender expectations.
-Use `.agentic-workspace/docs/proof-surfaces-contract.md` when the missing judgment is which proof lane actually answers the current trust question.
-Use `.agentic-workspace/docs/ownership-authority-contract.md` when the missing judgment is who owns a concern or which checked-in surface is authoritative.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 ## Documentation Role Map
 
@@ -44,18 +34,7 @@ Treat `start`, `summary`, `report`, `defaults`, and `preflight` as context-route
 
 Default startup path for an agent maintainer:
 
-1. Read `AGENTS.md`.
-2. If changed paths are already known, run `agentic-workspace implement --changed <paths> --format json` for the smallest bounded implementer context.
-3. Otherwise, run `agentic-workspace start --task "<task>" --format json` for the ordinary compact startup context.
-4. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
-5. If you need the current planning state, ask `agentic-workspace summary --format json` before opening raw planning files.
-6. If you need the combined workspace state, ask `agentic-workspace report --target ./repo --format json` before reading raw module files.
-7. Open `.agentic-workspace/planning/state.toml` only when compact output points there or you are directly maintaining planning state.
-8. If `.agentic-workspace/planning/state.toml` points at an active execplan and the compact surfaces are insufficient, read that plan before editing code.
-9. If you are handing the active slice to another executor, derive the worker contract from `agentic-workspace summary --format json` rather than drafting a fresh ad hoc prompt.
-10. Use `agentic-workspace config --target ./repo --format json` to inspect effective mixed-agent posture and local machine/runtime overrides in `.agentic-workspace/config.local.toml`; use `--select <field.path>` when one field is needed or `--verbose` for broad diagnostics.
-11. Read package-local `AGENTS.md` only for the package you will touch.
-12. Use this playbook to pick the right ownership surface and narrow validation lane.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
 
@@ -114,33 +93,15 @@ Design guardrails:
 
 For execution scaling specifically:
 
-- keep work direct in `todo.active_items` when one coherent pass can finish it and the row can stay at `ID`, `Status`, `Surface`, `Why now`, `Next action`, and `Done when`
-- promote to an execplan when the work gains milestone sequencing, blocker handling, non-obvious validation scope, rollback or migration detail, enough ambiguity that restart would require more than the TODO row, or enough context pressure that a smaller or less capable agent would otherwise have to rediscover the task
-- use `.agentic-workspace/docs/capability-aware-execution.md` when the missing judgment is capability fit rather than ownership: cheap direct path, medium reasoning direct path, stronger planning first, silent shaping into a cheaper slice, delegation-friendly, or stop-and-escalate
-- when capability-aware execution suggests a cleaner but broader solution, treat that as a promotion or escalation decision instead of silently replacing the requested outcome; improve local means, not requested ends
-- when an execplan completes only part of a larger intended outcome, record both `Intent Continuity` and `Required Continuation` before archive; required follow-on must name a checked-in owner surface and activation trigger instead of surviving only in prose or chat
-- do not create an execplan just because a stronger agent is available; use one when the checked-in artifact is likely to save tokens or reduce coordination risk overall
-- when the environment supports multiple agents or models, a stronger one may write a compact execution contract for a smaller one, but that handoff is optional and should stay cheaper than the rediscovery it prevents
-- when a slice is delegated, use `agentic-workspace summary --format json` (the `handoff_contract` view) as the worker-facing contract and pass it to whichever executor is available internally or externally; the repo does not prescribe the executor brand, API, or model
-- if stronger capability keeps seeming necessary for the same class of work, treat that as an improvement-targeting signal for better decomposition, validation, or guidance rather than as a standing instruction to keep raising executor strength
-- if the same human correction keeps repeating for the same class of work, treat that as an improvement-targeting signal for better defaults, contracts, proof, ownership, or handoff rather than as normal conversational steering
-- treat direct execution as a valid success path, then record only the minimum durable residue that outlives the task
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 ## Validation Lanes
 
 Run the narrowest lane that proves the change.
 
-Use `agentic-workspace defaults --format json` first when you need the structured default answer for which lane is enough, when broader checks are needed, and when the work should escalate beyond the narrow proving path.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
-- Root workspace CLI changes: `uv run pytest tests -q`, `uv run ruff check src tests`, `uv run ty check src`
-- Memory package changes: `make sync-memory` once, then `cd packages/memory && uv run pytest <path>` for a focused repro or `make test-memory` for the serial-by-default full-suite lane; use `cd packages/memory && uv run ruff check .` for lint and escalate to `make check-memory` for the full package lane
-- Planning package changes: `make sync-planning` once, then `cd packages/planning && uv run pytest <path>` for a focused repro or `make test-planning` for the serial-by-default full-suite lane; use `cd packages/planning && uv run ruff check .` for lint and escalate to `make check-planning` for the full package lane
-- Maintainer-surface, generated-doc, or installed-contract payload changes: `make maintainer-surfaces`
-- Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
-- Declarative contract manifests or schemas for workspace proof/report/selectors: `uv run python scripts/check/check_contract_tooling_surfaces.py`
-- Generated command package outputs, command-package IR, or the workspace command-generation consumer wrapper: put command behavior examples in `src/agentic_workspace/contracts/conformance/*.json` and reference them from `command_package_ir.json` before adding one-off regression tests; generated Python and TypeScript adapters consume those same contract-owned cases through the shared `command-generation` runner. AW consumes `command-generation` as a released, hash-pinned dev package for ordinary generation/proof, while AW itself remains exercised from this local source checkout for dogfooding. Run `uv run python scripts/check/check_generated_command_packages.py`, then the target-specific conformance lane selected by `uv run agentic-workspace proof --changed <paths> --format json`. For Python-only generated output, run `uv run python scripts/check/check_generated_command_packages.py --python-conformance` and `uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker` serially. For cross-target or TypeScript output, run `uv run python scripts/check/check_generated_command_packages.py --conformance --require-node`, `uv run python scripts/check/check_generated_command_packages.py --docker --require-docker`, and `uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker` serially when Node and Docker are available.
-- Memory note/current-state changes: `uv run agentic-workspace doctor --target . --format json` and `uv run agentic-workspace report --target . --format json`
-- Absolute-path hygiene across tracked files: `make absolute-paths`
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
 
@@ -152,10 +113,7 @@ Final repo sync after package work:
 
 ## Common Routes
 
-- Lifecycle orchestration or root CLI: start at `src/agentic_workspace/` and `README.md`.
-- Memory bootstrap behavior: start at `packages/memory/AGENTS.md`, then `packages/memory/README.md` and `packages/memory/src/`.
-- Planning bootstrap behavior: start at `packages/planning/AGENTS.md`, then `packages/planning/README.md` and `packages/planning/src/`.
-- Planning contract or archive behavior: start with `agentic-workspace summary --format json`; open `.agentic-workspace/planning/state.toml`, the active execplan, or `.agentic-workspace/docs/execution-flow-contract.md` only when the compact answer or the maintenance task points there.
+Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
 
 Generated guidance lives under `tools/`, but the source of truth for that guidance is `.agentic-workspace/planning/agent-manifest.json`. When routing docs drift, update the managed manifest and rerender instead of editing generated files directly.
 

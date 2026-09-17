@@ -6,7 +6,7 @@
     "format_option": "format",
     "subcommand": "retry"
   },
-  "summary": "Return the current retryable external delivery request for failed or pending sinks.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Return the current retryable external delivery request for failed or pending sinks.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -80,5 +80,5 @@
     "evaluation unit tests",
     "operation contract validates against operation.schema.json"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "source-maintenance-only"
 }

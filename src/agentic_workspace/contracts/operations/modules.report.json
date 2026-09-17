@@ -5,7 +5,7 @@
     "command": "modules",
     "format_option": "format"
   },
-  "summary": "List workspace modules available to the orchestrator and installed-module signals for the target repository.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. List workspace modules available to the orchestrator and installed-module signals for the target repository.",
   "classification": "read-only-report",
   "inputs": [
     {
@@ -89,5 +89,5 @@
     "contract registry has one modules operation",
     "modules tests cover compact output, section output, and verbose full output"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

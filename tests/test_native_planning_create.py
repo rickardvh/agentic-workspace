@@ -270,6 +270,24 @@ def test_real_former_owner_can_evolve_after_native_custody(
     answer = quiet["planning"]["requests"][0]
     answer["arguments"].update(answer="independent", task_posture="direct")
     assert call({**other, "request": answer})["planning"]["status"] == "direct"
+    if surface == "native" and selector_mode == "legacy-local":
+        # The acquired former selector can later select a new native owner.
+        # Historical annotations stay in prior custody, not the successor shape.
+        next_context = {**context, "task": "Create a separate follow-through owner"}
+        current = call(next_context)
+        relation = current["planning"]["requests"][0]
+        relation["arguments"] = {"answer": "independent", "task_posture": "planned"}
+        create = current["planning"]["creation_requests"][0]
+        create["arguments"] = {"material": {**material(), "title": "Separate follow-through owner"}}
+        ready = call({**next_context, "request": [relation, create]})
+        created = call({**next_context, "invocation": ready["decision_packet"]["primary_action"]})
+        next_context = created["value"]["selection_context"]
+        ready = call({**next_context, "request": created["value"]["selection_request"]})
+        transitioned = call({**next_context, "invocation": ready["decision_packet"]["primary_action"]})
+        assert transitioned["effect_outcome"]["status"] == "committed"
+        successor = json.loads(selector.read_bytes())
+        assert "reason" not in successor and "planning_revision" not in successor
+        assert successor["selected_owner"]["ref"] == created["value"]["owner_path"]
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

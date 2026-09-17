@@ -8,10 +8,7 @@ The optional artifact is `tools/setup-findings.json` with kind `workspace-setup-
 
 Use:
 
-```bash
-agentic-workspace setup --target . --format json
-agentic-workspace defaults --section improvement_intake --format json
-```
+Use the current `start` result and its exact owner request/action; see the [native CLI catalogue](/docs/reference/cli-catalogue.md).
 
 ## Accepted Classes
 

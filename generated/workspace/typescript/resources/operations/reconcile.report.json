@@ -74,7 +74,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json"
   },
@@ -124,7 +124,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show stale planning state and optionally apply exact safe-to-prune cleanup targets.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Show stale planning state and optionally apply exact safe-to-prune cleanup targets.",
   "writes": [
     {
       "required": false,

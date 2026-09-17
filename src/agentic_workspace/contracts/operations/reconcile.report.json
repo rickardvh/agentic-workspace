@@ -5,7 +5,7 @@
     "command": "reconcile",
     "format_option": "format"
   },
-  "summary": "Show stale planning state and optionally apply exact safe-to-prune cleanup targets.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Show stale planning state and optionally apply exact safe-to-prune cleanup targets.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -108,5 +108,5 @@
     "reconcile command tests cover provider-agnostic stale-state reporting",
     "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

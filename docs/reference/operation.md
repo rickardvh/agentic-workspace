@@ -68,4 +68,4 @@ Contract for one Agentic Workspace operation, including command shape, effects, 
 | `route_action_bindings.<name>.result_admission` | object | yes |  | Result envelope and statuses accepted when the destination operation returns. |  |  |
 | `route_action_bindings.<name>.result_admission.kind` | string | yes |  | Required result-envelope kind. |  |  |
 | `route_action_bindings.<name>.result_admission.accepted_statuses` | array of string | yes |  | Destination result statuses that may advance the route. |  |  |
-| `migration_status` | enum `"draft-contract-only"`, `"validated-contract"`, `"runtime-consumed"` | no |  | Maturity of the operation contract relative to implementation. |  |  |
+| `migration_status` | enum `"draft-contract-only"`, `"validated-contract"`, `"runtime-consumed"`, `"source-maintenance-only"` | no |  | Maturity of the operation contract relative to implementation. |  |  |

@@ -79,7 +79,7 @@ def contract_inventory_manifest() -> dict[str, Any]:
 
 
 def workspace_surfaces_manifest() -> dict[str, Any]:
-    return load_validated_contract_json("workspace_surfaces.json", "workspace_surfaces_manifest.schema.json")
+    return load_validated_contract_json("source_maintenance_surfaces.json", "workspace_surfaces_manifest.schema.json")
 
 
 def setup_findings_policy_manifest() -> dict[str, Any]:

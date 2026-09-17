@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Establish, refresh, recover, and remove a minimal Git-host foothold through Configuration while preserving repository, domain, and local state. Separate the public footprint from historical maintenance profiles."
+issues = [3372, 3373, 3374]

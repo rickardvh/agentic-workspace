@@ -249,6 +249,7 @@ pub(crate) fn contract() -> Result<Value, CoreError> {
         .unwrap()
         .push(crate::native_configuration_procedure::declaration());
     crate::native_skill_exposure::declarations(&mut owner);
+    crate::native_adoption::declarations(&mut owner);
     owner["revision"] = json!(digest(&owner)?);
     let mut result = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending","owners":[owner],"restriction_authorities":[{"owner":"configuration","affects":["task","effect:configuration-source"]}]});
     result["revision"] = json!(digest(&result)?);
@@ -365,6 +366,20 @@ pub(crate) fn view_selected(
     );
     result["payload_discovery_request"] = template(READ_PAYLOAD, json!({}));
     result["skill_exposure_request"] = template(crate::native_skill_exposure::READ, json!({}));
+    // Advertise repository foothold work only for a root-shaped Git target or
+    // retained adoption subject. This is discovery, not Git/custody admission;
+    // the adoption owner still validates both on every exact request. Unrelated
+    // directory queries must not pay for a repository-only capability invitation.
+    if [
+        ".git",
+        ".agentic-workspace/adoption.json",
+        ".agentic-workspace/local/effects/adoption.prepared.json",
+    ]
+    .iter()
+    .any(|path| std::fs::symlink_metadata(target.join(path)).is_ok())
+    {
+        result["repository_adoption_request"] = template(crate::native_adoption::READ, json!({}));
+    }
     result["choice_requests"] = json!(
         PROGRESSIVE_CHOICES
             .iter()
@@ -492,6 +507,13 @@ pub(crate) fn view_selected(
         return Err(err(
             "configuration source, policy or capability changed; resolve a fresh request",
         ));
+    }
+    if matches!(
+        request["request_kind"].as_str(),
+        Some(crate::native_adoption::READ | crate::native_adoption::EDIT)
+    ) {
+        crate::native_adoption::view(target, request, &binding, &template, &mut result)?;
+        return Ok(result);
     }
     if matches!(
         request["request_kind"].as_str(),
@@ -733,6 +755,9 @@ pub(crate) fn view_selected(
     Ok(result)
 }
 pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
+    if action["operation_id"] == crate::native_adoption::OP {
+        return crate::native_adoption::write_scope(action);
+    }
     if action["operation_id"] == crate::native_skill_exposure::OP {
         return crate::native_skill_exposure::write_scope(action);
     }
@@ -767,6 +792,9 @@ pub(crate) fn execute(
 ) -> Result<Value, CoreError> {
     if invocation["operation_id"] == crate::native_skill_exposure::OP {
         return crate::native_skill_exposure::execute(target, decision, invocation, revalidate);
+    }
+    if invocation["operation_id"] == crate::native_adoption::OP {
+        return crate::native_adoption::execute(target, decision, invocation, revalidate);
     }
     let mut result = execute_checked(target, decision, invocation, &mut revalidate, &mut |_| {
         Ok(())

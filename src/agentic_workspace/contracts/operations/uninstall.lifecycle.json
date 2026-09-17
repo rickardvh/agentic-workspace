@@ -4,7 +4,7 @@
   "command_surface": {
     "command": "uninstall"
   },
-  "summary": "Remove managed surfaces conservatively for selected installed modules.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Remove managed surfaces conservatively for selected installed modules.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -123,5 +123,5 @@
     "uninstall.lifecycle.destructive-refusal.process proves ambiguous destructive removal is review-required and write-free in dry-run",
     "uninstall.lifecycle.strict-preflight-refusal.process proves strict preflight refuses before mutation without writes"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

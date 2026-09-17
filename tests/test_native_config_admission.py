@@ -109,7 +109,7 @@ def test_config_force_and_payload_labels_cannot_waive_requirements(
     provenance.write_text(json.dumps(forged))
     assert call()["configuration"]["payload"]["status"] == "unresolved"
     provenance.write_bytes(recorded)
-    missing = tmp_path / ".agentic-workspace/WORKFLOW.md"
+    missing = tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md"
     missing.unlink()
     assert call()["configuration"]["payload"]["status"] == "unresolved", "matching provenance labels cannot prove absent payload"
     config.write_text(original.replace('policy = "required-before-work"', 'policy = "required-before-claim"'))

@@ -5,7 +5,7 @@
   "source_role": {
     "surface": "source/proof",
     "ordinary_startup_visibility": "not-startup-workflow",
-    "rule": "Operation conformance test IR is consumed by proof and migration tooling only; it must not become an ordinary agent startup surface."
+    "rule": "Historical source-maintenance proof only, excluded from native v1 public conformance. Use the native source-decision contract and façade parity for current product evidence."
   },
   "source_contracts": [
     "command_package_ir.json",
@@ -147,21 +147,23 @@
   },
   "external_readiness": {
     "operations": [
-    {
-      "operation_id": "config.report",
-      "valid_input": {},
-      "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
-      "case_exceptions": {}
-    },
-    {
-      "operation_id": "instructions.explain",
-      "valid_input": {
-        "changed": ["src/auth/login.py"]
+      {
+        "operation_id": "config.report",
+        "valid_input": {},
+        "runtime_exception_revision": "github-2044-closure:config.report@pr-2256",
+        "case_exceptions": {}
       },
-      "runtime_exception_revision": "github-2639:instructions.explain@pr-2627",
-      "case_exceptions": {}
-    },
-    {
+      {
+        "operation_id": "instructions.explain",
+        "valid_input": {
+          "changed": [
+            "src/auth/login.py"
+          ]
+        },
+        "runtime_exception_revision": "github-2639:instructions.explain@pr-2627",
+        "case_exceptions": {}
+      },
+      {
         "operation_id": "delegation-outcome.append",
         "valid_input": {
           "delegation_target": "external-conformance",
@@ -1307,7 +1309,9 @@
           "adapter_id": "python.function",
           "proof_role": "operation-conformance",
           "source_ref": "command_package_ir:root-workspace/instructions",
-          "wrapper_refs": ["instructions.operations.cli"]
+          "wrapper_refs": [
+            "instructions.operations.cli"
+          ]
         },
         {
           "artifact_id": "root-workspace.instructions-explain.typescript",
@@ -1315,26 +1319,57 @@
           "adapter_id": "typescript.function",
           "proof_role": "operation-conformance",
           "source_ref": "command_package_ir:root-workspace/instructions",
-          "wrapper_refs": ["instructions.operations.cli"]
+          "wrapper_refs": [
+            "instructions.operations.cli"
+          ]
         }
       ],
       "schema_refs": {
         "operation_contract": "operations/instructions.explain.json",
-        "input": ["scoped_instruction_operation_input.schema.json"],
-        "output": ["scoped_instruction_operation_result.schema.json"]
+        "input": [
+          "scoped_instruction_operation_input.schema.json"
+        ],
+        "output": [
+          "scoped_instruction_operation_result.schema.json"
+        ]
       },
       "composition": {
         "case_focus": "The generated operation loads matching guidance while leaving an irrelevant Markdown body unloaded.",
-        "assumes_primitives": ["workspace.target-root.resolve", "instructions.execute", "output.emit"],
+        "assumes_primitives": [
+          "workspace.target-root.resolve",
+          "instructions.execute",
+          "output.emit"
+        ],
         "reuses_case_ids": []
       },
       "targets": [
-        {"kind": "python", "mode": "run"},
-        {"kind": "typescript", "mode": "run"}
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
       ],
       "input": {
-        "json": {"target": ".", "changed": ["src/auth/login.py"], "format": "json"},
-        "argv": ["instructions", "explain", "--target", ".", "--changed", "src/auth/login.py", "--format", "json"],
+        "json": {
+          "target": ".",
+          "changed": [
+            "src/auth/login.py"
+          ],
+          "format": "json"
+        },
+        "argv": [
+          "instructions",
+          "explain",
+          "--target",
+          ".",
+          "--changed",
+          "src/auth/login.py",
+          "--format",
+          "json"
+        ],
         "fixture_id": "scoped-instructions",
         "fixture_files": {
           ".git/.keep": "",
@@ -1360,10 +1395,20 @@
             "progressive_disclosure.irrelevant_bodies_loaded": 0
           }
         },
-        "stderr": {"format": "none", "allow_non_empty": false},
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        },
         "parity": {
-          "compare": ["exit_code", "selected canonical result fields", "structured error absence"],
-          "normalization": ["ignore target-specific path separators", "compare declared selected fields instead of full payload ordering"]
+          "compare": [
+            "exit_code",
+            "selected canonical result fields",
+            "structured error absence"
+          ],
+          "normalization": [
+            "ignore target-specific path separators",
+            "compare declared selected fields instead of full payload ordering"
+          ]
         }
       },
       "freshness": {
@@ -1378,8 +1423,12 @@
         ]
       },
       "migration": {
-        "replaces_handwritten_tests": ["Python/TypeScript instruction explanation parity is represented by this operation IR case."],
-        "retain_handwritten_tests": ["frontmatter parsing and instruction-program semantic unit tests"],
+        "replaces_handwritten_tests": [
+          "Python/TypeScript instruction explanation parity is represented by this operation IR case."
+        ],
+        "retain_handwritten_tests": [
+          "frontmatter parsing and instruction-program semantic unit tests"
+        ],
         "rationale": "Generated Python and TypeScript operation callables consume the same operation contract and result schema while the scoped instruction module remains the explicit domain semantic owner."
       }
     },
@@ -1508,7 +1557,9 @@
           "adapter_id": "python.function",
           "proof_role": "operation-conformance",
           "source_ref": "command_package_ir:root-workspace/correction-event.lifecycle.cli",
-          "wrapper_refs": ["correction-event.lifecycle.cli"]
+          "wrapper_refs": [
+            "correction-event.lifecycle.cli"
+          ]
         },
         {
           "artifact_id": "root-workspace.correction-event.typescript",
@@ -1516,28 +1567,58 @@
           "adapter_id": "typescript.function",
           "proof_role": "operation-conformance",
           "source_ref": "command_package_ir:root-workspace/correction-event.lifecycle.cli",
-          "wrapper_refs": ["correction-event.lifecycle.cli"]
+          "wrapper_refs": [
+            "correction-event.lifecycle.cli"
+          ]
         }
       ],
       "schema_refs": {
         "operation_contract": "operations/correction-event.submit.json",
         "input": [],
-        "output": ["correction_event_result.schema.json"]
+        "output": [
+          "correction_event_result.schema.json"
+        ]
       },
       "composition": {
         "case_focus": "Cross-target trusted-host input recognition and fail-closed authority behavior without local correction storage.",
-        "assumes_primitives": ["workspace.target-root.resolve", "correction.event.apply", "output.emit"],
+        "assumes_primitives": [
+          "workspace.target-root.resolve",
+          "correction.event.apply",
+          "output.emit"
+        ],
         "reuses_case_ids": []
       },
       "targets": [
-        {"kind": "python", "mode": "run"},
-        {"kind": "typescript", "mode": "run"}
+        {
+          "kind": "python",
+          "mode": "run"
+        },
+        {
+          "kind": "typescript",
+          "mode": "run"
+        }
       ],
       "input": {
-        "json": {"target": ".", "host_event_ref": "invalid-host-ref", "format": "json"},
-        "argv": ["correction-event", "submit", "--target", ".", "--host-event-ref", "invalid-host-ref", "--format", "json"],
+        "json": {
+          "target": ".",
+          "host_event_ref": "invalid-host-ref",
+          "format": "json"
+        },
+        "argv": [
+          "correction-event",
+          "submit",
+          "--target",
+          ".",
+          "--host-event-ref",
+          "invalid-host-ref",
+          "--format",
+          "json"
+        ],
         "fixture_id": "minimal-repo",
-        "fixture_files": {".git/.keep": "", "README.md": "# Fixture\n"}
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
       },
       "expected": {
         "exit_code": 0,
@@ -1549,12 +1630,23 @@
             "mutation_applied": false
           }
         },
-        "stdout": {"format": "none", "allow_non_empty": false},
-        "stderr": {"format": "none", "allow_non_empty": false},
+        "stdout": {
+          "format": "none",
+          "allow_non_empty": false
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        },
         "filesystem": {
           "allowed_write_paths": [],
-          "required_paths": [".git/.keep", "README.md"],
-          "forbidden_paths": [".agentic-workspace/local/correction-events.json"]
+          "required_paths": [
+            ".git/.keep",
+            "README.md"
+          ],
+          "forbidden_paths": [
+            ".agentic-workspace/local/correction-events.json"
+          ]
         }
       },
       "freshness": {
@@ -1570,8 +1662,12 @@
         ]
       },
       "migration": {
-        "replaces_handwritten_tests": ["generated Python/TypeScript host-observation option and fail-closed parity"],
-        "retain_handwritten_tests": ["signed-host positive authority, custody, normalization, and deduplication tests"],
+        "replaces_handwritten_tests": [
+          "generated Python/TypeScript host-observation option and fail-closed parity"
+        ],
+        "retain_handwritten_tests": [
+          "signed-host positive authority, custody, normalization, and deduplication tests"
+        ],
         "rationale": "Cross-target operation conformance proves that declared host inputs reach both generated callables and cannot silently create correction storage when custody is unavailable; signed positive proof remains in the trusted-host runtime fixture."
       }
     }

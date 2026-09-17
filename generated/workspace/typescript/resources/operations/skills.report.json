@@ -71,7 +71,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "source-maintenance-only",
   "output": {
     "kind": "text-or-json"
   },
@@ -121,6 +121,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "List registered workspace skills from installed package registries and repo-owned skill registries.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. List registered workspace skills from installed package registries and repo-owned skill registries.",
   "writes": []
 }

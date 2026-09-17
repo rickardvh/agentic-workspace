@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -30,11 +31,21 @@ def wheel(tmp_path_factory):
     return wheels[0]
 
 
-def test_wheel_contains_only_binding_and_paired_core(wheel):
+def test_wheel_contains_only_binding_host_adapter_and_paired_core(wheel):
     with zipfile.ZipFile(wheel) as archive:
         files = archive.namelist()
         code = {name for name in files if name.endswith(".py")}
-        assert code == {f"agentic_workspace/{name}.py" for name in ("__init__", "cli", "_binding", "native_core")}
+        assert code == {
+            f"agentic_workspace/{name}.py"
+            for name in ("__init__", "cli", "_binding", "native_core", "codex_provider", "sealed_codex_transport")
+        }
+        # The host adapter has provider I/O, not the old Python policy/runtime host.
+        provider = ast.parse(archive.read("agentic_workspace/codex_provider.py"))
+        for node in ast.walk(provider):
+            if isinstance(node, ast.Import):
+                assert all(alias.name.split(".")[0] in sys.stdlib_module_names for alias in node.names)
+            elif isinstance(node, ast.ImportFrom):
+                assert not node.level and node.module.split(".")[0] in sys.stdlib_module_names
         metadata = archive.read(next(name for name in files if name.endswith("/METADATA"))).decode()
         assert "Requires-Dist:" not in metadata
         manifest = json.loads(archive.read("agentic_workspace/_native/artifact.json"))
@@ -90,6 +101,26 @@ print(json.dumps({'effect':result['effect_outcome']['status']}))
         text=True,
     )
     assert parity.returncode == 0, parity.stderr
+    capability = subprocess.run(
+        [str(python), "-I", "-m", "agentic_workspace.sealed_codex_transport", "--aw-capability"],
+        input='{"model":"fixture"}',
+        cwd=target,
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+    assert capability.returncode == 0, capability.stderr
+    assert json.loads(capability.stdout)["reason"] == "native-adapter-executable-unavailable"
+    assert json.loads(capability.stdout)["status"] == "unavailable"
+    invalid = subprocess.run(
+        [str(python), "-I", "-m", "agentic_workspace.sealed_codex_transport"],
+        input="{}",
+        cwd=target,
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+    assert invalid.returncode != 0 and "worker carriage missing or changed" in invalid.stderr
     native = next(venv.rglob("agentic_workspace/_native/agentic-workspace-core*"))
     native.write_bytes(native.read_bytes() + b"altered")
     rejected = subprocess.run(
@@ -100,6 +131,15 @@ print(json.dumps({'effect':result['effect_outcome']['status']}))
         text=True,
     )
     assert rejected.returncode != 0 and "digest mismatch" in rejected.stderr
+    rejected_bridge = subprocess.run(
+        [str(python), "-I", "-m", "agentic_workspace.sealed_codex_transport"],
+        input="{}",
+        cwd=target,
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+    assert rejected_bridge.returncode != 0 and "digest mismatch" in rejected_bridge.stderr
 
 
 def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):

@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from agentic_workspace import codex_provider as provider
 from agentic_workspace import native_transport as native
 from agentic_workspace.contracts.python_primitive_support import _assignment_dispatch_configuration, _assignment_seal_host_native_packet
 
@@ -60,7 +61,7 @@ def test_forced_native_close_stops_owned_launcher_and_child():
 
 def test_active_turn_deadline_is_not_reported_as_initial_control_failure(tmp_path, monkeypatch, snapshot):
     clock = [0.0]
-    monkeypatch.setattr(native, "time", SimpleNamespace(time=time.time, monotonic=lambda: clock[0]))
+    monkeypatch.setattr(provider, "time", SimpleNamespace(time=time.time, monotonic=lambda: clock[0]))
 
     class Connection:
         def __init__(self, executable):
@@ -76,7 +77,7 @@ def test_active_turn_deadline_is_not_reported_as_initial_control_failure(tmp_pat
         def close(self):
             pass
 
-    monkeypatch.setattr(native, "CodexConnection", Connection)
+    monkeypatch.setattr(provider, "CodexConnection", Connection)
     with pytest.raises(native.ProviderError, match="provider-turn-timeout"):
         native.execute(tmp_path, snapshot, selection(snapshot), "unused", {}, timeout=1)
 
@@ -260,7 +261,7 @@ def test_partial_startup_captures_cleanup_custody_before_turn_failure(tmp_path, 
         def close(self):
             closed.append(True)
 
-    monkeypatch.setattr(native, "CodexConnection", Connection)
+    monkeypatch.setattr(provider, "CodexConnection", Connection)
     owned = set()
     with pytest.raises(native.ProviderError, match="fixture-turn-rejected"):
         native.execute(tmp_path, snapshot, selection(snapshot), "unused", {}, on_thread=owned.add, on_history=history.append)
@@ -283,7 +284,7 @@ def test_archive_failure_does_not_delete_or_claim_success(monkeypatch, snapshot)
         def close(self):
             calls.append("closed")
 
-    monkeypatch.setattr(native, "CodexConnection", Connection)
+    monkeypatch.setattr(provider, "CodexConnection", Connection)
     with pytest.raises(native.ProviderError, match="archive-unavailable"):
         native.archive_reference(snapshot, "owned")
     assert calls == []
@@ -490,7 +491,12 @@ def test_configured_process_and_native_remain_distinct_peer_options(tmp_path):
                 "location": "external",
                 "transports": [
                     {"kind": "process", "command": ["fixture"]},
-                    {"kind": "native", "adapter": "codex-app-server/v1", "parameters": {"model": "fixture-model"}},
+                    {
+                        "kind": "native",
+                        "adapter": "codex-app-server/v1",
+                        "parameters": {"model": "fixture-model"},
+                        "command": ["fixture-host"],
+                    },
                 ],
             }
         },
@@ -838,7 +844,7 @@ def test_native_topology_uses_metadata_only_and_returns_counters(tmp_path, monke
         def close(self):
             calls.append(("closed", {}))
 
-    monkeypatch.setattr(native, "CodexConnection", Connection)
+    monkeypatch.setattr(provider, "CodexConnection", Connection)
     choice = selection(snapshot, mode=mode, **({"reference": "opaque"} if mode != "fresh" else {}))
     worker_environment = {"AGENTIC_WORKSPACE_DELEGATED_WORKER_KERNEL": '{"assignment":{"assignment_id":"worker"}}'}
     result = native.execute(tmp_path, snapshot, choice, "bounded input", {"type": "object"}, worker_environment=worker_environment)

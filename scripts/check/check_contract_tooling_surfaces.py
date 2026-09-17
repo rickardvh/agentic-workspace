@@ -288,6 +288,8 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
         except Exception as exc:
             errors.append(f"operation {operation_id} failed mutation-outcome inventory load: {exc}")
             continue
+        if operation_ref.get("migration_status") != operation.get("migration_status"):
+            errors.append(f"operation {operation_id} registry migration_status disagrees with its operation contract")
         effects = operation.get("effects", {})
         if isinstance(effects, dict) and effects.get("writes_repo_state") is True:
             mutating_ids.add(operation_id)

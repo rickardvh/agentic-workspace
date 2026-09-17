@@ -73,7 +73,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": true
   },
-  "migration_status": "runtime-consumed",
+  "migration_status": "source-maintenance-only",
   "output": {
     "description": "External delivery request requiring provider adapter receipts.",
     "kind": "json",
@@ -107,6 +107,6 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Create the current per-sink external report delivery request.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Create the current per-sink external report delivery request.",
   "writes": []
 }

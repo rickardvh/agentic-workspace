@@ -6,7 +6,7 @@
     "subcommand": "write",
     "format_option": "format"
   },
-  "summary": "Write or refresh the ignored local chat checkpoint.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Write or refresh the ignored local chat checkpoint.",
   "classification": "local-record-append",
   "inputs": [
     {
@@ -121,5 +121,5 @@
     "local checkpoint write tests validate stdout against local_chat_checkpoint_write_result.schema.json and created records against local_chat_checkpoint.schema.json",
     "startup projection tests cover absent, present, stale, and unreadable checkpoints"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

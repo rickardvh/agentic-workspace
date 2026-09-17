@@ -6,7 +6,7 @@
     "subcommand": "refresh-github",
     "format_option": "format"
   },
-  "summary": "Refresh provider-agnostic external intent evidence from GitHub issues through the optional gh CLI adapter.",
+  "summary": "Source-maintenance model only; not native/public runtime authority. Refresh provider-agnostic external intent evidence from GitHub issues through the optional gh CLI adapter.",
   "classification": "metadata-refresh",
   "inputs": [
     {
@@ -143,5 +143,5 @@
     "workspace CLI tests cover GitHub issue normalization and evidence writes",
     "planning summary tests cover refresh metadata consumption"
   ],
-  "migration_status": "draft-contract-only"
+  "migration_status": "source-maintenance-only"
 }

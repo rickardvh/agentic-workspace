@@ -31,301 +31,301 @@
     {
       "command": "agent-guidance",
       "id": "agent-guidance.promote",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.promote.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.edit",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.edit.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.merge",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.merge.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.split",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.split.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.suppress",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.suppress.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.revalidate",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.revalidate.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.weaken",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.weaken.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.supersede",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.supersede.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.retire",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.retire.json"
     },
     {
       "command": "agent-guidance",
       "id": "agent-guidance.delete",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/agent-guidance.delete.json"
     },
     {
       "command": "instructions",
       "id": "instructions.list",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/instructions.list.json"
     },
     {
       "command": "instructions",
       "id": "instructions.create",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/instructions.create.json"
     },
     {
       "command": "instructions",
       "id": "instructions.check",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/instructions.check.json"
     },
     {
       "command": "instructions",
       "id": "instructions.explain",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/instructions.explain.json"
     },
     {
       "command": "instructions",
       "id": "instructions.routes",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/instructions.routes.json"
     },
     {
       "command": "instructions",
       "id": "instructions.route-select",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/instructions.route-select.json"
     },
     {
       "command": "instructions",
       "id": "instructions.migrate",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/instructions.migrate.json"
     },
     {
       "command": "autopilot",
       "id": "autopilot.run",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/autopilot.run.json"
     },
     {
       "command": "checkpoint",
       "id": "checkpoint.write",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/checkpoint.write.json"
     },
     {
       "command": "final-response",
       "id": "final-response.admit",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/final-response.admit.json"
     },
     {
       "command": "work-thread",
       "id": "work-thread.prune",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/work-thread.prune.json"
     },
     {
       "command": "work-thread",
       "id": "work-thread.carry-inspect",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/work-thread.carry-inspect.json"
     },
     {
       "command": "work-thread",
       "id": "work-thread.carry-select",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/work-thread.carry-select.json"
     },
     {
       "command": "work-thread",
       "id": "work-thread.carry-prune",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/work-thread.carry-prune.json"
     },
     {
       "command": "work-thread",
       "id": "work-thread.select",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/work-thread.select.json"
     },
     {
       "command": "session-log",
       "id": "session-log.manage",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/session-log.manage.json"
     },
     {
       "command": "evaluation",
       "id": "evaluation.register",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/evaluation.register.json"
     },
     {
       "command": "evaluation",
       "id": "evaluation.observe",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/evaluation.observe.json"
     },
     {
       "command": "evaluation",
       "id": "evaluation.authority-refresh",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/evaluation.authority-refresh.json"
     },
     {
       "command": "evaluation",
       "id": "evaluation.status",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/evaluation.status.json"
     },
     {
       "command": "evaluation",
       "id": "evaluation.transition",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/evaluation.transition.json"
     },
     {
       "command": "evaluation",
       "id": "evaluation.prune",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/evaluation.prune.json"
     },
     {
       "id": "evaluation.report-preview",
       "path": "operations/evaluation.report-preview.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "evaluation.local-delivery",
       "path": "operations/evaluation.local-delivery.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "evaluation.external-request",
       "path": "operations/evaluation.external-request.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "evaluation.external-host-result-import",
       "path": "operations/evaluation.external-host-result-import.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "evaluation.external-adapter-receipt",
       "path": "operations/evaluation.external-adapter-receipt.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "evaluation.external-delivery",
       "path": "operations/evaluation.external-delivery.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "evaluation.delivery-status",
       "path": "operations/evaluation.delivery-status.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "evaluation.retry",
       "path": "operations/evaluation.retry.json",
       "command": "evaluation",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "external-evidence.submit",
       "path": "operations/external-evidence.submit.json",
       "command": "external-evidence-submit",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "id": "external-evidence.query",
       "path": "operations/external-evidence.query.json",
       "command": "external-evidence-query",
-      "migration_status": "runtime-consumed"
+      "migration_status": "source-maintenance-only"
     },
     {
       "command": "config",
       "id": "config.report",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/config.report.json"
     },
     {
       "command": "defaults",
       "id": "defaults.report",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/defaults.report.json"
     },
     {
       "command": "note-delegation-outcome",
       "id": "delegation-outcome.append",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/delegation-outcome.append.json"
     },
     {
       "command": "doctor",
       "id": "doctor.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/doctor.report.json"
     },
     {
       "command": "external-intent",
       "id": "external-intent.refresh-github",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/external-intent.refresh-github.json"
     },
     {
       "command": "implement",
       "id": "implement.context",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/implement.context.json"
     },
     {
       "command": "init",
       "id": "init.lifecycle",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/init.lifecycle.json"
     },
     {
       "command": "install",
       "id": "install.lifecycle",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/install.lifecycle.json"
     },
     {
@@ -487,13 +487,13 @@
     {
       "command": "modules",
       "id": "modules.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/modules.report.json"
     },
     {
       "command": "ownership",
       "id": "ownership.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/ownership.report.json"
     },
     {
@@ -709,91 +709,91 @@
     {
       "command": "preflight",
       "id": "preflight.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/preflight.report.json"
     },
     {
       "command": "prompt",
       "id": "prompt.init",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/prompt.init.json"
     },
     {
       "command": "prompt",
       "id": "prompt.uninstall",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/prompt.uninstall.json"
     },
     {
       "command": "prompt",
       "id": "prompt.upgrade",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/prompt.upgrade.json"
     },
     {
       "command": "proof",
       "id": "proof.report",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/proof.report.json"
     },
     {
       "command": "reconcile",
       "id": "reconcile.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/reconcile.report.json"
     },
     {
       "command": "report",
       "id": "report.combined",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/report.combined.json"
     },
     {
       "command": "setup",
       "id": "setup.guidance",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/setup.guidance.json"
     },
     {
       "command": "skills",
       "id": "skills.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/skills.report.json"
     },
     {
       "command": "start",
       "id": "start.context",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/start.context.json"
     },
     {
       "command": "status",
       "id": "status.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/status.report.json"
     },
     {
       "command": "summary",
       "id": "summary.report",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/summary.report.json"
     },
     {
       "command": "system-intent",
       "id": "system-intent.sync",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/system-intent.sync.json"
     },
     {
       "command": "uninstall",
       "id": "uninstall.lifecycle",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/uninstall.lifecycle.json"
     },
     {
       "command": "upgrade",
       "id": "upgrade.lifecycle",
-      "migration_status": "draft-contract-only",
+      "migration_status": "source-maintenance-only",
       "path": "operations/upgrade.lifecycle.json"
     },
     {
@@ -805,103 +805,103 @@
     {
       "command": "memory",
       "id": "workspace.memory-create-note.apply",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/workspace.memory-create-note.apply.json"
     },
     {
       "command": "assignment",
       "id": "assignment.admit",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.admit.json"
     },
     {
       "command": "assignment",
       "id": "assignment.cleanup",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.cleanup.json"
     },
     {
       "command": "assignment",
       "id": "assignment.status",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.status.json"
     },
     {
       "command": "assignment",
       "id": "assignment.dispatch",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.dispatch.json"
     },
     {
       "command": "assignment",
       "id": "assignment.export",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.export.json"
     },
     {
       "command": "assignment",
       "id": "assignment.import",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.import.json"
     },
     {
       "command": "assignment",
       "id": "assignment.integrate",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.integrate.json"
     },
     {
       "command": "assignment",
       "id": "assignment.override",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.override.json"
     },
     {
       "command": "assignment",
       "id": "assignment.reject",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.reject.json"
     },
     {
       "command": "assignment",
       "id": "assignment.repair",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/assignment.repair.json"
     },
     {
       "command": "correction-event",
       "id": "correction-event.correct-dispute",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/correction-event.correct-dispute.json"
     },
     {
       "command": "correction-event",
       "id": "correction-event.identity-init",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/correction-event.identity-init.json"
     },
     {
       "command": "correction-event",
       "id": "correction-event.prune-compact",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/correction-event.prune-compact.json"
     },
     {
       "command": "correction-event",
       "id": "correction-event.query",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/correction-event.query.json"
     },
     {
       "command": "correction-event",
       "id": "correction-event.submit",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/correction-event.submit.json"
     },
     {
       "command": "correction-event",
       "id": "correction-event.withdraw-supersede",
-      "migration_status": "runtime-consumed",
+      "migration_status": "source-maintenance-only",
       "path": "operations/correction-event.withdraw-supersede.json"
     }
   ],
