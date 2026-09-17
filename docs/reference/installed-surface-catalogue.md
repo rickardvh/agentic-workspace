@@ -3,23 +3,40 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:5ad14a52ecb9fa7569f03c68065fab7f293e23fc64a12b7e1366e5e036733b96`
+- Contract digest: `sha256:7b52262a708a2d74a813f10b97a9c768fe0994846220d62f9725fac2fff7dd03`
 
-| Surface | Ownership | Lifetime | Establish / refresh / remove | Consumer |
-| --- | --- | --- | --- | --- |
-| `.agentic-workspace/READING.json` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-only source orientation bound to the ownership ledger |
-| `.agentic-workspace/OWNERSHIP.toml` | package-managed | adopted-host | `configuration.repository-adoption` | Current source/lifetime declarations for runtime and repository-only readers |
-| `.agentic-workspace/skills/REGISTRY.json` | package-managed | adopted-host | `configuration.repository-adoption` | Passive route and executable procedure declarations |
-| `.agentic-workspace/skills/workspace-startup/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-work-shape/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-proof-selection/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-transition-gates/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-resources/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-intent-discovery/prepare.py` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py` | package-managed | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |
+| --- | --- | --- | --- | --- | --- |
+| `.agentic-workspace/READING.json` | package-managed | target-derived | adopted-host | `configuration.repository-adoption` | Repository-only source orientation bound to the ownership ledger |
+| `.agentic-workspace/OWNERSHIP.toml` | package-managed | host-composed | adopted-host | `configuration.repository-adoption` | Current source/lifetime declarations for runtime and repository-only readers |
+| `.agentic-workspace/skills/REGISTRY.json` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Passive route and executable procedure declarations |
+| `.agentic-workspace/skills/workspace-startup/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-work-shape/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-transition-gates/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-intent-discovery/prepare.py` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+
+Public host derivation reads only explicitly promoted portable sources or another declared host materialization; source-maintenance-only semantic inputs are forbidden.
+
+Portable source promotions:
+
+- `src/agentic_workspace/contracts/portable_ownership.toml`
+- `.agentic-workspace/skills/REGISTRY.json`
+- `.agentic-workspace/skills/workspace-startup/SKILL.md`
+- `.agentic-workspace/skills/workspace-intent-discovery/SKILL.md`
+- `.agentic-workspace/skills/workspace-work-shape/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-transition-gates/SKILL.md`
+- `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
+- `.agentic-workspace/skills/workspace-intent-discovery/prepare.py`
+- `.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib.util
 import json
@@ -48,6 +49,14 @@ def test_active_bootstrap_and_config_command_examples_match_native_surface():
 
 def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert generator.synchronize(check=True) == []
+    portable = (ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text()
+    shipped = (ROOT / "src/agentic_workspace/_payload" / LEDGER).read_text()
+    assert shipped == portable and shipped != (ROOT / LEDGER).read_text()
+    assert (ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text() == render(portable)
+    for module in ("memory", "planning"):
+        fallback = tomllib.loads((ROOT / f"packages/{module}/src/repo_{module}_bootstrap/_ownership.toml").read_text())
+        assert set(fallback) == {"schema_version", "module_roots"}
+        assert fallback["module_roots"] == tomllib.loads(portable)["module_roots"]
     pointer = workspace_pointer_block("different-host-tool")
     agents = (ROOT / "AGENTS.md").read_text()
     assert pointer in agents
@@ -67,6 +76,44 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
         render("schema_version=2\n")
     with pytest.raises(tomllib.TOMLDecodeError):
         render("[malformed")
+
+
+def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
+    """Producer-only mutation cannot influence a closed portable derivation graph."""
+    contract_path = "src/agentic_workspace/contracts/workspace_surfaces.json"
+    contract = json.loads((ROOT / contract_path).read_text())
+    for reference in [contract_path, *contract["derivation"]["portable_sources"], LEDGER, PROFILE]:
+        destination = tmp_path / reference
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((ROOT / reference).read_bytes())
+    baseline = generator.render_host_payload(tmp_path)
+    poison = 'schema_version=1\n[[subsystems]]\nid="producer-poison"\npaths=["maintainer/poison/**"]\nproof=["poison-maintainer-check"]\n'
+    poison += '[[authority_surfaces]]\nconcern="poison-authority"\nowner="producer"\nread={refs=["maintainer/poison.md"],select="poison",unknown=[]}\n'
+    (tmp_path / LEDGER).write_text(poison)
+    (tmp_path / PROFILE).write_text(render(poison))
+    assert generator.render_host_payload(tmp_path) == baseline
+    portable_ref = next(row["materialization"]["source"] for row in contract["surfaces"] if row["path"] == LEDGER)
+    portable = tmp_path / portable_ref
+    portable.write_text(portable.read_text().replace("Repository-native state", "Portable-input mutation: repository-native state"))
+    changed = generator.render_host_payload(tmp_path)
+    assert {key for key in baseline if baseline[key] != changed[key]} == {LEDGER, PROFILE}
+    # An attempted undeclared dependency, implicit relabelling, or copy mode for
+    # a composite surface fails before the source-only bytes can be consumed.
+    for defect in ["source-only-edge", "implicit-promotion", "copy-composite", "missing-mode"]:
+        bad = copy.deepcopy(contract)
+        row = next(row["materialization"] for row in bad["surfaces"] if row["path"] == LEDGER)
+        if defect in {"source-only-edge", "implicit-promotion"}:
+            row["source"] = LEDGER
+            if defect == "implicit-promotion":
+                bad["derivation"]["portable_sources"].append(LEDGER)
+        elif defect == "copy-composite":
+            row.clear()
+            row.update(mode="package-verbatim", source=portable_ref)
+        else:
+            row.pop("mode")
+        (tmp_path / contract_path).write_text(json.dumps(bad))
+        with pytest.raises(ValueError, match="portable|materialization"):
+            generator.render_host_payload(tmp_path)
 
 
 def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():

@@ -104,12 +104,18 @@ fn bound_sources(target: &Path, source: Option<&str>) -> Result<Value, CoreError
         values[source] = crate::native_planning::read(&root, source)?
             .map(|bytes| json!(crate::native_intent::hash(&bytes)))
             .unwrap_or(Value::Null);
+        if source == crate::native_ownership::PROFILE {
+            values[crate::native_ownership::LEDGER] =
+                crate::native_planning::read(&root, crate::native_ownership::LEDGER)?
+                    .map(|bytes| json!(crate::native_intent::hash(&bytes)))
+                    .unwrap_or(Value::Null);
+        }
     }
     Ok(values)
 }
 fn proposed(target: &Path, source: &str, key: &str, value: &Value) -> Result<Vec<u8>, CoreError> {
     if key == PAYLOAD_KEY {
-        let bytes = crate::native_payload::shipped(source)?;
+        let bytes = crate::native_payload::desired(target, source)?;
         if *value != crate::native_intent::hash(&bytes) {
             return Err(err("payload choice differs from the current artifact"));
         }
@@ -530,7 +536,13 @@ pub(crate) fn view_selected(
     if request["request_kind"] == READ_PAYLOAD {
         let mut choices = Vec::new();
         for source in crate::native_payload::paths() {
-            let bytes = crate::native_payload::shipped(source)?;
+            let bytes = match crate::native_payload::desired(target, source) {
+                Ok(bytes) => bytes,
+                Err(error) => {
+                    choices.push(json!({"source":source,"status":"preserved-blocked","reason":error.to_string()}));
+                    continue;
+                }
+            };
             let post = crate::native_intent::hash(&bytes);
             let mut exact_binding = binding.clone();
             exact_binding["sources"] = bound_sources(target, Some(source))?;

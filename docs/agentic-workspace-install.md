@@ -151,11 +151,19 @@ Historical payload-mirroring profiles and executable fallback maintenance are so
 
 ## Refresh managed payload
 
-An adopted repository can require package-managed files and provenance to match the selected artifact's shipped bytes.
+An adopted repository can require package-managed files and provenance to match the selected artifact. Ordinary package files match shipped bytes; ownership is a composition of portable package facts and repository-owned declarations.
+
+The portable ownership source is `src/agentic_workspace/contracts/portable_ownership.toml` in the AW source distribution. The AW checkout's own `OWNERSHIP.toml` remains development policy and is not a host template. Configuration preserves host subsystem definitions, authority declarations, and supported extensions while updating portable facts. A changed package fact requires an exact match to the authenticated prior package baseline; conflicting or unknown declarations remain blocked. Adoption records that baseline separately from the resulting host ledger.
+
+For older adoption records without a structured baseline, the committed ledger postimage supplies the historical package baseline only when it matches the authenticated installed hash. Refresh uses that baseline to retire unchanged source-repository policy while preserving host additions and edited retired declarations. Conflicts with current package facts still block. If the historical postimage is unavailable, only an unchanged ledger matching the old installed hash can establish the baseline; unknown customized bytes do not gain inferred package custody. Historical postimages are migration evidence, never current portable payload inputs. The portable read profile retains the installed skill-registry route without the source-maintenance registry reference.
+
+The public host-surface contract declares `package-verbatim`, `host-composed`, and `target-derived` materialization modes. Generation reads only explicitly promoted portable sources or another declared host output. The native build validates those input edges and carries the mode into Configuration; its generic copy function rejects composite and derived surfaces. Source-maintenance copying cannot supply or retire a public host output.
+
+Adoption derives `READING.json` from its resulting host ledger in the same bounded change. A per-file profile refresh binds to the ledger currently on disk, including its Git blob identity. After refreshing ownership, refresh its profile or run adoption to converge both files. A second pass preserves current composite bytes. Standalone Memory and Planning fallbacks carry only portable module-root declarations.
 
 When refresh is supported, Configuration exposes `payload_discovery_request` with exact per-file proposals. Inspect those proposals, supply only the bounded authorization requested, execute the returned exact action through `invoke`, and resolve again. Interrupted publication uses the same owner's recovery path.
 
-This operation is bounded to the artifact's declared package files. It cannot accept arbitrary replacement paths/bytes, initialize human policy, reset domain state, or turn unknown ownership into deletion authority. Preserve useful target-specific meaning before authorizing replacement.
+This operation is bounded to the artifact's declared package files. It cannot accept arbitrary replacement paths/bytes, initialize human policy, reset domain state, or turn unknown ownership into deletion authority. Host ownership meaning is preserved by composition, and unknown edits to the generated profile envelope block replacement.
 
 Installing a newer runtime artifact does not itself reconcile the target's checked-in package surfaces.
 

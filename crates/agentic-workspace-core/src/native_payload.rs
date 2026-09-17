@@ -6,6 +6,13 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::path::Path;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Materialization {
+    PackageVerbatim,
+    HostComposed,
+    TargetDerived,
+}
+
 include!(concat!(env!("OUT_DIR"), "/payload.rs"));
 const PROVENANCE: &str = ".agentic-workspace/payload-provenance.json";
 const CAPABILITIES: &[&str] = &["installed-state-sync-v2"];
@@ -15,21 +22,14 @@ const CAPABILITIES: &[&str] = &["installed-state-sync-v2"];
 pub(crate) fn paths() -> Vec<&'static str> {
     PAYLOAD
         .iter()
-        .map(|(path, _)| *path)
+        .map(|(path, _, _)| *path)
         .chain([PROVENANCE])
         .collect()
 }
 
 pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
-    if let Some((_, bytes)) = PAYLOAD.iter().find(|(p, _)| *p == path) {
-        return text(bytes)
-            .map(String::into_bytes)
-            .ok_or_else(|| CoreError::new("shipped payload is not UTF-8"));
-    }
     if path != PROVENANCE {
-        return Err(CoreError::new(
-            "source is not in the artifact's payload declaration",
-        ));
+        return seed(path, Materialization::PackageVerbatim);
     }
     let product: toml::Value = toml::from_str(include_str!("../../../pyproject.toml"))
         .map_err(|e| CoreError::new(e.to_string()))?;
@@ -37,7 +37,7 @@ pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
     let value = json!({"kind":"agentic-workspace/payload-provenance/v1",
         "payload_schema":"agentic-workspace/payload/v1",
         "payload_capabilities":CAPABILITIES,
-        "payload_files":PAYLOAD.iter().map(|(path,_)| *path).collect::<Vec<_>>(),
+        "payload_files":PAYLOAD.iter().map(|(path,_,_)| *path).collect::<Vec<_>>(),
         "release_identity":{"package":"agentic-workspace","version":version},
         "rule":"Artifact-derived payload identity; native admission also checks every shipped byte. No domain-state or completion authority."});
     let mut bytes = serde_json::to_vec_pretty(&value).map_err(|e| CoreError::new(e.to_string()))?;
@@ -45,10 +45,81 @@ pub(crate) fn shipped(path: &str) -> Result<Vec<u8>, CoreError> {
     Ok(bytes)
 }
 
+pub(crate) fn materialization(path: &str) -> Result<Materialization, CoreError> {
+    if path == PROVENANCE {
+        return Ok(Materialization::PackageVerbatim);
+    }
+    PAYLOAD
+        .iter()
+        .find(|(p, _, _)| *p == path)
+        .map(|(_, mode, _)| *mode)
+        .ok_or_else(|| CoreError::new("source is not in the artifact's payload declaration"))
+}
+
+/// Seed bytes require the caller's exact materializer, never generic copy authority.
+pub(crate) fn seed(path: &str, expected: Materialization) -> Result<Vec<u8>, CoreError> {
+    if let Some((_, mode, bytes)) = PAYLOAD.iter().find(|(p, _, _)| *p == path) {
+        if *mode != expected {
+            return Err(CoreError::new(
+                "host surface requires its declared materializer, not package copying",
+            ));
+        }
+        return text(bytes)
+            .map(String::into_bytes)
+            .ok_or_else(|| CoreError::new("shipped payload is not UTF-8"));
+    }
+    Err(CoreError::new(
+        "source is not in the artifact's payload declaration",
+    ))
+}
+
 fn text(bytes: &[u8]) -> Option<String> {
     std::str::from_utf8(bytes)
         .ok()
         .map(|s| s.replace("\r\n", "\n"))
+}
+
+/// Configuration's host-specific postimage; ordinary files remain exact payload bytes.
+pub(crate) fn desired(target: &Path, path: &str) -> Result<Vec<u8>, CoreError> {
+    use crate::native_ownership::{LEDGER, PROFILE};
+    let mode = materialization(path)?;
+    if mode == Materialization::PackageVerbatim {
+        return shipped(path);
+    }
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let before = crate::native_planning::read(&root, LEDGER)?;
+    let before = before
+        .as_deref()
+        .map(std::str::from_utf8)
+        .transpose()
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let ledger = crate::native_ownership::compose(
+        before,
+        &crate::native_adoption::ownership_baseline(target)?,
+    )?;
+    if mode == Materialization::HostComposed {
+        return Ok(ledger.into_bytes());
+    }
+    // A separately requested profile refresh binds to the ledger currently on disk.
+    // Adoption instead projects its resulting ledger in the same bounded effect.
+    let rendered = crate::native_ownership::profile(before.unwrap_or(&ledger))?;
+    let current_profile = crate::native_planning::read(&root, PROFILE)?;
+    crate::native_ownership::admit_profile(
+        current_profile
+            .as_deref()
+            .map(std::str::from_utf8)
+            .transpose()
+            .map_err(|e| CoreError::new(e.to_string()))?,
+    )?;
+    if let Some(current) = current_profile
+        && std::str::from_utf8(&current)
+            .ok()
+            .is_some_and(|s| crate::native_ownership::profile_matches(s, &rendered))
+    {
+        return Ok(current);
+    }
+    Ok(rendered.into_bytes())
 }
 
 pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
@@ -116,9 +187,11 @@ pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
             gaps.push(json!({"path":PROVENANCE,"reason":"required-payload-capability-unproven","capability":capability}));
         }
     }
-    for (reference, expected_bytes) in PAYLOAD {
+    for (reference, _, _) in PAYLOAD {
         let bytes = read(reference);
-        if bytes.as_deref().and_then(text) != text(expected_bytes)
+        let expected_bytes = desired(target, reference).ok();
+        if expected_bytes.is_none()
+            || bytes.as_deref().and_then(text) != expected_bytes.as_deref().and_then(text)
             || !provenance["payload_files"]
                 .as_array()
                 .is_some_and(|files| files.iter().any(|p| p == reference))

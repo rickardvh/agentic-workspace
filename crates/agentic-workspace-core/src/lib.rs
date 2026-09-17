@@ -32,6 +32,7 @@ mod native_memory_learning;
 mod native_memory_write;
 mod native_methods;
 mod native_owner_change;
+mod native_ownership;
 pub(crate) mod native_patch;
 mod native_payload;
 mod native_planning;
