@@ -36,6 +36,18 @@ def test_cargo_projection_preserves_inputs_and_source_identity(tmp_path, monkeyp
     assert provenance["compile_inputs"]["policy.json"] == cargo.sha256(tmp_path / "policy.json")
 
 
+def test_cargo_projection_carries_declared_portable_build_inputs(tmp_path, monkeypatch):
+    """The standalone build must retain the same closed derivation inputs."""
+    monkeypatch.setattr(cargo.subprocess, "run", lambda *a, **k: None)
+    destination = tmp_path / "staged"
+    cargo.stage_crate(ROOT, {"path": "crates/agentic-workspace-core", "name": "agentic-workspace-core"}, destination, "a" * 40)
+    contract = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    provenance = json.loads((destination / "release-source.json").read_text())
+    for reference in contract["derivation"]["portable_sources"]:
+        assert (destination / "_inputs" / reference).read_bytes() == (ROOT / reference).read_bytes()
+        assert provenance["compile_inputs"][reference] == cargo.sha256(ROOT / reference)
+
+
 def test_cargo_registry_recovery_distinguishes_absence_conflict_and_uncertainty():
     data = b"immutable crate source"
     crate = {"name": "agentic-workspace-core", "version": "1.0.0-rc.1", "sha256": hashlib.sha256(data).hexdigest()}
