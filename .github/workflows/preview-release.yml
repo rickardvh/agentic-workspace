@@ -171,11 +171,13 @@ jobs:
           uv lock --check
           uv sync --locked --all-groups
 
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - if: steps.existing.outputs.complete != 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           name: complete-platform-packages
           path: dist
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+      - if: steps.existing.outputs.complete != 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: platform-consumer-*
           path: dist
@@ -262,7 +264,8 @@ jobs:
           assert manifest["artifact_commit"] != manifest["reconstruction_source_commit"]
           PY
 
-      - name: Bind all platform artifacts and compiler-free consumers
+      - if: steps.existing.outputs.complete != 'true'
+        name: Bind all platform artifacts and compiler-free consumers
         run: python scripts/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
 
       - if: steps.existing.outputs.complete != 'true'

@@ -90,6 +90,7 @@ include = [
   "/deny.toml",
   "/scripts/check/check_rust_dependencies.py",
   "/scripts/release/native_toolchain.py",
+  "/.github/release-platforms.json",
   "/bindings/python",
   "/bindings/node",
   "/generated/workspace/typescript/package.json",

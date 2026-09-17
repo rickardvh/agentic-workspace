@@ -150,6 +150,13 @@ def assemble(inputs, directory):
                     or identity["source_dirty"]
                 ):
                     raise ValueError("Platform build has wrong source, version or target")
+                if row["node_platform"] == "darwin":
+                    minimum = row["macos_deployment_target"]
+                    arch = "x86_64" if row["node_arch"] == "x64" else "arm64"
+                    if identity["rust_toolchain"].get("macos_deployment_target") != minimum or not wheel.name.endswith(
+                        f"macosx_{minimum.replace('.', '_')}_{arch}.whl"
+                    ):
+                        raise ValueError("macOS wheel and native deployment policy disagree")
                 if not package.exists():
                     npm.extractall(tmp, filter="data")
                     shutil.rmtree(package / "src/native/bin")

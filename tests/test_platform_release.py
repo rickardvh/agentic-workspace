@@ -122,3 +122,23 @@ def test_platform_receipts_do_not_change_when_manifest_is_extended(inventory):
     assert before == (install.read_bytes(), redistribution.read_bytes())
     assert len(json.loads(install.read_text())["platforms"]) == 6
     assert json.loads(redistribution.read_text())["artifact_count"] == 12
+
+
+@pytest.mark.parametrize("target,minimum", [("x86_64-apple-darwin", "15.0"), ("aarch64-apple-darwin", "14.0")])
+def test_macos_builds_use_declared_minimum_even_with_ambient_override(monkeypatch, target, minimum):
+    import native_toolchain
+
+    row = next(row for row in release.platforms() if row["target"] == target)
+    assert row["macos_deployment_target"] == minimum
+    monkeypatch.setenv("MACOSX_DEPLOYMENT_TARGET", "99.0")
+    env = native_toolchain.build_environment({"macos_deployment_target": row["macos_deployment_target"]})
+    assert env["MACOSX_DEPLOYMENT_TARGET"] == minimum
+
+
+def test_macos_support_policy_is_bound_by_inventory(inventory):
+    root, data = inventory
+    row = next(row for row in data["platforms"] if row["node_platform"] == "darwin")
+    row["macos_deployment_target"] = "11.0"
+    (root / release.MANIFEST).write_text(json.dumps(data))
+    with pytest.raises(ValueError, match="Platform declaration mismatch"):
+        release.load(root)

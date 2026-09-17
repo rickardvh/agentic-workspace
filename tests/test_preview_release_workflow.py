@@ -161,3 +161,19 @@ def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> Non
         assert checkout["with"]["ref"] == "${{ needs.preview-admission.outputs.artifact_commit }}"
         assert checkout["with"]["persist-credentials"] is False
     assert workflow["concurrency"] == {"group": "preview-${{ inputs.preview_tag || github.ref }}", "cancel-in-progress": False}
+
+
+def test_complete_existing_preview_skips_local_artifact_operations():
+    import yaml
+
+    workflow = yaml.safe_load((WORKFLOW_ROOT / "preview-release.yml").read_text())
+    steps = workflow["jobs"]["preview-package"]["steps"]
+    start = next(i for i, step in enumerate(steps) if step.get("id") == "existing")
+    for step in steps[start + 1 :]:
+        if step.get("name") == "Smoke published preview from public bytes":
+            assert "if" not in step
+            assert "preview_public_smoke.py" in step["run"]
+        else:
+            # With complete=true, no downloads, manifest extension or publishing
+            # may run against an absent/rebuilt local release set.
+            assert step["if"] == "steps.existing.outputs.complete != 'true'", step

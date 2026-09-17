@@ -55,9 +55,7 @@ class CustomBuildHook(BuildHookInterface):
             mac_arch = {"x86_64": "x86_64", "aarch64": "arm64"}[host.split("-", 1)[0]]
             if platform.machine() != mac_arch:
                 raise RuntimeError("Python and Rust must execute on the same macOS architecture")
-            major, minor = platform.mac_ver()[0].split(".")[:2]
-            if int(major) >= 11:
-                minor = "0"
+            major, minor = toolchain["macos_deployment_target"].split(".")
             platform_tag = f"macosx_{major}_{minor}_{mac_arch}"
         architectures = {"x86_64": ("x86_64", "amd64"), "aarch64": ("aarch64", "arm64"), "i686": ("i686", "i386", "win32")}
         architecture = host.split("-", 1)[0]
@@ -81,7 +79,7 @@ class CustomBuildHook(BuildHookInterface):
                 "--bins",
             ],
             cwd=root,
-            env=toolchain_module.build_environment(),
+            env=toolchain_module.build_environment(toolchain),
             check=True,
             capture_output=True,
             text=True,

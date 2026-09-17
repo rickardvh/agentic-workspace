@@ -4,6 +4,8 @@ on:
     paths:
       - .github/release-platforms.json
       - .github/workflows/platform-release.yml
+      - scripts/release/native_toolchain.py
+      - pyproject.toml
       - scripts/release/platform_release.py
       - scripts/release/stage_native_npm.py
       - scripts/release/admit_linux_wheel.py

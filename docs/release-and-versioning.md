@@ -497,6 +497,8 @@ Missing platforms, mismatched binary pairs, stale receipts or failed installs
 block the publisher. Linux uses audited glibc 2.39 wheels; musl and 32-bit targets
 are outside this declared inventory.
 
+The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on Apple Silicon ARM64**, as declared in `.github/release-platforms.json`. Both Rust executables are built with that explicit `MACOSX_DEPLOYMENT_TARGET`; Python wheel tags and the platform inventory bound by installation receipts carry the same minimum. Compiler-free macOS coverage is limited to these versions and newer. Older macOS versions are not covered by release installation proof.
+
 `platform-release-manifest.json` and the six `platform-consumer-*.json` receipts
 bind the complete platform set. The language manifest's `wheels` and
 `native_archives` arrays and the install receipt's `platforms` list are the full
