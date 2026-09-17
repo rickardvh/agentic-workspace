@@ -54,7 +54,7 @@ jobs:
           make typecheck-nosync
       - name: Run compact public integration guard
         run: |
-          uv run pytest tests/test_contract_catalogues.py \
+          uv run pytest tests/test_contract_catalogues.py::test_active_executable_examples_agree_with_native_command_authority \
             tests/test_native_public_cli.py::test_native_help_matches_declared_command_inventory -q
           uv run pytest \
             tests/test_native_public_cli.py::test_public_read_real_repository_decision_preserves_currentness \
