@@ -3,10 +3,11 @@
 The shipped set is one `agentic-workspace` Python distribution (wheel and
 source archive), one `@agentic-workspace/workspace-cli` npm distribution, and
 one host-labelled archive containing `agentic-workspace` and
-`agentic-workspace-core`. Both language packages carry the identical executable
-pair. The Rust core owns decisions, answer admission, effects and continuations.
+`agentic-workspace-core`, plus the coordinated Cargo source pair described below.
+Both language packages carry the identical executable pair. The Rust core owns
+decisions, answer admission, effects and continuations.
 
-The installed Python API exports `start`, `invoke`, `select_reference`,
+The installed Python API exports `start`, `invoke`, `resources`, `select_reference`,
 `answer_carried` and `invoke_carried`; npm exports their camel-case equivalents
 from the package root and `./operating`, with TypeScript declarations. `./native`
 retains the low-level JSON transport projection. The command launchers forward
@@ -53,8 +54,10 @@ source and artifact set. Only intact hosted proofs from clean source may satisfy
 its semantic runtime lanes; a passed status or recognized Node version alone
 cannot admit a receipt.
 
-Host-labelled artifacts establish support only for the host exercised. Linux
-wheels retain `linux_*` tags; they do not claim manylinux compatibility. The
+Host-labelled artifacts establish support only for the host exercised. Before
+hosted proof and registry publication, Linux wheels are audited against
+`manylinux_2_39_x86_64`; only compatible wheels are relabelled, with their native
+executable bytes unchanged. Source builds alone do not establish that ABI. The
 release matrix runs the same isolated native proof per host/runtime, and final
 release/preview checks prove the bytes actually published. The admitted published class is Linux x64 only. Windows and macOS are not
 supported release classes; local Windows validation is development evidence. Preview assets remain non-support-bearing; stable
@@ -178,16 +181,19 @@ Alpha; Candidate C and support-bearing v1 admission remain separate.
 ## Candidate C prepublication reconciliation
 
 The [integrated acceptance input](../reviews/candidate-c-integrated-acceptance.md)
-consolidates the accepted implementation leaves through #3357, current bounded
-validation, operating-cost observations and native System Intent reconciliation.
-Its closeout proposal awaits independent review. Candidate C has no publication
-record here. Remaining P0 release gates include #3358 for canonical RC identity,
-#3363/#3364 for wrapper façade parity and shipped-wrapper subtraction before first
-registry publication, and #3361/#3362 for PyPI/npm and crates.io/native publication
-with exact public-byte proof. These gates remain outside #3260. After their
-acceptance and integrated review of the exact source, publish/exercise
-`v1.0.0-rc.1`, then perform fresh stable preparation/admission/publication under
-#2985 from the accepted RC.
+records the accepted #3359 aggregate and the post-implementation reconciliation
+through #3389. RC identity (#3360), public facade/subtraction (#3365), registry
+projection and Cargo packaging (#3366/#3367), later owner/host corrections, and
+the final command-authority cleanup (#3389) are merged. The reconciliation is
+ready for independent review; merged implementation does not prove publication.
+
+Candidate C has no publication record here. Release-owner environment and
+trusted-publisher bootstrap, exact hosted artifacts and public-registry byte/install
+receipts remain required. Follow the existing first-stable RC preparation path
+from the fresh accepted master after reconciliation, then publish/exercise
+`v1.0.0-rc.1`. Only an independently accepted RC may feed fresh stable
+preparation/admission/publication under #2985. Closed pre-C #3283 is superseded.
+
 # Coordinated Cargo distribution
 
 The public Cargo surface is the existing `agentic-workspace-core` and
