@@ -1,5 +1,9 @@
 # Agentic Workspace
 
+[![PyPI](https://img.shields.io/pypi/v/agentic-workspace)](https://pypi.org/project/agentic-workspace/)
+[![npm](https://img.shields.io/npm/v/%40agentic-workspace%2Fworkspace-cli)](https://www.npmjs.com/package/@agentic-workspace/workspace-cli)
+[![crates.io](https://img.shields.io/crates/v/agentic-workspace-cli)](https://crates.io/crates/agentic-workspace-cli)
+
 > [!IMPORTANT]
 > **v1.0 release candidate:** [Download v1.0.0-rc.3](https://github.com/rickardvh/agentic-workspace/releases/tag/v1.0.0-rc.3), with prebuilt packages for Windows, macOS, and Linux on x64 and ARM64. Also available on PyPI, npm, and crates.io. This is a prerelease intended for testing.
 
