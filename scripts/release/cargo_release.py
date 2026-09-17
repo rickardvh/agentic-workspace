@@ -66,8 +66,11 @@ def stage_crate(root, crate, destination, source):
             text = text.replace(old, '.join("_inputs")')
             declaration = root / "src/agentic_workspace/contracts/workspace_surfaces.json"
             copy_input(declaration)
-            for reference in json.loads(declaration.read_text())["payload_files"]:
+            contract = json.loads(declaration.read_text())
+            for reference in contract["payload_files"]:
                 copy_input(root / "src/agentic_workspace/_payload" / reference)
+            for reference in contract["derivation"]["portable_sources"]:
+                copy_input(root / reference)
         output = destination / relative
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(text)
