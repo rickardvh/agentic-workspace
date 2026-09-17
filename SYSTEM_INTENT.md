@@ -44,6 +44,8 @@ Still-current recognized authority survives a change of representation. Obsolete
 
 Persisted caches, receipts, journals, and prior decisions are projections or results, not independent current authority. Reuse or replay requires their producer, contract, source dependencies, and subject to remain current and compatible.
 
+Current-state sufficiency is the corresponding continuity goal: for the same current task, relevant sources, admitted decisions/effects/evidence, authority, and environment observations, the material action and claim boundaries should not depend on which conversation or sequence led there. Current state includes exact source references and explicit unknowns; it is not just the latest response or a complete model of the repository. Relevant history may remain evidence in its existing owner. No global snapshot, event replay, MDP solver, or belief-state store is implied.
+
 External trackers and services normally provide evidence rather than repo intent or completion authority unless a repository explicitly assigns them a stronger role.
 
 This file does not own the current execution queue or roadmap. Those belong to their configured owner and compact query path.
@@ -60,11 +62,15 @@ Do not preserve chat, logs, plans, reviews, histories, or arbitrary repository f
 
 A durable plan or prior work binding does not implicitly become the current task. Selection and resume are explicit, current dependencies remain actionable, and Planning custody does not manufacture completion authority.
 
+Before a material handoff, pause or custody loss, preserve the outcome, accepted conclusions and progress, relevant assumptions/dependencies, unresolved questions, and effect disposition needed by the receiving owner. Use current owners and exact refs, not a transcript or a new record for every observation. This does not require persisting each reasoning step or make direct work Planning-owned. Information that has no justified future value need not survive.
+
 ### 2. Surface only what matters now
 
 First contact should contain only information that can change the current decision. The canonical main skill is the stable procedure entry point; deeper context, specialized procedures, evidence, diagnostics, and module detail should remain behind exact selectors, semantic skill routes, operations, or owners until relevant.
 
 Relevance alone does not determine delivery order. Prefer a trustworthy observation that can change an imminent action, prevent costly rework, or resolve a material claim over detail that only enriches a still-contingent branch. Expose the affected decision and a useful source, operation, or bounded question; leave semantic prioritization with the agent. Deliver small certainly-required context together when another discovery turn adds no choice. Keep optional detail lazy without hiding restrictions or competing legitimate actions.
+
+Information should be interpretable when delivered: make its task, scope and decision consequence clear without requiring the agent to wait for a later explanation. Keep optional future detail at its source. If changed work makes an earlier source relevant, surface its current consequence or exact read route then, rather than rely on unanchored earlier delivery. Reuse unchanged material already available to the continuing consumer when sufficient; re-anchoring does not require retransmitting it on every turn. Missing consumer context or changed dependencies require appropriate re-entry, not assumed understanding.
 
 The right information at the wrong time is still a product failure. Installing another capability should not proportionally enlarge ordinary startup or the agent's mental model. Specialized skills should be justified by reusable procedure, not by the existence of an internal owner/module/command.
 
@@ -162,6 +168,8 @@ Correct use should be progressively discoverable and cheaper than bypass. Host-n
 
 When an agent ignores a routed contract, trust should degrade visibly rather than causing silent authority expansion. Strong agents should spend reasoning on judgment; weaker agents should receive enough structure to avoid common ownership, proof, and continuation failures.
 
+Fresh consumers should recover supported next work from current owners without having witnessed earlier turns. Loss of disposable carriage may add bounded reconstruction cost; it cannot create authority or erase a confirmed effect. Loss of non-reconstructible local evidence is different: expose the missing evidence and supported recovery, without promising equivalent executability or retrying an uncertain effect. The sufficiency goal governs AW's operational guarantees, not an agent's freedom to reason over its working context or choose another valid implementation.
+
 ### 9. Stay portable
 
 Assume as little as possible about the host repository, language, environment manager, model, provider, and selected modules.
@@ -222,7 +230,7 @@ A change is not validated merely because its requested slice landed. Ask whether
 - kept direct work cheap and irrelevant capabilities/instruction clauses/skills quiet;
 - made modules easier to author as well as more peer-like, with module-specific meaning remaining module-owned;
 - avoided requiring a new independent module to modify semantic core code, the canonical main skill, or fixed AW choreography merely to register itself;
-- reconciled results and claims without another parallel authority;
+- reconciled results and claims without another parallel authority or dependence on remembering an earlier interaction;
 - kept stability, version, and platform support claims behind current final-admission evidence and explicit platform proof;
 - removed, derived, backgrounded, or replaced older machinery where a new abstraction was introduced.
 

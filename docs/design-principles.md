@@ -53,6 +53,8 @@ Repository and module sources keep semantic authority. Workspace composes their 
 
 A generated instruction or operating contract is useful because it is cheap to consume, not because it replaces the source that authorized it.
 
+Current context should be sufficient for the next supported decision, including exact source routes and explicit unknowns where more observation is needed. Equivalent task, authority, evidence/effects and environment observations should expose equivalent material action and claim boundaries regardless of conversation history. This is a practical continuity property, not a literal Markov model, global state snapshot, or demand for identical model choices.
+
 ### 5. Make the next action constructible
 
 Good dynamic control should normally end in something the agent can actually do:
@@ -75,6 +77,8 @@ The ordinary mental model is `resolve -> act -> reconcile`.
 Startup, implementation, proof, handoff, closeout, and continuation are common situations, not independent core frameworks. Closeout is terminal reconciliation.
 
 Do not create another phase-specific decision engine when the existing operating-decision path can carry the result.
+
+After a consequential result, make its supported claim, remaining uncertainty and continuation recoverable through current owners. A decision delta may help a continuing consumer, but a delta alone must not become the only way a fresh consumer can understand current work. Preserve confirmed effects independently of continuation failure; an unknown effect requires recovery, not replay.
 
 ### 7. Modules specialize the loop; they do not redefine it
 
@@ -132,6 +136,8 @@ A permanent warning in another subsystem is a poor substitute for fixing determi
 AW must work with mixed agents and cannot assume perfect adherence, hidden reasoning, or one vendor.
 
 Make the intended path progressively discoverable and cheaper than bypass. When an agent ignores a routed contract, lower trust explicitly rather than allowing silent authority expansion.
+
+Do not depend on a consumer remembering a fact that was presented before its purpose was clear. Bind decision-bearing context to its current task, scope and consequence; re-establish that relationship when relevance changes. Valid in-context reuse is welcome. Fresh or context-limited consumers need current references or material, not a claim that it was delivered to somebody earlier. Delivery remains distinct from understanding, reconciliation and proof.
 
 ### 15. Extensibility must stay bounded
 
@@ -197,7 +203,7 @@ Use an abstraction ladder:
 4. maintainer procedure;
 5. historical evidence.
 
-Links compose docs; copied truth creates drift.
+Links compose docs; copied truth creates drift. Introduce the subject and purpose before details whose interpretation depends on them. The same discipline applies to agent-facing results: concise output should not leave facts waiting for a later message to explain why they matter.
 
 ### 23. Portability beats dogfooding cleverness
 
@@ -220,7 +226,7 @@ A change is moving in the right direction when it helps answer yes to questions 
 - Does this preserve or route operating context that materially changes behavior?
 - Does the information arrive when it can change a decision, without unnecessary discovery hops?
 - Does the current agent get a constructible action, real choice, bounded question, or recovery rather than a forced primary action?
-- Does source ownership remain explicit?
+- Can a fresh consumer interpret the current action and claim boundaries from current owners and exact refs, without reconstructing the prior conversation?
 - Does this reduce total successful-completion cost rather than shifting it elsewhere?
 - Can direct work ignore the capability entirely?
 - Can another module provide a different domain capability without changing the core mental model?
