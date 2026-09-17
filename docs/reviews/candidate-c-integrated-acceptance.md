@@ -237,8 +237,11 @@ The outstanding implementation sequence recorded by the original aggregate has
 landed. #3360 supplies canonical RC identity; #3365–#3367 supply the public
 facades, exact PyPI/npm artifact projection and independently packaged Cargo
 pair. Their implementation reviews distinguish repository proof from account
-bootstrap and actual public-registry acceptance. Those issues now show closed;
-their status is not a registry receipt.
+bootstrap and actual public-registry acceptance. #3361 and #3362 are reopened:
+their repository implementations are merged, but their existing completion rules
+still own first publication, trusted-publisher configuration and exact public-byte
+and clean-install evidence. No new follow-up issue or narrower closure boundary
+replaces those outcomes.
 
 The later ordinary-use corrections also landed: #3382 provides source-aware
 System Intent publication and bounded scratch pruning; #3384/#3385 provide
@@ -298,13 +301,15 @@ After independent acceptance and merge of this reconciliation:
    preparation path and current resource-policy judgment. Inspect its exact
    release-only child before adding `--push`. Do not freeze an RC from the older
    source named in this report merely to bypass the final reconciliation.
-2. Follow the existing [language-registry bootstrap](../release-and-versioning.md#public-language-registries)
-   and [paired Cargo bootstrap](../maintainer/native-release-topology.md#coordinated-cargo-distribution).
+2. Complete open #3361 through the existing [language-registry bootstrap](../release-and-versioning.md#public-language-registries)
+   and open #3362 through the [paired Cargo bootstrap](../maintainer/native-release-topology.md#coordinated-cargo-distribution).
    First-publication credentials, if required, apply only to the admitted bytes;
    ordinary publication uses the configured trusted identities. Recover the same
    immutable tag and artifacts after partial publication.
 3. Collect the exact GitHub prerelease, PyPI/npm/Cargo byte and public-install
    receipts together with hosted runtime, provenance, security and checksums.
+   Keep #3361/#3362 open until their own external publication, trusted-publisher
+   and public-install requirements are evidenced and independently accepted.
    Local source tests do not substitute for Linux hosted/package proof.
 4. Only after independent RC acceptance may #2985 prepare a fresh stable subject
    from that RC, admit it independently, and publish/verify stable bytes.

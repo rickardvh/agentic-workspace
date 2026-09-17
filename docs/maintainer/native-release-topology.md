@@ -187,9 +187,12 @@ projection and Cargo packaging (#3366/#3367), later owner/host corrections, and
 the final command-authority cleanup (#3389) are merged. The reconciliation is
 ready for independent review; merged implementation does not prove publication.
 
-Candidate C has no publication record here. Release-owner environment and
-trusted-publisher bootstrap, exact hosted artifacts and public-registry byte/install
-receipts remain required. Follow the existing first-stable RC preparation path
+Candidate C has no publication record here. Reopened #3361 owns the remaining
+PyPI/npm bootstrap, trusted-publisher and public-byte/install outcome; reopened
+#3362 owns the corresponding paired Cargo outcome. Their merged repository
+implementations do not close those external requirements. Release-owner
+environment setup and exact hosted artifacts also remain required.
+Follow the existing first-stable RC preparation path
 from the fresh accepted master after reconciliation, then publish/exercise
 `v1.0.0-rc.1`. Only an independently accepted RC may feed fresh stable
 preparation/admission/publication under #2985. Closed pre-C #3283 is superseded.
