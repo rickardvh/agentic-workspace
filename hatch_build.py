@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import platform
 import re
 import subprocess
 import sysconfig
@@ -48,6 +49,14 @@ class CustomBuildHook(BuildHookInterface):
         toolchain = toolchain_module.observe(root)
         host = toolchain["host"]
         platform_tag = sysconfig.get_platform().replace("-", "_").replace(".", "_")
+        if host.endswith("-apple-darwin"):
+            # Hosted CPython is universal2; our Rust subprocesses are native to
+            # one architecture. Never label a single-architecture wheel universal.
+            mac_arch = {"x86_64": "x86_64", "aarch64": "arm64"}[host.split("-", 1)[0]]
+            if platform.machine() != mac_arch:
+                raise RuntimeError("Python and Rust must execute on the same macOS architecture")
+            major, minor = platform.mac_ver()[0].split(".")[:2]
+            platform_tag = f"macosx_{major}_{minor}_{mac_arch}"
         architectures = {"x86_64": ("x86_64", "amd64"), "aarch64": ("aarch64", "arm64"), "i686": ("i686", "i386", "win32")}
         architecture = host.split("-", 1)[0]
         if architecture not in architectures or not any(platform_tag.endswith(suffix) for suffix in architectures[architecture]):

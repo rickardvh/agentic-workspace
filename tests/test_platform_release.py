@@ -11,6 +11,23 @@ sys.path.insert(0, str(ROOT / "scripts/release"))
 import platform_release as release  # noqa: E402
 
 
+@pytest.mark.parametrize(
+    "system,machine,target",
+    [
+        ("Windows", "ARM64", "aarch64-pc-windows-msvc"),
+        ("Windows", "AMD64", "x86_64-pc-windows-msvc"),
+        ("Darwin", "arm64", "aarch64-apple-darwin"),
+        ("Darwin", "x86_64", "x86_64-apple-darwin"),
+        ("Linux", "aarch64", "aarch64-unknown-linux-gnu"),
+        ("Linux", "x86_64", "x86_64-unknown-linux-gnu"),
+    ],
+)
+def test_host_selects_its_native_release_target(monkeypatch, system, machine, target):
+    monkeypatch.setattr(release.platform, "system", lambda: system)
+    monkeypatch.setattr(release.platform, "machine", lambda: machine)
+    assert release.current_platform()["target"] == target
+
+
 @pytest.fixture
 def inventory(tmp_path):
     rows = []

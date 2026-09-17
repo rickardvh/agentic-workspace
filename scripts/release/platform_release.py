@@ -40,7 +40,7 @@ def run(args, **kwargs):
 
 def current_platform():
     node_os = {"Windows": "win32", "Darwin": "darwin", "Linux": "linux"}[platform.system()]
-    arch = {"AMD64": "x64", "x86_64": "x64", "arm64": "arm64", "aarch64": "arm64"}[platform.machine()]
+    arch = {"amd64": "x64", "x86_64": "x64", "arm64": "arm64", "aarch64": "arm64"}[platform.machine().lower()]
     return next(row for row in platforms() if row["node_platform"] == node_os and row["node_arch"] == arch)
 
 
