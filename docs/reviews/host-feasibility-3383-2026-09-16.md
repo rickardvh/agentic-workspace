@@ -69,3 +69,15 @@ corrupted core. The existing sealed handoff fixtures retain dispatch/return and
 owner admission coverage. This fixes constructibility of the documented host route;
 it adds no AW public operation or independent Python semantic authority. The patch
 classification is retained for that bounded installation correction.
+
+The distribution follow-through passed six installed topology/host-handoff cases
+and the source-archive case after building the initially omitted sdist. The lower
+thin-distribution layer passed 159 installed public/handoff cases, with its
+source-only host case skipped; this layer enables and passes that installed case.
+The provider/feasibility/topology sweep passed 78 cases and skipped three
+platform/artifact-dependent cases. Two additional historical public-history
+fixtures failed at the retired `assignment` CLI before reaching provider code;
+they are not evidence against or proof of the supported installed route. The
+affected provider/history cases passed a focused rerun (eight cases). Generated
+contract freshness, static proof and commit-hook typechecks passed. No paid
+provider execution, independent review, merge, or complete release proof is claimed.

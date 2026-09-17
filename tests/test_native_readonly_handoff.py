@@ -36,8 +36,6 @@ BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="loc
 )
 def test_current_process_handoff_executes_once_without_admitting_worker_claims(tmp_path, shared_core_binary, native_cli, surface, fault):
     host = fault == "host"
-    if host and native_artifact_consumers.CURRENT is not None:
-        pytest.skip("This layer ships public bindings only; the host bridge remains source-maintenance-only.")
     repair_evaluation = fault == "repair-evaluation"
     if host or repair_evaluation:
         fault = None
