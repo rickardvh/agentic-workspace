@@ -226,6 +226,7 @@ A change is moving in the right direction when it helps answer yes to questions 
 - Does this preserve or route operating context that materially changes behavior?
 - Does the information arrive when it can change a decision, without unnecessary discovery hops?
 - Does the current agent get a constructible action, real choice, bounded question, or recovery rather than a forced primary action?
+- Does source ownership remain explicit?
 - Can a fresh consumer interpret the current action and claim boundaries from current owners and exact refs, without reconstructing the prior conversation?
 - Does this reduce total successful-completion cost rather than shifting it elsewhere?
 - Can direct work ignore the capability entirely?
