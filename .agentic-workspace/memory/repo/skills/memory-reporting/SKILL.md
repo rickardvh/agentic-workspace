@@ -1,53 +1,23 @@
 ---
 name: memory-reporting
-description: Point to the canonical memory reporting surfaces (freshness, routing health, cleanup signals, remediation) without reading raw memory files first.
+description: Resolve current Memory owner questions and distinguish source-maintenance diagnostics from native operating authority.
 ---
 
 # Memory Reporting
 
-Use this skill when you need to answer memory-operating questions cheaply and consistently without opening raw `memory/**/*.md` first.
+Follow `.agentic-workspace/skills/workspace-startup/SKILL.md` with the actual Memory
+question. Use the configured native invocation for `start --target . --task
+"<memory question>" --format json`, then pass exact owner-returned requests to
+`invoke`. Report the observed owner answer, its evidence and any unresolved
+freshness or admission boundary. Open only the owner-selected detail; a current
+query does not authorize cleanup, promotion or a completion claim.
 
-## Default read path (machine-readable first)
+## Source-maintenance diagnostics
 
-1. `uv run agentic-memory status --target . --format json`
-2. If remediation is needed: `uv run agentic-memory doctor --target . --format json`
-
-Treat `status` as the fast "what is wrong / what next" view, and `doctor` as the compact remediation guide.
-
-## Freshness and staleness
-
-- Fast audit: `uv run agentic-workspace doctor --target . --format json`
-- Recurring-friction and trust report: `uv run agentic-workspace report --target . --format json`
-
-If you need to check current-memory note shape and staleness specifically:
-
-- `uv run agentic-memory current check --target . --format json`
-
-## Anti-rediscovery health (routing and promotion pressure)
-
-Use these when you want signals about whether the memory system is saving tokens or creating noise:
-
-- Routing health and working-set pressure:
-  - `uv run agentic-memory route-report --target . --format json`
-- Promotion / elimination candidates (notes that should shrink, move to docs, or be replaced by tests/scripts):
-  - `uv run agentic-memory promotion-report --target . --format json`
-
-If you need "what should I load for this task" without guessing:
-
-- `uv run agentic-memory route --target . --format json`
-
-## Cleanup signals
-
-Prefer cleanup signals surfaced via `status`/`doctor` first.
-When work touched the memory system, re-run:
-
-- `uv run agentic-workspace doctor --target . --format json`
-- `uv run agentic-workspace report --target . --format json`
-
-## Output expectations (for handoff)
-
-When reporting memory state to another agent or a human:
-
-- paste the `status --format json` result (or the minimal relevant fields)
-- if action is required, include `doctor --format json` and name the specific remediation step you are taking
-
+When maintaining the Memory package in this source checkout, its separate
+maintenance CLI supports `uv run agentic-memory doctor --target . --format json`
+and `uv run agentic-memory report --target . --format json`. The package
+`check-memory` Make target runs these diagnostics against the repository.
+These are maintenance observations, not native AW commands or owner mutations.
+Use the returned diagnostic scope and findings when reporting results; do not
+infer whole-workspace health, trust freshness or intent satisfaction from exit zero.

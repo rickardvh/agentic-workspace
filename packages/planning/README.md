@@ -18,7 +18,7 @@ Planning does not own canonical product knowledge, proof sufficiency, semantic i
 - **Act:** expose schema-backed Planning operations through the root Workspace front door.
 - **Reconcile:** record bounded result, continuation, parent intent, and archive/integration transitions without inferring semantic completion.
 
-Start with `agentic-workspace start`, `implement`, or `summary`; follow the exact Planning operation named by the current decision. Use generated [current CLI catalogue](../../docs/reference/cli-catalogue.md) for exact flags rather than copying a command inventory here.
+Start with `agentic-workspace start`; follow the exact Planning operation named by the current decision. Use generated [current CLI catalogue](../../docs/reference/cli-catalogue.md) for exact flags rather than copying a command inventory here.
 
 ## Continuation contract
 

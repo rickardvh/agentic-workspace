@@ -181,11 +181,11 @@
           {
             "reason": "missing-result",
             "field": "result",
-            "recovery": "Supply the observed result with --receipt-result."
+            "recovery": "Supply the observed result in the receipt result field."
           }
         ],
         "reason": "missing-result",
-        "safe_recovery": "Supply the observed result with --receipt-result.",
+        "safe_recovery": "Supply the observed result in the receipt result field.",
         "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state."
       }
     },
@@ -209,11 +209,11 @@
           {
             "reason": "missing-result",
             "field": "result",
-            "recovery": "Supply the observed result with --receipt-result."
+            "recovery": "Supply the observed result in the receipt result field."
           }
         ],
         "reason": "missing-result",
-        "safe_recovery": "Supply the observed result with --receipt-result.",
+        "safe_recovery": "Supply the observed result in the receipt result field.",
         "rule": "Only admitted receipts may be persisted, selected, or counted as trusted proof state."
       }
     },

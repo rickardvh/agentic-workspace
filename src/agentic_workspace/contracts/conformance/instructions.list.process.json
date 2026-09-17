@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "instructions.list.process",
   "operation_id": "instructions.list",

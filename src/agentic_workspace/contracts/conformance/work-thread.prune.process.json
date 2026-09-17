@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "work-thread.prune.process",
   "operation_id": "work-thread.prune",
@@ -59,8 +60,7 @@
       "allow_non_empty": false
     },
     "filesystem": {
-      "allowed_write_paths": [
-      ],
+      "allowed_write_paths": [],
       "required_paths": [
         ".git/.keep",
         "README.md",

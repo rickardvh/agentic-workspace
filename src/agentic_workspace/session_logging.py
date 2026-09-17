@@ -720,7 +720,7 @@ def capture_improvement_signal(
         "cache_path": SESSION_IMPROVEMENT_SIGNAL_CACHE_PATH.as_posix(),
         "candidate_only": True,
         "mutation_authorized": False,
-        "next_route": "agentic-workspace report --target . --section improvement_intake --format json",
+        "next_route": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
     }
 
 
@@ -2924,6 +2924,9 @@ def _is_session_log_analyzer_entry(entry: dict[str, Any]) -> bool:
         tokens = shlex.split(str(entry.get("command", "")))
     except ValueError:
         tokens = str(entry.get("command", "")).split()
+    for index, token in enumerate(tokens):
+        if token.replace("\\", "/").endswith("scripts/maintainer/session_diagnostics.py"):
+            return tokens[index + 1 : index + 2] == ["analyze"]
     try:
         surface_index = tokens.index("session-log")
     except ValueError:
@@ -3613,8 +3616,15 @@ def analyze_session_log(
             "enabled": state.enabled,
             "path": "",
             "index_status": "missing",
-            "rule": "Pass --path, --id, or create a session with session-log new-session before analyzing logs.",
+            "rule": "Pass --path or --id for an existing captured session to the source-maintenance diagnostic reader.",
         }
+
+    # Routes are source-checkout diagnostics and retain the selected log even
+    # when the caller used an explicit path or a different repository target.
+    diagnostic = "uv run --frozen --active --no-sync python scripts/maintainer/session_diagnostics.py"
+    selection = f"--target {shlex.quote(str(state.target_root))} --path {shlex.quote(log_path.relative_to(state.target_root).as_posix())}"
+    analyze_route = f"{diagnostic} analyze {selection}"
+    export_route = f"{diagnostic} export {selection}"
 
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
     session_scope = _session_scope_payload(session=effective_session, explicit_selection=bool(path or session_id))
@@ -3720,9 +3730,7 @@ def analyze_session_log(
             "origins": sorted(origins),
             "command_count": len(members),
             "failure_count": len(partition_failures),
-            "detail_route": (
-                f"agentic-workspace session-log analyze --origin {partition} --detail entries --page 1 --page-size 25 --format json"
-            ),
+            "detail_route": (f"{analyze_route} --origin {partition} --detail entries --page 1 --page-size 25 --format json"),
         }
     analyzer_overhead = [entry for entry in selected_entries if _is_session_log_analyzer_entry(entry)]
     product_entries = [entry for entry in entries if not _is_session_log_analyzer_entry(entry)]
@@ -3759,10 +3767,7 @@ def analyze_session_log(
         "origin": origin_scope,
         "default": "agent",
         "included_origins": sorted(origin_groups[origin_scope]),
-        "detail_route": (
-            "agentic-workspace session-log analyze "
-            "--detail <entries|segments|episodes|contexts|candidates> --page 1 --page-size 25 --format json"
-        ),
+        "detail_route": (f"{analyze_route} --origin {origin_scope} --detail entries --page 1 --page-size 25 --format json"),
         "rule": "The ordinary packet is live-agent-first; other origins remain available through explicit origin scope.",
     }
     bounded_collections = {
@@ -3774,10 +3779,10 @@ def analyze_session_log(
         "available": sorted(supported_details - {"summary"}),
     }
     export_routing = {
-        "download_or_share": "agentic-workspace session-log export --target ./repo --format json",
+        "download_or_share": f"{export_route} --format json",
         "artifact_class": "normalized-share-safe",
         "raw_local_route": "Keep the source session directory local; it is not the share artifact.",
-        "authority": "session-log export is the sole share/download route for session evidence",
+        "authority": "The source-maintenance session_diagnostics.py export operation produces the normalized share artifact; it does not transfer it.",
         "transfer_approval": "not-granted",
         "review_required": "Review the normalized archive for secrets and external-transfer policy before sharing.",
     }
@@ -3810,7 +3815,7 @@ def analyze_session_log(
         "origin_partitions": origin_partitions,
         "analyzer_overhead": {
             "command_count": len(analyzer_overhead),
-            "detail_route": "agentic-workspace session-log analyze --detail entries --format json",
+            "detail_route": f"{analyze_route} --origin {origin_scope} --detail entries --format json",
             "rule": "session-log analyze traffic is classified separately and cannot become default product-friction evidence.",
         },
         "failures_by_origin": _bounded_counter(failures_by_origin),
@@ -3875,7 +3880,7 @@ def analyze_session_log(
         "detail_page": detail_payload,
         "full_analysis": {
             "status": "omitted",
-            "command": "agentic-workspace session-log analyze --detail summary --format json",
+            "command": f"{analyze_route} --origin {origin_scope} --detail summary --format json",
             "rule": "A detail selector returns only its bounded page and compact session counts; broad analysis requires the explicit summary route.",
         },
     }

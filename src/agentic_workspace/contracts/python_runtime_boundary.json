@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/python-runtime-boundary/v1",
   "parent_issue": "#309",
   "purpose": "Classify remaining Python-owned behavior after contract, schema, parser, policy, and template extraction so runtime code is intentional implementation rather than hidden contract authority.",
@@ -294,5 +295,3 @@
     }
   }
 }
-
-

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/conformance-contracts.schema.json",
   "title": "Agentic Workspace Conformance Contracts Registry",
-  "description": "Registry of conformance fixtures and the schemas they exercise.",
+  "description": "Source-maintenance model only; not native/public command authority. Registry of conformance fixtures and the schemas they exercise.",
   "type": "object",
   "required": [
     "schema_version",
@@ -63,6 +63,10 @@
         "description": "One entry in the contracts list."
       },
       "description": "Ordered contracts entries used by this contract."
+    },
+    "migration_status": {
+      "const": "source-maintenance-only",
+      "description": "Retained source-maintenance metadata; not an executable native/public CLI contract. Current commands belong to source_decision_contract.json native_cli."
     }
   },
   "additionalProperties": false,

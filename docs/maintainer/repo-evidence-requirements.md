@@ -34,7 +34,7 @@ source_intent_ref = "SYSTEM_INTENT.md#trust"
 source_intent_revision = "<current revision>"
 source_intent_current = true
 evidence_owner = "verification:typed-exit"
-detail_route = "agentic-workspace proof --target . --select <route> --format json"
+detail_route = "agentic-workspace start --target . --task 'Inspect typed-exit evidence' --format json"
 ```
 
 ```markdown

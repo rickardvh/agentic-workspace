@@ -32,8 +32,8 @@ Package-local contract for work under `packages/planning/`.
 1. Read `README.md`.
 2. Read `pyproject.toml` when changing packaging, CLI entry points, or metadata.
 3. Read only the relevant files under `src/repo_planning_bootstrap/`, `bootstrap/`, `skills/`, or `tests/` for the task.
-4. When the task affects planning ownership, startup routing, generated agent docs, or managed wrappers, re-check `../../AGENTS.md`, the locally selected owner reported by `agentic-workspace summary`, and that owner's record.
-5. When working on shipped package behavior, refresh the installed package through the canonical upgrade workflow first so the task starts from the latest checked-in package version.
+4. When the task affects planning ownership, startup routing, generated agent docs, or managed wrappers, re-check `../../AGENTS.md`, the current Planning owner returned by `agentic-workspace start`, and that owner's record.
+5. When working on shipped package behavior, edit the owning source and regenerate its package copies; use current Configuration requests for repository adoption changes.
 
 ## Sources Of Truth
 
@@ -60,4 +60,3 @@ Package-local contract for work under `packages/planning/`.
 - Prefer `uv run ruff check packages/planning` for lint validation.
 - Run `make maintainer-surfaces` when a change also affects generated maintainer docs, startup routing, or the root planning contract.
 - Escalate to `make check-planning` or `make check-all` only when the change crosses package or root orchestration boundaries.
-

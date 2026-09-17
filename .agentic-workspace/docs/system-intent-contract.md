@@ -46,13 +46,8 @@ Ordinary compact inspection should answer:
 - where required continuation now lives
 - what evidence justified the closure decision
 
-Use:
-- `agentic-workspace defaults --section system_intent --format json`
-- `agentic-workspace summary --format json`
-- `agentic-planning report --format json`
-- `agentic-workspace system-intent --target ./repo --sync --format json`
+Use current System Intent detail returned by `agentic-workspace start --target ./repo --task "<task>" --format json`. Follow its source-reconciliation request when the consumed declaration no longer matches its source. Execute only an exact admitted action; do not advance a trust revision merely because HEAD changed.
 
 ## Checked-In Residue Rule
 
 Keep a checked-in execplan whenever later proof, intent validation, or required continuation would be expensive or ambiguous to reconstruct from chat alone.
-

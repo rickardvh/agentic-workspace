@@ -45,15 +45,13 @@ The full Verification manifest remains module-owned; Workspace should consume on
 agentic-verification report --target ./repo --format json
 ```
 
-The AW root can expose routed Verification projections through current supported commands such as:
+For ordinary work, resolve current Verification detail through:
 
 ```text
-agentic-workspace report --section verification --format json
-agentic-workspace implement --select verification --changed <paths> --format json
-agentic-workspace proof --changed <paths> --verbose --format json
+agentic-workspace start --target ./repo --task "<task>" --changed <path> --format json
 ```
 
-Treat exact commands/options as current contract/reference facts rather than the conceptual module boundary.
+Follow the returned exact requests and actions. The workspace proof-selection skill can prepare, execute and admit a selected check through native `proof-procedure`. The module CLI above is source-maintenance tooling, not an alternate public workspace command.
 
 ## Boundary
 

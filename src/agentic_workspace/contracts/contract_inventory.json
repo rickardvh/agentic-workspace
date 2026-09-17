@@ -182,7 +182,7 @@
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
       "consumers": [
-        "agentic-workspace implement --format json",
+        "Source-maintenance model: agentic-workspace implement --format json",
         "generated/workspace/python/cli.py:_implement_payload",
         "scripts/check/check_contract_tooling_surfaces.py"
       ],
@@ -204,7 +204,7 @@
       "classification": "derived",
       "owner_surface": "generated/workspace/python/cli.py",
       "consumers": [
-        "agentic-workspace report --target ./repo --format json"
+        "Source-maintenance model: agentic-workspace report --target ./repo --format json"
       ],
       "notes": "Combined workspace report payload is derived from manifests, config, and live repo state."
     },
@@ -213,7 +213,7 @@
       "classification": "procedural",
       "owner_surface": "generated/workspace/python/cli.py",
       "consumers": [
-        "agentic-workspace defaults --format json"
+        "Source-maintenance model: agentic-workspace defaults --format json"
       ],
       "notes": "Defaults still assemble declarative and procedural contract answers into one emitted payload."
     },
@@ -222,7 +222,7 @@
       "classification": "procedural",
       "owner_surface": "generated/workspace/python/cli.py",
       "consumers": [
-        "agentic-workspace init/adopt/upgrade/uninstall/status/doctor"
+        "Source-maintenance model: agentic-workspace init/adopt/upgrade/uninstall/status/doctor"
       ],
       "notes": "Lifecycle execution stays Python-owned in the first tranche."
     },

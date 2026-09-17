@@ -63,7 +63,7 @@ Use for bounded active direction that should steer current work but should not b
 
 Default owners:
 
-- `.agentic-workspace/planning/state.toml` (`todo.active_items`)
+- bounded Planning lane and decomposition records
 - `.agentic-workspace/planning/execplans/`
 
 Typical examples:
@@ -197,9 +197,9 @@ Use these first supersession rules:
 
 ## First Effective View
 
-Use `agentic-workspace report --target ./repo --format json` for the first compact effective standing-intent view.
+Resolve relevant instruction and System Intent detail through `agentic-workspace start --target ./repo --task "<task>" --format json`; use the exact current references rather than a separate aggregate report.
 
-That view should answer, without broad rereading:
+Inspect relevant source-owned detail to establish:
 
 - which standing-intent classes currently have durable repo-owned surfaces in force
 - which surfaces own them

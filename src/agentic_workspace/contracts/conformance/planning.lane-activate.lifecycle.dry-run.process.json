@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "planning.lane-activate.lifecycle.dry-run.process",
   "operation_id": "planning.lane-activate.lifecycle",

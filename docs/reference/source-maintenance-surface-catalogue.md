@@ -3,7 +3,7 @@
 
 Exact footprint, ownership, and availability values generated from `source_maintenance_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:faf88c957eec599f7bfbece2e5fb02b29c8db26dd998af58125ef29d5bbb4563`
+- Contract digest: `sha256:95e37943dd00c35f74ac9e7e1946cb67682a50cf0f2f015d75b942f3c58d6bfd`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 

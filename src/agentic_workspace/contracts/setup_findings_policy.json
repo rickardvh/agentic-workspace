@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/setup-findings-policy/v1",
   "artifact_path": "tools/setup-findings.json",
   "accepted_kind": "workspace-setup-findings/v1",

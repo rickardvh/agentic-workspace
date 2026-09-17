@@ -41,6 +41,7 @@ plan-summary:
 render-agent-docs:
 	uv run python $(RENDER_AGENT_DOCS_SCRIPT)
 
+# Source-maintenance diagnostics; not installed AW public commands.
 check-memory:
-	uv run agentic-workspace doctor --target ../.. --format json
-	uv run agentic-workspace report --target ../.. --format json
+	uv run agentic-memory doctor --target ../.. --format json
+	uv run agentic-memory report --target ../.. --format json

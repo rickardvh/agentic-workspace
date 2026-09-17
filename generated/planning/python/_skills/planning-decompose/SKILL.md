@@ -15,11 +15,11 @@ Route intent satisfaction to `planning-intent-verification`, closeout mechanics 
 
 ## Route
 
-1. Run `agentic-workspace planning --target . --format json`.
-2. Run `agentic-workspace summary --target . --format json`.
+1. Resolve `agentic-workspace start --target . --task "<task>" --format json`.
+2. Inspect its current Planning detail and exact owner requests.
 3. Classify whether the work is a lane or an epic before writing implementation files.
-4. Create or update a schema-backed decomposition under `.agentic-workspace/planning/decompositions/` when the work has multiple lanes.
-5. Promote only the next bounded ready lane into an execplan.
+4. Use current owner-returned requests and actions to create or update a bounded decomposition when the work has multiple lanes.
+5. Select only the next bounded ready slice through its current owner; do not hand-edit managed records.
 
 ## Guardrails
 

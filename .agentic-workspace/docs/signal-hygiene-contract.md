@@ -29,7 +29,7 @@ Every completed task or milestone should produce a compact "Proof Report" preser
 
 ## Signal Promotion Path
 
-1. **Friction Capture**: Recorded as `repo_friction` in `agentic-workspace report`.
+1. **Friction Capture**: Route actionable friction through the current correction/instruction owner using the workspace instruction-correction skill.
 2. **Evidence Accumulation**: Repeated signals in archived execplans or review artifacts.
 3. **Knowledge Promotion**: Interpretive findings move to Memory; stable rules move to Docs or Config.
 4. **Structural Remediation**: The roadmap prioritizes friction-backed improvements over speculative ones.

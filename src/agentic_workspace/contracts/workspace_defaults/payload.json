@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "agent_aid_storage": {
     "boundary_rules": [
       "local-only helpers remain under the local integration area and must not become shared authority",
@@ -2533,11 +2534,11 @@
       "resolution_algorithm": [
         "weak target below recommended_strength on boundary-shaping or reasoning-heavy work -> escalate-before-execution; never treat the weak target as the executor of record",
         "strong target above recommended_strength on mechanical-follow-through work -> delegate-down-when-safe if a cheaper fit exists; keep strong planner/reviewer fallback",
-        "strong_external_reasoning='preferred' \u2192 external-delegation if external targets exist, else stronger-reasoning, else manual-handoff",
-        "execution_class in (boundary-shaping, reasoning-heavy) or recommended_strength=strong \u2192 stronger-reasoning if available, else external-delegation, else manual-handoff",
-        "execution_class=mixed \u2192 stay-local if local profiles acceptable, else stronger-reasoning",
-        "execution_class=mechanical-follow-through or recommended_strength in (weak, medium) \u2192 stay-local",
-        "no posture \u2192 stay-local with confidence derived from cheap_bounded_executor_available"
+        "strong_external_reasoning='preferred' → external-delegation if external targets exist, else stronger-reasoning, else manual-handoff",
+        "execution_class in (boundary-shaping, reasoning-heavy) or recommended_strength=strong → stronger-reasoning if available, else external-delegation, else manual-handoff",
+        "execution_class=mixed → stay-local if local profiles acceptable, else stronger-reasoning",
+        "execution_class=mechanical-follow-through or recommended_strength in (weak, medium) → stay-local",
+        "no posture → stay-local with confidence derived from cheap_bounded_executor_available"
       ],
       "resolution_categories": [
         "stay-local",

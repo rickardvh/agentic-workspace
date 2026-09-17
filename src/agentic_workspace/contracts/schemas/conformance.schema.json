@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/conformance.schema.json",
   "title": "Conformance",
-  "description": "Conformance fixture contract for proving an operation adapter behaves as expected.",
+  "description": "Source-maintenance model only; not native/public command authority. Conformance fixture contract for proving an operation adapter behaves as expected.",
   "type": "object",
   "required": [
     "schema_version",
@@ -10,7 +10,8 @@
     "operation_id",
     "adapter",
     "fixtures",
-    "expectations"
+    "expectations",
+    "migration_status"
   ],
   "properties": {
     "schema_version": {
@@ -307,6 +308,10 @@
       },
       "additionalProperties": false,
       "description": "Expected process, stream, filesystem, idempotency, and safety results."
+    },
+    "migration_status": {
+      "const": "source-maintenance-only",
+      "description": "Historical generated-operation fixture; never current native/public command conformance. The public command inventory belongs to source_decision_contract.json native_cli."
     }
   },
   "additionalProperties": false,

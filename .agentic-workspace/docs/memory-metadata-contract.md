@@ -70,28 +70,13 @@ Compact durable facts live under `[durable_facts."<id>"]`. Use them only when a 
 
 Post-promotion shape is not selected from a caller-supplied pass flag. A non-`retain` disposition requires a typed stronger-owner resolution that binds the exact fact and revision to the current owner decision plus an admitted, passing `agentic-workspace/proof-receipt/v1`. `retention_after_promotion = "retain"` remains meaningful after remediation: use it when the implementation fix does not make the durable rationale cheap or mechanically equivalent to rediscover.
 
-## Validation Contract
+## Current validation and retrieval
 
-`agentic-workspace doctor --target <repo> --modules memory` validates `manifest.toml` as a typed TOML contract. Invalid TOML, malformed tables, scalar values where arrays are required, non-boolean booleans, invalid enum values, incomplete improvement-signal lifecycle metadata, and incomplete durable facts produce `memory-manifest` diagnostics.
+Use current Memory detail returned by `agentic-workspace start --target <repo> --task "<task>" --format json`, with known changed paths. Follow exact route, declaration or disposition requests rather than guessing a module CLI command.
 
-Agents may edit manifest entries, but they should keep values inside this contract and run doctor or the workspace doctor before claiming completion.
+Malformed or stale metadata remains an owner-reported gap. The current owner validates declaration and mutation requests; prose metadata examples do not authorize direct writes to managed state. Consult the workspace startup and correction skills when capturing or promoting durable knowledge.
 
-## Search & Retrieval Contract
-
-Agents should follow these patterns for "Habitual Pull":
-
-### 1. Automatic Routing (Preferred)
-
-Use `agentic-workspace memory route --files <paths>` or `agentic-workspace memory route --surface <terms>`.
-This uses the manifest and `.agentic-workspace/memory/repo/index.md` to find the smallest set of relevant notes.
-
-### 2. Keyword Search (Fallback)
-
-Use `agentic-workspace memory route --task "<query>"` to find notes matching a task or surface without opening raw memory first.
-
-### 3. Sync Check
-
-Use `agentic-workspace memory sync-memory --files <paths>` to see which notes might be stale after your changes.
+Read only relevant routed notes. After changes, reconcile affected declarations and disposition through their current owner. A keyword match aids discovery but cannot decide semantic relevance, retention or proof.
 
 ## Note Hygiene
 

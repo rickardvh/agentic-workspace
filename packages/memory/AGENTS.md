@@ -32,8 +32,8 @@ Package-local contract for work under `packages/memory/`.
 1. Read `README.md`.
 2. Read `pyproject.toml` when changing packaging, CLI entry points, or dependency metadata.
 3. Read only the relevant files under `src/repo_memory_bootstrap/`, `bootstrap/`, `skills/`, or `tests/` for the task.
-4. When the task affects shared workflow or ownership boundaries, re-check `../../AGENTS.md`, `../../.agentic-workspace/planning/state.toml`, and the active execplan.
-5. When working on shipped package behavior, refresh the installed package through the canonical upgrade workflow first so the task starts from the latest checked-in package version.
+4. When the task affects shared workflow or ownership boundaries, re-check `../../AGENTS.md`, the current Planning owner returned by `agentic-workspace start`, and its exact record.
+5. When working on shipped package behavior, edit the owning source and regenerate its package copies; use current Configuration requests for repository adoption changes.
 
 ## Sources Of Truth
 

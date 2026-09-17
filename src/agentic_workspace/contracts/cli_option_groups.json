@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/cli-option-groups/v1",
   "option_groups": {
     "format": {

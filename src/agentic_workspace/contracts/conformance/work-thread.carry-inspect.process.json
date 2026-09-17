@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "work-thread.carry-inspect.process",
   "operation_id": "work-thread.carry-inspect",

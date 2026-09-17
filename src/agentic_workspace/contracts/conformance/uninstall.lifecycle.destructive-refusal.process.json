@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "uninstall.lifecycle.destructive-refusal.process",
   "operation_id": "uninstall.lifecycle",

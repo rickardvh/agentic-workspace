@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/skill-spec.schema.json",
   "title": "Module-neutral SkillSpec Contract",
-  "description": "Package-owned skill behavior projected from one compiled operating decision; specialized procedures remain behind routed skill owners.",
+  "description": "Source-maintenance model only; not native/public command authority. Package-owned skill behavior projected from one compiled operating decision; specialized procedures remain behind routed skill owners.",
   "type": "object",
   "required": [
     "schema_version",
@@ -44,6 +44,10 @@
         "$ref": "#/$defs/generated_target_behavior_fixture"
       },
       "description": "Target-agnostic behavior fixtures that generated skills and plugins must preserve."
+    },
+    "migration_status": {
+      "const": "source-maintenance-only",
+      "description": "Retained source-maintenance metadata; not an executable native/public CLI contract. Current commands belong to source_decision_contract.json native_cli."
     }
   },
   "$defs": {

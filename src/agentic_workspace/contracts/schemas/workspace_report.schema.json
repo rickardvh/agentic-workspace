@@ -119,6 +119,10 @@
             "description": "One entry in the report principles list."
           },
           "description": "Ordered report principles entries used by this contract."
+        },
+        "migration_status": {
+          "const": "source-maintenance-only",
+          "description": "The embedded reporting model is source-maintenance metadata, not the native/public command surface."
         }
       },
       "additionalProperties": false,

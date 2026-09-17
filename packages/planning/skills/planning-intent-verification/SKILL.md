@@ -15,12 +15,12 @@ Route closeout mechanics to `planning-closeout-trust`, broad-work sequencing to 
 
 ## Route
 
-1. Inspect the cheapest structured surface first: `agentic-workspace start --target . --task "<task>" --format json`, `agentic-workspace summary --target . --format json`, or `agentic-workspace report --target ./repo --section closeout_trust --format json`.
+1. Resolve `agentic-workspace start --target . --task "<task>" --format json` and inspect only relevant current Planning and Verification detail references.
 2. Extract original intent, interpreted local intent, parent or larger intent, non-goals, negative invariants, escalation triggers, and continuation owner from the user request, issue body/comments, active planning record, and relevant repo docs.
 3. Compare the intended outcome to the proposed or delivered slice. Classify it as satisfied, partially satisfied, unsatisfied, deferred-with-owner, or escalation-required.
 4. Keep proof separate from intent. Passing validation proves behavior, not task/lane/epic satisfaction by itself.
 5. Before closeout, require explicit evidence for parent/larger intent satisfaction and for each negative invariant being satisfied, deferred, or rejected.
-6. If CLI output exposes `next_safe_action`, preserve its forbidden actions, `completion_claim_allowed`, proof boundary, module slot, and fallback behavior.
+6. Preserve the current decision's restrictions, exact requests, source currentness and claim boundaries. No skill grants completion authority.
 
 ## Completion Claims
 
@@ -31,8 +31,8 @@ Completion is not allowed when any of these are true:
 - negative invariants are present but not satisfied, deferred, or rejected;
 - external issue evidence is missing or older than the local closeout claim;
 - a continuation owner is required but not recorded;
-- the next-safe-action packet forbids completion.
+- the current owner decision forbids completion.
 
 ## Fallback
 
-If the CLI is unavailable, read only the active planning record or issue text needed to answer the same fields. Do not mutate managed planning state by hand unless the package lifecycle command is unavailable and the user explicitly asked for recovery.
+If native execution is unavailable, read only the relevant Planning record or issue text. Follow the startup skill's repository-readable boundary: runtime admission is unknown and managed state must remain preserved.

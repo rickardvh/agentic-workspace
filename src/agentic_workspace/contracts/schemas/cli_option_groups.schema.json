@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/cli-option-groups.schema.json",
   "title": "Cli Option Groups",
-  "description": "Reusable CLI option-group manifest used by generated command metadata.",
+  "description": "Source-maintenance model only; not native/public command authority. Reusable CLI option-group manifest used by generated command metadata.",
   "type": "object",
   "required": [
     "schema_version",
@@ -40,6 +40,10 @@
         "description": "Named entry in the option groups mapping."
       },
       "description": "Option groups details used by this contract."
+    },
+    "migration_status": {
+      "const": "source-maintenance-only",
+      "description": "Retained source-maintenance metadata; not an executable native/public CLI contract. Current commands belong to source_decision_contract.json native_cli."
     }
   },
   "$defs": {

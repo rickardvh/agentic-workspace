@@ -18,6 +18,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `schema.command` | string | yes |  | Command string or command name used by this contract. |  |  |
 | `schema.shared_fields` | array of string | yes |  | Fields shared across related report profiles. |  |  |
 | `schema.report_principles` | array of string | yes |  | Ordered report principles entries used by this contract. |  |  |
+| `schema.migration_status` | const `"source-maintenance-only"` | no |  | The embedded reporting model is source-maintenance metadata, not the native/public command surface. |  |  |
 | `command` | string | yes |  | Command invocation represented by this report. |  |  |
 | `target` | string | yes |  | Resolved repository path the report describes. |  |  |
 | `invoked_cli_identity` | ref `#/$defs/invoked_cli_identity` | yes |  | Invoked cli identity referenced contract shape used by this contract. |  |  |

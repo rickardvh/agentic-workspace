@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/proof-routes-manifest.schema.json",
   "title": "Proof Routes Manifest",
-  "description": "Manifest of named proof routes and their validation commands.",
+  "description": "Source-maintenance model only; not native/public command authority. Manifest of named proof routes and their validation commands.",
   "type": "object",
   "required": [
     "schema_version",
@@ -31,6 +31,10 @@
         "description": "Named entry in the default routes mapping."
       },
       "description": "Default routes details used by this contract."
+    },
+    "migration_status": {
+      "const": "source-maintenance-only",
+      "description": "Retained source-maintenance metadata; not an executable native/public CLI contract. Current commands belong to source_decision_contract.json native_cli."
     }
   },
   "additionalProperties": false,

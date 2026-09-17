@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,16 @@ import pytest
 from tests import native_artifact_consumers
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_native_help_matches_declared_command_inventory(native_cli: Path) -> None:
+    contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
+    commands = {row["name"] for row in contract["native_cli"]["commands"]}
+    result = subprocess.run([str(native_cli), "--help"], capture_output=True, text=True, check=True)
+    assert set(re.findall(r"^  ([a-z][\w-]*)  ", result.stdout, re.M)) == commands
+    for command in sorted(commands):
+        parsed = subprocess.run([str(native_cli), command, "--help"], capture_output=True, text=True)
+        assert parsed.returncode == 0, (command, parsed.stderr)
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])

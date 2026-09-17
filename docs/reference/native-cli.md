@@ -15,6 +15,7 @@ public command and option declarations come from `source_decision_contract.json`
 | `invoke` | Execute an exact action returned by its current owner. |
 | `worker` | Project sealed Assignment input or assemble unproven return re-entry. |
 | `resources` | Inspect hygiene and propose or execute an admitted resource operation. |
+| `proof-procedure` | Prepare selected proof context or execute and admit one exact native check. |
 
 `start --target <repository> --task "<task>" --format json` reads current owner
 sources. Repeated `--changed` arguments declare changed paths. Supply a returned

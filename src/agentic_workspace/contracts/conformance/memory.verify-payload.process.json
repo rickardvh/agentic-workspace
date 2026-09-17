@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "memory.verify-payload.process",
   "operation_id": "memory.verify-payload.report",

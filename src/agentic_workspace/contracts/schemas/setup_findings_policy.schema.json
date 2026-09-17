@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/setup-findings-policy.schema.json",
   "title": "Setup Findings Promotion Policy",
-  "description": "Policy for promoting setup findings into docs, planning, config, checks, or issues.",
+  "description": "Source-maintenance model only; not native/public command authority. Policy for promoting setup findings into docs, planning, config, checks, or issues.",
   "type": "object",
   "required": [
     "schema_version",
@@ -98,6 +98,10 @@
         "description": "One entry in the secondary list."
       },
       "description": "Ordered secondary entries used by this contract."
+    },
+    "migration_status": {
+      "const": "source-maintenance-only",
+      "description": "Retained source-maintenance metadata; not an executable native/public CLI contract. Current commands belong to source_decision_contract.json native_cli."
     }
   },
   "additionalProperties": false,
