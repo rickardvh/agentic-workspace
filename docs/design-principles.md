@@ -43,11 +43,17 @@ Prefer:
 
 Avoid broad reading lists and always-loaded capability manuals.
 
+Of several relevant unknowns, prefer the observation that can change the next action or prevent expensive downstream rework. A compatibility requirement may determine whether an implementation is viable; formatting detail usually does not. This is decision-relevant information gain, not a requirement to calculate entropy or rank every source. The agent judges semantic value; owners expose trustworthy facts, consequences and exact routes.
+
+Small certainly-needed context can be cheaper to deliver now than behind another selector. Independent reads may be batched when that helps; progressive disclosure is not one fact per turn. A useful negative result or newly discovered conflict may increase acknowledged uncertainty rather than reduce it.
+
 ### 4. One operating decision, many source owners
 
 Repository and module sources keep semantic authority. Workspace composes their current effect; it should not create a second source of truth.
 
 A generated instruction or operating contract is useful because it is cheap to consume, not because it replaces the source that authorized it.
+
+Current context should be sufficient for the next supported decision, including exact source routes and explicit unknowns where more observation is needed. Equivalent task, authority, evidence/effects and environment observations should expose equivalent material action and claim boundaries regardless of conversation history. This is a practical continuity property, not a literal Markov model, global state snapshot, or demand for identical model choices.
 
 ### 5. Make the next action constructible
 
@@ -62,6 +68,8 @@ Good dynamic control should normally end in something the agent can actually do:
 
 A transition name without a supported route is not an adequate instruction.
 
+A question should identify what is unresolved, why it changes the action or claim, and what bounded answer is needed. Do not ask the human to repeat facts available from current sources or decisions already admitted by standing authority. Preserve a truthful insufficient-evidence path rather than forcing a choice. Carry a uniquely determined authorized action without a model turn just to select it; genuinely different choices must remain visible.
+
 ### 6. Use one generic loop
 
 The ordinary mental model is `resolve -> act -> reconcile`.
@@ -69,6 +77,8 @@ The ordinary mental model is `resolve -> act -> reconcile`.
 Startup, implementation, proof, handoff, closeout, and continuation are common situations, not independent core frameworks. Closeout is terminal reconciliation.
 
 Do not create another phase-specific decision engine when the existing operating-decision path can carry the result.
+
+After a consequential result, make its supported claim, remaining uncertainty and continuation recoverable through current owners. A decision delta may help a continuing consumer, but a delta alone must not become the only way a fresh consumer can understand current work. Preserve confirmed effects independently of continuation failure; an unknown effect requires recovery, not replay.
 
 ### 7. Modules specialize the loop; they do not redefine it
 
@@ -113,7 +123,7 @@ Measure the whole path: rereads, rediscovery, clarification, retries, route reve
 
 Token count, bytes, latency, commands, and file count are useful proxies only when they improve the total path to a correct result.
 
-Do not save model tokens by creating human bureaucracy.
+Do not save model tokens by creating human bureaucracy. Do not replace total completion cost with a greedy information-per-call metric: some valuable steps perform work, establish custody, or protect future continuation rather than resolve a new question. Stop optional discovery when it will not materially improve the supported decision, not when all conceivable uncertainty is gone. Required work, currentness, authority and proof remain binding.
 
 ### 13. Improve the deterministic owner before compensating elsewhere
 
@@ -126,6 +136,8 @@ A permanent warning in another subsystem is a poor substitute for fixing determi
 AW must work with mixed agents and cannot assume perfect adherence, hidden reasoning, or one vendor.
 
 Make the intended path progressively discoverable and cheaper than bypass. When an agent ignores a routed contract, lower trust explicitly rather than allowing silent authority expansion.
+
+Do not depend on a consumer remembering a fact that was presented before its purpose was clear. Bind decision-bearing context to its current task, scope and consequence; re-establish that relationship when relevance changes. Valid in-context reuse is welcome. Fresh or context-limited consumers need current references or material, not a claim that it was delivered to somebody earlier. Delivery remains distinct from understanding, reconciliation and proof.
 
 ### 15. Extensibility must stay bounded
 
@@ -191,7 +203,7 @@ Use an abstraction ladder:
 4. maintainer procedure;
 5. historical evidence.
 
-Links compose docs; copied truth creates drift.
+Links compose docs; copied truth creates drift. Introduce the subject and purpose before details whose interpretation depends on them. The same discipline applies to agent-facing results: concise output should not leave facts waiting for a later message to explain why they matter.
 
 ### 23. Portability beats dogfooding cleverness
 
@@ -205,14 +217,17 @@ Features that claim to reduce restart cost, context cost, handoff burden, or age
 
 Keep weak, negative, and unavailable evidence visible rather than averaging it into a broad success claim.
 
+Select proof for the claims and failure modes still unresolved, not the number of commands available. Checks with similar names or the same claimed goal need not supply equivalent evidence; correlation and different failure coverage matter. Reuse valid evidence and avoid demonstrated duplication without weakening independent review or source-required checks. Empirical lessons may improve a method, but repetition alone cannot promote advice into human-owned policy.
+
 ## Design tests
 
 A change is moving in the right direction when it helps answer yes to questions such as:
 
 - Does this preserve or route operating context that materially changes behavior?
-- Does the right information arrive later and more selectively than before?
-- Does the current agent get one coherent, constructible next action?
+- Does the information arrive when it can change a decision, without unnecessary discovery hops?
+- Does the current agent get a constructible action, real choice, bounded question, or recovery rather than a forced primary action?
 - Does source ownership remain explicit?
+- Can a fresh consumer interpret the current action and claim boundaries from current owners and exact refs, without reconstructing the prior conversation?
 - Does this reduce total successful-completion cost rather than shifting it elsewhere?
 - Can direct work ignore the capability entirely?
 - Can another module provide a different domain capability without changing the core mental model?
@@ -235,6 +250,7 @@ A change is suspicious when it tends to:
 
 Use narrower owner docs for maintainer procedure and implementation details:
 
+- [Operational affordance design](maintainer/operational-affordance-design.md) for interaction design and consequence-based evidence;
 - `docs/maintainer/contributor-playbook.md` for maintainer routing and validation;
 - `docs/maintainer/dogfooding-feedback.md` for dogfooding/product-friction routing;
 - `.agentic-workspace/docs/` contracts for installed/source-checkout tactical details;
