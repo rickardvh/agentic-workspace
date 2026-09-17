@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "selector-contracts-manifest/v1",
   "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
   "profile": "compact-contract-answer/v1",

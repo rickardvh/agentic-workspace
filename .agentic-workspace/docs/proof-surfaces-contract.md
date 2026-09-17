@@ -1,83 +1,15 @@
-# Proof Surfaces Contract
+# Proof surfaces
 
-## Purpose
+Select the smallest evidence lane that establishes the changed behavior. Validation is evidence for a bounded claim; it does not by itself prove issue completion or intent satisfaction.
 
-This document records the normal proof lanes for the repository.
+Use the workspace proof-selection skill when proof judgment is needed. The native `proof-procedure` consumes one JSON step through `--input`, starting with `{"operation":"prepare"}`. It returns current Verification context and exact requests. Carry only an owner-returned execution request or action after applicability and strategy are settled.
 
-Use it when the question is not "what should I edit?" but "what proves that this contract still holds?"
-
-## Rule
-
-Use the narrowest proof lane that answers the current trust question.
-
-Do not widen routine proof into a broad repo check when a surface-specific lane is enough.
-
-Validation should confirm correct construction, not serve as the normal instruction source for how agents construct an artifact, command path, or workflow.
-
-When otherwise straightforward work repeatedly needs validation output to teach the construction shape, route that as interface friction toward a scaffold, writer helper, alias, lifecycle command, compact route, or agent aid before adding more validation prose.
-
-## Default Proof Surface
-
-Use:
-
-```bash
-agentic-workspace proof --target ./repo --format json
+```sh
+agentic-workspace proof-procedure --target . --task "<task>" --changed <path> --input <step.json> --format json
 ```
 
-That command is the workspace-level query surface for:
+An ordinary `start`/`invoke` client can use the same owners. No domain proof command or diagnostic alias is required. Keep direct no-proof work direct.
 
-- the canonical proof contract
-- the normal proof routes
-- the currently installed modules
-- the current `status` and `doctor` health summary
-- current warnings, manual-review signals, and stale generated-surface signals
+Source-checkout maintainers may run repository tests and checks through their actual Makefile or script entry points. Those invocations do not define installed CLI behavior. Record failures, skips, retries and unavailable evidence accurately; broader release proof is warranted when the changed artifact or unresolved risk requires it.
 
-It reports existing proof lanes. It does not replace them.
-
-When the question is which proof lane is enough, use the proof-selection section in the machine-readable defaults contract:
-
-```bash
-agentic-workspace defaults --section proof_selection --format json
-```
-
-When the question is which proof lane should absorb a vague prompt, use the prompt-routing section:
-
-```bash
-agentic-workspace defaults --section prompt_routing --format json
-```
-
-When the question is already narrow, prefer the compact selector path:
-
-```bash
-agentic-workspace proof --target ./repo --route workspace_proof --format json
-agentic-workspace proof --target ./repo --current --format json
-```
-
-Those forms return the compact contract answer profile from [compact-contract-profile.md](compact-contract-profile.md) instead of the full proof surface.
-
-## Default Routes
-
-| Trust question | Default route | Why |
-| --- | --- | --- |
-| What proves the workspace contract here? | `agentic-workspace proof --target ./repo --format json` | One queryable answer for the normal proof lanes plus current workspace proof state |
-| What is the current workspace health? | `agentic-workspace status --target ./repo` | Cheap current-state summary |
-| What drift or ambiguity needs remediation? | `agentic-workspace doctor --target ./repo` | Targeted drift and warning lane |
-| Are planning surfaces coherent? | `uv run python scripts/check/check_planning_surfaces.py` | Canonical planning-surface proof |
-| Do maintainer and generated surfaces still agree? | `make maintainer-surfaces` | Cross-surface contract proof |
-| Does source, payload, and root install still line up? | `uv run pytest tests/test_source_payload_operational_install.py` | Explicit boundary proof |
-| Is the root repo on the latest checked-in planning payload? | `uv run agentic-workspace upgrade --target . --modules planning` | Final payload freshness proof |
-| Is the root repo on the latest checked-in memory payload? | `uv run agentic-workspace upgrade --target . --modules memory` | Final payload freshness proof |
-
-## Boundaries
-
-- Keep proof surfaces queryable and compact.
-- Preserve package-local ownership of package-local tests and validation.
-- Do not treat the workspace proof surface as a new source of truth over the underlying checks.
-- Do not turn proof into monitoring, scoring, or long-running health infrastructure.
-
-## Relationship To Other Docs
-
-- Use [compact-contract-profile.md](compact-contract-profile.md) when you want the one-answer query shape instead of the full proof object.
-- Use [`.agentic-workspace/docs/reporting-contract.md`](reporting-contract.md) for the compact front-door route to combined workspace state.
-- Use [`.agentic-workspace/docs/lifecycle-and-config-contract.md`](lifecycle-and-config-contract.md) when the repo is already in a broken or ambiguous state and you need a recovery sequence.
-- Use [generated-surface-trust.md](generated-surface-trust.md) when the trust question is specifically about generated mirrors and their canonical sources.
+Keep source reconciliation, independent review and claim admission separate from successful check execution. Do not retry an uncertain committed effect without its current recovery path.

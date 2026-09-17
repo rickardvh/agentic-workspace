@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "planning.handoff.process",
   "operation_id": "planning.handoff.report",

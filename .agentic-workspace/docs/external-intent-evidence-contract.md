@@ -68,7 +68,7 @@ Use it when a repo has planning evidence outside the checked-in planning state a
         "source_ref": "https://example.invalid/owner/repo/issues/251",
         "refresh_id": "2026-04-27T12:00:00Z"
       },
-      "refresh_route": "agentic-workspace external-intent refresh-github --issue #251 --storage cache",
+      "refresh_route": "https://example.invalid/owner/repo/issues/251",
       "availability": "available",
       "provider_detail": {}
     }
@@ -105,7 +105,7 @@ Planning normalizes legacy items into the observation fields above and adds:
 
 Ordinary startup, summary, and selected-owner queries project only observations with a fresh explicit or evidence-backed relationship to a selected/live owner. Full unmatched evidence remains available through explicit bounded external-intent queries. A 1,000-item unrelated snapshot must not create durable candidates, owners, or ordinary route pressure.
 
-Promotion is a separate explicit decision. `external-intent refresh-github --apply-planning-candidates` requires one or more `--issue` selections; a broad refresh cannot bulk-create Planning work. Repeated refresh replaces the cache snapshot instead of retaining a second `previous_items` authority, and candidate promotion remains idempotent by stable external reference.
+Promotion is a separate explicit current Planning decision. An external observation or broad refresh cannot bulk-create Planning work. Preserve exact external references and source currentness when answering an owner request.
 
 Evidence references supplied by an adapter are observation evidence only. External completion becomes `externally-completed-awaiting-admission`; it does not satisfy Planning intent, AW proof, lane closure, or parent closure.
 
@@ -117,7 +117,7 @@ The intent-validation surface may use this artifact to answer:
 - which closed external items have lower-trust closeout because expected checked-in residue is missing
 - whether the repo looks quiet only because larger intent fell out of visible planning state
 
-Use `external_work_reconciliation` in `agentic-workspace summary --format json` or `agentic-workspace report --target ./repo --section external_work_reconciliation --format json` as the first compact answer. It groups evidence freshness, current external work state, closeout reconciliation, and landed-open checks before provider-specific detail. Explicit report/reconcile paths may reconstruct the ignored cache from an optional provider adapter when one is available; missing adapters fall back to absent evidence instead of blocking offline planning.
+Resolve current Planning external-work detail through `agentic-workspace start --target ./repo --task "<task>" --format json`. Follow its exact observation and reconciliation requests. Provider data is evidence, never permission to mutate or complete a Planning owner.
 
 ## Non-Authority Rule
 

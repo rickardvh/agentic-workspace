@@ -73,7 +73,7 @@
         "value": ".agentic-workspace/OWNERSHIP.toml"
       },
       "safe_to_edit": true,
-      "refresh_command": "agentic-workspace ownership --target . --path <path> --format json",
+      "refresh_command": null,
       "representative_paths": [
         ".agentic-workspace/config.toml"
       ]

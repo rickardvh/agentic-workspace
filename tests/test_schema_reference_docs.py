@@ -28,7 +28,7 @@ def test_schema_reference_generator_renders_workspace_config_annotations() -> No
     assert '`"CLAUDE.md"`' in text
     assert '`".cursor/rules/project.mdc"`' in text
     assert "x-agentic-workspace-effective-default-source" in text
-    assert "`update.modules.memory.source_ref`" in text
+    assert "`payload.target_release`" in text
 
 
 def test_schema_reference_annotation_check_covers_workspace_config() -> None:

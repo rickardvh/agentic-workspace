@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/python-runtime-boundary.schema.json",
   "title": "Python Runtime Boundary",
-  "description": "Boundary contract for what remains runtime-owned versus contract-owned in Python code.",
+  "description": "Source-maintenance model only; not native/public command authority. Boundary contract for what remains runtime-owned versus contract-owned in Python code.",
   "type": "object",
   "required": [
     "schema_version",
@@ -361,6 +361,10 @@
       },
       "additionalProperties": false,
       "description": "Root cli authority audit details used by this contract."
+    },
+    "migration_status": {
+      "const": "source-maintenance-only",
+      "description": "Retained source-maintenance metadata; not an executable native/public CLI contract. Current commands belong to source_decision_contract.json native_cli."
     }
   },
   "additionalProperties": false,

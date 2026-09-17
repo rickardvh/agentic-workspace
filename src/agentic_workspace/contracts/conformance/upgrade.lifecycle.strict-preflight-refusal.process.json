@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "upgrade.lifecycle.strict-preflight-refusal.process",
   "operation_id": "upgrade.lifecycle",

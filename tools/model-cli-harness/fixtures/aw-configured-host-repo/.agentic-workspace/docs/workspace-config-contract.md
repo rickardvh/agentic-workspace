@@ -1,7 +1,3 @@
-# Workspace Config Contract
+# Workspace configuration
 
-Use `uv run agentic-workspace config --target . --format json` for the resolved workspace configuration before reading raw config files.
-
-`config.toml` is repo-owned policy. `config.local.toml` is local runtime posture and must not be treated as shared repo authority.
-
-Prefer the default command output for workflow obligations, output posture, delegation posture, proof policy, and closeout settings. Use `--select <field>` for exact detail or `--verbose` only for broad diagnostics.
+Repository and local TOML sources own policy. Use current Configuration detail returned by `agentic-workspace start --target . --task "<task>" --format json` when effective policy or mutation admission matters. Read named source files when requested; do not invent a resolved configuration from remembered defaults.

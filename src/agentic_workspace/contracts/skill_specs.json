@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/skill-spec/v1",
   "rule": "Skills project the mandatory enabled-AW workflow's compiled operating decision. Specialized owners contribute routed procedures; advisory skills never bypass authority, proof, or claim boundaries.",
   "generated_plugin_targets": [

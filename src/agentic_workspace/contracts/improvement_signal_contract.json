@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/improvement-signal-contract/v1",
   "kind": "workspace-improvement-signal-contract/v1",
   "role": "candidate-shape-not-backlog",

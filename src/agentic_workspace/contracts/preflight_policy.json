@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/preflight-policy/v1",
   "summary": "Policy for high-risk command preflight gating and token validation.",
   "high_risk_commands": [

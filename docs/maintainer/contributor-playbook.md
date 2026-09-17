@@ -60,10 +60,10 @@ The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`,
 - Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` before changing or explaining root lifecycle behavior or configuration so the semantics stay canonical.
 - Use `.agentic-workspace/docs/generated-surface-trust.md` for canonical-source and freshness questions before editing mirrors or routing docs.
 - Edit package code only when the change belongs to that package's shipped behavior or tests.
-- Keep the root `agentic-workspace` CLI thin; push module-specific lifecycle logic back into the module packages.
+- Keep the root CLI and language bindings thin; current deterministic domain semantics and effects belong to the Rust core. Package-local Python tools remain source-maintenance mechanisms.
 - Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.
 - Treat `tools/` agent docs as generated mirrors; change `.agentic-workspace/planning/agent-manifest.json` and rerender instead of editing them directly.
-- Treat CLI interface authoring as definition-owned during the generated-package migration. Change command shape, option semantics, generated package metadata, operation refs, primitive refs, schemas, and conformance refs in contracts or generators; use direct `cli.py` edits for runtime primitives, live inspection, dispatch migration glue, or explicitly justified uncovered fixes.
+- Author current CLI commands and options in `source_decision_contract.json` and the native implementation. Retained command-generation metadata and process conformance fixtures are classified `source-maintenance-only`; they do not define installed/public commands. Keep Python `cli.py` a native launcher.
 - Treat command/code generation, autopilot/self-improvement loops, package extraction, and heavy maintenance pressure as source-checkout-only maintainer tooling. Review artifacts and external tracker adapters are the reusable host-repo diagnostics that may remain behind `workspace.advanced_features`.
 - In checked-in human-facing docs, prefer clickable Markdown links for navigation, but keep the target paths repo-relative. Do not introduce absolute filesystem paths into links or prose unless the absolute external path is itself the documented subject.
 

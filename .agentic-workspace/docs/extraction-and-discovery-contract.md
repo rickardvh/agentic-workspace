@@ -1,82 +1,18 @@
-# Extraction, Discovery, and Declarative Boundary
+# Source, payload and discovery boundaries
 
-This contract defines the policy for identifying new capabilities, extracting them into packages, and maintaining the boundary between declarative and procedural state.
+The Rust core owns current deterministic domain semantics and effects. Python, TypeScript, JSON and native CLI entry points project that authority. Source-maintenance Python modules and generated historical command models do not add public CLI commands.
 
-## 1. Discovery and Findings
+Keep four layers distinct:
 
-### Setup Findings
-- **Purpose**: Captures advisory findings during `init`, `setup`, or `doctor` passes.
-- **Triage**: Findings should be triaged into:
-  - **Dismiss**: Duplicate or out of scope.
-  - **Planning Candidate**: Promotion to `todo.active_items` or `roadmap` in `.agentic-workspace/planning/state.toml`.
-  - **Durable Residue**: Capture in Memory or canonical docs.
-- **Storage**: Optional findings live in `tools/setup-findings.json`. This file is transient and should be removed once findings are promoted or dismissed.
-
-### Skill Discovery
-- Use for identifying reusable agent skills and registry-backed workflows.
-- Skills should be discovered and registered rather than remaining ad hoc script snippets.
-
----
-
-## 2. Extraction Policy
-
-Extract a new package only when:
-- **Stable Boundary**: The ownership is clear and doesn't overlap with existing modules.
-- **Explicit Seams**: The capability exposes manifests, schemas, or generated artifacts.
-- **Independent Utility**: The package is useful on its own in selective-adoption repos.
-- **Maintenance Friction**: Dogfooding shows that staying in the root or a module is causing friction.
-
-### Workspace Thinness
-- New module-specific logic belongs in the package CLI first.
-- The root workspace layer only centralizes composition, reporting, and shared lifecycle orchestration.
-
----
-
-## 3. Declarative Contract Boundary
-
-### Purpose
-- Keep stable metadata (selectors, schemas, route IDs) inspectable without reading Python code.
-- Avoid turning the workspace into a heavy workflow engine.
-
-### Classification Rule
-- **Declarative**: Data is stable, versioned, and inspectable (e.g. selector metadata, proof route IDs).
-- **Procedural**: Logic depends on live repo state, dynamic branching, or complex reconciliation.
-- **Derived**: Payload is assembled from stable manifests plus live state (e.g. `agentic-workspace report`).
-
----
-
-## 4. Source, Payload, and Install Boundaries
-
-This monorepo maintains four distinct layers to separate the shipped product from operational usage and repo-local configuration:
-
-| Layer | Purpose | Paths | Direction of Change |
-| --- | --- | --- | --- |
-| **Source Code** | Procedural Python logic, CLI commands, and installer logic. | `packages/*/src/` | Authority for tool behavior. |
-| **Shipped Product** | Authoritative contracts, templates, and default skills (the "Bootstrap"). | `packages/*/bootstrap/` | **Primary Source of Truth** for shipped content. Edit here first. |
-| **Installed Product** | The operational installation of the shipped product into this repo. | `docs/`, `AGENTS.md`, `.agentic-workspace/planning/state.toml`, etc. | **Dogfooding layer.** Update via `upgrade` command after editing the Payload. |
-| **Repo-Specific Files**| Metadata unique to this monorepo's identity, build, and environment. | `pyproject.toml`, `README.md`, `Makefile` | **Local configuration.** Entirely separate from shipped logic. |
-
-### Operational Hygiene
-- **Edit Payload First**: Changes to distributed contracts (e.g., `docs/*-contract.md`) must be made in the `packages/*/bootstrap/` payload. 
-- **Upgrade to Dogfood**: After editing the payload, run the workspace `upgrade` command (for example, `uv run agentic-workspace upgrade --modules planning --target .`) to apply the changes to the monorepo root.
-- **Template Separation**: To prevent confusion, generic tracking files in the payload are named with a `.template.md` suffix (e.g., `TODO.template.md`). The installer strips this suffix during deployment to ensure the target repo receives standard operational filenames.
-- **Do not patch root alone**: Do not patch the root operational install alone if a package upgrade would overwrite it or if the change is intended for distribution.
-
----
-
-## 5. Ownership Tests
-
-| Component | Authority |
+| Layer | Authority |
 | --- | --- |
-| **Memory** | Durable knowledge (facts, decisions, failure modes). |
-| **Planning** | Active execution state (tasks, milestones, next actions). |
-| **Routing** | Guidance on what to read, trust, and run. |
-| **Checks** | Liveness and drift validation. |
-| **Workspace** | Lifecycle orchestration and module composition. |
+| Source and contracts | Native behavior and its public declarations; package source owns maintenance tools. |
+| Bootstrap payload and package skills | Reusable templates and procedure supplied to consumers. |
+| Root operational install | Repository policy and domain state under their declared owners. |
+| Generated copies | Derived outputs refreshed from their source, never an independent authority. |
 
----
+Edit the declared source of distributed content, regenerate its copies, and validate source/payload agreement. Do not overwrite repository-owned state to refresh product guidance. Use current Configuration owner requests for adoption or removal, with their exact custody and preservation rules.
 
-## 5. Relationship to Tooling
+Source-checkout maintainers can inspect the boundary with `uv run python scripts/check/check_source_payload_operational_install.py --strict` and regenerate command-package projections with `uv run python scripts/generate/generate_command_packages.py`. These are maintenance invocations from the repository root, not installed commands.
 
-- `agentic-workspace setup --target ./repo --format json`: Discovery entrypoint.
-- `scripts/check/check_contract_tooling_surfaces.py`: Validation for declarative manifests.
+Discover specialized skills only when relevant to the task. Extract a new capability only when it has clear ownership, stable seams, independent utility and demonstrated maintenance value. Keep advisory findings transient until a current owner accepts actionable work or durable knowledge.

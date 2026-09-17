@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "workspace-reporting-schema/v1",
   "canonical_doc": ".agentic-workspace/docs/reporting-contract.md",
   "command": "agentic-workspace report --target ./repo --format json",

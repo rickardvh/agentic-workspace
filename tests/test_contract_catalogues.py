@@ -14,20 +14,47 @@ SCRIPT = REPO_ROOT / "scripts/generate/generate_contract_catalogues.py"
 def test_active_executable_examples_agree_with_native_command_authority():
     contract = json.loads((REPO_ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text(encoding="utf-8"))
     commands = {row["name"] for row in contract["native_cli"]["commands"]}
-    files = [
-        *REPO_ROOT.glob("docs/*.md"),
-        *REPO_ROOT.glob("docs/package/*.md"),
-        *REPO_ROOT.glob("docs/maintainer/*.md"),
-        *REPO_ROOT.glob(".agentic-workspace/skills/*/SKILL.md"),
-    ]
+    # Audit procedure sources AND delivered copies. History is evidence, not an
+    # executable catalogue; exclude only its named homes, not reference docs.
+    historical = ("docs/reviews/", "docs/decisions/", "docs/releases/")
+    files = {
+        *REPO_ROOT.glob("*.md"),
+        *REPO_ROOT.glob("docs/**/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/docs/**/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/skills/**/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/*/skills/**/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/*/WORKFLOW.md"),
+        *REPO_ROOT.glob(".agentic-workspace/planning/*/README.md"),
+        *REPO_ROOT.glob("packages/**/*.md"),
+        *REPO_ROOT.glob("src/agentic_workspace/_payload/**/*.md"),
+        *REPO_ROOT.glob("generated/**/*.md"),
+        *REPO_ROOT.glob("tools/skills/**/*.md"),
+        *REPO_ROOT.glob("tools/model-cli-harness/fixtures/**/*.md"),
+    }
     unsupported = []
-    for path in files:
-        for block in re.findall(r"```[^\n]*\n(.*?)```", path.read_text(encoding="utf-8"), re.S):
-            for command in re.findall(r"(?:^|\s)agentic-workspace\s+([a-z][\w-]*)", block):
+    for path in sorted(files):
+        relative = path.relative_to(REPO_ROOT).as_posix()
+        if relative.startswith(historical):
+            continue
+        # Inline code, fenced examples and quoted configuration values all
+        # carry executable guidance. A bare product name in prose does not.
+        for block in re.findall(r"`+([^`]+)`+", path.read_text(encoding="utf-8")):
+            for command in re.findall(r"\bagentic-workspace\s+([a-z][\w-]*)", block):
                 if command not in commands:
-                    unsupported.append(f"{path.relative_to(REPO_ROOT)}: {command}")
+                    unsupported.append(f"{relative}: {command}")
     assert unsupported == []
+    native_reference = (REPO_ROOT / "docs/reference/native-cli.md").read_text(encoding="utf-8")
+    assert set(re.findall(r"^\| `([\w-]+)` \|", native_reference, re.M)) == commands
     for path in (REPO_ROOT / "src/agentic_workspace/contracts/operations").glob("*.json"):
+        assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
+    # Retained generated-operation fixtures must carry the same disposition as
+    # their operations, including when opened independently of the registry.
+    from agentic_workspace.contract_tooling import conformance_contracts_manifest, contract_path
+
+    registry = conformance_contracts_manifest()
+    assert registry["migration_status"] == "source-maintenance-only"
+    for fixture in registry["contracts"]:
+        path = contract_path(fixture["path"])
         assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
 
 

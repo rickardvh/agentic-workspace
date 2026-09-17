@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "proof-routes-manifest/v1",
   "canonical_doc": ".agentic-workspace/docs/proof-surfaces-contract.md",
   "command": "agentic-workspace proof --target ./repo --format json",

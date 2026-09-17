@@ -1,5 +1,5 @@
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Before answering or editing non-trivial requests, including read-only workflow, config, delegation, or action-safety decisions, run `uv run agentic-workspace implement --changed <paths> --format json` when changed paths are known; otherwise run `uv run agentic-workspace start --task "<task>" --format json` using the user's request as `<task>`. Do not open raw `.agentic-workspace` files before this command; follow `immediate_next_allowed_action` and `skill_routing` first. Use `preflight` for takeover or recovery. Report repo-relative paths, not local absolute paths. If the CLI is unavailable, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.
+Read `.agentic-workspace/WORKFLOW.md` for repository procedure. Use `agentic-workspace start --target . --task "<task>" --format json` when current owner information matters; add known paths with repeated `--changed` arguments. Follow exact current references, requests and admitted actions. Report repo-relative paths. Native unavailability leaves live owner admission unknown.
 <!-- agentic-workspace:workflow:end -->

@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "adapter": {
     "command_template": ["{agentic_workspace_cli}", "assignment", "dispatch", "--target", ".", "--assignment-id", "assign-1", "--assignment-revision", "rev-1", "--target-name", "planner", "--run-id", "run-1", "--transport", "cli", "--format", "json"],
     "cwd": "fixture_root",

@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/module-registry/v1",
   "package_footprint": {
     "decision": "bundle-first-party-modules-for-now",

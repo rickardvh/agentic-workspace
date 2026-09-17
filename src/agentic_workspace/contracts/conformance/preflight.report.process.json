@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "preflight.report.process",
   "operation_id": "preflight.report",

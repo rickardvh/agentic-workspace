@@ -5,7 +5,7 @@ description: Finish bootstrap removal conservatively after the CLI has removed t
 
 # Bootstrap Uninstall
 
-Use this skill after `agentic-workspace uninstall --modules memory`.
+Use this skill after an admitted native Configuration removal action. Resolve current removal information through `agentic-workspace start --target <repo> --task "Remove repository guidance" --format json`; repository guidance removal does not imply deletion of optional Memory state.
 
 It handles the manual-review part of uninstall without deleting repo-local content blindly.
 

@@ -46,7 +46,7 @@ Use `authority_boundary` when an aid is provider-specific, tracker-specific, or 
 
 Run `python scripts/check/check_agent_aids.py` or `make agent-aids` to validate checked-in aid manifests and ensure aid files are covered by nearby metadata.
 
-Run `agentic-workspace report --target . --section agent_aids --format json` to list checked-in and local-only aids without scanning the repo. Run `agentic-workspace skills --target . --task "<task>" --format json` when the question is task-specific aid or skill recommendation.
+Use the current startup skill and semantic route references to select relevant agent aids. Read their declared source and scope; discovery does not grant effect authority.
 
 Executable aid types are `script` and `check`. They must declare nonblank validation commands that reference the aid entrypoint, not only an absent-reason. Runtime-specific or platform-specific checked-in aids must include `portability_justification`; platform-specific repo-shared or module-owned aids also need `checked_in_scope_justification` explaining why they are checked in instead of local-only. Repo-general validation should prefer cross-platform wrappers. Aids that write to the repo, use the network, or perform destructive actions must set `requires_review = true`, and `hidden_required_workflow` must be false. Candidate and advisory aids are not canonical proof routes or required workflow entrypoints; `proof_role = "canonical-proof"` is reserved for promoted aids.
 

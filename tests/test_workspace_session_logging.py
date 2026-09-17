@@ -123,6 +123,17 @@ def test_metadata_only_stream_has_bounded_coverage_and_no_redundancy_claim(tmp_p
         check=True,
     )
     assert json.loads(maintained.stdout)["coverage"]["whole_task_coverage"] == "unknown"
+    maintained_export = subprocess.run(
+        [sys.executable, "scripts/maintainer/session_diagnostics.py", "export", "--no-artifacts", "--target", str(target)],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    exported_cli = json.loads(maintained_export.stdout)
+    assert exported_cli["manifest"]["evidence_profile"]["id"] == "recorded-stream-summary"
+    assert exported_cli["manifest"]["evidence_profile"]["whole_task_coverage"] == "unknown"
+    assert (target / exported_cli["path"]).is_file()
 
 
 def test_session_logging_disabled_does_not_redirect_command_output(tmp_path: Path) -> None:

@@ -1,13 +1,14 @@
 ---
 name: bootstrap-upgrade
-description: Upgrade an existing planning bootstrap install through the root workspace lifecycle path, with package CLI fallback for debugging.
+description: Reconcile repository guidance with current Configuration ownership while preserving local content.
 ---
 
 # Bootstrap Upgrade
 
-1. Run `agentic-workspace upgrade --target <repo> --dry-run --format json` first and inspect selected modules, planned changes, review items, and the next safe command.
-2. Resolve any review items before applying changes.
-3. Run `agentic-workspace upgrade --target <repo> --format json`.
-4. Run `agentic-workspace doctor --target <repo> --format json`.
-5. Use `agentic-workspace doctor --target <repo> --modules planning` or `agentic-workspace upgrade --target <repo> --modules planning` for ordinary host-repo work; use the package-local Planning CLI only for package-local debugging when the root command cannot run.
-6. Report any manual-review items that were intentionally preserved.
+Read the target repository instructions and resolve current Configuration detail through `agentic-workspace start --target <repo> --task "Refresh repository guidance" --format json`.
+
+Inspect current source and custody gaps. Follow only the returned request or action for the supported change; do not infer an upgrade effect from a newer payload. Preserve modified, unowned and repository-authored files.
+
+For source-checkout package development, edit the owning payload or skill source and regenerate package copies through the checked-in generator. This maintenance step is separate from a target-repository effect.
+
+After an admitted effect, inspect its outcome and continuation, and report remaining manual decisions. No removed lifecycle command or package fallback supplies current native authority.

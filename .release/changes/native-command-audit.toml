@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Remove remaining retired command guidance from workspace and package procedures, classify maintenance conformance inputs, and check active examples against native help in merge CI."
+issues = [3376]

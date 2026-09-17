@@ -1,4 +1,5 @@
 {
+  "migration_status": "source-maintenance-only",
   "schema_version": "agentic-workspace/conformance/v1",
   "id": "planning.report.process",
   "operation_id": "planning.report.report",

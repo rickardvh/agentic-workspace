@@ -1647,6 +1647,7 @@ def _generated_command_adapter_statuses() -> tuple[list[dict[str, object]], list
         statuses.append(
             {
                 "program": program,
+                "migration_status": "source-maintenance-only",
                 "path": generated_path.relative_to(repo_root).as_posix(),
                 "status": "current" if is_current else "stale",
                 "direct_edit_detected": not is_current,
@@ -3378,7 +3379,8 @@ def main(argv: list[str] | None = None) -> int:
         print("Contract tooling health report")
         print("- No contract-tooling drift warnings detected.")
         print("- Command-generation schema boundary: packaged command_package_ir.schema.json mirrors workspace validation schema.")
-        print("- Generated command adapter status:")
+        print("- Source-maintenance generated adapter status (not native/public command conformance):")
+        print("- Current public commands are declared only by source_decision_contract.json native_cli.")
         for status in generated_adapter_statuses:
             commands = ", ".join(str(command) for command in status["command_surfaces"])
             print(
