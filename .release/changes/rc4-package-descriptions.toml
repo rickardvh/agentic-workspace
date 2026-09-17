@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Prepare RC4 with portable documentation links on PyPI and crates.io, the shared README in npm packages, and a consistent Python/npm product summary."

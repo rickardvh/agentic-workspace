@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -90,6 +91,13 @@ def run(package: Path, target: Path, *flags: str) -> dict:
         return {"status": "failed", "error": result.stderr}
     assert result.stdout, result.stderr
     return json.loads(result.stdout)
+
+
+def test_packed_npm_includes_registry_readme_and_product_summary(packed: Path) -> None:
+    assert (packed / "README.md").read_bytes() == (ROOT / "README.md").read_bytes()
+    metadata = json.loads((packed / "package.json").read_text(encoding="utf-8"))
+    product = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert metadata["description"] == product["project"]["description"]
 
 
 def test_real_packed_npm_discovers_without_python_or_source_checkout(packed: Path, tmp_path: Path) -> None:

@@ -21,6 +21,19 @@ PAYLOAD_ROOT = WORKSPACE_ROOT / "src" / "agentic_workspace" / "_payload"
 PACKAGE_PREFIX = Path("agentic_workspace") / "_payload"
 
 
+def test_registry_readme_links_are_portable_and_documentation_targets_exist() -> None:
+    readme = (WORKSPACE_ROOT / "README.md").read_text(encoding="utf-8")
+    # Immutable packages must not inherit a mutable "current RC" announcement.
+    assert not re.search(r"\b\d+\.\d+\.\d+(?:-rc\.|rc)\d+\b", readme)
+    links = re.findall(r"\]\(([^)]+)\)", readme)
+    assert links
+    for link in links:
+        assert link.startswith("https://"), f"Registry README needs an absolute URL: {link}"
+        prefix = "https://github.com/rickardvh/agentic-workspace/blob/master/"
+        if link.startswith(prefix):
+            assert (WORKSPACE_ROOT / link.removeprefix(prefix).split("#")[0]).is_file(), link
+
+
 @contextlib.contextmanager
 def _package_build_lock():
     lock_path = WORKSPACE_ROOT / "scratch" / "package-build.lock"

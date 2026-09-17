@@ -68,6 +68,7 @@ def stage(output: Path, *, profile: str = "release") -> Path:
         shutil.copy2(ROOT / "bindings/node" / name, native.parent / name)
     shutil.copy2(ROOT / "bindings/node/cli.mjs", output / "src/cli.mjs")
     shutil.copy2(ROOT / "LICENSE", output / "LICENSE")
+    shutil.copy2(ROOT / "README.md", output / "README.md")
     binary = binaries["agentic-workspace-core"]
     for executable in binaries.values():
         shutil.copy2(executable, native / executable.name)
@@ -97,13 +98,13 @@ def stage(output: Path, *, profile: str = "release") -> Path:
     package.update(
         {
             "type": "module",
-            "description": "Thin Node/TypeScript projection of the shared Rust authority",
+            "description": product["project"]["description"],
             "bin": {"agentic-workspace": "./src/cli.mjs"},
             "exports": {
                 ".": {"types": "./src/native/operating.d.mts", "import": "./src/native/operating.mjs"},
                 "./operating": {"types": "./src/native/operating.d.mts", "import": "./src/native/operating.mjs"},
             },
-            "files": ["src", "LICENSE"],
+            "files": ["src", "LICENSE", "README.md"],
             "scripts": {"test": "node src/cli.mjs --help"},
             "agenticWorkspace": {"runtimeBinding": {}},
         }

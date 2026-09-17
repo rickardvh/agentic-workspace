@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "agentic-workspace"
 version = "0.51.0"
-description = "Repo-native continuity and execution layer for agents, combining workspace routing, active planning, and durable memory."
+description = "Persistent operating context and dynamic control for coding agents."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
