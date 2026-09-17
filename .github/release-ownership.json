@@ -25,7 +25,8 @@
     "mutable_branch_install_supported": false,
     "registry_resolution_supported": true,
     "rule": "RC/stable language registries project the admitted GitHub artifact digests; only stable admission grants support. Exploratory previews remain GitHub-only.",
-    "release_candidate_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/{tag}"
+    "release_candidate_base_url_template": "https://github.com/rickardvh/agentic-workspace/releases/download/{tag}",
+    "platform_policy": ".github/release-platforms.json"
   },
   "changeset_dir": ".release/changes",
   "release_notes_dir": ".release/releases",

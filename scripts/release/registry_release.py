@@ -88,8 +88,8 @@ def admitted_artifacts(dist, tag, source):
     for (ecosystem, name), package in packages.items():
         if package["version"] != identity["package_versions"][ecosystem]:
             raise ValueError("Package version diverges from canonical ecosystem mapping")
-        for kind in ("wheel", "sdist") if ecosystem == "python" else ("tarball",):
-            artifact = package[kind]
+        artifacts = [*package.get("wheels", [package.get("wheel")]), package["sdist"]] if ecosystem == "python" else [package["tarball"]]
+        for artifact in artifacts:
             if checksums.get(artifact["asset"]) != artifact["sha256"]:
                 raise ValueError("Package digest not admitted by release manifest")
             result.append({"ecosystem": ecosystem, "name": name, "version": package["version"], **artifact})

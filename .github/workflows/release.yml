@@ -58,6 +58,12 @@ jobs:
           path: server-promotion-receipt.json
           if-no-files-found: error
 
+  platform-packages:
+    needs: promotion-admission
+    uses: ./.github/workflows/platform-release.yml
+    with:
+      source_ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
+
   release-runtime-matrix:
     name: Release runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
@@ -118,7 +124,7 @@ jobs:
           if-no-files-found: error
 
   agentic-workspace-package:
-    needs: [promotion-admission, release-runtime-matrix]
+    needs: [promotion-admission, release-runtime-matrix, platform-packages]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     permissions:
@@ -193,20 +199,28 @@ jobs:
                   raise SystemExit(f"{package['package_json']} must declare coordinated public registry publication")
           PY
 
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-platform-packages
+          path: dist
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: platform-consumer-*
+          path: dist
+          merge-multiple: true
+
       - name: Build Agentic Workspace package artifacts
         run: |
-          rm -rf dist
-          mkdir -p dist
-          uv build --wheel --sdist --out-dir dist
-          python scripts/release/admit_linux_wheel.py dist
-          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
-          (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+          python scripts/release/platform_release.py verify --artifact-dir dist
           python scripts/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
           python scripts/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
           uv run python scripts/check/check_package_identity.py \
             --artifact-dir dist \
             --require-exact-urls \
             --write-receipts
+
+      - name: Bind platform install instructions before security and promotion
+        run: python scripts/release/platform_release.py receipts --artifact-dir dist --tag "${RELEASE_TAG}"
 
       - name: Run built package smoke tests
         env:
@@ -294,7 +308,7 @@ jobs:
               declared = tomllib.loads(Path(package["pyproject"]).read_text(encoding="utf-8"))["project"]["version"]
               if declared != version:
                   raise SystemExit(f"{package['pyproject']} has version {declared}, expected {version}")
-              wheel = next(dist.glob(f"{package['wheel_prefix']}-{version}-*.whl"), None)
+              wheel = next(dist.glob(f"{package['wheel_prefix']}-{version}-*-manylinux_2_39_x86_64.whl"), None)
               sdist = next(dist.glob(f"{package['sdist_prefix']}-{version}.tar.gz"), None)
               if wheel is None or sdist is None:
                   raise SystemExit(f"Missing wheel or sdist for {package['name']} {version}")
@@ -344,7 +358,7 @@ jobs:
                   }
               )
 
-          native_paths = list(dist.glob(f"agentic-workspace-native-{version}-*.zip"))
+          native_paths = list(dist.glob(f"agentic-workspace-native-{version}-x86_64-unknown-linux-gnu.zip"))
           if len(native_paths) != 1:
               raise SystemExit("Expected exactly one paired native archive")
           native_archive = {"asset": native_paths[0].name, "sha256": sha256(native_paths[0])}
@@ -459,6 +473,9 @@ jobs:
           (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
           PY
 
+      - name: Bind all platform artifacts and compiler-free consumers
+        run: python scripts/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
+
       - name: Verify release artifacts
         run: |
           python - <<'PY'
@@ -523,6 +540,11 @@ jobs:
               else:
                   required_assets.add(package["wheel"]["asset"])
                   required_assets.add(package["sdist"]["asset"])
+          required_assets.add(manifest["platform_release"]["asset"])
+          required_assets.update(item["asset"] for item in manifest["platform_consumers"])
+          required_assets.update(item["asset"] for item in manifest["native_archives"])
+          for package in manifest["packages"]:
+              required_assets.update(item["asset"] for item in package.get("wheels", []))
           missing = sorted(required_assets - set(checksums))
           if missing:
               raise SystemExit(f"Missing checksums for release assets: {missing}")
@@ -550,6 +572,8 @@ jobs:
             dist/cargo-release-manifest.json
             dist/agentic-workspace-native-*.zip
             dist/generated-command-conformance-node*.json
+            dist/platform-release-manifest.json
+            dist/platform-consumer-*.json
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json
             dist/distribution-install-readiness.json

@@ -235,6 +235,14 @@ def verify_published_preview(*, repo: str, verified: dict[str, Any], artifact_di
                     required.add(item["asset"])
                     if entries.get(item["asset"]) != item["sha256"]:
                         raise SystemExit("Preview package manifest/checksum mismatch")
+        if manifest.get("platform_release"):
+            import platform_release
+
+            platform_data = platform_release.verify_consumers(downloaded)
+            for item in [manifest["platform_release"], *manifest["platform_consumers"], *platform_release.entries(platform_data)]:
+                required.add(item["asset"])
+                if entries.get(item["asset"]) != item["sha256"]:
+                    raise SystemExit("Platform manifest/checksum mismatch")
         native = manifest["native_archive"]
         if manifest.get("cargo"):
             for item in [manifest["cargo"]["manifest"], *manifest["cargo"]["packages"]]:

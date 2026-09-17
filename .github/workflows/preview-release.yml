@@ -56,6 +56,12 @@ jobs:
           ARTIFACT_COMMIT: ${{ inputs.artifact_commit }}
         run: python scripts/release/preview_release.py --admit-tag "$PREVIEW_TAG" --artifact-commit "$ARTIFACT_COMMIT" >> "$GITHUB_OUTPUT"
 
+  platform-packages:
+    needs: preview-admission
+    uses: ./.github/workflows/platform-release.yml
+    with:
+      source_ref: ${{ needs.preview-admission.outputs.artifact_commit }}
+
   preview-runtime-matrix:
     needs: preview-admission
     name: Preview runtime ${{ matrix.os }} / Python ${{ matrix.python }} / Node ${{ matrix.node }}
@@ -101,7 +107,7 @@ jobs:
           uv run python scripts/check/check_native_release_topology.py --artifact-dir runtime-dist --receipt-out runtime-proof.json --execution-context hosted-ci
 
   preview-package:
-    needs: [preview-admission, preview-runtime-matrix]
+    needs: [preview-admission, preview-runtime-matrix, platform-packages]
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -166,14 +172,21 @@ jobs:
           uv sync --locked --all-groups
 
       - if: steps.existing.outputs.complete != 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: complete-platform-packages
+          path: dist
+      - if: steps.existing.outputs.complete != 'true'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          pattern: platform-consumer-*
+          path: dist
+          merge-multiple: true
+
+      - if: steps.existing.outputs.complete != 'true'
         name: Build coordinated preview package artifacts
         run: |
-          rm -rf dist
-          mkdir -p dist
-          uv build --wheel --sdist --out-dir dist
-          python scripts/release/admit_linux_wheel.py dist
-          python scripts/release/stage_native_npm.py --output "$RUNNER_TEMP/aw-native-npm" --native-archive-dir dist
-          (cd "$RUNNER_TEMP/aw-native-npm" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
+          python scripts/release/platform_release.py verify --artifact-dir dist
           python scripts/release/cargo_release.py build --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
           python scripts/release/cargo_release.py install-staged --artifact-dir dist --staging "$RUNNER_TEMP/aw-cargo"
           uv run python scripts/check/check_package_identity.py \
@@ -252,6 +265,10 @@ jobs:
           PY
 
       - if: steps.existing.outputs.complete != 'true'
+        name: Bind all platform artifacts and compiler-free consumers
+        run: python scripts/release/platform_release.py extend --artifact-dir dist --tag "${RELEASE_TAG}"
+
+      - if: steps.existing.outputs.complete != 'true'
         name: Reject replacement of existing preview bytes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -281,6 +298,8 @@ jobs:
             dist/cargo-release-manifest.json
             dist/agentic-workspace-native-*.zip
             dist/generated-command-conformance-node*.json
+            dist/platform-release-manifest.json
+            dist/platform-consumer-*.json
             dist/SHA256SUMS
             dist/agentic-workspace-preview-release-manifest.json
             dist/distribution-install-readiness.json

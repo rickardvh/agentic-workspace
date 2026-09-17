@@ -24,6 +24,17 @@ _native_spec.loader.exec_module(NATIVE_PROOF)
 
 def published_platform_failures(policy: dict[str, Any], artifact_dir: Path) -> list[str]:
     """A runtime receipt cannot substitute for an installable published platform set."""
+    if policy.get("platform_policy"):
+        import sys
+
+        sys.path.insert(0, str(ROOT / "scripts/release"))
+        import platform_release
+
+        try:
+            platform_release.verify_consumers(artifact_dir)
+            return []
+        except (ValueError, KeyError, OSError) as error:
+            return [f"published platform coverage: {error}"]
     failures = []
     platforms = policy.get("published_platforms", {})
     for runner in sorted({row["os"] for row in policy["runtime_matrix"]}):

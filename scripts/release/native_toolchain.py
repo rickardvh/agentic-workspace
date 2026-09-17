@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -22,7 +23,12 @@ def observe(root: Path) -> dict[str, str]:
     fields = dict(line.split(": ", 1) for line in output.splitlines() if ": " in line)
     if fields.get("release") != channel or not fields.get("commit-hash") or not fields.get("host"):
         raise ValueError(f"Native packaging requires Rust {channel} from rust-toolchain.toml; observed {fields.get('release')}")
+    deployment = {}
+    if fields["host"].endswith("-apple-darwin"):
+        rows = json.loads((root / ".github/release-platforms.json").read_text())["platforms"]
+        deployment["macos_deployment_target"] = next(row["macos_deployment_target"] for row in rows if row["target"] == fields["host"])
     return {
+        **deployment,
         "channel": channel,
         "declaration_sha256": hashlib.sha256(declaration).hexdigest(),
         "release": fields["release"],
@@ -44,7 +50,10 @@ def source_identity(root: Path) -> dict[str, object]:
     return {"source_head": result.stdout.strip(), "source_dirty": bool(dirty.strip())}
 
 
-def build_environment() -> dict[str, str]:
+def build_environment(toolchain: dict[str, str] | None = None) -> dict[str, str]:
     # Bind Cargo to the same compiler observed above, including when a local
     # Cargo config names a different compiler or wrapper.
-    return {**os.environ, "RUSTC": shutil.which("rustc") or "rustc", "RUSTC_WRAPPER": "", "RUSTC_WORKSPACE_WRAPPER": ""}
+    deployment = (
+        {"MACOSX_DEPLOYMENT_TARGET": toolchain["macos_deployment_target"]} if toolchain and "macos_deployment_target" in toolchain else {}
+    )
+    return {**os.environ, **deployment, "RUSTC": shutil.which("rustc") or "rustc", "RUSTC_WRAPPER": "", "RUSTC_WORKSPACE_WRAPPER": ""}

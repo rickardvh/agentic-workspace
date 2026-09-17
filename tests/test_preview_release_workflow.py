@@ -57,7 +57,7 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
     assert "test ! -e dist/support-bearing-promotion.json" in preview
     assert "overwrite_files: false" in preview
     assert preview.count("ref: ${{ github.sha }}") == 1
-    assert preview.count("ref: ${{ needs.preview-admission.outputs.artifact_commit }}") == 2
+    assert preview.count("ref: ${{ needs.preview-admission.outputs.artifact_commit }}") == 3
     assert "make_latest: false" in preview
     permissions = json.loads((ROOT / ".github/workflow-write-permissions.json").read_text())
     assert set(permissions["allowed_write_permissions"][".github/workflows/preview-release.yml"]) == {
@@ -71,8 +71,8 @@ def test_preview_workflow_reuses_release_authorities_without_support_bearing_adm
     assert "support_bearing_promotion.py compose" in stable
 
     shared_authorities = (
-        "uv build --wheel --sdist --out-dir dist",
-        "scripts/release/stage_native_npm.py",
+        "uses: ./.github/workflows/platform-release.yml",
+        "platform_release.py verify --artifact-dir dist",
         "make packed-artifact-conformance",
         "scripts/check/check_package_identity.py",
         "scripts/check/check_security_supply_chain.py",
@@ -155,9 +155,25 @@ def test_publication_admission_is_owned_by_trusted_dispatch_not_the_tag() -> Non
     assert gate["env"] == {"PREVIEW_TAG": "${{ inputs.preview_tag }}", "ARTIFACT_COMMIT": "${{ inputs.artifact_commit }}"}
     assert not any("${{ inputs." in step.get("run", "") for step in admission["steps"])
     assert jobs["preview-runtime-matrix"]["needs"] == "preview-admission"
-    assert jobs["preview-package"]["needs"] == ["preview-admission", "preview-runtime-matrix"]
+    assert jobs["preview-package"]["needs"] == ["preview-admission", "preview-runtime-matrix", "platform-packages"]
     for name in ("preview-runtime-matrix", "preview-package"):
         checkout = jobs[name]["steps"][0]
         assert checkout["with"]["ref"] == "${{ needs.preview-admission.outputs.artifact_commit }}"
         assert checkout["with"]["persist-credentials"] is False
     assert workflow["concurrency"] == {"group": "preview-${{ inputs.preview_tag || github.ref }}", "cancel-in-progress": False}
+
+
+def test_complete_existing_preview_skips_local_artifact_operations():
+    import yaml
+
+    workflow = yaml.safe_load((WORKFLOW_ROOT / "preview-release.yml").read_text())
+    steps = workflow["jobs"]["preview-package"]["steps"]
+    start = next(i for i, step in enumerate(steps) if step.get("id") == "existing")
+    for step in steps[start + 1 :]:
+        if step.get("name") == "Smoke published preview from public bytes":
+            assert "if" not in step
+            assert "preview_public_smoke.py" in step["run"]
+        else:
+            # With complete=true, no downloads, manifest extension or publishing
+            # may run against an absent/rebuilt local release set.
+            assert step["if"] == "steps.existing.outputs.complete != 'true'", step

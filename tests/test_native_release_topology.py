@@ -6,6 +6,7 @@ import ast
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,15 @@ def wheel(tmp_path_factory):
     if not os.environ.get("AW_NATIVE_ARTIFACT_DIR"):
         subprocess.run(["uv", "build", "--wheel", "--out-dir", str(output)], cwd=ROOT, check=True, capture_output=True)
     wheels = list(output.glob("agentic_workspace-*.whl"))
+    if len(wheels) > 1:
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location("platform_release", ROOT / "scripts/release/platform_release.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        data = module.load(output)
+        selected = next(p for p in data["platforms"] if p["target"] == module.current_platform()["target"])
+        wheels = [output / selected["wheel"]["asset"]]
     assert len(wheels) == 1
     return wheels[0]
 
@@ -184,14 +194,19 @@ def test_native_npm_has_no_mirrored_runtime_and_runs_paired_cli(tmp_path):
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["decision_packet"]["status"] == "direct"
     assert not (consumer / ".agentic-workspace").exists()
-    manifest = json.loads((package / "src/native/bin/artifact.json").read_text())
+    native_dir = package / "src/native/bin"
+    node_os = {"Windows": "win32", "Linux": "linux", "Darwin": "darwin"}[platform.system()]
+    node_arch = "arm64" if platform.machine().lower() in {"aarch64", "arm64"} else "x64"
+    if (native_dir / f"{node_os}-{node_arch}").exists():
+        native_dir /= f"{node_os}-{node_arch}"
+    manifest = json.loads((native_dir / "artifact.json").read_text())
     from tests.test_language_facade import check_node
 
     contract = json.loads((ROOT / "src/agentic_workspace/contracts/source_decision_contract.json").read_text())["language_facade"]
-    core = package / "src/native/bin" / ("agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core")
+    core = native_dir / ("agentic-workspace-core.exe" if os.name == "nt" else "agentic-workspace-core")
     check_node(contract, package / "src/native/operating.mjs", core)
     assert manifest["cli_sha256"]
-    assert len(list((package / "src/native/bin").iterdir())) == 3
+    assert len(list(native_dir.iterdir())) == 3
     script = """
 import {start, selectReference, invokeCarried} from '@agentic-workspace/workspace-cli/operating';
 const context={target:process.cwd(),task:'Configure this consumer',projection:'full'};
@@ -216,7 +231,9 @@ def test_exact_archive_and_language_packages_share_native_bytes(wheel, tmp_path)
     if not os.environ.get("AW_NATIVE_ARTIFACT_DIR"):
         pytest.skip("exact release set is supplied by the release proof runner")
     directory = Path(os.environ["AW_NATIVE_ARTIFACT_DIR"])
-    archives = list(directory.glob("agentic-workspace-native-*.zip"))
+    with zipfile.ZipFile(wheel) as python:
+        host = json.loads(python.read("agentic_workspace/_native/artifact.json"))["rust_host"]
+    archives = list(directory.glob(f"agentic-workspace-native-*-{host}.zip"))
     assert len(archives) == 1
     with zipfile.ZipFile(archives[0]) as native, zipfile.ZipFile(wheel) as python:
         manifest = json.loads(native.read("artifact.json"))
@@ -224,7 +241,10 @@ def test_exact_archive_and_language_packages_share_native_bytes(wheel, tmp_path)
         binaries = [name for name in native.namelist() if name not in {"artifact.json", "LICENSE"}]
         assert len(binaries) == 2
         with tarfile.open(next(directory.glob("agentic-workspace-workspace-cli-*.tgz"))) as node:
-            node_manifest = json.load(node.extractfile("package/src/native/bin/artifact.json"))
+            prefix = "package/src/native/bin/"
+            if prefix + "artifact.json" not in node.getnames():
+                prefix += f"{manifest['platform']}-{manifest['arch']}/"
+            node_manifest = json.load(node.extractfile(prefix + "artifact.json"))
             for field in ("rust_toolchain", "rust_host", "rust_target", "source_head", "source_dirty"):
                 assert manifest[field] == python_manifest[field] == node_manifest[field]
             assert manifest["source_head"] == subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
@@ -233,7 +253,7 @@ def test_exact_archive_and_language_packages_share_native_bytes(wheel, tmp_path)
                 key = "sha256" if "-core" in name else "cli_sha256"
                 assert hashlib.sha256(data).hexdigest() == manifest[key]
                 assert python.read(f"agentic_workspace/_native/{name}") == data
-                assert node.extractfile(f"package/src/native/bin/{name}").read() == data
+                assert node.extractfile(prefix + name).read() == data
                 executable = tmp_path / name
                 executable.write_bytes(data)
                 executable.chmod(0o755)

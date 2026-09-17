@@ -59,11 +59,12 @@ hosted proof and registry publication, Linux wheels are audited against
 `manylinux_2_39_x86_64`; only compatible wheels are relabelled, with their native
 executable bytes unchanged. Source builds alone do not establish that ABI. The
 release matrix runs the same isolated native proof per host/runtime, and final
-release/preview checks prove the bytes actually published. The admitted published class is Linux x64 only. Windows and macOS are not
-supported release classes; local Windows validation is development evidence. Preview assets remain non-support-bearing; stable
+release/preview checks prove the bytes actually published. The required publication set is Windows, macOS and Linux on x64 and ARM64, declared in `.github/release-platforms.json`. Each platform builds natively and installs the assembled Python, npm and standalone artifacts with Rust absent from the consumer PATH. Previously published Linux-only artifacts retain their original boundary. Preview assets remain non-support-bearing; stable
 promotion still requires the separate exact-subject server, runtime, install,
 redistribution and security receipts. Implementation completion does not grant
 independent review acceptance, merge readiness or parent-issue closure.
+
+The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on Apple Silicon ARM64**, as declared in `.github/release-platforms.json`. Both Rust executables are built with that explicit `MACOSX_DEPLOYMENT_TARGET`; Python wheel tags and the platform inventory bound by installation receipts carry the same minimum. Compiler-free macOS coverage is limited to these versions and newer. Older macOS versions are not covered by release installation proof.
 
 ## Exact installed owner conformance
 

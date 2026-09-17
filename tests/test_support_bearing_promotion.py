@@ -116,6 +116,43 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             entry = tarfile.TarInfo("package/src/native/bin/" + name)
             entry.size = len(binary)
             archive.addfile(entry, io.BytesIO(binary))
+    sys.path.insert(0, str(ROOT / "scripts/release"))
+    import platform_release
+
+    rows = []
+    for row in platform_release.platforms():
+        if row["target"] == "x86_64-unknown-linux-gnu":
+            platform_wheel = wheel
+            native = dist / "agentic-workspace-native-1.0.0-x86_64-unknown-linux-gnu.zip"
+        else:
+            platform_wheel = dist / f"agentic_workspace-1.0.0-{row['target']}.whl"
+            native = dist / f"agentic-workspace-native-1.0.0-{row['target']}.zip"
+            platform_wheel.write_bytes(b"other platform wheel")
+            native.write_bytes(b"other platform native")
+        rows.append({**row, "wheel": platform_release.asset(platform_wheel), "native_archive": platform_release.asset(native)})
+    platform_manifest = _write(
+        dist / platform_release.MANIFEST,
+        {
+            "kind": "agentic-workspace/platform-release/v1",
+            "version": "1.0.0",
+            "source_commit": commit,
+            "platforms": rows,
+            "npm": platform_release.asset(dist / "agentic-workspace-workspace-cli-1.0.0.tgz"),
+        },
+    )
+    for row in rows:
+        _write(
+            dist / f"platform-consumer-{row['target']}.json",
+            {
+                "kind": "agentic-workspace/platform-consumer/v1",
+                "status": "passed",
+                "target": row["target"],
+                "source_commit": commit,
+                "inventory_sha256": platform_release.digest(platform_manifest),
+                "rust_available": False,
+                "checks": ["uv-sync", "npm-install", "native-start"],
+            },
+        )
     wheel_digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
     server = _write(
         tmp_path / "server.json",
@@ -176,7 +213,7 @@ def _compose_fixture(tmp_path: Path, commit: str = "release-commit") -> list[str
             "kind": "agentic-workspace/redistributable-package-readiness/v1",
             "status": "passed",
             "license_spdx": "MIT",
-            "artifact_count": 4,
+            "artifact_count": 14,
             "artifacts": [
                 {"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
                 for path in dist.iterdir()
@@ -326,15 +363,9 @@ def test_composed_promotion_rejects_redistribution_artifact_drift(tmp_path: Path
 def test_supported_windows_receipt_cannot_replace_missing_published_artifacts(tmp_path):
     _compose_fixture(tmp_path)
     policy = json.loads((ROOT / ".github/support-bearing-promotion.json").read_text())
-    policy["runtime_matrix"].append({"os": "windows-latest", "python": "3.14", "node": "24"})
-    policy["published_platforms"]["windows-latest"] = {
-        "rust_host": "x86_64-pc-windows-msvc",
-        "wheel_platform": "win_amd64",
-        "node_platform": "win32",
-        "node_arch": "x64",
-    }
+    (tmp_path / "dist/agentic_workspace-1.0.0-x86_64-pc-windows-msvc.whl").unlink()
     failures = PROMOTION.published_platform_failures(policy, tmp_path / "dist")
-    assert any("windows-latest" in failure and "installable wheel" in failure for failure in failures)
+    assert any("windows-msvc.whl" in failure for failure in failures)
 
 
 def test_published_linux_set_requires_npm_and_standalone_pair(tmp_path):
@@ -342,4 +373,4 @@ def test_published_linux_set_requires_npm_and_standalone_pair(tmp_path):
     policy = json.loads((ROOT / ".github/support-bearing-promotion.json").read_text())
     assert PROMOTION.published_platform_failures(policy, tmp_path / "dist") == []
     (tmp_path / "dist/agentic-workspace-workspace-cli-1.0.0.tgz").unlink()
-    assert any("installable npm" in failure for failure in PROMOTION.published_platform_failures(policy, tmp_path / "dist"))
+    assert any("workspace-cli-1.0.0.tgz" in failure for failure in PROMOTION.published_platform_failures(policy, tmp_path / "dist"))

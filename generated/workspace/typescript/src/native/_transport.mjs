@@ -4,15 +4,20 @@ import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+const nativeDirectory = () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "bin");
+  const selected = join(root, `${process.platform}-${process.arch}`);
+  return existsSync(selected) ? selected : root;
+};
+
 const packagedBinary = () => join(
-  dirname(fileURLToPath(import.meta.url)),
-  "bin",
+  nativeDirectory(),
   process.platform === "win32" ? "agentic-workspace-core.exe" : "agentic-workspace-core",
 );
 
 const coreBinary = () => {
   let candidate = process.env.AGENTIC_WORKSPACE_CORE_BINARY || packagedBinary();
-  const manifestPath = join(dirname(fileURLToPath(import.meta.url)), "bin", "artifact.json");
+  const manifestPath = join(nativeDirectory(), "artifact.json");
   const packagePath = join(dirname(fileURLToPath(import.meta.url)), "../..", "package.json");
   const packageMetadata = existsSync(packagePath) ? JSON.parse(readFileSync(packagePath, 'utf8')) : null;
   if (packageMetadata && !existsSync(manifestPath) && (packageMetadata.agenticWorkspace?.nativeRuntime || !process.env.AGENTIC_WORKSPACE_CORE_BINARY)) throw new Error("packaged shared-core manifest missing; stage the native npm artifact (unpackaged development requires explicit AGENTIC_WORKSPACE_CORE_BINARY)");
@@ -34,7 +39,7 @@ const coreBinary = () => {
 export function runNativeCli(args) {
   const core = coreBinary();
   const binary = join(dirname(core), process.platform === "win32" ? "agentic-workspace.exe" : "agentic-workspace");
-  const manifestPath = join(dirname(fileURLToPath(import.meta.url)), "bin", "artifact.json");
+  const manifestPath = join(nativeDirectory(), "artifact.json");
   if (!existsSync(binary)) throw new Error("paired native CLI missing");
   if (existsSync(manifestPath)) {
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));

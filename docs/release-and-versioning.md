@@ -485,3 +485,25 @@ Before hosted artifact proof, Linux wheels are audited against
 relabeled. Native executable bytes are never repaired or replaced during tagging;
 the existing exact-pair proof still compares wheel, npm and native archive bytes.
 Other host classes are not newly admitted by registry availability.
+
+## Required platform publication inventory
+
+Every new preview, RC and stable release must publish the complete prebuilt set in
+`.github/release-platforms.json`: Windows, macOS and Linux, each on x64 and ARM64.
+The reusable `platform-release.yml` builds on native runners, assembles one npm
+archive containing the six paired runtimes, and installs the final wheel, npm
+archive and native archive in fresh consumer repositories without Rust on PATH.
+Missing platforms, mismatched binary pairs, stale receipts or failed installs
+block the publisher. Linux uses audited glibc 2.39 wheels; musl and 32-bit targets
+are outside this declared inventory.
+
+The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on Apple Silicon ARM64**, as declared in `.github/release-platforms.json`. Both Rust executables are built with that explicit `MACOSX_DEPLOYMENT_TARGET`; Python wheel tags and the platform inventory bound by installation receipts carry the same minimum. Compiler-free macOS coverage is limited to these versions and newer. Older macOS versions are not covered by release installation proof.
+
+`platform-release-manifest.json` and the six `platform-consumer-*.json` receipts
+bind the complete platform set. The language manifest's `wheels` and
+`native_archives` arrays and the install receipt's `platforms` list are the full
+inventory. Legacy singular `wheel`, `native_archive` and `install` fields retain
+the Linux x64 projection for older readers; they never satisfy complete platform
+admission by themselves. PyPI publication includes every admitted wheel and npm
+publishes the same universal tarball tested on each platform. Rust is required
+only for source installation, including Cargo or a Git URL.

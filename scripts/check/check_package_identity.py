@@ -218,6 +218,8 @@ def source_identity_errors(root: Path = ROOT) -> list[str]:
 
 def _find_one(dist: Path, pattern: str) -> Path:
     matches = sorted(dist.glob(pattern))
+    if len(matches) > 1 and (dist / "platform-release-manifest.json").exists():
+        matches = [p for p in matches if p.name.endswith("manylinux_2_39_x86_64.whl")]
     if len(matches) != 1:
         raise ValueError(f"expected one {pattern} artifact, found {len(matches)}")
     return matches[0]
@@ -324,6 +326,7 @@ def write_readiness_receipts(root: Path, dist: Path) -> list[Path]:
                 _find_one(dist, f"{package['sdist_prefix']}-{version}.tar.gz"),
             )
         )
+    release_artifacts = list({p.name: p for p in [*release_artifacts, *dist.glob("agentic_workspace-*.whl")]}.values())
     for package in ownership["typescript_packages"]:
         release_artifacts.append(_find_one(dist, f"{package['tarball_prefix']}-{version}.tgz"))
     release_artifacts.extend(dist.glob(f"agentic-workspace-native-{version}-*.zip"))
@@ -369,6 +372,15 @@ def redistributable_receipt_errors(root: Path, dist: Path) -> list[str]:
             expected.append({"name": artifact.name, "sha256": hashlib.sha256(artifact.read_bytes()).hexdigest()})
     except ValueError as exc:
         return [str(exc)]
+    expected = list(
+        {
+            p["name"]: p
+            for p in [
+                *expected,
+                *[{"name": p.name, "sha256": hashlib.sha256(p.read_bytes()).hexdigest()} for p in dist.glob("agentic_workspace-*.whl")],
+            ]
+        }.values()
+    )
     expected.sort(key=lambda item: item["name"])
     errors: list[str] = []
     if receipt.get("artifacts") != expected:

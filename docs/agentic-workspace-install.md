@@ -50,6 +50,32 @@ Previews may prove useful packaged behavior, but they do not establish stable co
 
 Editable installs, source-checkout invocation, `uvx`, `pipx run`, and other development/debug routes can be useful for maintainers. They are not support-bearing installation identities unless a release policy explicitly says otherwise.
 
+## Prebuilt packages and source installs
+
+New releases require prebuilt Python wheels, a universal npm package, and paired
+native archives for Windows, macOS, and Linux on x64 and ARM64. The release
+publisher must receive a successful compiler-free installation receipt from each
+platform before publishing any packages. The required set is maintained in
+[release-platforms.json](../.github/release-platforms.json).
+
+Use the matching entry in the release's `distribution-install-readiness.json`
+`platforms` list when installing from GitHub. PyPI selects the compatible wheel;
+the npm package selects its packaged OS/architecture binaries. Neither route
+requires Rust. Linux wheels currently require glibc 2.39 or newer; Alpine/musl and
+32-bit systems are not part of this declared set.
+
+The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on Apple Silicon ARM64**, as declared in `.github/release-platforms.json`. Both Rust executables are built with that explicit `MACOSX_DEPLOYMENT_TARGET`; Python wheel tags and the platform inventory bound by installation receipts carry the same minimum. Compiler-free macOS coverage is limited to these versions and newer. Older macOS versions are not covered by release installation proof.
+
+A Git dependency is a **source build**, even when pinned to a release tag. It
+requires the exact Rust toolchain declared by that source plus the host linker.
+Cargo installation also builds from source. Use a wheel, npm archive, or native
+archive for installation without Rust. npm Git installation from the repository
+root is not supported; use the published `.tgz` or the registry package.
+
+Previously published `v1.0.0-rc.2` artifacts remain Linux x64 only. This new
+requirement does not change those immutable bytes or establish support for an
+unpublished successor.
+
 ## Runtime prerequisites and support boundary
 
 This page owns the current native prerequisite model; the selected immutable release and its receipts own the exact public support claim for those bytes.
@@ -60,7 +86,7 @@ This page owns the current native prerequisite model; the selected immutable rel
 | Node | npm projection exercised on majors 20, 24 and 25 | other majors |
 | Git/repository | Git working tree for shared checked-in operating context and ownership | non-Git hosts |
 | Network | required to obtain release assets and for explicitly configured external adapters | ordinary local operation does not imply a network service |
-| OS/architecture | native artifact evidence for Linux x64 / GNU target | Windows, macOS, ARM, manylinux or blanket shell/container/runner support |
+| OS/architecture | each published release must prove its declared Windows/macOS/Linux x64 and ARM64 artifacts | old releases do not gain new platform coverage; musl, 32-bit and other targets remain excluded |
 | Credentials | remain in caller/platform boundaries | AW as a credential host or sandbox |
 | Runtime tools | repository-configured commands run with caller authority | arbitrary host tools being bundled or silently trusted |
 
