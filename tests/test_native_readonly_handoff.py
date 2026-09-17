@@ -36,6 +36,8 @@ BASE = '[delegation]\nassignment_policy="required-best-fit"\ncurrent_target="loc
 )
 def test_current_process_handoff_executes_once_without_admitting_worker_claims(tmp_path, shared_core_binary, native_cli, surface, fault):
     host = fault == "host"
+    if host and native_artifact_consumers.CURRENT is not None:
+        pytest.skip("This layer ships public bindings only; the host bridge remains source-maintenance-only.")
     repair_evaluation = fault == "repair-evaluation"
     if host or repair_evaluation:
         fault = None
@@ -777,11 +779,9 @@ def test_readonly_handoff_does_not_gain_mutation_capability(tmp_path, shared_cor
     assert not (tmp_path / ".agentic-workspace/local").exists()
 
 
-@pytest.mark.parametrize("surface", ["json", "python", "typescript"])
-def test_shared_seal_preserves_only_exact_known_unicode_checksum(tmp_path, shared_core_binary, surface):
+def test_shared_seal_preserves_only_exact_known_unicode_checksum(tmp_path, shared_core_binary):
     import os
     import subprocess
-    import sys
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
@@ -798,29 +798,9 @@ def test_shared_seal_preserves_only_exact_known_unicode_checksum(tmp_path, share
     def call(action, value):
         payload = {"action": action, "packet": value}
         env = {**os.environ, "AGENTIC_WORKSPACE_CORE_BINARY": str(shared_core_binary)}
-        if surface == "json":
-            command = [str(shared_core_binary)]
-            stdin = json.dumps({"assignment_packet": payload})
-        elif surface == "python":
-            command = [
-                *([str(installed["python"]), "-I"] if installed else [sys.executable]),
-                "-c",
-                "import json,sys; from agentic_workspace.decision import assignment_packet; print(json.dumps(assignment_packet(json.loads(sys.argv[1]))))",
-                json.dumps(payload),
-            ]
-            stdin = None
-        else:
-            module = (
-                (installed["package"] / "src/native/semantic-decision.mjs") if installed else (root / "bindings/node/semantic-decision.mjs")
-            ).as_uri()
-            command = [
-                str(installed["node"]) if installed else "node",
-                "--input-type=module",
-                "-e",
-                f"import {{assignmentPacket}} from {json.dumps(module)}; console.log(JSON.stringify(assignmentPacket(JSON.parse(process.argv[1]))));",
-                json.dumps(payload),
-            ]
-            stdin = None
+        # Seal/integrity is a shared-core fixture, not an installed public language API.
+        command = [str(shared_core_binary)]
+        stdin = json.dumps({"assignment_packet": payload})
         if installed:
             env = {
                 k: v for k, v in os.environ.items() if k not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH", "PYTHONHOME", "NODE_PATH"}
@@ -866,7 +846,8 @@ def test_real_packed_packet_owner_without_python_or_checkout(packed, tmp_path):
 
     node = shutil.which("node")
     assert node
-    module = (packed / "src/native/semantic-decision.mjs").as_uri()
+    from agentic_workspace.decision import assignment_packet
+
     payload = {
         "action": "seal",
         "packet": {
@@ -874,21 +855,27 @@ def test_real_packed_packet_owner_without_python_or_checkout(packed, tmp_path):
             "assignment_revision": "r",
             "run_id": "one",
             "target": "manual",
-            "assignment_identity": {"human_intent": "A bounded explanation"},
+            "assignment_identity": {"human_intent": "A bounded explanation", "input_capsule": []},
             "return_contract": {},
         },
     }
+    # Fixture construction uses the source owner; the isolated installed worker
+    # entry consumes only this sealed packet through its current public CLI.
+    sealed = assignment_packet(payload)
     environment = {key: value for key, value in os.environ.items() if key != "AGENTIC_WORKSPACE_CORE_BINARY"}
     environment["PATH"] = ""
     result = subprocess.run(
         [
             node,
-            "--input-type=module",
-            "-e",
-            f"import {{assignmentPacket}} from {json.dumps(module)}; console.log(JSON.stringify(assignmentPacket(JSON.parse(process.argv[1]))));",
-            json.dumps(payload),
+            str(packed / "src/cli.mjs"),
+            "worker",
+            "--input",
+            "-",
+            "--format",
+            "json",
         ],
         cwd=tmp_path,
+        input=json.dumps({"action": "entry", "packet": sealed}),
         env=environment,
         text=True,
         encoding="utf-8",
@@ -897,6 +884,5 @@ def test_real_packed_packet_owner_without_python_or_checkout(packed, tmp_path):
     )
     assert result.returncode == 0, result.stderr
     packet = json.loads(result.stdout)
-    assert packet["worker_context"]["intent"]["outcome"] == "A bounded explanation"
-    assert packet["return_contract"]["required_identity"]["packet_integrity"] == packet["packet_integrity"]
-    assert packet["worker_context"]["proof"]["worker_authority"] is False
+    assert packet["view"]["intent"]["outcome"] == "A bounded explanation"
+    assert packet["view"]["proof"]["worker_authority"] is False

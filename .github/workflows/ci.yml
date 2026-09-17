@@ -227,6 +227,8 @@ jobs:
       - name: Run workspace release proof
         run: make verify-workspace
       - name: Verify generated command packages
+        env:
+          AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
         run: uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
 
   planning-handoff-checks:
@@ -421,7 +423,10 @@ jobs:
           uv run pytest tests/test_shared_core.py tests/test_v1_contract.py -q
           uv run pytest tests/test_external_integration_boundary.py tests/test_package_identity.py::test_install_survives_into_fresh_second_process -q
           uv run pytest tests/test_native_maintainer_logging.py::test_native_logging_concurrent_append_preserves_valid_sequence tests/test_native_maintainer_logging.py::test_native_logging_concurrent_registration_preserves_existing_identities -q
-          uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
+      - name: Prove source-maintenance adapter conformance
+        env:
+          AGENTIC_WORKSPACE_CORE_BINARY: ${{ github.workspace }}/target/debug/agentic-workspace-core
+        run: uv run python scripts/check/check_generated_command_packages.py --conformance-shard --require-node
       - name: Prove installed artifacts on the declared runtime
         run: uv run python scripts/check/check_native_release_topology.py --artifact-dir admission-dist --receipt-out native-runtime-proof.json --execution-context hosted-ci --expected-node-major ${{ matrix.node }}
       - name: Retain exact runtime proof
