@@ -70,6 +70,45 @@ pub(crate) fn parse(text: &str) -> Result<Value, CoreError> {
 
 // Package facts are a positive declaration, not a denylist of source-repo rows.
 // Host-only keys/rows stay intact. Conflicting values require exact prior custody.
+fn row_identity(path: &str) -> Option<&'static str> {
+    match path {
+        "/module_roots" => Some("module"),
+        "/managed_surfaces" => Some("path"),
+        "/fences" => Some("name"),
+        "/authority_surfaces" => Some("concern"),
+        "/subsystems" => Some("id"),
+        _ => None,
+    }
+}
+
+// Retired facts no longer constrain the host. Remove only unchanged old facts;
+// preserve host additions and edited retired declarations as host-owned meaning.
+fn retire_value(host: &mut Value, prior: &Value, path: &str) -> bool {
+    if host == prior {
+        return true;
+    }
+    if let (Some(h), Some(p)) = (host.as_object_mut(), prior.as_object()) {
+        h.retain(|key, value| {
+            p.get(key)
+                .is_none_or(|old| !retire_value(value, old, &format!("{path}/{key}")))
+        });
+        return h.is_empty();
+    }
+    if let Some(key) = row_identity(path)
+        && let Some(rows) = host.as_array_mut()
+    {
+        rows.retain(|row| {
+            !prior
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|old| old[key] == row[key] && old == row)
+        });
+        return rows.is_empty();
+    }
+    false
+}
+
 fn compose_value(
     host: &mut Value,
     package: &Value,
@@ -86,13 +125,9 @@ fn compose_value(
     if let (Some(h), Some(p)) = (host.as_object_mut(), package.as_object()) {
         for (key, old) in prior.as_object().into_iter().flatten() {
             if !p.contains_key(key)
-                && let Some(current) = h.get(key)
+                && let Some(current) = h.get_mut(key)
+                && retire_value(current, old, &format!("{path}/{key}"))
             {
-                if current != old {
-                    return Err(err(format!(
-                        "edited retired package ownership fact at {path}/{key}; preserve"
-                    )));
-                }
                 h.remove(key);
             }
         }
@@ -106,14 +141,7 @@ fn compose_value(
         }
         return Ok(());
     }
-    let identity = match path {
-        "/module_roots" => Some("module"),
-        "/managed_surfaces" => Some("path"),
-        "/fences" => Some("name"),
-        "/authority_surfaces" => Some("concern"),
-        _ => None,
-    };
-    if let Some(key) = identity {
+    if let Some(key) = row_identity(path) {
         let rows = host
             .as_array_mut()
             .ok_or_else(|| err("ownership rows must be an array"))?;
@@ -124,12 +152,8 @@ fn compose_value(
                 .iter()
                 .any(|row| row[key] == old[key])
                 && let Some(index) = rows.iter().position(|row| row[key] == old[key])
+                && rows[index] == *old
             {
-                if rows[index] != *old {
-                    return Err(err(format!(
-                        "edited retired package ownership row at {path}; preserve"
-                    )));
-                }
                 rows.remove(index);
             }
         }

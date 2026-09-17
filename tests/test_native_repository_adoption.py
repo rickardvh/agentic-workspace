@@ -12,8 +12,8 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
-@pytest.mark.parametrize("edited", [False, True])
-def test_legacy_adoption_migrates_only_exact_committed_ledger(tmp_path, shared_core_binary, native_cli, edited):
+@pytest.mark.parametrize("change", ["unchanged", "customized", "conflict", "unknown-history"])
+def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_binary, native_cli, change):
     """A legacy producer held installed hashes, not a structured baseline."""
     from agentic_workspace.decision import admit_stored_attempt, commit_stored_attempt
     from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
@@ -51,6 +51,9 @@ def test_legacy_adoption_migrates_only_exact_committed_ledger(tmp_path, shared_c
             output.write_bytes(update["after"].encode())
             if path in state["installed"]:
                 state["installed"][path] = "sha256:" + hashlib.sha256(output.read_bytes()).hexdigest()
+    if change == "unknown-history":
+        # No trusted postimage matching the installed identity is available.
+        state["updates"][LEDGER]["after"] = "schema_version=1\n"
     admission = admit_stored_attempt(str(tmp_path), {"ready_actions": [legacy]}, legacy)
     committed = commit_stored_attempt(
         str(tmp_path),
@@ -64,15 +67,37 @@ def test_legacy_adoption_migrates_only_exact_committed_ledger(tmp_path, shared_c
     record = tmp_path / ".agentic-workspace/local/effects/adoption.prepared.json"
     record.write_text(json.dumps({"invocation": legacy, "custody": committed["custody"]}))
     ledger, profile = tmp_path / LEDGER, tmp_path / PROFILE
-    if edited:
+    host_subsystems = []
+    host_authorities = []
+    if change == "customized":
+        customized = old_ledger.replace("proof = [", 'proof = ["host-test", ', 1)
+        customized += (
+            '\n[[subsystems]]\nid="backend"\npaths=["backend/**"]\nowns=["host API"]\n'
+            'does_not_own=["frontend"]\nproof=["host-test backend"]\nescalate_when=["API changes"]\n'
+            '[[authority_surfaces]]\nconcern="host-api"\nsurface="docs/api.md"\n'
+            'owner="repo"\nownership="repo_owned"\nauthority="primary"\n'
+            'read={refs=["docs/api.md"],select="Read the host API",unknown=["runtime"]}\n'
+        )
+        ledger.write_bytes(customized.encode())
+        host = tomllib.loads(customized)
+        host_subsystems = [host["subsystems"][0], host["subsystems"][-1]]
+        host_authorities = [host["authority_surfaces"][-1]]
+    elif change == "conflict":
+        ledger.write_text(old_ledger.replace('path = ".agentic-workspace/memory/"', 'path = "unexpected/"'))
+    elif change == "unknown-history":
         ledger.write_bytes(ledger.read_bytes() + b"\n# Host customization after RC3 adoption\n")
+    if change in ("conflict", "unknown-history"):
         before = ledger.read_bytes()
         assert propose()["configuration_write"]["status"] == "preserved-blocked"
         assert ledger.read_bytes() == before
         return
     assert call(invocation=authorize(propose()))["effect_outcome"]["status"] == "committed"
     portable = tomllib.loads((ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text())
-    assert tomllib.loads(ledger.read_text()) == portable
+    expected = copy.deepcopy(portable)
+    if host_subsystems:
+        expected["subsystems"] = host_subsystems
+        expected["authority_surfaces"] += host_authorities
+    assert tomllib.loads(ledger.read_text()) == expected
     reading = json.loads(profile.read_text())
     route = next(row for row in reading["entries"] if row["concern"] == "canonical-agent-procedure")
     assert route["refs"] == [".agentic-workspace/skills/REGISTRY.json"]

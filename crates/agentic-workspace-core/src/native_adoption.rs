@@ -125,12 +125,20 @@ pub(crate) fn ownership_baseline(target: &Path) -> Result<Value, CoreError> {
     if !state["ownership_baseline"].is_null() {
         return Ok(state["ownership_baseline"].clone());
     }
-    // Before structured baselines, adoption held exact whole-file custody.
-    // Only unchanged, committed legacy bytes can become a prior package ledger;
-    // a customized ledger must never acquire inferred package ownership.
+    // The committed legacy postimage is an exact historical migration source,
+    // not an input to today's portable payload. Authenticate it against the old
+    // installed identity before reconciling a subsequently customized host.
+    let installed = &state["installed"][crate::native_ownership::LEDGER];
+    if let Some(old) = state["updates"][crate::native_ownership::LEDGER]["after"].as_str()
+        && *installed == json!(crate::native_intent::hash(old.as_bytes()))
+    {
+        return crate::native_ownership::parse(old);
+    }
+    // Older records without a retained postimage can still migrate unchanged
+    // bytes. Unknown customized bytes never acquire inferred package custody.
     let ledger = bytes(&root, crate::native_ownership::LEDGER)?;
     if let Some(text) = ledger.as_deref()
-        && state["installed"][crate::native_ownership::LEDGER] == revision(&ledger)
+        && *installed == revision(&ledger)
     {
         return crate::native_ownership::parse(text);
     }
