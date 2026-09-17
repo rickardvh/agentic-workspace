@@ -2,7 +2,7 @@
   "kind": "agentic-workspace/repository-read-profile/v1",
   "source": {
     "path": ".agentic-workspace/OWNERSHIP.toml",
-    "git_blob_sha1": "989e643e31b6b79ec297899481039af7f009fb3e"
+    "git_blob_sha1": "37a8eabfa8a0aa829630f7f6b294a45137b63162"
   },
   "authority": "orientation-only; no mutation, effect, proof, completion or issue-close authority",
   "currentness": "Read one repository revision; record each selected path and provider blob identity. Reconsider changed selected sources/dependencies; unrelated blobs do not invalidate the reading. Source identity is not truth or runtime admission.",
@@ -33,6 +33,17 @@
         "effective local overrides",
         "live provider capability",
         "current decision admission"
+      ]
+    },
+    {
+      "concern": "canonical-agent-procedure",
+      "owner": "workspace",
+      "refs": [
+        ".agentic-workspace/skills/REGISTRY.json"
+      ],
+      "select": "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime.",
+      "unknown": [
+        "runtime route admission"
       ]
     },
     {

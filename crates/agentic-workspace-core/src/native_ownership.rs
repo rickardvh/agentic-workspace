@@ -28,7 +28,7 @@ pub(crate) fn has_host_meaning(text: &str) -> bool {
     parse(text).map_or(true, |value| value != baseline())
 }
 
-fn parse(text: &str) -> Result<Value, CoreError> {
+pub(crate) fn parse(text: &str) -> Result<Value, CoreError> {
     let value: toml::Value = toml::from_str(text).map_err(err)?;
     let value = serde_json::to_value(value).map_err(err)?;
     let schema: Value = serde_json::from_str(include_str!(

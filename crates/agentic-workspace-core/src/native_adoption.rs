@@ -121,7 +121,20 @@ pub(crate) fn ownership_baseline(target: &Path) -> Result<Value, CoreError> {
     if !committed(target, &root, &record)? {
         return Ok(Value::Null);
     }
-    Ok(record["invocation"]["arguments"]["binding"]["state"]["ownership_baseline"].clone())
+    let state = &record["invocation"]["arguments"]["binding"]["state"];
+    if !state["ownership_baseline"].is_null() {
+        return Ok(state["ownership_baseline"].clone());
+    }
+    // Before structured baselines, adoption held exact whole-file custody.
+    // Only unchanged, committed legacy bytes can become a prior package ledger;
+    // a customized ledger must never acquire inferred package ownership.
+    let ledger = bytes(&root, crate::native_ownership::LEDGER)?;
+    if let Some(text) = ledger.as_deref()
+        && state["installed"][crate::native_ownership::LEDGER] == revision(&ledger)
+    {
+        return crate::native_ownership::parse(text);
+    }
+    Ok(Value::Null)
 }
 pub(crate) fn declarations(owner: &mut Value) {
     owner["requests"].as_array_mut().unwrap().extend([

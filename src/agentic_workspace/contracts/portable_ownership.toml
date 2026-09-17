@@ -84,6 +84,15 @@ authority = "primary"
 summary = "Repo-owned workspace policy, workflow obligations, and structured operating settings."
 
 [[authority_surfaces]]
+concern = "canonical-agent-procedure"
+read = { refs = [".agentic-workspace/skills/REGISTRY.json"], select = "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime.", unknown = ["runtime route admission"] }
+surface = ".agentic-workspace/skills/workspace-startup/SKILL.md"
+owner = "workspace"
+ownership = "module_managed"
+authority = "primary"
+summary = "Canonical reusable procedure for agents using Agentic Workspace; it does not own repo policy, domain state/evidence, or effect authority."
+
+[[authority_surfaces]]
 concern = "bounded-planning-continuity"
 read = { refs = [".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/execplans/"], select = "Prefer a task-supplied owner ref; otherwise follow active.execplans.surface in the optional state file or enumerate only immediate *.plan.json names, excluding archive. Select the relevant owner by meaning. Read intent.outcome/non_goals, scope, proof/relationships, blockers, next_action and continuation from that record; recorded status is not fresh proof or local active selection.", unknown = ["local selected owner", "current custody", "task completion"] }
 surface = ".agentic-workspace/planning/execplans/"

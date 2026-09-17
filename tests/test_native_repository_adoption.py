@@ -12,6 +12,79 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+@pytest.mark.parametrize("edited", [False, True])
+def test_legacy_adoption_migrates_only_exact_committed_ledger(tmp_path, shared_core_binary, native_cli, edited):
+    """A legacy producer held installed hashes, not a structured baseline."""
+    from agentic_workspace.decision import admit_stored_attempt, commit_stored_attempt
+    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    context = {"target": str(tmp_path), "task": "Refresh legacy repository ownership"}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def propose():
+        discovery = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+        request = next(r for r in discovery["adoption_requests"] if r["arguments"]["mode"] == "adopt")
+        return call(request=request)
+
+    def authorize(proposed):
+        answer = next(
+            d for d in proposed["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+        )["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        return call(request=answer)["decision_packet"]["primary_action"]
+
+    # Model the old producer through the real immutable attempt store. This is
+    # fixture construction, not an edit of already-authenticated custody files.
+    legacy = authorize(propose())
+    state = legacy["arguments"]["binding"]["state"]
+    del state["ownership_baseline"]
+    old_ledger = (ROOT / LEDGER).read_text(encoding="utf-8")
+    state["updates"][LEDGER]["after"] = old_ledger
+    state["updates"][PROFILE]["after"] = render(old_ledger)
+    for path, update in state["updates"].items():
+        if update["after"] is not None:
+            output = tmp_path / path
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_bytes(update["after"].encode())
+            if path in state["installed"]:
+                state["installed"][path] = "sha256:" + hashlib.sha256(output.read_bytes()).hexdigest()
+    admission = admit_stored_attempt(str(tmp_path), {"ready_actions": [legacy]}, legacy)
+    committed = commit_stored_attempt(
+        str(tmp_path),
+        admission["custody"],
+        {
+            "status": "applied",
+            "effects": ["configuration-source"],
+            "value": {"kind": "agentic-workspace/repository-adoption-result/v1", "mode": "adopt", "completion_authority": False},
+        },
+    )
+    record = tmp_path / ".agentic-workspace/local/effects/adoption.prepared.json"
+    record.write_text(json.dumps({"invocation": legacy, "custody": committed["custody"]}))
+    ledger, profile = tmp_path / LEDGER, tmp_path / PROFILE
+    if edited:
+        ledger.write_bytes(ledger.read_bytes() + b"\n# Host customization after RC3 adoption\n")
+        before = ledger.read_bytes()
+        assert propose()["configuration_write"]["status"] == "preserved-blocked"
+        assert ledger.read_bytes() == before
+        return
+    assert call(invocation=authorize(propose()))["effect_outcome"]["status"] == "committed"
+    portable = tomllib.loads((ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text())
+    assert tomllib.loads(ledger.read_text()) == portable
+    reading = json.loads(profile.read_text())
+    route = next(row for row in reading["entries"] if row["concern"] == "canonical-agent-procedure")
+    assert route["refs"] == [".agentic-workspace/skills/REGISTRY.json"]
+    raw = ledger.read_bytes()
+    assert reading["source"]["git_blob_sha1"] == hashlib.sha1(b"blob " + str(len(raw)).encode() + b"\0" + raw).hexdigest()
+    migrated = json.loads(record.read_text())["invocation"]["arguments"]["binding"]["state"]
+    assert migrated["ownership_baseline"] == portable
+    before = ledger.read_bytes(), profile.read_bytes()
+    assert propose()["configuration_write"]["status"] == "already-current"
+    assert (ledger.read_bytes(), profile.read_bytes()) == before
+
+
 @pytest.mark.parametrize("customized", [False, True])
 def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_binary, native_cli, customized):
     """One native journey also runs unchanged against installed release artifacts."""
