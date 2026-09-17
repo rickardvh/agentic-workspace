@@ -1,69 +1,115 @@
-# Evidence And Support Summary
+# Evidence and support
 
-The native reconstruction has independently passed exact release-equivalent artifact admission. That admission does not publish a release or change the **alpha** package maturity label. Deterministic compatibility proof, public release support and live-agent behavior are separate claims.
+Agentic Workspace keeps several claims deliberately separate:
 
-## Deterministic evidence
+1. **source/conformance evidence** — what the current source and deterministic contracts prove;
+2. **published release evidence** — what an exact immutable release proves about its artifacts and support boundary;
+3. **live-agent evidence** — what observed models/hosts actually did under a bounded setup.
 
-- JSON schemas, parser/command parity, operation conformance, package tests, installed-footprint/reference closure, removal/restart fixtures, and generated-reference drift checks run in CI/source validation.
-- Published reconstruction previews use immutable `preview-vMAJOR.MINOR.PATCH` subjects and may carry install-readiness, redistribution, security/supply-chain, SBOM, artifact-digest, provenance, and generated-target conformance evidence while remaining explicitly non-support-bearing.
-- Stable versioned support-bearing releases publish promotion evidence in addition to their install-readiness, redistribution, security/supply-chain, SBOM, artifact digest, and generated-target conformance receipts.
-- The generated [support-bearing install projection](reference/support-bearing-install.md) identifies the latest stable release receipt and exact hash-bound root wheel; preview installs instead use the receipt attached to the exact published preview prerelease.
-- Weak-case fixtures retain failures such as ignored routed skills, stale/duplicate sources, skipped proof boundaries, and partial slices presented as parent completion.
+A strong result in one class does not silently promote another. Source tests do not publish a release; a published prerelease is not stable support; deterministic conformance does not guarantee model obedience; one successful provider run does not establish universal provider support.
 
-Deterministic proof supports the declared contract on its exact subject. Preview evidence proves only the preview claims it names; it does not manufacture Stable/1.0, support-bearing, or untested platform status. Deterministic proof also does not prove that every model will discover or use the contract cheaply.
+## Published release evidence
 
-## Historical live-agent evidence
+Use the selected immutable release as the public evidence subject.
 
-The historical 2026-08-14 operating-context run (before the current skills-first native interface) used `gpt-5.3-codex-spark` on three scenarios:
+### Stable releases
 
-- clean-host startup passed with one AW command, no raw state scan, and a bounded claim;
-- failed-proof/partial-intent behavior passed the claim boundary despite recoverable shell failures;
-- Memory trap-aware routing selected the correct note and proof route but remains `weak_noncompliant` because it wrote unexpected local diagnostic state and leaked a local path before the export boundary repaired it.
+A support-bearing stable release must carry the coordinated evidence required by the release owner for that exact source and artifact set. The generated [support-bearing install projection](reference/support-bearing-install.md) identifies the current stable release and its exact installation receipt.
 
-This is evidence for a bounded model/adapter/head, not a universal provider claim. The maintained provider-availability record explicitly marks a distinct-vendor route and a separate strong-tier comparative route unavailable; deterministic vendor-neutral fixtures remain the fallback. The weakness ledger also retains active monitoring where models ignored delegation decisions or produced incomplete handoffs.
+Release evidence can include:
 
-## Support boundary
+- `distribution-install-readiness.json` for exact install identity and artifact binding;
+- support-bearing promotion evidence;
+- redistribution/package-readiness evidence;
+- security and supply-chain checks;
+- SBOM, provenance, and artifact digests;
+- native/generated-target conformance;
+- registry publication receipts for exact PyPI/npm projections when those registries are part of the release;
+- coordinated Cargo publication evidence when Cargo artifacts are part of the release.
 
-- A published preview install is an exact immutable external-testing identity, but it is not support-bearing.
-- Support-bearing installation is the exact stable versioned receipt path; debug/source/registry routes and preview receipts do not inherit that status.
-- Supported runtime behavior is bounded by the selected release, package metadata, configured repository, and admitted command authorities.
-- AW is not a sandbox, credential host, CI provider, compliance certification, or guarantee of model obedience.
-- Unknown OS/provider/runner behavior remains unknown until source-bound evidence promotes it.
+The release receipts, not a conceptual documentation page, own the exact version, digest, and publication status.
 
-See [Maturity model](maturity-model.md), [Installation](agentic-workspace-install.md), [Threat model](security/threat-model.md), and maintainer [external-agent evaluation](../tools/model-cli-harness/external-agent-evaluation/README.md) for deeper evidence owners.
+### Release candidates and previews
 
-## Current skills-first candidate evidence
+Release candidates and exploratory previews are immutable prerelease evidence subjects but remain **non-support-bearing**.
 
-The [Candidate C integrated acceptance input](reviews/candidate-c-integrated-acceptance.md)
-aggregates accepted child reviews, current native public journeys and measured
-frontier cost. It records the remaining independent acceptance and publication
-boundaries; source validation does not put Candidate C into older published bytes.
+An RC can exercise near-final package topology and public journeys without establishing the later stable release. A preview can prove useful packaged behavior without establishing stable compatibility, registry availability, or production support.
 
-The [C53 recheck](maintainer/c53-conformance.md) identifies the exact integrated
-source and distinguishes owner tests, public journeys, architecture constraints
-and public documentation. The [continuation burden report](priority5-validation.md)
-counts selected skills, worker/parent context, tool calls, steering, repairs and
-residue. Its worker savings yield only 0.55% less full-fixture context and add
-machine transport. Hidden host context and actual model/provider economics remain
-unknown. Source tests are not public-byte install proof, independent review or
-Stable/1.0 admission.
+Use the exact prerelease's own manifest and install-readiness receipt. Do not transfer evidence from a newer source checkout or another prerelease merely because the interfaces look similar.
 
-The later reconstruction additions cover consequential bounded delegation,
-advisory Memory capture, owner-authorized correction/adaptation, and selective
-repository-only reading. Their source-level evidence and remaining candidate
-gates are tracked in the [candidate conformance input](maintainer/c54-conformance-input.md).
-These additions do not retroactively change C53's published bytes or evidence.
-Independent acceptance, exact artifact proof and public-byte installation remain
-required before attributing them to a new published candidate.
+See [Installation and adoption](agentic-workspace-install.md) for the release-class selection rules.
 
-## Admitted native reconstruction
+## Deterministic source evidence
 
-The exact candidate and artifact receipts are recorded in [admission #2990](https://github.com/rickardvh/agentic-workspace/issues/2990), with the independent projection review in [PR #3259](https://github.com/rickardvh/agentic-workspace/pull/3259). This evidence supersedes the older candidate inputs above for current native behavior; each historical report keeps its original subject.
+Source validation covers classes such as:
 
-The admitted set contains the root Python wheel/source archive, npm package and native CLI/core archive. The Python and npm packages carry the same Rust executables. Memory, Planning and Verification capabilities execute through that core; their separate source-development packages are not dependencies or extra shipped module assets.
+- operation/schema and parser/command conformance;
+- shared Rust semantic authority and thin binding/projection parity;
+- package and clean-install topology;
+- installed-footprint/reference closure;
+- currentness, stale-action, interruption, recovery, and idempotency fixtures;
+- Planning, Memory, Verification, Assignment, delegation, correction, and repository-control owner behavior;
+- generated-reference and package-contract drift checks;
+- weak/negative cases where a route is ignored, evidence is stale, or a partial slice is incorrectly presented as broader completion.
 
-The exercised release platform is **Linux x64** (`x86_64-unknown-linux-gnu`, wheel `linux_x86_64`), with no manylinux, Windows, macOS or ARM guarantee. Runtime evidence covers Python 3.11, 3.13 and 3.14 with Node 20/24, plus Node 25 topology. Python 3.12 is a declared intermediate bounded by the minimum/primary lanes, not a separate measured lane. See the [installation contract](agentic-workspace-install.md#stablesupport-bearing-prerequisites).
+Deterministic proof supports only its exact subject and declared claim. A source checkout may be ahead of the latest published release. Passing source validation therefore does not establish that those capabilities are publicly available in older installed bytes or that a support-bearing release exists.
 
-Installed-consumer proof covers current owner behavior, source transitions, carried actions, continuation, proof/custody rejection and bounded removal. Local/sealed-process delegation and the packaged sealed provider bridge have deterministic transport evidence. Simulated providers do not establish live account/model availability, arbitrary provider support, unrestricted shared-worktree writes or economic superiority.
+The native architecture has one ordinary deterministic semantic/effect authority in the Rust core. Native, Python, TypeScript, and JSON-facing surfaces project or bind that authority; separate source-development module packages are development/migration fixtures rather than independent shipped semantic runtimes.
 
-Canonical branch cutover requires separate exact human approval under [#3014](https://github.com/rickardvh/agentic-workspace/issues/3014). A later support-bearing publication requires its own immutable version and release-owned install, redistribution, security and promotion receipts. CI build version metadata, a green prerequisite aggregate and a branch move supply none of those publication claims. Existing previews retain their original bytes and non-support-bearing status.
+## Live-agent evidence
+
+Live-agent runs test a different question: whether a model/host actually discovers and uses the available context and control cheaply and correctly.
+
+Representative observations have included:
+
+- clean startup with compact routed context;
+- correct claim boundaries after failed or partial proof;
+- relevant Memory/skill selection;
+- continuation across sessions;
+- bounded worker/delegation handoff;
+- cases where models ignored routed guidance, produced incomplete handoffs, created unexpected residue, or required steering.
+
+These observations are bounded by model, host, source/release revision, scenario, and available integrations. They are evidence, not universal compatibility guarantees.
+
+Maintainer evaluation material lives under the [external-agent evaluation harness](../tools/model-cli-harness/external-agent-evaluation/README.md) and dated review/maintainer reports. Historical runs keep their original subject rather than becoming current product doctrine.
+
+## Current support boundary
+
+The selected release owns exact public support. The [installation and adoption guide](agentic-workspace-install.md) owns the current native prerequisite model and points to the immutable release evidence that can make a support-bearing claim.
+
+General boundaries remain:
+
+- AW is not a sandbox, credential host, CI provider, compliance certification, or guarantee of model obedience;
+- repository-configured commands inherit caller filesystem and credential authority;
+- unknown OS, architecture, provider, agent-host, runner, or runtime behavior remains unknown until source-bound/release-bound evidence promotes it;
+- registry availability does not imply broader semantic or platform support than the admitted release;
+- a repository-only read path cannot establish live runtime state, fresh proof, or effect permission;
+- a passing check supports only the claim that check and its owner actually establish.
+
+See the [Threat model](security/threat-model.md) for the execution and supply-chain boundary.
+
+## Evidence about first-stable development
+
+The repository retains detailed evidence from the native migration and first-stable preparation. That material remains useful for explaining why current architecture and release gates exist, but it is not the ordinary public support owner.
+
+Examples include:
+
+- exact native artifact admission and independent review around [#2990](https://github.com/rickardvh/agentic-workspace/issues/2990);
+- candidate/conformance reports under `docs/maintainer/` and `docs/reviews/`;
+- release-topology, support-promotion, and public-smoke evidence;
+- bounded cost/continuation measurements and weak-case ledgers.
+
+Once behavior is published, the immutable release receipts for those bytes are the public evidence subject. Historical source candidate reports do not retroactively change an older preview or stable release and do not need to be copied into first-contact documentation.
+
+## How to interpret a claim
+
+When evaluating a statement about AW, identify all four parts:
+
+1. **subject** — source revision, release tag, artifact digest, provider/model run, or repository state;
+2. **claim** — compatibility, correctness, support, model behavior, performance, or completion;
+3. **owner/evidence** — deterministic test, release receipt, runtime result, review, or live-agent observation;
+4. **limits** — excluded platforms, stale dependencies, weak cases, unavailable providers, or unsupported effects.
+
+If any of these are missing, narrow the claim rather than filling the gap from nearby evidence.
+
+See [Maturity model](maturity-model.md), [Installation and adoption](agentic-workspace-install.md), [Documentation status](documentation-status.md), and the [Threat model](security/threat-model.md).

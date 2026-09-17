@@ -5,11 +5,11 @@ governing_intents = ["Preserve only the context that is expensive to rediscover 
 anti_intents = ["Do not become a visible workflow framework the user must consciously operate.", "Do not grow a surface maze where every good idea becomes another durable file or command.", "Do not optimize one local step while making the overall loop heavier.", "Do not let package-owned and repo-owned artifacts blur into ambiguous authority.", "Do not create a skills runtime, mandatory workflow phase machine, hidden semantic classifier, or universal policy language.", "Do not treat successful validation, matched source records, or a published preview as whole-intent or stable-release acceptance.", "Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.", "Do not treat current local tooling preferences as durable package requirements without explicit justification."]
 decision_tests = ["Favor work that preserves human intent more faithfully across time.", "Favor work that makes bounded execution cheaper to start, continue, hand off, review, or finish.", "Favor work that removes, compresses, or backgrounds visible residue instead of adding new first-line surfaces.", "Favor work that sharpens ownership, preserves source-owned policy and currentness-bound interpretations, and makes important operating choices machine-consumable.", "Favor work that improves portability by reducing accidental repo-, language-, agent-, vendor-, or local-tool assumptions.", "Favor work that makes the correct action easy to construct before validation runs.", "Question work that mainly adds framework feel, narrative residue, or new visible concepts without replacing older ones.", "Question work that treats validation success alone as proof that the larger intent was satisfied.", "Question work that relies on repeated validation failures as the authoring interface for package-owned artifacts or workflows."]
 open_questions = []
-interpretation_notes = "Semantically reconciled on 2026-09-16 against every declared source: SYSTEM_INTENT.md supplies governing direction and README.md corroborates public orientation. Replaces the older query-first preference with the current skills-first responsibility split, lazy decision frontier, directly usable consequences, partial-compliance learning, and preservation of recognized authority. Retains human why, portability, and total-cost direction. This mirror is an operating compass, not active task state, independent review, maturity promotion, or release admission. Existing architecture principles remain in force; native Rust paths are now included in their scope. The README registry-distribution clarification preserves one Rust authority and exact admitted artifact identity. PyPI and npm distribute admitted bytes; registry presence is an external publication fact, not an independent version authority, platform-support claim, or stable acceptance."
+interpretation_notes = "Semantically reconciled on 2026-09-17 against every declared source: SYSTEM_INTENT.md supplies governing direction and the rewritten README.md corroborates the public first-contact projection. The README foregrounds task-shaped operating context, direct-work quietness, skills-first procedure, one Rust authority, and Configuration-owned adoption/refresh/removal while preserving repo/domain/local ownership boundaries. This does not change human-owned why, architecture authority, maturity, release admission, or support claims; exact release identity and support remain release-owned. This mirror is an operating compass, not active task state, independent review, maturity promotion, or release admission. Existing architecture principles remain in force."
 confidence = "high"
 needs_review = false
 preferred_source = "SYSTEM_INTENT.md"
-last_synced_at = "2026-09-16"
+last_synced_at = "2026-09-17"
 
 [[source_records]]
 path = "SYSTEM_INTENT.md"
@@ -21,9 +21,9 @@ line_count = 234
 [[source_records]]
 path = "README.md"
 present = true
-sha256 = "1539002d71aba1ca53e1cc203b372b1b80b6230f99056d0293b87bf8e582bf08"
+sha256 = "704ab5de21f9f9412502e6fcb1a22403b85862cbe77d008f974dc8a27f5853ac"
 first_heading = "Agentic Workspace"
-line_count = 126
+line_count = 184
 
 [[architecture_principles]]
 id = "host-agnostic-agent-judgment"
