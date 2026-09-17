@@ -97,10 +97,28 @@ def test_registry_requires_exact_admitted_subject(tmp_path, tag):
 def test_registry_workflow_is_gated_projection_without_rebuild():
     workflow = (ROOT / ".github/workflows/registry-release.yml").read_text()
     assert "workflow_call:" in workflow and "workflow_dispatch:" not in workflow
-    assert "npm@11.5.1" in workflow and '--tag "$NPM_TAG"' in workflow
-    assert "pypa/gh-action-pypi-publish@" in workflow and "id-token: write" in workflow
-    assert "uv build" not in workflow and "npm pack" not in workflow and "secrets." not in workflow
-    assert workflow.index("Reobserve immutable") < workflow.index("Publish missing exact") < workflow.index("Verify public bytes")
+    assert "pypa/gh-action-pypi-publish@" not in workflow
+    import yaml
+
+    for filename, dependency in (("preview-release.yml", "preview-package"), ("release.yml", "agentic-workspace-package")):
+        publisher = yaml.safe_load((ROOT / ".github/workflows" / filename).read_text())
+        job = publisher["jobs"]["language-packages"]
+        assert dependency in job["needs"]
+        assert "uses" not in job
+        assert job["environment"] == "package-registries"
+        assert job["permissions"] == {"contents": "read", "id-token": "write", "attestations": "read"}
+        steps = job["steps"]
+        assert any(step.get("uses", "").startswith("pypa/gh-action-pypi-publish@") for step in steps)
+        names = [step.get("name") for step in steps]
+        assert (
+            names.index("Reobserve immutable registry versions")
+            < names.index("Publish missing exact PyPI artifacts with trusted identity")
+            < names.index("Verify public bytes and clean native consumers")
+        )
+        content = str(job)
+        assert "npm@11.5.1" in content and '--tag "$NPM_TAG"' in content
+        assert "uv build" not in content and "npm pack" not in content and "secrets." not in content
+        assert "${{ inputs.tag }}" not in content
     with pytest.raises(ValueError, match="Exploratory"):
         registry.admitted_artifacts(Path("unused"), "preview-v0.57.0", "a" * 40)
 

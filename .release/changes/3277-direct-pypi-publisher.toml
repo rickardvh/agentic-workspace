@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Run PyPI trusted publishing directly in the admitted release workflows so RC and stable publication can authenticate."
+issues = [3277, 3361]
