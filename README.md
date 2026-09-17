@@ -1,5 +1,8 @@
 # Agentic Workspace
 
+> [!IMPORTANT]
+> **v1.0 release candidate:** [Download v1.0.0-rc.3](https://github.com/rickardvh/agentic-workspace/releases/tag/v1.0.0-rc.3), with prebuilt packages for Windows, macOS, and Linux on x64 and ARM64. Also available on PyPI, npm, and crates.io. This is a prerelease intended for testing.
+
 **Persistent operating context and dynamic control for coding agents.**
 
 Agentic Workspace (AW) helps coding agents enter a repository with the right guidance, continue unfinished work across sessions, and preserve useful lessons without turning every task into a workflow.
