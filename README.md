@@ -84,8 +84,6 @@ agentic-workspace start --target . \
 
 If the repository is not yet adopted and the selected artifact includes the current adoption owner, Configuration returns the exact repository-adoption request. Follow that request and execute only the returned authorized action. Adoption establishes the small package-owned host footprint and managed `AGENTS.md` fence; it does **not** invent repository policy, choose optional modules, or create Planning, Memory, or Verification state.
 
-Historical `init`/setup command families are not the v1 adoption model.
-
 ### In an adopted repository
 
 The repository's small entry point leads to the canonical `workspace-startup` skill. Agent hosts with supported native skill discovery can expose the same skill directly.
