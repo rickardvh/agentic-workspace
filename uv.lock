@@ -12,7 +12,7 @@ members = [
 
 [[package]]
 name = "agentic-workspace"
-version = "0.51.0"
+version = "1.0.0rc4"
 source = { editable = "." }
 
 [package.dev-dependencies]

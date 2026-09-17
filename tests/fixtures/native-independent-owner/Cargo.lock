@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "agentic-workspace-core"
-version = "0.51.0"
+version = "1.0.0-rc.4"
 dependencies = [
  "base64",
  "cap-std",
