@@ -41,6 +41,8 @@ struct Request {
     #[serde(default, skip_serializing_if = "is_false")]
     compose: bool,
     path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    selection: Option<String>,
     need: Option<String>,
     base: Option<String>,
     reason: Option<String>,
@@ -251,7 +253,11 @@ fn audit(target: &Path) -> Result<Value, CoreError> {
         json!({"kind":"agentic-workspace/local-hygiene/v1","entries":rows,"authority":"classification-only; ignored is not disposable","source_revision":digest(&json!(text))?}),
     )
 }
-fn scratch_snapshot(target: &Path, relative: &str) -> Result<(Value, Vec<String>), CoreError> {
+fn scratch_snapshot(
+    target: &Path,
+    relative: &str,
+    selection: Option<&str>,
+) -> Result<(Value, Vec<String>), CoreError> {
     let path = target.join(relative);
     unlinked(&path)?;
     if !path.exists() {
@@ -327,7 +333,7 @@ fn scratch_snapshot(target: &Path, relative: &str) -> Result<(Value, Vec<String>
                 *bytes += meta.len() as usize;
                 if *bytes > 16_777_216 {
                     return Err(err(
-                        "scratch exceeds bounded cleanup bytes; do not treat build caches as task scratch",
+                        "scratch exceeds bounded cleanup bytes; contents beyond the limit are unobserved",
                     ));
                 }
                 out.insert(
@@ -343,7 +349,40 @@ fn scratch_snapshot(target: &Path, relative: &str) -> Result<(Value, Vec<String>
     }
     let mut entries = BTreeMap::new();
     let mut files = Vec::new();
-    walk(&dir, "", &mut entries, &mut files, &mut 0)?;
+    if let Some(selected) = selection {
+        crate::decision_source::relative(selected)?;
+        if selected == MARKER {
+            return Err(err("scratch marker is not a disposable selection"));
+        }
+        unlinked(&path.join(selected))?;
+        let metadata = dir.symlink_metadata(selected).map_err(err)?;
+        if !metadata.is_file() || metadata.len() > 16_777_216 {
+            return Err(err(
+                "selected scratch material must be one bounded regular file; preserve",
+            ));
+        }
+        entries.insert(
+            MARKER.to_owned(),
+            json!({"revision":digest(&json!(marker_bytes))?}),
+        );
+        entries.insert(
+            selected.to_owned(),
+            json!({"revision":digest(&json!(dir.read(selected).map_err(err)?))?}),
+        );
+        files.push(selected.to_owned());
+    } else if let Err(problem) = walk(&dir, "", &mut entries, &mut files, &mut 0) {
+        if problem
+            .to_string()
+            .contains("scratch exceeds bounded cleanup")
+        {
+            return Ok((
+                json!({"status":"over-capacity","marker":marker,"observation_limit":problem.to_string(),
+                "recovery":"Select one known regular file of at most 16 MiB with scratch-prune and selection; other material remains unobserved and preserved."}),
+                vec![],
+            ));
+        }
+        return Err(problem);
+    }
     Ok((
         json!({"status":"present","marker":marker,"entries":entries}),
         files,
@@ -556,7 +595,8 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     let mut seed = String::new();
     let mut outputs = vec![];
     match request.operation.as_str() {
-        "scratch-create" | "scratch-remove" | "scratch-retain" | "scratch-release" => {
+        "scratch-create" | "scratch-remove" | "scratch-prune" | "scratch-retain"
+        | "scratch-release" => {
             crate::decision_source::relative(relative)?;
             if relative
                 .strip_prefix(&format!("{SCRATCH}/"))
@@ -572,7 +612,15 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                     "new scratch path must be derived from the explicit current work",
                 ));
             }
-            (snapshot, files) = scratch_snapshot(&target, relative)?;
+            if (request.operation == "scratch-prune") != request.selection.is_some() {
+                return Err(err(
+                    "scratch-prune requires one explicit selection; other operations accept none",
+                ));
+            }
+            (snapshot, files) = scratch_snapshot(&target, relative, request.selection.as_deref())?;
+            if snapshot["status"] == "over-capacity" {
+                blockers.push("scratch observation limit reached; preserve and use bounded scratch-prune recovery");
+            }
             if matches!(
                 request.operation.as_str(),
                 "scratch-retain" | "scratch-release"
@@ -584,7 +632,11 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             {
                 blockers.push("retention disposition requires an existing task container and an explicit reason");
             }
-            if request.operation == "scratch-remove" && snapshot["marker"]["retain"] == true {
+            if matches!(
+                request.operation.as_str(),
+                "scratch-remove" | "scratch-prune"
+            ) && snapshot["marker"]["retain"] == true
+            {
                 blockers.push("retained recovery material requires current owner disposition");
             }
         }
@@ -760,7 +812,10 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
             });
         }
     }
-    if (request.operation == "scratch-remove" && snapshot["status"] == "present")
+    if (matches!(
+        request.operation.as_str(),
+        "scratch-remove" | "scratch-prune"
+    ) && snapshot["status"] == "present")
         || (request.operation == "worktree-remove" && !registration.is_null())
     {
         let current = crate::native_public::start(
@@ -835,7 +890,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     )?;
     unlinked(&path)?;
     if request.operation.starts_with("scratch")
-        && scratch_snapshot(&target, relative)?.0 != snapshot
+        && scratch_snapshot(&target, relative, request.selection.as_deref())?.0 != snapshot
     {
         return Err(err(
             "scratch changed at effect barrier; preserve and reobserve",
@@ -868,11 +923,16 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
         "scratch-remove" if snapshot["status"] == "empty-interrupted" => {
             fs::remove_dir(&path).map_err(err)?;
         }
-        "scratch-remove" if snapshot["status"] == "present" => {
+        "scratch-remove" | "scratch-prune" if snapshot["status"] == "present" => {
             let root = Dir::open_ambient_dir(&target, ambient_authority()).map_err(err)?;
             let dir = root.open_dir(relative).map_err(err)?;
             // Delete marker last; interrupted cleanup remains recognizable and re-observable.
             for file in files.into_iter().filter(|p| p != MARKER) {
+                if digest(&json!(dir.read(MARKER).map_err(err)?))?
+                    != snapshot["entries"][MARKER]["revision"]
+                {
+                    return Err(err("scratch retention changed; preserve and reobserve"));
+                }
                 unlinked(&path.join(&file))?;
                 if digest(&json!(dir.read(&file).map_err(err)?))?
                     != snapshot["entries"][&file]["revision"]
@@ -883,27 +943,29 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 }
                 dir.remove_file(file).map_err(err)?;
             }
-            let mut dirs: Vec<_> = snapshot["entries"]
-                .as_object()
-                .unwrap()
-                .iter()
-                .filter(|(_, v)| v["directory"] == true)
-                .map(|(k, _)| k.clone())
-                .collect();
-            dirs.sort_by_key(|p| std::cmp::Reverse(p.len()));
-            for directory in dirs {
-                dir.remove_dir(directory).map_err(err)?;
+            if request.operation == "scratch-remove" {
+                let mut dirs: Vec<_> = snapshot["entries"]
+                    .as_object()
+                    .unwrap()
+                    .iter()
+                    .filter(|(_, v)| v["directory"] == true)
+                    .map(|(k, _)| k.clone())
+                    .collect();
+                dirs.sort_by_key(|p| std::cmp::Reverse(p.len()));
+                for directory in dirs {
+                    dir.remove_dir(directory).map_err(err)?;
+                }
+                if digest(&json!(dir.read(MARKER).map_err(err)?))?
+                    != snapshot["entries"][MARKER]["revision"]
+                {
+                    return Err(err(
+                        "scratch retention changed during cleanup; preserve marker and reobserve",
+                    ));
+                }
+                dir.remove_file(MARKER).map_err(err)?;
+                drop(dir);
+                root.remove_dir(relative).map_err(err)?;
             }
-            if digest(&json!(dir.read(MARKER).map_err(err)?))?
-                != snapshot["entries"][MARKER]["revision"]
-            {
-                return Err(err(
-                    "scratch retention changed during cleanup; preserve marker and reobserve",
-                ));
-            }
-            dir.remove_file(MARKER).map_err(err)?;
-            drop(dir);
-            root.remove_dir(relative).map_err(err)?;
         }
         "scratch-retain" | "scratch-release" => {
             let mut marker = snapshot["marker"].clone();

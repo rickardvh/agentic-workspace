@@ -235,6 +235,21 @@ pub(crate) fn view(
             }
             let bytes = proposed_content(target, config, args)?;
             let post = crate::native_intent::hash(&bytes);
+            if before.as_deref() == Some(bytes.as_slice()) {
+                write["status"] = json!("already-current");
+                intent["reconciliation"] = write;
+                return Ok(());
+            }
+            // Historical publication is not current source satisfaction. Bind
+            // a fresh proposal to the exact prior custody before superseding it.
+            // This also distinguishes a later return to an identical preimage.
+            bound["prior_publication"] = match held(target, MIRROR, &post)? {
+                Some(record) if admitted(target, MIRROR, &post)? => json!(digest(&record)?),
+                Some(record) => {
+                    record["invocation"]["arguments"]["binding"]["prior_publication"].clone()
+                }
+                None => Value::Null,
+            };
             let proposal = json!({"binding":bound,"source":MIRROR,"before":before.as_ref().map(|b|String::from_utf8_lossy(b).into_owned()),"postimage":args["content"],"post_revision":post,"judgment":args["judgment"],"reason":args["reason"],"authority":"exact-bounded-owner-answer"});
             let pr = digest(&proposal)?;
             write["proposal"] = proposal;
@@ -271,6 +286,7 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
         source.to_owned(),
         format!("{source}.*.tmp"),
         marker(source, post)?,
+        format!("{}.*.tmp", marker(source, post)?),
         ".agentic-workspace/local/effects/system-intent.lock".into(),
     ]);
     Ok(paths)
@@ -321,10 +337,17 @@ pub(crate) fn execute(
         return Ok(json!({"outcome":out,"custody":committed["custody"]}));
     }
     let bytes = postimage(&args["request"]["arguments"])?;
-    let previous = held(target, path, post)?;
-    if admitted(target, path, post)? {
-        return Err(err("exact intent write already consumed"));
+    let historical = held(target, path, post)?;
+    let superseding = historical.is_some() && admitted(target, path, post)?;
+    if superseding
+        && (source(target, path)?.as_deref() == Some(bytes.as_slice())
+            || args["binding"]["prior_publication"] != digest(historical.as_ref().unwrap())?)
+    {
+        return Err(err(
+            "intent publication subject changed; reobserve current source",
+        ));
     }
+    let previous = if superseding { None } else { historical };
     if previous.as_ref().is_some_and(|r| r["invocation"] != *i) {
         return Err(err("intent attempt collision preserved"));
     }
@@ -337,9 +360,15 @@ pub(crate) fn execute(
     )?;
     let out = outcome(i);
     if previous.is_none() {
+        let marker_path = marker(path, post)?;
+        let prepared_path = if superseding {
+            format!("{marker_path}.{}.tmp", &digest(i)?[7..])
+        } else {
+            marker_path.clone()
+        };
         let mut f = root
             .open_with(
-                marker(path, post)?,
+                &prepared_path,
                 OpenOptions::new().write(true).create_new(true),
             )
             .map_err(err)?;
@@ -351,6 +380,11 @@ pub(crate) fn execute(
         )
         .map_err(err)?;
         f.sync_all().map_err(err)?;
+        drop(f);
+        if superseding {
+            root.rename(&prepared_path, &root, &marker_path)
+                .map_err(err)?;
+        }
     }
     source(target, path)?;
     root.create_dir_all(Path::new(path).parent().unwrap())

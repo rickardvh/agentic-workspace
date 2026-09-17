@@ -1,0 +1,75 @@
+{
+  "blockers": [],
+  "canonical_core": {},
+  "continuation": {
+    "frontier": "Host footprint/adoption; effect/resource/diagnostic correctness; CLI/procedure and compact reproducer"
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/68f0aef4ee8b682313dc4f95760ee8d7f9a17c925c5004e0e16a133f7b31671b.attempt.json",
+        "revision": "sha256:48b08adca115bacb6bb8ecd525e8752ff6a5d06284cdfc7b954330fc9ccf9d17",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/68f0aef4ee8b682313dc4f95760ee8d7f9a17c925c5004e0e16a133f7b31671b.result.json",
+        "revision": "sha256:0c1ddebcf0708d610e93e452b979bd8d8f8bf454569a97a1ec80a55c6066be6b",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:e5fe391ee0ef6a1ca6ac2392d841253f0872fe4271607ff55f66101f310694eb",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:d4a0d0bb92eb69cf4d0167f9203906a4989197c54392279b9070d2d3313cb60a"
+  },
+  "id": "work-3ddc8229dc506109d916a5f5bcf0f7cc64b8cb5cfc6aa95cc9297348bb89d860",
+  "intent": {
+    "outcome": "Implement issues 3372 through 3380 in three stacked PRs ready for independent review; reproduce and disposition 3380 without speculative machinery"
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Implement minimal host footprint and Configuration adoption/de-adoption",
+  "owner_level": "lane",
+  "parent": {},
+  "phase": "shaping",
+  "proof": {
+    "strategy": "Current owner contract evidence and public parity; each PR source-current independently"
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3372",
+    "https://github.com/rickardvh/agentic-workspace/issues/3373",
+    "https://github.com/rickardvh/agentic-workspace/issues/3374",
+    "https://github.com/rickardvh/agentic-workspace/issues/3375",
+    "https://github.com/rickardvh/agentic-workspace/issues/3376",
+    "https://github.com/rickardvh/agentic-workspace/issues/3377",
+    "https://github.com/rickardvh/agentic-workspace/issues/3378",
+    "https://github.com/rickardvh/agentic-workspace/issues/3379",
+    "https://github.com/rickardvh/agentic-workspace/issues/3380"
+  ],
+  "relationships": {},
+  "revision": 1,
+  "scope": {
+    "excluded": [
+      "Review or approve implementation PRs",
+      "Merge PRs"
+    ],
+    "included": [
+      "3372",
+      "3373",
+      "3374",
+      "3375",
+      "3376",
+      "3377",
+      "3378",
+      "3379",
+      "3380"
+    ]
+  },
+  "title": "Host adoption and current-owner follow-through 3372-3380"
+}

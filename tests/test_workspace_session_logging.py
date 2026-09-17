@@ -73,6 +73,51 @@ def _read_export(path: Path) -> list[dict[str, object]]:
         return [json.loads(line) for line in handle if line.strip()]
 
 
+def test_metadata_only_stream_has_bounded_coverage_and_no_redundancy_claim(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "[session_logging]\nenabled=true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session = session_logging.ensure_session(state=state)
+    stream = target / session_logging._event_path_for_session(session)
+    events = []
+    for number in (1, 2):
+        event = session_logging._synthetic_export_event(
+            session=session,
+            event_type="command.completed",
+            sequence=number,
+            timestamp=session["created_at"],
+            payload={
+                "entry": {
+                    "id": str(number),
+                    "command": "agentic-workspace start",
+                    "argv": [],
+                    "storage_mode": "metadata-only",
+                    "omissions": ["argv", "task", "operation arguments"],
+                    "origin": {"classification": "unknown", "source": "native-transport"},
+                    "exit_status": 0,
+                }
+            },
+        )
+        event.pop("recovered_from")
+        events.append(event)
+    stream.write_text("".join(json.dumps(event) + "\n" for event in events), encoding="utf-8")
+    analysis = session_logging.analyze_session_log(
+        state=state, origin_scope="all", detail="candidates", capture_observations=("identity-unavailable",)
+    )
+    assert analysis["recorded_stream_integrity"]["status"] == "complete"
+    assert analysis["coverage"]["whole_task_coverage"] == "unknown"
+    assert analysis["capture_quality"]["known_observations"] == ["identity-unavailable"]
+    assert "repeated-command" not in json.dumps(analysis.get("friction_candidates", []))
+    exported = session_logging.export_session_log(state=state, include_artifacts=False, capture_observations=("identity-unavailable",))
+    profile = exported["manifest"]["evidence_profile"]
+    assert profile["source_command_count"] == profile["exported_command_count"] == 2
+    assert profile["canonical_event_stream_complete"] is True
+    assert profile["whole_task_coverage"] == "unknown"
+    started = next(event for event in _read_export(target / exported["path"]) if event["event_type"] == "session.started")
+    assert started["recovered_from"] == "recorded-stream-session-metadata"
+    assert "migration" not in started["payload"]
+
+
 def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
 
@@ -465,21 +510,20 @@ def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path:
     assert [event["sequence"] for event in root_events] == list(range(1, len(root_events) + 1))
     assert {first["session_id"], second["session_id"]}.issubset({event["physical_session_id"] for event in root_events})
     assert (
-        session_logging.run_with_session_logging(["implement", "--target", str(target), "--task", "#2703 implementation"], lambda _argv: 0)
-        == 0
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "#2703 implementation"], lambda _argv: 0) == 0
     )
     monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "child-session")
     monkeypatch.setenv(session_logging.PARENT_LOGICAL_SESSION_IDENTITY_ENV, "root-session")
     child = session_logging.ensure_session(state=state)
     assert (
-        session_logging.run_with_session_logging(["proof", "--target", str(target), "--task", "#2703 delegated proof"], lambda _argv: 0)
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "#2703 delegated proof"], lambda _argv: 0)
         == 0
     )
     monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "root-session")
     monkeypatch.delenv(session_logging.PARENT_LOGICAL_SESSION_IDENTITY_ENV)
     assert (
         session_logging.run_with_session_logging(
-            ["closeout", "--target", str(target), "--task", "#2703 blocked review repair"], lambda _argv: 0
+            ["start", "--target", str(target), "--task", "#2703 blocked review repair"], lambda _argv: 0
         )
         == 0
     )
@@ -506,7 +550,7 @@ def test_session_log_rotation_and_delegated_child_export_as_one_stream(tmp_path:
         for marker in ("intake", "implementation", "delegated proof", "blocked review repair", "final recheck")
     )
     transitions = [event["payload"]["surface"] for event in events if event["event_type"] == "workflow.transition"]
-    assert transitions == ["start", "implement", "proof", "closeout", "start"]
+    assert transitions == ["start"] * 5
     exported_event_ids = [event["event_id"] for event in events[1:]]
     assert len(exported_event_ids) == len(set(exported_event_ids))
     assert events[1:] == repeated_events[1:]
@@ -532,7 +576,7 @@ def test_session_log_recovers_after_partial_tail_and_discloses_gap(tmp_path: Pat
 def test_session_log_exports_legacy_views_with_migration_gap(tmp_path: Path) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
-    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
+    assert session_logging.run_with_session_logging(["start", "--target", str(target)], lambda _argv: 0) == 0
     _current_events(target).unlink()
 
     exported = session_logging.export_session_log(
@@ -2692,7 +2736,7 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
         print(json.dumps({"kind": "agentic-workspace/path/v1", "target": str(target), "home": str(Path.home()), "python": sys.executable}))
         return 0
 
-    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    assert session_logging.run_with_session_logging(["start", "--target", str(target)], runner) == 0
     capsys.readouterr()
     log_path = _current_log(target)
     index_path = _current_index(target)
@@ -2707,8 +2751,7 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     assert status["session_scope"]["current_logical_session"] is True
     assert analysis["status"] == "analyzed"
     assert analysis["session_scope"]["kind"] == "distinct-logical-session"
-    assert source_cli.main(["session-log", "--target", str(target), "export", "--format", "json"]) == 0
-    payload = json.loads(capsys.readouterr().out)
+    payload = session_logging.export_session_log(state=state)
     assert payload["status"] == "exported"
     assert payload["session_scope"]["kind"] == "distinct-logical-session"
     export_path = target / payload["path"]
@@ -2732,11 +2775,11 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     assert "transfer approval" in manifest["limitations"]
     assert manifest["transfer_review"]["status"] == "required"
     assert manifest["transfer_review"]["approval"] == "not-granted"
-    assert manifest["evidence_profile"]["id"] == "complete-logical-session-with-output-chunks"
+    assert manifest["evidence_profile"]["id"] == "recorded-stream-with-output-chunks"
     assert manifest["evidence_profile"]["source_command_count"] == 1
     assert manifest["evidence_profile"]["exported_command_count"] == 1
     assert manifest["evidence_profile"]["canonical_event_stream_complete"] is True
-    assert manifest["evidence_profile"]["command_selection"] == "all-logical-session-tree-commands"
+    assert manifest["evidence_profile"]["command_selection"] == "recorded-logical-session-tree-commands"
     assert manifest["artifact_coverage"][0]["status"] == "included-as-output-chunks"
     assert any(event["event_type"] == "output.chunk" for event in events)
     assert [event["sequence"] for event in events] == list(range(len(events)))
@@ -2748,20 +2791,13 @@ def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_p
     assert index_path.read_bytes() == original_index
     assert event_path.read_bytes() == original_events
 
-    assert (
-        source_cli.main(
-            ["session-log", "--target", str(target), "export", "--id", status["session_id"], "--no-artifacts", "--format", "json"]
-        )
-        == 0
-    )
-    by_id = json.loads(capsys.readouterr().out)
+    by_id = session_logging.export_session_log(state=state, session_id=status["session_id"], include_artifacts=False)
     assert by_id["artifact_count"] == 0
     assert by_id["session_scope"]["kind"] == "explicit-artifact"
     assert by_id["session_scope"]["current_logical_session"] is False
-    assert by_id["manifest"]["evidence_profile"]["id"] == "complete-logical-session-summary"
+    assert by_id["manifest"]["evidence_profile"]["id"] == "recorded-stream-summary"
     assert by_id["manifest"]["artifact_coverage"][0]["status"] == "digest-only"
-    assert source_cli.main(["session-log", "--target", str(target), "export", "--path", status["path"], "--format", "json"]) == 0
-    by_path = json.loads(capsys.readouterr().out)
+    by_path = session_logging.export_session_log(state=state, path=status["path"])
     assert by_path["source_log_path"] == status["path"]
     assert by_path["session_scope"]["kind"] == "explicit-artifact"
     assert log_path.read_bytes() == original_log
@@ -2773,8 +2809,8 @@ def test_session_log_export_repairs_partial_source_index_in_export_only(tmp_path
     _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
-    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "one"], lambda _argv: 0) == 0
-    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "two"], lambda _argv: 0) == 0
+    assert session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "one"], lambda _argv: 0) == 0
+    assert session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "two"], lambda _argv: 0) == 0
     index_path = _current_index(target)
     original = json.loads(index_path.read_text(encoding="utf-8"))
     partial = {**original, "entries": original["entries"][:1]}
