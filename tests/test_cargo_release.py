@@ -25,6 +25,7 @@ def test_cargo_projection_preserves_inputs_and_source_identity(tmp_path, monkeyp
     monkeypatch.setattr(cargo.subprocess, "run", lambda *a, **k: None)
     destination = tmp_path / "staged"
     cargo.stage_crate(tmp_path, {"path": "crates/example", "name": "example"}, destination, "a" * 40)
+    assert (destination / "README.md").read_bytes() == (tmp_path / "README.md").read_bytes()
     transformed = (destination / "src/main.rs").read_text()
     assert 'include_str!("../_inputs/crates/example/src/main.rs")' in transformed
     assert (destination / "_inputs/crates/example/src/main.rs").read_bytes() == source.encode()
