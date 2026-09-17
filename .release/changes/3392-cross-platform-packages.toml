@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Ship prebuilt Python, npm and native packages for Windows, macOS and Linux on x64 and ARM64, with compiler-free installation required before publication."
+issues = [3277]
