@@ -122,7 +122,7 @@ pub fn admit(receipt: &Value, timestamp_valid: bool, assignment_binding: Option<
         reject(
             "unsupported-receipt-kind",
             "kind",
-            "Record evidence through `agentic-workspace proof --record-receipt`.",
+            "Supply a receipt of kind agentic-workspace/proof-receipt/v1 through the current Verification owner request; resolve current requests with `agentic-workspace start --target . --format json`.",
         );
     }
     let command = command(&receipt["command"]);
@@ -138,7 +138,7 @@ pub fn admit(receipt: &Value, timestamp_valid: bool, assignment_binding: Option<
         reject(
             "missing-result",
             "result",
-            "Supply the observed result with --receipt-result.",
+            "Supply the observed result in the receipt result field.",
         );
     } else if result["admitted"] != true {
         reject(

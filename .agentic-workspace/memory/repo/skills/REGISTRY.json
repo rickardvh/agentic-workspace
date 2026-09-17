@@ -21,7 +21,7 @@
       "path": "memory-reporting/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
-      "summary": "use canonical memory reporting commands (status/doctor/freshness/routing/promotion) instead of reading raw memory files",
+      "summary": "resolve current Memory owner questions; use package diagnostics only for source maintenance",
       "activation_hints": {
         "verbs": ["report", "inspect", "summarize", "audit", "check"],
         "nouns": ["memory", "freshness", "staleness", "routing", "cleanup", "promotion"],

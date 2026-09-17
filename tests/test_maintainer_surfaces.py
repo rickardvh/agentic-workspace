@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 from pathlib import Path
 
 WORKSPACE_ROOT = Path(__file__).resolve().parents[1]
@@ -29,84 +28,8 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
 
-def _baseline_manifest() -> dict[str, object]:
-    return {
-        "bootstrap": {
-            "first_reads": ["AGENTS.md"],
-            "first_queries": [
-                'Use `agentic-workspace start --task "<task>" --format json` before non-trivial work.',
-                'Use `agentic-workspace implement --changed <paths> --task "<task>" --format json` when changed paths are already known.',
-            ],
-            "tiny_safe_model": [
-                "Start from `AGENTS.md`.",
-                "Ask the Startup Router first.",
-                "Open deeper surfaces only when the small model stops being sufficient.",
-            ],
-            "surface_roles": [
-                "`.agentic-workspace/docs/routing-contract.md` is the authoritative routing home.",
-                "`AGENTS.md` is the agent entrypoint router.",
-            ],
-            "boundary_triggered_escalation": [
-                {
-                    "boundary": "workspace",
-                    "cue": "routing question",
-                    "load_next": ["agentic-workspace defaults --section startup --format json"],
-                    "why": "workspace owns routing",
-                },
-                {
-                    "boundary": "planning",
-                    "cue": "sequencing question",
-                    "load_next": ["agentic-workspace summary --format json"],
-                    "why": "planning owns active work",
-                },
-                {
-                    "boundary": "memory",
-                    "cue": "durable context question",
-                    "load_next": [".agentic-workspace/memory/repo/"],
-                    "why": "memory owns durable knowledge",
-                },
-            ],
-            "top_level_capabilities": [
-                {
-                    "module": "workspace",
-                    "owns": "routing",
-                    "escalate_when": "routing boundary",
-                    "capability_unlocked": "defaults",
-                    "first_surface": "agentic-workspace defaults --section startup --format json",
-                },
-                {
-                    "module": "planning",
-                    "owns": "active work",
-                    "escalate_when": "planning boundary",
-                    "capability_unlocked": "summary",
-                    "first_surface": "agentic-workspace summary --format json",
-                },
-                {
-                    "module": "memory",
-                    "owns": "durable context",
-                    "escalate_when": "memory boundary",
-                    "capability_unlocked": "memory",
-                    "first_surface": ".agentic-workspace/memory/repo/",
-                },
-            ],
-            "conditional_reads": [
-                "Read the roadmap in `state.toml` (authoritative) only when promoting work.",
-                "Read `agentic-workspace summary --format json` when the Startup Router or explicit task asks for planning recovery.",
-                "Read `.agentic-workspace/docs/routing-contract.md` when execution hits an edge case, ambiguity, or requires deep context.",
-                "Do not bulk-read all planning surfaces.",
-            ],
-        }
-    }
-
-
 def _write_generated_agent_surfaces(tmp_path: Path) -> None:
     render_module = _load_module(_render_script_path(), "maintainer_render")
-    manifest = _baseline_manifest()
-    _write(
-        tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json",
-        json.dumps(manifest, ensure_ascii=False, indent=2),
-    )
-    _write(tmp_path / "tools" / "agent-manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2))
     _write(tmp_path / "tools" / "AGENT_QUICKSTART.md", render_module.render_quickstart())
     _write(tmp_path / "tools" / "AGENT_ROUTING.md", render_module.render_routing())
 
@@ -118,139 +41,13 @@ def _write_planning_surfaces(tmp_path: Path) -> None:
 # Agent Instructions
 
 <!-- agentic-workspace:workflow:start -->
-Use the main Agentic Workspace operating skill: `.agentic-workspace/skills/workspace-startup/SKILL.md`.
-
-Invocation rule:
-1. Use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present.
-2. Otherwise use `.agentic-workspace/config.toml` `[workspace].cli_invoke`.
-3. Otherwise use the package default `agentic-workspace`.
-4. If no CLI invocation works, read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.
-This generated adapter's configured invocation is `uv run --frozen --active --no-sync python scripts/run_agentic_workspace.py`. Use it directly for ordinary route commands; do not open raw config files to rediscover it.
-
-Ordinary route:
-1. Run exactly `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions; the ordinary contract is the JSON `decision_packet`, so do not omit `--format json`.
-2. Run `<configured AW invocation> implement --target . --changed <paths> --task "<task>" --format json` when changed paths are already known.
-3. Follow the authoritative `decision_packet` action, effects, claim boundary, and routed detail before opening raw `.agentic-workspace` files or running drill-down commands.
-4. Treat `communication_contract` as optional selector-backed response-shape detail; ordinary work proceeds from `decision_packet` and expands only when its safety, proof, or detail routes require it.
-5. When implementing an issue, satisfy the intended end state in the ordinary path; ask for clarification instead of closing with a partial path when the full outcome appears larger than the issue safely permits.
-
-Boundaries:
-- Known dedicated Agentic Workspace commands are allowed only when the request maps directly to that command and no takeover, recovery, active-planning, or ambiguous safety decision is needed first.
-- Do not bake machine-local AW invocation paths into checked-in generic guidance; concrete commands come from the configured invocation or live router output.
-- Treat checked-in `.agentic-workspace/skills` and module skill trees as required operating surfaces, not optional payload mirror content.
-- Treat `.agentic-workspace/skills/workspace-startup/SKILL.md` as the shared startup fallback reached through this adapter.
-- Treat `preflight`, `config`, `defaults`, `skills`, `modules`, `ownership`, and `report` as routed drill-down or recovery surfaces, not the ordinary startup loop.
-- Report repo-relative paths, not local absolute paths.
+Use `.agentic-workspace/skills/workspace-startup/SKILL.md` for repository procedure;
+if native skill discovery is unavailable, read it directly.
 <!-- agentic-workspace:workflow:end -->
 """,
     )
-    _write(
-        tmp_path / "docs" / "routing-contract.md",
-        """
-# Routing and Entry Contract (Authoritative Routing Home)
-
-This contract defines how to enter the repository, orient quickly, and pick the right execution lane.
-
-## 1. Startup and First Contact
-
-Use the following order for a fresh entry:
-1. [Cold-Start Protocol](cold-start-protocol.md)
-2. AGENTS.md
-3. .agentic-workspace/planning/state.toml
-4. Compact queries:
-   - agentic-workspace summary --format json
-   - agentic-workspace report --target ./repo --format json
-
-### Tiny Safe Model
-
-- start from AGENTS.md
-- use compact queries before broader prose
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace/planning/state.toml",
-        """
-# TODO
-
-## Now
-
-- ID: plan-alpha
-  Status: in-progress
-  Surface: .agentic-workspace/planning/execplans/plan-alpha.md
-  Why now: promote when maintained report signal appears for this bounded next step.
-""",
-    )
-    _write(
-        tmp_path / ".agentic-workspace/planning/process.md",
-        """
-# Roadmap
-
-## Next Candidate Queue
-
-- Candidate alpha: promote when maintained report signal appears.
-
-## Reopen Conditions
-
-- Reopen only when a queue or report signals new work.
-""",
-    )
-    _write(
-        tmp_path / "docs" / "execplans" / "plan-alpha.md",
-        """
-# Plan Alpha
-
-## Goal
-
-- Keep scope clear.
-
-## Non-Goals
-
-- No runtime changes.
-
-## Machine-Readable Contract
-
-```yaml
-intent:
-  outcome: "Keep scope clear."
-```
-
-## Active Milestone
-
-- Status: in-progress
-- Scope: maintain planning discipline.
-- Ready: ready
-- Blocked: none
-- optional_deps: none
-
-## Immediate Next Action
-
-- Add one checker.
-
-## Blockers
-
-- None.
-
-## Touched Paths
-
-- scripts/check/check_planning_surfaces.py
-
-## Invariants
-
-- Planning surfaces remain separate.
-
-## Validation Commands
-
-- uv run pytest tests/test_check_planning_surfaces.py
-
-## Completion Criteria
-
-- Warning classes are emitted for known drift.
-
-## Drift Log
-
-- 2026-04-06: Initial plan created.
-""",
-    )
+    # Optional Planning state is absent in the clean current baseline.
+    # Individual tests introduce only the owner drift they exercise.
 
 
 def _write_docs_surfaces(tmp_path: Path, *, drift_readme: bool = False) -> None:
@@ -289,9 +86,9 @@ ownership, or validation guidance.
 Default startup path for an agent maintainer:
 
 1. Read `agents.md`.
-2. Read `.agentic-workspace/planning/state.toml` via `agentic-workspace summary --format json`.
-3. If the question is startup order or first-contact routing, ask `agentic-workspace defaults --section startup --format json` before broader prose.
-4. Read one active execplan only when the planning state surface points to it.
+2. Follow `.agentic-workspace/skills/workspace-startup/SKILL.md`.
+3. Use current native owner requests for the task and open only selected owner detail.
+4. Read the relevant Planning record only when current owner routing selects it.
 6. Read package-local `agents.md` only for the package you will edit.
 """,
     )
@@ -361,7 +158,7 @@ def test_maintainer_surface_role_guidance_passes_when_docs_are_scoped(tmp_path: 
     assert not any(warning.warning_class == "startup_policy_drift" for warning in warnings)
 
 
-def test_maintainer_surface_role_guidance_warns_when_readme_docs_map_drifts(tmp_path: Path) -> None:
+def test_readme_docs_map_is_not_a_startup_authority(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "maintainer_surfaces_drift")
     _write_planning_surfaces(tmp_path)
     _write_generated_agent_surfaces(tmp_path)

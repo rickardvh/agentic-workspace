@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 import json
 import os
+import shlex
 import subprocess
 import sys
 import threading
@@ -123,8 +124,25 @@ def test_metadata_only_stream_has_bounded_coverage_and_no_redundancy_claim(tmp_p
         check=True,
     )
     assert json.loads(maintained.stdout)["coverage"]["whole_task_coverage"] == "unknown"
+    routes = [
+        *(partition["detail_route"] for partition in analysis["origin_partitions"].values()),
+        analysis["analysis_scope"]["detail_route"],
+        analysis["analyzer_overhead"]["detail_route"],
+        analysis["full_analysis"]["command"],
+    ]
+    for route in routes:
+        arguments = shlex.split(route)
+        assert arguments[:6] == ["uv", "run", "--frozen", "--active", "--no-sync", "python"]
+        result = subprocess.run(
+            [sys.executable, *arguments[6:]],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert json.loads(result.stdout)["path"] == analysis["path"]
     maintained_export = subprocess.run(
-        [sys.executable, "scripts/maintainer/session_diagnostics.py", "export", "--no-artifacts", "--target", str(target)],
+        [sys.executable, *shlex.split(analysis["export_routing"]["download_or_share"])[6:], "--no-artifacts"],
         cwd=Path(__file__).resolve().parents[1],
         capture_output=True,
         text=True,
@@ -992,7 +1010,8 @@ def test_session_log_origins_expected_failures_and_nested_commands_are_separate(
     assert any(entry["origin"]["classification"] == "nested-aw" for entry in index["entries"])
 
 
-def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_path: Path, capsys, monkeypatch) -> None:
+@pytest.mark.parametrize("analyzer", ["session-log analyze", "python scripts/maintainer/session_diagnostics.py analyze"])
+def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_path: Path, capsys, monkeypatch, analyzer: str) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
@@ -1005,7 +1024,7 @@ def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_p
     for position in range(68):
         command = "summary --verbose --target ." if position == 0 else f"status --target . --select agent-{position}"
         if position == 1:
-            command = "session-log analyze --target . --format json"
+            command = f"{analyzer} --target . --format json"
         entries.append(
             {
                 **template,

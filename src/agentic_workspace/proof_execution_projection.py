@@ -176,36 +176,38 @@ def proof_execution_result_payload(
             "rule": "Failed, timed-out, cancelled, or incomplete selected proof cannot authorize a completion claim.",
         }
     next_action = (
-        {"action": "reconcile-closeout", "command": "agentic-workspace planning closeout --target . --proof-from last --format json"}
+        {"action": "reconcile-closeout", "command": None}
         if complete and not local_scope
         else {"action": "continue-with-verified-local-config", "command": None}
         if complete
         else {
             "action": "resume-selected-proof",
-            "command": f"agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id {run['run_id']} --format json",
+            "command": None,
             "reason": "aggregate-receipt-admission",
         }
         if commands_complete and not aggregate_complete
         else {
             "action": "repair-proof-route",
-            "command": "agentic-workspace proof --target . --changed <paths> --select route_refinement_required,manual_proof_obligations --format json",
+            "command": None,
         }
         if commands_complete and selection_blockers
         else {
             "action": "diagnose-failed-proof",
-            "command": "agentic-workspace proof --target . --changed <paths> --format json",
+            "command": None,
             "reason": "completed-command-failure",
-            "revalidation_command": (
-                "agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id <new-run-id> --format json"
-            ),
+            "revalidation_command": None,
+            "revalidation": "Diagnose or fix the failure, then obtain a new run identity through the current Verification owner.",
             "rule": "A completed failing command remains immutable in this run; diagnose or fix it, then revalidate under a new run identity.",
         }
         if completed_failures
         else {
             "action": "resume-selected-proof",
-            "command": f"agentic-workspace proof --target . --changed <paths> --execute-selected --proof-run-id {run['run_id']} --format json",
+            "command": None,
         }
     )
+    next_action["owner"] = "verification"
+    next_action["run_id"] = run["run_id"]
+    next_action["authority"] = "source-maintenance-only; descriptive action, not an executable request"
     return {
         "kind": "agentic-workspace/proof-execution-result/v1",
         "exit_status": exit_status,
@@ -261,6 +263,6 @@ def proof_execution_result_payload(
             "repository_residue": False,
             "tracked_file_count": 0,
             "delta_shape": "one local aggregate receipt plus one bounded run receipt and individually addressable local command receipts",
-            "detailed_repository_publication": "manual --record-receipt interoperability route only",
+            "detailed_repository_publication": "source-maintenance interoperability only; current owner admission is required",
         },
     }

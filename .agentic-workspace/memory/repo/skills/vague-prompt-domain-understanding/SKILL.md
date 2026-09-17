@@ -20,8 +20,9 @@ Use this skill when the same vague prompt class keeps recurring and you need the
 4. If the same repo fact keeps recurring, tighten the durable Memory or canonical-doc owner instead of re-solving it in chat.
 5. If the guidance has become stable contract wording or repo-wide policy, promote it into canonical docs rather than leaving it here.
 
-## Typical verification
+## Current intent routing
 
-- `agentic-workspace defaults --section clarification --format json`
-- `agentic-workspace defaults --section prompt_routing --format json`
-- `agentic-workspace defaults --section relay --format json`
+Use `.agentic-workspace/skills/workspace-startup/SKILL.md` and its routed
+`workspace-intent-discovery` skill to clarify missing intent. Resolve current
+owner requests through the configured native invocation; this local procedure
+adds no command aliases or verification authority.

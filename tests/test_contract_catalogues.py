@@ -23,6 +23,8 @@ def test_active_executable_examples_agree_with_native_command_authority():
         *REPO_ROOT.glob(".agentic-workspace/docs/**/*.md"),
         *REPO_ROOT.glob(".agentic-workspace/skills/**/*.md"),
         *REPO_ROOT.glob(".agentic-workspace/*/skills/**/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/memory/repo/skills/**/*.md"),
+        *REPO_ROOT.glob(".agentic-workspace/**/AGENTS.md"),
         *REPO_ROOT.glob(".agentic-workspace/*/WORKFLOW.md"),
         *REPO_ROOT.glob(".agentic-workspace/planning/*/README.md"),
         *REPO_ROOT.glob("packages/**/*.md"),
@@ -31,6 +33,18 @@ def test_active_executable_examples_agree_with_native_command_authority():
         *REPO_ROOT.glob("tools/skills/**/*.md"),
         *REPO_ROOT.glob("tools/model-cli-harness/fixtures/**/*.md"),
     }
+    # Executable maintenance targets and live diagnostic/recovery producers are
+    # also guidance. Retained legacy parsers, archived fixtures and historical
+    # records are not an alternative public command authority.
+    producers = {
+        *REPO_ROOT.glob("crates/*/src/**/*.rs"),
+        *REPO_ROOT.glob("packages/**/Makefile"),
+        REPO_ROOT / "Makefile",
+        REPO_ROOT / "src/agentic_workspace/session_logging.py",
+        REPO_ROOT / "src/agentic_workspace/proof_execution_projection.py",
+        REPO_ROOT / "tests/test_maintainer_surfaces.py",
+    }
+    files.update(producers)
     unsupported = []
     for path in sorted(files):
         relative = path.relative_to(REPO_ROOT).as_posix()
@@ -38,11 +52,15 @@ def test_active_executable_examples_agree_with_native_command_authority():
             continue
         # Inline code, fenced examples and quoted configuration values all
         # carry executable guidance. A bare product name in prose does not.
-        for block in re.findall(r"`+([^`]+)`+", path.read_text(encoding="utf-8")):
-            for command in re.findall(r"\bagentic-workspace\s+([a-z][\w-]*)", block):
+        text = path.read_text(encoding="utf-8")
+        blocks = [text] if path in producers else re.findall(r"`+([^`]+)`+", text)
+        for block in blocks:
+            for command in re.findall(
+                r"(?:\bagentic-workspace(?:\.exe)?|\brun_agentic_workspace\.py|<configured AW invocation>)\s+([a-z][\w-]*)", block
+            ):
                 if command not in commands:
                     unsupported.append(f"{relative}: {command}")
-    assert unsupported == []
+    assert unsupported == [], "\n".join(unsupported)
     native_reference = (REPO_ROOT / "docs/reference/native-cli.md").read_text(encoding="utf-8")
     assert set(re.findall(r"^\| `([\w-]+)` \|", native_reference, re.M)) == commands
     for path in (REPO_ROOT / "src/agentic_workspace/contracts/operations").glob("*.json"):
@@ -56,6 +74,39 @@ def test_active_executable_examples_agree_with_native_command_authority():
     for fixture in registry["contracts"]:
         path = contract_path(fixture["path"])
         assert json.loads(path.read_text(encoding="utf-8"))["migration_status"] == "source-maintenance-only", path
+
+
+@pytest.mark.parametrize(
+    ("command_status", "aggregate", "blocked", "local", "action"),
+    [
+        ("passed", True, False, False, "reconcile-closeout"),
+        ("passed", True, False, True, "continue-with-verified-local-config"),
+        ("passed", False, False, False, "resume-selected-proof"),
+        ("passed", True, True, False, "repair-proof-route"),
+        ("failed", False, False, False, "diagnose-failed-proof"),
+        ("cancelled", False, False, False, "resume-selected-proof"),
+    ],
+)
+def test_maintenance_proof_projection_preserves_action_without_executable_authority(command_status, aggregate, blocked, local, action):
+    from agentic_workspace.proof_execution_projection import proof_execution_result_payload
+
+    result = proof_execution_result_payload(
+        run={
+            "run_id": "maintenance-run",
+            "required_commands": ["pytest"],
+            "commands": [{"command": "pytest", "status": command_status}],
+            "aggregate_receipt": {"status": "written" if aggregate else "missing", "admission": {"proof_sufficient": aggregate}},
+            "subject": {"claim_scope": "machine-local-effective-config" if local else "repository"},
+        },
+        selection={"route_refinement_required": {"status": "required" if blocked else "none"}},
+        status="completed",
+    )
+    assert result["next_action"]["action"] == action
+    assert result["next_action"]["owner"] == "verification"
+    assert result["next_action"]["run_id"] == "maintenance-run"
+    assert result["next_action"]["command"] is None
+    assert result["detail_routes"]["resume"] is result["detail_routes"]["revalidation"] is None
+    assert result["safe_to_retry"] is (command_status == "cancelled" or not aggregate and command_status != "failed" or blocked)
 
 
 def _module():
