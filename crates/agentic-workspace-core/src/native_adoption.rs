@@ -112,6 +112,17 @@ fn committed(target: &Path, root: &Dir, record: &Value) -> Result<bool, CoreErro
     crate::attempt_store::inspect_committed(target.to_str().unwrap(), prepared["custody"].clone())?;
     Ok(true)
 }
+
+pub(crate) fn ownership_baseline(target: &Path) -> Result<Value, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let Some(record) = held(target, &root)? else {
+        return Ok(Value::Null);
+    };
+    if !committed(target, &root, &record)? {
+        return Ok(Value::Null);
+    }
+    Ok(record["invocation"]["arguments"]["binding"]["state"]["ownership_baseline"].clone())
+}
 pub(crate) fn declarations(owner: &mut Value) {
     owner["requests"].as_array_mut().unwrap().extend([
         json!({"kind":READ,"result_kind":"agentic-workspace/repository-adoption/v1","input_schema":{"type":"object","additionalProperties":false,"properties":{}}}),
@@ -140,11 +151,50 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     let mut updates = BTreeMap::new();
     let mut preserved = Vec::new();
     let mut blockers = Vec::new();
+    let removing = mode == "remove";
+    let ledger_before = bytes(&root, crate::native_ownership::LEDGER)?;
+    let preserve_ownership = removing
+        && ledger_before
+            .as_deref()
+            .is_some_and(crate::native_ownership::has_host_meaning);
+    if preserve_ownership {
+        blockers.push("host ownership declarations and their read profile are preserved; removal has no host-policy custody".into());
+    }
+    let composed = if removing {
+        None
+    } else {
+        match crate::native_ownership::compose(
+            ledger_before.as_deref(),
+            &ownership_baseline(target)?,
+        ) {
+            Ok(ledger) => Some(ledger),
+            Err(error) => {
+                blockers.push(format!("{}: {error}", crate::native_ownership::LEDGER));
+                None
+            }
+        }
+    };
+    let profile = composed
+        .as_deref()
+        .map(crate::native_ownership::profile)
+        .transpose()?;
+    if !removing
+        && let Err(error) = crate::native_ownership::admit_profile(
+            bytes(&root, crate::native_ownership::PROFILE)?.as_deref(),
+        )
+    {
+        blockers.push(format!("{}: {error}", crate::native_ownership::PROFILE));
+    }
     let mut add = |path: &str, after: Option<String>, package: bool| -> Result<(), CoreError> {
         let before = bytes(&root, path)?;
         observations.insert(path.to_owned(), revision(&before));
         if before != after {
-            if package && before.is_some() && mode == "adopt" {
+            if package
+                && before.is_some()
+                && mode == "adopt"
+                && path != crate::native_ownership::LEDGER
+                && path != crate::native_ownership::PROFILE
+            {
                 // Existing package content needs exact prior adoption custody.
                 let owned = held.as_ref().and_then(|r| {
                     r["invocation"]["arguments"]["binding"]["state"]["installed"].get(path)
@@ -163,10 +213,33 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
         }
         Ok(())
     };
-    let removing = mode == "remove";
     let mut installed = BTreeMap::new();
     for path in crate::native_payload::paths() {
-        let shipped = String::from_utf8(crate::native_payload::shipped(path)?).map_err(err)?;
+        if preserve_ownership
+            && [
+                crate::native_ownership::LEDGER,
+                crate::native_ownership::PROFILE,
+            ]
+            .contains(&path)
+        {
+            add(path, bytes(&root, path)?, true)?;
+            continue;
+        }
+        let mut shipped = String::from_utf8(crate::native_payload::shipped(path)?).map_err(err)?;
+        if !removing && path == crate::native_ownership::LEDGER {
+            shipped = composed
+                .clone()
+                .or_else(|| ledger_before.clone())
+                .unwrap_or(shipped);
+        }
+        if !removing && path == crate::native_ownership::PROFILE {
+            shipped = profile.clone().unwrap_or(shipped);
+            if let Some(current) = bytes(&root, path)?
+                && crate::native_ownership::profile_matches(&current, &shipped)
+            {
+                shipped = current;
+            }
+        }
         installed.insert(
             path.to_owned(),
             json!(crate::native_intent::hash(shipped.as_bytes())),
@@ -274,7 +347,7 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     if pending.is_some() && mode != "recover" {
         blockers.push("interrupted adoption effect requires exact recover request".into());
     }
-    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"observations":observations,"updates":updates,"installed":installed,"preserved":preserved,"blockers":blockers,
+    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"observations":observations,"updates":updates,"installed":installed,"ownership_baseline":crate::native_ownership::baseline(),"preserved":preserved,"blockers":blockers,
         "identity":revision(&identity),"prior_custody":held.as_ref().map(digest).transpose()?,"pending":pending});
     Ok(state)
 }

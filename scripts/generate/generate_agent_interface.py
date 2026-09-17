@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -11,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def synchronize(*, check: bool = False) -> list[str]:
     manifest = json.loads((ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
+    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    portable = (ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text(encoding="utf-8")
     payload = ROOT / "src/agentic_workspace/_payload"
     from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
 
@@ -21,20 +24,27 @@ def synchronize(*, check: bool = False) -> list[str]:
         drift.append(PROFILE)
         if not check:
             profile.write_text(expected_profile, encoding="utf-8", newline="\n")
-    for reference in manifest["payload_files"]:
+    for reference in dict.fromkeys([*manifest["payload_files"], *host["payload_files"]]):
         # Only the declared source set participates; no workspace traversal.
         source, destination = ROOT / reference, payload / reference
         expected = source.read_text(encoding="utf-8").replace("\r\n", "\n")
+        if reference == LEDGER:
+            expected = portable
+        elif reference == PROFILE:
+            expected = render(portable)
         if not destination.is_file() or destination.read_text(encoding="utf-8") != expected:
             drift.append(reference)
             if not check:
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 destination.write_text(expected, encoding="utf-8", newline="\n")
     # Standalone first-party packages fall back to these shipped declarations.
-    # Keep them derived from the same owner as the root payload.
+    # These consumers need module roots only, never repository policy.
     for module in ("memory", "planning"):
         destination = ROOT / f"packages/{module}/src/repo_{module}_bootstrap/_ownership.toml"
-        expected = (ROOT / LEDGER).read_text(encoding="utf-8")
+        roots = tomllib.loads(portable)["module_roots"]
+        expected = "schema_version = 1\n" + "".join(
+            "\n[[module_roots]]\n" + "".join(f"{key} = {json.dumps(value)}\n" for key, value in row.items()) for row in roots
+        )
         if destination.read_text(encoding="utf-8") != expected:
             drift.append(destination.relative_to(ROOT).as_posix())
             if not check:

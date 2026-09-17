@@ -239,7 +239,10 @@ def test_installed_planning_wheel_imports_cli_module(planning_wheel: Path, tmp_p
         [
             sys.executable,
             "-c",
-            "import repo_planning_bootstrap.cli; from repo_planning_bootstrap._generated_cli_package_impl import build_generated_parser",
+            "import repo_planning_bootstrap.cli; from repo_planning_bootstrap._generated_cli_package_impl import build_generated_parser; "
+            "from repo_planning_bootstrap._ownership import _ownership_data, module_root; "
+            "assert set(_ownership_data()) == {'schema_version', 'module_roots'}; "
+            "assert module_root('planning').as_posix() == '.agentic-workspace/planning'",
         ],
         cwd=tmp_path,
         env={**os.environ, "PYTHONPATH": str(install_root)},

@@ -187,7 +187,10 @@ def test_installed_memory_wheel_imports_cli_module(memory_wheel: Path, tmp_path:
                 "from repo_memory_bootstrap._generated_cli_package_impl import build_generated_parser; "
                 "from repo_memory_bootstrap._generated_cli_package_impl.primitives.operation_executor import "
                 "_handle_context_root_memory_contracts; "
-                "assert (_handle_context_root_memory_contracts() / 'payload_verification.memory.json').is_file()"
+                "assert (_handle_context_root_memory_contracts() / 'payload_verification.memory.json').is_file(); "
+                "from repo_memory_bootstrap._ownership import _ownership_data, module_root; "
+                "assert set(_ownership_data()) == {'schema_version', 'module_roots'}; "
+                "assert module_root('memory').as_posix() == '.agentic-workspace/memory'"
             ),
         ],
         cwd=tmp_path,

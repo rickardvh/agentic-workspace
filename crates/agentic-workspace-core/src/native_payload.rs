@@ -51,6 +51,48 @@ fn text(bytes: &[u8]) -> Option<String> {
         .map(|s| s.replace("\r\n", "\n"))
 }
 
+/// Configuration's host-specific postimage; ordinary files remain exact payload bytes.
+pub(crate) fn desired(target: &Path, path: &str) -> Result<Vec<u8>, CoreError> {
+    use crate::native_ownership::{LEDGER, PROFILE};
+    if path != LEDGER && path != PROFILE {
+        return shipped(path);
+    }
+    let root = Dir::open_ambient_dir(target, ambient_authority())
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let before = crate::native_planning::read(&root, LEDGER)?;
+    let before = before
+        .as_deref()
+        .map(std::str::from_utf8)
+        .transpose()
+        .map_err(|e| CoreError::new(e.to_string()))?;
+    let ledger = crate::native_ownership::compose(
+        before,
+        &crate::native_adoption::ownership_baseline(target)?,
+    )?;
+    if path == LEDGER {
+        return Ok(ledger.into_bytes());
+    }
+    // A separately requested profile refresh binds to the ledger currently on disk.
+    // Adoption instead projects its resulting ledger in the same bounded effect.
+    let rendered = crate::native_ownership::profile(before.unwrap_or(&ledger))?;
+    let current_profile = crate::native_planning::read(&root, PROFILE)?;
+    crate::native_ownership::admit_profile(
+        current_profile
+            .as_deref()
+            .map(std::str::from_utf8)
+            .transpose()
+            .map_err(|e| CoreError::new(e.to_string()))?,
+    )?;
+    if let Some(current) = current_profile
+        && std::str::from_utf8(&current)
+            .ok()
+            .is_some_and(|s| crate::native_ownership::profile_matches(s, &rendered))
+    {
+        return Ok(current);
+    }
+    Ok(rendered.into_bytes())
+}
+
 pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
     let configured = policy["target_release"]
         .as_str()
@@ -116,9 +158,11 @@ pub(crate) fn view(target: &Path, policy: &Value) -> Result<Value, CoreError> {
             gaps.push(json!({"path":PROVENANCE,"reason":"required-payload-capability-unproven","capability":capability}));
         }
     }
-    for (reference, expected_bytes) in PAYLOAD {
+    for (reference, _) in PAYLOAD {
         let bytes = read(reference);
-        if bytes.as_deref().and_then(text) != text(expected_bytes)
+        let expected_bytes = desired(target, reference).ok();
+        if expected_bytes.is_none()
+            || bytes.as_deref().and_then(text) != expected_bytes.as_deref().and_then(text)
             || !provenance["payload_files"]
                 .as_array()
                 .is_some_and(|files| files.iter().any(|p| p == reference))

@@ -48,6 +48,16 @@ def test_active_bootstrap_and_config_command_examples_match_native_surface():
 
 def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert generator.synchronize(check=True) == []
+    portable = (ROOT / "src/agentic_workspace/contracts/portable_ownership.toml").read_text()
+    shipped = (ROOT / "src/agentic_workspace/_payload" / LEDGER).read_text()
+    assert shipped == portable and shipped != (ROOT / LEDGER).read_text()
+    assert (ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text() == render(portable)
+    for marker in ["planning-records", "workspace-cli-runtime", "model-cli-harness", "tools/skills", "packages/", "make check-"]:
+        assert marker not in shipped
+    for module in ("memory", "planning"):
+        fallback = tomllib.loads((ROOT / f"packages/{module}/src/repo_{module}_bootstrap/_ownership.toml").read_text())
+        assert set(fallback) == {"schema_version", "module_roots"}
+        assert fallback["module_roots"] == tomllib.loads(portable)["module_roots"]
     pointer = workspace_pointer_block("different-host-tool")
     agents = (ROOT / "AGENTS.md").read_text()
     assert pointer in agents
