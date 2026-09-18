@@ -13,9 +13,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 # rather than weakening the detector globally.
 ALLOWED_LITERAL_EXCEPTIONS = frozenset[str]()
 ALLOWED_FILE_LITERAL_EXCEPTIONS: dict[Path, frozenset[str]] = {
-    # Negative archive-confinement fixtures must exercise Windows absolute paths.
-    Path("crates/agentic-workspace-core/src/decision_source.rs"): frozenset({"C:" + "/docs/adr"}),
-    Path("tests/test_native_repository_decisions.py"): frozenset({"C:" + "/private/archive"}),
     Path("tools/model-cli-harness/sandbox/codex/Dockerfile"): frozenset(
         {
             "/" + "home/agent/workspace",

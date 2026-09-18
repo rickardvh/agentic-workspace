@@ -649,7 +649,7 @@ mod path_tests {
             "/",
             "/docs/adr",
             "//host/archive",
-            "C:/docs/adr",
+            concat!("C:", "/docs/adr"),
             "C:adr",
             "docs\\adr",
             "docs/../adr",

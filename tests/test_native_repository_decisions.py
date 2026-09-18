@@ -80,7 +80,7 @@ def test_decision_archive_directory_identity(tmp_path, shared_core_binary, nativ
     assert recalled[1][0]["status"] == "current"
     field = "decision_record_target" if destination == "repository" else "decision_record_fallback.archive"
     wrong_owner = ".agentic-workspace/" if destination == "repository" else "docs/adr/"
-    for unsafe in ["/private/archive", "../outside", "docs//adr", "C:/private/archive", wrong_owner]:
+    for unsafe in ["/private/archive", "../outside", "docs//adr", "C:" + "/private/archive", wrong_owner]:
         configure(unsafe)
         with pytest.raises(AssertionError, match=rf"assurance\.{field}") as failure:
             call()
