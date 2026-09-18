@@ -49,6 +49,65 @@ pub(crate) fn relative(path: &str) -> Result<(), CoreError> {
     }
     Ok(())
 }
+/// Directory-valued archive inputs accept one optional trailing separator.
+/// Validate before use and return the same confined identity to every consumer;
+/// exact file references and changed paths continue to use `relative` directly.
+pub(crate) fn archive_relative<'a>(path: &'a str, field: &str) -> Result<&'a str, CoreError> {
+    let canonical = path.strip_suffix('/').unwrap_or(path);
+    relative(canonical).map_err(|_| {
+        error(format!(
+            "{field} requires a confined repository-relative archive directory with at most one trailing slash"
+        ))
+    })?;
+    Ok(canonical)
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn archive_directories_preserve_exact_source_confinement() {
+        for path in ["docs/adr", ".agentic-workspace/memory/repo/decisions"] {
+            assert_eq!(archive_relative(path, "archive").unwrap(), path);
+            assert_eq!(
+                archive_relative(&format!("{path}/"), "archive").unwrap(),
+                path
+            );
+            assert!(relative(path).is_ok());
+            assert!(relative(&format!("{path}/")).is_err());
+        }
+        for path in [
+            "",
+            "/",
+            "/docs/adr",
+            "//host/archive",
+            "C:/docs/adr",
+            "C:adr",
+            "docs\\adr",
+            "docs/../adr",
+            "./adr",
+            "docs/./adr",
+            "docs//adr",
+            "docs/adr//",
+            ".git/objects",
+            "docs/.git/objects",
+            "docs/\0adr",
+            "docs/\nadr",
+        ] {
+            assert!(relative(path).is_err(), "exact source accepted {path:?}");
+            let error = archive_relative(path, "assurance.decision_record_target").unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("assurance.decision_record_target")
+            );
+            if !path.is_empty() {
+                assert!(archive_relative(&format!("{path}/"), "archive").is_err());
+            }
+        }
+    }
+}
 fn admitted_blobs(
     input: &Input,
     candidates: &[&[u8]],
@@ -190,7 +249,12 @@ fn load(
     routes: &[Value],
     required: &[Value],
 ) -> Result<Value, CoreError> {
-    relative(input.archive.trim_end_matches('/'))?;
+    let field = if owner == "repository" {
+        "assurance.decision_record_target (decision source archive)"
+    } else {
+        "assurance.decision_record_fallback.archive (decision source fallback.archive)"
+    };
+    let archive = archive_relative(&input.archive, field)?;
     if input.admitted_revision.len() != 40
         || !input
             .admitted_revision
@@ -214,7 +278,7 @@ fn load(
     args.extend([
         input.admitted_revision.clone(),
         "--".into(),
-        input.archive.clone(),
+        archive.to_owned(),
     ]);
     let found = Command::new("git")
         .arg("-C")

@@ -281,7 +281,7 @@
           "default": false
         },
         "decision_record_target": {
-          "description": "Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset.",
+          "description": "Confined repository-relative directory for durable decision records. One optional trailing slash is accepted and removed for archive identity; absolute paths, backslashes, colons, empty interior segments, dot/traversal segments and .git segments are rejected. Exact source-file and changed-path references do not accept a trailing slash.",
           "type": "string",
           "minLength": 1,
           "examples": [
@@ -298,7 +298,7 @@
           "additionalProperties": false,
           "properties": {
             "archive": {
-              "description": "Exact repository-relative Memory source archive admitted by its host owner.",
+              "description": "Confined repository-relative Memory archive directory admitted by its host owner. Uses the same directory path contract as assurance.decision_record_target, including one optional trailing slash; native capture requires the existing .agentic-workspace/memory/repo/ owner.",
               "type": "string",
               "minLength": 1
             },

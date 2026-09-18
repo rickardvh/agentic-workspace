@@ -117,10 +117,11 @@ fn archive(config: &Value, destination: Destination) -> Result<String, CoreError
         let path = config["admissions"]["decision_record_target"]
             .as_str()
             .ok_or_else(|| err("repository decision owner is not configured"))?;
-        crate::decision_source::relative(path)?;
-        if path.starts_with(".agentic-workspace/") {
+        let path =
+            crate::decision_source::archive_relative(path, "assurance.decision_record_target")?;
+        if path == ".agentic-workspace" || path.starts_with(".agentic-workspace/") {
             return Err(err(
-                "repository decisions require the independently owned repository destination",
+                "assurance.decision_record_target requires the independently owned repository destination",
             ));
         }
         return Ok(path.to_owned());
@@ -128,10 +129,13 @@ fn archive(config: &Value, destination: Destination) -> Result<String, CoreError
     let path = config["admissions"]["decision_record_fallback"]["archive"]
         .as_str()
         .unwrap_or(DEFAULT_ARCHIVE);
-    crate::decision_source::relative(path)?;
+    let path = crate::decision_source::archive_relative(
+        path,
+        "assurance.decision_record_fallback.archive",
+    )?;
     if !path.starts_with(".agentic-workspace/memory/repo/") {
         return Err(err(
-            "Fallback capture requires the existing Memory archive owner",
+            "assurance.decision_record_fallback.archive: Fallback capture requires the existing Memory archive owner",
         ));
     }
     Ok(path.to_owned())
@@ -782,7 +786,15 @@ pub(crate) fn view_for(
                 (destination, context),
                 Some(recoveries[0]),
             ) {
-                Ok(current) => Ok(current),
+                Ok(mut current) => {
+                    // Eager action preparation must preserve the exact recovery
+                    // request for callers that select owner requests explicitly.
+                    current["requests"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(recoveries[0].clone());
+                    Ok(current)
+                }
                 Err(problem) => {
                     view["contribution"]["blockers"] = json!([{"code":"memory-publication-recovery-unresolved","message":problem.to_string(),"affects":[format!("effect:{}",destination.effect())]}]);
                     Ok(view)
