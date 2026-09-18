@@ -116,6 +116,38 @@ def test_portable_derivation_is_isolated_from_source_policy(tmp_path):
             generator.render_host_payload(tmp_path)
 
 
+def test_interface_generation_preserves_lifecycle_provenance(tmp_path, monkeypatch):
+    """Projection writes cannot silently repair another owner's source record."""
+    host_ref = "src/agentic_workspace/contracts/workspace_surfaces.json"
+    maintenance_ref = "src/agentic_workspace/contracts/source_maintenance_surfaces.json"
+    host = json.loads((ROOT / host_ref).read_text())
+    maintenance = json.loads((ROOT / maintenance_ref).read_text())
+    references = {
+        host_ref,
+        maintenance_ref,
+        LEDGER,
+        PROFILE,
+        *host["derivation"]["portable_sources"],
+        *maintenance["payload_files"],
+        "packages/memory/src/repo_memory_bootstrap/_ownership.toml",
+        "packages/planning/src/repo_planning_bootstrap/_ownership.toml",
+        "packages/planning/bootstrap/.agentic-workspace/docs/workspace-config-contract.md",
+    }
+    for reference in references:
+        destination = tmp_path / reference
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((ROOT / reference).read_bytes())
+    provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
+    # Deliberately not the public-host list: generation must leave even stale
+    # lifecycle material untouched, not silently normalize selected fields.
+    original = b'{"payload_files": ["old"], "release_identity": {"version": "custom"}}\n'
+    provenance.write_bytes(original)
+    monkeypatch.setattr(generator, "ROOT", tmp_path)
+    assert generator.synchronize()
+    assert generator.synchronize(check=True) == []
+    assert provenance.read_bytes() == original
+
+
 def test_tree_only_reader_follows_selected_owner_refs_and_blob_currentness():
     """Consumer access is fetch/list only; no AW, shell, or renderer is called.
 

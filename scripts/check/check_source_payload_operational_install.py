@@ -280,7 +280,13 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
     if portable_path.is_file() and ledger_path.is_file():
         portable = tomllib.loads(portable_path.read_text(encoding="utf-8"))
         ledger = tomllib.loads(ledger_path.read_text(encoding="utf-8"))
-        identities = {"module_roots": "module", "managed_surfaces": "path", "fences": "name", "authority_surfaces": "concern"}
+        identities = {
+            "module_roots": "module",
+            "managed_surfaces": "path",
+            "fences": "name",
+            "authority_surfaces": "concern",
+            "subsystems": "id",
+        }
         for section, expected_value in portable.items():
             actual = ledger.get(section)
             if section in identities:

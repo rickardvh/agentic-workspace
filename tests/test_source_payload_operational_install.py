@@ -280,13 +280,27 @@ def _write_source_current_payload_fixture(tmp_path: Path) -> None:
 
 
 def test_committed_payload_alignment_accepts_matching_source_current_state(tmp_path: Path) -> None:
+    from agentic_workspace.static_read_profile import render
+
     mod = _load_module(_checker_script_path(), "source_payload_committed_alignment_current")
     _write_source_current_payload_fixture(tmp_path)
+    portable = 'schema_version=1\n[[subsystems]]\nid="portable"\npaths=["shared/**"]\n'
+    source_only = '[[subsystems]]\nid="maintainer"\npaths=["tools/**"]\n'
+    _write(tmp_path / "src/agentic_workspace/contracts/portable_ownership.toml", portable)
+    ledger = tmp_path / ".agentic-workspace/OWNERSHIP.toml"
+    profile = tmp_path / ".agentic-workspace/READING.json"
+    _write(ledger, portable + source_only)
+    _write(profile, render(ledger.read_text(encoding="utf-8")))
 
     alignment = mod._committed_payload_alignment(repo_root=tmp_path)
 
     assert alignment["status"] == "current"
     assert alignment["drift"] == []
+    _write(ledger, portable.replace("shared/**", "conflicting/**") + source_only)
+    _write(profile, render(ledger.read_text(encoding="utf-8")))
+    assert mod._committed_payload_alignment(repo_root=tmp_path)["drift"] == [
+        {"path": ".agentic-workspace/OWNERSHIP.toml", "reason": "source ledger conflicts with portable subsystems"}
+    ]
 
 
 @pytest.mark.parametrize("drift", ["version", "package", "kind", "schema", "capabilities", "files", "extra-files", "malformed"])
