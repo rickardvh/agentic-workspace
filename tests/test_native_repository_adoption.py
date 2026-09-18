@@ -395,6 +395,9 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
         ".agentic-workspace/planning/schemas/obsolete.json",
         ".agentic-workspace/memory/skills/obsolete/prepare.py",
         ".agentic-workspace/example/obsolete.md",
+        ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+        ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py",
+        ".agentic-workspace/memory/skills/memory-hygiene/prepare.py",
     ]
     for ref in stale:
         path = tmp_path / ref
