@@ -31,8 +31,18 @@ it stale. The helper stores no session and never answers an owner request.
 
 ## Protocol
 
-1. Distinguish a clear task, meaningful ambiguity and a required owner decision.
-2. Prepare the selected posture above; follow it for one bounded clarification.
+1. Apply the startup skill's evidence/sufficiency boundary before interpreting
+   ambiguity. Read cheap named intent sources and their material subsequent
+   discussion; discover a bounded source when none is identified. In a sparse
+   repository, lack of AW material is not lack of accessible project evidence.
+   Distinguish evidence not yet read from genuinely missing human judgment.
+2. Compare intended requirements with observed behavior and proposals with
+   accepted decisions. Preserve legitimate version/environment/local differences.
+   For a genuine conflict, seek the smallest discriminating observation or bounded
+   owner decision; code, documentation and the latest comment do not win by default.
+   Then distinguish clear work, meaningful ambiguity and a required owner decision.
+   Prepare the selected posture above only when needed; clarify the remaining
+   domain question, not which filename or AW mechanism the human should choose.
 3. Classify work as `direct`, `bounded`, `lane`, or `epic` using continuity value.
 4. Carry useful clarified intent to its existing issue or current owner. Create
    Planning only through its exact native operation when durable continuity helps.
@@ -46,6 +56,9 @@ it stale. The helper stores no session and never answers an owner request.
 - `epic`: multiple lanes, unclear decomposition, or high assurance; stop before implementation and shape the durable plan first.
 
 ## Output Shape
+
+Use only fields that help resolve meaningful uncertainty or carry intent. Clear
+direct work needs no questionnaire, classification report or capture artifact.
 
 - `inferred_intent`
 - `uncertainty`
@@ -66,10 +79,12 @@ Prefer `intent_custody` when compact refs, boundaries, anti-goals, provenance, a
 ## Examples
 
 Ask:
-  "Make onboarding better." The outcome, audience, non-goals, and first slice are unclear enough that implementation or Planning would guess.
+  "Make onboarding better." Consult available product and task sources first;
+  ask about the remaining outcome/audience choice if implementation would still guess.
 
 Acknowledge and proceed:
-  "Implement #1234." The issue can carry detail; state the interpretation, first slice, and correction point before editing.
+  "Implement #1234." Read the issue, material later discussion and linked work
+  needed to establish accepted intent; state the bounded interpretation before editing.
 
 Do not interrupt:
   "Fix the typo in README.md." The target and proof are direct; clarification would add cost without preserving intent.
