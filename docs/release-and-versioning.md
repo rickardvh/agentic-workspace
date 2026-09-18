@@ -459,7 +459,8 @@ absence enters an upload directory. Conflicts or transport uncertainty stop the
 attempt. A retry repeats observation, never allocates a replacement version.
 
 The release owner supplies Python/npm/Cargo versions for every release class.
-RC npm publication uses `rc`; stable uses `latest`. A mismatching channel on recovery
+RC and stable npm publication use `latest`: before stable v1 exists, the newest RC is
+the default package; publishing stable v1 replaces it. A mismatching channel on recovery
 requires inspection of its history and a separate deliberate tag repair, never an
 automatic rollback of a newer release. Registry verification downloads public bytes,
 checks integrity and performs clean PyPI/npm installs before recording

@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Publish the newest release candidate as npm's default version until stable v1 replaces it."
