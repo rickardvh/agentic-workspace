@@ -17,6 +17,7 @@ mod native_config_write;
 mod native_configuration_procedure;
 mod native_decision_authority;
 mod native_delegation;
+mod native_enclave;
 mod native_frontier;
 pub(crate) mod native_handoff;
 mod native_independent;

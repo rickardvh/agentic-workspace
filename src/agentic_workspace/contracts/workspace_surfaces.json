@@ -278,5 +278,69 @@
       ".agentic-workspace/READING.json"
     ],
     "rule": "Public host derivation reads only explicitly promoted portable sources or another declared host materialization; source-maintenance-only semantic inputs are forbidden."
-  }
+  },
+  "enclave": {
+    "owner": "workspace",
+    "declarations": [
+      {
+        "path": ".agentic-workspace/config.toml",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "repository"
+      },
+      {
+        "path": ".agentic-workspace/config.local.toml",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "repository"
+      },
+      {
+        "path": ".agentic-workspace/LOCAL-ONLY.toml",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "repository"
+      },
+      {
+        "path": ".agentic-workspace/adoption.json",
+        "scope": "exact",
+        "class": "managed-support",
+        "lifetime": "adopted-host"
+      },
+      {
+        "path": ".agentic-workspace/instructions",
+        "scope": "subtree",
+        "class": "customization",
+        "lifetime": "repository"
+      },
+      {
+        "path": ".agentic-workspace/custom",
+        "scope": "subtree",
+        "class": "customization",
+        "lifetime": "repository"
+      },
+      {
+        "path": ".agentic-workspace/local",
+        "scope": "subtree",
+        "class": "local-only",
+        "lifetime": "local"
+      },
+      {
+        "path": ".agentic-workspace/system-intent/intent.toml",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "durable"
+      },
+      {
+        "path": ".agentic-workspace/system-intent/subsystems.toml",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "durable"
+      }
+    ]
+  },
+  "module_enclave_contracts": [
+    "packages/planning/src/repo_planning_bootstrap/contracts/enclave.json",
+    "packages/memory/src/repo_memory_bootstrap/contracts/enclave.json",
+    "packages/verification/src/repo_verification_bootstrap/contracts/enclave.json"
+  ]
 }

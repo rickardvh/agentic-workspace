@@ -305,14 +305,44 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     instructions = tmp_path / "AGENTS.md"
     instructions.write_text("# Repository policy\nPreserve this text.\n", encoding="utf-8")
-    # A former mirror converges only exact known package bytes.
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
-    retired = contract["retired_package_surfaces"][0]["path"]
+    # Convergence uses current ownership, never a historical package digest.
+    retired = ".agentic-workspace/obsolete-support/old.bin"
     old = tmp_path / retired
     old.parent.mkdir(parents=True, exist_ok=True)
-    old.write_bytes((ROOT / "src/agentic_workspace/_payload" / retired).read_bytes())
+    old.write_bytes(b"\xff\x00unknown historic support")
     unknown = tmp_path / ".agentic-workspace/unknown.txt"
-    unknown.write_text("Preserve unknown material")
+    unknown.write_text("Unknown material is residue")
+    preserved_state = {
+        ".agentic-workspace/config.toml": b"# repository policy\n",
+        ".agentic-workspace/planning/execplans/archive/history.json": b"{}",
+        ".agentic-workspace/memory/repo/domains/lesson.md": b"durable lesson",
+        ".agentic-workspace/verification/evidence/proof.json": b"{}",
+        ".agentic-workspace/custom/plugin/config.txt": b"custom extension",
+        ".agentic-workspace/local/scratch/retained.bin": b"\xfflocal custody",
+    }
+    for ref, content in preserved_state.items():
+        path = tmp_path / ref
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    module_skill = ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md"
+    module_source = ROOT / "packages/memory/bootstrap" / module_skill
+    module_path = tmp_path / module_skill
+    module_path.parent.mkdir(parents=True, exist_ok=True)
+    module_path.write_bytes(module_source.read_text().replace("\r\n", "\n").encode())
+    stale = [".agentic-workspace/planning/schemas/obsolete.json", ".agentic-workspace/memory/skills/obsolete/prepare.py"]
+    for ref in stale:
+        path = tmp_path / ref
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("unknown support")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    sentinel = outside / "sentinel.txt"
+    sentinel.write_text("untouched")
+    link = tmp_path / ".agentic-workspace/unknown-link"
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(outside)], check=True, capture_output=True)
+    else:
+        link.symlink_to(outside, target_is_directory=True)
     context = {"target": str(tmp_path), "task": "Configure repository integration"}
 
     def call(**extra):
@@ -333,6 +363,8 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
 
     assert read()["status"] == "unadopted"
     prepared = action("adopt")
+    removals = prepared["arguments"]["binding"]["state"]["enclave"]["removals"]
+    assert set([retired, ".agentic-workspace/unknown.txt", ".agentic-workspace/unknown-link", *stale]) <= set(removals)
     forged = copy.deepcopy(prepared)
     forged["arguments"]["binding"]["state"]["updates"]["AGENTS.md"]["after"] = "Forged"
     with pytest.raises(AssertionError):
@@ -349,9 +381,12 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     )
     assert ignored.returncode == 0
     assert not old.exists()
-    assert unknown.read_text() == "Preserve unknown material"
-    assert not (tmp_path / ".agentic-workspace/config.toml").exists()
-    assert not (tmp_path / ".agentic-workspace/planning").exists()
+    assert not unknown.exists() and not link.exists()
+    assert sentinel.read_text() == "untouched"
+    assert all((tmp_path / ref).read_bytes() == content for ref, content in preserved_state.items())
+    assert all(not (tmp_path / ref).exists() for ref in stale)
+    assert read()["repository_adoption"]["enclave"]["status"] == "current"
+    assert read()["repository_adoption"]["installed"][module_skill] == "sha256:" + hashlib.sha256(module_path.read_bytes()).hexdigest()
     request = next(r for r in read()["adoption_requests"] if r["arguments"]["mode"] == "adopt")
     assert call(request=request)["configuration_write"]["status"] == "already-current"
     # Lost outcome evidence recovers without replaying published files.
@@ -383,8 +418,8 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     request = next(r for r in read()["adoption_requests"] if r["arguments"]["mode"] == "remove")
     assert call(request=request)["configuration_write"]["status"] == "remove-owned-skill-exposures-first"
     assert exposure("remove")["effect_outcome"]["status"] == "committed"
-    preserved = tmp_path / ".agentic-workspace/planning/retained.md"
-    preserved.parent.mkdir()
+    preserved = tmp_path / ".agentic-workspace/planning/execplans/retained.md"
+    preserved.parent.mkdir(parents=True, exist_ok=True)
     preserved.write_text("Independent durable work")
     removed = call(invocation=action("remove"))
     assert removed["effect_outcome"]["status"] == "committed"

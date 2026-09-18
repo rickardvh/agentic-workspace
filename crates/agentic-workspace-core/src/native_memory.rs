@@ -13,6 +13,13 @@ use std::{
 const MANIFEST: &str = ".agentic-workspace/memory/repo/manifest.toml";
 const HOME: &str = ".agentic-workspace/memory/repo/";
 
+pub(crate) fn enclave() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../packages/memory/src/repo_memory_bootstrap/contracts/enclave.json"
+    ))
+    .expect("Memory enclave contract")
+}
+
 fn error(message: impl ToString) -> CoreError {
     CoreError::new(format!("Memory source: {}", message.to_string()))
 }

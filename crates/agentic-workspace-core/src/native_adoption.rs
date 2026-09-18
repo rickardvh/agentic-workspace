@@ -173,6 +173,11 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     let mut preserved = Vec::new();
     let mut blockers = Vec::new();
     let removing = mode == "remove";
+    let enclave = if removing {
+        Value::Null
+    } else {
+        crate::native_enclave::inventory(&root, &crate::native_enclave::declarations(&c)?)?
+    };
     let ledger_before = bytes(&root, crate::native_ownership::LEDGER)?;
     let preserve_ownership = removing
         && ledger_before
@@ -213,8 +218,11 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
             if package
                 && before.is_some()
                 && mode == "adopt"
-                && crate::native_payload::materialization(path)?
-                    == crate::native_payload::Materialization::PackageVerbatim
+                && ![
+                    crate::native_ownership::LEDGER,
+                    crate::native_ownership::PROFILE,
+                ]
+                .contains(&path)
             {
                 // Existing package content needs exact prior adoption custody.
                 let owned = held.as_ref().and_then(|r| {
@@ -284,6 +292,21 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
         }
         add(path, if removing { None } else { Some(shipped) }, true)?;
     }
+    // Refresh only already-installed module procedures. Their owner declares
+    // exact source bytes; prior adoption custody still protects host edits.
+    // This neither installs modules nor overwrites mutable domain records.
+    if !removing {
+        for (path, shipped) in crate::native_enclave::MODULE_SUPPORT {
+            if bytes(&root, path)?.is_some() {
+                let shipped = shipped.replace("\r\n", "\n");
+                installed.insert(
+                    (*path).to_owned(),
+                    json!(crate::native_intent::hash(shipped.as_bytes())),
+                );
+                add(path, Some(shipped), true)?;
+            }
+        }
+    }
     let instruction_path = c["instruction_fence"]["path"].as_str().unwrap();
     let instructions = bytes(&root, instruction_path)?;
     add(
@@ -338,7 +361,12 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     }
     // Retired package files have an exact source-contract digest. Removal is
     // separately visible in the authorized convergence proposal, never recursive.
-    for row in c["retired_package_surfaces"].as_array().unwrap() {
+    for row in c["retired_package_surfaces"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|_| removing)
+    {
         let path = row["path"].as_str().unwrap();
         if let Some(current) = bytes(&root, path)? {
             observations.insert(
@@ -358,11 +386,28 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
             }
         }
     }
+    if !removing {
+        for (path, observed) in enclave["removals"].as_object().unwrap() {
+            updates.insert(
+                path.clone(),
+                json!({"before":observed,"after":null,"enclave_residue":true}),
+            );
+        }
+    }
     for (class, paths) in c["preserved_classes"].as_object().unwrap() {
         for path in paths.as_array().unwrap() {
             let path = path.as_str().unwrap();
-            if class == "local-only" || target.join(path).exists() {
+            if removing && (class == "local-only" || target.join(path).exists()) {
                 preserved.push(json!({"path":path,"class":class,"disposition":"preserve"}));
+            }
+        }
+    }
+    if !removing {
+        for (path, declaration) in enclave["entries"].as_object().unwrap() {
+            if ["mutable-state", "customization", "local-only"]
+                .contains(&declaration["class"].as_str().unwrap_or(""))
+            {
+                preserved.push(json!({"path":path,"owner":declaration["owner"],"class":declaration["class"],"lifetime":declaration["lifetime"],"disposition":"preserve"}));
             }
         }
     }
@@ -373,7 +418,7 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     if pending.is_some() && mode != "recover" {
         blockers.push("interrupted adoption effect requires exact recover request".into());
     }
-    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"observations":observations,"updates":updates,"installed":installed,"ownership_baseline":crate::native_ownership::baseline(),"preserved":preserved,"blockers":blockers,
+    let state = json!({"contract_revision":digest(&c)?,"mode":mode,"enclave":enclave,"observations":observations,"updates":updates,"installed":installed,"ownership_baseline":crate::native_ownership::baseline(),"preserved":preserved,"blockers":blockers,
         "identity":revision(&identity),"prior_custody":held.as_ref().map(digest).transpose()?,"pending":pending});
     Ok(state)
 }
@@ -435,6 +480,8 @@ pub(crate) fn view(
     if request["request_kind"] == READ {
         result["status"] = json!(if state["identity"].is_null() {
             "unadopted"
+        } else if state["enclave"]["status"] == "dirty" {
+            "adopted-dirty"
         } else {
             "adopted-source-present"
         });
@@ -480,6 +527,13 @@ pub(crate) fn view(
         effective["updates"] =
             record["invocation"]["arguments"]["binding"]["state"]["updates"].clone();
         for (path, update) in effective["updates"].as_object().unwrap() {
+            if update["enclave_residue"] == true {
+                let current = crate::native_enclave::identity(&root, path)?;
+                if !current.is_null() && current != update["before"] {
+                    return Err(err(format!("{path}: recovery residue changed")));
+                }
+                continue;
+            }
             let current = bytes(&root, path)?;
             if revision(&current) != update["before"]
                 && current != update["after"].as_str().map(str::to_owned)
@@ -578,16 +632,20 @@ pub(crate) fn execute(
     paths.sort_by_key(|path| {
         if path.as_str() == IDENTITY {
             if original["arguments"]["request"]["arguments"]["mode"] == "adopt" {
-                2
+                (2, 0)
             } else {
-                0
+                (0, 0)
             }
         } else {
-            1
+            (1, usize::MAX - path.matches('/').count())
         }
     });
     for path in paths {
         let update = &updates[path];
+        if update["enclave_residue"] == true {
+            crate::native_enclave::remove(&root, path, &update["before"], recovery)?;
+            continue;
+        }
         let current = bytes(&root, path)?;
         let after = update["after"].as_str().map(str::to_owned);
         if recovery && current == after {
