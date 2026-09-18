@@ -428,6 +428,7 @@
     "smallest_useful_config": [
       "[assurance]",
       "default_level = \"medium\"",
+      "# Future write destination only; existing typed history needs source-owner admission.",
       "decision_record_target = \"docs/decisions/\"",
       "",
       "[assurance.proof_profiles.example]",

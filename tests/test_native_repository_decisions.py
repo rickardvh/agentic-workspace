@@ -295,11 +295,16 @@ def test_standing_decision_scope_uses_bounded_configuration_admission(tmp_path, 
 @pytest.mark.parametrize("disposition", ["retain", "no-retention"])
 def test_repository_material_targets_stronger_owner_without_memory(tmp_path, shared_core_binary, native_cli, surface, disposition):
     context, material = repository(tmp_path)
+    # A destination needs no archive admission for a plain proposal. Native
+    # publication retains its own exact custody; it does not invent a Git pin.
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.write_text('[assurance]\ndecision_record_target="docs/decisions/"\n')
 
     def call(**extra):
         return consume(surface, shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
 
     initial = call()
+    assert not any(b["owner"] == "decision-continuity" for b in initial["decision_packet"]["blockers"])
     assert initial["memory"]["capture"]["status"] == "stronger-owner-required"
     request = initial["decision_sources"]["capture"]["requests"][0]
     request["arguments"] = {"material": material, "disposition": disposition}
@@ -396,6 +401,7 @@ def test_repository_relevant_malformed_custody_cannot_silently_drop_consequence(
 @pytest.mark.parametrize("stage", ["prepared", "published"])
 def test_repository_capture_recovery_keeps_original_answer(tmp_path, shared_core_binary, native_cli, stage):
     context, material = repository(tmp_path)
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[assurance]\ndecision_record_target="docs/decisions"\n')
 
     def call(**extra):
         return consume("json", shared_core_binary, native_cli, {**context, **extra})
@@ -499,6 +505,15 @@ def test_repository_identity_collision_and_forged_authorship_are_rejected(tmp_pa
         call(request=request)
     assert source.read_bytes() == before
     assert not (tmp_path / ".agentic-workspace/local").exists()
+    # A native-looking filename is no substitute for either publication custody
+    # or an admitted snapshot; the public blocker identifies the missing owner.
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[assurance]\ndecision_record_target="docs/decisions"\n')
+    unadmitted = source.with_name("native-" + "0" * 64 + ".md")
+    source.rename(unadmitted)
+    blockers = json.dumps(call()["decision_packet"]["blockers"])
+    assert "assurance.decision_record_revision" in blockers
+    assert unadmitted.name in blockers
+    assert "repository/source owner" in blockers
 
 
 def test_repository_capture_is_independent_of_memory_enablement(tmp_path, shared_core_binary, native_cli):

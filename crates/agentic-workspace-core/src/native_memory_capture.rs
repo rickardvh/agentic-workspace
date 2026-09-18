@@ -1291,7 +1291,7 @@ pub(crate) fn context_for(
     scope: &[String],
     destination: Destination,
 ) -> Result<Value, CoreError> {
-    let mut result = json!({"records":[],"admissions":[],"current_dependencies":[],"required_records":[],"applicable_scope":scope});
+    let mut result = json!({"records":[],"admissions":[],"current_dependencies":[],"required_records":[],"publication_sources":[],"applicable_scope":scope});
     if scope.is_empty()
         || (destination == Destination::Memory
             && !crate::native_config::module_enabled(config, "memory"))
@@ -1346,8 +1346,19 @@ pub(crate) fn context_for(
                 "Native decision declaration is outside current fallback archive",
             ));
         }
-        let record = retained(target, &source)?
-            .ok_or_else(|| err("Native decision lacks bounded answer; source remains advisory"))?;
+        let record = retained(target, &source)?.ok_or_else(|| {
+            if destination == Destination::Repository
+                && config["admissions"]["decision_record_revision"]
+                    .as_str()
+                    .is_none_or(str::is_empty)
+            {
+                err(format!(
+                    "assurance.decision_record_revision is missing for {source} (destination {archive}); only the repository/source owner can admit an exact archive Git commit; native decision lacks bounded answer"
+                ))
+            } else {
+                err("Native decision lacks bounded answer; source remains advisory")
+            }
+        })?;
         let args = &record["invocation"]["arguments"];
         let binding = &args["binding"];
         if Destination::from_binding(binding)? != destination {
@@ -1357,6 +1368,18 @@ pub(crate) fn context_for(
             return Err(err(
                 "Decision declaration changed; reconcile exact source/scope",
             ));
+        }
+        // Exact retained attempt custody identifies publication bytes, including
+        // the temporary file observed by the pre-publication revalidation. This
+        // does not admit an uncommitted decision as governing context.
+        if destination == Destination::Repository {
+            let temporary = format!("{source}.{}.tmp", &digest(&record["invocation"])?[7..]);
+            for reference in [&source, &temporary] {
+                result["publication_sources"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"reference":reference,"revision":args["post_revision"]}));
+            }
         }
         if !committed(&root, target, &record)? {
             continue;

@@ -281,7 +281,7 @@
           "default": false
         },
         "decision_record_target": {
-          "description": "Confined repository-relative directory for durable decision records. One optional trailing slash is accepted and removed for archive identity; absolute paths, backslashes, colons, empty interior segments, dot/traversal segments and .git segments are rejected. Exact source-file and changed-path references do not accept a trailing slash.",
+          "description": "Confined repository-relative destination for future durable decision records, not admission of existing decision history. Without decision_record_revision, an absent directory or ordinary Markdown with no relevant typed AW decisions requires no archive admission. Relevant unadmitted typed records fail closed and require the repository/source owner to admit an exact snapshot. One optional trailing slash is accepted and removed for archive identity; absolute paths, backslashes, colons, empty interior segments, dot/traversal segments and .git segments are rejected. Exact source-file and changed-path references do not accept a trailing slash.",
           "type": "string",
           "minLength": 1,
           "examples": [
@@ -353,7 +353,7 @@
           "description": "Trusted repository-owner admission of binding checks/protect in the exact scoped Markdown snapshot. Never inferred from HEAD, tracking, or instruction contents."
         },
         "decision_record_revision": {
-          "description": "Trusted source-owner admission of this exact archive Git commit, including semantic provenance. Never infer from HEAD, tracking or record actor strings.",
+          "description": "Optional trusted source-owner admission of this exact archive Git commit, including semantic provenance. Required to use historical typed repository decisions as current context, not merely to configure a future decision destination. Native publications retain their independently checked owner custody. Only the repository/source owner can admit the snapshot; never infer from HEAD, tracking, installation, caller input or record actor strings.",
           "type": "string",
           "pattern": "^[0-9a-fA-F]{40}$"
         }
