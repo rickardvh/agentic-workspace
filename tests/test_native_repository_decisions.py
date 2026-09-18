@@ -6,12 +6,85 @@ import copy
 import json
 import os
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
 from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 from tests.test_shared_core import _commit_native
+
+
+@pytest.mark.parametrize("destination", ["repository", "memory"])
+def test_decision_archive_directory_identity(tmp_path, shared_core_binary, native_cli, destination):
+    """Directory spelling must not change scoped startup, capture, or recall."""
+    context, material = repository(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True).strip()
+    archive = "docs/decisions" if destination == "repository" else ".agentic-workspace/memory/repo/decisions"
+    section = "decision_sources" if destination == "repository" else "memory"
+    spellings = [archive, archive + "/"]
+    if destination == "repository":
+        contracts = ROOT / "src/agentic_workspace/contracts"
+        schema = json.loads((contracts / "schemas/workspace_config.schema.json").read_text())
+        defaults = json.loads((contracts / "workspace_defaults/payload.json").read_text())
+        example = tomllib.loads("\n".join(defaults["assurance_onboarding"]["smallest_useful_config"]))
+        spellings = list(
+            dict.fromkeys(
+                [
+                    archive,
+                    *schema["properties"]["assurance"]["properties"]["decision_record_target"]["examples"],
+                    example["assurance"]["decision_record_target"],
+                    archive + "/",
+                ]
+            )
+        )
+
+    def configure(path):
+        selector = (
+            f'decision_record_target="{path}"\ndecision_record_revision="{revision}"'
+            if destination == "repository"
+            else f'decision_record_fallback={{archive="{path}",admitted_revision="{revision}"}}'
+        )
+        config.write_text(f"[assurance]\n{selector}\n")
+
+    def call(**extra):
+        return consume("json", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    sources = []
+    for path in spellings:
+        configure(path)
+        quiet = call(changed=[])
+        assert not quiet["decision_packet"].get("decision_context", {}).get("states")
+        current = call()
+        assert not any(b["owner"] == "decision-continuity" for b in current["decision_packet"]["blockers"])
+        request = current[section]["capture"]["requests"][0]
+        request["arguments"]["material"] = material
+        proposed = call(request=request)
+        source = proposed[section]["capture"]["proposal"]["binding"]["source"]
+        assert source.startswith(archive + "/native-")
+        assert "//" not in source
+        sources.append(source)
+    assert len(set(sources)) == 1
+    answer = proposed["decision_packet"]["decision_request"]["response_request"]
+    answer["arguments"]["answer"] = "confirm-decision"
+    action = call(request=answer)["decision_packet"]["primary_action"]
+    call(invocation=action)
+    recalled = []
+    for path in [archive, archive + "/"]:
+        configure(path)
+        recalled.append(call()["decision_packet"]["decision_context"]["states"])
+    assert recalled[0][0]["source"] == recalled[1][0]["source"]
+    # Canonical archive identity does not waive exact configuration custody.
+    assert recalled[0][0]["status"] == "stale"
+    assert recalled[1][0]["status"] == "current"
+    field = "decision_record_target" if destination == "repository" else "decision_record_fallback.archive"
+    wrong_owner = ".agentic-workspace/" if destination == "repository" else "docs/adr/"
+    for unsafe in ["/private/archive", "../outside", "docs//adr", "C:/private/archive", wrong_owner]:
+        configure(unsafe)
+        with pytest.raises(AssertionError, match=rf"assurance\.{field}") as failure:
+            call()
+        assert unsafe not in str(failure.value)
 
 
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
@@ -52,7 +125,11 @@ def test_exact_policy_delegation_preserves_human_fallback_and_currentness(tmp_pa
     grant = f'decision_delegations=[{{owner="{destination}",scope={scope}}}]\n'
     local = tmp_path / ".agentic-workspace/config.local.toml"
     local.write_text("[assurance]\n" + grant)
-    assert propose()[section]["capture"]["status"] == "human-decision-required"
+    rejected = call()
+    assert rejected["status"] == "blocked"
+    assert rejected["failed_checks"] == ["configuration_source_shape"]
+    assert rejected["managed_state_interpreted"] is False
+    assert "mutation-guidance" in rejected["unavailable_effects"]
     local.unlink()
     config.write_text(original + grant)  # Explicit fixture repository-policy admission.
     for pattern in ["src/*.rs", "src/?.rs", "src/[ab].rs", "src/a[.rs", "src/a].rs"]:
@@ -335,6 +412,8 @@ def test_repository_capture_recovery_keeps_original_answer(tmp_path, shared_core
     retries = fresh["decision_sources"]["capture"]["requests"][1:]
     assert len(retries) == 1
     retry = call(request=retries[0])["decision_packet"]["primary_action"]
+    if stage == "published":
+        assert retry == fresh["decision_packet"]["primary_action"]
     call(invocation=retry)
     assert source.read_bytes() == before
     assert call()["decision_packet"]["decision_context"]["consequences"][0]["id"] == material["id"]

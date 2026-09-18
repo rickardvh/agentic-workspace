@@ -1727,6 +1727,8 @@ def test_repo_native_source_is_current_relevant_and_transport_equivalent(shared_
     context, _ = _native_archive(tmp_path)
     actual = repository_decision_view(**context)
     assert actual == json.loads(_direct(shared_core_binary, {"repository_decision_view": context}).stdout)
+    directory_spelling = {**context, "archive": context["archive"] + "/"}
+    assert actual == json.loads(_direct(shared_core_binary, {"repository_decision_view": directory_spelling}).stdout)
     node = subprocess.run(
         [
             "node",
@@ -1933,6 +1935,11 @@ def test_memory_decision_fallback_promotes_only_to_exact_current_native_source(
     fallback = {"archive": context["archive"], "admitted_revision": context["admitted_revision"]}
     context.update(archive="", admitted_revision="", fallback=fallback)
     retained = repository_decision_view(**context)["decision_context"]
+    if destination == "absent":
+        directory_spelling = {**context, "fallback": {**fallback, "archive": fallback["archive"] + "/"}}
+        assert (
+            retained == json.loads(_direct(shared_core_binary, {"repository_decision_view": directory_spelling}).stdout)["decision_context"]
+        )
     assert retained["reconciliation"][0]["status"] == "fallback"
     assert retained["consequences"][0]["source"]["owner"] == "memory"
     original = (tmp_path / "design/choice.md").read_bytes()
