@@ -3881,18 +3881,6 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         matched_categories = _python_executable_behavior_categories(text)
-        if relative_path in {
-            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-intent-discovery/prepare.py",
-            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py",
-        }:
-            # This registry-selected procedure prepares judgment from fresh native
-            # results. Its bounded argument parser is not generated CLI ownership.
-            # Generic dispatch and subcommand ownership remain prohibited.
-            matched_categories = [
-                category
-                for category in matched_categories
-                if category not in {"console entrypoint", "parser construction", "command parsing"}
-            ]
         if relative_path == "src/agentic_workspace/sealed_codex_transport.py" and "console entrypoint" in matched_categories:
             # The accepted sealed transport has a stdin/stdout bridge, not a
             # generated CLI or fallback runtime. Admit only its exact wrapper;

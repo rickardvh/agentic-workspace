@@ -8,15 +8,15 @@ description: Clarify ambiguous human intent and classify direct, bounded, lane, 
 Use this subskill after `workspace-startup` or compact routing when a prompt is broad, vague, high-stakes, or outcome-shaped enough that silently choosing a first implementation slice could miss the user's real goal.
 This subskill owns the merged intent/work-shape decision. `workspace-work-shape` is reference support, not a competing peer skill.
 
-## Selected executable preparation
+## Current owner preparation
 
-Use `python .agentic-workspace/skills/workspace-intent-discovery/prepare.py
---native-cli <current-executable> --target . --task "<task>" --procedure intent
---judgment clear|ambiguous|required-decision` after making the semantic judgment.
-Pass repeated `--changed` paths when known. The helper calls native `start` afresh;
-it never reads or merges configuration files. Python and the current native CLI
-are prerequisites. If either is unavailable, report preparation as unexecuted and
-use the startup skill's conservative source-reading procedure.
+Use the configured AW invocation with `start --target . --task "<task>"
+--projection full --format json`, repeating `--changed` for known paths. Read
+effective `configuration.clarification.mode` and the current owner's restrictions.
+The agent or human judges whether work is clear, ambiguous, or requires an owner
+decision. No language-specific helper or executable-launch parsing is needed.
+If native execution is unavailable, follow the startup skill's conservative
+source-reading procedure and keep effective runtime preferences unknown.
 
 The prepared posture consumes effective `clarification.mode`: clear work stays
 direct; an independently required decision always remains with its owner;
@@ -25,9 +25,9 @@ assumptions while safe independent progress continues; `auto-continue` states th
 smallest safe interpretation and correction point. Choose the actual question,
 safe scope and remaining uncertainty yourself. No posture grants effects.
 
-Use `--expected-revision` only to check carried preparation against fresh owners.
-Changed relevant preferences, procedure bytes, task judgment or restrictions make
-it stale. The helper stores no session and never answers an owner request.
+Reobserve when relevant preferences, procedure, task judgment or restrictions
+change. Use exact fresh owner requests for required decisions; this procedure
+does not answer them or grant effects.
 
 ## Protocol
 

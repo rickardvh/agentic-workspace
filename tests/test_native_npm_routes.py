@@ -69,12 +69,18 @@ def run(package: Path, target: Path, *flags: str) -> dict:
         for key in ("parent", "exact"):
             if f"--{key}" in flags:
                 context[key] = flags[flags.index(f"--{key}") + 1]
-        module = (package / "src/native/semantic-decision.mjs").as_uri()
+        module = (package / "src/native/operating.mjs").as_uri()
         command = [
             node,
             "--input-type=module",
             "-e",
-            f"import {{routeDiscovery}} from {json.dumps(module)}; console.log(JSON.stringify(routeDiscovery(JSON.parse(process.argv[1]))));",
+            f"import {{start}} from {json.dumps(module)}; "
+            "const input=JSON.parse(process.argv[1]); const context={target:input.target,task:'Inspect routes',projection:'full'}; "
+            "let view=start(context); "
+            "if(input.exact || input.parent) { const kind=input.exact?'semantic-routes/select/v1':'semantic-routes/discover/v1'; "
+            "const request=view.semantic_routes.requests.find(r=>r.request_kind===kind); "
+            "request.arguments=input.exact?{posture:'selected',routes:[input.exact]}:{parent:input.parent}; view=start({...context,request}); } "
+            "console.log(JSON.stringify(view.semantic_routes));",
             json.dumps(context),
         ]
     else:
@@ -111,13 +117,11 @@ def test_real_packed_npm_discovers_without_python_or_source_checkout(packed: Pat
     leaf = route if isinstance(route, str) else route["id"]
     roots = run(packed, tmp_path, "routes")
     assert roots["status"] == "current", roots
-    assert leaf.split("/")[0] in [item["id"] for item in roots["routes"]]
+    assert leaf.split("/")[0] in [item["id"] for item in roots["discovery"]["children"]]
     exact = run(packed, tmp_path, "routes", "--exact", leaf)
-    assert exact["route_count"] == 1
-    assert exact["routes"][0]["id"] == leaf
-    assert any(binding["capability"] == "skill:" + skill["id"] for binding in exact["routes"][0]["capability_bindings"])
+    assert exact["decision"]["semantic_task_routes"]["routes"] == [leaf]
     branch = run(packed, tmp_path, "routes", "--parent", leaf.rsplit("/", 1)[0])
-    assert leaf in [item["id"] for item in branch["routes"]]
+    assert leaf in [item["id"] for item in branch["discovery"]["children"]]
     assert registry.read_bytes() == original
     assert not (tmp_path / ".agentic-workspace").exists()
     package = json.loads((packed / "package.json").read_text())
@@ -125,6 +129,36 @@ def test_real_packed_npm_discovers_without_python_or_source_checkout(packed: Pat
     assert manifest["package_version"] == package["version"]
     assert package["os"] == [manifest["platform"]]
     assert package["cpu"] == [manifest["arch"]]
+    assert not list(packed.rglob("*.py"))
+    # The binary's embedded payload matters as much as the visible tarball.
+    git = shutil.which("git")
+    assert git
+    subprocess.run([git, "init", "-q", str(tmp_path)], check=True)
+    script = """
+import {start, invoke} from './src/native/operating.mjs';
+const context = {target: process.argv[1], task: 'Adopt portable procedures', projection: 'full'};
+let current = start(context);
+current = start({...context, request: current.configuration_write.repository_adoption_request});
+const request = current.configuration_write.adoption_requests.find(r => r.arguments.mode === 'adopt');
+current = start({...context, request});
+const answer = current.decision_packet.pending_consequences.decisions.find(d => d.id === 'repository-adoption-authorization').response_request;
+answer.arguments.answer = 'authorize-write';
+current = start({...context, request: answer});
+console.log(JSON.stringify(invoke({...context, invocation: current.decision_packet.primary_action})));
+"""
+    environment = {key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}}
+    environment["PATH"] = str(Path(git).parent)
+    assert shutil.which("python", path=environment["PATH"]) is None
+    adopted = subprocess.run(
+        [shutil.which("node"), "--input-type=module", "-e", script, str(tmp_path)],
+        cwd=packed,
+        env=environment,
+        capture_output=True,
+        text=True,
+    )
+    assert adopted.returncode == 0, adopted.stderr
+    assert json.loads(adopted.stdout)["effect_outcome"]["status"] == "committed"
+    assert not list((tmp_path / ".agentic-workspace").rglob("*.py"))
 
 
 def test_packed_operating_projection_uses_exact_reference_without_host_runtime(packed: Path, tmp_path: Path) -> None:
@@ -173,7 +207,7 @@ def test_legacy_persistent_selection_remains_an_explicit_nonmutating_gap(packed:
             node,
             "--input-type=module",
             "-e",
-            "import {start} from '@agentic-workspace/workspace-cli/native'; console.log(JSON.stringify(start(JSON.parse(process.argv[1]))));",
+            "import {start} from '@agentic-workspace/workspace-cli/operating'; console.log(JSON.stringify(start(JSON.parse(process.argv[1]))));",
             context,
         ],
         cwd=packed.parents[2],
@@ -238,6 +272,7 @@ def test_stage_rejects_rust_build_mismatch(tmp_path: Path, monkeypatch: pytest.M
     import runpy
     import tomllib
 
+    monkeypatch.syspath_prepend(str(ROOT / "scripts/release"))
     stage_native_npm = runpy.run_path(str(ROOT / "scripts/release/stage_native_npm.py"))
 
     def observe(command, **kwargs):
@@ -306,6 +341,6 @@ def test_readiness_archive_survives_exact_conformance_reuse(tmp_path: Path) -> N
     registry.write_bytes((ROOT / "tools/skills/REGISTRY.json").read_bytes())
     result = run(package, target, "routes")
     assert result["status"] == "current", result
-    assert result["route_count"] > 0
+    assert result["discovery"]["children"]
     assert (package / "src/native/bin/artifact.json").is_file()
     assert not (target / ".agentic-workspace").exists()

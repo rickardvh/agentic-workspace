@@ -128,12 +128,6 @@
       "lifetime": "current-version"
     },
     {
-      "path": ".agentic-workspace/memory/skills/memory-hygiene/prepare.py",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
       "path": ".agentic-workspace/memory/skills/memory-refresh/SKILL.md",
       "scope": "exact",
       "class": "managed-support",

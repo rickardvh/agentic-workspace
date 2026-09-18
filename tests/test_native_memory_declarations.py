@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import subprocess
-import sys
 from pathlib import Path
 
 from tests.test_native_public_cli import consume
@@ -46,15 +43,11 @@ promotion_trigger="Repeated observation"
     selected = call(changed=["tasks/one.md"])["memory"]
     assert selected["selected_notes"][0]["metadata"]["summary"] == "Read before selecting a durable owner"
     assert selected["diagnostics"][0]["review_context"]["promotion_trigger"] == "Repeated observation"
-    helper = ROOT / "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-hygiene/prepare.py"
 
-    def check(binary=native_cli):
-        result = subprocess.run(
-            [sys.executable, str(helper), "--native-cli", str(binary), "--target", str(tmp_path), "--task", context["task"]],
-            capture_output=True,
-            text=True,
-        )
-        return json.loads(result.stdout)["hygiene"]
+    def check():
+        request = next(r for r in call()["semantic_routes"]["requests"] if r["request_kind"] == "semantic-routes/select/v1")
+        request["arguments"] = {"posture": "selected", "routes": ["memory/hygiene"]}
+        return call(request=request)["memory"].get("hygiene")
 
     findings = check()
     assert {row["code"] for row in findings["findings"]} == {"outside-canonical-directories", "task-board-dependence"}
@@ -62,12 +55,11 @@ promotion_trigger="Repeated observation"
         source.replace('/decisions"]', '/domains"]').replace('task_board_globs=["tasks/**"]', 'task_board_globs=["backlog/**"]')
     )
     assert check()["findings"] == []
-    assert check(tmp_path / "missing-native")["status"] == "unexecuted"
     manifest.write_text(source + "unknown_control=true\n")
     invalid = call(changed=["tasks/one.md"])["memory"]
     assert invalid["selected_notes"] == []
     assert "unsupported declaration" in str(invalid["diagnostics"])
-    assert check()["status"] == "unexecuted"
+    assert not check() or check()["status"] != "checked"
     assert call()["memory"]["selected_notes"] == []
     assert not (tmp_path / ".agentic-workspace/local").exists()
 

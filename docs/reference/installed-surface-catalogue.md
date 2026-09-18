@@ -3,7 +3,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:18dd49301329e65f70895fdabe8002db956a5ae014e20f34965002f3a53a6650`
+- Contract digest: `sha256:47f7ef98b3f028ec8312f69d371ddec1137e5c5414dfc754eb3bc7f171b5697c`
 
 | Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -18,8 +18,6 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-resources/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-intent-discovery/prepare.py` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialization; source-maintenance-only semantic inputs are forbidden.
 
@@ -35,8 +33,6 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
-- `.agentic-workspace/skills/workspace-intent-discovery/prepare.py`
-- `.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 
