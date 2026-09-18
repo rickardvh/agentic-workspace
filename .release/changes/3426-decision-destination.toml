@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Allow decision output destinations without implicit archive admission, preserving exact trust checks for historical decisions and native publication custody."
