@@ -17,20 +17,25 @@ def test_payload_refresh_is_artifact_bound_and_preserves_unrelated_sources(tmp_p
     config = workspace / "config.toml"
     config.write_text(
         '[modules]\nenabled=[]\n[payload]\ntarget_release="source-current"\nminimum_capabilities=["installed-state-sync-v2"]\npolicy="required-before-work"\n'
+        '[assurance]\ndecision_record_target="docs/adr/"\n'
     )
+    archive = tmp_path / "docs/adr"
+    archive.mkdir(parents=True)
+    (archive / "choice.md").write_text("# Ordinary ADR\nUse the existing package manager.\n")
     human = tmp_path / "AGENTS.md"
     human.write_text("Preserve the repository's human policy.\n")
     local = workspace / "local" / "human.txt"
     local.parent.mkdir()
     local.write_text("Private machine-local material")
     preserved = {path: path.read_bytes() for path in [config, human, local]}
-    context = {"target": str(tmp_path), "task": "Refresh the declared package payload"}
+    context = {"target": str(tmp_path), "task": "Refresh the declared package payload", "changed": ["AGENTS.md"]}
 
     def call(**extra):
         return consume("native", shared_core_binary, native_cli, {**context, **extra})
 
     def choices():
         current = call()
+        assert not any(b["owner"] == "decision-continuity" for b in current["decision_packet"]["blockers"])
         request = current["configuration_write"]["payload_discovery_request"]
         return call(request=request)["configuration_write"]["payload_choices"]
 

@@ -1754,7 +1754,9 @@ def test_repo_native_source_is_current_relevant_and_transport_equivalent(shared_
     assert "decision_context" not in repository_decision_view(**context)
 
 
-@pytest.mark.parametrize("change", ["source", "authority", "forged-actor", "unadmitted-commit", "self-source", "effect-authority"])
+@pytest.mark.parametrize(
+    "change", ["source", "authority", "forged-actor", "unadmitted-commit", "missing-admission", "self-source", "effect-authority"]
+)
 def test_native_source_never_self_admits_or_replays_stale_authority(shared_core_binary: Path, tmp_path: Path, change: str) -> None:
     from agentic_workspace.decision import repository_decision_view
 
@@ -1769,6 +1771,22 @@ def test_native_source_never_self_admits_or_replays_stale_authority(shared_core_
         (tmp_path / "design/choice.md").write_text("Unreviewed replacement", encoding="utf-8")
     elif change == "unadmitted-commit":
         context["admitted_revision"] = "HEAD"
+    elif change == "missing-admission":
+        context["admitted_revision"] = ""
+        with pytest.raises(DecisionContractError, match=r"assurance\.decision_record_revision.*design/choice.md.*source owner"):
+            repository_decision_view(**context)
+        # Unadmitted bytes are selection hints only: an unrelated record cannot
+        # contribute consequences or force admission for an unrelated task.
+        context["applicable_scope"] = ["path:unrelated.txt"]
+        assert "decision_context" not in repository_decision_view(**context)
+        # A malformed typed record cannot establish irrelevance.
+        (tmp_path / "design/choice.md").write_text("```aw-decision\n{}\n```\n")
+        with pytest.raises(DecisionContractError, match=r"assurance\.decision_record_revision"):
+            repository_decision_view(**context)
+        (tmp_path / "design/choice.md").unlink()
+        (tmp_path / "design").rmdir()
+        assert "decision_context" not in repository_decision_view(**context)
+        return
     elif change == "forged-actor":
         record["authority"]["actor"] = {"kind": "human", "id": "invented-human"}
         _write_native(tmp_path / "design/choice.md", record)
@@ -1835,6 +1853,33 @@ def test_native_decision_blob_boundaries_remain_bounded(shared_core_binary: Path
     context["admitted_revision"] = _commit_native(tmp_path)
     with pytest.raises(DecisionContractError, match="exceeds bounded read"):
         repository_decision_view(**context)
+
+
+def test_destination_discovery_is_confined_and_never_admits_working_bytes(shared_core_binary: Path, tmp_path: Path) -> None:
+    from agentic_workspace.decision import repository_decision_view
+
+    context, record = _native_archive(tmp_path)
+    context["admitted_revision"] = ""
+    source = tmp_path / "design/choice.md"
+    source.unlink()
+    nested = tmp_path / "design/nested"
+    nested.mkdir()
+    (tmp_path / ".gitignore").write_text("design/nested/\n")
+    source = nested / "choice.md"
+    source.write_text("# Ordinary ADR\nNo AW history.\n")
+    (nested / "diagram.bin").write_bytes(b"\xff\x00\xfe")
+    assert "decision_context" not in repository_decision_view(**context)
+    _write_native(source, record)
+    # Ignoring or not tracking a file cannot bypass detection or supply trust.
+    with pytest.raises(DecisionContractError, match=r"assurance\.decision_record_revision.*design/nested/choice.md"):
+        repository_decision_view(**context)
+    source.write_text("x" * 262145)
+    with pytest.raises(DecisionContractError, match="exceeds bounded read"):
+        repository_decision_view(**context)
+    for archive in ["../outside", "design//nested", "design/../outside", "design/.git"]:
+        with pytest.raises(DecisionContractError, match="confined repository-relative"):
+            repository_decision_view(**{**context, "archive": archive})
+    assert not (tmp_path / ".agentic-workspace/local").exists()
 
 
 def test_source_node_transport_requires_explicit_development_binary(shared_core_binary: Path) -> None:
@@ -2130,6 +2175,9 @@ def test_repo_decision_consumes_public_route_without_path_match(shared_core_bina
     result = repository_decision_view(**context, semantic_routes=host)
     assert result["decision_context"]["consequences"][0]["id"] == record["id"]
     assert result["decision_context"]["consequences"][0]["source"]["owner"] == source_owner
+    if source_owner == "repository":
+        with pytest.raises(DecisionContractError, match=r"assurance\.decision_record_revision"):
+            repository_decision_view(**{**context, "admitted_revision": ""}, semantic_routes=host)
     host["current_work"]["id"] = "changed-work"
     assert "decision_context" not in repository_decision_view(**context, semantic_routes=host)
     context["applicable_scope"] = ["path:src/core.rs"]

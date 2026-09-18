@@ -141,6 +141,11 @@ pub(crate) fn hash(bytes: &[u8]) -> String {
 }
 pub(crate) const MAX_SOURCE_BYTES: usize = 262144;
 pub(crate) fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
+    let bytes = read_bytes(root, path)?;
+    std::str::from_utf8(&bytes).map_err(error)?;
+    Ok(bytes)
+}
+fn read_bytes(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
     relative(path)?;
     let mut bytes = Vec::new();
     root.open(path)
@@ -151,10 +156,13 @@ pub(crate) fn read(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
     if bytes.len() > MAX_SOURCE_BYTES {
         return Err(error("decision source exceeds bounded read"));
     }
-    std::str::from_utf8(&bytes).map_err(error)?;
     Ok(bytes)
 }
 fn read_repository_source(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> {
+    repository_metadata(root, path)?;
+    read(root, path)
+}
+fn repository_metadata(root: &Dir, path: &str) -> Result<cap_std::fs::Metadata, CoreError> {
     relative(path)?;
     let mut current = std::path::PathBuf::new();
     for part in path.split('/') {
@@ -173,7 +181,7 @@ fn read_repository_source(root: &Dir, path: &str) -> Result<Vec<u8>, CoreError> 
             )));
         }
     }
-    read(root, path)
+    root.symlink_metadata(path).map_err(error)
 }
 pub(crate) fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, CoreError> {
     let text = std::str::from_utf8(bytes).map_err(error)?;
@@ -197,11 +205,103 @@ pub(crate) fn record(bytes: &[u8], path: &str, owner: &str) -> Result<Value, Cor
     continuity::normalize(value)
 }
 
+/// Working bytes can reveal a missing admission, never supply one. Inspect only
+/// the configured destination, with the same confinement as admitted sources.
+fn destination_only(
+    input: &Input,
+    archive: &str,
+    routes: &[Value],
+    required: &[Value],
+    publications: &[Value],
+) -> Result<Value, CoreError> {
+    let missing = |source: &str| {
+        error(format!(
+            "assurance.decision_record_revision is missing for {source} (destination {archive}); only the repository/source owner can admit an exact archive Git commit"
+        ))
+    };
+    if !required.is_empty() {
+        return Err(missing(archive));
+    }
+    let root = Dir::open_ambient_dir(&input.target, ambient_authority()).map_err(error)?;
+    match root.symlink_metadata(archive) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(empty_context(&input.applicable_scope));
+        }
+        Err(e) => return Err(error(e)),
+        Ok(_) => {}
+    }
+    let mut pending = vec![archive.to_owned()];
+    let mut observed = 0usize;
+    let mut bytes_read = 0usize;
+    while let Some(path) = pending.pop() {
+        observed += 1;
+        if observed > 4096 {
+            return Err(error(
+                "decision destination discovery exceeds bounded observation",
+            ));
+        }
+        let metadata = repository_metadata(&root, &path)?;
+        if metadata.is_dir() {
+            for entry in root.read_dir(&path).map_err(error)? {
+                let name = entry.map_err(error)?.file_name();
+                let name = name
+                    .to_str()
+                    .ok_or_else(|| error("decision source path is not UTF-8"))?;
+                let child = format!("{path}/{name}");
+                relative(&child)?;
+                pending.push(child);
+                if pending.len() + observed > 4096 {
+                    return Err(error(
+                        "decision destination discovery exceeds bounded observation",
+                    ));
+                }
+            }
+            continue;
+        }
+        if !metadata.is_file() {
+            return Err(error("decision destination contains a non-regular source"));
+        }
+        let bytes = read_bytes(&root, &path)?;
+        bytes_read += bytes.len();
+        if bytes_read > MAX_SOURCE_BYTES * 64 {
+            return Err(error("decision destination discovery exceeds bounded read"));
+        }
+        if !bytes
+            .windows(b"```aw-decision".len())
+            .any(|w| w == b"```aw-decision")
+        {
+            continue;
+        }
+        // A current native publication has independently checked custody. It
+        // remains source-owned without being converted into archive admission.
+        if publications
+            .iter()
+            .any(|source| source["reference"] == path && source["revision"] == hash(&bytes))
+        {
+            continue;
+        }
+        let normalized = record(&bytes, &path, "repository").map_err(|_| missing(&path))?;
+        if normalized["scope"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|s| input.applicable_scope.iter().any(|p| s == p))
+            || normalized["semantic_routes"]
+                .as_array()
+                .is_some_and(|declared| declared.iter().any(|route| routes.contains(route)))
+        {
+            return Err(missing(&path));
+        }
+    }
+    Ok(empty_context(&input.applicable_scope))
+}
+
 fn load(
     input: &Input,
     owner: &str,
     routes: &[Value],
     required: &[Value],
+    publications: &[Value],
 ) -> Result<Value, CoreError> {
     let field = if owner == "repository" {
         "assurance.decision_record_target (decision source archive)"
@@ -209,15 +309,23 @@ fn load(
         "assurance.decision_record_fallback.archive (decision source fallback.archive)"
     };
     let archive = archive_relative(&input.archive, field)?;
+    let revision_field = if owner == "repository" {
+        "assurance.decision_record_revision"
+    } else {
+        "assurance.decision_record_fallback.admitted_revision"
+    };
+    if owner == "repository" && input.admitted_revision.is_empty() {
+        return destination_only(input, archive, routes, required, publications);
+    }
     if input.admitted_revision.len() != 40
         || !input
             .admitted_revision
             .bytes()
             .all(|c| c.is_ascii_hexdigit())
     {
-        return Err(error(
-            "repository decision provenance requires an independently admitted exact Git commit",
-        ));
+        return Err(error(format!(
+            "repository decision provenance for {archive} requires an independently admitted exact Git commit in {revision_field}; only the source owner can admit it"
+        )));
     }
     // Discover only this optional record encoding. Relevance is determined
     // from parsed JSON, never from its textual escaping or task substrings.
@@ -245,9 +353,9 @@ fn load(
         return Ok(empty_context(&input.applicable_scope));
     }
     if !found.status.success() {
-        return Err(error(
-            "decision source selection failed; reconcile admission",
-        ));
+        return Err(error(format!(
+            "decision source selection failed for {archive}; the repository/source owner must reconcile {revision_field} with an available exact archive Git commit"
+        )));
     }
     let candidates: Vec<_> = found
         .stdout
@@ -328,7 +436,7 @@ fn load(
         let (normalized, bytes, path) = available.remove(&id).unwrap();
         if hash(&read_repository_source(&root, &path)?) != hash(&bytes) {
             return Err(error(format!(
-                "stale decision source {path}; reconcile exact provenance before contribution"
+                "stale decision source {path}; the repository/source owner must reconcile exact provenance and {revision_field} before contribution"
             )));
         }
         for dependency in normalized["authority"]["basis"]
@@ -427,6 +535,7 @@ pub(crate) fn resolve_with_publications(
                 .and_then(|v| v["required_records"].as_array())
                 .map(Vec::as_slice)
                 .unwrap_or(&[]),
+            &[],
         )?
     } else {
         empty_context(&input.applicable_scope)
@@ -451,6 +560,11 @@ pub(crate) fn resolve_with_publications(
             repository_publications
                 .as_ref()
                 .and_then(|v| v["required_records"].as_array())
+                .map(Vec::as_slice)
+                .unwrap_or(&[]),
+            repository_publications
+                .as_ref()
+                .and_then(|v| v["publication_sources"].as_array())
                 .map(Vec::as_slice)
                 .unwrap_or(&[]),
         ) {
