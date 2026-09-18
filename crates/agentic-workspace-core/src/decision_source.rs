@@ -62,52 +62,6 @@ pub(crate) fn archive_relative<'a>(path: &'a str, field: &str) -> Result<&'a str
     Ok(canonical)
 }
 
-#[cfg(test)]
-mod path_tests {
-    use super::*;
-
-    #[test]
-    fn archive_directories_preserve_exact_source_confinement() {
-        for path in ["docs/adr", ".agentic-workspace/memory/repo/decisions"] {
-            assert_eq!(archive_relative(path, "archive").unwrap(), path);
-            assert_eq!(
-                archive_relative(&format!("{path}/"), "archive").unwrap(),
-                path
-            );
-            assert!(relative(path).is_ok());
-            assert!(relative(&format!("{path}/")).is_err());
-        }
-        for path in [
-            "",
-            "/",
-            "/docs/adr",
-            "//host/archive",
-            "C:/docs/adr",
-            "C:adr",
-            "docs\\adr",
-            "docs/../adr",
-            "./adr",
-            "docs/./adr",
-            "docs//adr",
-            "docs/adr//",
-            ".git/objects",
-            "docs/.git/objects",
-            "docs/\0adr",
-            "docs/\nadr",
-        ] {
-            assert!(relative(path).is_err(), "exact source accepted {path:?}");
-            let error = archive_relative(path, "assurance.decision_record_target").unwrap_err();
-            assert!(
-                error
-                    .to_string()
-                    .contains("assurance.decision_record_target")
-            );
-            if !path.is_empty() {
-                assert!(archive_relative(&format!("{path}/"), "archive").is_err());
-            }
-        }
-    }
-}
 fn admitted_blobs(
     input: &Input,
     candidates: &[&[u8]],
@@ -673,4 +627,51 @@ pub(crate) fn public_read(
         result["response"] = json!({"kind":"agentic-workspace/decision-source-read-result/v1","status":"read","source":source,"decision_state":state,"body":std::str::from_utf8(&bytes).map_err(error)?,"authority_effect":"no-new-authority"});
     }
     Ok(result)
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn archive_directories_preserve_exact_source_confinement() {
+        for path in ["docs/adr", ".agentic-workspace/memory/repo/decisions"] {
+            assert_eq!(archive_relative(path, "archive").unwrap(), path);
+            assert_eq!(
+                archive_relative(&format!("{path}/"), "archive").unwrap(),
+                path
+            );
+            assert!(relative(path).is_ok());
+            assert!(relative(&format!("{path}/")).is_err());
+        }
+        for path in [
+            "",
+            "/",
+            "/docs/adr",
+            "//host/archive",
+            "C:/docs/adr",
+            "C:adr",
+            "docs\\adr",
+            "docs/../adr",
+            "./adr",
+            "docs/./adr",
+            "docs//adr",
+            "docs/adr//",
+            ".git/objects",
+            "docs/.git/objects",
+            "docs/\0adr",
+            "docs/\nadr",
+        ] {
+            assert!(relative(path).is_err(), "exact source accepted {path:?}");
+            let error = archive_relative(path, "assurance.decision_record_target").unwrap_err();
+            assert!(
+                error
+                    .to_string()
+                    .contains("assurance.decision_record_target")
+            );
+            if !path.is_empty() {
+                assert!(archive_relative(&format!("{path}/"), "archive").is_err());
+            }
+        }
+    }
 }
