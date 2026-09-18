@@ -88,7 +88,7 @@ def dispatch(root: Path, packet: dict[str, Any]) -> dict[str, Any]:
             "changed_paths": {"type": "array", "items": {"type": "string"}},
             "patch": {"type": "string"},
             "stop_conditions_hit": {"type": "array", "items": {"type": "string"}},
-            "result_delivery": {"const": "unapplied-patch"},
+            "result_delivery": {"type": "string", "const": "unapplied-patch"},
         },
         "required": ["summary", "changed_paths", "patch", "stop_conditions_hit", "result_delivery"],
     }

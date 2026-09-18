@@ -101,6 +101,8 @@ def test_current_process_handoff_executes_once_without_admitting_worker_claims(t
             "def execute(root,snapshot,selection,prompt,schema,**kw):\n"
             " assert selection['parameters']=={'model':'fixture'} and selection['mode']=='fresh'\n"
             " assert set(schema['properties'])=={'summary','patch','changed_paths','stop_conditions_hit','result_delivery'}\n"
+            " assert all('type' in value for value in schema['properties'].values())\n"
+            " assert schema['properties']['result_delivery']=={'type':'string','const':'unapplied-patch'}\n"
             " with Path('launches.txt').open('a') as f: f.write('launched\\n')\n"
             " return {'returned_work':{'summary':json.loads(prompt)['captured_inputs'][0]['content'],'patch':'','changed_paths':[],'stop_conditions_hit':[],'result_delivery':'unapplied-patch'}}\n"
             "host.native_transport.execute=execute\n"

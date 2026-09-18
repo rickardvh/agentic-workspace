@@ -3,7 +3,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:7b52262a708a2d74a813f10b97a9c768fe0994846220d62f9725fac2fff7dd03`
+- Contract digest: `sha256:47f7ef98b3f028ec8312f69d371ddec1137e5c5414dfc754eb3bc7f171b5697c`
 
 | Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -18,8 +18,6 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-resources/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-intent-discovery/prepare.py` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
-| `.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialization; source-maintenance-only semantic inputs are forbidden.
 
@@ -35,14 +33,12 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/SKILL.md`
-- `.agentic-workspace/skills/workspace-intent-discovery/prepare.py`
-- `.agentic-workspace/skills/workspace-setup-jumpstart/prepare.py`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 
 Only the declared workflow fence in `AGENTS.md` is managed. Text outside it remains repository-owned. Edited, unowned, or unsafe destinations are preserved and reported by Configuration.
 
-## Preserved classes
+## De-adoption preservation
 
 - repo-owned: `.agentic-workspace/config.toml`, `.agentic-workspace/config.local.toml`, `AGENTS.md`
 - module-owned: `.agentic-workspace/planning`, `.agentic-workspace/memory`, `.agentic-workspace/verification`
@@ -50,11 +46,15 @@ Only the declared workflow fence in `AGENTS.md` is managed. Text outside it rema
 - promoted-output: `docs/decisions`
 - Local diagnostic ignore rule: `.agentic-workspace/local/.gitignore`; created only when absent and preserved with local state on removal.
 
-Unknown paths are preserved. Skill-discovery links are removed through their authenticated Configuration exposure owner before removing their canonical targets.
+Current-version updates treat `.agentic-workspace/` as a closed enclave. Every file is covered by one current owner/class/lifetime declaration, including explicitly mutable, customization and local subtrees. Unclassified residue is included in the exact authorized removal proposal; ambiguous declarations block reconciliation. Inventory is bounded and never traverses links or junctions. Current managed-file conflict rules still apply. A second successful reconciliation is quiet. De-adoption preserves independent state and remains a separate operation.
+
+Workspace declarations live in `workspace_surfaces.json` under `enclave`; Planning, Memory and Verification each own `contracts/enclave.json` in their package source. Owners register classification through a generic linked inventory; Workspace neither lists module identities nor refreshes their support. Repository OWNERSHIP.toml admits independent owner paths through explicit enclave rows (path, scope, owner, class, lifetime) and preserves repo_owned authority surfaces. Independent native publication namespaces follow current modules.independent admissions. Ambiguous overlaps block cleanup; broad legacy module roots do not hide residue. New repository extensions can also live under `.agentic-workspace/custom/`; scoped repository instructions remain under `.agentic-workspace/instructions/`.
+
+Skill-discovery links are removed through their authenticated Configuration exposure owner before removing their canonical targets.
 
 ## Retired package surfaces
 
-Convergence removes only these exact source-contract preimages; edited or unknown content is preserved. These paths are not installed into new hosts.
+These exact preimages are retained only for de-adoption compatibility. Current-version update hygiene uses current ownership declarations and requires no retirement entry or historical hash.
 
 - `.agentic-workspace/WORKFLOW.md` -- `sha256:75162f6469347e428ab284a7e1478a0fdd62ab4f61897a8e913f5a5f6600afa7`
 - `.agentic-workspace/docs/jumpstart-contract.md` -- `sha256:f37d653f52fdb3616758d8c5f31123f5d65d704e4c2cb971edd45f9729abbd4e`

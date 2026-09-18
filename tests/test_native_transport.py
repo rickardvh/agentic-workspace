@@ -96,6 +96,52 @@ def snapshot():
     }
 
 
+@pytest.mark.parametrize("phase", ["start", "completed"])
+@pytest.mark.parametrize("invalid_schema", [False, True])
+def test_provider_schema_rejection_is_actionable_and_does_not_echo_payload(tmp_path, monkeypatch, snapshot, phase, invalid_schema):
+    error = {
+        "code": -32600,
+        "message": ("Invalid schema for response_format 'codex_output_schema': " if invalid_schema else "failure: ")
+        + "secret-prompt-credential",
+    }
+
+    class Connection:
+        call = provider.CodexConnection.call
+
+        def __init__(self, executable):
+            self.events = []
+            self.number = 0
+            self.timeout = 1
+
+        def send(self, request):
+            self.request = request
+
+        def next(self, timeout):
+            if self.request["method"] == "thread/start":
+                assert self.request["params"]["sandbox"] == "read-only"
+                assert self.request["params"]["approvalPolicy"] == "never"
+                return {"id": self.number, "result": {"thread": {"id": "fresh"}}}
+            if phase == "start":
+                return {"id": self.number, "error": error}
+            self.events.append(
+                {"method": "turn/completed", "params": {"threadId": "fresh", "turn": {"id": "turn", "status": "failed", "error": error}}}
+            )
+            return {"id": self.number, "result": {"turn": {"id": "turn"}}}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(provider, "CodexConnection", Connection)
+    with pytest.raises(provider.ProviderError) as failure:
+        provider.execute(tmp_path, snapshot, selection(snapshot), "private prompt", {}, timeout=1)
+    expected = (
+        "provider-output-schema-invalid:check-adapter-output-schema"
+        if invalid_schema
+        else ("provider-operation-rejected:turn/start:-32600" if phase == "start" else "provider-turn-failed")
+    )
+    assert str(failure.value) == expected
+
+
 def selection(snapshot, **changes):
     return {
         "capability_revision": snapshot["revision"],

@@ -10,31 +10,26 @@ routes a configuration concern here. Start with the desired behavior. Select
 only the relevant concern; a setup request does not authorize enabling every
 module, choosing providers, changing proof floors or replacing repository policy.
 
-## Selected executable method
+## Current native method
 
-Run this bundle's `prepare.py` with the configured `--native-cli`, repository
-`--target`, exact `--task` and any `--changed` paths. It uses the existing native
-request/action/result boundary; it does not parse config, edit sources, answer
-owner questions or execute a primary-action loop.
+Use the configured AW invocation with `start --target . --task "<task>"
+--projection full --format json` and repeated `--changed` paths. Select
+`configuration_write.behavior_request` and supply its `concern`:
+`instructions`, `diagnostics`, `assignment`, `modules`, `invocation`, or
+`preferences`. Resolve that exact request through `start --input <request.json>`.
+Select by the human outcome, not task-word matching. Carry required affected-owner
+judgments as an exact current request set; never manufacture absent edit requests.
 
-- `--concern instructions|diagnostics|assignment|modules|invocation|preferences`
-  obtains fresh current behavior and its remaining gaps from the responsible
-  native owner. Select by the human outcome, not task-word matching.
-- `--input <request.json>` carries an exact Configuration request, a current
-  request set containing that concern and supplied affected-owner judgments, or
-  one **already-authorized** Configuration action. Native source/work admission
-  remains mandatory. It does not manufacture absent edit requests.
-- `--no-change` is a successful zero-owner-call, no-retention disposition when
-  the concern is already settled or a one-off observation has no durable value.
-- `--expected-method-revision <returned revision>` rejects carried preparation
-  after this helper or skill changes. Native owners separately revalidate source,
-  policy, task and action currentness. A changed method is not a hot-patch permit.
+For an already-authorized Configuration action, use native `invoke --input
+<action.json>` with the same target/task/changed context. Native admission checks
+source, policy and work currentness. The writer attaches current selected behavior
+observations after a supported write. A known failure to launch the native
+process means no owner/effect entry; once it may have started, preserve uncertainty
+and use current owner recovery. No Python subprocess wrapper is involved.
 
-Use `configuration_write.behavior_request` directly through ordinary native
-`start` when the host does not run Python. The same current owner observations
-and effect restrictions apply. The native writer also attaches selected behavior
-observations after a supported write, so bypassing this optional helper does not
-bypass the responsible owners.
+When the concern is already settled or has no durable value, do no work and
+retain nothing. A configured command prefix such as `uv run agentic-workspace`
+is an agent-facing invocation; do not pass it as one executable filename.
 
 ## Questions, writes and consequences
 
@@ -45,8 +40,8 @@ question. Supply an existing human answer only when it authorizes this exact
 current proposal. Explicit source delegations may admit ordinary agent choices;
 capability enablement and delegation-policy changes keep their own authority.
 
-Pass the returned exact action to the method. It carries one invocation and
-returns native `effect_outcome`, `configuration_behavior`, actual `session_capture`
+Pass the returned exact action to native `invoke`. It returns
+`effect_outcome`, `configuration_behavior`, actual `session_capture`
 when available, and continuation/reentry. Interpret the **affected owner's**
 observation: exact instruction delivery or read requirement, effective diagnostic
 privacy and capture outcome, eligible Assignment configurations or missing

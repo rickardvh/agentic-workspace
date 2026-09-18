@@ -1,0 +1,77 @@
+{
+  "owner": "verification",
+  "declarations": [
+    {
+      "path": ".agentic-workspace/verification/evidence",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/receipts",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/test-strategy-dispositions",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/manifest.toml",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/test-suite-budget.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/reasoning-economy-evidence.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/proof-decision.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/assurance-evidence-records.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/custom",
+      "scope": "subtree",
+      "class": "customization",
+      "lifetime": "repository"
+    },
+    {
+      "path": ".agentic-workspace/proof/receipts",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/proof/manifests",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/proof-strategy.toml",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    }
+  ]
+}

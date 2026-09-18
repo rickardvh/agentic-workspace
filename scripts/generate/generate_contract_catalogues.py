@@ -116,7 +116,7 @@ def render_surface_catalogue() -> str:
             "",
             "Only the declared workflow fence in `AGENTS.md` is managed. Text outside it remains repository-owned. Edited, unowned, or unsafe destinations are preserved and reported by Configuration.",
             "",
-            "## Preserved classes",
+            "## De-adoption preservation",
             "",
         ]
     )
@@ -128,11 +128,15 @@ def render_surface_catalogue() -> str:
     lines.extend(
         [
             "",
-            "Unknown paths are preserved. Skill-discovery links are removed through their authenticated Configuration exposure owner before removing their canonical targets.",
+            "Current-version updates treat `.agentic-workspace/` as a closed enclave. Every file is covered by one current owner/class/lifetime declaration, including explicitly mutable, customization and local subtrees. Unclassified residue is included in the exact authorized removal proposal; ambiguous declarations block reconciliation. Inventory is bounded and never traverses links or junctions. Current managed-file conflict rules still apply. A second successful reconciliation is quiet. De-adoption preserves independent state and remains a separate operation.",
+            "",
+            "Workspace declarations live in `workspace_surfaces.json` under `enclave`; Planning, Memory and Verification each own `contracts/enclave.json` in their package source. Owners register classification through a generic linked inventory; Workspace neither lists module identities nor refreshes their support. Repository OWNERSHIP.toml admits independent owner paths through explicit enclave rows (path, scope, owner, class, lifetime) and preserves repo_owned authority surfaces. Independent native publication namespaces follow current modules.independent admissions. Ambiguous overlaps block cleanup; broad legacy module roots do not hide residue. New repository extensions can also live under `.agentic-workspace/custom/`; scoped repository instructions remain under `.agentic-workspace/instructions/`.",
+            "",
+            "Skill-discovery links are removed through their authenticated Configuration exposure owner before removing their canonical targets.",
             "",
             "## Retired package surfaces",
             "",
-            "Convergence removes only these exact source-contract preimages; edited or unknown content is preserved. These paths are not installed into new hosts.",
+            "These exact preimages are retained only for de-adoption compatibility. Current-version update hygiene uses current ownership declarations and requires no retirement entry or historical hash.",
             "",
         ]
     )

@@ -6,6 +6,14 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{io::Read, path::Path};
 
+inventory::submit! { crate::native_enclave::Registration { declarations: enclave } }
+pub(crate) fn enclave() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../packages/verification/src/repo_verification_bootstrap/contracts/enclave.json"
+    ))
+    .expect("Verification enclave contract")
+}
+
 const MANIFEST: &str = ".agentic-workspace/verification/manifest.toml";
 const RECEIPTS: &str = ".agentic-workspace/proof/receipts";
 

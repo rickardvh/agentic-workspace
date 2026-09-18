@@ -12,6 +12,44 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_path, shared_core_binary, native_cli):
+    source = json.loads((ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
+    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    required = set(source["payload_files"] + source["necessary_surface_files"])
+    required.update(path for paths in source["module_surface_files"].values() for path in paths)
+
+    def inventory(target):
+        context = {"target": str(target), "task": "Check current source-maintenance classification"}
+        current = consume("native", shared_core_binary, native_cli, context, host_path=os.environ["PATH"])
+        request = current["configuration_write"]["repository_adoption_request"]
+        return consume("native", shared_core_binary, native_cli, {**context, "request": request}, host_path=os.environ["PATH"])[
+            "configuration_write"
+        ]["repository_adoption"]["enclave"]
+
+    # Read the actual source checkout through the same public owner used by updates.
+    current = inventory(ROOT)
+    assert not required.intersection(current["removals"])
+    assert all(path in current["entries"] for path in source["payload_files"])
+
+    # The same source-only support on an ordinary host is still cleanup residue.
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    source_only = {
+        row["path"]
+        for row in tomllib.loads((ROOT / ".agentic-workspace/OWNERSHIP.toml").read_text())["enclave"]
+        if row["owner"] == "source-maintenance"
+    }
+    assert source_only.isdisjoint(host["payload_files"])
+    assert source_only
+    for path in source_only:
+        destination = tmp_path / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((ROOT / path).read_bytes())
+    ledger = tmp_path / ".agentic-workspace/OWNERSHIP.toml"
+    ledger.write_bytes((ROOT / "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml").read_bytes())
+    ordinary = inventory(tmp_path)
+    assert source_only <= ordinary["removals"].keys()
+
+
 def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared_core_binary, native_cli):
     """Committed source projections work on a new machine, without writer custody."""
     from tests.test_source_payload_operational_install import _checker_script_path, _load_module
@@ -298,21 +336,82 @@ def test_host_ownership_composition_and_profile_converge(tmp_path, shared_core_b
     assert adopt()["configuration_write"]["status"] == "preserved-blocked"
 
 
-def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("host_declarations", [False, True])
+def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_core_binary, native_cli, host_declarations):
     initial = consume("native", shared_core_binary, native_cli, {"target": str(tmp_path), "task": "Configure repository integration"})
     assert "repository_adoption_request" not in initial["configuration_write"]
     assert not (tmp_path / ".agentic-workspace").exists()
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
     instructions = tmp_path / "AGENTS.md"
     instructions.write_text("# Repository policy\nPreserve this text.\n", encoding="utf-8")
-    # A former mirror converges only exact known package bytes.
-    contract = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
-    retired = contract["retired_package_surfaces"][0]["path"]
+    # Convergence uses current ownership, never a historical package digest.
+    retired = ".agentic-workspace/obsolete-support/old.bin"
     old = tmp_path / retired
     old.parent.mkdir(parents=True, exist_ok=True)
-    old.write_bytes((ROOT / "src/agentic_workspace/_payload" / retired).read_bytes())
+    old.write_bytes(b"\xff\x00unknown historic support")
     unknown = tmp_path / ".agentic-workspace/unknown.txt"
-    unknown.write_text("Preserve unknown material")
+    unknown.write_text("Unknown material is residue")
+    preserved_state = {
+        ".agentic-workspace/config.toml": b"# repository policy\n",
+        ".agentic-workspace/planning/execplans/archive/history.json": b"{}",
+        ".agentic-workspace/planning/assignments/current.assignment.json": b"{}",
+        ".agentic-workspace/proof/receipts/source-reconciliation.json": b"{}",
+        ".agentic-workspace/proof/manifests/current.json": b"{}",
+        ".agentic-workspace/evaluations.json": b'{"kind":"agentic-workspace/evaluations/v1","evaluations":[]}',
+        ".agentic-workspace/evaluations/history.json": b"{}",
+        ".agentic-workspace/agent-aids/candidate.md": b"repo-owned candidate",
+        ".agentic-workspace/example/state/current.json": b"independent state",
+        ".agentic-workspace/example/support.md": b"independent support",
+        ".agentic-workspace/memory/repo/domains/lesson.md": b"durable lesson",
+        ".agentic-workspace/verification/evidence/proof.json": b"{}",
+        ".agentic-workspace/custom/plugin/config.txt": b"custom extension",
+        ".agentic-workspace/local/scratch/retained.bin": b"\xfflocal custody",
+    }
+    if not host_declarations:
+        for ref in (
+            ".agentic-workspace/agent-aids/candidate.md",
+            ".agentic-workspace/example/state/current.json",
+            ".agentic-workspace/example/support.md",
+        ):
+            del preserved_state[ref]
+    for ref, content in preserved_state.items():
+        path = tmp_path / ref
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    if host_declarations:
+        (tmp_path / ".agentic-workspace/OWNERSHIP.toml").write_text(
+            'schema_version=1\n[[authority_surfaces]]\nconcern="agent-aids"\n'
+            'surface=".agentic-workspace/agent-aids/"\nowner="repo"\nownership="repo_owned"\nauthority="primary"\n'
+            '[[enclave]]\npath=".agentic-workspace/example/state"\nowner="example"\n'
+            'scope="subtree"\nclass="mutable-state"\nlifetime="durable"\n'
+            '[[enclave]]\npath=".agentic-workspace/example/support.md"\nowner="example"\n'
+            'scope="exact"\nclass="managed-support"\nlifetime="current-version"\n'
+        )
+    module_skill = ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md"
+    module_path = tmp_path / module_skill
+    module_path.parent.mkdir(parents=True, exist_ok=True)
+    module_path.write_bytes(b"Existing module-owned support, customized before Workspace adoption")
+    stale = [
+        ".agentic-workspace/planning/schemas/obsolete.json",
+        ".agentic-workspace/memory/skills/obsolete/prepare.py",
+        ".agentic-workspace/example/obsolete.md",
+        ".agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+        ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py",
+        ".agentic-workspace/memory/skills/memory-hygiene/prepare.py",
+    ]
+    for ref in stale:
+        path = tmp_path / ref
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("unknown support")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    sentinel = outside / "sentinel.txt"
+    sentinel.write_text("untouched")
+    link = tmp_path / ".agentic-workspace/unknown-link"
+    if os.name == "nt":
+        subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(outside)], check=True, capture_output=True)
+    else:
+        link.symlink_to(outside, target_is_directory=True)
     context = {"target": str(tmp_path), "task": "Configure repository integration"}
 
     def call(**extra):
@@ -333,6 +432,8 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
 
     assert read()["status"] == "unadopted"
     prepared = action("adopt")
+    removals = prepared["arguments"]["binding"]["state"]["enclave"]["removals"]
+    assert set([retired, ".agentic-workspace/unknown.txt", ".agentic-workspace/unknown-link", *stale]) <= set(removals)
     forged = copy.deepcopy(prepared)
     forged["arguments"]["binding"]["state"]["updates"]["AGENTS.md"]["after"] = "Forged"
     with pytest.raises(AssertionError):
@@ -349,9 +450,13 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     )
     assert ignored.returncode == 0
     assert not old.exists()
-    assert unknown.read_text() == "Preserve unknown material"
-    assert not (tmp_path / ".agentic-workspace/config.toml").exists()
-    assert not (tmp_path / ".agentic-workspace/planning").exists()
+    assert not unknown.exists() and not link.exists()
+    assert sentinel.read_text() == "untouched"
+    assert all((tmp_path / ref).read_bytes() == content for ref, content in preserved_state.items())
+    assert all(not (tmp_path / ref).exists() for ref in stale)
+    assert read()["repository_adoption"]["enclave"]["status"] == "current"
+    assert module_skill not in read()["repository_adoption"]["installed"]
+    assert module_path.read_bytes() == b"Existing module-owned support, customized before Workspace adoption"
     request = next(r for r in read()["adoption_requests"] if r["arguments"]["mode"] == "adopt")
     assert call(request=request)["configuration_write"]["status"] == "already-current"
     # Lost outcome evidence recovers without replaying published files.
@@ -383,9 +488,14 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     request = next(r for r in read()["adoption_requests"] if r["arguments"]["mode"] == "remove")
     assert call(request=request)["configuration_write"]["status"] == "remove-owned-skill-exposures-first"
     assert exposure("remove")["effect_outcome"]["status"] == "committed"
-    preserved = tmp_path / ".agentic-workspace/planning/retained.md"
-    preserved.parent.mkdir()
+    preserved = tmp_path / ".agentic-workspace/planning/execplans/retained.md"
+    preserved.parent.mkdir(parents=True, exist_ok=True)
     preserved.write_text("Independent durable work")
+    if host_declarations:
+        request = next(r for r in read()["adoption_requests"] if r["arguments"]["mode"] == "remove")
+        assert call(request=request)["configuration_write"]["status"] == "preserved-blocked"
+        assert all((tmp_path / ref).read_bytes() == content for ref, content in preserved_state.items())
+        return
     removed = call(invocation=action("remove"))
     assert removed["effect_outcome"]["status"] == "committed"
     assert not identity.exists()

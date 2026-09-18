@@ -57,7 +57,6 @@
     ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
     ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
     ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md",
-    ".agentic-workspace/memory/skills/memory-hygiene/prepare.py",
     ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml",
     ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md",
     ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml",
@@ -228,12 +227,6 @@
       "role": "shared-replaceable",
       "safety": "safe",
       "source": ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md"
-    },
-    {
-      "path": ".agentic-workspace/memory/skills/memory-hygiene/prepare.py",
-      "role": "shared-replaceable",
-      "safety": "safe",
-      "source": ".agentic-workspace/memory/skills/memory-hygiene/prepare.py"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-refresh/agents/openai.yaml",

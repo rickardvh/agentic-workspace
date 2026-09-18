@@ -43,7 +43,12 @@ def test_cargo_projection_carries_declared_portable_build_inputs(tmp_path, monke
     cargo.stage_crate(ROOT, {"path": "crates/agentic-workspace-core", "name": "agentic-workspace-core"}, destination, "a" * 40)
     contract = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
     provenance = json.loads((destination / "release-source.json").read_text())
-    for reference in contract["derivation"]["portable_sources"]:
+    assert not any("/skills/" in path and path.endswith(".py") for path in provenance["compile_inputs"])
+    for module in ("memory", "planning", "verification"):
+        projection = ROOT / "generated" / module / "typescript"
+        assert not list(projection.rglob("*.py")), f"{module} acquired an undeclared Python runtime"
+    references = list(contract["derivation"]["portable_sources"])
+    for reference in references:
         assert (destination / "_inputs" / reference).read_bytes() == (ROOT / reference).read_bytes()
         assert provenance["compile_inputs"][reference] == cargo.sha256(ROOT / reference)
 

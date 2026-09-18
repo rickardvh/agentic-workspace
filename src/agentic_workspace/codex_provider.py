@@ -47,6 +47,16 @@ class ProviderError(ValueError):
         self.metrics = metrics or {}
 
 
+def _schema_rejection(error: Any) -> bool:
+    """Classify provider diagnostics without returning their untrusted payload."""
+    if not isinstance(error, dict):
+        return False
+    message = error.get("message", "")
+    return error.get("code") == "invalid_json_schema" or (
+        isinstance(message, str) and ("invalid_json_schema" in message or "Invalid schema for response_format" in message)
+    )
+
+
 class CodexConnection:
     """One provider process. Only the provider owns conversation persistence."""
 
@@ -116,6 +126,8 @@ class CodexConnection:
             message = self.next(max(0.01, deadline - time.monotonic()))
             if message.get("id") == number:
                 if "error" in message:
+                    if method == "turn/start" and _schema_rejection(message["error"]):
+                        raise ProviderError("provider-output-schema-invalid:check-adapter-output-schema")
                     if (
                         method == "thread/archive"
                         and message["error"].get("message") == f"no rollout found for thread id {params.get('threadId')}"
@@ -438,6 +450,8 @@ def execute(
                     output = payload["item"].get("text", "")
                 if event.get("method") == "turn/completed" and payload.get("turn", {}).get("id") == turn:
                     if payload["turn"].get("status") != "completed":
+                        if _schema_rejection(payload["turn"].get("error")):
+                            raise ProviderError("provider-output-schema-invalid:check-adapter-output-schema")
                         raise ProviderError("provider-turn-failed")
                     return {
                         "returned_work": json.loads(output),

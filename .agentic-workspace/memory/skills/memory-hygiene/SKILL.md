@@ -29,7 +29,10 @@ No matching Memory means no corpus sweep or write. Creating notes, rewriting the
 
 ## Selected declaration hygiene
 
-Run `python .agentic-workspace/memory/skills/memory-hygiene/prepare.py --target . --task "<task>" --native-cli <native-executable>` when Python and the current native executable are available. Missing tools return unexecuted; there is no source-only checking fallback. The helper performs the following settled steps.
+Use the configured native AW invocation directly; no Python helper is required.
+Keep the same target/task/changed context when resolving the exact route-selection
+request with `start --input <request.json>`. Missing native execution means
+unexecuted/unknown hygiene; source reading does not establish a clean result.
 
 Select the current `memory/hygiene` semantic route through the native owner's returned route-selection request, then read `memory.hygiene` from fresh `start` output. The shared native owner checks at most 128 declared notes against `rules.canonical_dirs` and `rules.task_board_globs`. Findings name the source and the remaining owner judgment. This does not scan the repository or grant source-write/proof authority. An absent, malformed or unavailable source means unexecuted/unknown hygiene, never clean hygiene.
 

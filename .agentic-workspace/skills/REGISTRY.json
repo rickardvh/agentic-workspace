@@ -98,16 +98,6 @@
           "the user describes an outcome rather than a solution",
           "why, desired outcome, non-goals, or acceptable first slice are missing"
         ]
-      },
-      "executable": {
-        "entrypoint": {
-          "kind": "file",
-          "path": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py"
-        },
-        "dependencies": [
-          ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
-          ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
-        ]
       }
     },
     {
@@ -275,15 +265,6 @@
           "workspace surfaces need to be populated after init or install",
           "mature repo discovery needs bounded pre-seed routing"
         ]
-      },
-      "executable": {
-        "entrypoint": {
-          "kind": "file",
-          "path": ".agentic-workspace/skills/workspace-setup-jumpstart/prepare.py"
-        },
-        "dependencies": [
-          ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md"
-        ]
       }
     },
     {
@@ -359,16 +340,6 @@
         ],
         "when": [
           "a trusted correction should change later repository behavior"
-        ]
-      },
-      "executable": {
-        "entrypoint": {
-          "kind": "file",
-          "path": ".agentic-workspace/skills/workspace-intent-discovery/prepare.py"
-        },
-        "dependencies": [
-          ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
-          ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
         ]
       }
     }

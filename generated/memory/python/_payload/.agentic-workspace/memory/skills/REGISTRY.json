@@ -99,16 +99,7 @@
           "priority": 10,
           "description": "Inspect bounded Memory declaration hygiene and separately authorized disposition."
         }
-      ],
-      "executable": {
-        "entrypoint": {
-          "kind": "file",
-          "path": ".agentic-workspace/memory/skills/memory-hygiene/prepare.py"
-        },
-        "dependencies": [
-          ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md"
-        ]
-      }
+      ]
     },
     {
       "id": "memory-refresh",

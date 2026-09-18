@@ -1,0 +1,341 @@
+{
+  "owner": "planning",
+  "declarations": [
+    {
+      "path": ".agentic-workspace/planning/UPGRADE-SOURCE.toml",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/pre-ingestion-refinement.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-decomposition.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-integration-receipt.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-issue-relation.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-lane.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/schemas/planning-review.schema.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/upstream-task-intake.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/execplans",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/lanes",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/decompositions",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/reviews",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/issue-relations",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/integration-proposals",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/integration-receipts",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/closeout-evidence",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/state.toml",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/external-intent-evidence.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/finished-work-evidence.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/README.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/REGISTRY.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assurance-delegation/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-decompose/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-high-assurance-lifecycle/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-manual-delegation/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-new-plan-tighten/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-promote-review-findings/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-reporting/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-returned-result/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/docs/capability-contract.json",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/docs/execution-flow-contract.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/docs/lifecycle-and-config-contract.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/docs/minimum-operating-model.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/docs/routing-contract.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/docs/system-intent-contract.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/docs/workspace-config-contract.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/custom",
+      "scope": "subtree",
+      "class": "customization",
+      "lifetime": "repository"
+    },
+    {
+      "path": ".agentic-workspace/planning/assignments",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/assignment-receipts",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/archive/index.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/evaluation-finding-followups.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-baseline.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/records",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    }
+  ]
+}

@@ -3025,7 +3025,14 @@ def test_static_generated_package_proof_accepts_current_static_surfaces() -> Non
 def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywords(monkeypatch, tmp_path: Path) -> None:
     checker = _load_checker()
     bridge = "src/agentic_workspace/sealed_codex_transport.py"
-    wrapper = "def main() -> None:\n    packet = json.load(sys.stdin)\n    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
+    wrapper = (
+        "def main() -> None:\n"
+        "    if sys.argv[1:] == ['--aw-capability']:\n"
+        "        print(json.dumps(capability(Path.cwd(), json.load(sys.stdin))))\n"
+        "        return\n"
+        "    packet = json.load(sys.stdin)\n"
+        "    print(json.dumps(dispatch(Path.cwd(), packet)))\n"
+    )
     cases = [
         ("src/agentic_workspace/harmless_notes.py", 'TEXT = "argparse.ArgumentParser and def main are only prose"\n', False),
         (bridge, wrapper, False),
@@ -3033,12 +3040,12 @@ def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywor
         (bridge, wrapper + "parser = argparse.ArgumentParser()\n", True),
         ("src/agentic_workspace/cli.py", wrapper, True),
         (
-            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+            "src/agentic_workspace/_payload/.agentic-workspace/skills/example/prepare.py",
             "def main():\n    parser = argparse.ArgumentParser()\n    parser.parse_args()\n",
-            False,
+            True,
         ),
         (
-            "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-intent-discovery/prepare.py",
+            "src/agentic_workspace/_payload/.agentic-workspace/skills/example/prepare.py",
             "def run_operation_ir():\n    pass\n",
             True,
         ),
