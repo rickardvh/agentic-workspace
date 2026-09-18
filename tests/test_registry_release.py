@@ -13,6 +13,18 @@ sys.path.insert(0, str(ROOT / "scripts/release"))
 import registry_release as registry  # noqa: E402
 
 
+@pytest.mark.parametrize("tag", ["v1.0.0-rc.1", "v1.0.0"])
+def test_rc_and_stable_publication_use_the_default_npm_channel(tag):
+    identity = registry.coordinated_release.release_identity(tag)
+    assert registry.npm_dist_tag(identity) == "latest"
+
+
+def test_exploratory_preview_has_no_npm_channel():
+    identity = registry.coordinated_release.release_identity("preview-v0.57.0")
+    with pytest.raises(ValueError, match="Exploratory"):
+        registry.npm_dist_tag(identity)
+
+
 @pytest.mark.parametrize("ecosystem", ["python", "npm"])
 def test_registry_absence_matching_bytes_and_conflict(tmp_path, ecosystem):
     data = b"exact admitted artifact"

@@ -43,6 +43,13 @@ def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def npm_dist_tag(identity):
+    """Keep the newest admitted RC as the default until stable v1 replaces it."""
+    if identity["release_class"] not in {"release-candidate", "stable"}:
+        raise ValueError("Exploratory previews are not npm registry releases")
+    return "latest"
+
+
 def admitted_artifacts(dist, tag, source):
     identity = coordinated_release.release_identity(tag)
     if identity["release_class"] not in {"stable", "release-candidate"}:
@@ -214,12 +221,10 @@ def main():
     if args.verify:
         if absent:
             raise ValueError("Registry publication is incomplete; reobserve before retrying upload")
-        npm_tag = "rc" if identity["release_class"] == "release-candidate" else "latest"
+        npm_tag = npm_dist_tag(identity)
         tags = json_response("https://registry.npmjs.org/-/package/%40agentic-workspace%2Fworkspace-cli/dist-tags")
         if not tags or tags.get(npm_tag) != identity["package_versions"]["npm"]:
             raise ValueError("npm channel differs from this release; inspect channel history before a separate tag repair")
-        if npm_tag == "rc" and tags.get("latest") == identity["package_versions"]["npm"]:
-            raise ValueError("RC must not be npm latest")
         smoke(identity)
         receipt = {
             "kind": "agentic-workspace/registry-publication/v1",
@@ -238,7 +243,7 @@ def main():
             shutil.copyfile(args.artifact_dir / row["asset"], args.pending / row["ecosystem"] / row["asset"])
         print("python_pending=" + str(any(row["ecosystem"] == "python" for row in absent)).lower())
         print("npm_pending=" + str(any(row["ecosystem"] == "npm" for row in absent)).lower())
-        print("npm_tag=" + ("rc" if identity["release_class"] == "release-candidate" else "latest"))
+        print("npm_tag=" + npm_dist_tag(identity))
 
 
 if __name__ == "__main__":
