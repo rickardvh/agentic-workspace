@@ -12,6 +12,44 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_path, shared_core_binary, native_cli):
+    source = json.loads((ROOT / "src/agentic_workspace/contracts/source_maintenance_surfaces.json").read_text())
+    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    required = set(source["payload_files"] + source["necessary_surface_files"])
+    required.update(path for paths in source["module_surface_files"].values() for path in paths)
+
+    def inventory(target):
+        context = {"target": str(target), "task": "Check current source-maintenance classification"}
+        current = consume("native", shared_core_binary, native_cli, context, host_path=os.environ["PATH"])
+        request = current["configuration_write"]["repository_adoption_request"]
+        return consume("native", shared_core_binary, native_cli, {**context, "request": request}, host_path=os.environ["PATH"])[
+            "configuration_write"
+        ]["repository_adoption"]["enclave"]
+
+    # Read the actual source checkout through the same public owner used by updates.
+    current = inventory(ROOT)
+    assert not required.intersection(current["removals"])
+    assert all(path in current["entries"] for path in source["payload_files"])
+
+    # The same source-only support on an ordinary host is still cleanup residue.
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    source_only = {
+        row["path"]
+        for row in tomllib.loads((ROOT / ".agentic-workspace/OWNERSHIP.toml").read_text())["enclave"]
+        if row["owner"] == "source-maintenance"
+    }
+    assert source_only.isdisjoint(host["payload_files"])
+    assert source_only
+    for path in source_only:
+        destination = tmp_path / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((ROOT / path).read_bytes())
+    ledger = tmp_path / ".agentic-workspace/OWNERSHIP.toml"
+    ledger.write_bytes((ROOT / "src/agentic_workspace/_payload/.agentic-workspace/OWNERSHIP.toml").read_bytes())
+    ordinary = inventory(tmp_path)
+    assert source_only <= ordinary["removals"].keys()
+
+
 def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared_core_binary, native_cli):
     """Committed source projections work on a new machine, without writer custody."""
     from tests.test_source_payload_operational_install import _checker_script_path, _load_module
