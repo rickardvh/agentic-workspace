@@ -2,7 +2,7 @@
   "kind": "agentic-workspace/repository-read-profile/v1",
   "source": {
     "path": ".agentic-workspace/OWNERSHIP.toml",
-    "git_blob_sha1": "adb401566d0128a82c2b61957e7d2d2a860f1757"
+    "git_blob_sha1": "3e2db6c5ba527b0916597705bbc9b134facb12e3"
   },
   "authority": "orientation-only; no mutation, effect, proof, completion or issue-close authority",
   "currentness": "Read one repository revision; record each selected path and provider blob identity. Reconsider changed selected sources/dependencies; unrelated blobs do not invalidate the reading. Source identity is not truth or runtime admission.",
@@ -39,8 +39,7 @@
       "concern": "canonical-agent-procedure",
       "owner": "workspace",
       "refs": [
-        ".agentic-workspace/skills/REGISTRY.json",
-        "tools/skills/REGISTRY.json"
+        ".agentic-workspace/skills/REGISTRY.json"
       ],
       "select": "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime.",
       "unknown": [
@@ -59,6 +58,17 @@
         "local selected owner",
         "current custody",
         "task completion"
+      ]
+    },
+    {
+      "concern": "source-maintainer-procedure",
+      "owner": "repo",
+      "refs": [
+        "tools/skills/REGISTRY.json"
+      ],
+      "select": "Select the relevant repository-maintainer procedure and follow its declared source; this registry belongs only to this source repository.",
+      "unknown": [
+        "runtime route admission"
       ]
     },
     {

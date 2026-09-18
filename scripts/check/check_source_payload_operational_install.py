@@ -264,6 +264,40 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
             )
 
     manifest_path = repo_root / "src" / "agentic_workspace" / "contracts" / "source_maintenance_surfaces.json"
+    contracts = manifest_path.parent
+    host_path = contracts / "workspace_surfaces.json"
+    host = json.loads(host_path.read_text(encoding="utf-8")) if host_path.is_file() else {}
+    declared = provenance.get("payload_files")
+    expected_files = host.get("payload_files", [])
+    if not isinstance(declared, list) or sorted(declared) != sorted(expected_files):
+        drift.append(
+            {"path": ".agentic-workspace/payload-provenance.json", "reason": "payload files differ from the public host declaration"}
+        )
+    # Source-maintenance alignment is stricter than migration: the current
+    # package-owned keyed facts must match, with source-only rows kept separate.
+    portable_path = contracts / "portable_ownership.toml"
+    ledger_path = repo_root / ".agentic-workspace/OWNERSHIP.toml"
+    if portable_path.is_file() and ledger_path.is_file():
+        portable = tomllib.loads(portable_path.read_text(encoding="utf-8"))
+        ledger = tomllib.loads(ledger_path.read_text(encoding="utf-8"))
+        identities = {"module_roots": "module", "managed_surfaces": "path", "fences": "name", "authority_surfaces": "concern"}
+        for section, expected_value in portable.items():
+            actual = ledger.get(section)
+            if section in identities:
+                key = identities[section]
+                observed_rows = {row[key]: row for row in actual or []}
+                matches = all(observed_rows.get(row[key]) == row for row in expected_value)
+            elif isinstance(expected_value, dict):
+                matches = isinstance(actual, dict) and all(actual.get(key) == value for key, value in expected_value.items())
+            else:
+                matches = actual == expected_value
+            if not matches:
+                drift.append({"path": ".agentic-workspace/OWNERSHIP.toml", "reason": f"source ledger conflicts with portable {section}"})
+        from agentic_workspace.static_read_profile import render
+
+        profile = repo_root / ".agentic-workspace/READING.json"
+        if not profile.is_file() or _normalized_file_text(profile) != render(_normalized_file_text(ledger_path)):
+            drift.append({"path": ".agentic-workspace/READING.json", "reason": "source read profile differs from its ledger projection"})
     source_payload_root = repo_root / "src" / "agentic_workspace" / "_payload"
     if manifest_path.is_file():
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -271,11 +305,10 @@ def _committed_payload_alignment(*, repo_root: Path) -> dict[str, object]:
         for relative in payload_files if isinstance(payload_files, list) else []:
             if not isinstance(relative, str):
                 continue
-            declared = provenance.get("payload_files")
-            if not isinstance(declared, list) or relative not in declared:
-                drift.append(
-                    {"path": ".agentic-workspace/payload-provenance.json", "reason": f"declared payload identity is missing {relative}"}
-                )
+            # These are host-composed/target-derived, not verbatim copies of
+            # the portable artifact. Their source relation is checked above.
+            if relative in {".agentic-workspace/OWNERSHIP.toml", ".agentic-workspace/READING.json"}:
+                continue
             source = source_payload_root / relative
             installed = repo_root / relative
             if not source.is_file() or not installed.is_file():

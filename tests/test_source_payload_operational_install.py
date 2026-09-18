@@ -266,6 +266,10 @@ def _write_source_current_payload_fixture(tmp_path: Path) -> None:
         tmp_path / "src/agentic_workspace/contracts/source_maintenance_surfaces.json",
         json.dumps({"payload_files": [".agentic-workspace/skills/workspace-startup/SKILL.md"]}),
     )
+    _write(
+        tmp_path / "src/agentic_workspace/contracts/workspace_surfaces.json",
+        json.dumps({"payload_files": [".agentic-workspace/skills/workspace-startup/SKILL.md"]}),
+    )
     _write(tmp_path / "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-startup/SKILL.md", "current")
     _write(tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md", "current")
     _write(
@@ -285,7 +289,7 @@ def test_committed_payload_alignment_accepts_matching_source_current_state(tmp_p
     assert alignment["drift"] == []
 
 
-@pytest.mark.parametrize("drift", ["version", "package", "kind", "schema", "capabilities", "files", "malformed"])
+@pytest.mark.parametrize("drift", ["version", "package", "kind", "schema", "capabilities", "files", "extra-files", "malformed"])
 def test_committed_payload_alignment_rejects_stale_provenance_and_managed_payload(tmp_path: Path, drift: str) -> None:
     mod = _load_module(_checker_script_path(), "source_payload_committed_alignment_drift")
     _write_source_current_payload_fixture(tmp_path)
@@ -301,6 +305,8 @@ def test_committed_payload_alignment_rejects_stale_provenance_and_managed_payloa
         provenance["payload_capabilities"] = []
     elif drift == "files":
         provenance["payload_files"] = []
+    elif drift == "extra-files":
+        provenance["payload_files"].append(".agentic-workspace/WORKFLOW.md")
     _write(path, "[invalid" if drift == "malformed" else json.dumps(provenance))
     _write(tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md", "stale")
     _write(tmp_path / ".agentic-workspace/memory/skills/memory-router/SKILL.md", "stale")

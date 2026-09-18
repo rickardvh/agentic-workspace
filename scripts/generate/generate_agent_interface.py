@@ -81,6 +81,17 @@ def synchronize(*, check: bool = False) -> list[str]:
     from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
 
     drift = []
+    # Source-current provenance describes public host material, not the larger
+    # maintenance copy set. This is a generated declaration, never local custody.
+    provenance_path = ROOT / ".agentic-workspace/payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text(encoding="utf-8"))
+    provenance["payload_files"] = host["payload_files"]
+    expected_provenance = json.dumps(provenance, indent=2) + "\n"
+    if provenance_path.read_text(encoding="utf-8") != expected_provenance:
+        drift.append(provenance_path.relative_to(ROOT).as_posix())
+        if not check:
+            provenance_path.write_text(expected_provenance, encoding="utf-8", newline="\n")
     profile = ROOT / PROFILE
     expected_profile = render((ROOT / LEDGER).read_text(encoding="utf-8"))
     if not profile.is_file() or profile.read_text(encoding="utf-8") != expected_profile:
