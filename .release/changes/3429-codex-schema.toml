@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Fix the sealed Codex output schema and report schema rejection without exposing provider content."
+issues = [3429]
