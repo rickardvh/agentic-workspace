@@ -54,6 +54,24 @@
       "scope": "subtree",
       "class": "customization",
       "lifetime": "repository"
+    },
+    {
+      "path": ".agentic-workspace/proof/receipts",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/proof/manifests",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/verification/proof-strategy.toml",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
     }
   ]
 }

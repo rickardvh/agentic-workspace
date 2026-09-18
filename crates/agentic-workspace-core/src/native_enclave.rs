@@ -4,19 +4,23 @@ use cap_std::fs::Dir;
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, io::Read};
 
-include!(concat!(env!("OUT_DIR"), "/module_support.rs"));
+// Owners register classification only; adoption never acquires their writers.
+pub(crate) struct Registration {
+    pub declarations: fn() -> Value,
+}
+inventory::collect!(Registration);
 
 fn err(e: impl ToString) -> CoreError {
     CoreError::new(e.to_string())
 }
 
-pub(crate) fn declarations(contract: &Value) -> Result<Vec<Value>, CoreError> {
+pub(crate) fn declarations(root: &Dir, contract: &Value) -> Result<Vec<Value>, CoreError> {
     let mut owners = vec![contract["enclave"].clone()];
-    owners.extend([
-        crate::native_planning::enclave(),
-        crate::native_memory::enclave(),
-        crate::native_verification::enclave(),
-    ]);
+    owners.extend(
+        inventory::iter::<Registration>
+            .into_iter()
+            .map(|r| (r.declarations)()),
+    );
     let mut rows = Vec::new();
     for owner in owners {
         for row in owner["declarations"]
@@ -31,8 +35,72 @@ pub(crate) fn declarations(contract: &Value) -> Result<Vec<Value>, CoreError> {
     for path in crate::native_payload::paths() {
         rows.push(json!({"path":path,"scope":"exact","owner":"workspace","class":"managed-support","lifetime":"current-version"}));
     }
+    // Host declarations are admission of classification, not execution grants.
+    // Never infer an opaque module root from legacy module_roots rows.
+    if let Some(text) = read_declaration(root, crate::native_ownership::LEDGER)? {
+        let ledger = crate::native_ownership::parse(&text)?;
+        rows.extend(ledger["enclave"].as_array().into_iter().flatten().cloned());
+        for row in ledger["authority_surfaces"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let Some(path) = row["surface"].as_str() else {
+                continue;
+            };
+            if row["ownership"] == "repo_owned" && path.starts_with(".agentic-workspace/") {
+                let normalized = path.trim_end_matches('/');
+                // Existing precise package state declarations already protect it.
+                if rows.iter().any(|r| covers(r, normalized)) {
+                    continue;
+                }
+                rows.push(json!({"path":normalized,"scope":if path.ends_with('/') {"subtree"} else {"exact"},"owner":row["owner"],"class":"mutable-state","lifetime":"repository"}));
+            }
+        }
+    }
+    // Independent native publication has an existing admitted owner namespace.
+    // Preserve it even when that implementation is currently unavailable.
+    if let Some(text) = read_declaration(root, ".agentic-workspace/config.toml")? {
+        let config: toml::Value = toml::from_str(&text).map_err(err)?;
+        if let Some(admissions) = config
+            .get("modules")
+            .and_then(|m| m.get("independent"))
+            .and_then(toml::Value::as_table)
+        {
+            for owner in admissions.keys() {
+                rows.push(json!({"path":format!(".agentic-workspace/modules/{owner}"),"scope":"subtree","owner":owner,"class":"mutable-state","lifetime":"durable"}));
+            }
+        }
+    }
+    rows.sort_by(|a, b| a["path"].as_str().cmp(&b["path"].as_str()));
     validate(&rows)?;
     Ok(rows)
+}
+
+fn read_declaration(root: &Dir, path: &str) -> Result<Option<String>, CoreError> {
+    // Inspect the root first: opening a declaration must not follow a junction.
+    match root.symlink_metadata(".agentic-workspace") {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Ok(m) if !linked(&m) && m.is_dir() => {}
+        _ => return Err(err("enclave root must be an unlinked directory")),
+    }
+    let observed = identity(root, path)?;
+    if observed.is_null() {
+        return Ok(None);
+    }
+    if observed["kind"] != "file" {
+        return Err(err("enclave declaration must be a bounded regular file"));
+    }
+    let mut text = String::new();
+    root.open(path)
+        .map_err(err)?
+        .take(1024 * 1024 + 1)
+        .read_to_string(&mut text)
+        .map_err(err)?;
+    if text.len() > 1024 * 1024 {
+        return Err(err("enclave declaration exceeded bound"));
+    }
+    Ok(Some(text))
 }
 
 fn covers(row: &Value, path: &str) -> bool {
@@ -273,9 +341,70 @@ pub(crate) fn remove(
 mod tests {
     use super::*;
     #[test]
+    fn independent_admission_preserves_only_its_publication_namespace() {
+        struct TestDir(std::path::PathBuf);
+        impl Drop for TestDir {
+            fn drop(&mut self) {
+                std::fs::remove_dir_all(&self.0).unwrap();
+            }
+        }
+        let directory = TestDir(
+            std::env::temp_dir().join(format!(
+                "aw-enclave-{}-{}",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            )),
+        );
+        std::fs::create_dir(&directory.0).unwrap();
+        let root = Dir::open_ambient_dir(&directory.0, cap_std::ambient_authority()).unwrap();
+        root.create_dir_all(".agentic-workspace/modules/example")
+            .unwrap();
+        root.create_dir_all(".agentic-workspace/modules/unowned")
+            .unwrap();
+        root.write(
+            ".agentic-workspace/config.toml",
+            "[modules.independent.example]\nbinding='admitted-but-unavailable'\n",
+        )
+        .unwrap();
+        root.write(".agentic-workspace/modules/example/result.json", "{}")
+            .unwrap();
+        root.write(".agentic-workspace/modules/unowned/residue.json", "{}")
+            .unwrap();
+        let rows = declarations(
+            &root,
+            &json!({"enclave":{"owner":"workspace","declarations":[]}}),
+        )
+        .unwrap();
+        let observed = inventory(&root, &rows).unwrap();
+        assert!(
+            observed["removals"]
+                .get(".agentic-workspace/modules/example/result.json")
+                .is_none()
+        );
+        assert!(
+            observed["removals"]
+                .get(".agentic-workspace/modules/unowned/residue.json")
+                .is_some()
+        );
+        // Current admission affects the bound declaration revision.
+        root.write(".agentic-workspace/config.toml", "").unwrap();
+        let changed = declarations(
+            &root,
+            &json!({"enclave":{"owner":"workspace","declarations":[]}}),
+        )
+        .unwrap();
+        assert_ne!(
+            digest(&json!(rows)).unwrap(),
+            digest(&json!(changed)).unwrap()
+        );
+    }
+    #[test]
     fn current_declarations_reject_ambiguous_or_unconfined_ownership() {
         let row = json!({"path":".agentic-workspace/custom","scope":"subtree","owner":"repo","class":"customization","lifetime":"repository"});
-        assert!(validate(&[row.clone()]).is_ok());
+        assert!(validate(std::slice::from_ref(&row)).is_ok());
         let mut child = row.clone();
         child["path"] = json!(".agentic-workspace/custom/child");
         assert!(validate(&[row.clone(), child]).is_err());

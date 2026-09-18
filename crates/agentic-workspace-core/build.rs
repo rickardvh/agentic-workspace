@@ -129,33 +129,6 @@ fn main() {
         ));
     }
     generated.push_str("];\n");
-    let mut modules = String::from("pub(crate) const MODULE_SUPPORT: &[(&str, &str)] = &[\n");
-    for reference in value["module_enclave_contracts"]
-        .as_array()
-        .expect("module inventories")
-    {
-        let path = root.join(reference.as_str().unwrap());
-        println!("cargo:rerun-if-changed={}", path.display());
-        let owner: serde_json::Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
-        for row in owner["declarations"].as_array().unwrap() {
-            if let Some(source) = row["source"].as_str() {
-                let source = root.join(source).canonicalize().unwrap();
-                assert!(source.starts_with(root.canonicalize().unwrap()));
-                println!("cargo:rerun-if-changed={}", source.display());
-                modules.push_str(&format!(
-                    "({:?}, include_str!({:?})),\n",
-                    row["path"].as_str().unwrap(),
-                    source.to_str().unwrap()
-                ));
-            }
-        }
-    }
-    modules.push_str("];\n");
-    fs::write(
-        PathBuf::from(env::var("OUT_DIR").unwrap()).join("module_support.rs"),
-        modules,
-    )
-    .unwrap();
     fs::write(
         PathBuf::from(env::var("OUT_DIR").unwrap()).join("payload.rs"),
         generated,

@@ -176,7 +176,7 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     let enclave = if removing {
         Value::Null
     } else {
-        crate::native_enclave::inventory(&root, &crate::native_enclave::declarations(&c)?)?
+        crate::native_enclave::inventory(&root, &crate::native_enclave::declarations(&root, &c)?)?
     };
     let ledger_before = bytes(&root, crate::native_ownership::LEDGER)?;
     let preserve_ownership = removing
@@ -291,21 +291,6 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
             }
         }
         add(path, if removing { None } else { Some(shipped) }, true)?;
-    }
-    // Refresh only already-installed module procedures. Their owner declares
-    // exact source bytes; prior adoption custody still protects host edits.
-    // This neither installs modules nor overwrites mutable domain records.
-    if !removing {
-        for (path, shipped) in crate::native_enclave::MODULE_SUPPORT {
-            if bytes(&root, path)?.is_some() {
-                let shipped = shipped.replace("\r\n", "\n");
-                installed.insert(
-                    (*path).to_owned(),
-                    json!(crate::native_intent::hash(shipped.as_bytes())),
-                );
-                add(path, Some(shipped), true)?;
-            }
-        }
     }
     let instruction_path = c["instruction_fence"]["path"].as_str().unwrap();
     let instructions = bytes(&root, instruction_path)?;

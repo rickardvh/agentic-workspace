@@ -155,120 +155,103 @@
       "path": ".agentic-workspace/planning/skills/README.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/README.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/REGISTRY.json",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/REGISTRY.json"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/bootstrap-upgrade/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/bootstrap-upgrade/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-assurance-delegation/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-assurance-delegation/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-autopilot/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-closeout-trust/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-decompose/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-decompose/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-high-assurance-lifecycle/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-high-assurance-lifecycle/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-intake-upstream-task/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-intent-verification/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-manual-delegation/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-manual-delegation/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-new-plan-tighten/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-new-plan-tighten/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-orchestrator-workflow/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-promote-review-findings/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-promote-review-findings/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-reporting/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-reporting/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-returned-result/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-returned-result/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/planning/skills/planning-review-pass/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/docs/capability-contract.json",
@@ -317,6 +300,42 @@
       "scope": "subtree",
       "class": "customization",
       "lifetime": "repository"
+    },
+    {
+      "path": ".agentic-workspace/planning/assignments",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/assignment-receipts",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/archive/index.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/evaluation-finding-followups.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/mutation-baseline.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/records",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
     }
   ]
 }

@@ -335,12 +335,37 @@
         "scope": "exact",
         "class": "mutable-state",
         "lifetime": "durable"
+      },
+      {
+        "path": ".agentic-workspace/evaluations.json",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "durable"
+      },
+      {
+        "path": ".agentic-workspace/evaluations",
+        "scope": "subtree",
+        "class": "mutable-state",
+        "lifetime": "durable"
+      },
+      {
+        "path": ".agentic-workspace/delegation-outcomes.json",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "durable"
+      },
+      {
+        "path": ".agentic-workspace/delegation-outcomes.local.json",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "durable"
+      },
+      {
+        "path": ".agentic-workspace/proof-route-hints.json",
+        "scope": "exact",
+        "class": "mutable-state",
+        "lifetime": "durable"
       }
     ]
-  },
-  "module_enclave_contracts": [
-    "packages/planning/src/repo_planning_bootstrap/contracts/enclave.json",
-    "packages/memory/src/repo_memory_bootstrap/contracts/enclave.json",
-    "packages/verification/src/repo_verification_bootstrap/contracts/enclave.json"
-  ]
+  }
 }

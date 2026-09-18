@@ -3,7 +3,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:e68e2f2606a2dc2f958abb3156986fc3b2c3fcbced259b69a3de01a7bd3ef341`
+- Contract digest: `sha256:18dd49301329e65f70895fdabe8002db956a5ae014e20f34965002f3a53a6650`
 
 | Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -52,7 +52,7 @@ Only the declared workflow fence in `AGENTS.md` is managed. Text outside it rema
 
 Current-version updates treat `.agentic-workspace/` as a closed enclave. Every file is covered by one current owner/class/lifetime declaration, including explicitly mutable, customization and local subtrees. Unclassified residue is included in the exact authorized removal proposal; ambiguous declarations block reconciliation. Inventory is bounded and never traverses links or junctions. Current managed-file conflict rules still apply. A second successful reconciliation is quiet. De-adoption preserves independent state and remains a separate operation.
 
-Workspace declarations live in `workspace_surfaces.json` under `enclave`; Planning, Memory and Verification each own `contracts/enclave.json` in their package source. Workspace composes those inventories without interpreting durable records. New repository extensions belong under `.agentic-workspace/custom/`; scoped repository instructions remain under `.agentic-workspace/instructions/`.
+Workspace declarations live in `workspace_surfaces.json` under `enclave`; Planning, Memory and Verification each own `contracts/enclave.json` in their package source. Owners register classification through a generic linked inventory; Workspace neither lists module identities nor refreshes their support. Repository OWNERSHIP.toml admits independent owner paths through explicit enclave rows (path, scope, owner, class, lifetime) and preserves repo_owned authority surfaces. Independent native publication namespaces follow current modules.independent admissions. Ambiguous overlaps block cleanup; broad legacy module roots do not hide residue. New repository extensions can also live under `.agentic-workspace/custom/`; scoped repository instructions remain under `.agentic-workspace/instructions/`.
 
 Skill-discovery links are removed through their authenticated Configuration exposure owner before removing their canonical targets.
 

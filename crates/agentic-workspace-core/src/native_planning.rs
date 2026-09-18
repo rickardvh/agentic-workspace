@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 
 const SELECTION: &str = ".agentic-workspace/local/planning/owner-selection.json";
 const THREADS: &str = ".agentic-workspace/local/work-threads/index.json";
+inventory::submit! { crate::native_enclave::Registration { declarations: enclave } }
 pub(crate) fn enclave() -> Value {
     serde_json::from_str(include_str!(
         "../../../packages/planning/src/repo_planning_bootstrap/contracts/enclave.json"

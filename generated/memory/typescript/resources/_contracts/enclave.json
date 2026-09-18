@@ -35,36 +35,31 @@
       "path": ".agentic-workspace/memory/bootstrap/skills/REGISTRY.json",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/bootstrap/skills/REGISTRY.json"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/bootstrap/skills/cleanup/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/bootstrap/skills/cleanup/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/bootstrap/skills/cleanup/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/bootstrap/skills/cleanup/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/bootstrap/skills/install/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/bootstrap/skills/install/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/repo/templates/invariant.template.md",
@@ -88,106 +83,91 @@
       "path": ".agentic-workspace/memory/skills/README.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/README.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/REGISTRY.json",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/REGISTRY.json"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-capture/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-capture/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-capture/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-capture/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-consultation-and-residue/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-hygiene/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-hygiene/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-hygiene/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-hygiene/prepare.py",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-hygiene/prepare.py"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-refresh/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-refresh/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-refresh/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-refresh/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-router/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-router/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-router/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-router/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-upgrade/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-upgrade/SKILL.md"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml",
       "scope": "exact",
       "class": "managed-support",
-      "lifetime": "current-version",
-      "source": "packages/memory/bootstrap/.agentic-workspace/memory/skills/memory-upgrade/agents/openai.yaml"
+      "lifetime": "current-version"
     },
     {
       "path": ".agentic-workspace/memory/repo/domains",
@@ -260,6 +240,18 @@
       "scope": "subtree",
       "class": "customization",
       "lifetime": "repository"
+    },
+    {
+      "path": ".agentic-workspace/memory/guidance-lifecycle.json",
+      "scope": "exact",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/memory/repo/skills",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
     }
   ]
 }

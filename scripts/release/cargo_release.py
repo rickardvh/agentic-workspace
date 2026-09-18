@@ -71,12 +71,6 @@ def stage_crate(root, crate, destination, source):
                 copy_input(root / "src/agentic_workspace/_payload" / reference)
             for reference in contract["derivation"]["portable_sources"]:
                 copy_input(root / reference)
-            for reference in contract["module_enclave_contracts"]:
-                copy_input(root / reference)
-                owner = json.loads((root / reference).read_text())
-                for row in owner["declarations"]:
-                    if "source" in row:
-                        copy_input(root / row["source"])
         output = destination / relative
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(text)

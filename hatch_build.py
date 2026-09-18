@@ -30,12 +30,6 @@ class CustomBuildHook(BuildHookInterface):
             host = json.loads((root / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
             for reference in host["derivation"]["portable_sources"]:
                 build_data.setdefault("force_include", {})[str(root / reference)] = reference
-            for reference in host["module_enclave_contracts"]:
-                build_data.setdefault("force_include", {})[str(root / reference)] = reference
-                owner = json.loads((root / reference).read_text())
-                for row in owner["declarations"]:
-                    if "source" in row:
-                        build_data.setdefault("force_include", {})[str(root / row["source"])] = row["source"]
             # Preserve exact compile-time Rust inputs, not the former Python host.
             for source in (root / "crates").rglob("*.rs"):
                 for reference in re.findall(r'include_(?:str|bytes)!\(\s*"([^"]+)"', source.read_text(encoding="utf-8")):

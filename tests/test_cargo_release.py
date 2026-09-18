@@ -44,10 +44,6 @@ def test_cargo_projection_carries_declared_portable_build_inputs(tmp_path, monke
     contract = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
     provenance = json.loads((destination / "release-source.json").read_text())
     references = list(contract["derivation"]["portable_sources"])
-    for reference in contract["module_enclave_contracts"]:
-        references.append(reference)
-        owner = json.loads((ROOT / reference).read_text())
-        references.extend(row["source"] for row in owner["declarations"] if "source" in row)
     for reference in references:
         assert (destination / "_inputs" / reference).read_bytes() == (ROOT / reference).read_bytes()
         assert provenance["compile_inputs"][reference] == cargo.sha256(ROOT / reference)
