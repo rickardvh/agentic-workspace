@@ -81,6 +81,9 @@ def synchronize(*, check: bool = False) -> list[str]:
     from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
 
     drift = []
+    # Provenance stays lifecycle/release-owned source truth. The source-payload
+    # checker validates its public-host relation; interface generation cannot
+    # repair or overwrite that record, including its release identity.
     profile = ROOT / PROFILE
     expected_profile = render((ROOT / LEDGER).read_text(encoding="utf-8"))
     if not profile.is_file() or profile.read_text(encoding="utf-8") != expected_profile:

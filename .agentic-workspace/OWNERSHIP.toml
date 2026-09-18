@@ -225,7 +225,7 @@ summary = "Repo-owned workspace policy, workflow obligations, and structured ope
 
 [[authority_surfaces]]
 concern = "canonical-agent-procedure"
-read = { refs = [".agentic-workspace/skills/REGISTRY.json", "tools/skills/REGISTRY.json"], select = "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime.", unknown = ["runtime route admission"] }
+read = { refs = [".agentic-workspace/skills/REGISTRY.json"], select = "Choose a relevant semantic route with agent judgment; follow only its declared procedure path or registry_sources. An absent optional registry is not an unavailable runtime.", unknown = ["runtime route admission"] }
 surface = ".agentic-workspace/skills/workspace-startup/SKILL.md"
 owner = "workspace"
 ownership = "module_managed"
@@ -240,6 +240,15 @@ owner = "planning"
 ownership = "module_managed"
 authority = "primary"
 summary = "Owner-scoped execution continuity owned by the planning package; repository-wide views are derived."
+
+[[authority_surfaces]]
+concern = "source-maintainer-procedure"
+surface = "tools/skills/REGISTRY.json"
+owner = "repo"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Source-repository maintainer skills; not portable package procedure."
+read = { refs = ["tools/skills/REGISTRY.json"], select = "Select the relevant repository-maintainer procedure and follow its declared source; this registry belongs only to this source repository.", unknown = ["runtime route admission"] }
 
 [[authority_surfaces]]
 concern = "design-constraints"

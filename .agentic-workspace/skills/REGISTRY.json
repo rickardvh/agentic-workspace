@@ -335,13 +335,13 @@
       "scope": "specialized-subskill",
       "stability": "contract-backed-projection",
       "visibility": "routed-on-demand",
-      "summary": "Retain trusted future behavior in the correct local or checked-in instruction source through current owner publication.",
+      "summary": "Route trusted corrections, material source inconsistencies and acquired conclusions to coherent owner-directed repair or justified retention.",
       "semantic_routes": [
         {
           "id": "workspace/instructions/correction",
           "match": "exact",
           "priority": 10,
-          "description": "Reconcile trusted future-behavior corrections and author scoped repository instructions."
+          "description": "Reconcile trusted corrections and material source inconsistencies through the responsible owner; publish scoped instructions only when that is the appropriate destination."
         }
       ],
       "activation_hints": {

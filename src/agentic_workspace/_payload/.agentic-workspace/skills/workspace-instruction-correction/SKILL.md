@@ -1,13 +1,54 @@
 ---
 name: workspace-instruction-correction
-description: Route trusted future-behavior corrections and current owner friction to the smallest existing owner; preserve scope, nomination authority and no-retention.
+description: Carry trusted corrections, material source inconsistencies and acquired conclusions to their responsible owner for coherent repair or justified retention; preserve scope, authority and no-retention.
 ---
 
 # Retain repository behavior
 
-Use this procedure when a trusted user or reviewer corrects future behavior. Do not
-wait for the user to mention AW, remembering, a file path, or a storage mechanism.
-Interpret meaning and intended lifetime; keyword matching cannot decide authority.
+Use this procedure for a trusted future-behavior correction, material source
+inconsistency, or acquired conclusion that warrants a durable consequence. Apply
+the [startup evidence boundary](../workspace-startup/SKILL.md#evidence-for-a-decision)
+first. Do not wait for the user to name AW or a storage mechanism; evidence alone
+does not establish authority, and keyword matching cannot decide its lifetime.
+
+## Choose and verify the responsible change
+
+Compare the actual sources, scope and accepted intent. Correct implementation
+that violates a sound requirement; correct stale guidance when accepted behavior
+changed. Preserve legitimate version/local/shared differences. Equal-authority
+conflicts or changes to purpose need the bounded owner decision, not forced
+agreement. Several agreeing sources can still be wrong. Restrict only dependent
+actions/claims unless current authority requires a wider hold.
+
+Choose the strongest appropriate home directly: a domain contract or instruction
+for requirements, code/tests for enforceable invariants, a skill/helper for reusable
+method, Memory for advice, the decision owner for settled choices, or Planning for
+unfinished execution needing custody. There is no compulsory Planning-to-Memory
+promotion ladder or recurrence threshold for an authorized first decision. In a
+blank repository create only the necessary host-owned destination; do not import
+AW's source-repository conventions. No retention and already-current are valid.
+
+For ordinary repository docs/code/tests/skills, use the authorized repository
+editing and review workflow. For managed state, use only the current owner's
+returned requests/actions below. Existing task instructions or grants may already
+authorize a coherent repair; do not ask again. Initiative latitude does not grant
+permission to rewrite purpose, security or proof floors. If the required supported
+operation is absent, name the exact gap; a read-only reviewer can propose a bounded
+source disposition but cannot claim repaired state or AW retention.
+
+Verify the receiving source and its relevant consequence, then reconcile affected
+references/projections and superseded advice through their owners. Narrow, merge
+or retire material only after its value is absorbed or no longer justified;
+preserve distinct rationale, unique work, required evidence and unresolved custody.
+Memory disposition may change metadata, not delete prose. Do not advance a trust
+revision to silence drift. Reconsider a dependent conclusion when its source or
+rationale changes; quiet no-op reentry needs no ledger or permanent suppression.
+Keep unresolved material risk in the existing work/issue/owner context where
+continuation needs it, not a new generic conflict backlog.
+
+## Instruction publication
+
+Use these steps when the selected destination is an instruction source.
 
 1. Apply the correction to current work. A one-off correction needs no durable
    instruction. Advisory knowledge belongs to Memory, settled choices to the

@@ -12,6 +12,64 @@ from tests.test_native_public_cli import ROOT, consume
 from tests.test_native_public_cli import native_cli as native_cli
 
 
+def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared_core_binary, native_cli):
+    """Committed source projections work on a new machine, without writer custody."""
+    from tests.test_source_payload_operational_install import _checker_script_path, _load_module
+
+    from agentic_workspace.static_read_profile import LEDGER, PROFILE, render
+
+    _committed_payload_alignment = _load_module(_checker_script_path(), "fresh_source_alignment")._committed_payload_alignment
+    host = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    for ref in [*host["payload_files"], ".agentic-workspace/payload-provenance.json"]:
+        destination = tmp_path / ref
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text((ROOT / ref).read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n')
+    context = {"target": str(tmp_path), "task": "Work in the fresh source checkout"}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra})
+
+    ledger = tmp_path / LEDGER
+    before = ledger.read_bytes()
+    reading = json.loads((tmp_path / PROFILE).read_text())
+    assert (tmp_path / PROFILE).read_text() == render(ledger.read_text())
+    assert "tools/skills/REGISTRY.json" in [ref for row in reading["entries"] for ref in row["refs"]]
+    portable = json.loads((ROOT / "src/agentic_workspace/_payload" / PROFILE).read_text())
+    assert "tools/skills/REGISTRY.json" not in [ref for row in portable["entries"] for ref in row["refs"]]
+    provenance = json.loads((tmp_path / ".agentic-workspace/payload-provenance.json").read_text())
+    assert provenance["payload_files"] == host["payload_files"]
+    for _ in range(2):
+        current = call()
+        assert current["configuration"]["payload"]["status"] == "satisfied"
+        assert current["configuration"]["payload"]["gaps"] == []
+        assert ledger.read_bytes() == before
+        assert not (tmp_path / ".agentic-workspace/adoption.json").exists()
+        assert not (tmp_path / ".agentic-workspace/local/effects").exists()
+    # A real package-fact change still fails closed, and discovery identifies
+    # its exact source rather than manufacturing a migration baseline.
+    ledger.write_text(ledger.read_text().replace('path = ".agentic-workspace/memory/"', 'path = "unexpected/"'))
+    invalid = call()
+    assert invalid["configuration"]["payload"]["status"] == "unresolved"
+    discovery = call(request=invalid["configuration_write"]["payload_discovery_request"])
+    choice = next(row for row in discovery["configuration_write"]["payload_choices"] if row["source"] == LEDGER)
+    assert choice["status"] == "preserved-blocked"
+    assert "conflicting package ownership fact" in choice["reason"]
+    # Maintenance validation guards the same source relationship without
+    # creating a second runtime admission or migration mechanism.
+    for ref in [
+        "pyproject.toml",
+        "src/agentic_workspace/contracts/workspace_surfaces.json",
+        "src/agentic_workspace/contracts/portable_ownership.toml",
+    ]:
+        destination = tmp_path / ref
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((ROOT / ref).read_bytes())
+    assert LEDGER in {row["path"] for row in _committed_payload_alignment(repo_root=tmp_path)["drift"]}
+    ledger.write_bytes(before)
+    assert _committed_payload_alignment(repo_root=tmp_path)["status"] == "current"
+
+
 @pytest.mark.parametrize("change", ["unchanged", "customized", "conflict", "unknown-history"])
 def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_binary, native_cli, change):
     """A legacy producer held installed hashes, not a structured baseline."""
@@ -42,6 +100,12 @@ def test_legacy_adoption_reconciles_authenticated_history(tmp_path, shared_core_
     state = legacy["arguments"]["binding"]["state"]
     del state["ownership_baseline"]
     old_ledger = (ROOT / LEDGER).read_text(encoding="utf-8")
+    # Retain the legacy package-owned collision explicitly: the current source
+    # ledger is now intentionally composition-compatible without prior custody.
+    old_ledger = old_ledger.replace(
+        'refs = [".agentic-workspace/skills/REGISTRY.json"]',
+        'refs = [".agentic-workspace/skills/REGISTRY.json", "tools/skills/REGISTRY.json"]',
+    )
     state["updates"][LEDGER]["after"] = old_ledger
     state["updates"][PROFILE]["after"] = render(old_ledger)
     for path, update in state["updates"].items():
