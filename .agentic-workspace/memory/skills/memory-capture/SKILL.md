@@ -9,6 +9,15 @@ Start through the repository adapter's configured native AW route with the curre
 
 A capture candidate should save future rediscovery, remain concise, and affect a future decision. Exclude transcripts, temporary troubleshooting, backlog and active execution state. Prefer an existing stronger owner when it already owns the lesson.
 
+With Workspace installed, use its selected startup/correction procedure for
+evidence sufficiency and source repair. Standalone Memory keeps the same advisory
+boundary: distinguish accepted intent, observed behavior and hypotheses; retain
+only the source identity, scope, rationale and dependencies needed for future use.
+An authorized first decision need not recur before retention. Ordinary authorized
+docs/code/tests may be the direct destination, with no Memory or Planning staging.
+Do not substitute a warning note for a currently authorized correction of the
+responsible source. Retention neither repairs that source nor proves it correct.
+
 For an existing selected note or advisory fact, [Memory Hygiene](../memory-hygiene/SKILL.md) supplies the native disposition path. Retaining a note does not rewrite its prose or confirm its truth. Promotion requires independently admitted receiving material and an exact authorized disposition.
 
 For a deliberately authored fallback decision, use the current `memory.capture.requests` entry of kind `memory/capture-decision/v1`. Supply only the requested semantic material: stable decision ID, decision, bounded consequence, rationale, alternatives, exact dependency paths, and any exact admitted supersession references. The owner derives scope from the current changed paths and constructs the destination, source and manifest postimages, dependencies, work, policy and capability bindings. A configured repository decision owner takes precedence; use its returned destination or preserve its explicit unsupported gap.
