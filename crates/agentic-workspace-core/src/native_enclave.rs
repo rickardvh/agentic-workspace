@@ -348,16 +348,12 @@ mod tests {
                 std::fs::remove_dir_all(&self.0).unwrap();
             }
         }
-        let directory = TestDir(
-            std::env::temp_dir().join(format!(
-                "aw-enclave-{}-{}",
-                std::process::id(),
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_nanos()
-            )),
-        );
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let name = format!("aw-enclave-{}-{nonce}", std::process::id());
+        let directory = TestDir(std::env::temp_dir().join(name));
         std::fs::create_dir(&directory.0).unwrap();
         let root = Dir::open_ambient_dir(&directory.0, cap_std::ambient_authority()).unwrap();
         root.create_dir_all(".agentic-workspace/modules/example")
