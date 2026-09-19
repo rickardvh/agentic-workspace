@@ -20,7 +20,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
     skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
-    intake_skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md"
+    intake_skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md"
     review_readme_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
     review_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.md"
     review_record_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json"
@@ -172,7 +172,7 @@ def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, ca
     assert plan["summary"]["review_required_count"] >= 0
     assert plan["files"]["create"]
     assert ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md" in plan["files"]["create"]
-    assert ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md" in plan["files"]["create"]
+    assert ".agentic-workspace/planning/skills/planning-work/SKILL.md" in plan["files"]["create"]
     assert plan["local_only_state"]["status"] == "not-authoritative"
     assert plan["next_safe_command"].startswith("agentic-planning install --target ")
 
@@ -286,7 +286,7 @@ def test_adopt_bootstrap_include_optional_preserves_existing_optional_surfaces(t
 
     assert review_readme_path.read_text(encoding="utf-8") == "# Existing review workflow\n"
     assert (tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md").exists()
     assert any(action.kind == "skipped" and action.path == review_readme_path for action in result.actions)
 
 

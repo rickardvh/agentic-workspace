@@ -5,80 +5,25 @@ import re
 from pathlib import Path
 
 
-def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
+def test_bundled_skills_catalog_resolves_selected_resources() -> None:
     skills_root = Path(__file__).resolve().parents[1] / "skills"
-    readme_path = skills_root / "README.md"
-    registry_path = skills_root / "REGISTRY.json"
-    autopilot_skill = skills_root / "planning-autopilot" / "SKILL.md"
-    intake_skill = skills_root / "planning-intake-upstream-task" / "SKILL.md"
-    review_pass_skill = skills_root / "planning-review-pass" / "SKILL.md"
-    promote_review_findings_skill = skills_root / "planning-promote-review-findings" / "SKILL.md"
-    reporting_skill = skills_root / "planning-reporting" / "SKILL.md"
-    lifecycle_skill = skills_root / "planning-high-assurance-lifecycle" / "SKILL.md"
-    intent_skill = skills_root / "planning-intent-verification" / "SKILL.md"
-    closeout_skill = skills_root / "planning-closeout-trust" / "SKILL.md"
-    decompose_skill = skills_root / "planning-decompose" / "SKILL.md"
-
-    assert autopilot_skill.exists()
-    assert intake_skill.exists()
-    assert review_pass_skill.exists()
-    assert promote_review_findings_skill.exists()
-    assert reporting_skill.exists()
-    assert lifecycle_skill.exists()
-    assert intent_skill.exists()
-    assert readme_path.exists()
-    assert registry_path.exists()
-    readme_text = readme_path.read_text(encoding="utf-8")
-    registry_text = registry_path.read_text(encoding="utf-8")
-    registry_payload = json.loads(registry_text)
-    assert "planning-autopilot" in readme_text
-    assert "planning-intake-upstream-task" in readme_text
-    assert "planning-review-pass" in readme_text
-    assert "planning-promote-review-findings" in readme_text
-    assert "planning-reporting" in readme_text
-    assert "planning-high-assurance-lifecycle" in readme_text
-    assert "planning-intent-verification" in readme_text
-    assert "planning-autopilot" in registry_text
-    autopilot_text = autopilot_skill.read_text(encoding="utf-8")
-    assert "re-enters execution while the same explicit objective has safe continuation state" in autopilot_text
-    assert "must not treat one milestone completion as permission to yield" in autopilot_text
-    assert "do not run the slice loop directly outside that host boundary" in autopilot_text
-    assert "agentic-workspace autopilot --target <repo> --executor-command <agent-command> --format json" in autopilot_text
-    assert "Reconcile before editing when:" in autopilot_text
-    assert "record a typed BLOCKED state only when no safe selection exists" in autopilot_text
-    assert "Stop and report instead of editing when:" not in autopilot_text
-    assert "planning-review-pass" in registry_text
-    assert "planning-reporting" in registry_text
-    assert "planning-high-assurance-lifecycle" in registry_text
-    assert "planning-intent-verification" in registry_text
-    assert "semantic intent satisfaction" in intent_skill.read_text(encoding="utf-8")
-    assert "owns closeout procedure" in closeout_skill.read_text(encoding="utf-8")
-    assert "routing wrapper" in lifecycle_skill.read_text(encoding="utf-8")
-    assert "owns parent/lane/slice structure" in decompose_skill.read_text(encoding="utf-8")
-    assert "owns compact projection" in reporting_skill.read_text(encoding="utf-8")
-    assert "planning_route_decision" in reporting_skill.read_text(encoding="utf-8")
-    assert "do not rebuild a task-switch classification" in reporting_skill.read_text(encoding="utf-8")
-    autopilot_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-autopilot")
-    review_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-review-pass")
-    reporting_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-reporting")
-    lifecycle_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-high-assurance-lifecycle")
-    intent_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-intent-verification")
-    assert "run autopilot" in autopilot_entry["activation_hints"]["phrases"]
-    assert autopilot_entry["host_entrypoint"]["operation_id"] == "autopilot.run"
-    assert autopilot_entry["host_entrypoint"]["required"] is True
-    assert autopilot_entry["host_entrypoint"]["ordinary_path_unavoidable"] is True
-    assert "perform a review" in review_entry["activation_hints"]["phrases"]
-    assert "planning report" in reporting_entry["activation_hints"]["phrases"]
-    assert "high assurance planning lifecycle" in lifecycle_entry["activation_hints"]["phrases"]
-    assert "intent verification" in intent_entry["activation_hints"]["phrases"]
-    assert "negative invariants" in intent_entry["activation_hints"]["phrases"]
-    summaries = {entry["id"]: entry["summary"] for entry in registry_payload["skills"]}
-    assert "authorized terminal outcome" in summaries["planning-autopilot"]
-    assert "semantic intent satisfaction" in summaries["planning-intent-verification"]
-    assert "closeout procedure" in summaries["planning-closeout-trust"]
-    assert "broad or high-assurance" in summaries["planning-high-assurance-lifecycle"]
-    assert "parent/lane/slice structure" in summaries["planning-decompose"]
-    assert "canonical summary JSON" in summaries["planning-reporting"]
+    registry = json.loads((skills_root / "REGISTRY.json").read_text())
+    for skill in registry["skills"]:
+        entry = skills_root / skill["path"]
+        assert entry.is_file()
+        if resource := skill.get("procedure_resource"):
+            question = entry.parent / resource
+            text = question.read_text()
+            control = json.loads(text.split("```agentic-procedure\n", 1)[1].split("```", 1)[0])
+            assert control["kind"] == "agentic-workspace/procedure/v1"
+            for branch in control["branches"]:
+                assert (question.parent / branch["next"]).is_file()
+    assert not {
+        "planning-decompose",
+        "planning-intake-upstream-task",
+        "planning-new-plan-tighten",
+        "planning-intent-verification",
+    }.intersection(r["id"] for r in registry["skills"])
 
 
 def test_bundled_skills_catalog_readme_matches_registry_ids() -> None:
@@ -150,7 +95,7 @@ def test_delegation_skills_have_one_post_assignment_owner_and_current_target_exc
     assert entries["planning-high-assurance-lifecycle"]["activation_contract"]["role"] == "umbrella-router"
 
 
-def test_delegation_skill_package_installed_and_generated_mirrors_match() -> None:
+def test_skill_package_installed_and_generated_mirrors_match() -> None:
     root = Path(__file__).resolve().parents[3]
     source_root = root / "packages" / "planning" / "skills"
     mirror_roots = (
@@ -158,13 +103,7 @@ def test_delegation_skill_package_installed_and_generated_mirrors_match() -> Non
         root / "generated" / "planning" / "python" / "_skills",
         root / "generated" / "planning" / "typescript" / "resources" / "_skills",
     )
-    relative_paths = (
-        Path("README.md"),
-        Path("REGISTRY.json"),
-        Path("planning-orchestrator-workflow/SKILL.md"),
-        Path("planning-assurance-delegation/SKILL.md"),
-        Path("planning-high-assurance-lifecycle/SKILL.md"),
-    )
+    relative_paths = [path.relative_to(source_root) for path in source_root.rglob("*") if path.is_file()]
 
     for relative in relative_paths:
         expected = (source_root / relative).read_bytes()

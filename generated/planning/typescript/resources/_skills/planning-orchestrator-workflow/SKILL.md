@@ -48,7 +48,7 @@ skill consumes their result and never recomputes it.
    `assignment.reassign`, `assignment.override`, or `assignment.integrate`
    action rather than hand-editing lifecycle state.
 6. After admitted integration, run AW-owned proof, route semantic satisfaction
-   to `planning-intent-verification`, and route closeout mechanics to
+   to `planning-closeout-trust`, and route closeout mechanics to
    `planning-closeout-trust`. Worker claims cannot authorize those transitions.
 7. Planning exposes the exact continuity update when it is already entitled to
    retain the sealed handoff or admitted return. Invoke that current action; do

@@ -72,7 +72,7 @@
         "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
         "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
-        "packages/planning/skills/planning-intake-upstream-task/SKILL.md"
+        "packages/planning/skills/planning-work/SKILL.md"
       ],
       "existing_follow_up": [
         "https://github.com/rickardvh/agentic-workspace/issues/469"

@@ -20,8 +20,8 @@ satisfaction, or closeout mechanics.
 ## Route
 
 1. Start from the compact current decision and active Planning summary.
-2. Route intent and parent/lane/slice shaping to `planning-decompose`; tighten a
-   newly created bounded execplan through `planning-new-plan-tighten`.
+2. Route intent and parent/lane/slice shaping to `planning-work`; tighten a
+   newly created bounded execplan through `planning-work`.
 3. When the canonical assignment owner names unresolved assurance input, route
    that pre-decision assessment to `planning-assurance-delegation` and return
    its evidence to the assignment owner.
@@ -36,7 +36,7 @@ satisfaction, or closeout mechanics.
 5. Route manual transport to `planning-manual-delegation` and delegated returns
    to `planning-returned-result`; do not duplicate their procedures here.
 6. Route validation to AW-owned proof, semantic satisfaction to
-   `planning-intent-verification`, and closeout mechanics and residue
+   `planning-closeout-trust`, and closeout mechanics and residue
    distillation to `planning-closeout-trust`.
 
 ## Stop Conditions
