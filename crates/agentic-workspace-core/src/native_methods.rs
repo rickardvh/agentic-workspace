@@ -2,25 +2,17 @@
 //! routing remain in the one canonical skill registry; this table binds code.
 use crate::{CoreError, digest};
 use serde_json::{Value, json};
-use std::path::Path;
 
 struct Binding {
     command: &'static str,
     implementation: &'static [u8],
     run: fn(Value) -> Result<Value, CoreError>,
 }
-const BINDINGS: &[Binding] = &[
-    Binding {
-        command: "resources",
-        implementation: include_bytes!("native_resources.rs"),
-        run: crate::native_resources::view,
-    },
-    Binding {
-        command: "proof-procedure",
-        implementation: include_bytes!("native_proof_procedure.rs"),
-        run: crate::native_proof_procedure::view,
-    },
-];
+const BINDINGS: &[Binding] = &[Binding {
+    command: "resources",
+    implementation: include_bytes!("native_resources.rs"),
+    run: crate::native_resources::view,
+}];
 
 pub(crate) fn dispatch(input: &Value) -> Option<Result<Value, CoreError>> {
     let object = input.as_object().filter(|v| v.len() == 1)?;
@@ -47,21 +39,5 @@ pub(crate) fn descriptor(command: &str) -> Result<Value, CoreError> {
         .ok_or_else(|| CoreError::new("native method declaration unavailable"))?;
     Ok(
         json!({"command":command,"implementation_revision":digest(&json!(binding.implementation))?,"binding_revision":digest(&json!(include_bytes!("native_methods.rs").as_slice()))?,"contract_revision":digest(declaration)?}),
-    )
-}
-pub(crate) fn selected(target: &Path, skill: &str, command: &str) -> Result<Value, CoreError> {
-    let available = crate::native_routes::procedure(target, skill)?;
-    let executable = &available["procedures"][0]["executable"];
-    if available["status"] != "current"
-        || executable["status"] != "current"
-        || executable["entrypoint"]["kind"] != "native"
-        || executable["entrypoint"]["command"] != command
-    {
-        return Ok(
-            json!({"status":"unavailable","availability":available,"authority_effect":"none"}),
-        );
-    }
-    Ok(
-        json!({"status":"current","revision":executable["revision"],"availability":available,"authority_effect":"none"}),
     )
 }

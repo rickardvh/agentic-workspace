@@ -350,17 +350,18 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
     from agentic_workspace.decision import resources
 
     context = {"target": str(tmp_path), "task": "Installed resource procedure"}
-    created = resources({**context, "request": {"operation": "scratch-create", "compose": True}})
+    proposal = resources({**context, "request": {"operation": "scratch-create"}})
+    created = resources(proposal["action"])
     assert created["effect_outcome"] == "committed"
-    removed = resources(
-        {**context, "request": {"operation": "scratch-remove", "compose": True, "path": created["resource_context"]["path"]}}
-    )
+    removal = resources({**context, "request": {"operation": "scratch-remove", "path": proposal["action"]["request"]["path"]}})
+    removed = resources(removal["action"])
     assert removed["effect_outcome"] == "committed"
     assert cli.main(["uninstall", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     assert agents.read_text().strip() == "Repository instruction: preserve this line."
     assert not (tmp_path / MAIN).exists()
-    assert resources({**context, "request": {"operation": "scratch-create", "compose": True}})["status"] == "unavailable"
+    # Optional skill removal does not remove the direct native owner's capability.
+    assert "action" in resources({**context, "request": {"operation": "scratch-create"}})
     for reference, original in retained.items():
         assert (tmp_path / reference).read_bytes() == original
 

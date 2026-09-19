@@ -150,14 +150,7 @@
           "skips, retries, warnings, crashes, or negative evidence need interpretation"
         ]
       },
-      "executable": {
-        "entrypoint": {
-          "kind": "native",
-          "command": "proof-procedure",
-          "required_capability": "proof-procedure-v1"
-        },
-        "dependencies": []
-      }
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-setup-jumpstart",
@@ -211,13 +204,6 @@
     {
       "id": "workspace-resources",
       "path": "workspace-resources/SKILL.md",
-      "executable": {
-        "entrypoint": {
-          "kind": "native",
-          "command": "resources",
-          "required_capability": "resource-procedure-v1"
-        }
-      },
       "scope": "specialized-subskill",
       "stability": "package-managed",
       "visibility": "routed-on-demand",
@@ -249,7 +235,8 @@
           "temporary task material or isolated checkout has a real need",
           "terminal or interrupted work owns disposable resources"
         ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-instruction-correction",

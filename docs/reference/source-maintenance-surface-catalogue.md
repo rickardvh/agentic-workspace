@@ -3,7 +3,7 @@
 
 Exact footprint, ownership, and availability values generated from `source_maintenance_surfaces.json` and `module_registry.json`.
 
-- Contract digest: `sha256:deebc53a638b3627961ffae96d13a1a593d1aa111e54487e2d5837498dec4c05`
+- Contract digest: `sha256:11b49666a5377d0a2e95c72d338084c86d4572811c9c2060d18a1bb5a3cc161c`
 - Supported profiles: `necessary-surfaces`, `full-mirror`
 - Declared modules: `planning`, `memory`, `verification`
 
@@ -283,7 +283,7 @@ File count: 31
 
 ### `full-mirror` + `none`
 
-File count: 37
+File count: 51
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -306,7 +306,21 @@ File count: 37
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
@@ -325,7 +339,7 @@ File count: 37
 
 ### `full-mirror` + `planning`
 
-File count: 39
+File count: 53
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -350,7 +364,21 @@ File count: 39
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
@@ -369,7 +397,7 @@ File count: 39
 
 ### `full-mirror` + `memory`
 
-File count: 40
+File count: 54
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -395,7 +423,21 @@ File count: 40
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
@@ -414,7 +456,7 @@ File count: 40
 
 ### `full-mirror` + `verification`
 
-File count: 37
+File count: 51
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -437,7 +479,21 @@ File count: 37
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
@@ -456,7 +512,7 @@ File count: 37
 
 ### `full-mirror` + `planning,memory`
 
-File count: 42
+File count: 56
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -484,7 +540,21 @@ File count: 42
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
@@ -503,7 +573,7 @@ File count: 42
 
 ### `full-mirror` + `planning,verification`
 
-File count: 39
+File count: 53
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -528,7 +598,21 @@ File count: 39
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
@@ -547,7 +631,7 @@ File count: 39
 
 ### `full-mirror` + `memory,verification`
 
-File count: 40
+File count: 54
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -573,7 +657,21 @@ File count: 40
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`
@@ -592,7 +690,7 @@ File count: 40
 
 ### `full-mirror` + `planning,memory,verification`
 
-File count: 42
+File count: 56
 
 - `.agentic-workspace/OWNERSHIP.toml`
 - `.agentic-workspace/READING.json`
@@ -620,7 +718,21 @@ File count: 42
 - `.agentic-workspace/skills/workspace-intent-discovery/references/intent.md`
 - `.agentic-workspace/skills/workspace-intent-discovery/references/shape.md`
 - `.agentic-workspace/skills/workspace-proof-selection/SKILL.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
 - `.agentic-workspace/skills/workspace-resources/SKILL.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/procedure.md`
 - `.agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md`

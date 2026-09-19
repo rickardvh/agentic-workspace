@@ -37,7 +37,21 @@
     ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/other.md",
     ".agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md",
-    ".agentic-workspace/skills/workspace-instruction-correction/procedure.md"
+    ".agentic-workspace/skills/workspace-instruction-correction/procedure.md",
+    ".agentic-workspace/skills/workspace-resources/references/select.md",
+    ".agentic-workspace/skills/workspace-resources/references/operation.md",
+    ".agentic-workspace/skills/workspace-resources/references/build.md",
+    ".agentic-workspace/skills/workspace-resources/references/cleanup.md",
+    ".agentic-workspace/skills/workspace-resources/references/recovery.md",
+    ".agentic-workspace/skills/workspace-resources/references/hygiene.md",
+    ".agentic-workspace/skills/workspace-resources/procedure.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/select.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/execute.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
+    ".agentic-workspace/skills/workspace-proof-selection/procedure.md"
   ],
   "necessary_surface_files": [
     ".agentic-workspace/READING.json",

@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Replace fixed resource/proof procedure wrappers with selected shared fragments and exact native owner calls; remove proof-procedure and resources compose."
+issues = [3451, 3411, 3442, 3445]

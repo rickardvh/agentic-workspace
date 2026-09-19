@@ -3,7 +3,7 @@
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:7a96e040e982cf84b6dbc81ce88a8ae462891aa1e6a30d1b03e1bf725381d80c`
+- Contract digest: `sha256:699ff94101ec0e144e1a1f446e92dc1c0e0152fcea2e9acab5f43cfcac6eeb94`
 
 | Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
@@ -36,6 +36,20 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-instruction-correction/references/other.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-instruction-correction/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/references/select.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/references/operation.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/references/build.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/references/cleanup.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/references/recovery.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/references/hygiene.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-resources/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/select.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/execute.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/claim.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/references/learning.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
+| `.agentic-workspace/skills/workspace-proof-selection/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 
 Public host derivation reads only explicitly promoted portable sources or another declared host materialization; source-maintenance-only semantic inputs are forbidden.
 
@@ -69,6 +83,20 @@ Portable source promotions:
 - `.agentic-workspace/skills/workspace-instruction-correction/references/other.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md`
 - `.agentic-workspace/skills/workspace-instruction-correction/procedure.md`
+- `.agentic-workspace/skills/workspace-resources/references/select.md`
+- `.agentic-workspace/skills/workspace-resources/references/operation.md`
+- `.agentic-workspace/skills/workspace-resources/references/build.md`
+- `.agentic-workspace/skills/workspace-resources/references/cleanup.md`
+- `.agentic-workspace/skills/workspace-resources/references/recovery.md`
+- `.agentic-workspace/skills/workspace-resources/references/hygiene.md`
+- `.agentic-workspace/skills/workspace-resources/procedure.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/select.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/execute.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/receipt.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/claim.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/recovery.md`
+- `.agentic-workspace/skills/workspace-proof-selection/references/learning.md`
+- `.agentic-workspace/skills/workspace-proof-selection/procedure.md`
 
 Adoption identity: `.agentic-workspace/adoption.json`. Payload provenance: `.agentic-workspace/payload-provenance.json`. Both are package integration records with the same lifecycle.
 
