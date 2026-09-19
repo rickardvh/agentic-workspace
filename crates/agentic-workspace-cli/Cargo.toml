@@ -1,6 +1,6 @@
 [package]
 name = "agentic-workspace-cli"
-version = "0.51.0"
+version = "1.0.0-rc.9"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/rickardvh/agentic-workspace"
