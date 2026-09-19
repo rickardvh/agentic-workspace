@@ -44,8 +44,7 @@
       "candidate_surfaces": [
         "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",
         "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
-        "packages/planning/skills/planning-review-pass/SKILL.md",
-        "packages/planning/skills/planning-promote-review-findings/SKILL.md"
+        "packages/planning/skills/planning-review-continuation/SKILL.md"
       ],
       "existing_follow_up": [
         "https://github.com/rickardvh/agentic-workspace/issues/450",

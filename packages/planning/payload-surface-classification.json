@@ -88,8 +88,7 @@
         "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
         "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
         "packages/planning/skills/planning-work/SKILL.md",
-        "packages/planning/skills/planning-promote-review-findings/SKILL.md",
-        "packages/planning/skills/planning-review-pass/SKILL.md"
+        "packages/planning/skills/planning-review-continuation/SKILL.md"
       ],
       "next_issue": "https://github.com/rickardvh/agentic-workspace/issues/464"
     },
@@ -679,8 +678,8 @@
       "rationale": "Orchestrator workflow should be opt-in for repos and agents that actually delegate."
     },
     {
-      "source_path": "packages/planning/skills/planning-promote-review-findings/SKILL.md",
-      "installed_path": ".agentic-workspace/planning/skills/planning-promote-review-findings/SKILL.md",
+      "source_path": "packages/planning/skills/planning-review-continuation/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-review-continuation/SKILL.md",
       "classification": "extraction candidate",
       "owner": "planning review extension",
       "rationale": "Review promotion belongs with optional review workflow rather than the smallest active-planning core."
@@ -691,13 +690,6 @@
       "classification": "config-enabled extension",
       "owner": "planning skills extension",
       "rationale": "Reporting workflow is valuable when enabled, but compact summary and proof commands should satisfy normal planning work."
-    },
-    {
-      "source_path": "packages/planning/skills/planning-review-pass/SKILL.md",
-      "installed_path": ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
-      "classification": "extraction candidate",
-      "owner": "planning review extension",
-      "rationale": "Review pass workflow is separable from daily active execution and should move with review support."
     },
     {
       "source_path": "packages/planning/src/repo_planning_bootstrap/_ownership.toml",
@@ -1087,6 +1079,27 @@
     {
       "source_path": "packages/planning/skills/planning-assignment/procedure.md",
       "installed_path": ".agentic-workspace/planning/skills/planning-assignment/procedure.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-review-continuation/references/triage.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-review-continuation/references/triage.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-review-continuation/references/continuation.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-review-continuation/references/continuation.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-review-continuation/procedure.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-review-continuation/procedure.md",
       "classification": "config-enabled extension",
       "owner": "planning skills extension",
       "rationale": "Selected shared procedure; native owners retain state and authority."

@@ -224,79 +224,6 @@
       ]
     },
     {
-      "id": "planning-promote-review-findings",
-      "path": "planning-promote-review-findings/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "turn selected review findings into roadmap or active-planning candidates without collapsing capture and promotion",
-      "activation_hints": {
-        "verbs": [
-          "promote",
-          "convert",
-          "turn",
-          "prioritize"
-        ],
-        "nouns": [
-          "review findings",
-          "roadmap candidate",
-          "follow-up"
-        ],
-        "phrases": [
-          "promote review findings",
-          "turn review into roadmap",
-          "promote findings into planning"
-        ],
-        "when": [
-          "review follow-up selection",
-          "promotion from review"
-        ]
-      }
-    },
-    {
-      "id": "planning-review-pass",
-      "path": "planning-review-pass/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "required_resources": [
-        "planning-review-template"
-      ],
-      "summary": "run a bounded review pass and capture compact findings under .agentic-workspace/planning/reviews",
-      "activation_hints": {
-        "verbs": [
-          "review",
-          "audit",
-          "inspect",
-          "check",
-          "perform"
-        ],
-        "nouns": [
-          "review",
-          "review pass",
-          "review mode",
-          "review portfolio",
-          "code review",
-          "package review",
-          "contract integrity",
-          "regression",
-          "change"
-        ],
-        "phrases": [
-          "run review pass",
-          "review this change",
-          "review the repo",
-          "perform a review",
-          "perform reviews",
-          "review the planning package",
-          "do a review"
-        ],
-        "when": [
-          "bounded review",
-          "finding capture",
-          "review-shaped request"
-        ]
-      }
-    },
-    {
       "id": "planning-reporting",
       "path": "planning-reporting/SKILL.md",
       "scope": "bundled",
@@ -349,6 +276,18 @@
       "summary": "Supply requested assessment, carry admitted transport and reconcile returned work.",
       "semantic_routes": [
         "planning/assignment/lifecycle"
+      ],
+      "procedure_resource": "procedure.md"
+    },
+    {
+      "id": "planning-review-continuation",
+      "required_resources": ["planning-review-template"],
+      "path": "planning-review-continuation/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "Receive current review findings and route justified Planning continuation without granting approval.",
+      "semantic_routes": [
+        "planning/review/continuation"
       ],
       "procedure_resource": "procedure.md"
     }

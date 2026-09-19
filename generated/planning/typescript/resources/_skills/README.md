@@ -13,16 +13,14 @@ Use the target configured `start`/`invoke` and shared startup carriage.
   - route broad or high-assurance work across canonical planning, assignment, proof, intent, and closeout owners without duplicating their procedures
 - `planning-closeout-trust`
   - Compare original/larger intent, proof and residue before native owner-admitted closeout.
-- `planning-promote-review-findings`
-  - turn selected review findings into roadmap or active-planning candidates without collapsing capture and promotion
-- `planning-review-pass`
-  - run a bounded review pass and capture compact findings under .agentic-workspace/planning/reviews
 - `planning-reporting`
   - project active planning state, proof expectations, and next-action guidance from canonical summary JSON
 - `planning-work`
   - Shape upstream work, bound structure and tighten native Planning continuity.
 - `planning-assignment`
   - Supply requested assessment, carry admitted transport and reconcile returned work.
+- `planning-review-continuation`
+  - Receive current review findings and route justified Planning continuation without granting approval.
 
 Canonical sources are under `packages/planning/skills`; installed and generated
 copies distribute the same resources. Missing runtime permits source reads only.
