@@ -2,7 +2,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "frontier": "Source-bound design proposed for 3409 with complete group-level dispositions and eight bounded capability/migration children. Independent shaping acceptance remains required; no product implementation or P1 completion is claimed."
+    "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
+    "frontier": "External shaping in PR 3454 settles the minimum authoring contract and graph: capability 3446 -> 3447 (C2a) -> 3455 (C2b) -> 3448; migration 3449,3450,3451,3453 and Planning coordination 3452 with leaves 3456,3457,3458 then 3459. Artifact reconciliation precedes implementation per the shaping reply. Independent acceptance, implementation and P1 closure remain unestablished."
   },
   "creation_provenance": {
     "custody": {
@@ -34,7 +35,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Obtain externally initiated independent shaping acceptance of 3409, reconcile any design/child corrections, then implement capability, full migration, contraction and documentation in dependency-ordered stacked PRs.",
+  "next_action": "Finish audit/PR reconciliation to external shaping, then implement C1 and the dependency-ordered stack under the reply authorization. Leave independent acceptance to externally initiated recheck; do not infer issue closure.",
   "owner_level": "epic",
   "parent": {
     "issue": "3445"
@@ -47,10 +48,11 @@
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3445",
     "https://github.com/rickardvh/agentic-workspace/issues/3409",
-    "docs/reviews/powerskill-p1-design-3409.md"
+    "docs/reviews/powerskill-p1-design-3409.md",
+    "https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790"
   ],
   "relationships": {},
-  "revision": 2,
+  "revision": 3,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -71,18 +73,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4c8a5dc63b8d9042c70de674985bccb6da9e5144ee496e47925210cf3c3c22f8.attempt.json",
-        "revision": "sha256:b4dc33c2aed03c8e1c5a625e3998686e8046f1ac00dcc7623217c1555adc83f7",
+        "path": ".agentic-workspace/local/effects/37a72bfa8b883ab9aeb1158a5525ecda30abb36a60b1e18e9bbbb2663a953b2c.attempt.json",
+        "revision": "sha256:5f0a8f197c2decff7d9d902d6a580576886f4b5161a8b12423d163858da6d4c5",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/4c8a5dc63b8d9042c70de674985bccb6da9e5144ee496e47925210cf3c3c22f8.result.json",
-        "revision": "sha256:21eac8416cbc6a72e31d17ae5fd3236b16dd3f21e176d9aa811f43f60a486330",
+        "path": ".agentic-workspace/local/effects/37a72bfa8b883ab9aeb1158a5525ecda30abb36a60b1e18e9bbbb2663a953b2c.result.json",
+        "revision": "sha256:5d0d2e704c2a1fa0905fbc7600617187cc2703c605d9d29f7a0a76770e19e989",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:f832c86c1bcdb24c055806600a798a0fb3cb591d9d8cde9785d35eba24f61199",
+    "invocation_revision": "sha256:040e51ed9f71d3ad21c49c0a0b9747af3fb863a6cd678222a33d7a0d8e8269b2",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -90,7 +92,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:63fa5a0005a98c0a5e1986f2e0861c7f0419904b51640f0cbefb8b2e6aaf30b6",
+        "document_revision": "sha256:e0f27c73ca89c70c47e50d5d6b5abb4aa9c674f4047bce82ee8c5d6a2b322769",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }

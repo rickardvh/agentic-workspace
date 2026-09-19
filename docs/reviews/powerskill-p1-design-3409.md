@@ -1,7 +1,9 @@
 # P1 powerskill source audit and proposed implementation boundary
 
-Status: proposed for independent shaping acceptance; not an accepted contract or
-implementation-completion record. Owner: #3409 under #3408 / #3445.
+Status: reconciled to the externally shaped issue contract and decomposition in
+[the shaping reply](https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790).
+Ready for focused independent recheck; no independent acceptance or implementation
+completion is claimed. Owner: #3409 under #3408 / #3445.
 
 Audit subject: `cc2b236b0d0a546d0c47c9c1e59ede857d679477` (2026-09-19).
 The working checkout was clean before creating this lane's Planning owner. Both
@@ -52,8 +54,8 @@ or execution on any AW host.
 `M` means MIGRATE; `K` means KEEP_NATIVE (or keep an already adequate transparent
 skill unchanged); `R` means RETIRE_OR_MERGE. These are proposed dispositions for
 review, not permission to remove binding meaning. Mixed groups identify both
-sides of the boundary. M1–M5 are bounded implementation destinations under #3411;
-C1–C3 below belong to #3410.
+sides of the boundary. M1â€“M5 are bounded implementation destinations under #3411;
+C1â€“C3 below belong to #3410.
 
 | Group and current source/consumer | Disposition and destination | Guarantee retained / subtraction obligation | Agent-facing; public; module consequence |
 | --- | --- | --- | --- |
@@ -64,10 +66,10 @@ C1–C3 below belong to #3410.
 | Correction SKILL.md: instruction vs advisory vs decision vs ordinary source repair | M, M2: selected destination fragments | Keep publication, source delegations, receiving evidence, no-retention and recovery in current owners. Remove repeated request-transport instructions already owned by startup. | migrate; keep exact writers; none |
 | `native_resources::compose` and resource SKILL.md | M/K, M3: generic bounded composition plus resource fragments | Remove skill-name selection and fixed proposal/action choreography. Keep resource observation, path bounds, policy, retention, Git registration, leases and cleanup recovery native. | migrate; remove compose-specific facade after equivalent direct owner access; none |
 | `native_proof_procedure::view/present` and proof SKILL.md | M/K, M3: proof sequence over generic composition | Remove fixed prepare/execute/admit sequence and SKILL/COMMAND switch. Keep unique-required-action determination, exact check execution, receipt admission, strict claims and no-retry recovery in Verification. | migrate; proof-procedure removal under #3442 after migration; retain Verification meaning |
-| Planning high-assurance lifecycle, orchestrator workflow, autopilot | M/R, M4: Planning continuation fragments | Merge overlapping umbrellas; preserve local/non-local restrictions and current owner handoffs. Replace historical command suggestions with supported owner references. | migrate/merge; worker remains direct pending #3442; candidate procedural descriptor cleanup #3443 |
-| Planning decompose, intake, new-plan-tighten, reporting, intent verification, closeout | M/K, M4: Planning fragments plus adequate plain references | Move selection/sequence only. Keep original intent, owner creation/update, continuity, custody and claim evidence native. Small single-purpose interpretation may remain ordinary Markdown. No independent phase taxonomy. | migrate/simplify; exact Planning operations retained; retain domain meaning |
-| Planning assurance-delegation, manual-delegation, returned-result | M/K, M4: pre-assignment, transport and return fragments | Assignment keeps feasibility/comparison admission, binding target, sealed input/output, integration and recovery. Delete duplicated legacy `assignment.*` command recipes where unsupported. No P2 delegation-methodology expansion. | migrate; retain worker and exact assignment operations pending #3442; retain domain meaning |
-| Planning review-pass / promote-review-findings | K/M, M4: preserve bounded review meaning; route continuation through common fragments | Independent review remains externally initiated and never becomes a skill completion flag. Remove duplicate closeout/activation procedure, not reviewer evidence. | simplify where duplicated; no new operation; retain review meaning |
+| Planning high-assurance lifecycle, orchestrator workflow, autopilot | M/R, M4d / #3459: final umbrella consolidation | Merge overlapping umbrellas; preserve local/non-local restrictions and current owner handoffs. Replace historical command suggestions with supported owner references. | migrate/merge; worker remains direct pending #3442; candidate procedural descriptor cleanup #3443 |
+| Planning decompose, intake, new-plan-tighten, reporting, intent verification, closeout | M/K, M4a / #3456: Planning fragments plus adequate plain references | Move selection/sequence only. Keep original intent, owner creation/update, continuity, custody and claim evidence native. Small single-purpose interpretation may remain ordinary Markdown. No independent phase taxonomy. | migrate/simplify; exact Planning operations retained; retain domain meaning |
+| Planning assurance-delegation, manual-delegation, returned-result | M/K, M4b / #3457: pre-assignment, transport and return fragments | Assignment keeps feasibility/comparison admission, binding target, sealed input/output, integration and recovery. Delete duplicated legacy `assignment.*` command recipes where unsupported. No P2 delegation-methodology expansion. | migrate; retain worker and exact assignment operations pending #3442; retain domain meaning |
+| Planning review-pass / promote-review-findings | K/M, M4c / #3458: preserve bounded review meaning; route continuation through common fragments | Independent review remains externally initiated and never becomes a skill completion flag. Remove duplicate closeout/activation procedure, not reviewer evidence. | simplify where duplicated; no new operation; retain review meaning |
 | Memory capture/hygiene and `native_memory_learning::view` | M/K, M5: capture/disposition fragments | Move richest-owner/materiality explanation; keep explicit candidate nomination, pending claim consequences, source-set identity, receiving-source validation, publication and no-retention admission native. Optional-skill bypass must not drop candidate obligations. | migrate; exact Memory operations retained; retain advisory domain meaning |
 | Package Memory/Planning bootstrap adoption/upgrade/uninstall guidance | R/K, M2: consolidate shared setup method; retain domain-specific preservation | No resurrection of retired package host commands. Keep custom-content and Memory-state preservation, separate from Configuration footprint removal. | merge/simplify; #3442 checks lifecycle resurrection; retain module state boundaries |
 | Maintainer issue shaping/creation, PR review, dogfood, ownership/path/foundation checks | K/R, M5: keep already transparent bounded procedures; merge duplicated source-owner guidance | Keep source-only helper transport and independent review eligibility. `ownership-ledger-check` still calls WORKFLOW a shared contract although WORKFLOW calls itself a pointer: repair this misleading owner reference. Do not migrate all helper code into a runtime. | simplify exact duplicate; no shipped command; none |
@@ -101,13 +103,14 @@ precedence. A host-owned override selects a distinct source identity.
 
 ### 2. Questions and material
 
-A question has an ID, natural-language purpose/criteria, alternative descriptions,
-explicit evidence references and a bounded JSON answer schema. Answers include a
-disposition (`answered`, `unknown`, `defer`, `no-match`, `conflict`), selected
-alternatives when answered, and procedure-local material. Arrays/objects are
-allowed; Boolean labels are not the semantic vocabulary. The agent may add exact
-relevant evidence dependencies. Unresolved dispositions yield useful explanation
-and reconsideration guidance rather than falling through to the first branch.
+A question requires stable local identity, a natural-language semantic question
+or criteria, named branch identities/descriptions and exact next fragment/resource
+references. Suggested context/evidence references and bounded semantic material
+are optional. One generic answer envelope carries a disposition (`answered`,
+`unknown`, `defer`, `no-match`, `conflict`), selected branch IDs, optional bounded
+material and optional exact evidence references. No per-question JSON schema,
+fact/predicate DSL or exhaustive evidence declaration is required. Unresolved
+dispositions remain unresolved rather than falling through to the first branch.
 
 The public submission path is the existing start request/answer transport,
 extended for a procedure-local question. It must not impersonate the existing
@@ -149,22 +152,23 @@ current retained answers or owner-returned settled decisions can progress withou
 another model turn. No semantic expression evaluator, global variables, scheduler
 or unrestricted loop.
 
-Owner composition consumes current typed results and exact returned references.
-At most one effect runs per call. After it, current admission/recovery may proceed
-only through explicit typed owner continuations. Missing, ambiguous or uncertain
-continuation yields. Detect repeated no-progress identity and cap automatic
-traversal; deliberate revisit after changed evidence remains possible. Do not
-encode private JSON pointer knowledge in every skill. C2 must supply the generic
-public result/reference seam needed by both resources and proof.
+Owner composition consumes current typed results and exact returned references
+by stable public identity, without copied action fields or private JSON pointers.
+Effect/traversal bounds and no-progress detection are native implementation safety,
+not author-programmed loop, retry or effect controls. Admission and recovery remain
+with the owner and its explicit typed continuations; uncertainty never authorizes
+replay. C2b supplies the generic public reference seam. Resource/proof adaptations
+consume it in M3 rather than becoming generic capability special cases.
 
 ### 6. Native integration and inspectability
 
 C1 extends `native_routes` resource admission and `operating` detail delivery;
-C2 integrates a procedure-local request/result contribution with `native_public`
-and its current request/answer machinery. Reuse `decision_source::relative`,
+C2a integrates procedure-local questions, answers and current caller carriage
+with the existing request/answer machinery. C2b adds exact current owner-reference
+continuation/composition. Reuse `decision_source::relative`,
 bounded source reads, current task identity and existing effect invocation.
 Resource actions presently use their dedicated consumer shape, so adapting that
-owner to the generic exact-reference seam is an explicit C2 gap, not presumed
+owner to the generic exact-reference seam is explicit M3 work, not presumed
 reuse. Proof receipt admission likewise needs a typed continuation, not a copied
 native_proof_procedure implementation in a skill.
 
@@ -180,8 +184,9 @@ executes nothing, and refresh/removal preserve host edits and effect custody.
 A host skill `change-note` has a small entry pointing to its procedure resource.
 The resource asks: "Does the observed change alter behavior visible to a user?
 Compare the stated intent with the patch; defer when evidence is insufficient."
-Two alternatives point to `user-note.md` and `internal-note.md`. The output schema
-permits a concise impact summary and exact evidence refs. Both branches end by
+Two named branches point to `user-note.md` and `internal-note.md`. An answer may
+include a concise impact summary and exact evidence refs without a local schema.
+Both branches end by
 returning a draft note; neither publishes it.
 
 Normal path: read the question and patch, answer user-visible with the impact
@@ -192,8 +197,8 @@ answer asks again; changing the criterion cannot reuse the old label. No runtime
 read the same question and selected linked Markdown manually. A later native
 publication step would remain unavailable, not be simulated.
 
-A human edits one natural-language condition, one destination reference or the
-local output schema without native code. JSON punctuation and reference upkeep
+A human edits one natural-language condition or destination reference without
+native code. JSON punctuation and reference upkeep
 are real authoring costs. Compare with a fairly factored ordinary skill, not a
 full tree forced into SKILL.md. This walkthrough establishes design intelligibility
 only; actual host activation, execution and benefit remain C3/#3411 evidence.
@@ -202,20 +207,26 @@ only; actual host activation, execution and benefit remain C3/#3411 evidence.
 
 | Unit | Dependency and complete PR outcome | Required present evidence |
 | --- | --- | --- |
-| C1 / #3446 under #3410 | Accepted #3409; passive source/resource form, qualified identity, validation and inspectable selected detail | Plain skill unaffected; missing/unsafe resource and collision; lazy branch delivery; source drift |
-| C2 / #3447 under #3410 | C1; semantic answers, bounded carriage/revisit, generic owner-reference composition including resource and proof adapters | Cross-task/instance and stale answers; lost material; unresolved/conflict; owner authority; one-effect/no-progress; confirmed/uncertain recovery |
-| C3 / #3448 under #3410 | C2; installable bundle lifecycle and supported host vertical path | Installed Python/TypeScript/JSON/native parity where transport differs; host-owned edits, refresh/removal; neutral actual host walkthrough |
+| C1 / #3446 under #3410 | Reconciled #3409 shaping per external reply; passive source/resource form, qualified identity, validation and inspectable selected detail | Plain skill unaffected; missing/unsafe resource and collision; lazy branch delivery; source drift |
+| C2a / #3447 under #3410 | C1; semantic question/answer carriage and currentness only | Cross-task/instance and stale answers; lost material; unresolved/conflict; supplied-answer protocol proof does not establish model judgment |
+| C2b / #3455 under #3410 | C2a; generic exact current owner-reference continuation/composition | Current public identity; owner validation/authority; missing/ambiguous/no-progress; confirmed/uncertain recovery; one read-only and one existing effect/request case |
+| C3 / #3448 under #3410 | C2b; installable bundle lifecycle and supported host vertical path | Installed Python/TypeScript/JSON/native parity where transport differs; host-owned edits, refresh/removal; neutral actual host walkthrough |
 | M1 / #3449 under #3411 | C3; startup/intent/reference consolidation | Small full-loaded entry, same manual sources, direct and unavailable path; no binding obligation loss |
 | M2 / #3450 under #3411 | C3; configuration/correction/bootstrap procedure migration | Authorized write, deferred/unknown result, receiving-owner consequence and preservation |
-| M3 / #3451 under #3411 | C3; resource and proof sequence extraction and deletion | Equivalent direct/skill restrictions; typed receipt continuation; no repeated uncertain effect; helpers removed |
-| M4 / #3452 under #3411 | C3; complete Planning/Assignment procedure-group consolidation | Local/non-local and return continuity; intent/claim separation; no new P2 orchestration capability |
+| M3 / #3451 under #3411 | C3; resource/proof-specific adaptation consuming C2b, sequence extraction and deletion | Equivalent direct/skill restrictions; typed receipt continuation; no repeated uncertain effect; helpers removed |
+| M4 / #3452 under #3411 | Coordination outcome covering M4aâ€“M4d; not an implementation leaf | Complete original Planning/Assignment obligation; all four leaves accepted before coordination closeout |
+| M4a / #3456 under #3452 | C3; intake, decompose, tighten, reporting, intent verification and closeout | Planning continuity/custody; intent/claim separation; duplicate deletion; direct/manual parity |
+| M4b / #3457 under #3452 | C3; assurance/manual delegation and returned-result procedure | Local/manual/non-local boundaries; Assignment admission and return recovery; no P2 delegation strategy |
+| M4c / #3458 under #3452 | C3; review-pass and finding-promotion continuation | Externally initiated findings; Planning-owned continuation only; independent review/claim authority retained |
+| M4d / #3459 under #3452 | Accepted M4aâ€“M4c; retire/merge high-assurance lifecycle, orchestrator workflow and autopilot umbrellas | Unique-meaning disposition; duplicate deletion and no resurrection; no replacement workflow taxonomy |
 | M5 / #3453 under #3411 | C3; Memory and maintainer reference consolidation | Candidate consequences survive bypass; no-retention and receiving evidence; independent review unchanged |
-| #3411 integration | M1–M5 | Audit-subject-to-current-head sweep, package exposure and one bounded final host walkthrough; every M/R row accounted for |
+| #3411 integration | M1â€“M5 | Audit-subject-to-current-head sweep, package exposure and one bounded final host walkthrough; every M/R row accounted for |
 | #3442 / #3443 | Accepted #3408 | Fresh actual public/field inventory; complete remove/merge dispositions, direct operations, neutral modules, generated parity and no resurrection |
 | #3404 / #3405 -> #3406 | Accepted #3441 | Final contract references and integrated customization guide validated against actual supported artifact |
 
-These units are linked GitHub sub-issues, proposed for independent shaping
-acceptance before product implementation. #3410 cannot close from C1,
+These units match the externally shaped GitHub sub-issue graph. The shaping reply
+authorizes implementation after artifact reconciliation; independent acceptance
+and issue closure remain separate. #3410 cannot close from C1,
 and #3411 cannot close from a proving subset. Public/module contraction must use
 the post-migration head, not prematurely freeze this proposal. Fresh final RC and
 stable admission remain #3277/#2985 after accepted P1.
@@ -228,11 +239,11 @@ route, effect, Planning and Memory tests identify reusable proof classes; they
 have not been run as proof of this proposed extension. No source-only walkthrough
 is counted as model behavior or measured economic benefit.
 
-Independent shaping review is explicitly required by #3409's acceptance and
-completion rules. It must assess disposition completeness, the minimal control
-form and C2's generic composition seam. Until that acceptance, dependent product
-implementation remains pending. The implementation agent does not self-approve
-this design or request a reviewer to approve its own implementation.
+Independent shaping acceptance remains required for #3409 closure. The external
+shaping reply settles the minimum contract and issue boundaries and permits
+implementation after this reconciliation. The revised artifacts are ready for
+focused recheck; the implementation agent does not self-approve this design or
+request a reviewer to approve its own implementation.
 
 Outstanding before #3409 closure: independent acceptance; accepted parent
 dispositions; any source-reference or boundary corrections from
@@ -241,3 +252,15 @@ Observed overhead includes owner/assignment preparation, source reads, a failed
 bare Python invocation, corrected Windows path queries and bounded request
 reentry. Total successful-completion cost and host comparative economics are
 unmeasured; they are not zero.
+
+## Artifact end-state
+
+After independent acceptance, retain this audit only as a compact design record
+while its dispositions and rationale remain useful. It is not an active workflow
+or a substitute for current source/owner facts. Reconcile superseded claims rather
+than leaving the proposal as apparent current authority.
+
+The epic Planning record carries the remaining P1 continuation. When it no longer
+has continuation value, close, archive or remove it through Planning according to
+the current owner lifecycle. Do not leave a completed lane as an active plan or
+delete managed state directly merely to clear residue.
