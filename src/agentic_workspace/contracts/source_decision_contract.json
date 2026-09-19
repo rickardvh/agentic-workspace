@@ -113,8 +113,9 @@
         "evidence_refs": 32
       },
       "authority_effect": "none",
-      "reentry": "Lost carriage exposes an unresolved question; changed relevant basis requires reconsideration. Supplied-answer validation establishes protocol/currentness, not semantic truth."
-
+      "reentry": "Lost carriage exposes an unresolved question; changed relevant basis requires reconsideration. Supplied-answer validation establishes protocol/currentness, not semantic truth.",
+      "selection_binding": "Selection binds immutable route, source reference, skill identity and question resource revision. The caller chooses the instance at selection time; answer carriage binds that instance as well.",
+      "semantic_material": "Reject versioned authority envelopes and nested bare action envelopes containing source_owner, operation_id, arguments, effects and authority. Ordinary prose and JSON remain advisory material."
     }
   },
   "public_requests": {

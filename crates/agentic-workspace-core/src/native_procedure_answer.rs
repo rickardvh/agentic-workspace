@@ -28,6 +28,14 @@ fn template(work: &Value, contract: &Value, kind: &str, basis: &str, selection: 
         "request_kind":kind,"source_revision":basis,"arguments":{"selection":selection}})
 }
 
+fn selection_basis(selection: &Value, resource: &Value) -> Result<String, CoreError> {
+    // The qualified procedure is immutable; callers choose an instance at selection time.
+    digest(
+        &json!({"route":selection["route"],"source_ref":selection["source_ref"],
+        "skill_id":selection["skill_id"],"resource":resource["revision"]}),
+    )
+}
+
 fn forbidden(value: &Value) -> bool {
     if matches!(
         value["kind"].as_str(),
@@ -40,7 +48,18 @@ fn forbidden(value: &Value) -> bool {
         return true;
     }
     match value {
-        Value::Object(values) => values.values().any(forbidden),
+        Value::Object(values) => {
+            [
+                "source_owner",
+                "operation_id",
+                "arguments",
+                "effects",
+                "authority",
+            ]
+            .iter()
+            .all(|key| values.contains_key(*key))
+                || values.values().any(forbidden)
+        }
         Value::Array(values) => values.iter().any(forbidden),
         _ => false,
     }
@@ -66,7 +85,7 @@ pub(crate) fn view(
                 work,
                 contract,
                 "procedure/select/v1",
-                resource["revision"].as_str().unwrap(),
+                &selection_basis(&selection, resource)?,
                 &selection,
             ));
         }
@@ -110,7 +129,7 @@ pub(crate) fn view(
     if request["task_identity"] != *work
         || request["source_revision"]
             != if select {
-                resource["revision"].clone()
+                json!(selection_basis(selection, resource)?)
             } else {
                 json!(basis)
             }
@@ -219,6 +238,104 @@ mod tests {
     }
 
     #[test]
+    fn select_binds_qualified_identity_but_instance_is_caller_owned() {
+        let f = Fixture::new();
+        fs::write(f.0.join("tools/skills/REGISTRY.json"), json!({"skills":[
+            {"id":"note","path":"note/SKILL.md","semantic_routes":["note/change","note/alias"],"procedure_resource":"procedure.md"},
+            {"id":"alias","path":"note/SKILL.md","semantic_routes":["note/change"],"procedure_resource":"procedure.md"}
+        ]}).to_string()).unwrap();
+        let initial = f.start("note", Value::Null).unwrap();
+        let mut discover = initial["semantic_routes"]["requests"][0].clone();
+        discover["arguments"] = json!({"parent":"note/change"});
+        let leaf = f.start("note", discover).unwrap();
+        let select = leaf["procedure"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["arguments"]["selection"]["skill_id"] == "note")
+            .unwrap()
+            .clone();
+        for (key, value) in [("route", "note/alias"), ("skill_id", "alias")] {
+            let mut rebound = select.clone();
+            rebound["arguments"]["selection"][key] = json!(value);
+            assert_eq!(
+                f.start("note", rebound).unwrap()["procedure"]["status"],
+                "stale"
+            );
+        }
+        // Identical resource bytes in another admitted source cannot inherit the selection.
+        fs::create_dir_all(f.0.join(".agentic-workspace/skills/note")).unwrap();
+        for name in ["SKILL.md", "procedure.md", "note.md"] {
+            fs::copy(
+                f.0.join(format!("tools/skills/note/{name}")),
+                f.0.join(format!(".agentic-workspace/skills/note/{name}")),
+            )
+            .unwrap();
+        }
+        fs::copy(
+            f.0.join("tools/skills/REGISTRY.json"),
+            f.0.join(".agentic-workspace/skills/REGISTRY.json"),
+        )
+        .unwrap();
+        let mut rebound = select.clone();
+        rebound["arguments"]["selection"]["source_ref"] =
+            json!(".agentic-workspace/skills/REGISTRY.json");
+        assert_eq!(
+            f.start("note", rebound).unwrap()["procedure"]["status"],
+            "stale"
+        );
+        for instance in ["first", "second"] {
+            let mut selected = select.clone();
+            selected["arguments"]["selection"]["instance"] = json!(instance);
+            let result = f.start("note", selected).unwrap();
+            assert_eq!(result["procedure"]["status"], "unresolved");
+            let mut answer = result["procedure"]["requests"][0].clone();
+            answer["arguments"]["answer"] = json!({"disposition":"answered","branches":["yes"]});
+            assert_eq!(
+                f.start("note", answer.clone()).unwrap()["procedure"]["status"],
+                "current"
+            );
+            answer["arguments"]["selection"]["instance"] = json!("rebound");
+            assert_eq!(
+                f.start("note", answer).unwrap()["procedure"]["status"],
+                "stale"
+            );
+        }
+    }
+
+    #[test]
+    fn untaken_branch_body_does_not_stale_semantic_answer() {
+        let f = Fixture::new();
+        let path = f.0.join("tools/skills/note/procedure.md");
+        let original = fs::read_to_string(&path).unwrap();
+        fs::write(&path, original.replace("\"branches\":[", "\"context\":[\"context.md\"],\"branches\":[{\"id\":\"no\",\"description\":\"Internal\",\"next\":\"internal.md\"},")).unwrap();
+        let context = f.0.join("tools/skills/note/context.md");
+        fs::write(&context, "Question context").unwrap();
+        let mut answer = f.answer_request();
+        answer["arguments"]["answer"] = json!({"disposition":"answered","branches":["yes"]});
+        let first = f.start("note", answer.clone()).unwrap();
+        assert_eq!(first["procedure"]["status"], "current");
+        let untaken = f.0.join("tools/skills/note/internal.md");
+        for bytes in [b"New body".as_slice(), b"Changed body".as_slice(), &[255]] {
+            fs::write(&untaken, bytes).unwrap();
+            assert_eq!(
+                f.start("note", answer.clone()).unwrap()["procedure"],
+                first["procedure"]
+            );
+        }
+        fs::remove_file(untaken).unwrap();
+        assert_eq!(
+            f.start("note", answer.clone()).unwrap()["procedure"],
+            first["procedure"]
+        );
+        fs::write(context, "Changed question context").unwrap();
+        assert_eq!(
+            f.start("note", answer).unwrap()["procedure"]["status"],
+            "stale"
+        );
+    }
+
+    #[test]
     fn semantic_answer_carriage_is_scoped_current_and_disposable() {
         let f = Fixture::new();
         let mut request = f.answer_request();
@@ -280,11 +397,18 @@ mod tests {
             assert_eq!(result["procedure"]["answer"]["disposition"], disposition);
             assert_eq!(result["procedure"]["next"], json!([]));
         }
+        let mut benign = request.clone();
+        benign["arguments"]["answer"] = json!({"disposition":"unknown","material":{"operation_id":"discussed operation","notes":"ordinary JSON"}});
+        assert_eq!(
+            f.start("note", benign).unwrap()["procedure"]["status"],
+            "current"
+        );
         for answer in [
             json!({"disposition":"answered"}),
             json!({"disposition":"unknown","branches":["yes"]}),
             json!({"disposition":"answered","branches":["missing"]}),
             json!({"disposition":"answered","branches":["yes"],"material":{"kind":"agentic-workspace/operation-invocation/v1"}}),
+            json!({"disposition":"unknown","material":{"nested":[{"source_owner":"planning","operation_id":"planning.update","arguments":{},"effects":[],"authority":{}}]}}),
             json!({"disposition":"unknown","material":"x".repeat(17000)}),
         ] {
             let mut carried = request.clone();
