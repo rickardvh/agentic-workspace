@@ -1,9 +1,11 @@
 {
-  "blockers": [],
+  "blockers": [
+    "3448 Scope explicitly requires accepted 3446,3447,3455 before C3; current capability PRs are ready for independent review, not accepted."
+  ],
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "Audit reconciliation pushed in PR 3454. C1 implemented in stacked PR 3460 at 18b712fb2. C2a semantic answer carriage implemented on codex/3447-procedure-answers; focused protocol/currentness tests pass. C2b 3455, C3 3448, full migration, contraction and docs remain. Independent review/issue acceptance remains external."
+    "frontier": "Audit reconciliation pushed in PR 3454 at da890148e; C1 in PR 3460 at 18b712fb2; C2a in PR 3461 at 1b45b6f74. C2b generic owner-reference seam implemented on codex/3455-owner-reference and ready to publish for independent review. C3 issue 3448 explicitly depends on accepted 3446,3447,3455. Full migration, contraction and docs remain pending after capability. No independent acceptance or issue closure claimed."
   },
   "creation_provenance": {
     "custody": {
@@ -35,24 +37,27 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish C2a stacked on 3460, implement generic owner-reference seam 3455, then package/host capability 3448. Reconcile stale prepare.py expectation in the existing host-exposure test during C3.",
+  "next_action": "After externally initiated acceptance of C1/C2a/C2b, resume C3 3448 packaging/host proof, including the stale host-exposure fixture, then the remaining dependency-ordered P1 stack. Do not self-review/approve or dispatch a reviewer.",
   "owner_level": "epic",
   "parent": {
     "issue": "3445"
   },
   "phase": "implementation",
   "proof": {
-    "observed": "C2a: both binaries build; 2 focused public-path semantic answer/currentness tests pass; generated catalogue and language facade checks pass. Broader native run: 135 passed, 2 failed, 3 ignored. Config temporary-directory collision passed isolated rerun; host-exposure test persistently expects absent prepare.py at native_skill_exposure.rs:508, deferred to C3 packaging scope. No green full-suite, model judgment, independent acceptance or P1 closure claim.",
+    "observed": "C2b: both binaries build; 7 operating tests and 5 focused Python cases pass (public owner question/effect journey and existing forged/stale action boundaries); generated catalogue/language facade and commit checks current. C2a broader native run had 135 passed,2 failed,3 ignored: config collision passed isolated rerun, existing host-exposure prepare.py expectation persists and belongs to C3. Supplied answers prove protocol, not model judgment. Full-suite green, actual-host capability, independent acceptance, P1 satisfaction and total comparative cost remain unestablished.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
     "https://github.com/rickardvh/agentic-workspace/issues/3445",
     "https://github.com/rickardvh/agentic-workspace/issues/3409",
     "docs/reviews/powerskill-p1-design-3409.md",
-    "https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790"
+    "https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790",
+    "https://github.com/rickardvh/agentic-workspace/pull/3460",
+    "https://github.com/rickardvh/agentic-workspace/pull/3461",
+    "https://github.com/rickardvh/agentic-workspace/issues/3448"
   ],
   "relationships": {},
-  "revision": 5,
+  "revision": 6,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -73,18 +78,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/62edf5f1c510827761fd8ee05802c19e51b5733eb9cc3e1e8a2667affe261a61.attempt.json",
-        "revision": "sha256:5e55015f473d51f82ee5a4d834f8f6626f7bd49fe8c6fdae7e36992808a61199",
+        "path": ".agentic-workspace/local/effects/419f9d16366b4adff9bb0a2aebed61a25524556d67a04e15917b7a0181eed6a6.attempt.json",
+        "revision": "sha256:2551308886bf539c26b4938ef064f18c6cb8b3e0c6c79f21602d9f5e48874e0d",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/62edf5f1c510827761fd8ee05802c19e51b5733eb9cc3e1e8a2667affe261a61.result.json",
-        "revision": "sha256:f5d2cf7a48ae6dc493a8d2761a16bdb38c43053a81a28eb0c0354b2f79609371",
+        "path": ".agentic-workspace/local/effects/419f9d16366b4adff9bb0a2aebed61a25524556d67a04e15917b7a0181eed6a6.result.json",
+        "revision": "sha256:9e8c2b6f1f9df47fa53db83e9a069054b1b8d494fe14bf1ba222c47cbbaa4170",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:b3ee647fdc363cd8e40c8b07271dcc8371007a73409e2deb86698598c3133150",
+    "invocation_revision": "sha256:c491d1ce3624067c583914823ec05cbad91f2403d0aad4767d1d462c988fa5e8",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -92,7 +97,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:7804da2c7a6fcdf27c9de37d8693ecd00c1debe03581e4f5486e2da8e2d78c33",
+        "document_revision": "sha256:ad7add07f69da80c9c59e0907021149c4140b00b7cf289c11bfd69d995ce53bc",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }

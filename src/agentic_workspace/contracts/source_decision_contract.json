@@ -113,6 +113,22 @@
       },
       "authority_effect": "none",
       "reentry": "Lost carriage exposes an unresolved question; changed relevant basis requires reconsideration. Supplied-answer validation establishes protocol/currentness, not semantic truth."
+    },
+    "owner_references": {
+      "identity": {
+        "kind": [
+          "request",
+          "question",
+          "action"
+        ],
+        "owner": "current public owner",
+        "id": "public request id or action operation_id"
+      },
+      "direct_selection": "start reference owner:<kind>:<owner>:<id> resolves one exact immutable reference; stable identity alone cannot invoke",
+      "fragment_selection": "One agentic-owner-reference fenced JSON identity in a selected Markdown resource",
+      "currentness": "Exact returned reference binds work context and owner envelope; reobserve before use; missing or ambiguous identities yield. Selection cannot replace arguments, effects or authority.",
+      "continuation": "One resolution step, then yield to existing owner request/answer/invoke. No automatic effect traversal or blind replay; confirmed/uncertain truth and typed continuation remain owner-owned.",
+      "authority_effect": "none"
     }
   },
   "public_requests": {

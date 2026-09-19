@@ -27,6 +27,31 @@ def size(value):
     return len(json.dumps(value, separators=(",", ":"), ensure_ascii=False).encode())
 
 
+def test_public_owner_identity_uses_existing_question_and_effect_boundary(tmp_path, shared_core_binary, native_cli):
+    context = proposal("native", shared_core_binary, native_cli, tmp_path)
+    current = consume("native", shared_core_binary, native_cli, context)
+    question = current["decision_packet"]["decision_request"]["response_request"]
+    identity = f"owner:question:{question['owner']}:{question['id']}"
+    selected = consume("native", shared_core_binary, native_cli, {**context, "reference": identity})
+    assert selected["status"] == "current"
+    assert not (tmp_path / ".agentic-workspace/config.local.toml").exists()
+    answered = consume(
+        "native",
+        shared_core_binary,
+        native_cli,
+        {**context, "reference": selected["reference"], "answer": "authorize-write", "projection": "carried"},
+    )
+    action = answered["view"]["decision_packet"]["primary_action"]
+    exact_context = answered["carriage"]["context"]
+    stable = f"owner:action:{action['source_owner']}:{action['operation_id']}"
+    resolved = consume("native", shared_core_binary, native_cli, {**exact_context, "reference": stable})
+    for field in ("arguments", "effects", "authority"):
+        assert resolved["value"][field] == action[field]
+    result = consume("native", shared_core_binary, native_cli, {"invocation": answered["carriage"], "reference": resolved["reference"]})
+    assert result["effect_outcome"]["status"] == "committed"
+    assert result["continuation"]["retry_effect"] is False
+
+
 def rehash(carrier, entry):
     value = {"kind": carrier["kind"], "context": carrier["context"], "selector": entry["selector"], "envelope": entry["envelope"]}
     entry["reference"] = (
