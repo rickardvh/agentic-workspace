@@ -783,7 +783,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
     static PRODUCER: std::sync::LazyLock<String> =
         std::sync::LazyLock::new(|| digest(&json!(include_str!("native_resources.rs"))).unwrap());
     let revision = digest(
-        &json!({"semantics":&*PRODUCER,"target":target,"task":input.task,"operation":request.operation,"path":path,"snapshot":snapshot,"policy":policy,"need":request.need,"reason":request.reason,"disposable_outputs":outputs}),
+        &json!({"semantics":&*PRODUCER,"target":target,"task":input.task,"changed":input.changed,"operation":request.operation,"path":path,"snapshot":snapshot,"policy":policy,"need":request.need,"reason":request.reason,"disposable_outputs":outputs}),
     )?;
     let mut next = request.clone();
     next.path = Some(if request.operation.starts_with("scratch") {

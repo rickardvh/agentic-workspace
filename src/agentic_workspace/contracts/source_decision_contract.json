@@ -190,9 +190,10 @@
       },
       {
         "name": "resources",
-        "description": "Inspect or propose a bounded native resource operation; carry the returned exact action for current policy-bound execution.",
+        "description": "Propose with a resource request; execute by passing the exact returned action envelope unchanged to --input. Explicit context flags must match; omitted context comes from the envelope.",
         "input_field": "request",
-        "input_required": true
+        "input_required": true,
+        "accepts_input_envelope": true
       },
       {
         "name": "start",
