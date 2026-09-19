@@ -1,34 +1,18 @@
 ---
 name: planning-closeout-trust
-description: Close out planned work with proof, intent satisfaction, trust, and residue distillation.
+description: Compare original and larger intent, proof and residue before admitted closeout.
 ---
 
-# Planning Closeout Trust
+# Reconcile intent and closeout
 
-Use this skill after implementation of planned work, before closing the issue or archiving the plan.
+Agents judge semantic intent; Planning and Verification retain state, evidence and
+claim authority. A method cannot grant closure, archive, review or trust.
 
-## Primary Ownership
+Use [the current question](procedure.md) or its same-source links directly:
 
-This skill owns closeout procedure: proof-to-claim reconciliation, archive/close decisions, residue distillation, and final trust posture. It invokes `planning-intent-verification` for semantic intent satisfaction instead of redefining that judgment.
+- [Compare the requested outcome](references/intent.md).
+- [Reconcile proof, residue and continuation](references/finish.md).
 
-Route broad/high-risk workflow setup to `planning-high-assurance-lifecycle`, decomposition questions to `planning-decompose`, and read-only active-state summaries to `planning-reporting`.
-
-## Route
-
-1. Resolve current Verification requirements through `agentic-workspace start --target . --task "<task>" --changed <path> --format json`, or use the workspace proof-selection skill to prepare and execute an admitted check through the shared proof-selection fragments and exact native owner requests.
-2. Consult `planning-intent-verification` and the current owner evidence to decide whether original intent is fully satisfied, partially satisfied, or blocked.
-3. Distill what should survive: future work to Planning, durable knowledge to Memory, stable guidance to docs, enforceable behavior to tests/contracts/config, and tracker follow-up to issues.
-4. Use exact current Planning requests and actions to reconcile completion, required continuation and archival when admitted.
-5. Inspect the effect outcome and current continuation after the transition. A successful write does not replace source reconciliation or independent review.
-
-## Guardrails
-
-- Red flag: Archive or close is safe because validation passed.
-- Use instead: Inspect current Planning and Verification detail, then archive only when proof, intent satisfaction, residue and continuation owner are reconciled.
-- Do not keep completed execplans as the knowledge base.
-- Do not close external issues when intent is only partially satisfied.
-- Treat missing proof, skipped startup, or absent closeout evidence as lower trust.
-
-## Behavior-Impact Evidence
-
-Changes to this skill must preserve the separation between validation, intent satisfaction, issue closure, residue routing and archive mechanics. Use current owner outcomes and focused native closeout tests as evidence.
+Use the configured native invocation and exact owner requests/actions. Without it,
+read only relevant sources; current custody is unknown and managed state stays
+preserved. Optional procedure supplies no assignment, proof or completion authority.

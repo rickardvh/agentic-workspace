@@ -170,85 +170,13 @@
       "lifetime": "current-version"
     },
     {
-      "path": ".agentic-workspace/planning/skills/planning-assurance-delegation/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
       "path": ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
       "lifetime": "current-version"
     },
     {
-      "path": ".agentic-workspace/planning/skills/planning-decompose/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-high-assurance-lifecycle/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-intent-verification/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-manual-delegation/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-new-plan-tighten/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-promote-review-findings/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
       "path": ".agentic-workspace/planning/skills/planning-reporting/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-returned-result/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-review-pass/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
       "lifetime": "current-version"
@@ -336,6 +264,120 @@
       "scope": "subtree",
       "class": "mutable-state",
       "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-work/references/intake.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-work/references/structure.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-work/references/continuity.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-work/procedure.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-work/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-closeout-trust/references/intent.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-closeout-trust/references/finish.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-closeout-trust/procedure.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/references/assessment.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/references/binding.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/references/manual.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/references/return.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/references/recovery.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/procedure.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-assignment/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-review-continuation/references/triage.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-review-continuation/references/continuation.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-review-continuation/procedure.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/planning/skills/planning-review-continuation/SKILL.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
     }
   ]
 }

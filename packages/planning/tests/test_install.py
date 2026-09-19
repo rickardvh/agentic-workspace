@@ -19,8 +19,8 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     extraction_doc_path = tmp_path / ".agentic-workspace" / "docs" / "extraction-and-discovery-contract.md"
     skill_readme_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "README.md"
     skill_registry_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json"
-    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
-    intake_skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md"
+    intake_skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md"
     review_readme_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
     review_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.md"
     review_record_template_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "TEMPLATE.review.json"
@@ -152,7 +152,7 @@ def test_install_bootstrap_include_optional_copies_optional_payload(tmp_path: Pa
     assert (tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "pre-ingestion-refinement.md").exists()
     assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md").exists()
     assert any(
         action.kind == "copied" and action.path == tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
         for action in result.actions
@@ -171,8 +171,8 @@ def test_install_dry_run_json_includes_compact_lifecycle_plan(tmp_path: Path, ca
     assert plan["summary"]["create_count"] > 0
     assert plan["summary"]["review_required_count"] >= 0
     assert plan["files"]["create"]
-    assert ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md" in plan["files"]["create"]
-    assert ".agentic-workspace/planning/skills/planning-intake-upstream-task/SKILL.md" in plan["files"]["create"]
+    assert ".agentic-workspace/planning/skills/planning-work/SKILL.md" in plan["files"]["create"]
+    assert ".agentic-workspace/planning/skills/planning-work/SKILL.md" in plan["files"]["create"]
     assert plan["local_only_state"]["status"] == "not-authoritative"
     assert plan["next_safe_command"].startswith("agentic-planning install --target ")
 
@@ -189,11 +189,11 @@ def test_install_include_optional_dry_run_json_includes_optional_payload(tmp_pat
     )
     assert any(
         action["kind"] == "would copy"
-        and action["path"].replace("\\", "/").endswith(".agentic-workspace/planning/skills/planning-autopilot/SKILL.md")
+        and action["path"].replace("\\", "/").endswith(".agentic-workspace/planning/skills/planning-work/SKILL.md")
         for action in actions
     )
     assert ".agentic-workspace/planning/reviews/README.md" in payload["lifecycle_plan"]["files"]["create"]
-    assert ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md" in payload["lifecycle_plan"]["files"]["create"]
+    assert ".agentic-workspace/planning/skills/planning-work/SKILL.md" in payload["lifecycle_plan"]["files"]["create"]
 
 
 def test_ownership_module_root_matches_workspace_ledger() -> None:
@@ -228,14 +228,12 @@ def test_bootstrap_upgrade_skill_uses_root_lifecycle_without_unshipped_helper_sc
     repo_skill = Path(__file__).resolve().parents[3] / ".agentic-workspace" / "planning" / "skills" / "bootstrap-upgrade" / "SKILL.md"
     for skill_path in (package_skill, repo_skill):
         text = skill_path.read_text(encoding="utf-8")
-        assert "agentic-workspace upgrade --target <repo> --dry-run --format json" in text
-        assert "agentic-workspace upgrade --target <repo> --format json" in text
-        assert "agentic-workspace doctor --target <repo> --format json" in text
-        assert "agentic-workspace upgrade --target <repo>" in text
-        assert "agentic-planning upgrade --target <repo>" not in text
-        assert "package-local debugging" in text
+        assert "references/package.md" in text
+        assert "Preserve repository-authored guidance" in text
+        assert "Removal\ndoes not imply deleting domain state" in text
+        assert "agentic-workspace upgrade" not in text
+        assert "agentic-planning upgrade" not in text
         assert "scripts/render_agent_docs.py" not in text
-        assert "scripts/check/check_maintainer_surfaces.py" not in text
 
 
 def test_adopt_bootstrap_preserves_existing_agents(tmp_path: Path) -> None:
@@ -271,7 +269,7 @@ def test_adopt_bootstrap_docs_heavy_repo_preserves_root_surfaces_and_installs_he
     assert contributor_playbook_path.read_text(encoding="utf-8") == "# Existing contributor playbook\n"
     assert maintainer_commands_path.read_text(encoding="utf-8") == "# Existing commands\n"
     assert not (tmp_path / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md").exists()
     assert any(action.kind == "skipped" and action.path == agents_path for action in result.actions)
     assert any(action.kind == "skipped" and action.path == execplan_readme_path for action in result.actions)
     assert not any(action.path.name == "agent-manifest.json" for action in result.actions)
@@ -286,7 +284,7 @@ def test_adopt_bootstrap_include_optional_preserves_existing_optional_surfaces(t
 
     assert review_readme_path.read_text(encoding="utf-8") == "# Existing review workflow\n"
     assert (tmp_path / ".agentic-workspace" / "planning" / "upstream-task-intake.md").exists()
-    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-intake-upstream-task" / "SKILL.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md").exists()
     assert any(action.kind == "skipped" and action.path == review_readme_path for action in result.actions)
 
 
@@ -409,9 +407,9 @@ def test_list_files_json_separates_default_optional_and_skill_payloads(capsys) -
     payload = json.loads(capsys.readouterr().out)
     assert ".agentic-workspace/docs/execution-flow-contract.md" in payload["default_files"]
     assert ".agentic-workspace/docs/capability-contract.json" in payload["optional_files"]
-    assert "planning-autopilot/SKILL.md" in payload["bundled_skill_files"]
+    assert "planning-work/SKILL.md" in payload["bundled_skill_files"]
     assert ".agentic-workspace/docs/capability-contract.json" in payload["files"]
-    assert "skills/planning-autopilot/SKILL.md" not in payload["files"]
+    assert "skills/planning-work/SKILL.md" not in payload["files"]
     assert "agentic-planning install --include-optional" in payload["optional_enable_commands"]
 
 
@@ -475,23 +473,13 @@ def test_bootstrap_execution_compatibility_reference_uses_canonical_procedure() 
 def test_bootstrap_execplan_readme_includes_memory_synergy_guidance() -> None:
     text = (installer_mod.payload_root() / ".agentic-workspace" / "planning" / "execplans" / "README.md").read_text(encoding="utf-8")
 
-    assert "prefer borrowing durable context from the smallest relevant memory note or canonical doc" in text
-    assert "Repeated background prose in plans is a missing-synergy signal" in text
-    assert "promote it into memory or canonical docs" in text
-    assert "must not silently widen the requested outcome" in text
-    assert "Continuation surface" in text
-    assert "larger intended outcome" in text
-    assert "Required follow-on for the larger intended outcome" in text
-    assert "Activation trigger" in text
-    assert "## Iterative Follow-Through" in text
-    assert "What this slice enabled" in text
-    assert "## Delegated Judgment" in text
-    assert "Requested outcome" in text
-    assert "Agent may decide locally" in text
-    assert "required tools" in text
-    assert "Native runtime artifacts such as `implementation_plan.md`" in text
-    assert "## Execution Summary" in text
-    assert "Outcome delivered" in text
+    assert "durable technical knowledge in its canonical source or Memory" in text
+    assert "Preserve original scope" in text
+    assert "required continuation, its owner and activation trigger" in text
+    assert "only through current Planning requests and exact admitted actions" in text
+    assert "Assignment policy governs executor choice" in text
+    assert "Validation, issue completion and parent intent satisfaction are separate" in text
+    assert "Native unavailability leaves current admission unknown" in text
 
 
 def test_doctor_reports_contract_surface_shortlists(tmp_path: Path) -> None:
@@ -727,7 +715,7 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
     install_bootstrap(target=tmp_path)
     agents_path = tmp_path / "AGENTS.md"
     checker_path = tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
-    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
     checker_path.write_text("stale checker\n", encoding="utf-8")
@@ -747,7 +735,7 @@ def test_upgrade_bootstrap_overwrites_managed_files_but_preserves_root_surfaces(
 def test_upgrade_bootstrap_include_optional_refreshes_optional_payload_and_keeps_skills_current(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path, include_optional=True)
     review_readme_path = tmp_path / ".agentic-workspace" / "planning" / "reviews" / "README.md"
-    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md"
 
     review_readme_path.write_text("stale optional review surface\n", encoding="utf-8")
     skill_path.write_text("stale optional skill\n", encoding="utf-8")
@@ -870,10 +858,10 @@ def test_uninstall_bootstrap_removes_pristine_files_and_keeps_modified_surfaces(
     agents_path = tmp_path / "AGENTS.md"
     checker_path = tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
     quickstart_path = tmp_path / "tools" / "AGENT_QUICKSTART.md"
-    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-autopilot" / "SKILL.md"
+    skill_path = tmp_path / ".agentic-workspace" / "planning" / "skills" / "planning-work" / "SKILL.md"
 
     agents_path.write_text("repo-owned agents\n", encoding="utf-8")
-    skill_source = installer_mod.skills_root() / "planning-autopilot" / "SKILL.md"
+    skill_source = installer_mod.skills_root() / "planning-work" / "SKILL.md"
     skill_path.parent.mkdir(parents=True, exist_ok=True)
     skill_path.write_bytes(skill_source.read_bytes())
 

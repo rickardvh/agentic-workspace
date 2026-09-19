@@ -44,8 +44,7 @@
       "candidate_surfaces": [
         "packages/planning/bootstrap/.agentic-workspace/planning/reviews/README.md",
         "packages/planning/bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json",
-        "packages/planning/skills/planning-review-pass/SKILL.md",
-        "packages/planning/skills/planning-promote-review-findings/SKILL.md"
+        "packages/planning/skills/planning-review-continuation/SKILL.md"
       ],
       "existing_follow_up": [
         "https://github.com/rickardvh/agentic-workspace/issues/450",
@@ -72,7 +71,7 @@
         "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
         "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
         "packages/planning/bootstrap/.agentic-workspace/planning/pre-ingestion-refinement.md",
-        "packages/planning/skills/planning-intake-upstream-task/SKILL.md"
+        "packages/planning/skills/planning-work/SKILL.md"
       ],
       "existing_follow_up": [
         "https://github.com/rickardvh/agentic-workspace/issues/469"
@@ -80,10 +79,10 @@
     },
     {
       "id": "advanced-agent-operation",
-      "capability": "Autopilot, bounded delegated judgment, orchestration, and capability-aware execution",
+      "capability": "Bounded Assignment transport and return",
       "current_home": "Machine-readable capability data, planning skills, mixed-agent config reporting, and workspace defaults",
       "decision": "optional extension for now",
-      "candidate_boundary": "A future operation package could own capability-fit rules, delegated judgment packets, autopilot loop semantics, and orchestration handoffs.",
+      "candidate_boundary": "Any future extraction must preserve native Assignment authority and current transport custody; no workflow controller is shipped.",
       "why_not_core_planning": "These workflows can be high leverage, but they depend heavily on agent/runtime availability and should not burden the smallest valid planning install.",
       "evidence_required_before_extraction": [
         "Capability and delegation records can stay repo-, agent-, tool-, and language-agnostic.",
@@ -91,13 +90,11 @@
         "Closeout trust and escalation rules stabilize without requiring planning internals."
       ],
       "blockers": [
-        "Current dogfooding evidence is mostly from this repo and this agent workflow.",
-        "Delegation and autopilot wording still needs compression before becoming product-general."
+        "No independent product need or lower total operating cost has been established."
       ],
       "candidate_surfaces": [
         "packages/planning/bootstrap/.agentic-workspace/docs/capability-contract.json",
-        "packages/planning/skills/planning-autopilot/SKILL.md",
-        "packages/planning/skills/planning-orchestrator-workflow/SKILL.md"
+        "packages/planning/skills/planning-assignment/SKILL.md"
       ],
       "existing_follow_up": [
         "https://github.com/rickardvh/agentic-workspace/issues/450",

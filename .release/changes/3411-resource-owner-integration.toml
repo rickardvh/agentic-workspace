@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Complete generic resource owner-reference carriage and integrate the P1 skill migration without removing direct resource access."
+issues = [3411, 3451, 3445]

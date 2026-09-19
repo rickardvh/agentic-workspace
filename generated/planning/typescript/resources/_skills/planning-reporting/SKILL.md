@@ -12,4 +12,4 @@ Use this skill for a bounded account of current Planning work. It supplies repor
 3. Report the returned owner references, current work, required continuation and restrictions. Distinguish unavailable or ambiguous state from an empty selection.
 4. Read exact source records only when needed to answer the question. Recorded assertions alone do not prove live currentness or completion.
 
-Route intent judgment to `planning-intent-verification`, closeout procedure to `planning-closeout-trust`, and decomposition to `planning-decompose`. Use current Verification detail or the workspace proof-selection skill for evidence questions. Reporting never grants a mutation, proof or completion claim.
+Use `planning-closeout-trust` for intent/closure judgment and `planning-work` for structure/continuity. Use current Verification detail or the workspace proof-selection skill for evidence questions. Reporting never grants a mutation, proof or completion claim.

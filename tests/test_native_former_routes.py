@@ -94,11 +94,25 @@ def test_former_selection_requires_exact_current_agent_request(
     # Full detail includes every declared API schema, including passive skill
     # exposure. Bound that explicit introspection separately from current state
     # and the ordinary compact response; new APIs must not inflate the latter.
-    # System Intent reconciliation adds explicit edit/recovery request and effect
-    # schemas (78,625 bytes total). Allow 3 KB over the former 78 KB ceiling for
-    # that declared API; keep current-state and compact-operation budgets below
-    # unchanged. This is introspection capacity, not ordinary context growth.
-    assert len(json.dumps(first["capability_contract"])) < 81_000
+    # Resource integration adds seven independently addressable effects and one
+    # proposal request (4,418 bytes of owner schemas; 84,489 total in this fixture).
+    # Attribute its diagnostic-only allowance rather than relaxing all owners:
+    # the pre-resource contract still has the existing 81 KB ceiling. Current
+    # state, compact output and former-candidate budgets below remain unchanged.
+    contract = first["capability_contract"]
+    resource_owners = [owner for owner in contract["owners"] if owner["owner"] == "workspace-resources"]
+    assert len(resource_owners) == 1
+    assert len(json.dumps(resource_owners[0])) < 4_500
+    non_resource_contract = {
+        **contract,
+        "owners": [owner for owner in contract["owners"] if owner["owner"] != "workspace-resources"],
+        "restriction_authorities": [
+            authority for authority in contract["restriction_authorities"] if authority["owner"] != "workspace-resources"
+        ],
+    }
+    assert len(json.dumps(non_resource_contract)) < 81_000
+    assert len(json.dumps(contract)) < 86_000
+    assert not any(key.startswith("workspace.resources.") for key in first["decision_packet"]["operation_revisions"])
     state = {key: value for key, value in first.items() if key != "capability_contract"}
     assert len(json.dumps(state)) < 28_000, {key: len(json.dumps(value)) for key, value in state.items()}
     compact = consume(surface, shared_core_binary, native_cli, {**context, "projection": "compact"})

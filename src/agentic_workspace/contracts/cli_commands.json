@@ -1,8 +1,8 @@
 {
   "commands": [
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "module inventory drill-down for explicit module inspection; not required for ordinary startup",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show module inventory as explicit drill-down; ordinary agents should start from start/report routing.",
       "mutates_state": false,
       "name": "modules",
@@ -23,24 +23,24 @@
           "name": "verbose"
         }
       ],
-      "role": "module_delegation_front_door",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "target-neutral scoped Markdown instruction authoring and inspection",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Create, validate, and explain scoped Markdown instructions through generated operations.",
       "mutates_state": true,
       "name": "instructions",
       "options": [],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "instructions_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "progressive-disclosure instruction inventory",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "List scoped instructions without loading irrelevant bodies.",
           "mutates_state": false,
           "name": "list",
@@ -53,14 +53,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "no-overwrite instruction scaffold creation",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Scaffold one global or path-scoped Markdown instruction.",
           "mutates_state": true,
           "name": "new",
@@ -90,14 +90,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "static instruction validation",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Validate instruction syntax and references without executing checks.",
           "mutates_state": false,
           "name": "check",
@@ -110,14 +110,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "task-scoped instruction applicability explanation",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Explain task-specific applicability in repository vocabulary.",
           "mutates_state": false,
           "name": "explain",
@@ -155,14 +155,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "progressive semantic task-route discovery",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Discover repo-owned semantic task routes one branch or leaf at a time.",
           "mutates_state": false,
           "name": "routes",
@@ -191,14 +191,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "authority-neutral current-task route fact selection",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Select existing semantic route facts for the resolved current work.",
           "mutates_state": true,
           "name": "select-route",
@@ -257,14 +257,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "non-destructive static-instruction migration advice",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Give non-destructive incremental migration guidance.",
           "mutates_state": false,
           "name": "migrate",
@@ -285,7 +285,7 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -293,8 +293,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "compact active planning and handoff state",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show the active execution summary from the planning module.",
       "mutates_state": false,
       "name": "summary",
@@ -339,14 +339,14 @@
           "nargs": "*"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "planning lifecycle help and schema-owned mutation guidance",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show planning workflow help or run Planning operations through the workspace front door.",
       "mutates_state": false,
       "name": "planning",
@@ -359,12 +359,12 @@
           "name": "target"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "planning_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Create a schema-valid execplan scaffold and optionally register it.",
           "mutates_state": true,
           "name": "new-plan",
@@ -457,14 +457,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Revision-guarded Planning owner mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Preview or apply a guarded patch to exactly one canonical execplan.",
           "mutates_state": true,
           "name": "targeted-write",
@@ -527,14 +527,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Promote a planning item into an execplan scaffold.",
           "mutates_state": true,
           "name": "promote-to-plan",
@@ -570,14 +570,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Existing Planning owner selection front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Select an existing Planning owner without creating or overwriting it.",
           "mutates_state": true,
           "name": "owner-select",
@@ -658,14 +658,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning decomposition artifact mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Create a first-class Planning decomposition record.",
           "mutates_state": true,
           "name": "decomposition-create",
@@ -718,14 +718,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning lane artifact mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Create a first-class Planning lane record.",
           "mutates_state": true,
           "name": "lane-create",
@@ -810,14 +810,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning lane artifact mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Promote a decomposition candidate lane into a first-class lane record.",
           "mutates_state": true,
           "name": "lane-promote",
@@ -854,14 +854,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning lane artifact mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Mark a lane record active and optionally select its current slice.",
           "mutates_state": true,
           "name": "lane-activate",
@@ -898,14 +898,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning lane artifact mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Record lane proof aggregation, residual work, and parent contribution.",
           "mutates_state": true,
           "name": "lane-close",
@@ -980,14 +980,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning lane artifact mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Archive a closed lane record and remove its live state projection.",
           "mutates_state": true,
           "name": "lane-archive",
@@ -1016,14 +1016,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning freehand artifact intake front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Route a freehand planning artifact into a canonical Planning surface.",
           "mutates_state": true,
           "name": "intake-artifact",
@@ -1113,14 +1113,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning closeout front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Close a completed execplan or parent lane after distillation.",
           "mutates_state": true,
           "name": "archive-plan",
@@ -1267,14 +1267,14 @@
               "name": "continuation_summary"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning command-owned closeout writer",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Close out a completed execplan through one command-owned writer.",
           "mutates_state": true,
           "name": "closeout",
@@ -1417,14 +1417,14 @@
               "name": "format"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning generic closeout front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Close completed planning residue by id without hand-editing checked-in state.",
           "mutates_state": true,
           "name": "close-item",
@@ -1467,14 +1467,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning review mutation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Create a schema-valid planning review record skeleton.",
           "mutates_state": true,
           "name": "create-review",
@@ -1534,14 +1534,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning delegation decision front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Record the delegation route chosen for the active execplan before mechanical lane work proceeds.",
           "mutates_state": true,
           "name": "delegation-decision",
@@ -1633,14 +1633,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning handoff front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Emit the compact delegated-worker handoff derived from active planning state.",
           "mutates_state": false,
           "name": "handoff",
@@ -1674,14 +1674,14 @@
               "name": "current_work_id"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning report front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Report compact planning module state.",
           "mutates_state": false,
           "name": "report",
@@ -1718,14 +1718,14 @@
               "type": "integer"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Planning owner-specific reconciliation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Preview or apply bounded Planning reconciliation transactions.",
           "mutates_state": true,
           "name": "reconcile",
@@ -1817,7 +1817,7 @@
               "name": "expected_planning_revision"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -1829,8 +1829,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "memory lifecycle help and route guidance",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show memory workflow help or run Memory operations through the workspace front door.",
       "mutates_state": false,
       "name": "memory",
@@ -1843,12 +1843,12 @@
           "name": "target"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "memory_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Memory routing front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Suggest the smallest relevant durable note set for touched files or surfaces.",
           "mutates_state": false,
           "name": "route",
@@ -1909,14 +1909,14 @@
               "name": "stage"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Memory update front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Suggest memory updates for changed work.",
           "mutates_state": true,
           "name": "sync-memory",
@@ -1947,14 +1947,14 @@
               "nargs": "*"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Memory promotion front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Suggest memory notes that should be promoted or eliminated.",
           "mutates_state": false,
           "name": "promotion-report",
@@ -1996,14 +1996,14 @@
               "name": "verbose"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Memory capture front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Recommend whether durable learning should update or create a Memory note.",
           "mutates_state": true,
           "name": "capture-note",
@@ -2088,14 +2088,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Memory note creation front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Create a repo-shared or local-only Memory note.",
           "mutates_state": true,
           "name": "create-note",
@@ -2248,14 +2248,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "Memory report front door",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Report compact memory module state.",
           "mutates_state": false,
           "name": "report",
@@ -2276,7 +2276,7 @@
               "name": "verbose"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -2288,8 +2288,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "local-first workspace evaluation lifecycle front door",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Manage local-first workspace evaluations.",
       "mutates_state": true,
       "name": "evaluation",
@@ -2302,12 +2302,12 @@
           "name": "target"
         }
       ],
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "evaluation_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "evaluation definition registration writes the local evaluation ledger",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Register or update one evaluation definition.",
           "mutates_state": true,
           "name": "register",
@@ -2401,11 +2401,11 @@
               "name": "action_policy"
             }
           ],
-          "role": "core_lifecycle"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "local observation append for evaluation evidence collection",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Append one local observation.",
           "mutates_state": true,
           "name": "observe",
@@ -2498,7 +2498,7 @@
               "default": ""
             }
           ],
-          "role": "core_lifecycle"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
           "name": "authority-refresh",
@@ -2530,9 +2530,9 @@
               "help": "Use the explicitly selected active Planning owner when no current delegated assignment exists."
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "repair local evaluation observation authority from current public owner receipts",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": true
         },
         {
@@ -2563,9 +2563,9 @@
               "help": "Expand one or more comma-separated evaluation status detail fields, or full."
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "read-only derived evaluation status report",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": false
         },
         {
@@ -2598,9 +2598,9 @@
               "default": false
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "read-only report authority preview compiled from current admitted evaluation state",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": false
         },
         {
@@ -2633,9 +2633,9 @@
               "default": false
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "local report compilation receipt with external delivery explicitly unattempted",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": true
         },
         {
@@ -2668,9 +2668,9 @@
               "default": false
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "read-only current external delivery request requiring producer-owned adapter receipts",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": false
         },
         {
@@ -2709,9 +2709,9 @@
               "default": ""
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "advanced_host_repo",
-          "classification_note": "provider-owned host result import/admission by opaque reference",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": true
         },
         {
@@ -2826,9 +2826,9 @@
               "required": true
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "advanced_host_repo",
-          "classification_note": "producer-owned external delivery attempt/result receipt indexed before admission",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": true
         },
         {
@@ -2868,9 +2868,9 @@
               "default": false
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "admit delivery status only from a current indexed producer-owned adapter receipt",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": true
         },
         {
@@ -2903,9 +2903,9 @@
               "default": false
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "read-only delivery status derived from local and provider-owned receipts",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": false
         },
         {
@@ -2937,9 +2937,9 @@
               "default": ""
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "read-only retry projection; actual success still requires a fresh adapter receipt",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": false
         },
         {
@@ -2995,14 +2995,14 @@
               "name": "reason"
             }
           ],
-          "role": "core_lifecycle",
-          "audience": "ordinary_host_repo",
-          "classification_note": "validated lifecycle transition writes the local evaluation ledger",
+          "role": "source_checkout_only_maintainer_development",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "mutates_state": true
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "local evaluation observation retention compaction",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Prune or compact local evaluation observation history.",
           "mutates_state": true,
           "name": "prune",
@@ -3030,7 +3030,7 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_lifecycle",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -3042,8 +3042,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "local-only continuity helper for compressed or fresh sessions",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Create or update ignored local chat continuity checkpoints.",
       "mutates_state": true,
       "name": "checkpoint",
@@ -3056,12 +3056,12 @@
           "name": "target"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "checkpoint_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "ignored local checkpoint writer; not durable closure evidence",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Write or refresh .agentic-workspace/local/chat-checkpoint.json.",
           "mutates_state": true,
           "name": "write",
@@ -3146,7 +3146,7 @@
               "name": "replace"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -3158,8 +3158,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "host final-response admission boundary",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Admit model-authored final responses at the host boundary.",
       "mutates_state": true,
       "name": "final-response",
@@ -3172,12 +3172,12 @@
           "name": "target"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "final_response_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "host final-response admission and local continuation checkpointing",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Admit or reject a model-authored final response attempt.",
           "mutates_state": true,
           "name": "admit",
@@ -3261,7 +3261,7 @@
               "name": "after_compaction"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -3273,8 +3273,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "ordinary autopilot execution boundary with conservative executor-mode effects",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Run the ordinary AW executor loop through final-response admission.",
       "mutates_state": true,
       "name": "autopilot",
@@ -3311,14 +3311,14 @@
           "name": "after_compaction"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "local-only work-thread cleanup helper",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Manage ignored local work-thread continuation handles.",
       "mutates_state": true,
       "name": "work-thread",
@@ -3331,12 +3331,12 @@
           "name": "target"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "work_thread_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "ignored local work-thread selection; not durable closure evidence",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Select an ignored local work-thread continuation handle.",
           "mutates_state": true,
           "name": "select",
@@ -3356,14 +3356,14 @@
               "name": "target"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "read-only local carry ownership and lifecycle inspection",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Inspect decision-point intent carries by exact current-work ownership.",
           "mutates_state": false,
           "name": "carry-inspect",
@@ -3384,14 +3384,14 @@
               "name": "key"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "exact ignored-local carry selection; not Planning owner selection",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Select one exact decision-point carry for closeout or stale recovery.",
           "mutates_state": true,
           "name": "carry-select",
@@ -3412,14 +3412,14 @@
               "required": true
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "exact ignored-local carry lifecycle repair; never archives Planning",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Mark one exactly selected stale decision-point carry without archiving its owner.",
           "mutates_state": true,
           "name": "carry-prune",
@@ -3464,14 +3464,14 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "ignored local work-thread cleanup; not durable closure evidence",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Prune ignored local work-thread records already classified as safe candidates.",
           "mutates_state": true,
           "name": "prune",
@@ -3509,7 +3509,7 @@
               "name": "dry_run"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -3521,8 +3521,8 @@
       ]
     },
     {
-      "audience": "local_only",
-      "classification_note": "local-only session log helper; not durable proof",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Inspect or annotate ignored local AW session logs.",
       "mutates_state": true,
       "name": "session-log",
@@ -3535,12 +3535,12 @@
           "name": "target"
         }
       ],
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "session_log_command",
       "subcommands": [
         {
-          "audience": "local_only",
-          "classification_note": "local-only session logging status; not durable proof",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Report local AW session logging status.",
           "mutates_state": false,
           "name": "status",
@@ -3553,14 +3553,14 @@
               "name": "target"
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "local_only",
-          "classification_note": "local-only session log rotation; not durable proof",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Start a new ignored local AW session log.",
           "mutates_state": true,
           "name": "new-session",
@@ -3573,14 +3573,14 @@
               "name": "target"
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "local_only",
-          "classification_note": "local-only session log note; not durable proof",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Append an optional note to the current ignored local AW session log.",
           "mutates_state": true,
           "name": "note",
@@ -3601,14 +3601,14 @@
               "required": true
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "local_only",
-          "classification_note": "local-only improvement-signal observation; candidate evidence only and never mutation authority",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Capture compact workaround or opportunity evidence for the existing improvement intake.",
           "mutates_state": true,
           "name": "signal",
@@ -3722,14 +3722,14 @@
               "default": "unknown"
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "local_only",
-          "classification_note": "local-only session log analysis; not durable proof",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates.",
           "mutates_state": false,
           "name": "analyze",
@@ -3778,14 +3778,14 @@
               "name": "origin"
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "local_only",
-          "classification_note": "local-only idempotent session-log index repair; not durable proof",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Repair or backfill a partial local session-log index from its Markdown entries.",
           "mutates_state": true,
           "name": "repair",
@@ -3812,14 +3812,14 @@
               "name": "id"
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "local_only",
-          "classification_note": "explicit local session log export; not durable proof",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Export an existing local session log as a local diagnostic bundle with known local paths normalized.",
           "mutates_state": true,
           "name": "export",
@@ -3854,7 +3854,7 @@
               "name": "no_artifacts"
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -3866,8 +3866,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "ordinary first-contact startup context",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Return the minimum safe startup context for beginning work in a target repository.",
       "mutates_state": false,
       "name": "start",
@@ -3919,14 +3919,14 @@
           "name": "verbose"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "bounded implementer context over changed paths",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Return a cheap-implementer context for a bounded changed-path scope.",
       "mutates_state": false,
       "name": "implement",
@@ -3978,14 +3978,14 @@
           "name": "verbose"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "queryable default policy and routing contracts",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show the machine-readable default-route contract for startup, lifecycle, skills, validation, and combined installs.",
       "mutates_state": false,
       "name": "defaults",
@@ -4013,14 +4013,14 @@
           "name": "select"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "changed-path proof routing, authority checks, and explicit proof receipt recording",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show the canonical proof routes and current workspace proof summary.",
       "mutates_state": true,
       "name": "proof",
@@ -4320,25 +4320,25 @@
           "name": "verbose"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "post-bootstrap setup findings and guidance",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show the bounded post-bootstrap setup guidance for a mature repository.",
       "mutates_state": false,
       "name": "setup",
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "selection"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "ownership and authority routing",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show the canonical ownership and authority mapping for the target repository.",
       "mutates_state": false,
       "name": "ownership",
@@ -4365,14 +4365,14 @@
           "name": "path"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "resolved repo and local configuration posture",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show the resolved repo-owned workspace config layered onto product defaults.",
       "mutates_state": false,
       "name": "config",
@@ -4400,14 +4400,14 @@
           "name": "verbose"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "compiled system-intent declaration and sync route",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show or refresh the workspace-owned compiled system-intent declaration.",
       "mutates_state": false,
       "name": "system-intent",
@@ -4428,14 +4428,14 @@
           "name": "sync"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "local_only",
-      "classification_note": "local-only delegation calibration record",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Append one local-only delegation outcome record for target-profile tuning.",
       "mutates_state": true,
       "name": "note-delegation-outcome",
@@ -4556,14 +4556,14 @@
           "name": "escalation_required"
         }
       ],
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "registered package and repo skill routing",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "List registered workspace skills from installed package registries and repo-owned skill registries.",
       "mutates_state": false,
       "name": "skills",
@@ -4590,14 +4590,14 @@
           "name": "select"
         }
       ],
-      "role": "module_delegation_front_door",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "combined compact workspace router and selected diagnostics",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show a compact combined workspace report for installed modules, mixed-agent posture, and next-action guidance.",
       "mutates_state": false,
       "name": "report",
@@ -4660,14 +4660,14 @@
           "name": "fail_on"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "selection"
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "provider-agnostic external-work reconciliation",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show stale planning state against provider-agnostic external work evidence.",
       "mutates_state": true,
       "name": "reconcile",
@@ -4696,14 +4696,14 @@
           "name": "dry_run"
         }
       ],
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "provider-neutral external proof submission through package-trusted host custody",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Submit an external proof candidate by opaque signed host-result reference.",
       "mutates_state": false,
       "name": "external-evidence-submit",
@@ -4732,14 +4732,14 @@
           "required": true
         }
       ],
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "provider-neutral current external proof query",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Query and revalidate one admitted external proof result.",
       "mutates_state": false,
       "name": "external-evidence-query",
@@ -4768,23 +4768,23 @@
           "required": true
         }
       ],
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "optional external evidence adapter front door",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Refresh optional provider-agnostic external intent evidence through adapter subcommands.",
       "mutates_state": false,
       "name": "external-intent",
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "external_intent_command",
       "subcommands": [
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "optional GitHub adapter for provider-agnostic external evidence",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Refresh external intent evidence from GitHub issues through the optional gh CLI adapter.",
           "mutates_state": true,
           "name": "refresh-github",
@@ -4861,7 +4861,7 @@
               "name": "verbose"
             }
           ],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -4869,8 +4869,8 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "takeover-safe compact startup plus active state",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Get compact takeover-safe context: startup defaults + resolved config + active planning state in one call.",
       "mutates_state": false,
       "name": "preflight",
@@ -4906,45 +4906,45 @@
           "name": "verbose"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "format"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "module install lifecycle mutation",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Bootstrap selected modules into a target repository.",
       "mutates_state": true,
       "name": "install",
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "init"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "conservative bootstrap/adopt lifecycle mutation",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Bootstrap selected modules into a target repository.",
       "mutates_state": true,
       "name": "init",
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "init"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "lifecycle handoff prompt renderer",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Print a ready-to-paste workspace lifecycle handoff prompt.",
       "mutates_state": false,
       "name": "prompt",
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "prompt_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "bootstrap handoff prompt renderer",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Print the workspace bootstrap handoff prompt.",
           "mutates_state": false,
           "name": "init",
@@ -4965,29 +4965,29 @@
               "name": "adopt"
             }
           ],
-          "role": "core_lifecycle",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "selection"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "upgrade handoff prompt renderer",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Print the workspace upgrade handoff prompt.",
           "mutates_state": false,
           "name": "upgrade",
-          "role": "core_lifecycle",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "selection"
           ]
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "uninstall handoff prompt renderer",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Print the workspace uninstall handoff prompt.",
           "mutates_state": false,
           "name": "uninstall",
-          "role": "core_lifecycle",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "selection"
           ]
@@ -4995,8 +4995,8 @@
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "read-only lifecycle health drill-down for explicit lifecycle or remediation checks",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show installed-module health for lifecycle checks; ordinary agents should use start/report routing first.",
       "mutates_state": false,
       "name": "status",
@@ -5017,14 +5017,14 @@
           "name": "select"
         }
       ],
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "selection"
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "read-only recovery diagnostic drill-down; not an ordinary first-contact route",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Show drift diagnostics for recovery or remediation; ordinary agents should use start/report routing first.",
       "mutates_state": false,
       "name": "doctor",
@@ -5045,14 +5045,14 @@
           "name": "select"
         }
       ],
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "selection"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "module upgrade lifecycle mutation",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Refresh managed surfaces for selected installed modules.",
       "mutates_state": true,
       "name": "upgrade",
@@ -5137,15 +5137,15 @@
           "name": "to_necessary_surfaces"
         }
       ],
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "selection",
         "preflight_gate"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "conservative lifecycle removal mutation",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Remove managed surfaces conservatively for selected installed modules.",
       "mutates_state": true,
       "name": "uninstall",
@@ -5167,23 +5167,23 @@
           "name": "local_only"
         }
       ],
-      "role": "core_lifecycle",
+      "role": "source_checkout_only_maintainer_development",
       "uses_option_groups": [
         "selection",
         "preflight_gate"
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "local agent guidance lifecycle operation front door",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Promote and mutate local target guidance through generated operations.",
       "name": "agent-guidance",
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "agent_guidance_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Promote one authorised guidance candidate into its lifecycle store.",
           "mutates_state": true,
           "name": "promote",
@@ -5298,11 +5298,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Edit one guidance record while preserving provenance and revision history.",
           "mutates_state": true,
           "name": "edit",
@@ -5417,11 +5417,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Merge guidance records and preserve source lineage.",
           "mutates_state": true,
           "name": "merge",
@@ -5536,11 +5536,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Split one guidance record into replacement records.",
           "mutates_state": true,
           "name": "split",
@@ -5655,11 +5655,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Suppress guidance without deleting provenance.",
           "mutates_state": true,
           "name": "suppress",
@@ -5774,11 +5774,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Revalidate guidance against the current target identity.",
           "mutates_state": true,
           "name": "revalidate",
@@ -5893,11 +5893,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Weaken guidance to advisory-only routing.",
           "mutates_state": true,
           "name": "weaken",
@@ -6012,11 +6012,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Supersede guidance with a replacement record.",
           "mutates_state": true,
           "name": "supersede",
@@ -6131,11 +6131,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Retire guidance from future routing.",
           "mutates_state": true,
           "name": "retire",
@@ -6250,11 +6250,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "agent guidance lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Delete guidance routing while retaining mutation receipt provenance.",
           "mutates_state": true,
           "name": "delete",
@@ -6369,13 +6369,13 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         }
       ]
     },
     {
-      "audience": "advanced_host_repo",
-      "classification_note": "public adapter-neutral assignment/run lifecycle front door",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Execute public assignment/run lifecycle operations.",
       "mutates_state": false,
       "name": "assignment",
@@ -6388,12 +6388,12 @@
           "name": "target"
         }
       ],
-      "role": "core_context_router",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "assignment_command",
       "subcommands": [
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.admit.",
           "mutates_state": false,
           "name": "admit",
@@ -6478,14 +6478,14 @@
               "help": "Changed paths whose review scope must match the admitted result."
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.cleanup.",
           "mutates_state": false,
           "name": "cleanup",
@@ -6526,38 +6526,38 @@
               "name": "run_state_json"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "read-only exact assignment/run inspection",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.status.",
           "mutates_state": false,
           "name": "status",
           "options": [],
-          "role": "reusable_host_repo_diagnostics",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.dispatch.",
           "mutates_state": false,
           "name": "dispatch",
           "options": [],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.export.",
           "mutates_state": false,
           "name": "export",
@@ -6598,14 +6598,14 @@
               "name": "run_state_json"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.import.",
           "mutates_state": false,
           "name": "import",
@@ -6646,14 +6646,14 @@
               "name": "run_state_json"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.integrate.",
           "mutates_state": false,
           "name": "integrate",
@@ -6694,14 +6694,14 @@
               "name": "run_state_json"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.override.",
           "mutates_state": false,
           "name": "override",
@@ -6742,14 +6742,14 @@
               "name": "run_state_json"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.reject.",
           "mutates_state": false,
           "name": "reject",
@@ -6790,14 +6790,14 @@
               "name": "run_state_json"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
         },
         {
-          "audience": "advanced_host_repo",
-          "classification_note": "assignment lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Run assignment.repair.",
           "mutates_state": false,
           "name": "repair",
@@ -6838,7 +6838,7 @@
               "name": "run_state_json"
             }
           ],
-          "role": "core_context_router",
+          "role": "source_checkout_only_maintainer_development",
           "uses_option_groups": [
             "format"
           ]
@@ -6850,17 +6850,17 @@
       ]
     },
     {
-      "audience": "ordinary_host_repo",
-      "classification_note": "local correction-event lifecycle and bounded storage diagnostic front door",
+      "audience": "source_checkout_only",
+      "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
       "help": "Submit, query, and compact local correction events through generated operations.",
       "name": "correction-event",
       "options": [],
-      "role": "reusable_host_repo_diagnostics",
+      "role": "source_checkout_only_maintainer_development",
       "subcommand_dest": "correction_event_command",
       "subcommands": [
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "local target identity lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Initialize one stable configured target identity in ignored local config.",
           "mutates_state": true,
           "name": "identity-init",
@@ -6914,11 +6914,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "correction event lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Submit a correction event through the public local operation boundary.",
           "mutates_state": true,
           "name": "submit",
@@ -7132,11 +7132,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "correction event lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Query admitted and low-authority correction events from bounded local storage.",
           "mutates_state": false,
           "name": "query",
@@ -7329,11 +7329,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "correction event lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Record a dispute/correction transition for a prior correction event.",
           "mutates_state": true,
           "name": "correct-dispute",
@@ -7526,11 +7526,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "correction event lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Withdraw or supersede a prior correction event.",
           "mutates_state": true,
           "name": "withdraw-supersede",
@@ -7723,11 +7723,11 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         },
         {
-          "audience": "ordinary_host_repo",
-          "classification_note": "correction event lifecycle subcommand",
+          "audience": "source_checkout_only",
+          "classification_note": "Historical parser fixture, not an installed public operation. Use the native contract for current owner access.",
           "help": "Compact bounded local correction-event storage while preserving lineage.",
           "mutates_state": true,
           "name": "prune-compact",
@@ -7920,7 +7920,7 @@
               "name": "dry_run"
             }
           ],
-          "role": "reusable_host_repo_diagnostics"
+          "role": "source_checkout_only_maintainer_development"
         }
       ]
     }

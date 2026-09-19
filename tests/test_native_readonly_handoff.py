@@ -652,8 +652,9 @@ def test_current_capsule_and_typed_return_without_parent_context(tmp_path, share
         # reproducible source delivery, not a claim about hidden host injection.
         skill_refs = [
             ".agentic-workspace/skills/workspace-startup/SKILL.md",
-            "packages/planning/skills/planning-manual-delegation/SKILL.md",
-            "packages/planning/skills/planning-returned-result/SKILL.md",
+            "packages/planning/skills/planning-assignment/SKILL.md",
+            "packages/planning/skills/planning-assignment/references/manual.md",
+            "packages/planning/skills/planning-assignment/references/return.md",
         ]
         skills = sum(len((ROOT / ref).read_bytes()) for ref in skill_refs)
 

@@ -13,7 +13,7 @@ Agentic Workspace (AW) helps coding agents enter a repository with the right gui
 
 It builds on repository instructions and skills with persistent, source-owned context and a small Rust-backed tool surface for exact current information and bounded operations. Keep your existing agent, editor, source tree, tests, and review process; AW connects them to the operating context that matters for the task at hand.
 
-[Get started](https://github.com/rickardvh/agentic-workspace#get-started) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md) · [Releases](https://github.com/rickardvh/agentic-workspace/releases)
+[Customize repository behavior](https://github.com/rickardvh/agentic-workspace/blob/master/docs/customization.md) · [Get started](https://github.com/rickardvh/agentic-workspace#get-started) · [Everyday use](https://github.com/rickardvh/agentic-workspace/blob/master/docs/everyday-use.md) · [Documentation](https://github.com/rickardvh/agentic-workspace/blob/master/docs/index.md) · [Releases](https://github.com/rickardvh/agentic-workspace/releases)
 
 ## Why AW?
 
@@ -146,7 +146,7 @@ AW includes optional first-party capabilities for recurring coordination costs:
 
 These are peer capabilities, not mandatory workflow stages. Repositories can use what repays its cost and leave unrelated capabilities out of the current task's context.
 
-Repository-specific rules and procedures do not require a new module. Modules are for independently reusable capabilities with their own domain state or operations.
+Repository-specific rules and procedures do not require a new module. Modules are for independently owned domain capabilities, including read-only facts; persistence is optional.
 
 [Modules and extensions →](https://github.com/rickardvh/agentic-workspace/blob/master/docs/package/modules.md)
 

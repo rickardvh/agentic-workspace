@@ -82,7 +82,7 @@ fn resolve_selected(
     let work = json!({"kind":"current-work", "id":digest(&json!({
         "target":target, "task":input.task, "changed":input.changed
     }))?});
-    let requests = owner_requests(if executing {
+    let mut requests = owner_requests(if executing {
         input
             .invocation
             .as_ref()
@@ -90,6 +90,28 @@ fn resolve_selected(
     } else {
         input.request.as_ref()
     })?;
+    // Resource policy uses the same current semantic route dependency as direct
+    // entry. Promote only this typed owner's declared dependency, never search
+    // arbitrary semantic material for envelopes.
+    if let Some(route) = requests
+        .iter()
+        .find(|r| r["owner"] == crate::native_resource_owner::OWNER)
+        .and_then(|r| r["arguments"]["request"].get("route_request"))
+        .cloned()
+    {
+        if route["owner"] != "semantic-routes" {
+            return Err(CoreError::new(
+                "resource route dependency must belong to semantic-routes",
+            ));
+        }
+        if let Some(existing) = requests.iter().find(|r| r["owner"] == "semantic-routes") {
+            if existing != &route {
+                return Err(CoreError::new("conflicting resource route dependency"));
+            }
+        } else {
+            requests.push(route);
+        }
+    }
     let retained_baseline = crate::native_delegation::retained_packet(target, &requests)?;
     let baseline = baseline.or(retained_baseline.as_ref());
     if executing
@@ -97,6 +119,7 @@ fn resolve_selected(
             !i["source_owner"]
                 .as_str()
                 .is_some_and(crate::native_independent::linked)
+                && !crate::native_resource_owner::operation(&i["operation_id"])
                 && i["operation_id"] != "delegation.dispatch"
                 && i["operation_id"] != crate::native_patch::OP
                 && i["operation_id"] != crate::native_intent_write::WRITE
@@ -345,6 +368,9 @@ fn resolve_selected(
             &instructions["capability_contract"],
         ],
     )?;
+    let resource_contract = crate::native_resource_owner::contract()?;
+    crate::native_startup::restrict_operations(&mut startup_adapter, &[&resource_contract])?;
+    native_instructions::restrict_operations(&mut instructions, &resource_contract)?;
     let mut decision_read_contract = decision_source::read_contract()?;
     if repository_capture_available {
         crate::native_memory_capture::extend_destination(
@@ -375,6 +401,7 @@ fn resolve_selected(
         &native_requirements::contract()?,
         &crate::native_delegation::contract()?,
         &independent.contract,
+        &resource_contract,
     ] {
         for owner in fragment["owners"].as_array().into_iter().flatten() {
             for effect in owner["effects"].as_array().into_iter().flatten() {
@@ -454,6 +481,7 @@ fn resolve_selected(
         &native_requirements::contract()?,
         &crate::native_delegation::contract()?,
         &independent.contract,
+        &resource_contract,
     ])?;
     for request in &requests {
         // Route selection has its own independently bound read-only contract and
@@ -770,7 +798,16 @@ fn resolve_selected(
         };
         config_write["contribution"]["blockers"] = json!([{"code":"independent-owner-configuration-required","message":"A relevant admitted native owner requires durable settings. Follow its exact Configuration request before affected work.","affects":affects}]);
     }
+    let mut resources = crate::native_resource_owner::view(
+        target,
+        &input.task,
+        &input.changed,
+        &work,
+        &contract,
+        request_for(crate::native_resource_owner::OWNER),
+    )?;
     let mut contributions = vec![
+        resources["contribution"].clone(),
         configuration["contribution"].clone(),
         config_write["contribution"].clone(),
     ];
@@ -1449,6 +1486,8 @@ fn resolve_selected(
     planning["current_owner"] = planning_detail;
     let mut public = json!({"runtime_compatibility":compatibility,"decision_sources":decision_sources,"decision_packet":decision, "capability_contract":contract, "current_work":work, "semantic_routes":routes, "configuration":configuration,"configuration_write":config_write,"system_intent":system_intent,"startup_adapter":startup_adapter,"workflow_artifact_profile":artifact_profile, "instructions":instructions,"memory":memory,"planning":planning, "verification":verification,"task_requirements":requirements});
 
+    resources.as_object_mut().unwrap().remove("contribution");
+    public["resources"] = resources;
     public["configuration"]
         .as_object_mut()
         .unwrap()
@@ -1790,6 +1829,7 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         .as_str()
         .is_some_and(crate::native_independent::linked);
     if !independent
+        && !crate::native_resource_owner::operation(&invocation["operation_id"])
         && invocation["operation_id"] != "planning.reconcile"
         && invocation["operation_id"] != "proof.report"
         && invocation["operation_id"] != "planning.create"
@@ -1829,6 +1869,14 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
         );
         rejected["blockers"] = current;
         return Ok(rejected);
+    }
+    if crate::native_resource_owner::operation(&invocation["operation_id"]) {
+        crate::admit_invocation_value(
+            json!({"decision":current["decision_packet"],"invocation":invocation}),
+        )?;
+        progress.entered_effect_owner = true;
+        let executed = crate::native_resource_owner::execute(invocation)?;
+        return finish_invocation(&input, &target, invocation, &executed, progress);
     }
     if independent {
         crate::admit_invocation_value(

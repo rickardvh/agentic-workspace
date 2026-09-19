@@ -44,6 +44,7 @@ mod native_procedure_answer;
 mod native_proof;
 pub mod native_public;
 mod native_requirements;
+mod native_resource_owner;
 mod native_resources;
 pub mod native_routes;
 mod native_skill_exposure;
@@ -2123,6 +2124,10 @@ fn compile(input: DecisionInput) -> Result<Value, CoreError> {
         let revisions = capabilities
             .owners
             .iter()
+            // Full introspection owns all declarations. A current decision only
+            // needs effect revisions for its relevant contributors; selection
+            // re-resolves that owner before an action can be admitted or invoked.
+            .filter(|(owner, _)| relevant.iter().any(|item| &item.owner == *owner))
             .flat_map(|(owner, capability)| {
                 capability
                     .operations

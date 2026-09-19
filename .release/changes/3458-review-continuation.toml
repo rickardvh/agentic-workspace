@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Consolidate Planning review finding triage and continuation while keeping independent review and approval outside optional procedure."
+issues = [3458, 3452, 3411, 3445]

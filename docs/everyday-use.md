@@ -1,5 +1,7 @@
 # Everyday use
 
+[Customize a repository method](customization.md) with the receipt-format example.
+
 Start with the repository's tiny bootstrap and canonical `workspace-startup`
 skill. It teaches procedure; scoped instructions/config provide policy and domain
 owners provide current work and evidence. Ask tools for exact state only when it
