@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Reconcile source-maintenance Memory, Planning and Workspace proof floors with the accepted post-P1 native contract; shipped runtime and payload behavior are unchanged."

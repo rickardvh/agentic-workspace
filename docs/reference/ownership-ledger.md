@@ -21,3 +21,4 @@ Optional repo-local ownership ledger for Agentic Workspace managed surfaces, aut
 | `authority_surfaces` | array of ref `#/$defs/authority_surface` | no | `[]` | Concern-to-surface authority declarations used to route edits, diagnostics, and compact ownership answers. |  |  |
 | `subsystems` | array of ref `#/$defs/subsystem` | no | `[]` | Optional host-repo subsystem ownership declarations used for path-specific scope, proof, and escalation hints. |  |  |
 | `notes` | object | no |  | Human-readable ledger notes; these are not used as routing authority. |  |  |
+| `enclave` | array of object | no | `[]` | Explicit repository-admitted classification for independent owner support and state. Does not grant mutation authority; paths must not overlap current package declarations. |  |  |

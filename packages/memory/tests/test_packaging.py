@@ -137,11 +137,11 @@ def test_memory_artifacts_do_not_ship_root_level_bootstrap_helpers(memory_artifa
         assert not any(path.startswith("bootstrap/optional/") for path in inventory)
 
 
-def test_memory_artifacts_only_ship_selected_native_hygiene_procedure(memory_artifacts: tuple[Path, Path]) -> None:
+def test_memory_artifacts_do_not_ship_retired_executable_procedure(memory_artifacts: tuple[Path, Path]) -> None:
     wheel_path, sdist_path = memory_artifacts
     for inventory in (_artifact_inventory(wheel_path), _artifact_inventory(sdist_path)):
         executable_entries = sorted(path for path in inventory if Path(path).suffix.lower() in EXECUTABLE_PAYLOAD_SUFFIXES)
-        assert executable_entries == ["bootstrap/.agentic-workspace/memory/skills/memory-hygiene/prepare.py"]
+        assert executable_entries == []
 
 
 def test_memory_wheel_ships_generated_cli_package_import_dependency(memory_wheel: Path) -> None:
