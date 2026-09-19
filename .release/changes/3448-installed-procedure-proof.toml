@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Validate installed semantic procedure delivery and passive resource preservation through the supported skill exposure lifecycle."
+issues = [3448, 3410, 3445]
