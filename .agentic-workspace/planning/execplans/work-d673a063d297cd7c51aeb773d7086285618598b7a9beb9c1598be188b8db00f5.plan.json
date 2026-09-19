@@ -1,0 +1,99 @@
+{
+  "blockers": [],
+  "canonical_core": {},
+  "continuation": {
+    "frontier": "Source-bound design proposed for 3409 with complete group-level dispositions and eight bounded capability/migration children. Independent shaping acceptance remains required; no product implementation or P1 completion is claimed."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/053072eac40eb2e6579ea8831dc786670d385bd117c4ea6e68cee881e809cdd8.attempt.json",
+        "revision": "sha256:2f758372d10d296280f95427b14b7a19f440b840f2ab1cf90d59a746f293fba5",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/053072eac40eb2e6579ea8831dc786670d385bd117c4ea6e68cee881e809cdd8.result.json",
+        "revision": "sha256:54ce17fb79dc50512a87561ea8994dee6ff0ed5f5bf92c0b1379671ad58e4424",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:ca0c1656a1ec9c68df7851170add6b5db0826bc41315dcf9d374582e07812397",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:11cac514cbe5330de2a7bf20a8205fa9648731ff85bad0ee753027ab652d09de"
+  },
+  "id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
+  "intent": {
+    "outcome": "Implement the complete P1 scope in dependency-ordered stacked PRs ready for independent review."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "Obtain externally initiated independent shaping acceptance of 3409, reconcile any design/child corrections, then implement capability, full migration, contraction and documentation in dependency-ordered stacked PRs.",
+  "owner_level": "epic",
+  "parent": {
+    "issue": "3445"
+  },
+  "phase": "shaping",
+  "proof": {
+    "observed": "Native workspace binaries build passed. This preparation changes only audit/Planning material; product proof, host vertical execution, independent acceptance and release admission are not established.",
+    "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3445",
+    "https://github.com/rickardvh/agentic-workspace/issues/3409",
+    "docs/reviews/powerskill-p1-design-3409.md"
+  ],
+  "relationships": {},
+  "revision": 2,
+  "scope": {
+    "excluded": [
+      "P2 and P3 implementation",
+      "Self-review or approval",
+      "Stable publication before accepted P1 and fresh RC"
+    ],
+    "included": [
+      "3409 source audit/design",
+      "3410 generic capability",
+      "3411 complete migration",
+      "3442 public contraction",
+      "3443 module contraction",
+      "3404 3405 3406 customization contract/docs"
+    ]
+  },
+  "title": "P1 powerskill contract freeze under 3445",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4c8a5dc63b8d9042c70de674985bccb6da9e5144ee496e47925210cf3c3c22f8.attempt.json",
+        "revision": "sha256:b4dc33c2aed03c8e1c5a625e3998686e8046f1ac00dcc7623217c1555adc83f7",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/4c8a5dc63b8d9042c70de674985bccb6da9e5144ee496e47925210cf3c3c22f8.result.json",
+        "revision": "sha256:21eac8416cbc6a72e31d17ae5fd3236b16dd3f21e176d9aa811f43f60a486330",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:f832c86c1bcdb24c055806600a798a0fb3cb591d9d8cde9785d35eba24f61199",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:63fa5a0005a98c0a5e1986f2e0861c7f0419904b51640f0cbefb8b2e6aaf30b6",
+        "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
+        "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
+      }
+    }
+  }
+}
