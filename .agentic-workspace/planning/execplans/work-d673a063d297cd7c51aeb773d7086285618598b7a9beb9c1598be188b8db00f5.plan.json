@@ -5,7 +5,7 @@
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "Audit reconciliation is in PR 3454. Capability stack: PR 3460 (C1 / 3446) -> PR 3461 (C2a / 3447) -> PR 3462 (C2b / 3455), all ready for independent review. C2a hosted startup-size regression corrected by omitting unselected procedure contracts and absent resource fields; release changesets/semver labels added. C3 3448 explicitly depends on accepted 3446,3447,3455. Full migration, contraction and docs remain pending. No acceptance or issue closure claimed."
+    "frontier": "Design PR 3454 independently accepted from shaping. C1 PR 3460 corrected lazy branch dependencies (86f9787db); C2a PR 3461 corrected immutable selection identity and bare action rejection (d9e87aaf1). Both propagated to C2b PR 3462; affected-delta checks pass. All three ready for independent review/recheck, not self-accepted. C3 3448 remains gated on accepted 3446,3447,3455. Full migration, contraction and docs remain pending."
   },
   "creation_provenance": {
     "custody": {
@@ -44,7 +44,7 @@
   },
   "phase": "implementation",
   "proof": {
-    "observed": "C2b: both binaries build; 7 operating tests and 5 focused Python cases pass (public owner question/effect journey and existing forged/stale action boundaries); generated catalogue/language facade and commit checks current. C2a broader native run had 135 passed,2 failed,3 ignored: config collision passed isolated rerun, existing host-exposure prepare.py expectation persists and belongs to C3. Supplied answers prove protocol, not model judgment. Full-suite green, actual-host capability, independent acceptance, P1 satisfaction and total comparative cost remain unestablished. C2a startup regression correction passes all 29 former-route cases across native/Python/TypeScript/JSON without relaxing size bounds; final stacked C2b targeted effect/currentness and C2a tests pass. Hosted checks remain separately observed; no blanket CI-green claim.",
+    "observed": "C2b: both binaries build; 7 operating tests and 5 focused Python cases pass (public owner question/effect journey and existing forged/stale action boundaries); generated catalogue/language facade and commit checks current. C2a broader native run had 135 passed,2 failed,3 ignored: config collision passed isolated rerun, existing host-exposure prepare.py expectation persists and belongs to C3. Supplied answers prove protocol, not model judgment. Full-suite green, actual-host capability, independent acceptance, P1 satisfaction and total comparative cost remain unestablished. C2a startup regression correction passes all 29 former-route cases across native/Python/TypeScript/JSON without relaxing size bounds; final stacked C2b targeted effect/currentness and C2a tests pass. Hosted checks remain separately observed; no blanket CI-green claim. Review fixes: C1 12 route tests pass. C2a four tests pass serially and on fresh parallel rerun; earlier combined run exited STATUS_STACK_BUFFER_OVERRUN and did not reproduce, so no root-cause claim. C2b propagated delta: seven operating tests and five Python effect/currentness cases pass. Both binaries built and generated catalogue updated. Review acceptance and total operating cost remain separate from these results.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
@@ -55,10 +55,12 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3460",
     "https://github.com/rickardvh/agentic-workspace/pull/3461",
     "https://github.com/rickardvh/agentic-workspace/issues/3448",
-    "https://github.com/rickardvh/agentic-workspace/pull/3462"
+    "https://github.com/rickardvh/agentic-workspace/pull/3462",
+    "https://github.com/rickardvh/agentic-workspace/pull/3460#issuecomment-5741242146",
+    "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050"
   ],
   "relationships": {},
-  "revision": 7,
+  "revision": 8,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -79,18 +81,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/13f94f7802635f7031f79ed3dee1dc01c9746550a306c22a2ced71385fff1478.attempt.json",
-        "revision": "sha256:394717ca9ecfb40c96d762cde1e9426226eed7e22f4c8b81ffaef91c27b4d830",
+        "path": ".agentic-workspace/local/effects/38e06f71a9c2045ac226b0d1dd80046547215f873fcc78ce0a327cf426fd0342.attempt.json",
+        "revision": "sha256:1832a3ff9821933e67138a2c801fa941e783dc4d1bc0383c36e933a1a9968eed",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/13f94f7802635f7031f79ed3dee1dc01c9746550a306c22a2ced71385fff1478.result.json",
-        "revision": "sha256:b01c3c1acd78b1dd36656b7432e98158e50132087226f4dff70e4ef157624204",
+        "path": ".agentic-workspace/local/effects/38e06f71a9c2045ac226b0d1dd80046547215f873fcc78ce0a327cf426fd0342.result.json",
+        "revision": "sha256:ed3d4f534fe810d3e88920ffa0cb1d4bd7e3077c66a60a3975fc2ef7768e0507",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:7866ed8608fa8d33b5c2f9fd1be756ec029358da9c74182c967caa9b6757fef0",
+    "invocation_revision": "sha256:43c1a0241ae23e187d3e01a6b7a4a977feb0a60ffadf7db5ce56dcf630e6d528",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -98,7 +100,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:a2c7b576cafbc94ee7536e0fe743432eb57640f8bf8af22748b377c0a68f81f5",
+        "document_revision": "sha256:2338405e6aef0a7c0f1c5329e2957beb75ec7fe10a46498499b6f48ef82217ef",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }
