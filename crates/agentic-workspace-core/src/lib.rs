@@ -44,6 +44,7 @@ mod native_procedure_answer;
 mod native_proof;
 pub mod native_public;
 mod native_requirements;
+mod native_resource_owner;
 mod native_resources;
 pub mod native_routes;
 mod native_skill_exposure;
