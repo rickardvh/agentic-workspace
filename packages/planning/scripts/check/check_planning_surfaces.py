@@ -1213,18 +1213,16 @@ def _check_docs_surface_roles(repo_root: Path) -> list[PlanningWarning]:
         (
             repo_root / ".agentic-workspace" / "planning" / "execplans" / "README.md",
             (
-                "canonical workspace startup skill",
-                "raw `todo.md` and execplan prose after that only when the compact summary is insufficient",
-                "Legacy `state.toml` is upgrade input, not current selection authority",
-                "Managed record changes require current native owner operations",
-                "Meaning Boundary",
-                "machine-readable state",
-                "compact prose",
-                "raw execplan detail",
-                "What should I do next?",
-                "resumable_contract",
+                "workspace-startup skill",
+                'agentic-workspace start --target . --task "<task>" --format json',
+                "current selection is worktree-local",
+                "not current selection authority",
+                "current Planning requests and exact admitted actions",
+                "required continuation, its owner and activation trigger",
+                "do not scan history during ordinary startup or keep a second aggregate backlog",
+                "Native unavailability leaves current admission unknown",
             ),
-            "Execplans README must keep the canonical startup procedure, current native owner authority, and the meaning boundary explicit.",
+            "Execplans README must preserve current startup, exact owner custody, continuation and unavailable-state boundaries.",
         ),
     )
 

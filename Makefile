@@ -67,6 +67,7 @@ WORKSPACE_TEST_CLI = \
 	tests/test_native_release_topology.py \
 	tests/test_native_repository_adoption.py \
 	tests/test_native_repository_decisions.py \
+	tests/test_native_resource_owner.py \
 	tests/test_native_resources.py \
 	tests/test_native_source_reconciliation.py \
 	tests/test_native_startup_adapter.py \
@@ -131,6 +132,7 @@ WORKSPACE_TEST_CONTRACTS = \
 	tests/test_no_absolute_paths.py \
 	tests/test_open_issues_closure_evidence.py \
 	tests/test_package_artifact_duplicates.py \
+	tests/test_platform_release.py \
 	tests/test_preview_public_smoke.py \
 	tests/test_prompt_semantic_markers.py \
 	tests/test_reconstruction_disposition_map.py \
@@ -416,8 +418,9 @@ format-check-nosync: format-check-workspace format-check-memory format-check-pla
 
 format-check: sync-all format-check-nosync
 
+# Native ingress and all four public transports supersede the retired Python CLI suite.
 verify-workspace:
-	@$(COMPACT_RUN) --label "workspace native command admission" -- uv run pytest tests/test_workspace_cli_blackbox.py -q
+	@$(COMPACT_RUN) --label "workspace native command admission" -- uv run pytest tests/test_native_public_cli.py -q
 
 verify-memory:
 	@$(COMPACT_RUN) --label "memory verify-payload" --cwd packages/memory -- uv run agentic-memory verify-payload --target .

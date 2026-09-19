@@ -160,7 +160,8 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "Required continuation for an unfinished larger intended outcome" in readme_text
     assert "skills/workspace-startup/SKILL.md" in bootstrap_agents_text
     assert "repository-owned and must be preserved" in bootstrap_agents_text
-    assert "without maintaining aggregate queue residue" in execplans_readme_text
+    assert "not current selection authority" in execplans_readme_text
+    assert "do not scan history during ordinary startup or keep a second aggregate backlog" in execplans_readme_text
     assert "## Authority Table" not in quickstart_text
     assert "## Escalation Table" not in quickstart_text
     assert "repository bytes cannot establish live authority" in quickstart_text
@@ -172,7 +173,8 @@ def test_planning_readme_and_bootstrap_agents_describe_required_follow_on_routin
     assert "## Compact Queries" not in routing_text
     assert "agentic-workspace preflight --format json" not in routing_text
     assert "Select specialized" in routing_text
-    assert "Iterative carry-forward belongs under `## Iterative Follow-Through`" in execplans_readme_text
+    assert "required continuation, its owner and activation trigger" in execplans_readme_text
+    assert "reconcile progress and continuation through the current owner" in execplans_readme_text
     assert "GENERATED STATIC ROUTING ADAPTER" in quickstart_text
     assert "Direct work stays direct" in quickstart_text
     assert "clear the matched queue residue in the same pass" not in quickstart_text

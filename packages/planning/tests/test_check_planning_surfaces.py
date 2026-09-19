@@ -525,24 +525,7 @@ def _baseline_resumable_contract() -> str:
 
 
 def _baseline_execplans_readme() -> str:
-    return """
-# Execution Plans
-
-Follow the canonical workspace startup skill when the question is active planning state.
-Use raw `TODO.md` and execplan prose after that only when the compact summary is insufficient.
-Legacy `state.toml` is upgrade input, not current selection authority.
-Managed record changes require current native owner operations.
-
-## Meaning Boundary
-
-Use one compact rule when deciding where a planning meaning belongs:
-
-- machine-readable state keeps the restart-critical meanings that must be recovered cheaply and unambiguously, including active work, next action, follow-on owner, proof state, and escalation boundaries
-- compact prose keeps stable route guidance and framing when a queryable field would not reduce recovery cost enough to justify a second owner
-- raw execplan detail keeps slice-specific narrative, implementation notes, drift-log residue, and other maintenance detail that should not be the default recovery path
-
-Example: "What should I do next?" belongs in `resumable_contract`; the route that gets you there belongs in compact prose; the line-by-line change log belongs in raw execplan detail.
-"""
+    return (PACKAGE_ROOT / "bootstrap/.agentic-workspace/planning/execplans/README.md").read_text(encoding="utf-8")
 
 
 def _write_generated_agent_surfaces(tmp_path: Path, manifest: dict[str, object] | None = None) -> None:
@@ -1383,6 +1366,23 @@ def test_active_execplan_space_warns_for_review_artifact(tmp_path: Path) -> None
     warnings = mod.gather_planning_warnings(repo_root=tmp_path)
     docs_warnings = [warning for warning in warnings if warning.warning_class == "docs_surface_role_drift"]
     assert _has_warning_path_suffix(docs_warnings, ".agentic-workspace/planning/execplans/review-alpha.md")
+
+
+def test_current_execplans_documentation_requires_native_custody_and_continuation(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_current_docs_roles")
+    path = tmp_path / ".agentic-workspace/planning/execplans/README.md"
+    current = _baseline_execplans_readme()
+    _write(path, current)
+    assert mod._check_docs_surface_roles(tmp_path) == []
+    for boundary in (
+        "current Planning requests and exact admitted actions",
+        "required continuation, its owner and activation trigger",
+        "Native unavailability leaves current admission unknown",
+    ):
+        _write(path, current.replace(boundary, "unqualified instruction"))
+        warnings = mod._check_docs_surface_roles(tmp_path)
+        assert len(warnings) == 1
+        assert warnings[0].warning_class == "docs_surface_role_drift"
 
 
 def test_docs_surface_role_drift_warns_when_summary_first_hierarchy_is_missing(tmp_path: Path) -> None:
