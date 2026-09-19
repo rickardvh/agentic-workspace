@@ -123,10 +123,13 @@ The remaining P1 implementation after merged #3464 is published as a linear stac
 | Skill authoring reference | #3477 |
 | Customization journey/navigation | #3478 |
 
-All are ready for independent review. No implementation author supplied review,
-approval or independent acceptance. Earlier issue acceptance prerequisites remain
-acceptance gates; the user explicitly authorized continuing the full implementation
-stack without stopping at intermediate reviews.
+Independent review accepted #3465–#3474 as implementation slices at their reviewed
+heads; those lower heads are unchanged by this repair. #3467 alone does not close
+M3/#3451, and #3473 alone does not close #3442. The late resource integration belongs
+to #3475 and its post-migration disposition must also be accepted before #3441
+contraction closeout. The repaired #3475/#3477 deltas and this #3478 handoff are
+ready for external recheck, not self-accepted. #3476 is content-ready but inherits
+its base's admission. No implementation author supplied review or approval.
 
 The documentation walkthrough extracted the authored question and registry into
 a temporary repository and exercised discovery, selection, semantic answer, leaf
@@ -152,3 +155,36 @@ distinct. Total development tokens/time and longitudinal operating benefit were
 not measured. The draft-only comparison above gives no basis to claim a net cost
 reduction. Scratch examples are disposable once this evidence and native Planning
 handoff are retained; no extra Memory record is justified.
+
+## Upper-stack review repair
+
+Independent review found that full capability introspection exceeded its former
+81,000-byte bound. The [final public disposition](p1-public-surface-disposition.md)
+now explicitly inventories `resources/propose/v1` and all seven resource effects,
+explains the direct/generic transport distinction, and attributes 4,418 bytes to
+the resource owner. The non-resource contract retains its 81,000-byte ceiling;
+the resource owner has a separate 4,500-byte cap and full introspection an
+86,000-byte cap. The original current-state, compact and candidate ceilings are
+unchanged. The first corrected run exposed additional ordinary-state growth;
+decision revision maps now include relevant owners only, retaining all schemas
+in full introspection and re-resolving selected effects before admission.
+
+The repaired #3475 run passed 149 cases: all four former-selection transport
+budgets, resource owner behavior, and shared-core admission/currentness tests.
+Measured Windows full/non-resource/state/compact/candidate sizes were
+84,489 / 79,998 / 27,995 / 3,434 / 1,066 JSON bytes. This is bounded diagnostic
+growth with ordinary budgets preserved, not an unqualified size improvement.
+
+#3477's canonical hash snippet now prints the required `sha256:` prefix. A fresh
+temporary fixture executed the snippet extracted from the page against CRLF
+evidence, submitted its exact result through the procedure answer owner, and
+verified current re-entry and stale changed evidence. A bare digest was rejected.
+This corrects the earlier documentation validation gap: merely running a hash
+snippet did not prove that its output was a valid owner revision.
+
+These repairs do not alter the independently accepted lower implementation heads.
+External recheck is limited to the #3475/#3477 deltas and final #3478 handoff,
+including hosted checks at their new heads and the post-integration #3442/#3441
+disposition. The native Planning continuation records that exact remaining custody;
+neither this record nor a green check supplies independent acceptance or release
+admission.
