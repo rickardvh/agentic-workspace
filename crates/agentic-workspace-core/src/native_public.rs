@@ -287,7 +287,8 @@ fn resolve_selected(
         // A known selected leaf already establishes relevance: include its
         // exact procedure references without a redundant discovery request.
         // Procedure bodies stay lazy; references grant no effect authority.
-        let detail = native_routes::discovery(json!({"target":target,"exact":parent}))?;
+        let detail = native_routes::discovery(json!({"target":target,"exact":parent,
+            "selection":view["discovery"]["resource"]}))?;
         if detail["source_revision"] != route_catalogue["revision"]
             || native_routes::former_selection(target, &native_routes::source(target)?)?.0
                 != route_source

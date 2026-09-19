@@ -3,7 +3,7 @@
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "External shaping in PR 3454 settles the minimum authoring contract and graph: capability 3446 -> 3447 (C2a) -> 3455 (C2b) -> 3448; migration 3449,3450,3451,3453 and Planning coordination 3452 with leaves 3456,3457,3458 then 3459. Artifact reconciliation precedes implementation per the shaping reply. Independent acceptance, implementation and P1 closure remain unestablished."
+    "frontier": "PR 3454 reconciled to external shaping at da890148e. C1 passive resource admission/detail implemented on codex/3446-procedure-admission, ready for independent review after commit. Capability remaining: 3447 C2a -> 3455 C2b -> 3448 C3, then complete migration including Planning leaves 3456-3459, contraction and docs. No independent acceptance or issue closure claimed."
   },
   "creation_provenance": {
     "custody": {
@@ -35,14 +35,14 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Finish audit/PR reconciliation to external shaping, then implement C1 and the dependency-ordered stack under the reply authorization. Leave independent acceptance to externally initiated recheck; do not infer issue closure.",
+  "next_action": "Publish C1 stacked on 3454, then implement semantic question/answer carriage and currentness in 3447. Keep resource/proof adaptation in 3451 and independent review externally initiated.",
   "owner_level": "epic",
   "parent": {
     "issue": "3445"
   },
-  "phase": "shaping",
+  "phase": "implementation",
   "proof": {
-    "observed": "Native workspace binaries build passed. This preparation changes only audit/Planning material; product proof, host vertical execution, independent acceptance and release admission are not established.",
+    "observed": "C1: both native binaries built; 11 native route tests pass including operating-path lazy resource delivery, source drift, malformed/unsafe/missing resources and qualified collision selection. Generated contract catalogue and language facade checks pass. No semantic progression, actual-host behavior, independent acceptance or P1 closure established.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
@@ -52,7 +52,7 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790"
   ],
   "relationships": {},
-  "revision": 3,
+  "revision": 4,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -73,18 +73,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/37a72bfa8b883ab9aeb1158a5525ecda30abb36a60b1e18e9bbbb2663a953b2c.attempt.json",
-        "revision": "sha256:5f0a8f197c2decff7d9d902d6a580576886f4b5161a8b12423d163858da6d4c5",
+        "path": ".agentic-workspace/local/effects/b65f2e3ecfc935818cfcf6acbc4c2146f1a02a00e489a47f13fd4ba571fa9654.attempt.json",
+        "revision": "sha256:fd1ff05fdfc2e80ad290bc81a3665d21af7c514d2d3116af87199a7392326afe",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/37a72bfa8b883ab9aeb1158a5525ecda30abb36a60b1e18e9bbbb2663a953b2c.result.json",
-        "revision": "sha256:5d0d2e704c2a1fa0905fbc7600617187cc2703c605d9d29f7a0a76770e19e989",
+        "path": ".agentic-workspace/local/effects/b65f2e3ecfc935818cfcf6acbc4c2146f1a02a00e489a47f13fd4ba571fa9654.result.json",
+        "revision": "sha256:b481c97f6042f7bc30ed5c246082389e842908b0d72425c94fbee97830c03067",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:040e51ed9f71d3ad21c49c0a0b9747af3fb863a6cd678222a33d7a0d8e8269b2",
+    "invocation_revision": "sha256:8f9ba764a7e4c5cc365caa66c0a6384e2145df451ce1f640d844e9c4c5db636c",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -92,7 +92,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:e0f27c73ca89c70c47e50d5d6b5abb4aa9c674f4047bce82ee8c5d6a2b322769",
+        "document_revision": "sha256:2ecb318bd6c37942a12f4171a87c3dcd8bafba4f08bd3c23b347ace1310314c3",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }

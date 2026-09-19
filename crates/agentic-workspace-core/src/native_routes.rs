@@ -179,7 +179,11 @@ fn executable(target: &Path, root: &Dir, declaration: &Value, procedure: &Value)
 
 /// Match semantic_route_catalogue's current explicitly owned registry sources.
 /// Invalid declarations never degrade into an apparently empty current source.
-fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreError> {
+fn catalogue_selected(
+    target: &Path,
+    exact_detail: Option<&str>,
+    selected: Option<&Value>,
+) -> Result<Value, CoreError> {
     let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(error)?;
     let mut paths = BTreeSet::new();
     // These are source-owned registry roots. Unrelated files elsewhere in the
@@ -361,6 +365,19 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
                     source["procedure"]["executable"] =
                         executable(target, &root, declaration, &source["procedure"]);
                 }
+                if let Some(declaration) = skill.get("procedure_resource") {
+                    let selected_resource = selected
+                        .filter(|selection| {
+                            selection["source_ref"] == path && selection["skill_id"] == skill_id
+                        })
+                        .and_then(|selection| selection["resource"].as_str());
+                    source["procedure"]["resource"] = crate::native_procedure::detail(
+                        &root,
+                        &source,
+                        declaration,
+                        selected_resource,
+                    );
+                }
                 entry["sources"].as_array_mut().unwrap().push(source);
             }
         }
@@ -390,6 +407,10 @@ fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreErr
     Ok(
         json!({"revision":hash(material.values().cloned().collect::<Vec<_>>().join("\n").as_bytes()), "sources":paths, "routes":declarations.into_values().collect::<Vec<_>>()}),
     )
+}
+
+fn catalogue(target: &Path, exact_detail: Option<&str>) -> Result<Value, CoreError> {
+    catalogue_selected(target, exact_detail, None)
 }
 
 pub(crate) fn source(target: &Path) -> Result<Value, CoreError> {
@@ -432,15 +453,17 @@ pub fn discovery(value: Value) -> Result<Value, CoreError> {
         parent: String,
         #[serde(default)]
         exact: String,
+        selection: Option<Value>,
     }
     let input: Input = serde_json::from_value(value).map_err(error)?;
     let parent = input.parent.trim_matches('/');
     let exact = input.exact.trim_matches('/');
-    let catalogue = catalogue(
+    let catalogue = catalogue_selected(
         Path::new(&input.target),
         if exact.is_empty() { None } else { Some(exact) },
+        input.selection.as_ref(),
     )?;
-    let (level, rows) = if !exact.is_empty() {
+    let (level, mut rows) = if !exact.is_empty() {
         (
             "exact",
             catalogue["routes"]
@@ -480,6 +503,22 @@ pub fn discovery(value: Value) -> Result<Value, CoreError> {
             children.into_values().collect(),
         )
     };
+    if let Some(selection) = input.selection {
+        for row in &mut rows {
+            let sources: Vec<_> = row["sources"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|source| {
+                    source["source_ref"] == selection["source_ref"]
+                        && source["skill_id"] == selection["skill_id"]
+                })
+                .collect();
+            row["resource_selection"] = json!({"selection":selection,
+                "status":if sources.len() > 1 {"ambiguous"} else if sources.len() == 1 && sources[0]["procedure"]["resource"]["selected"].is_object() {"current"} else {"unavailable"},
+                "authority_effect":"none"});
+        }
+    }
     Ok(
         json!({"kind":"agentic-workspace/semantic-task-route-discovery/v1","operation_id":"instructions.routes","status":"current","level":level,"parent":parent,"exact":exact,
         "source_revision":catalogue["revision"],"sources":catalogue["sources"],"route_count":rows.len(),"routes":rows,"full_catalogue_emitted":!exact.is_empty(),"diagnostics":[],"authority_effect":"applicability-only"}),
@@ -646,6 +685,116 @@ mod tests {
         );
         assert!(result.get("selection").is_none());
         assert!(!target.0.join(".agentic-workspace").exists());
+    }
+
+    #[test]
+    fn passive_procedure_resources_use_current_operating_detail() {
+        let target = Target::new();
+        let registry = json!({"skills":[{"id":"note","path":"note/SKILL.md","semantic_routes":["note/change"],"procedure_resource":"references/procedure.md"}]});
+        target.write("tools/skills/REGISTRY.json", &registry.to_string());
+        target.write(
+            "tools/skills/note/SKILL.md",
+            "Read [procedure](references/procedure.md).",
+        );
+        let resource = "tools/skills/note/references/procedure.md";
+        let next = "tools/skills/note/references/user.md";
+        let form = json!({"kind":"agentic-workspace/procedure/v1","id":"visibility","question":"Does this change affect users?","branches":[{"id":"yes","description":"Visible behavior changes","next":"user.md"},{"id":"no","description":"Internal change only","next":"internal.md"}]});
+        target.write(
+            resource,
+            &format!("# Visibility\n```agentic-procedure\n{form}\n```\n"),
+        );
+        target.write(next, "USER BRANCH BODY");
+        target.write(
+            "tools/skills/note/references/internal.md",
+            "INTERNAL BRANCH BODY",
+        );
+        let vocabulary = source(&target.0).unwrap();
+        let first = discovery(json!({"target":target.0,"exact":"note/change"})).unwrap();
+        let admitted = &first["routes"][0]["sources"][0]["procedure"]["resource"];
+        assert_eq!(admitted["status"], "current");
+        assert_eq!(
+            admitted["identity"]["source_ref"],
+            "tools/skills/REGISTRY.json"
+        );
+        assert!(!first.to_string().contains("BRANCH BODY"));
+        let context = json!({"target":target.0,"task":"Draft a change note","projection":"full"});
+        let initial = crate::operating::start(context.clone()).unwrap();
+        let mut request = initial["semantic_routes"]["requests"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["request_kind"] == "semantic-routes/discover/v1")
+            .unwrap()
+            .clone();
+        request["arguments"] = json!({"parent":"note/change","resource":{"source_ref":"tools/skills/REGISTRY.json","skill_id":"note","resource":next}});
+        let mut selected = context.clone();
+        selected["request"] = request;
+        let detail = crate::operating::start(selected.clone()).unwrap();
+        let body = &detail["semantic_routes"]["discovery"]["detail"]["sources"][0]["procedure"]["resource"];
+        assert_eq!(body["selected"]["text"], "USER BRANCH BODY");
+        assert!(!detail.to_string().contains("INTERNAL BRANCH BODY"));
+        target.write(next, "CHANGED USER BODY");
+        let changed = crate::operating::start(selected).unwrap();
+        assert_ne!(
+            body["revision"],
+            changed["semantic_routes"]["discovery"]["detail"]["sources"][0]["procedure"]["resource"]
+                ["revision"]
+        );
+        assert_eq!(source(&target.0).unwrap(), vocabulary);
+        assert!(!target.0.join(".agentic-workspace/local").exists());
+        for invalid in ["../escape.md", "/absolute.md", "missing.md"] {
+            let mut broken = form.clone();
+            broken["branches"][0]["next"] = json!(invalid);
+            target.write(resource, &format!("```agentic-procedure\n{broken}\n```\n"));
+            assert_eq!(
+                discovery(json!({"target":target.0,"exact":"note/change"})).unwrap()["routes"][0]["sources"]
+                    [0]["procedure"]["resource"]["status"],
+                "unavailable"
+            );
+            assert_eq!(source(&target.0).unwrap(), vocabulary);
+        }
+        target.write(resource, "```agentic-procedure\n{broken\n```\n");
+        assert_eq!(
+            procedure(&target.0, "note").unwrap()["procedures"][0]["resource"]["status"],
+            "unavailable"
+        );
+        // A broken optional resource does not make the ordinary skill disappear.
+        assert_eq!(procedure(&target.0, "note").unwrap()["status"], "current");
+    }
+
+    #[test]
+    fn procedure_selection_is_qualified_and_never_guesses_a_source() {
+        let target = Target::new();
+        let form = "```agentic-procedure\n{\"kind\":\"agentic-workspace/procedure/v1\",\"id\":\"q\",\"question\":\"Which note?\",\"branches\":[{\"id\":\"yes\",\"description\":\"A note is useful\",\"next\":\"note.md\"}]}\n```\n";
+        for base in ["tools/skills", ".agentic-workspace/skills"] {
+            target.write(&format!("{base}/REGISTRY.json"), &json!({"skills":[{"id":"same","path":"same/SKILL.md","procedure_resource":"procedure.md","semantic_routes":["note/change"]}]}).to_string());
+            target.write(&format!("{base}/same/SKILL.md"), "Ordinary skill");
+            target.write(&format!("{base}/same/procedure.md"), form);
+            target.write(&format!("{base}/same/note.md"), base);
+        }
+        assert_eq!(procedure(&target.0, "same").unwrap()["status"], "ambiguous");
+        let selection = json!({"source_ref":"tools/skills/REGISTRY.json","skill_id":"same","resource":"tools/skills/same/note.md"});
+        let selected =
+            discovery(json!({"target":target.0,"exact":"note/change","selection":selection}))
+                .unwrap();
+        assert_eq!(
+            selected["routes"][0]["resource_selection"]["status"],
+            "current"
+        );
+        let bodies: Vec<_> = selected["routes"][0]["sources"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|s| s["procedure"]["resource"]["selected"]["text"].as_str())
+            .collect();
+        assert_eq!(bodies, vec!["tools/skills"]);
+        let mut missing = selection;
+        missing["source_ref"] = json!("unknown/REGISTRY.json");
+        assert_eq!(
+            discovery(json!({"target":target.0,"exact":"note/change","selection":missing}))
+                .unwrap()["routes"][0]["resource_selection"]["status"],
+            "unavailable"
+        );
     }
 
     #[test]

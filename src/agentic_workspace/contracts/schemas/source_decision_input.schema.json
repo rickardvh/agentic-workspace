@@ -904,7 +904,17 @@
       "type": "object",
       "properties": {
         "parent": {"type": "string", "pattern": "^([a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)*)?$", "description": "Exact branch identity; empty selects roots."},
-        "after": {"type": "string", "description": "Returned next_after child identity for continuing this same branch."}
+        "after": {"type": "string", "description": "Returned next_after child identity for continuing this same branch."},
+        "resource": {
+          "type": "object",
+          "description": "Optional exact passive resource selection from current leaf detail. No execution or applicability authority.",
+          "properties": {
+            "source_ref": {"type": "string", "minLength": 1, "maxLength": 4096},
+            "skill_id": {"type": "string", "minLength": 1, "maxLength": 256},
+            "resource": {"type": "string", "minLength": 1, "maxLength": 4096}
+          },
+          "required": ["source_ref", "skill_id", "resource"], "additionalProperties": false
+        }
       },
       "required": ["parent"], "additionalProperties": false
     },

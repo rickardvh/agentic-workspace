@@ -60,6 +60,7 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
     }
     let mut parent = String::new();
     let mut after = String::new();
+    let mut resource = Value::Null;
     let mut request_identity = Value::Null;
     let mut stale = false;
     let mut contributions = Vec::new();
@@ -92,6 +93,7 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
                 .as_str()
                 .unwrap_or("")
                 .to_owned();
+            resource = request["arguments"]["resource"].clone();
         }
         if !stale {
             intent["public_request"] = prepared["request"].clone();
@@ -134,7 +136,7 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
     Ok((
         json!({"kind":"agentic-workspace/semantic-route-result/v1", "status":if stale {"stale"} else {"current"},
         "request_identity":request_identity, "decision":decision, "requests":templates, "capability_contract":contract,
-        "discovery":{"parent":parent,"children":children,"next_after":next_after}, "authority_effect":"applicability-only"}),
+        "discovery":{"parent":parent,"children":children,"next_after":next_after,"resource":resource}, "authority_effect":"applicability-only"}),
         intent,
     ))
 }

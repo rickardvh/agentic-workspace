@@ -43,7 +43,44 @@
       "current declared route"
     ],
     "authority_effect": "applicability-only",
-    "persistent_history": "none"
+    "persistent_history": "none",
+    "procedure_resources": {
+      "registry_field": "procedure_resource",
+      "reference_base": "relative to the declared SKILL.md; branch/context paths relative to its procedure resource",
+      "source_form": "One agentic-procedure fenced JSON object in Markdown",
+      "kind": "agentic-workspace/procedure/v1",
+      "required": [
+        "kind",
+        "id",
+        "question",
+        "branches"
+      ],
+      "branch_required": [
+        "id",
+        "description",
+        "next"
+      ],
+      "optional": [
+        "context"
+      ],
+      "authoring_boundary": "Natural-language criteria and named branches; no per-question answer schema, predicates, loops, retries or effect controls. Exact typed data belongs to domain owners.",
+      "identity": [
+        "registry source_ref",
+        "skill path",
+        "resource path",
+        "local id"
+      ],
+      "selected_delivery": "semantic-routes/discover/v1 arguments.resource selects exact source_ref, skill_id and resource returned by current leaf detail",
+      "limits": {
+        "resource_bytes": 65536,
+        "branches": 32,
+        "context_refs": 32,
+        "local_id_bytes": 128,
+        "question_or_description_bytes": 8192
+      },
+      "authority_effect": "none",
+      "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities."
+    }
   },
   "public_requests": {
     "selection_owner": "acting-agent-or-human",
