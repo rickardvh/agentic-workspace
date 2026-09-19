@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -181,6 +182,93 @@ def validate_next_rc(ownership: dict[str, Any], *, tag: str, source_commit: str)
 PROMOTION_RECORD = ".release/promotions/v1.0.0.json"
 
 
+def _proof_reconciliation(verified: dict[str, Any], preparation_source: str) -> dict[str, str] | None:
+    """Consume source-owned, exact-commit admission; never infer acceptance from paths."""
+    source = verified["reconstruction_source_commit"]
+    if preparation_source == source:
+        return None
+    path = f".release/proof-reconciliations/{verified['tag']}.json"
+    if not (ROOT / path).is_file():
+        raise SystemExit("Post-RC source requires an explicit proof reconciliation admission")
+    raw = (ROOT / path).read_text(encoding="utf-8").encode("utf-8")
+    admission = json.loads(raw)
+    keys = {
+        "kind",
+        "rc_tag",
+        "rc_artifact_commit",
+        "product_source_commit",
+        "reconciliation_commit",
+        "release_tooling_commit",
+        "reconciliation_paths",
+        "release_tooling_paths",
+        "acceptance_reference",
+    }
+    if set(admission) != keys or admission["kind"] != "agentic-workspace/rc-proof-reconciliation/v1":
+        raise SystemExit("Invalid proof reconciliation admission")
+    if (
+        admission["rc_tag"] != verified["tag"]
+        or admission["rc_artifact_commit"] != verified["artifact_commit"]
+        or admission["product_source_commit"] != source
+        or not isinstance(admission["acceptance_reference"], str)
+        or not admission["acceptance_reference"].strip()
+    ):
+        raise SystemExit("Proof reconciliation does not bind the exact accepted RC")
+    proof = admission["reconciliation_commit"]
+    tooling = admission["release_tooling_commit"]
+    for commit in (source, proof, tooling, preparation_source):
+        if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
+            raise SystemExit("Proof reconciliation requires full immutable commit identities")
+        if _run(["git", "rev-parse", f"{commit}^{{commit}}"], check=False).stdout.strip() != commit:
+            raise SystemExit("Proof reconciliation commit is unavailable")
+    tooling_paths = {
+        "scripts/release/coordinated_release.py",
+        "tests/test_release_candidate.py",
+        "docs/release-and-versioning.md",
+    }
+    for before, after, field in (
+        (source, proof, "reconciliation_paths"),
+        (proof, tooling, "release_tooling_paths"),
+    ):
+        if _run(["git", "merge-base", "--is-ancestor", before, after], check=False).returncode:
+            raise SystemExit("Proof reconciliation ancestry mismatch")
+        declared = admission[field]
+        changed = _run(["git", "diff", "--name-only", "--no-renames", before, after]).stdout.splitlines()
+        if not isinstance(declared, list) or not declared or declared != sorted(set(changed)):
+            raise SystemExit("Proof reconciliation delta does not match its finite admitted path set")
+        for changed_path in declared:
+            changeset = re.fullmatch(r"\.release/changes/[a-zA-Z0-9_-]+\.toml", changed_path)
+            proof_path = (
+                changed_path == "Makefile"
+                or re.fullmatch(r"docs/reference/[a-zA-Z0-9_-]+\.md", changed_path)
+                or re.fullmatch(r"(?:packages/(?:memory|planning|verification)/)?tests/test_[a-zA-Z0-9_]+\.py", changed_path)
+                or changed_path == "packages/planning/scripts/check/check_planning_surfaces.py"
+            )
+            if not (changeset or (proof_path if field == "reconciliation_paths" else changed_path in tooling_paths)):
+                raise SystemExit(f"Product path cannot be admitted as proof reconciliation: {changed_path}")
+            for commit in (before, after):
+                entry = _run(["git", "ls-tree", commit, "--", changed_path]).stdout
+                if entry and not entry.startswith("100644 blob "):
+                    raise SystemExit(f"Proof reconciliation changed file custody/mode: {changed_path}")
+    if _run(["git", "merge-base", "--is-ancestor", tooling, preparation_source], check=False).returncode:
+        raise SystemExit("Preparation source does not descend from admitted release tooling")
+    # The admission is committed AFTER the revisions it pins. This avoids a self-hash
+    # and accepts a merge of that exact tree, but no intervening maintenance/product edit.
+    delta = _run(["git", "diff", "--name-status", "--no-renames", tooling, preparation_source]).stdout.strip()
+    if delta != f"A\t{path}":
+        raise SystemExit("Unadmitted post-RC source drift after pinned release tooling")
+    entry = _run(["git", "ls-tree", preparation_source, "--", path]).stdout
+    committed = _run(["git", "show", f"{preparation_source}:{path}"]).stdout
+    if not entry.startswith("100644 blob ") or committed != raw.decode("utf-8"):
+        raise SystemExit("Preparation admission differs from the current release owner's admission")
+    return {
+        "preparation_source_commit": preparation_source,
+        "reconciliation_commit": proof,
+        "release_tooling_commit": tooling,
+        "admission_path": path,
+        "admission_sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
 def verify_normalization_delta(
     ownership: dict[str, Any], *, source: str, subject: str, version: str, metadata_paths: set[str]
 ) -> list[str]:
@@ -254,8 +342,10 @@ def prepare_rc_promotion(ownership: dict[str, Any], *, rc_tag: str) -> dict[str,
         raise SystemExit("Stable promotion requires a canonical RC")
     verified = verify_preview_release(ownership, tag=rc_tag, artifact_commit=_tag_target(rc_tag))
     source = verified["reconstruction_source_commit"]
-    if _run(["git", "rev-parse", "HEAD"]).stdout.strip() != source or _run(["git", "status", "--porcelain"]).stdout.strip():
-        raise SystemExit("Prepare promotion from the clean exact accepted RC source checkout")
+    preparation_source = _run(["git", "rev-parse", "HEAD"]).stdout.strip()
+    reconciliation = _proof_reconciliation(verified, preparation_source)
+    if _run(["git", "status", "--porcelain"]).stdout.strip():
+        raise SystemExit("Prepare promotion from a clean admitted source checkout")
     if _run(["git", "show-ref", "--verify", "--quiet", "refs/tags/v1.0.0"], check=False).returncode == 0:
         raise SystemExit("Stable v1.0.0 already exists; use its existing publication recovery")
     record = {
@@ -266,6 +356,8 @@ def prepare_rc_promotion(ownership: dict[str, Any], *, rc_tag: str) -> dict[str,
         "stable_tag": "v1.0.0",
         "rc_package_versions": release_identity(rc_tag)["package_versions"],
     }
+    if reconciliation:
+        record["proof_reconciliation"] = reconciliation
     path = ROOT / PROMOTION_RECORD
     if path.exists():
         raise SystemExit("Refusing to replace an existing promotion record")
@@ -278,7 +370,15 @@ def prepare_rc_promotion(ownership: dict[str, Any], *, rc_tag: str) -> dict[str,
         ownership,
         version="1.0.0",
         changesets=changesets,
-        introduction=f"Promotes {rc_tag} from exact source `{source}`.\n\nStable support remains conditional on fresh exact-subject admission.",
+        introduction=(
+            f"Promotes {rc_tag} from exact source `{source}`.\n\n"
+            + (
+                f"Admitted proof/repo-maintenance preparation source: `{preparation_source}`; product source remains unchanged.\n\n"
+                if reconciliation
+                else ""
+            )
+            + "Stable support remains conditional on fresh exact-subject admission."
+        ),
     )
     for changeset in changesets:
         changeset.path.unlink()
@@ -300,9 +400,16 @@ def verify_rc_promotion(ownership: dict[str, Any], *, subject: str | None = None
         "stable_tag": "v1.0.0",
         "rc_package_versions": release_identity(rc_tag)["package_versions"],
     }
+    preparation_source = verified["reconstruction_source_commit"]
+    if "proof_reconciliation" in record:
+        carried = record["proof_reconciliation"]
+        if not isinstance(carried, dict):
+            raise SystemExit("Invalid carried proof reconciliation")
+        preparation_source = carried.get("preparation_source_commit", "")
+        expected["proof_reconciliation"] = _proof_reconciliation(verified, preparation_source)
     if record != expected:
         raise SystemExit("Stable promotion record does not match the exact immutable RC")
-    source = record["source_commit"]
+    source = preparation_source
     if _run(["git", "merge-base", "--is-ancestor", source, subject], check=False).returncode:
         raise SystemExit("Stable subject does not descend from the accepted RC source")
     changed = verify_normalization_delta(
@@ -316,6 +423,18 @@ def verify_rc_promotion(ownership: dict[str, Any], *, subject: str | None = None
         if tomllib.loads(_run(["git", "show", f"{subject}:{_repo_path(path)}"]).stdout)["project"]["version"] != "1.0.0":
             raise SystemExit("Stable promotion requires normalized package versions")
     return {**record, "stable_commit": subject, "normalization_paths": changed, "support_bearing_admission": "required-separately"}
+
+
+def plan_rc_promotion(ownership: dict[str, Any], *, rc_tag: str) -> dict[str, Any]:
+    verified = verify_preview_release(ownership, tag=rc_tag, artifact_commit=_tag_target(rc_tag))
+    prepared = (ROOT / PROMOTION_RECORD).exists()
+    if prepared:
+        promotion = verify_rc_promotion(ownership)
+        if promotion["rc_tag"] != rc_tag:
+            raise SystemExit("Prepared stable subject belongs to a different accepted RC")
+    else:
+        _proof_reconciliation(verified, _run(["git", "rev-parse", "HEAD"]).stdout.strip())
+    return {"release_required": not prepared, "version": "1.0.0", "tag": "v1.0.0", "bump": "major", "changesets": []}
 
 
 def preview_release_note_path(ownership: dict[str, Any], tag: str) -> Path:
@@ -1018,8 +1137,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.from_rc:
             if parse_release_tag(args.from_rc)[0] != "release-candidate":
                 parser.error("--from-rc requires a canonical RC")
-            verify_preview_release(ownership, tag=args.from_rc, artifact_commit=_tag_target(args.from_rc))
-            plan = {"release_required": True, "version": "1.0.0", "tag": "v1.0.0", "bump": "major", "changesets": []}
+            plan = plan_rc_promotion(ownership, rc_tag=args.from_rc)
         else:
             plan = plan_release(ownership, include_git_tags=not args.ignore_git_tags)
         if args.github_output:
