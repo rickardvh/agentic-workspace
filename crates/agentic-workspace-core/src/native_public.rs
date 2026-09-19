@@ -427,8 +427,21 @@ fn resolve_selected(
         configuration["capability_contract"]["revision"] =
             json!(digest(&configuration["capability_contract"])?);
     }
+    let procedure_selected = request_for("procedure").is_some()
+        || routes.as_ref().is_some_and(|view| {
+            view["discovery"]["detail"]["sources"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|source| source["procedure"]["resource"]["status"] == "current")
+        });
+    let procedure_contract = if procedure_selected {
+        crate::native_procedure_answer::contract()?
+    } else {
+        Value::Null
+    };
     let contract = combined_contract(&[
-        &crate::native_procedure_answer::contract()?,
+        &procedure_contract,
         &config_write_contract,
         &decision_read_contract,
         &configuration["capability_contract"],
@@ -1477,7 +1490,9 @@ fn resolve_selected(
     if let Some(v) = planning_identity.as_object_mut() {
         v.remove("portable_continuation");
     }
-    public["procedure"] = procedure;
+    if procedure_selected {
+        public["procedure"] = procedure;
+    }
     let mut memory_identity = public["memory"].clone();
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
