@@ -152,14 +152,14 @@ the answer is bound to it. Identical question text in another skill is not the
 same identity. Do not recreate identity fields from prose or a branch name.
 
 For evidence-dependent answers, add `evidence` inside the answer, with entries
-`{"reference":"patch.txt","revision":"<current normalized-text SHA-256>"}`.
+`{"reference":"patch.txt","revision":"sha256:<64 lowercase hex characters>"}`.
 The reference is repository-relative. Compute the revision from UTF-8 text after
 normalizing CRLF to LF, for example with Python's normal text read:
 
 ```python
 from hashlib import sha256
 from pathlib import Path
-print(sha256(Path("patch.txt").read_text(encoding="utf-8").encode("utf-8")).hexdigest())
+print("sha256:" + sha256(Path("patch.txt").read_text(encoding="utf-8").encode("utf-8")).hexdigest())
 ```
 
 Carry the same answer on unchanged re-entry: a current answered judgment avoids
