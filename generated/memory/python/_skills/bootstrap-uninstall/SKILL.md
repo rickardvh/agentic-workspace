@@ -1,38 +1,22 @@
 ---
 name: bootstrap-uninstall
-description: Finish bootstrap removal conservatively after the CLI has removed the safe bootstrap-managed files. Use when uninstall leaves manual-review items such as customised notes or repo-local memory additions.
+description: Remove managed guidance while keeping optional Memory state separate.
 ---
 
-# Bootstrap Uninstall
+# Managed guidance lifecycle
 
-Use this skill after an admitted native Configuration removal action. Resolve current removal information through `agentic-workspace start --target <repo> --task "Remove repository guidance" --format json`; repository guidance removal does not imply deletion of optional Memory state.
+Remove managed guidance while keeping optional Memory state separate.
 
-It handles the manual-review part of uninstall without deleting repo-local content blindly.
+Use the target repository's `.agentic-workspace/skills/workspace-setup-jumpstart/`
+entry and its `references/package.md` for the shared method. In an AW source
+checkout, read that canonical source; do not maintain a second command recipe here.
 
-## Workflow
+If that source or the configured native runtime is unavailable, read target policy
+and report the exact lifecycle gap. Preserve existing material; no historical
+package command or no-install runner supplies replacement authority.
 
-1. Read the uninstall output and separate:
-   - safe removals already applied
-   - repo-local memory files left for manual review
-   - customised bootstrap-managed files that differ from payload
-2. Review the remaining memory surface:
-   - `AGENTS.md` if it still exists
-   - remaining files under `.agentic-workspace/memory/repo/`
-   - remaining `scripts/check/` files related to bootstrap
-3. Remove repo-local memory files only when the repository should no longer keep that knowledge.
-4. Preserve anything that the repo still intentionally wants, even if the bootstrap is otherwise being removed.
-5. Confirm the final steady state:
-   - no unwanted bootstrap-managed files remain
-   - any intentionally retained repo-local files are explicit
-
-## Guardrails
-
-- Do not delete customised files blindly.
-- Treat repo-local added notes and skills as manual-review content.
-- Prefer explicit reporting over guessing whether a remaining file should stay.
-
-## Typical outputs
-
-- a concise uninstall review
-- remaining manual-review items called out clearly
-- a final statement of what was removed and what was intentionally left
+Configuration owns its footprint only. Preserve repository-authored guidance,
+custom seed notes, unique knowledge, active plans, assignments and evidence.
+An upgrade is not a Memory refresh or a migration of current-task notes. Removal
+does not imply deleting domain state. Inspect actual receiving-owner behavior
+after a committed change and retain unresolved custody with its existing owner.

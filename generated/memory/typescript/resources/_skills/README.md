@@ -6,7 +6,7 @@ These skills are not part of the mandatory bootstrap payload, but they are part 
 
 `REGISTRY.json` is the explicit bundled bootstrap-skill registry for this package. Treat it as the machine-readable source of truth for bundled memory bootstrap skill discovery and task-matching hints.
 
-If the bundled skill is not already visible, prefer the root `agentic-workspace` command and its `memory` subcommands for host-repo work.
+If the bundled skill is not already visible, read the target repository’s `workspace-setup-jumpstart` skill and shared package lifecycle reference. If unavailable, preserve material and report the gap.
 
 For maintainers of this repository, `skills/` is the canonical source of truth. Any bundled copy inside an installed package is only a runtime copy for explicit packaging or install-path testing and may be stale until the package is reinstalled.
 
@@ -16,10 +16,9 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
   - introduce the memory bootstrap into an existing repository conservatively
 - `bootstrap-upgrade`
   - upgrade memory for an already bootstrapped repository safely
-  - determine the installation source automatically
-  - acts as the packaged implementation behind the checked-in `memory-upgrade` skill
+  - shares the Configuration method with the checked-in `memory-upgrade` entry
 - `bootstrap-uninstall`
-  - finish bootstrap removal conservatively after the CLI removes safe bootstrap-managed files
+  - finish bootstrap removal conservatively after an admitted Configuration action
 
 These bundled skills are for bootstrap lifecycle work only, not for general repo workflows.
 Day-to-day memory skills are shipped as checked-in repo skills under `.agentic-workspace/memory/repo/skills/` in the bootstrap payload.
