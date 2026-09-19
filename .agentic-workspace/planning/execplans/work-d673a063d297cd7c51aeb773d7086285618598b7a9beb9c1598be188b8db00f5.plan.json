@@ -2,8 +2,8 @@
   "blockers": [],
   "canonical_core": {},
   "continuation": {
-    "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "Independent review accepted lower implementation slices #3465-#3474 at unchanged heads. M3/#3451 still requires #3475 resource integration; #3442/#3441 requires the post-integration disposition. Repaired #3475 budgets/relevant-operation carriage and #3477 evidence prefix are propagated through #3478. Upper delta acceptance and final accepted-head handoff remain external."
+    "end_state": "Archived through the native Planning owner after independent acceptance and master integration; no active P1 continuation. Release/P2/P3 authority remains with existing owners.",
+    "frontier": "P1 implementation and final handoff independently accepted at #3478 head 9256bc8b73c4e72317dca7e80d6e450feba3107a. Accepted aggregate integrated into master through #3481 at 8bb67558d28eb583a893052ee06f0b95664bc3c0; integration tree equals accepted tree. Administrative P1 issue closure is grounded in that external acceptance. This owner is archived, with durable evidence in the accepted audit/integration records and PRs."
   },
   "creation_provenance": {
     "custody": {
@@ -29,20 +29,20 @@
     "outcome": "Implement the complete P1 scope in dependency-ordered stacked PRs ready for independent review."
   },
   "kind": "planning-execplan/v1",
-  "lifecycle": "planned",
+  "lifecycle": "archived",
   "material_lifetimes": {
     "continuation_frontier": "durable",
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Recheck hosted results on repaired #3475-#3478 heads. Await externally initiated affected-delta review of #3475/#3477 and final #3478 handoff; do not repeat broad lower-stack review or self-approve. Issue closure and release admission remain separate.",
+  "next_action": "No P1 implementation continuation remains. Release coordination continues under #3277 for a fresh post-P1 RC, with independent RC acceptance and stable admission under #2985. #3445 remains open for P2/P3.",
   "owner_level": "epic",
   "parent": {
     "issue": "3445"
   },
-  "phase": "implementation",
+  "phase": "complete",
   "proof": {
-    "observed": "149 repair cases passed: four transport budgets, resource owner behavior and shared-core admission/currentness. Full 84489 bytes, resource owner 4418, non-resource 79998; state 27995, compact 3434, candidate 1066 pass unchanged ordinary limits. Canonical hash snippet extracted and executed on CRLF evidence: bare digest rejected, prefixed digest current, unchanged re-entry current, changed evidence stale. Lower accepted slices unchanged; no upper independent acceptance inferred.",
+    "observed": "149 repair cases passed: four transport budgets, resource owner behavior and shared-core admission/currentness. Full 84489 bytes, resource owner 4418, non-resource 79998; state 27995, compact 3434, candidate 1066 pass unchanged ordinary limits. Canonical hash snippet extracted and executed on CRLF evidence: bare digest rejected, prefixed digest current, unchanged re-entry current, changed evidence stale. Lower accepted slices unchanged; no upper independent acceptance inferred. Final independent acceptance: https://github.com/rickardvh/agentic-workspace/pull/3478#issuecomment-5742982239. Master integration #3481 preserves the exact accepted tree. User explicitly requested administrative issue/Planning closeout after merge. This archival records accepted P1 intent satisfaction; it does not claim measured total cost benefit or release admission.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
@@ -55,10 +55,14 @@
     "https://github.com/rickardvh/agentic-workspace/issues/3448",
     "https://github.com/rickardvh/agentic-workspace/pull/3462",
     "https://github.com/rickardvh/agentic-workspace/pull/3460#issuecomment-5741242146",
-    "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050"
+    "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050",
+    "https://github.com/rickardvh/agentic-workspace/pull/3478#issuecomment-5742982239",
+    "https://github.com/rickardvh/agentic-workspace/pull/3481",
+    "https://github.com/rickardvh/agentic-workspace/issues/3277",
+    "docs/reviews/powerskill-p1-integration.md"
   ],
   "relationships": {},
-  "revision": 22,
+  "revision": 23,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -79,18 +83,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/c48abac878a088697ca3b25992923778d9789c98b58ebdca3ce3c906e7a7904e.attempt.json",
-        "revision": "sha256:4ef73571c546ea28b427cd6b13b489eae0abce68d497561ec52d36679da3792b",
+        "path": ".agentic-workspace/local/effects/c6452934a0b3ae13823a539b20a23bc2bcd218d4f6f59b779363a733f9f9ed76.attempt.json",
+        "revision": "sha256:b3a68b2faf205533a53a051a890a187d4a02e3773e727422e34de13b3a6549ec",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/c48abac878a088697ca3b25992923778d9789c98b58ebdca3ce3c906e7a7904e.result.json",
-        "revision": "sha256:19713d843a6db938044493c84d985242a5215b2040c001b8060808f559ce9ecc",
+        "path": ".agentic-workspace/local/effects/c6452934a0b3ae13823a539b20a23bc2bcd218d4f6f59b779363a733f9f9ed76.result.json",
+        "revision": "sha256:8173b0738e458d971c5ea3c60beeaa18cb6a1fe34be88655de4d0672f8f406be",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:be64578629c5bbe0ee1cb847b7931527fa8f7730e2751346e9680349ca837aa4",
+    "invocation_revision": "sha256:f7d56444a18e10399718eee00689c04a672cd23b5646f5ada07063f3bc14e926",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -98,7 +102,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:620a7381a28ca2ad8f1bbafcf6c1b521db7c36e98d0fa2f829f2ed0e2946993f",
+        "document_revision": "sha256:58fd8f7851f1233b7b70d28b4d7ced6bc2e09ec5ca4be3536bfac16bc4a5b98b",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }
