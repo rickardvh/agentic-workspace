@@ -1,7 +1,9 @@
 # P1 public surface disposition
 
-Implementation inventory for #3442, based on the M1-M5 stack. Ready for independent
-review; lower-layer acceptance and issue closure remain external.
+Implementation inventory for #3442, including the late resource integration in
+#3475 after the M1-M5 extraction stack. #3473 is a contraction slice, not the final
+post-migration closure. This updated disposition requires independent acceptance
+at the post-#3475 head before #3442/#3441 administrative closure.
 
 | Current surface | Disposition | Actual consumer and authority consequence |
 | --- | --- | --- |
@@ -9,6 +11,14 @@ review; lower-layer acceptance and issue closure remain external.
 | invoke, exact action/reference carriage | KEEP_EXACT | The same clients invoke a current owner action; reobservation and owner authorization remain mandatory. |
 | worker entry/expand/return | KEEP_EXACT | Sealed Assignment manual/process transport; distinct from owner admission, integration or execution authority. |
 | resources audit/scratch/worktree operations | KEEP_EXACT | Native path, policy, Git lease and recovery semantics; useful directly, independently of skills. |
+| resources/propose/v1 | KEEP_EXACT | Generic start clients and exact owner-reference fragments observe a proposal through the same resource primitive; discovery never executes it. |
+| workspace.resources.scratch-create | KEEP_EXACT | Exact owner action creates one task-owned scratch container. |
+| workspace.resources.scratch-remove | KEEP_EXACT | Exact owner action removes one current owned container, preserving retained or referenced material. |
+| workspace.resources.scratch-prune | KEEP_EXACT | Exact owner action applies the primitive's bounded stale-resource cleanup policy. |
+| workspace.resources.scratch-retain | KEEP_EXACT | Exact owner action records an explicit continuing-lifetime reason. |
+| workspace.resources.scratch-release | KEEP_EXACT | Exact owner action releases retention after its owner settles that lifetime. |
+| workspace.resources.worktree-create | KEEP_EXACT | Exact owner action applies current isolation policy and Git custody. |
+| workspace.resources.worktree-remove | KEEP_EXACT | Exact owner action reconciles the same owned worktree and registration without erasing foreign work. |
 | proof-procedure prepare/execute/direct | REMOVE | M3 deleted the wrapper, native dispatch, generated exports and descriptor. Proof method uses Verification exact requests/actions/receipts. |
 | resources compose | REMOVE | M3 deleted fixed proposal/action chaining. Caller carries the exact returned action; uncertainty cannot replay. |
 | native_methods selected skill switch | REMOVE | M3 removed skill-name dispatch; passive generic resource selection owns optional method. |
@@ -24,6 +34,40 @@ Verification scope, strategy, execution, receipt and claim admission; admitted
 independent owner requests/operations. Each family owns facts, permission, effects
 or evidence independently of optional skills. Removing one would force direct
 clients through method or lose domain guarantees. They are not extra CLI commands.
+
+The late resource owner is another retained request/effect family. Direct
+`resources` consumers and generic `start`/`invoke` consumers use the same native
+resource implementation, policy observation, exact proposal, currentness and
+recovery checks. The direct primitive remains useful to clients managing paths
+without semantic procedure. The generic owner makes those same effects addressable
+through the existing owner-reference contract, avoiding a resource-specific skill
+escape hatch. It is an adapter, not a second resource authority or a procedural
+facade: no proposal/action chaining, retry loop, skill dispatch or implicit effect
+is introduced. Both paths remain tested, including stale/protection rejection.
+
+Seven operation declarations let exact references distinguish their effects;
+collapsing them into an opaque dispatcher would lose that identity. Their schemas
+repeat a small common argument shape because the existing contract admits each
+operation independently. A new cross-operation schema registry solely to save
+this bounded full-detail cost would add an authoring/resolution contract. Retain
+the explicit declarations and account for their cost instead: the resource owner
+is 4,418 JSON bytes, and the full diagnostic fixture grows to 84,489 bytes. The
+test retains the former 81,000-byte ceiling for the non-resource contract, caps
+this owner at 4,500 bytes and all full introspection at 86,000. Current-state
+(28,000), compact (6,000) and former-selection (8,000) budgets remain unchanged.
+These are diagnostic capacities, not a claim of cheaper ordinary operation.
+Current decision revision maps include only relevant owners; full introspection
+still exposes all declarations. Selecting a resource proposal makes its owner
+relevant before exact action admission. This removes unselected effect hashes
+from ordinary state instead of raising its budget or hiding current restrictions.
+On the repair's Windows fixture, full/non-resource/state/compact/candidate sizes
+were 84,489 / 79,998 / 27,995 / 3,434 / 1,066 JSON bytes. The existing four-transport
+test enforces every budget, including unchanged state and compact ceilings.
+
+M3 closes only from accepted #3467 extraction plus the resource-integration part
+of #3475. The omission was discovered during integration. Final contraction must
+therefore be checked after that integration, rather than inferring completeness
+from the earlier #3473 inventory or closing #3441 before completed migration.
 
 The finite CLI changed from five commands at #3464 to four: start, invoke, worker,
 resources. No mega-command or compatibility alias was added. Historical report,
