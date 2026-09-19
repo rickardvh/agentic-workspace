@@ -3400,7 +3400,6 @@ _IMPROVEMENT_LATITUDE_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for ite
 _OPTIMIZATION_BIAS_PAYLOADS = {str(item["mode"]): copy.deepcopy(item) for item in _OPTIMIZATION_BIAS_POLICY["modes"]}
 _MODULE_REGISTRY_ENTRIES = {str(item["name"]): copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST["modules"]}
 _PACKAGE_FOOTPRINT = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("package_footprint", {}))
-_MODULE_PARTICIPATION_MODEL = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("participation_model", {}))
 _MODULE_COMPONENT_MODEL = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("component_model", {}))
 _WORKSPACE_COMPONENTS = copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("workspace_components", {}))
 _ADVANCED_FEATURE_ENTRIES = tuple((copy.deepcopy(item) for item in _MODULE_REGISTRY_MANIFEST.get("advanced_features", [])))
@@ -5723,7 +5722,6 @@ class ModuleRegistryEntry:
     capabilities: tuple[str, ...]
     dependencies: tuple[str, ...]
     conflicts: tuple[str, ...]
-    participation: dict[str, Any]
     result_contract: ModuleResultContract
     availability: str = "available"
     availability_reason: str = ""
@@ -11037,7 +11035,7 @@ def _minimal_module_footprint_report(
             "when the compact summary is insufficient.\n\n"
             "## Meaning Boundary\n\n"
             "`planning_record` is the canonical active planning record and machine-readable state. Compact prose answers "
-            "questions such as â€˜What should I do next?â€™; raw execplan detail is the fallback for maintenance or omitted "
+            "questions such as Ã¢â‚¬ËœWhat should I do next?Ã¢â‚¬â„¢; raw execplan detail is the fallback for maintenance or omitted "
             "evidence. Preserve the `resumable_contract` identity across summary, handoff, and closeout.\n",
             "create the bounded-owner Planning anchor without a repository-global state aggregate",
         )
@@ -20469,13 +20467,13 @@ def _operating_loop_text_lines(packet: dict[str, Any] | None) -> list[str]:
     required_text = ",".join((str(item) for item in required)) or "none"
     return [
         "loop: "
-        f"Memory {memory.get('state', 'not_applicable')} Â· "
-        f"Planning {planning.get('state', 'none')} Â· "
+        f"Memory {memory.get('state', 'not_applicable')} Ã‚Â· "
+        f"Planning {planning.get('state', 'none')} Ã‚Â· "
         f"Verification {verification.get('state', 'proof_not_required')}",
         "closeout: "
-        f"{loop.get('closeout_state')} Â· "
-        f"claim {loop.get('safe_claim')} Â· "
-        f"owner {loop.get('residue_owner')} Â· "
+        f"{loop.get('closeout_state')} Ã‚Â· "
+        f"claim {loop.get('safe_claim')} Ã‚Â· "
+        f"owner {loop.get('residue_owner')} Ã‚Â· "
         f"required {required_text}",
     ]
 
@@ -20492,7 +20490,7 @@ def _emit_implement_text(payload: dict[str, Any]) -> None:
         effects = _as_dict(decision.get("effects"))
         print(
             "effects: "
-            f"implementation_allowed={str(bool(effects.get('implementation_allowed'))).lower()} Â· "
+            f"implementation_allowed={str(bool(effects.get('implementation_allowed'))).lower()} Ã‚Â· "
             f"outside_scope={effects.get('outside_working_set', 'requires-explicit-authority')}"
         )
         proof = _as_dict(decision.get("proof"))
@@ -47310,7 +47308,6 @@ def _task_posture_packet_payload(
         registry = _module_registry(descriptors=_module_operations(), target_root=config.target_root)
     except Exception:
         registry = []
-    trigger_text = " ".join([task_text or "", " ".join(normalized_paths), surface]).lower()
     enabled_modules = set(config.enabled_modules)
     for entry in registry:
         if entry.name not in enabled_modules or entry.availability != "available" or entry.installed is False:
@@ -47324,22 +47321,6 @@ def _task_posture_packet_payload(
             if contribution is not None:
                 module_contributions.append(contribution)
             continue
-        participation = entry.participation if isinstance(entry.participation, dict) else {}
-        triggers = [str(item) for item in _list_payload(participation.get("posture_triggers")) if str(item).strip()]
-        declares = [str(item) for item in _list_payload(participation.get("declares")) if str(item).strip()]
-        matched = [trigger for trigger in triggers if any(token and token in trigger_text for token in trigger.lower().split())]
-        if matched or (entry.name in {"planning", "verification"} and (planning_safety_gate or proof or closeout_trust)):
-            module_contributions.append(
-                {
-                    "module": entry.name,
-                    "matched_triggers": matched,
-                    "declares": declares,
-                    "startup_contribution": _as_dict(participation.get("dynamic_projection")).get("startup_contribution", ""),
-                    "report_contribution": _as_dict(participation.get("dynamic_projection")).get("report_contribution", ""),
-                    "authority_boundaries": _list_payload(participation.get("authority_boundaries")),
-                    "source": "module_registry.modules[].participation",
-                }
-            )
     output_shape_requirements = [
         "keep AGENTS.md as a small static adapter; emit task-shaped instructions dynamically",
         "prefer compact router output; use selectors/detail commands for raw context",
@@ -49801,7 +49782,6 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     full_payload = {
         "package_footprint": copy.deepcopy(_PACKAGE_FOOTPRINT),
-        "participation_model": copy.deepcopy(_MODULE_PARTICIPATION_MODEL),
         "component_model": copy.deepcopy(_MODULE_COMPONENT_MODEL),
         "workspace_components": copy.deepcopy(_WORKSPACE_COMPONENTS),
         "terminology": copy.deepcopy(_MODULE_REGISTRY_MANIFEST.get("terminology", {})),
@@ -49828,7 +49808,6 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
                 "availability_reason": entry.availability_reason,
                 "entry_point": entry.entry_point,
                 "public_contract": copy.deepcopy(entry.public_contract),
-                "participation": copy.deepcopy(entry.participation),
                 "components": copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(entry.name, {}).get("components", {})),
                 "result_contract": {
                     "schema_version": entry.result_contract.schema_version,
@@ -49876,7 +49855,6 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
             "section_commands": section_commands,
             "detail_commands": {
                 "package_footprint": section_commands["package_footprint"],
-                "participation_model": section_commands["participation_model"],
                 "full": f"agentic-workspace modules{target_arg} --verbose --format json",
                 "status": "agentic-workspace status --target . --format json",
             },
@@ -62455,35 +62433,6 @@ def _scan_skill_paths(skills_root: Path) -> list[Path]:
     return sorted((path for path in skills_root.rglob("SKILL.md") if "__pycache__" not in path.parts))
 
 
-def _descriptor_participation(descriptor: ModuleDescriptor) -> dict[str, Any]:
-    if descriptor.public_contract is None:
-        return copy.deepcopy(_MODULE_REGISTRY_ENTRIES.get(descriptor.name, {}).get("participation", {}))
-    contract = descriptor.public_contract
-    relevance = _as_dict(contract.get("relevance"))
-    capabilities = _as_dict(contract.get("capabilities"))
-    declared = [name for name in ("resources", "skills", "operations") if _list_payload(capabilities.get(name))]
-    if _list_payload(contract.get("facts")):
-        declared.insert(0, "facts")
-    return {
-        "loop_steps": ["resolve", "act", "reconcile"],
-        "declares": declared,
-        "posture_triggers": [
-            *[str(item) for item in _list_payload(relevance.get("task_terms"))],
-            *[str(item) for item in _list_payload(relevance.get("path_prefixes"))],
-        ],
-        "dynamic_projection": {
-            "startup_contribution": "Route only matched resources, skills, or operations from the module contract.",
-            "report_contribution": "Report availability, compatibility, relevance, and declared capabilities.",
-            "closeout_contribution": "Admit only declared result and effect semantics; module-local success cannot set global completion.",
-        },
-        "authority_boundaries": list(_as_dict(contract.get("ownership")).get("authority_exclusions", [])),
-        "conflict_provenance": [
-            *([descriptor.entry_point] if descriptor.entry_point else []),
-            "module capability contract",
-        ],
-    }
-
-
 def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: Path | None) -> list[ModuleRegistryEntry]:
     entries: list[ModuleRegistryEntry] = []
     for module_name in _ordered_module_names(descriptors):
@@ -62512,7 +62461,6 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
                 capabilities=descriptor.capabilities,
                 dependencies=descriptor.dependencies,
                 conflicts=descriptor.conflicts,
-                participation=_descriptor_participation(descriptor),
                 result_contract=descriptor.result_contract,
                 availability=descriptor.availability,
                 availability_reason=descriptor.availability_reason,

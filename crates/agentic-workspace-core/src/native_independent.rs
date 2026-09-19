@@ -368,7 +368,7 @@ impl Runtime {
                 actions.push(json!({"operation_id":operation.operation_id,"dependency_revision":digest(&arguments)?,"arguments":arguments,"effects":effects,"source_requests":requests}));
             }
             contributions.push(json!({"owner":owner,"revision":selected.source_revision,"facts":resolution.facts,"blockers":resolution.blockers,"actions":actions}));
-            views[owner] = json!({"status":"current","revision":selected.revision,"source_revision":selected.source_revision,"requests":returned_requests,"sources":selected.sources,"authority_boundary":"Exact admitted native owner contribution; returned foreign material is evidence requiring responsible-owner admission"});
+            views[owner] = json!({"status":"current","facts":resolution.facts,"revision":selected.revision,"source_revision":selected.source_revision,"requests":returned_requests,"sources":selected.sources,"authority_boundary":"Exact admitted native owner contribution; returned foreign material is evidence requiring responsible-owner admission"});
         }
         Ok((contributions, views))
     }

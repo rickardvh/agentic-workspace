@@ -478,12 +478,9 @@ def test_malformed_provider_is_diagnosable_without_loading_raw_source() -> None:
 
 def test_first_party_registry_uses_same_public_contract_and_generic_loop() -> None:
     registry = runtime._MODULE_REGISTRY_MANIFEST
-    assert [step["id"] for step in registry["participation_model"]["recommended_loop"]] == [
-        "resolve",
-        "act",
-        "reconcile",
-    ]
+    assert "participation_model" not in registry
     for module in registry["modules"]:
+        assert "participation" not in module
         public_contract = validate_module_contract(module["public_contract"])
         assert public_contract["name"] == module["name"]
 

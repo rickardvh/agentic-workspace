@@ -3266,7 +3266,6 @@ def main(argv: list[str] | None = None) -> int:
             "dependencies": list(entry.dependencies),
             "conflicts": list(entry.conflicts),
             "public_contract": entry.public_contract,
-            "participation": entry.participation,
             "components": cli._MODULE_REGISTRY_ENTRIES[entry.name]["components"],  # type: ignore[attr-defined]
             "result_contract": {
                 "schema_version": entry.result_contract.schema_version,

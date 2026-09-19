@@ -17,6 +17,19 @@ fn description(owner: &str, effectful: bool) -> Description {
 fn lens() -> Description {
     description("fixture-lens", false)
 }
+fn facts_only() -> Description {
+    let mut d = description("fixture-facts", false);
+    d.capability["requests"] = json!([]);
+    d.capability["operations"] = json!([]);
+    d
+}
+fn resolve_facts(context: &Context) -> Result<Resolution, String> {
+    Ok(Resolution {
+        facts: json!({"source":context.sources["fixture-input.txt"]}),
+        ..Default::default()
+    })
+}
+submit! {Registration{owner:"fixture-facts",revision:"fixture-v1",api_version:1,describe:facts_only,resolve:resolve_facts}}
 fn notebook() -> Description {
     description("fixture-notebook", true)
 }
@@ -130,6 +143,7 @@ submit! {Registration{owner:"fixture-escape",revision:"fixture-v1",api_version:1
 pub fn configuration(owner: &str) -> Value {
     let description = match owner {
         "fixture-lens" => lens(),
+        "fixture-facts" => facts_only(),
         "fixture-notebook" => notebook(),
         "fixture-foreign-domain" => foreign_domain(),
         "fixture-claim" => ungranted_claim(),
