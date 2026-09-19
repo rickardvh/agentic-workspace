@@ -1,0 +1,24 @@
+{
+  "kind": "agentic-workspace/rc-proof-reconciliation/v1",
+  "rc_tag": "v1.0.0-rc.8",
+  "rc_artifact_commit": "8028391d52dc9353e8c95c4e137216c621c456dc",
+  "product_source_commit": "ec548db15042a7a36b4e73980bbe45336a49387b",
+  "reconciliation_commit": "2978a4284e35251ebff32aff97e7158f829d7695",
+  "release_tooling_commit": "5ebde52db2a52e33b6f53e164c8d085fcc0d0e24",
+  "reconciliation_paths": [
+    ".release/changes/3485-post-p1-proof-floors.toml",
+    "Makefile",
+    "docs/reference/ownership-ledger.md",
+    "packages/memory/tests/test_packaging.py",
+    "packages/planning/scripts/check/check_planning_surfaces.py",
+    "packages/planning/tests/test_check_planning_surfaces.py",
+    "packages/planning/tests/test_installer.py"
+  ],
+  "release_tooling_paths": [
+    ".release/changes/rc-proof-reconciliation-admission.toml",
+    "docs/release-and-versioning.md",
+    "scripts/release/coordinated_release.py",
+    "tests/test_release_candidate.py"
+  ],
+  "acceptance_reference": "https://github.com/rickardvh/agentic-workspace/pull/3486#pullrequestreview-5257117579"
+}
