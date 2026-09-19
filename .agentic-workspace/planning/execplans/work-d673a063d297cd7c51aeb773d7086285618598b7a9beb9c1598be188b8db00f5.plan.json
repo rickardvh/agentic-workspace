@@ -1,11 +1,11 @@
 {
   "blockers": [
-    "3448 Scope explicitly requires accepted 3446,3447,3455 before C3; current capability PRs are ready for independent review, not accepted."
+    "Migration slices 3449-3453 and 3456-3458 require accepted C3 3448. Implementation validation and a current-agent walkthrough do not constitute independent acceptance."
   ],
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "Design PR 3454 independently accepted from shaping. C1 PR 3460 corrected lazy branch dependencies (86f9787db); C2a PR 3461 corrected immutable selection identity and bare action rejection (d9e87aaf1). Both propagated to C2b PR 3462; affected-delta checks pass. All three ready for independent review/recheck, not self-accepted. C3 3448 remains gated on accepted 3446,3447,3455. Full migration, contraction and docs remain pending."
+    "frontier": "Design 3454 and capability PRs 3460/3461/3462 merged at master 329cd1880. C3 3448 installed/exposure proof is implemented and ready for independent review: neutral authored resources, installed native path, actual Codex discovery and explicit current-agent activation, bounded semantic response and reuse/loss. M1-M5, contraction and documentation remain pending; their accepted-C3 prerequisite remains open until independent acceptance."
   },
   "creation_provenance": {
     "custody": {
@@ -37,14 +37,14 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "After externally initiated acceptance of C1/C2a/C2b, resume C3 3448 packaging/host proof, including the stale host-exposure fixture, then the remaining dependency-ordered P1 stack. Do not self-review/approve or dispatch a reviewer.",
+  "next_action": "Obtain externally initiated C3 review/acceptance, then resume M1-M5 in dependency-ordered stacked PRs. No self-review, approval or reviewer dispatch. Preserve final migration/contraction/docs and fresh RC obligations.",
   "owner_level": "epic",
   "parent": {
     "issue": "3445"
   },
   "phase": "implementation",
   "proof": {
-    "observed": "C2b: both binaries build; 7 operating tests and 5 focused Python cases pass (public owner question/effect journey and existing forged/stale action boundaries); generated catalogue/language facade and commit checks current. C2a broader native run had 135 passed,2 failed,3 ignored: config collision passed isolated rerun, existing host-exposure prepare.py expectation persists and belongs to C3. Supplied answers prove protocol, not model judgment. Full-suite green, actual-host capability, independent acceptance, P1 satisfaction and total comparative cost remain unestablished. C2a startup regression correction passes all 29 former-route cases across native/Python/TypeScript/JSON without relaxing size bounds; final stacked C2b targeted effect/currentness and C2a tests pass. Hosted checks remain separately observed; no blanket CI-green claim. Review fixes: C1 12 route tests pass. C2a four tests pass serially and on fresh parallel rerun; earlier combined run exited STATUS_STACK_BUFFER_OVERRUN and did not reproduce, so no root-cause claim. C2b propagated delta: seven operating tests and five Python effect/currentness cases pass. Both binaries built and generated catalogue updated. Review acceptance and total operating cost remain separate from these results.",
+    "observed": "C3: two native exposure/recovery tests, 12 route and four answer tests pass; installed wheel/sdist identity and installed lifecycle pass; two isolated Python/npm release consumer tests pass; four public adapter cases and two repository lifecycle cases pass; generated agent/catalogue checks current. Actual Codex app 26.915.4065.0 with current Astra explicitly loaded the neutral skill and judged this test-only patch internal; installed AW 0.51.0 Windows/MSVC runtime returned the internal fragment, reused current answer and exposed unresolved lost carriage. Codex CLI 0.154.0 skills/list discovered enabled repo-scoped change-note. Only this bounded host setup observed; unrelated personal malformed-skill metadata did not block fixture discovery. Factored ordinary comparator uses less source/protocol overhead; latency, tokens, total cost and broader semantic quality unknown. No P1, issue closure, independent acceptance or final release claim.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
@@ -60,7 +60,7 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050"
   ],
   "relationships": {},
-  "revision": 8,
+  "revision": 9,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -81,18 +81,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/38e06f71a9c2045ac226b0d1dd80046547215f873fcc78ce0a327cf426fd0342.attempt.json",
-        "revision": "sha256:1832a3ff9821933e67138a2c801fa941e783dc4d1bc0383c36e933a1a9968eed",
+        "path": ".agentic-workspace/local/effects/82d87681c739b29ff5d12f1127dff1a477a7eafd2b4460bb9db04908e4e011b8.attempt.json",
+        "revision": "sha256:0d7e633b7becf7d5b3ef342e105f3b8f35037ddfff4f6b1a714e130cda24ed64",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/38e06f71a9c2045ac226b0d1dd80046547215f873fcc78ce0a327cf426fd0342.result.json",
-        "revision": "sha256:ed3d4f534fe810d3e88920ffa0cb1d4bd7e3077c66a60a3975fc2ef7768e0507",
+        "path": ".agentic-workspace/local/effects/82d87681c739b29ff5d12f1127dff1a477a7eafd2b4460bb9db04908e4e011b8.result.json",
+        "revision": "sha256:2059e26fdd870e84afbd51391f80063a5a3a81838347fe193589ae9c88cb0dc0",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:43c1a0241ae23e187d3e01a6b7a4a977feb0a60ffadf7db5ce56dcf630e6d528",
+    "invocation_revision": "sha256:65366884137ca7a77040c533345207517111076b697f7d1b49c9e030cc80f239",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -100,7 +100,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:2338405e6aef0a7c0f1c5329e2957beb75ec7fe10a46498499b6f48ef82217ef",
+        "document_revision": "sha256:2ca35ce87d810e5a15c7362046b6e1d91bb4fda2e22d556a926fb47e39df7dca",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }

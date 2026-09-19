@@ -334,6 +334,83 @@ def test_installed_workspace_stack_runs_fresh_repo_cli_sequence(workspace_wheel:
         assert _venv_site_package_entry_names(tmp_path / ".venv", module) == []
     assert _venv_site_package_entry_names(tmp_path / ".venv", "command_generation") == []
     _assert_workspace_stack_runs_fresh_repo_cli_sequence(workspace_exe=workspace_exe, tmp_path=tmp_path)
+    _assert_installed_procedure_bundle(workspace_exe, tmp_path / "procedure-consumer")
+
+
+def _assert_installed_procedure_bundle(workspace_exe: Path, target: Path) -> None:
+    """Installed delivery/exposure boundary, reusing core semantic/currentness proof."""
+    import shutil
+
+    target.mkdir()
+    subprocess.run(["git", "init", "-q", str(target)], check=True)
+    task = "Draft a note for an observable behavior change"
+
+    def call(request=None, invocation=None):
+        args = ["invoke" if invocation else "start", "--target", str(target), "--task", task, "--format", "json", "--projection", "full"]
+        if request is not None or invocation is not None:
+            packet = target.parent / "procedure-request.json"
+            packet.write_text(json.dumps(invocation if invocation is not None else request), encoding="utf-8")
+            args.extend(["--input", str(packet)])
+        return _run_workspace_console_json(workspace_exe, target, *args)
+
+    discovered = call(call()["configuration_write"]["repository_adoption_request"])
+    adopt = next(r for r in discovered["configuration_write"]["adoption_requests"] if r["arguments"]["mode"] == "adopt")
+    proposed = call(adopt)
+    decisions = proposed["decision_packet"]["pending_consequences"]["decisions"]
+    answer = next(d for d in decisions if d["id"] == "repository-adoption-authorization")["response_request"]
+    answer["arguments"]["answer"] = "authorize-write"
+    assert call(invocation=call(answer)["decision_packet"]["primary_action"])["effect_outcome"]["status"] == "committed"
+    manifest = json.loads((WORKSPACE_ROOT / "src/agentic_workspace/contracts/workspace_surfaces.json").read_text())
+    for reference in manifest["payload_files"]:
+        assert (target / reference).is_file(), reference
+
+    # Author an ordinary host skill; no module, executable helper or product-specific question schema.
+    bundle = target / ".agentic-workspace/skills/change-note"
+    shutil.copytree(WORKSPACE_ROOT / "tests/fixtures/change-note", bundle)
+    registry_path = target / ".agentic-workspace/skills/REGISTRY.json"
+    registry = json.loads(registry_path.read_text())
+    registry["skills"].append(
+        {
+            "id": "change-note",
+            "path": "change-note/SKILL.md",
+            "scope": "specialized-subskill",
+            "visibility": "routed-on-demand",
+            "semantic_routes": ["example/change-note"],
+            "procedure_resource": "procedure.md",
+        }
+    )
+    registry_path.write_text(json.dumps(registry))
+
+    def exposure(mode):
+        read = call(call()["configuration_write"]["skill_exposure_request"])
+        row = next(r for r in read["configuration_write"]["skill_exposure"] if r["state"]["name"] == "change-note")
+        proposed = call(row[f"{mode}_request"])
+        authorization = proposed["configuration_write"]["authorization_request"]
+        authorization["arguments"]["answer"] = "authorize-write"
+        return call(invocation=call(authorization)["decision_packet"]["primary_action"])
+
+    assert exposure("expose")["effect_outcome"]["status"] == "committed"
+    exposed = target / ".agents/skills/change-note"
+    for file in bundle.iterdir():
+        assert (exposed / file.name).read_bytes() == file.read_bytes()
+    discover = call()["semantic_routes"]["requests"][0]
+    discover["arguments"] = {"parent": "example/change-note"}
+    leaf = call(discover)
+    selection = leaf["procedure"]["requests"][0]
+    selected = call(selection)
+    answer = selected["procedure"]["requests"][0]
+    answer["arguments"]["answer"] = {"disposition": "answered", "branches": ["visible"], "material": {"summary": "Public output changed"}}
+    answered = call(answer)
+    assert answered["procedure"]["status"] == "current"
+    discover["arguments"]["resource"] = answered["procedure"]["next"][0]
+    detail = call(discover)["semantic_routes"]["discovery"]["detail"]
+    resource = detail["sources"][0]["procedure"]["resource"]
+    assert resource["selected"]["text"].encode("utf-8") == (bundle / "user-note.md").read_bytes()
+    (bundle / "user-note.md").write_text("Host-authored replacement: return a draft only.")
+    assert (exposed / "user-note.md").read_text() == (bundle / "user-note.md").read_text()
+    assert exposure("remove")["effect_outcome"]["status"] == "committed"
+    assert not exposed.exists()
+    assert (bundle / "user-note.md").read_text() == "Host-authored replacement: return a draft only."
 
 
 def _assert_workspace_stack_runs_fresh_repo_cli_sequence(*, workspace_exe: Path, tmp_path: Path) -> None:
@@ -412,6 +489,7 @@ def _run_workspace_console_json(workspace_exe: Path, cwd: Path, *args: str) -> d
         env={key: value for key, value in os.environ.items() if key not in {"AGENTIC_WORKSPACE_CORE_BINARY", "PYTHONPATH"}},
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     assert result.returncode == 0, result.stderr

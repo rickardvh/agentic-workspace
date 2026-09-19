@@ -504,10 +504,23 @@ mod tests {
             std::fs::canonicalize(&exposed).unwrap(),
             std::fs::canonicalize(&canonical).unwrap()
         );
+        // Exposure links the complete bundle, including nested passive resources,
+        // without assuming a retired executable helper is part of a skill.
+        std::fs::create_dir_all(canonical.join("references")).unwrap();
+        std::fs::write(
+            canonical.join("references/question.md"),
+            "A passive question",
+        )
+        .unwrap();
         assert_eq!(
-            std::fs::read(exposed.join("prepare.py")).unwrap(),
-            std::fs::read(canonical.join("prepare.py")).unwrap()
+            std::fs::read(exposed.join("references/question.md")).unwrap(),
+            b"A passive question"
         );
+        std::fs::write(
+            canonical.join("references/question.md"),
+            "Host-edited question",
+        )
+        .unwrap();
         apply(&target, "workspace-intent-discovery", "remove");
         apply(&target, "workspace-intent-discovery", "expose");
         let stale = choice(&target, "workspace-intent-discovery", "remove");
@@ -528,7 +541,10 @@ mod tests {
         );
         apply(&target, "workspace-intent-discovery", "remove");
         assert!(!exposed.exists());
-        assert!(canonical.join("prepare.py").exists());
+        assert_eq!(
+            std::fs::read(canonical.join("references/question.md")).unwrap(),
+            b"Host-edited question"
+        );
         assert_eq!(
             std::fs::read_to_string(canonical.join("SKILL.md")).unwrap(),
             "user modified canonical material"
