@@ -208,7 +208,8 @@ existing reservation rule.
 
 Independent acceptance is required before promotion. Dispatch the existing
 `release-from-semver-label.yml` workflow on master with `accepted_rc` set to the
-accepted tag. Master must still be the exact RC source; a product fix requires a
+accepted tag. Master must still be the exact RC source or the explicitly admitted
+proof-reconciliation preparation tree described below; a product fix requires a
 new RC first. Ordinary automatic preparation cannot silently manufacture the
 first stable release without this explicit selection.
 
@@ -237,6 +238,39 @@ exact-stable-subject checks, runtime/package/install/security and support-bearin
 promotion receipts. The stable manifest carries the RC promotion record. RC
 acceptance is not stable admission, byte-identical packaging or a maturity/platform
 promotion: the permitted version normalization necessarily changes package bytes.
+
+### Explicit post-RC proof reconciliation
+
+A reviewed proof-only correction does not establish a new product candidate.
+The release owner may explicitly admit it in
+`.release/proof-reconciliations/<accepted-RC-tag>.json`. This is reviewed release
+policy, not a request that a candidate can use to authorize itself. The record
+pins the RC tag/artifact/product source, the independently accepted reconciliation
+commit and its finite changed-path set, and the release-tooling commit and exact
+paths needed to support that admission. The acceptance reference records the
+external review; its mere presence is not automated independent acceptance.
+
+Commit the implementation/tooling first, then commit only the admission file that
+pins it. Preparation accepts that exact resulting tree (including an ordinary
+merge of it). Extra edits after either pin, even to another proof file, are
+rejected. Reconciliation paths are restricted to source-maintenance proof/tests,
+the named Planning checker, reference documentation, Makefile and changesets;
+tooling paths are restricted to this release verifier, its RC tests, this document
+and changesets. Runtime, payload, adapters, dependencies, file-mode changes and
+arbitrary release workflow modifications cannot enter through this admission.
+
+The stable promotion record keeps `source_commit` as the accepted RC product
+source and separately binds the preparation source, both immutable reconciliation
+revisions and the admission digest (UTF-8 text with normalized newlines). The
+ordinary value-aware normalization verifier then compares the stable subject to
+that admitted preparation source. It does not exempt proof files from the stable
+delta: further proof/tooling changes require a new explicit admission. Original
+exact-source promotions remain valid without a reconciliation record.
+
+This relationship does not reuse old receipts or waive stable evidence. Fresh
+exact-stable-subject admission, independent release review and public artifact
+verification remain required. Do not allocate a new RC solely to work around
+proof-owner residue; a product-semantic fix still requires a new RC.
 
 ## Release Changesets
 

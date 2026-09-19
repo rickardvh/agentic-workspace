@@ -175,6 +175,93 @@ def test_exact_rc_to_stable_promotion_rejects_product_and_lock_deltas(tmp_path, 
         module.verify_rc_promotion(ownership)
 
 
+def reconciled_repository(tmp_path, monkeypatch, proof_file="tests/test_proof.py"):
+    module, ownership, source = repository(tmp_path, monkeypatch)
+    _, rc = candidate(module, ownership, tmp_path, source)
+    _git(tmp_path, "switch", "master")
+    proof_path = tmp_path / proof_file
+    proof_path.parent.mkdir(exist_ok=True)
+    proof_path.write_text("# Current proof; no product changes.\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "reviewed proof reconciliation")
+    proof = _git(tmp_path, "rev-parse", "HEAD")
+    tool_path = tmp_path / "scripts/release/coordinated_release.py"
+    tool_path.parent.mkdir(parents=True)
+    tool_path.write_text("# Release-owner admission support.\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "release tooling support")
+    tooling = _git(tmp_path, "rev-parse", "HEAD")
+    admission = {
+        "kind": "agentic-workspace/rc-proof-reconciliation/v1",
+        "rc_tag": rc["tag"],
+        "rc_artifact_commit": rc["artifact_commit"],
+        "product_source_commit": source,
+        "reconciliation_commit": proof,
+        "release_tooling_commit": tooling,
+        "reconciliation_paths": [proof_file],
+        "release_tooling_paths": ["scripts/release/coordinated_release.py"],
+        "acceptance_reference": "https://example.test/independent-review",
+    }
+    path = tmp_path / f".release/proof-reconciliations/{rc['tag']}.json"
+    path.parent.mkdir()
+    path.write_text(json.dumps(admission, indent=2) + "\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "explicit finite admission")
+    return module, ownership, rc, admission, path
+
+
+def test_reconciled_promotion_keeps_rc_product_source_and_rejects_stable_drift(tmp_path, monkeypatch):
+    module, ownership, rc, admission, _ = reconciled_repository(tmp_path, monkeypatch)
+    preparation = _git(tmp_path, "rev-parse", "HEAD")
+    assert module.plan_rc_promotion(ownership, rc_tag=rc["tag"])["release_required"] is True
+    record = module.prepare_rc_promotion(ownership, rc_tag=rc["tag"])
+    assert record["source_commit"] == rc["reconstruction_source_commit"]
+    assert record["proof_reconciliation"]["preparation_source_commit"] == preparation
+    assert record["proof_reconciliation"]["reconciliation_commit"] == admission["reconciliation_commit"]
+    lock = tmp_path / "uv.lock"
+    lock.write_text(lock.read_text().replace('version="0.51.0"', 'version="1.0.0"'))
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "normalized stable")
+    stable = _git(tmp_path, "rev-parse", "HEAD")
+    assert module.verify_rc_promotion(ownership)["source_commit"] == rc["reconstruction_source_commit"]
+    assert module.plan_rc_promotion(ownership, rc_tag=rc["tag"])["release_required"] is False
+    for path in ("tests/test_proof.py", "product.txt", "scripts/release/coordinated_release.py"):
+        _git(tmp_path, "switch", "--detach", stable)
+        (tmp_path / path).write_text("unadmitted change\n")
+        _git(tmp_path, "add", ".")
+        _git(tmp_path, "commit", "-m", "unadmitted stable drift")
+        with pytest.raises(SystemExit, match="delta|custody"):
+            module.verify_rc_promotion(ownership)
+
+
+@pytest.mark.parametrize("field", ["rc_artifact_commit", "reconciliation_commit", "release_tooling_commit", "reconciliation_paths"])
+def test_reconciliation_rejects_forged_admission_identity_or_path_set(tmp_path, monkeypatch, field):
+    module, _, rc, admission, path = reconciled_repository(tmp_path, monkeypatch)
+    admission[field] = [] if field.endswith("paths") else rc["reconstruction_source_commit"]
+    path.write_text(json.dumps(admission) + "\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "forged admission")
+    with pytest.raises(SystemExit, match="reconciliation"):
+        module._proof_reconciliation(rc, _git(tmp_path, "rev-parse", "HEAD"))
+
+
+@pytest.mark.parametrize("path", ["product.txt", "tests/test_proof.py", "uv.lock"])
+def test_reconciliation_rejects_any_intervening_source_drift(tmp_path, monkeypatch, path):
+    module, ownership, rc, _, _ = reconciled_repository(tmp_path, monkeypatch)
+    (tmp_path / path).write_text("unadmitted change\n")
+    _git(tmp_path, "add", ".")
+    _git(tmp_path, "commit", "-m", "intervening drift")
+    with pytest.raises(SystemExit, match="Unadmitted post-RC source drift"):
+        module.prepare_rc_promotion(ownership, rc_tag=rc["tag"])
+
+
+@pytest.mark.parametrize("path", ["product.txt", "uv.lock"])
+def test_reconciliation_cannot_reclassify_product_or_dependencies_as_proof(tmp_path, monkeypatch, path):
+    module, _, rc, _, _ = reconciled_repository(tmp_path, monkeypatch, proof_file=path)
+    with pytest.raises(SystemExit, match="Product path cannot be admitted"):
+        module._proof_reconciliation(rc, _git(tmp_path, "rev-parse", "HEAD"))
+
+
 def test_rc_receipts_use_release_tag_url_and_never_stable_support(tmp_path, monkeypatch):
     import importlib.util
     from pathlib import Path
