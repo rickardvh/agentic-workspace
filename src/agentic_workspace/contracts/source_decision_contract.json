@@ -43,7 +43,97 @@
       "current declared route"
     ],
     "authority_effect": "applicability-only",
-    "persistent_history": "none"
+    "persistent_history": "none",
+    "procedure_resources": {
+      "registry_field": "procedure_resource",
+      "reference_base": "relative to the declared SKILL.md; branch/context paths relative to its procedure resource",
+      "source_form": "One agentic-procedure fenced JSON object in Markdown",
+      "kind": "agentic-workspace/procedure/v1",
+      "required": [
+        "kind",
+        "id",
+        "question",
+        "branches"
+      ],
+      "branch_required": [
+        "id",
+        "description",
+        "next"
+      ],
+      "optional": [
+        "context"
+      ],
+      "authoring_boundary": "Natural-language criteria and named branches; no per-question answer schema, predicates, loops, retries or effect controls. Exact typed data belongs to domain owners.",
+      "identity": [
+        "registry source_ref",
+        "skill path",
+        "resource path",
+        "local id"
+      ],
+      "selected_delivery": "semantic-routes/discover/v1 arguments.resource selects exact source_ref, skill_id and resource returned by current leaf detail",
+      "limits": {
+        "resource_bytes": 65536,
+        "branches": 32,
+        "context_refs": 32,
+        "local_id_bytes": 128,
+        "question_or_description_bytes": 8192
+      },
+      "authority_effect": "none",
+      "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities.",
+      "currentness": "Question source and declared judgment context are revision-bound. Branch destinations remain path-validated references; only a selected destination body is read and added to selected-detail dependencies."
+    },
+    "procedure_answers": {
+      "owner": "procedure",
+      "requests": [
+        "procedure/select/v1",
+        "procedure/answer/v1"
+      ],
+      "dispositions": [
+        "answered",
+        "unknown",
+        "defer",
+        "no-match",
+        "conflict"
+      ],
+      "optional": [
+        "bounded semantic material",
+        "exact repository evidence references with observed revision"
+      ],
+      "carriage": "Exact public answer request; caller-owned, disposable, no global answer storage",
+      "binding": [
+        "current work",
+        "qualified skill/resource identity",
+        "caller-selected instance",
+        "question/source/dependency revision",
+        "relied-upon evidence revision"
+      ],
+      "limits": {
+        "answer_bytes": 16384,
+        "branches": 32,
+        "evidence_refs": 32
+      },
+      "authority_effect": "none",
+      "reentry": "Lost carriage exposes an unresolved question; changed relevant basis requires reconsideration. Supplied-answer validation establishes protocol/currentness, not semantic truth.",
+      "selection_binding": "Selection binds immutable route, source reference, skill identity and question resource revision. The caller chooses the instance at selection time; answer carriage binds that instance as well.",
+      "semantic_material": "Reject versioned authority envelopes and nested bare action envelopes containing source_owner, operation_id, arguments, effects and authority. Ordinary prose and JSON remain advisory material."
+    },
+    "owner_references": {
+      "identity": {
+        "kind": [
+          "request",
+          "question",
+          "action"
+        ],
+        "owner": "current public owner",
+        "id": "public request id or action operation_id"
+      },
+      "direct_selection": "start reference owner:<kind>:<owner>:<id> resolves one exact immutable reference; stable identity alone cannot invoke",
+      "fragment_selection": "One agentic-owner-reference fenced JSON identity in a selected Markdown resource",
+      "currentness": "Exact returned reference binds work context and owner envelope; reobserve before use; missing or ambiguous identities yield. Selection cannot replace arguments, effects or authority.",
+      "continuation": "One resolution step, then yield to existing owner request/answer/invoke. No automatic effect traversal or blind replay; confirmed/uncertain truth and typed continuation remain owner-owned.",
+      "authority_effect": "none"
+
+    }
   },
   "public_requests": {
     "selection_owner": "acting-agent-or-human",

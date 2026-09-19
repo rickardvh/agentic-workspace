@@ -1,0 +1,109 @@
+{
+  "blockers": [
+    "3448 Scope explicitly requires accepted 3446,3447,3455 before C3; current capability PRs are ready for independent review, not accepted."
+  ],
+  "canonical_core": {},
+  "continuation": {
+    "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
+    "frontier": "Design PR 3454 independently accepted from shaping. C1 PR 3460 corrected lazy branch dependencies (86f9787db); C2a PR 3461 corrected immutable selection identity and bare action rejection (d9e87aaf1). Both propagated to C2b PR 3462; affected-delta checks pass. All three ready for independent review/recheck, not self-accepted. C3 3448 remains gated on accepted 3446,3447,3455. Full migration, contraction and docs remain pending."
+  },
+  "creation_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/053072eac40eb2e6579ea8831dc786670d385bd117c4ea6e68cee881e809cdd8.attempt.json",
+        "revision": "sha256:2f758372d10d296280f95427b14b7a19f440b840f2ab1cf90d59a746f293fba5",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/053072eac40eb2e6579ea8831dc786670d385bd117c4ea6e68cee881e809cdd8.result.json",
+        "revision": "sha256:54ce17fb79dc50512a87561ea8994dee6ff0ed5f5bf92c0b1379671ad58e4424",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:ca0c1656a1ec9c68df7851170add6b5db0826bc41315dcf9d374582e07812397",
+    "kind": "agentic-planning/creation-provenance/v2",
+    "material_revision": "sha256:11cac514cbe5330de2a7bf20a8205fa9648731ff85bad0ee753027ab652d09de"
+  },
+  "id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
+  "intent": {
+    "outcome": "Implement the complete P1 scope in dependency-ordered stacked PRs ready for independent review."
+  },
+  "kind": "planning-execplan/v1",
+  "lifecycle": "planned",
+  "material_lifetimes": {
+    "continuation_frontier": "durable",
+    "external_posture": "observation",
+    "next_action": "durable"
+  },
+  "next_action": "After externally initiated acceptance of C1/C2a/C2b, resume C3 3448 packaging/host proof, including the stale host-exposure fixture, then the remaining dependency-ordered P1 stack. Do not self-review/approve or dispatch a reviewer.",
+  "owner_level": "epic",
+  "parent": {
+    "issue": "3445"
+  },
+  "phase": "implementation",
+  "proof": {
+    "observed": "C2b: both binaries build; 7 operating tests and 5 focused Python cases pass (public owner question/effect journey and existing forged/stale action boundaries); generated catalogue/language facade and commit checks current. C2a broader native run had 135 passed,2 failed,3 ignored: config collision passed isolated rerun, existing host-exposure prepare.py expectation persists and belongs to C3. Supplied answers prove protocol, not model judgment. Full-suite green, actual-host capability, independent acceptance, P1 satisfaction and total comparative cost remain unestablished. C2a startup regression correction passes all 29 former-route cases across native/Python/TypeScript/JSON without relaxing size bounds; final stacked C2b targeted effect/currentness and C2a tests pass. Hosted checks remain separately observed; no blanket CI-green claim. Review fixes: C1 12 route tests pass. C2a four tests pass serially and on fresh parallel rerun; earlier combined run exited STATUS_STACK_BUFFER_OVERRUN and did not reproduce, so no root-cause claim. C2b propagated delta: seven operating tests and five Python effect/currentness cases pass. Both binaries built and generated catalogue updated. Review acceptance and total operating cost remain separate from these results.",
+    "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
+  },
+  "references": [
+    "https://github.com/rickardvh/agentic-workspace/issues/3445",
+    "https://github.com/rickardvh/agentic-workspace/issues/3409",
+    "docs/reviews/powerskill-p1-design-3409.md",
+    "https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790",
+    "https://github.com/rickardvh/agentic-workspace/pull/3460",
+    "https://github.com/rickardvh/agentic-workspace/pull/3461",
+    "https://github.com/rickardvh/agentic-workspace/issues/3448",
+    "https://github.com/rickardvh/agentic-workspace/pull/3462",
+    "https://github.com/rickardvh/agentic-workspace/pull/3460#issuecomment-5741242146",
+    "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050"
+  ],
+  "relationships": {},
+  "revision": 8,
+  "scope": {
+    "excluded": [
+      "P2 and P3 implementation",
+      "Self-review or approval",
+      "Stable publication before accepted P1 and fresh RC"
+    ],
+    "included": [
+      "3409 source audit/design",
+      "3410 generic capability",
+      "3411 complete migration",
+      "3442 public contraction",
+      "3443 module contraction",
+      "3404 3405 3406 customization contract/docs"
+    ]
+  },
+  "title": "P1 powerskill contract freeze under 3445",
+  "update_provenance": {
+    "custody": {
+      "attempt": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/38e06f71a9c2045ac226b0d1dd80046547215f873fcc78ce0a327cf426fd0342.attempt.json",
+        "revision": "sha256:1832a3ff9821933e67138a2c801fa941e783dc4d1bc0383c36e933a1a9968eed",
+        "target": "."
+      },
+      "committed": {
+        "owner": "planning",
+        "path": ".agentic-workspace/local/effects/38e06f71a9c2045ac226b0d1dd80046547215f873fcc78ce0a327cf426fd0342.result.json",
+        "revision": "sha256:ed3d4f534fe810d3e88920ffa0cb1d4bd7e3077c66a60a3975fc2ef7768e0507",
+        "target": "."
+      }
+    },
+    "invocation_revision": "sha256:43c1a0241ae23e187d3e01a6b7a4a977feb0a60ffadf7db5ce56dcf630e6d528",
+    "kind": "agentic-planning/update-provenance/v2",
+    "outcome": {
+      "effects": [
+        "planning-state"
+      ],
+      "status": "applied",
+      "value": {
+        "document_revision": "sha256:2338405e6aef0a7c0f1c5329e2957beb75ec7fe10a46498499b6f48ef82217ef",
+        "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
+        "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
+      }
+    }
+  }
+}

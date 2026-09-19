@@ -39,6 +39,8 @@ mod native_payload;
 mod native_planning;
 mod native_planning_create;
 mod native_planning_update;
+mod native_procedure;
+mod native_procedure_answer;
 mod native_proof;
 mod native_proof_procedure;
 pub mod native_public;

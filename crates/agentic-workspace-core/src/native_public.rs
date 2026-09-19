@@ -287,7 +287,8 @@ fn resolve_selected(
         // A known selected leaf already establishes relevance: include its
         // exact procedure references without a redundant discovery request.
         // Procedure bodies stay lazy; references grant no effect authority.
-        let detail = native_routes::discovery(json!({"target":target,"exact":parent}))?;
+        let detail = native_routes::discovery(json!({"target":target,"exact":parent,
+            "selection":view["discovery"]["resource"]}))?;
         if detail["source_revision"] != route_catalogue["revision"]
             || native_routes::former_selection(target, &native_routes::source(target)?)?.0
                 != route_source
@@ -426,7 +427,21 @@ fn resolve_selected(
         configuration["capability_contract"]["revision"] =
             json!(digest(&configuration["capability_contract"])?);
     }
+    let procedure_selected = request_for("procedure").is_some()
+        || routes.as_ref().is_some_and(|view| {
+            view["discovery"]["detail"]["sources"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|source| source["procedure"]["resource"]["status"] == "current")
+        });
+    let procedure_contract = if procedure_selected {
+        crate::native_procedure_answer::contract()?
+    } else {
+        Value::Null
+    };
     let contract = combined_contract(&[
+        &procedure_contract,
         &config_write_contract,
         &decision_read_contract,
         &configuration["capability_contract"],
@@ -465,6 +480,13 @@ fn resolve_selected(
     }
     let (independent_contributions, independent_views) =
         independent.resolve(target, &work, &contract, &requests)?;
+    let procedure = crate::native_procedure_answer::view(
+        target,
+        &work,
+        routes.as_ref().unwrap_or(&Value::Null),
+        request_for("procedure"),
+        &contract,
+    )?;
     if let Some(request) = request_for("startup-adapter") {
         startup_adapter = crate::native_startup::view(
             target,
@@ -1467,6 +1489,9 @@ fn resolve_selected(
     let mut planning_identity = public["planning"].clone();
     if let Some(v) = planning_identity.as_object_mut() {
         v.remove("portable_continuation");
+    }
+    if procedure_selected {
+        public["procedure"] = procedure;
     }
     let mut memory_identity = public["memory"].clone();
     if let Some(object) = memory_identity.as_object_mut() {

@@ -38,6 +38,11 @@ fn reference(context: &Value, selector: &str, envelope: &Value) -> Result<String
             "detail:{}:{hash}",
             selector.strip_prefix('/').unwrap_or(selector)
         ))
+    } else if selector.starts_with("request:") {
+        Ok(format!(
+            "request:{}:{hash}",
+            selector.split(':').nth(1).unwrap()
+        ))
     } else {
         Ok(hash)
     }
@@ -87,6 +92,57 @@ fn entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
         let descriptor =
             json!({"kind":"agentic-workspace/lazy-owner-detail/v1","revision":revision});
         result.push(entry(context, &selector, &descriptor)?);
+    }
+    Ok(result)
+}
+
+fn request_entries(full: &Value, context: &Value) -> Result<Vec<Value>, CoreError> {
+    let mut result = Vec::new();
+    // Only native-returned request lists participate. Never search caller
+    // material, provenance or action arguments for executable envelopes.
+    fn requests(value: &Value, found: &mut Vec<Value>, depth: usize) {
+        if depth > 12 || found.len() >= 512 {
+            return;
+        }
+        if let Some(object) = value.as_object() {
+            for (key, child) in object {
+                if key == "requests" || key.ends_with("_requests") {
+                    for request in child.as_array().into_iter().flatten() {
+                        if request["kind"] == "agentic-workspace/public-request/v1"
+                            && !found.contains(request)
+                        {
+                            found.push(request.clone());
+                        }
+                    }
+                } else if !matches!(
+                    key.as_str(),
+                    "arguments"
+                        | "carriage"
+                        | "creation_provenance"
+                        | "update_provenance"
+                        | "capability_contract"
+                        | "decision_packet"
+                ) {
+                    requests(child, found, depth + 1);
+                }
+            }
+        }
+    }
+    for (owner, value) in full.as_object().into_iter().flatten() {
+        if owner.starts_with('_')
+            || matches!(owner.as_str(), "capability_contract" | "decision_packet")
+        {
+            continue;
+        }
+        let mut found = Vec::new();
+        requests(value, &mut found, 0);
+        for request in found {
+            if request["task_identity"] != full["current_work"] {
+                continue;
+            }
+            let selector = format!("request:{owner}:{}", digest(&request)?);
+            result.push(entry(context, &selector, &request)?);
+        }
     }
     Ok(result)
 }
@@ -176,6 +232,9 @@ fn compact(full: &Value, context: &Value, carried: bool) -> Result<Value, CoreEr
     let mut refs = serde_json::Map::new();
     for item in entries(full, context)? {
         let selector = item["selector"].as_str().unwrap();
+        if selector.starts_with("request:") {
+            continue;
+        }
         refs.insert(selector.to_owned(), item["reference"].clone());
         if carried && action_selector(selector) {
             // Effect-bearing arguments stay visible until owners expose a
@@ -287,7 +346,12 @@ fn normalize_context(mut value: Value) -> Result<Value, CoreError> {
 }
 
 fn select_entry(full: &Value, context: &Value, selected: &Value) -> Result<Value, CoreError> {
-    let mut matches: Vec<_> = entries(full, context)?
+    let candidates = if selected.as_str().is_some_and(|s| s.starts_with("request:")) {
+        request_entries(full, context)?
+    } else {
+        entries(full, context)?
+    };
+    let mut matches: Vec<_> = candidates
         .into_iter()
         .filter(|entry| entry["reference"] == *selected)
         .collect();
@@ -304,6 +368,66 @@ fn select_entry(full: &Value, context: &Value, selected: &Value) -> Result<Value
     Ok(selected_entry)
 }
 
+fn resolve_owner_reference(
+    full: &Value,
+    context: &Value,
+    identity: &Value,
+) -> Result<Value, CoreError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Identity {
+        kind: String,
+        owner: String,
+        id: String,
+    }
+    let wanted: Identity = serde_json::from_value(identity.clone())
+        .map_err(|_| error("owner identity requires only kind, owner and id"))?;
+    if !matches!(wanted.kind.as_str(), "request" | "action" | "question")
+        || wanted.owner.is_empty()
+        || wanted.id.is_empty()
+        || wanted.owner.len() > 128
+        || wanted.id.len() > 1024
+    {
+        return Err(error("invalid public owner identity"));
+    }
+    let mut matches = Vec::new();
+    let candidates = if wanted.kind == "request" {
+        request_entries(full, context)?
+    } else {
+        entries(full, context)?
+    };
+    for item in candidates {
+        let selector = item["selector"].as_str().unwrap();
+        let envelope = &item["envelope"];
+        let candidate = match wanted.kind.as_str() {
+            "request" if selector.starts_with("request:") => {
+                envelope["owner"] == wanted.owner && envelope["id"] == wanted.id
+            }
+            "action" if action_selector(selector) => {
+                envelope["source_owner"] == wanted.owner && envelope["operation_id"] == wanted.id
+            }
+            "question" if selector == "/decision_packet/decision_request" => {
+                envelope["response_request"]["owner"] == wanted.owner
+                    && envelope["response_request"]["id"] == wanted.id
+            }
+            _ => false,
+        };
+        if candidate && !matches.iter().any(|m: &Value| m["envelope"] == *envelope) {
+            matches.push(item);
+        }
+    }
+    if matches.len() != 1 {
+        return Ok(
+            json!({"identity":identity,"status":if matches.is_empty(){"missing"}else{"ambiguous"},"authority_effect":"none"}),
+        );
+    }
+    let selected = matches.remove(0);
+    Ok(
+        json!({"identity":identity,"status":"current","reference":selected["reference"],"value":selected["envelope"],
+        "authority_effect":"none","continuation":"Use the exact reference through the existing owner answer/invoke path; a request template still requires its owner's requested input. Resolution never executes or retries."}),
+    )
+}
+
 fn use_selected(
     context: Value,
     current: Value,
@@ -318,7 +442,7 @@ fn use_selected(
         .ok_or_else(|| error("invalid selector"))?;
     let selected = selected_entry["reference"].clone();
     let lazy = selected_entry["envelope"]["kind"] == "agentic-workspace/lazy-owner-detail/v1";
-    if if lazy {
+    if if lazy || selector.starts_with("request:") {
         select_entry(&current, &context, &selected).ok().as_ref() != Some(&selected_entry)
     } else {
         current.pointer(selector) != Some(&selected_entry["envelope"])
@@ -432,9 +556,9 @@ fn resolution(projection: &Value, detail: Option<Option<&str>>) -> Resolution {
     }
 }
 fn selected_owner(reference: &Value) -> Option<&str> {
-    reference
-        .as_str()?
-        .strip_prefix("detail:")?
+    let text = reference.as_str()?;
+    text.strip_prefix("detail:")
+        .or_else(|| text.strip_prefix("request:"))?
         .split(':')
         .next()
 }
@@ -539,7 +663,14 @@ fn operate_current(
         return Err(error("unknown operating projection"));
     }
     let field = if invoking { "invocation" } else { "request" };
-    if let Some(selected) = selected {
+    if let Some(mut selected) = selected {
+        if let Some(identity) = selected.as_str().and_then(|s| s.strip_prefix("owner:")) {
+            let parts: Vec<_> = identity.splitn(3, ':').collect();
+            if parts.len() != 3 {
+                return Err(error("owner identity requires kind, owner and id"));
+            }
+            selected = json!({"kind":parts[0],"owner":parts[1],"id":parts[2]});
+        }
         if value[field]["kind"] == CARRIAGE {
             let carrier: Carriage = serde_json::from_value(
                 value
@@ -649,12 +780,24 @@ fn operate_current(
         let context = normalize_context(value)?;
         let current = native_public::start_selected(
             context.clone(),
-            &Resolution::Frontier(
-                selected_owner(&selected)
-                    .or(detail.flatten())
-                    .map(str::to_owned),
-            ),
+            &if selected.is_object() {
+                Resolution::Full
+            } else {
+                Resolution::Frontier(
+                    selected_owner(&selected)
+                        .or(detail.flatten())
+                        .map(str::to_owned),
+                )
+            },
         )?;
+        if selected.is_object() {
+            if invoking || answer.is_some() {
+                return Err(error(
+                    "stable owner identity must first resolve an exact reference",
+                ));
+            }
+            return resolve_owner_reference(&current, &context, &selected);
+        }
         let selected_entry = select_entry(&current, &context, &selected)?;
         return use_selected(
             context,
@@ -717,6 +860,68 @@ pub(crate) fn project_start(
     value: Value,
     projection: &Value,
 ) -> Result<Value, CoreError> {
+    let context = normalize_context(value.clone())?;
+    let mut nominations = Vec::new();
+    for source in full["semantic_routes"]["discovery"]["detail"]["sources"]
+        .as_array()
+        .into_iter()
+        .flatten()
+    {
+        let selected = &source["procedure"]["resource"]["selected"];
+        if let Some(text) = selected["text"].as_str() {
+            let lines: Vec<_> = text.lines().collect();
+            let starts: Vec<_> = lines
+                .iter()
+                .enumerate()
+                .filter(|(_, line)| **line == "```agentic-owner-reference")
+                .map(|(i, _)| i)
+                .collect();
+            if starts.is_empty() {
+                continue;
+            }
+            let resolve = || -> Result<Value, CoreError> {
+                if starts.len() != 1 {
+                    return Err(error("ambiguous owner-reference declaration"));
+                }
+                let start = starts[0] + 1;
+                let end = lines[start..]
+                    .iter()
+                    .position(|line| *line == "```")
+                    .map(|i| i + start)
+                    .ok_or_else(|| error("owner-reference fence is not closed"))?;
+                let identity: Value = serde_json::from_str(&lines[start..end].join("\n"))
+                    .map_err(|_| error("invalid owner-reference declaration"))?;
+                // Optional owner detail may have been suppressed in compact
+                // startup. Reobserve it on this explicit nomination only.
+                if projection != "full" {
+                    let current =
+                        native_public::start_selected(context.clone(), &Resolution::Full)?;
+                    let still_selected =
+                        current["semantic_routes"]["discovery"]["detail"]["sources"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .any(|candidate| {
+                                candidate["procedure"]["resource"]["selected"] == *selected
+                            });
+                    if !still_selected {
+                        return Err(error(
+                            "procedure nomination source changed during resolution",
+                        ));
+                    }
+                    resolve_owner_reference(&current, &context, &identity)
+                } else {
+                    resolve_owner_reference(&full, &context, &identity)
+                }
+            };
+            nominations.push(json!({"source":selected["reference"],"source_revision":selected["revision"],
+                "owner_reference":resolve().unwrap_or_else(|e|json!({"status":"unavailable","reason":e.to_string()})),
+                "continuation":"Yield to the exact owner reference. No automatic effect, replay or traversal is authorized."}));
+        }
+    }
+    if !nominations.is_empty() {
+        full["procedure_continuation"] = json!(nominations);
+    }
     if projection == "full" {
         let context = normalize_context(value)?;
         let recovery = consequence_recovery(&full, &context)?;
@@ -729,10 +934,13 @@ pub(crate) fn project_start(
         return Ok(full);
     }
     let value = normalize_context(value)?;
-    let view = compact(&full, &value, projection == "carried")?;
+    let mut view = compact(&full, &value, projection == "carried")?;
+    if let Some(nominations) = full.get("procedure_continuation") {
+        view["procedure_continuation"] = nominations.clone();
+    }
     if projection == "carried" {
         return Ok(
-            json!({"view":view,"carriage":{"kind":CARRIAGE,"context":value,"envelopes":entries(&full, &value)?}}),
+            json!({"view":view,"carriage":{"kind":CARRIAGE,"context":value,"envelopes":entries(&full, &value)?.into_iter().filter(|e|!e["selector"].as_str().unwrap().starts_with("request:")).collect::<Vec<_>>()}}),
         );
     }
     Ok(view)
@@ -783,6 +991,76 @@ mod tests {
             "reference":selected
         }));
         assert!(stale.is_err());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn public_owner_identity_resolves_exact_requests_without_rebinding() {
+        let root = temp_root("owner-reference");
+        let mut context = json!({"target":root,"task":"inspect a current owner"});
+        context["reference"] = json!("owner:request:semantic-routes:semantic-routes/discover/v1");
+        let resolved = start(context.clone()).unwrap();
+        assert_eq!(resolved["status"], "current");
+        assert_eq!(resolved["value"]["owner"], "semantic-routes");
+        assert_eq!(resolved["authority_effect"], "none");
+        context["reference"] = resolved["reference"].clone();
+        let exact = start(context.clone()).unwrap();
+        assert_eq!(exact["value"], resolved["value"]);
+        std::fs::create_dir_all(root.join("tools/skills")).unwrap();
+        std::fs::write(
+            root.join("tools/skills/REGISTRY.json"),
+            r#"{"skills":[{"id":"new","semantic_routes":["new/route"]}]}"#,
+        )
+        .unwrap();
+        assert!(start(context.clone()).is_err());
+        let mut rebound = context.clone();
+        rebound["reference"] = json!("owner:request:semantic-routes:semantic-routes/discover/v1");
+        assert_ne!(start(rebound).unwrap()["reference"], resolved["reference"]);
+        context["task"] = json!("another task");
+        assert!(start(context).is_err());
+        let result=invoke(json!({"target":root,"task":"inspect a current owner","reference":"owner:action:any:any"})).unwrap();
+        assert_eq!(result["effect_outcome"]["status"], "rejected-before-effect");
+        assert!(!root.join(".agentic-workspace/local").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn owner_nomination_yields_without_execution_and_preserves_ambiguity() {
+        let root = temp_root("fragment-owner");
+        let work = json!({"kind":"current-work","id":"test"});
+        let request = json!({"kind":"agentic-workspace/public-request/v1","owner":"example","id":"example/read","task_identity":work,"arguments":{"selection":"first"}});
+        let identity = json!({"kind":"request","owner":"example","id":"example/read"});
+        let context = json!({"target":root,"task":"inspect nominated owner"});
+        let mut full = json!({"current_work":work,"example":{"requests":[request]},"decision_packet":{},
+            "semantic_routes":{"discovery":{"detail":{"sources":[{"procedure":{"resource":{"selected":{"reference":"fragment.md","revision":"current","text":format!("Inspect current owner.\n```agentic-owner-reference\n{identity}\n```\n")}}}}]}}}});
+        let result = project_start(full.clone(), context.clone(), &json!("full")).unwrap();
+        assert_eq!(
+            result["procedure_continuation"][0]["owner_reference"]["value"],
+            request
+        );
+        assert_eq!(
+            result["procedure_continuation"][0]["owner_reference"]["status"],
+            "current"
+        );
+        assert!(result["decision_packet"]["primary_action"].is_null());
+        let mut peer = request.clone();
+        peer["arguments"]["selection"] = json!("second");
+        full["example"]["requests"]
+            .as_array_mut()
+            .unwrap()
+            .push(peer);
+        assert_eq!(
+            resolve_owner_reference(&full, &context, &identity).unwrap()["status"],
+            "ambiguous"
+        );
+        let missing = json!({"kind":"request","owner":"missing","id":"missing"});
+        assert_eq!(
+            resolve_owner_reference(&full, &context, &missing).unwrap()["status"],
+            "missing"
+        );
+        let mut altered = identity;
+        altered["arguments"] = json!({"injected":"effect"});
+        assert!(resolve_owner_reference(&full, &context, &altered).is_err());
         std::fs::remove_dir_all(root).unwrap();
     }
 
