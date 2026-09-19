@@ -79,7 +79,8 @@
         "question_or_description_bytes": 8192
       },
       "authority_effect": "none",
-      "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities."
+      "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities.",
+      "currentness": "Question source and declared judgment context are revision-bound. Branch destinations remain path-validated references; only a selected destination body is read and added to selected-detail dependencies."
     },
     "procedure_answers": {
       "owner": "procedure",
@@ -112,7 +113,9 @@
         "evidence_refs": 32
       },
       "authority_effect": "none",
-      "reentry": "Lost carriage exposes an unresolved question; changed relevant basis requires reconsideration. Supplied-answer validation establishes protocol/currentness, not semantic truth."
+      "reentry": "Lost carriage exposes an unresolved question; changed relevant basis requires reconsideration. Supplied-answer validation establishes protocol/currentness, not semantic truth.",
+      "selection_binding": "Selection binds immutable route, source reference, skill identity and question resource revision. The caller chooses the instance at selection time; answer carriage binds that instance as well.",
+      "semantic_material": "Reject versioned authority envelopes and nested bare action envelopes containing source_owner, operation_id, arguments, effects and authority. Ordinary prose and JSON remain advisory material."
     },
     "owner_references": {
       "identity": {
@@ -129,6 +132,7 @@
       "currentness": "Exact returned reference binds work context and owner envelope; reobserve before use; missing or ambiguous identities yield. Selection cannot replace arguments, effects or authority.",
       "continuation": "One resolution step, then yield to existing owner request/answer/invoke. No automatic effect traversal or blind replay; confirmed/uncertain truth and typed continuation remain owner-owned.",
       "authority_effect": "none"
+
     }
   },
   "public_requests": {
