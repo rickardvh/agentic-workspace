@@ -1,5 +1,7 @@
 # Package Overview
 
+[Customize repository behavior](../customization.md) with the receipt-format example.
+
 `agentic-workspace` turns static repository agent guidance into a programmable, repo-native operating context and control system.
 
 The repository preserves a bounded set of context because it materially affects agent behavior. AW selects the relevant part for the current task, environment, and decision, then compiles one compact operating contract: what matters now, what action is supported, what constraints apply, what deeper procedure is relevant, and what may be claimed afterward.

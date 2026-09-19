@@ -1,5 +1,7 @@
 # Modules
 
+[Try repository customization before adding a domain owner](../customization.md) with the receipt-format example.
+
 Modules own domain facts, typed requests, operations and results. Skills supply
 optional method. Read the [native module contract](../module-capability-contract.md)
 for the exact supported authoring path and [extension boundary](../extension-boundary.md)

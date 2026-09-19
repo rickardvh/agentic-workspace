@@ -1,5 +1,7 @@
 # Extension boundary
 
+[Choose a rule, skill, helper or module](customization.md) with the receipt-format example.
+
 Modules add domain capability; skills describe reusable method; repository
 instructions carry repository policy. They have separate authority and lifecycle.
 

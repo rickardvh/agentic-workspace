@@ -9,6 +9,9 @@ This reference describes the post-contraction source contract. Check the selecte
 it with an older artifact. The [integration record](../reviews/powerskill-p1-integration.md)
 separates source, installed-artifact and observed host evidence.
 
+For binding rules, see [scoped instructions](scoped-instructions.md). Follow the
+[customization walkthrough](../customization.md) for the complete receipt example.
+
 ## Start with an ordinary skill
 
 Create `tools/skills/change-note/SKILL.md` in your repository:

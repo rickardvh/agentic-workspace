@@ -10,6 +10,9 @@ This page describes the current native source contract. Check the selected
 assuming an older installed artifact supports it. Use your configured AW invocation
 in place of `agentic-workspace` below; no historical instruction CLI is required.
 
+For reusable methods, see [skill authoring](skill-authoring.md). Follow the
+[customization walkthrough](../customization.md) to combine them in one task.
+
 ## Choose scope and lifetime
 
 Checked-in shared sources live under `.agentic-workspace/instructions/`.
