@@ -50,6 +50,63 @@ def test_current_source_maintenance_has_enclave_owners_without_host_leakage(tmp_
     assert source_only <= ordinary["removals"].keys()
 
 
+def test_payload_inventory_reconciliation_preserves_content_and_custody(tmp_path, shared_core_binary, native_cli):
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    context = {"target": str(tmp_path), "task": "Reconcile package inventory"}
+
+    def call(**extra):
+        return consume("native", shared_core_binary, native_cli, {**context, **extra}, host_path=os.environ["PATH"])
+
+    def propose(mode):
+        read = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+        request = next(r for r in read["adoption_requests"] if r["arguments"]["mode"] == mode)
+        return call(request=request)
+
+    def action(proposal):
+        answer = next(
+            d for d in proposal["decision_packet"]["pending_consequences"]["decisions"] if d["id"] == "repository-adoption-authorization"
+        )["response_request"]
+        answer["arguments"]["answer"] = "authorize-write"
+        return call(request=answer)["decision_packet"]["primary_action"]
+
+    assert call(invocation=action(propose("adopt")))["effect_outcome"]["status"] == "committed"
+    record = tmp_path / ".agentic-workspace/local/effects/adoption.prepared.json"
+    previous = json.loads(record.read_text())["invocation"]["arguments"]["binding"]["state"]
+    provenance = tmp_path / ".agentic-workspace/payload-provenance.json"
+    expected = provenance.read_bytes()
+    old = json.loads(expected)
+    old["payload_files"] = []
+    provenance.write_text(json.dumps(old))
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[payload]\ntarget_release="source-current"\npolicy="required-before-work"\n')
+    skill = tmp_path / ".agentic-workspace/skills/workspace-startup/SKILL.md"
+    source = skill.read_bytes()
+    skill.write_bytes(source + b"\nHost customization\n")
+    assert propose("reconcile-payload")["configuration_write"]["status"] == "preserved-blocked"
+    skill.write_bytes(source)
+    old["host_notes"] = "Preserve me"
+    provenance.write_text(json.dumps(old))
+    assert propose("reconcile-payload")["configuration_write"]["status"] == "preserved-blocked"
+    del old["host_notes"]
+    provenance.write_text(json.dumps(old))
+    exact = action(propose("reconcile-payload"))
+    state = exact["arguments"]["binding"]["state"]
+    assert set(state["updates"]) == {".agentic-workspace/payload-provenance.json"}
+    assert state["installed"] == previous["installed"]
+    assert state["ownership_baseline"] == previous["ownership_baseline"]
+    result = call(invocation=exact)
+    assert result["effect_outcome"]["status"] == "committed"
+    assert provenance.read_bytes() == expected
+    assert skill.read_bytes() == source
+    assert propose("reconcile-payload")["configuration_write"]["status"] == "already-current"
+    assert propose("adopt")["configuration_write"]["status"] == "already-current"
+    (tmp_path / result["custody"]["committed"]["path"]).unlink()
+    read = call(request=call()["configuration_write"]["repository_adoption_request"])["configuration_write"]
+    recovered = call(invocation=action(call(request=read["recovery_requests"][0])))
+    assert recovered["effect_outcome"]["status"] == "committed"
+    assert provenance.read_bytes() == expected
+    assert skill.read_bytes() == source
+
+
 def test_fresh_source_current_checkout_without_adoption_custody(tmp_path, shared_core_binary, native_cli):
     """Committed source projections work on a new machine, without writer custody."""
     from tests.test_source_payload_operational_install import _checker_script_path, _load_module

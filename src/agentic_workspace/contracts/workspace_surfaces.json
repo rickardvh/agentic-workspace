@@ -7,12 +7,44 @@
     ".agentic-workspace/skills/REGISTRY.json",
     ".agentic-workspace/skills/workspace-startup/SKILL.md",
     ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
-    ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
     ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
-    ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
     ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
     ".agentic-workspace/skills/workspace-resources/SKILL.md",
-    ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
+    ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
+    ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
+    ".agentic-workspace/skills/workspace-startup/references/evidence.md",
+    ".agentic-workspace/skills/workspace-startup/references/owners.md",
+    ".agentic-workspace/skills/workspace-startup/references/reconcile.md",
+    ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
+    ".agentic-workspace/skills/workspace-startup/procedure.md",
+    ".agentic-workspace/skills/workspace-intent-discovery/references/shape.md",
+    ".agentic-workspace/skills/workspace-startup/references/constraints.md",
+    ".agentic-workspace/skills/workspace-intent-discovery/references/intent.md",
+    ".agentic-workspace/skills/workspace-intent-discovery/procedure.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/selection.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/other.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/procedure.md",
+    ".agentic-workspace/skills/workspace-resources/references/select.md",
+    ".agentic-workspace/skills/workspace-resources/references/operation.md",
+    ".agentic-workspace/skills/workspace-resources/references/build.md",
+    ".agentic-workspace/skills/workspace-resources/references/cleanup.md",
+    ".agentic-workspace/skills/workspace-resources/references/recovery.md",
+    ".agentic-workspace/skills/workspace-resources/references/hygiene.md",
+    ".agentic-workspace/skills/workspace-resources/procedure.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/select.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/execute.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
+    ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
+    ".agentic-workspace/skills/workspace-proof-selection/procedure.md"
   ],
   "surfaces": [
     {
@@ -83,19 +115,6 @@
       }
     },
     {
-      "path": ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
-      "ownership": "package-managed",
-      "lifetime": "adopted-host",
-      "establish": "configuration.repository-adoption",
-      "refresh": "configuration.repository-adoption",
-      "remove": "configuration.repository-adoption",
-      "justification": "Repository-local selected procedure or its declared executable dependency",
-      "materialization": {
-        "mode": "package-verbatim",
-        "source": ".agentic-workspace/skills/workspace-work-shape/SKILL.md"
-      }
-    },
-    {
       "path": ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
       "ownership": "package-managed",
       "lifetime": "adopted-host",
@@ -106,19 +125,6 @@
       "materialization": {
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-proof-selection/SKILL.md"
-      }
-    },
-    {
-      "path": ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
-      "ownership": "package-managed",
-      "lifetime": "adopted-host",
-      "establish": "configuration.repository-adoption",
-      "refresh": "configuration.repository-adoption",
-      "remove": "configuration.repository-adoption",
-      "justification": "Repository-local selected procedure or its declared executable dependency",
-      "materialization": {
-        "mode": "package-verbatim",
-        "source": ".agentic-workspace/skills/workspace-transition-gates/SKILL.md"
       }
     },
     {
@@ -158,6 +164,448 @@
       "materialization": {
         "mode": "package-verbatim",
         "source": ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/references/ordinary.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-startup/references/evidence.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/references/evidence.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-startup/references/owners.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/references/owners.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-startup/references/reconcile.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/references/reconcile.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/references/unavailable.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-startup/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-intent-discovery/references/shape.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-intent-discovery/references/shape.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-startup/references/constraints.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-startup/references/constraints.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-intent-discovery/references/intent.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-intent-discovery/references/intent.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-intent-discovery/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-intent-discovery/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/references/selection.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-setup-jumpstart/references/selection.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-correction/references/other.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-correction/references/other.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-instruction-correction/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-instruction-correction/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-resources/references/select.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-resources/references/select.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-resources/references/operation.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-resources/references/operation.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-resources/references/build.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-resources/references/build.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-resources/references/cleanup.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-resources/references/cleanup.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-resources/references/recovery.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-resources/references/recovery.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-resources/references/hygiene.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-resources/references/hygiene.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-resources/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-resources/procedure.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/select.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/references/select.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/execute.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/references/execute.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/references/claim.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/references/learning.md"
+      }
+    },
+    {
+      "path": ".agentic-workspace/skills/workspace-proof-selection/procedure.md",
+      "ownership": "package-managed",
+      "lifetime": "adopted-host",
+      "establish": "configuration.repository-adoption",
+      "refresh": "configuration.repository-adoption",
+      "remove": "configuration.repository-adoption",
+      "justification": "Repository-local selected procedure or its declared executable dependency",
+      "materialization": {
+        "mode": "package-verbatim",
+        "source": ".agentic-workspace/skills/workspace-proof-selection/procedure.md"
       }
     }
   ],
@@ -236,12 +684,44 @@
       ".agentic-workspace/skills/REGISTRY.json",
       ".agentic-workspace/skills/workspace-startup/SKILL.md",
       ".agentic-workspace/skills/workspace-intent-discovery/SKILL.md",
-      ".agentic-workspace/skills/workspace-work-shape/SKILL.md",
       ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
-      ".agentic-workspace/skills/workspace-transition-gates/SKILL.md",
       ".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md",
       ".agentic-workspace/skills/workspace-resources/SKILL.md",
-      ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md"
+      ".agentic-workspace/skills/workspace-instruction-correction/SKILL.md",
+      ".agentic-workspace/skills/workspace-startup/references/ordinary.md",
+      ".agentic-workspace/skills/workspace-startup/references/evidence.md",
+      ".agentic-workspace/skills/workspace-startup/references/owners.md",
+      ".agentic-workspace/skills/workspace-startup/references/reconcile.md",
+      ".agentic-workspace/skills/workspace-startup/references/unavailable.md",
+      ".agentic-workspace/skills/workspace-startup/procedure.md",
+      ".agentic-workspace/skills/workspace-intent-discovery/references/shape.md",
+      ".agentic-workspace/skills/workspace-startup/references/constraints.md",
+      ".agentic-workspace/skills/workspace-intent-discovery/references/intent.md",
+      ".agentic-workspace/skills/workspace-intent-discovery/procedure.md",
+      ".agentic-workspace/skills/workspace-setup-jumpstart/references/selection.md",
+      ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
+      ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
+      ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+      ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
+      ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
+      ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
+      ".agentic-workspace/skills/workspace-instruction-correction/references/other.md",
+      ".agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md",
+      ".agentic-workspace/skills/workspace-instruction-correction/procedure.md",
+      ".agentic-workspace/skills/workspace-resources/references/select.md",
+      ".agentic-workspace/skills/workspace-resources/references/operation.md",
+      ".agentic-workspace/skills/workspace-resources/references/build.md",
+      ".agentic-workspace/skills/workspace-resources/references/cleanup.md",
+      ".agentic-workspace/skills/workspace-resources/references/recovery.md",
+      ".agentic-workspace/skills/workspace-resources/references/hygiene.md",
+      ".agentic-workspace/skills/workspace-resources/procedure.md",
+      ".agentic-workspace/skills/workspace-proof-selection/references/select.md",
+      ".agentic-workspace/skills/workspace-proof-selection/references/execute.md",
+      ".agentic-workspace/skills/workspace-proof-selection/references/receipt.md",
+      ".agentic-workspace/skills/workspace-proof-selection/references/claim.md",
+      ".agentic-workspace/skills/workspace-proof-selection/references/recovery.md",
+      ".agentic-workspace/skills/workspace-proof-selection/references/learning.md",
+      ".agentic-workspace/skills/workspace-proof-selection/procedure.md"
     ],
     "source_only_inputs": [
       ".agentic-workspace/OWNERSHIP.toml",

@@ -911,7 +911,7 @@ mod tests {
         let target = Target::new();
         target.write(
             ".agentic-workspace/skills/REGISTRY.json",
-            include_str!("../../../.agentic-workspace/skills/REGISTRY.json"),
+            r#"{"skills":[{"id":"workspace-resources","path":"workspace-resources/SKILL.md","semantic_routes":["example/resources"],"executable":{"entrypoint":{"kind":"native","command":"resources","required_capability":"pre-state-runtime-compatibility-v1"}}}]}"#,
         );
         target.write(
             ".agentic-workspace/skills/workspace-resources/SKILL.md",
@@ -925,32 +925,21 @@ mod tests {
         // No product sources or binaries must be copied into the host repository.
         assert!(!target.0.join("crates").exists());
         target.write(
-            ".agentic-workspace/skills/workspace-proof-selection/SKILL.md",
-            include_str!("../../../.agentic-workspace/skills/workspace-proof-selection/SKILL.md"),
-        );
-        let proof = procedure(&target.0, "workspace-proof-selection").unwrap();
-        assert_eq!(proof["procedures"][0]["executable"]["status"], "current");
-        assert_eq!(
-            proof["procedures"][0]["executable"]["packaged"]["command"],
-            "proof-procedure"
-        );
-        target.write(
             ".agentic-workspace/skills/workspace-resources/SKILL.md",
             "Updated resource procedure",
         );
         assert_ne!(first, procedure(&target.0, "workspace-resources").unwrap());
-        assert_eq!(
-            proof,
-            procedure(&target.0, "workspace-proof-selection").unwrap()
-        );
         target.write(
             ".agentic-workspace/skills/workspace-resources/SKILL.md",
             include_str!("../../../.agentic-workspace/skills/workspace-resources/SKILL.md"),
         );
-        let registry = include_str!("../../../.agentic-workspace/skills/REGISTRY.json");
+        let registry = r#"{"skills":[{"id":"workspace-resources","path":"workspace-resources/SKILL.md","semantic_routes":["example/resources"],"executable":{"entrypoint":{"kind":"native","command":"resources","required_capability":"pre-state-runtime-compatibility-v1"}}}]}"#;
         target.write(
             ".agentic-workspace/skills/REGISTRY.json",
-            &registry.replace("resource-procedure-v1", "future-resource-procedure"),
+            &registry.replace(
+                "pre-state-runtime-compatibility-v1",
+                "future-resource-procedure",
+            ),
         );
         assert_eq!(
             procedure(&target.0, "workspace-resources").unwrap()["procedures"][0]["executable"]["status"],

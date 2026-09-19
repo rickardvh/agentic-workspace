@@ -1,14 +1,22 @@
 ---
 name: bootstrap-adoption
-description: Introduce repository guidance and optional Memory state through current native owners while preserving local knowledge.
+description: Adopt repository guidance; preserve existing Memory knowledge and local task systems.
 ---
 
-# Bootstrap Adoption
+# Managed guidance lifecycle
 
-Read the target instructions and inspect existing Memory content without replacing local task systems or repository knowledge.
+Adopt repository guidance; preserve existing Memory knowledge and local task systems.
 
-Resolve `agentic-workspace start --target <repo> --task "Adopt repository guidance and configure Memory" --format json`. Use the current Configuration adoption request for its exact footprint. Optional Memory setup is a separate owner decision; installing or adopting guidance does not imply domain setup.
+Use the target repository's `.agentic-workspace/skills/workspace-setup-jumpstart/`
+entry and its `references/package.md` for the shared method. In an AW source
+checkout, read that canonical source; do not maintain a second command recipe here.
 
-Inspect proposed paths and supply only the judgment requested by the current owner. Execute only exact returned actions, then inspect their effect outcomes and continuation. Preserve modified and unowned content and report unsupported or unresolved changes explicitly.
+If that source or the configured native runtime is unavailable, read target policy
+and report the exact lifecycle gap. Preserve existing material; no historical
+package command or no-install runner supplies replacement authority.
 
-Keep durable knowledge with Memory or its canonical source, active execution with Planning, and transient material in bounded local scratch. Do not install optional skills or overwrite repository guidance merely because a bootstrap payload includes them. Sibling repositories are outside the target's scope.
+Configuration owns its footprint only. Preserve repository-authored guidance,
+custom seed notes, unique knowledge, active plans, assignments and evidence.
+An upgrade is not a Memory refresh or a migration of current-task notes. Removal
+does not imply deleting domain state. Inspect actual receiving-owner behavior
+after a committed change and retain unresolved custody with its existing owner.

@@ -82,7 +82,7 @@ This page owns the current native prerequisite model; the selected immutable rel
 
 | Concern | Current native contract | Unknown or excluded unless a selected release says otherwise |
 | --- | --- | --- |
-| Python | 3.11–3.14; 3.11/3.13/3.14 exercised, 3.12 bounded by the minimum/primary lanes | later versions and alternative implementations |
+| Python | 3.11â€“3.14; 3.11/3.13/3.14 exercised, 3.12 bounded by the minimum/primary lanes | later versions and alternative implementations |
 | Node | npm projection exercised on majors 20, 24 and 25 | other majors |
 | Git/repository | Git working tree for shared checked-in operating context and ownership | non-Git hosts |
 | Network | required to obtain release assets and for explicitly configured external adapters | ordinary local operation does not imply a network service |
@@ -123,7 +123,6 @@ The native executable exposes:
 - `start`
 - `invoke`
 - `resources`
-- `proof-procedure`
 - `worker`
 
 Use `agentic-workspace --help` from the selected artifact for exact current options. The [generated native CLI catalogue](reference/cli-catalogue.md) owns the source-bound command reference.

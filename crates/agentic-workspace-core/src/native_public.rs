@@ -693,12 +693,20 @@ fn resolve_selected(
         .as_array()
         .is_some_and(|actions| {
             actions.iter().any(|action| {
-                matches!(
+                (matches!(
                     action["operation_id"].as_str(),
                     Some("configuration.write" | "configuration.recover-write")
                 ) && action["arguments"]["request"]["arguments"]["source"]
                     .as_str()
-                    .is_some_and(|source| crate::native_payload::paths().contains(&source))
+                    .is_some_and(|source| crate::native_payload::paths().contains(&source)))
+                    || (action["operation_id"] == "configuration.repository-adoption"
+                        && action["arguments"]["binding"]["state"]["updates"]
+                            .as_object()
+                            .is_some_and(|updates| {
+                                updates.len() == 1
+                                    && updates
+                                        .contains_key(".agentic-workspace/payload-provenance.json")
+                            }))
             })
         })
     {

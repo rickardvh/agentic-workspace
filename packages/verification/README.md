@@ -51,7 +51,7 @@ For ordinary work, resolve current Verification detail through:
 agentic-workspace start --target ./repo --task "<task>" --changed <path> --format json
 ```
 
-Follow the returned exact requests and actions. The workspace proof-selection skill can prepare, execute and admit a selected check through native `proof-procedure`. The module CLI above is source-maintenance tooling, not an alternate public workspace command.
+Follow the returned exact requests and actions. The workspace proof-selection skill selects shared fragments over exact Verification requests, `start` and `invoke`. The module CLI above is source-maintenance tooling, not an alternate public workspace command.
 
 ## Boundary
 

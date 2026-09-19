@@ -15,7 +15,7 @@ Route broad/high-risk workflow setup to `planning-high-assurance-lifecycle`, dec
 
 ## Route
 
-1. Resolve current Verification requirements through `agentic-workspace start --target . --task "<task>" --changed <path> --format json`, or use the workspace proof-selection skill to prepare and execute an admitted check through `proof-procedure`.
+1. Resolve current Verification requirements through `agentic-workspace start --target . --task "<task>" --changed <path> --format json`, or use the workspace proof-selection skill to prepare and execute an admitted check through the shared proof-selection fragments and exact native owner requests.
 2. Consult `planning-intent-verification` and the current owner evidence to decide whether original intent is fully satisfied, partially satisfied, or blocked.
 3. Distill what should survive: future work to Planning, durable knowledge to Memory, stable guidance to docs, enforceable behavior to tests/contracts/config, and tracker follow-up to issues.
 4. Use exact current Planning requests and actions to reconcile completion, required continuation and archival when admitted.

@@ -147,27 +147,6 @@ mod tests {
                 let (_, selected_admission_work) =
                     observe(admitted_context, Resolution::Frontier(Some("proof".into())));
                 assert_eq!(selected_admission_work, vec!["verification-contribution"]);
-                if count == 128 {
-                    BUILT.with(|v| v.borrow_mut().clear());
-                    let composed = crate::native_proof_procedure::view(json!({"target":root,"task":context["task"],"changed":context["changed"],"request":{"operation":"execute","request":full["verification"]["execution_requests"][0]}})).unwrap();
-                    assert_eq!(
-                        composed["proof"]["evidence"][0]["checked_scope"]["claim"],
-                        "selected-command-passed",
-                        "{composed}"
-                    );
-                    let work = BUILT.with(|v| v.borrow().clone());
-                    let boundary = work
-                        .iter()
-                        .position(|v| *v == "post-effect-continuation")
-                        .unwrap();
-                    assert!(
-                        work[boundary + 1..]
-                            .iter()
-                            .all(|v| *v == "verification-contribution"),
-                        "{work:?}"
-                    );
-                    assert_eq!(work[boundary + 1..].len(), 2);
-                }
             }
             eprintln!(
                 "frontier-work commands={count} full_build_events={} compact_build_events={} selected_proof_build_events={}",

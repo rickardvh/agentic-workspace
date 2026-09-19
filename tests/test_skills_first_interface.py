@@ -68,6 +68,7 @@ def test_bootstrap_payload_and_registry_have_one_ordinary_procedure():
     assert "workspace-operating-loop" not in {skill["id"] for skill in registry["skills"]}
     assert MAIN in (ROOT / ".agentic-workspace/WORKFLOW.md").read_text()
     skill = (ROOT / MAIN).read_text()
+    assert len(skill.encode()) < 2048
     assert "remain **unknown**" in skill
     assert "Do not mutate managed owner state" in skill
     ledger = tomllib.loads((ROOT / ".agentic-workspace/OWNERSHIP.toml").read_text())
@@ -233,7 +234,9 @@ def test_canonical_procedure_preserves_correction_retention_boundary():
     # This is a prose contract regression, not proof of a persistence owner.
     # The existing drift guard also requires these instructions in shipped bytes.
     skill = (ROOT / MAIN).read_text()
-    section = skill.split("## Corrections and retention\n", 1)[1].split("\n## ", 1)[0]
+    assert "references/reconcile.md" in skill
+    shared = (ROOT / Path(MAIN).parent / "references/reconcile.md").read_text()
+    section = shared.split("## Corrections and retention\n", 1)[1].split("\n## ", 1)[0]
     for obligation in (
         "explicit user or reviewer correction intended to change future behavior",
         "as reconciliation input",
@@ -347,17 +350,18 @@ def test_source_lifecycle_converges_without_replacing_repo_instructions(tmp_path
     from agentic_workspace.decision import resources
 
     context = {"target": str(tmp_path), "task": "Installed resource procedure"}
-    created = resources({**context, "request": {"operation": "scratch-create", "compose": True}})
+    proposal = resources({**context, "request": {"operation": "scratch-create"}})
+    created = resources(proposal["action"])
     assert created["effect_outcome"] == "committed"
-    removed = resources(
-        {**context, "request": {"operation": "scratch-remove", "compose": True, "path": created["resource_context"]["path"]}}
-    )
+    removal = resources({**context, "request": {"operation": "scratch-remove", "path": proposal["action"]["request"]["path"]}})
+    removed = resources(removal["action"])
     assert removed["effect_outcome"] == "committed"
     assert cli.main(["uninstall", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     assert agents.read_text().strip() == "Repository instruction: preserve this line."
     assert not (tmp_path / MAIN).exists()
-    assert resources({**context, "request": {"operation": "scratch-create", "compose": True}})["status"] == "unavailable"
+    # Optional skill removal does not remove the direct native owner's capability.
+    assert "action" in resources({**context, "request": {"operation": "scratch-create"}})
     for reference, original in retained.items():
         assert (tmp_path / reference).read_bytes() == original
 

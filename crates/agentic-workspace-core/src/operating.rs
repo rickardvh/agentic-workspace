@@ -540,14 +540,6 @@ pub fn invoke(value: Value) -> Result<Value, CoreError> {
 fn operate(value: Value, invoking: bool) -> Result<Value, CoreError> {
     operate_selected(value, invoking, None)
 }
-// Executable procedures select their certainly-required owner context through
-// the same private resolution boundary; no separate proof resolver or cache.
-pub(crate) fn start_owner(value: Value, owner: Option<&str>) -> Result<Value, CoreError> {
-    operate_selected(value, false, Some(owner))
-}
-pub(crate) fn invoke_owner(value: Value, owner: Option<&str>) -> Result<Value, CoreError> {
-    operate_selected(value, true, Some(owner))
-}
 fn resolution(projection: &Value, detail: Option<Option<&str>>) -> Resolution {
     match detail {
         Some(owner) => Resolution::Frontier(owner.map(str::to_owned)),

@@ -1,14 +1,22 @@
 ---
 name: bootstrap-upgrade
-description: Reconcile repository guidance with current Configuration ownership while preserving local content.
+description: Refresh managed guidance while preserving Planning state and custody.
 ---
 
-# Bootstrap Upgrade
+# Managed guidance lifecycle
 
-Read the target repository instructions and resolve current Configuration detail through `agentic-workspace start --target <repo> --task "Refresh repository guidance" --format json`.
+Refresh managed guidance while preserving Planning state and custody.
 
-Inspect current source and custody gaps. Follow only the returned request or action for the supported change; do not infer an upgrade effect from a newer payload. Preserve modified, unowned and repository-authored files.
+Use the target repository's `.agentic-workspace/skills/workspace-setup-jumpstart/`
+entry and its `references/package.md` for the shared method. In an AW source
+checkout, read that canonical source; do not maintain a second command recipe here.
 
-For source-checkout package development, edit the owning payload or skill source and regenerate package copies through the checked-in generator. This maintenance step is separate from a target-repository effect.
+If that source or the configured native runtime is unavailable, read target policy
+and report the exact lifecycle gap. Preserve existing material; no historical
+package command or no-install runner supplies replacement authority.
 
-After an admitted effect, inspect its outcome and continuation, and report remaining manual decisions. No removed lifecycle command or package fallback supplies current native authority.
+Configuration owns its footprint only. Preserve repository-authored guidance,
+custom seed notes, unique knowledge, active plans, assignments and evidence.
+An upgrade is not a Memory refresh or a migration of current-task notes. Removal
+does not imply deleting domain state. Inspect actual receiving-owner behavior
+after a committed change and retain unresolved custody with its existing owner.

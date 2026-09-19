@@ -1,36 +1,22 @@
 ---
 name: bootstrap-upgrade
-description: Upgrade memory for an already bootstrapped repository safely. Use when an agent should let the tool determine the installation source automatically, run the upgrade, and report conservative manual-review items.
+description: Refresh managed guidance while preserving custom Memory content.
 ---
 
-# Bootstrap Upgrade
+# Managed guidance lifecycle
 
-Use this skill to upgrade memory without asking the user to choose an installation source.
+Refresh managed guidance while preserving custom Memory content.
 
-The skill is intentionally small. It exists to execute the upgrade contract, not to duplicate CLI behaviour or long review choreography.
+Use the target repository's `.agentic-workspace/skills/workspace-setup-jumpstart/`
+entry and its `references/package.md` for the shared method. In an AW source
+checkout, read that canonical source; do not maintain a second command recipe here.
 
-## Contract
+If that source or the configured native runtime is unavailable, read target policy
+and report the exact lifecycle gap. Preserve existing material; no historical
+package command or no-install runner supplies replacement authority.
 
-- determine the installation source automatically
-- run the upgrade with the packaged tool
-- report conservative manual-review items only when the tool leaves local files untouched
-- confirm the result with the relevant built-in checks
-
-## Use
-
-Invoke the packaged CLI upgrade path for the target repo. If the packaged skill is not already visible in the runtime, use the no-install CLI runner that the product docs point to.
-
-## Guardrails
-
-- Never assume a shared file should replace a repo-local file with active customisation.
-- Treat repo-local workflow notes and customised seed notes as manual-review surfaces.
-- Preserve repo-specific scope, commands, and guardrails in `AGENTS.md`.
-- If a repo already has an equivalent optional fragment, keep the existing behaviour and avoid duplicate appends.
-- Keep the upgrade outcome visible in checked-in files rather than in skill-only state.
-
-## Typical outputs
-
-- shared bootstrap files updated to the new version
-- local docs left untouched when they are repo-owned
-- a short summary of manual-review items, if any
-- verification that the active memory surfaces still look correct
+Configuration owns its footprint only. Preserve repository-authored guidance,
+custom seed notes, unique knowledge, active plans, assignments and evidence.
+An upgrade is not a Memory refresh or a migration of current-task notes. Removal
+does not imply deleting domain state. Inspect actual receiving-owner behavior
+after a committed change and retain unresolved custody with its existing owner.

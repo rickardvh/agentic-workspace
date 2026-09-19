@@ -42,7 +42,6 @@ mod native_planning_update;
 mod native_procedure;
 mod native_procedure_answer;
 mod native_proof;
-mod native_proof_procedure;
 pub mod native_public;
 mod native_requirements;
 mod native_resources;

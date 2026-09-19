@@ -39,7 +39,11 @@
           "a mixed agent needs the repository bootstrap procedure",
           "a consumer needs the supported no-runtime read-only path"
         ]
-      }
+      },
+      "semantic_routes": [
+        "workspace/startup"
+      ],
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-intent-discovery",
@@ -98,35 +102,8 @@
           "the user describes an outcome rather than a solution",
           "why, desired outcome, non-goals, or acceptable first slice are missing"
         ]
-      }
-    },
-    {
-      "id": "workspace-work-shape",
-      "path": "workspace-work-shape/SKILL.md",
-      "scope": "reference-support",
-      "stability": "package-managed",
-      "visibility": "reference-only",
-      "summary": "reference vocabulary for direct, bounded, lane, and epic work shapes; merged procedure lives in workspace-intent-discovery",
-      "activation_hints": {
-        "verbs": [
-          "reference"
-        ],
-        "nouns": [
-          "work shape reference",
-          "direct bounded lane epic vocabulary",
-          "shape vocabulary",
-          "shape taxonomy"
-        ],
-        "phrases": [
-          "work shape reference",
-          "direct bounded lane epic vocabulary",
-          "what does lane shape mean"
-        ],
-        "when": [
-          "a compact packet or review explicitly asks for work-shape vocabulary",
-          "workspace-intent-discovery has already handled the procedure"
-        ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-proof-selection",
@@ -173,51 +150,7 @@
           "skips, retries, warnings, crashes, or negative evidence need interpretation"
         ]
       },
-      "executable": {
-        "entrypoint": {
-          "kind": "native",
-          "command": "proof-procedure",
-          "required_capability": "proof-procedure-v1"
-        },
-        "dependencies": []
-      }
-    },
-    {
-      "id": "workspace-transition-gates",
-      "path": "workspace-transition-gates/SKILL.md",
-      "scope": "reference-support",
-      "stability": "contract-backed-projection",
-      "visibility": "reference-only",
-      "summary": "reference for explicit current-contract gates, routed owner/action, proof or claim limits, reconciliation, and degraded recovery",
-      "activation_hints": {
-        "verbs": [
-          "reference",
-          "interpret",
-          "recover",
-          "reconcile"
-        ],
-        "nouns": [
-          "transition gate",
-          "allowed actions",
-          "forbidden actions",
-          "preferred operation",
-          "owner route",
-          "proof gate",
-          "claim gate",
-          "reconciliation gate"
-        ],
-        "phrases": [
-          "transition gate reference",
-          "interpret forbidden actions",
-          "interpret owner route",
-          "bounded fallback",
-          "reconciliation gate"
-        ],
-        "when": [
-          "a compact routed gate needs deeper interpretation",
-          "a blocked action needs an exact owner or recovery route"
-        ]
-      }
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-setup-jumpstart",
@@ -265,18 +198,12 @@
           "workspace surfaces need to be populated after init or install",
           "mature repo discovery needs bounded pre-seed routing"
         ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-resources",
       "path": "workspace-resources/SKILL.md",
-      "executable": {
-        "entrypoint": {
-          "kind": "native",
-          "command": "resources",
-          "required_capability": "resource-procedure-v1"
-        }
-      },
       "scope": "specialized-subskill",
       "stability": "package-managed",
       "visibility": "routed-on-demand",
@@ -308,7 +235,8 @@
           "temporary task material or isolated checkout has a real need",
           "terminal or interrupted work owns disposable resources"
         ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-instruction-correction",
@@ -341,7 +269,8 @@
         "when": [
           "a trusted correction should change later repository behavior"
         ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     }
   ]
 }

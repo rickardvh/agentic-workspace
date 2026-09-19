@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Select setup and correction fragments and consolidate package lifecycle guidance without changing native writer authority."
+issues = [3450, 3411, 3445]

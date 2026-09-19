@@ -101,25 +101,22 @@ def resource_skill(root):
         path.write_bytes((ROOT / reference).read_bytes())
 
 
-def test_resource_procedure_direct_scratch_and_fresh_recovery(tmp_path, shared_core_binary, native_cli):
-    context = {"target": str(tmp_path), "task": "Scratch composition"}
+def test_resource_exact_actions_scratch_and_fresh_recovery(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Scratch owner sequence"}
 
     def call(operation, **extra):
-        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": operation, "compose": True, **extra}})
+        proposal = resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": operation, **extra}})
+        return resource("json", shared_core_binary, native_cli, proposal["action"]) if "action" in proposal else proposal
 
-    direct = call("direct")
-    assert direct["status"] == "direct" and direct["owner_calls"] == 0
-    assert list(tmp_path.iterdir()) == []
-    assert call("scratch-create")["status"] == "unavailable"
-    resource_skill(tmp_path)
+    # Direct owners work without an optional skill and revalidate every effect.
     created = call("scratch-create")
-    assert created["effect_outcome"] == "committed" and created["composition"]["owner_calls"] == 2
+    assert created["effect_outcome"] == "committed"
     path = Path(created["path"])
     (path / "temporary.txt").write_text("Recover me after response loss")
     # Every call is a new process. Repeating intent reobserves the same container.
     recovered = call("scratch-create")
     assert recovered["path"] == created["path"] and (path / "temporary.txt").exists()
-    relative = created["resource_context"]["path"]
+    relative = path.relative_to(path.parents[3]).as_posix()
     retained = call("scratch-retain", path=relative, reason="Unfinished evidence")
     assert retained["effect_outcome"] == "committed"
     blocked = call("scratch-remove", path=relative)
@@ -139,9 +136,8 @@ def test_resource_procedure_direct_scratch_and_fresh_recovery(tmp_path, shared_c
     assert not (path / "first.packet").exists() and (path / "second.packet").exists()
     removed = call("scratch-remove", path=relative)
     assert removed["effect_outcome"] == "committed" and not path.exists()
-    with pytest.raises(AssertionError, match="fresh intent"):
+    with pytest.raises(AssertionError):
         call("scratch-create", expected_revision="old-effect")
-    print("resource procedure: direct owner calls=0; scratch public calls 2->1, native owner calls 2->2; cleanup public calls 2->1")
 
 
 def test_resource_procedure_yields_isolation_judgment_and_preserves_dirty_work(tmp_path, shared_core_binary, native_cli):
@@ -153,12 +149,10 @@ def test_resource_procedure_yields_isolation_judgment_and_preserves_dirty_work(t
     context = {"target": str(repo), "task": "Isolated destructive validation"}
 
     def call(operation, **extra):
-        return resource(
-            "json",
-            shared_core_binary,
-            native_cli,
-            {**context, "request": {"operation": operation, "compose": True, "path": str(path), **extra}},
+        proposal = resource(
+            "json", shared_core_binary, native_cli, {**context, "request": {"operation": operation, "path": str(path), **extra}}
         )
+        return resource("json", shared_core_binary, native_cli, proposal["action"]) if "action" in proposal else proposal
 
     proposal = call("worktree-create")
     assert proposal["blockers"] and not path.exists()
@@ -493,7 +487,6 @@ def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_pa
     selected = next(r for r in unresolved["route_requests"] if r["request_kind"] == "semantic-routes/select/v1")
     selected["arguments"] = {"posture": "selected", "routes": ["sample/protected"]}
     assert "action" not in call(route_request=selected)
-    assert "action" not in call(route_request=selected, compose=True)
     # Declared path AND route remains conjunctive: an unrelated path is quiet.
     ordinary = consume("json", shared_core_binary, native_cli, {**context, "request": selected})
     assert ordinary["instructions"]["sources"][0]["applicable"] is False
@@ -512,9 +505,10 @@ def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_pa
     fresh = call()
     negative = next(r for r in fresh["route_requests"] if r["request_kind"] == "semantic-routes/select/v1")
     negative["arguments"] = {"posture": "none", "routes": []}
-    created = call(route_request=negative, compose=True)
+    proposed = call(route_request=negative)
+    created = resource("json", shared_core_binary, native_cli, proposed["action"])
     assert created["effect_outcome"] == "committed"
-    assert created["resource_context"]["route_request"] == negative
+    assert proposed["action"]["request"]["route_request"] == negative
     removed = resource(
         "json",
         shared_core_binary,
@@ -523,10 +517,9 @@ def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_pa
             **context,
             "request": {
                 "operation": "scratch-remove",
-                "path": created["resource_context"]["path"],
+                "path": proposed["action"]["request"]["path"],
                 "route_request": negative,
-                "compose": True,
             },
         },
     )
-    assert removed["effect_outcome"] == "committed"
+    assert resource("json", shared_core_binary, native_cli, removed["action"])["effect_outcome"] == "committed"

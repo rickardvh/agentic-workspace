@@ -132,7 +132,6 @@
       "currentness": "Exact returned reference binds work context and owner envelope; reobserve before use; missing or ambiguous identities yield. Selection cannot replace arguments, effects or authority.",
       "continuation": "One resolution step, then yield to existing owner request/answer/invoke. No automatic effect traversal or blind replay; confirmed/uncertain truth and typed continuation remain owner-owned.",
       "authority_effect": "none"
-
     }
   },
   "public_requests": {
@@ -179,13 +178,6 @@
     "cross_owner_results": "evidence only until the responsible owner admits a typed request",
     "procedure_references": "non-authoritative"
   },
-  "resource_procedure": {
-    "request": "The existing resources request optionally accepts compose: true and an exact semantic route_request for the same current work. Unresolved route-scoped destination protection returns existing owner route_requests; settled negatives and unrelated effects remain quiet. Supply fresh operation intent and the same exact path for recovery; never a retained expected_revision.",
-    "composition": "Check selected executable availability, obtain one native proposal, and carry its exact action through current native admission. No action loop or separate filesystem semantics.",
-    "direct": "operation: direct with compose: true performs zero resource-owner calls and creates no state; ordinary direct work need not call at all.",
-    "judgment": "Missing isolation necessity or current policy judgment yields the native proposal. Composition cannot manufacture permits-isolation.",
-    "result": "Native effect_outcome remains authoritative; resource_context carries the exact target/task/changed/path for fresh reentry. An owner execution error preserves that context with unknown effect outcome, never an automatic retry."
-  },
   "native_cli": {
     "executable": "agentic-workspace",
     "help_flag": "--help",
@@ -198,13 +190,7 @@
       },
       {
         "name": "resources",
-        "description": "Inspect local hygiene or propose/execute one current resource operation; optional compose carries one exact action after current admission.",
-        "input_field": "request",
-        "input_required": true
-      },
-      {
-        "name": "proof-procedure",
-        "description": "Prepare selected proof context, or carry one exact native check through execution and current evidence admission.",
+        "description": "Inspect or propose a bounded native resource operation; carry the returned exact action for current policy-bound execution.",
         "input_field": "request",
         "input_required": true
       },
@@ -291,13 +277,6 @@
       "bindings/node/semantic-decision.mjs"
     ],
     "json_transport": "agentic-workspace-core binary stdin/stdout"
-  },
-  "proof_procedure": {
-    "request": "operation: prepare, execute or direct; request carries exact owner requests; invocation carries one exact native proof action. expected_revision optionally binds selected method material.",
-    "composition": "One explicitly selected check or one owner-established unique missing required check, exact native admission, bounded exact receipt observation, then remaining owner judgment. A sole candidate is not required; complete current alternatives and unresolved scope prevent automatic selection. Never a primary-action loop or automatic sufficiency answer.",
-    "recovery": "Confirmed effect remains in effect even when continuation fails. Uncertain execution requires exact native custody reentry, never a newly prepared retry.",
-    "direct": "Zero owner calls; no proof or claim authority.",
-    "cost": "public_owner_calls counts explicit public calls. Native invoke separately resolves pre-effect admission and post-effect continuation; no parallel batch or hidden automatic retry."
   },
   "memory_consequences": {
     "selected_advice": "Current selected small notes are delivered as bounded advisory_context; active proof procedure or explicit detail expands selected large notes. No disposition or authority is inferred.",

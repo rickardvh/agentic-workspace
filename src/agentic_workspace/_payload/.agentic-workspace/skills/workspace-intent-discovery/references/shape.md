@@ -1,14 +1,4 @@
----
-name: workspace-work-shape
-description: Reference the direct, bounded, lane, and epic vocabulary only when workspace-intent-discovery or compact routing needs work-shape details interpreted.
----
-
-# Workspace Work Shape Reference
-
-Do not use this as an independently invoked subskill. `workspace-intent-discovery` owns the merged intent/shape procedure after the main AW operating skill routes there.
-When AW is enabled, this reference preserves the same routed workflow boundary as the main skill; it does not make work-shape judgment a bypass around startup, planning or proof gates.
-
-This reference exists so compact output, reviews, or issue discussions can name the work-shape vocabulary without reloading the full intent protocol.
+# Work shape vocabulary
 
 ## Vocabulary
 
