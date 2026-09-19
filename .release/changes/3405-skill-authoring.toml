@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Publish one ordinary and AW-assisted skill authoring reference."
+issues = [3405, 3445]
