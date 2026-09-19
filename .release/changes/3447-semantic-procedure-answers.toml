@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Carry bounded semantic procedure answers with task, instance, source and evidence currentness while preserving advisory authority."
+issues = [3447, 3410, 3445]
