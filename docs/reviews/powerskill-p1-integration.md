@@ -96,8 +96,59 @@ hooks protect introducing surfaces. Passing validation is distinct from accepted
 issue completion, full P1 intent satisfaction and measured operating cost.
 
 The original design audit is retained as a historical design record linked here.
-The existing lane plan retains remaining documentation and later external review
-custody through its native owner; no new migration registry or knowledge backlog
+The existing lane plan retains external review custody through its native owner;
+the documentation leaves are now published. No new migration registry or knowledge backlog
 is shipped. Unrelated unresolved source admissions and repository policy remain
 with their owners. This record becomes historical evidence after acceptance, not
 a new operating procedure or release gate.
+
+## Implementation handoff
+
+The remaining P1 implementation after merged #3464 is published as a linear stack:
+
+| Slice | PR |
+| --- | --- |
+| M1 startup and provenance reconciliation | #3465 |
+| M2 setup/correction | #3466 |
+| M3 resources/proof | #3467 |
+| M4a work/closeout | #3468 |
+| M4b assignment | #3469 |
+| M4c review continuation | #3470 |
+| M4d umbrella retirement | #3471 |
+| M5 Memory | #3472 |
+| Public surface contraction | #3473 |
+| Module domain contract | #3474 |
+| Resource integration and audit accounting | #3475 |
+| Instruction reference | #3476 |
+| Skill authoring reference | #3477 |
+| Customization journey/navigation | #3478 |
+
+All are ready for independent review. No implementation author supplied review,
+approval or independent acceptance. Earlier issue acceptance prerequisites remain
+acceptance gates; the user explicitly authorized continuing the full implementation
+stack without stopping at intermediate reviews.
+
+The documentation walkthrough extracted the authored question and registry into
+a temporary repository and exercised discovery, selection, semantic answer, leaf
+delivery and a malformed-source diagnostic. The optional helper produced comparison
+data only. The instruction fixture's documented unittest command passed. Navigation
+files/anchors were checked; no permanent tests were added for these reversible
+documentation changes. Current official Agent Skills syntax was consulted separately
+from observed host evidence. README's customization link and facts-only module
+clarification were semantically reconciled through the native system-intent owner,
+preserving architecture principles and unrelated admissions.
+
+Hosted merge sufficiency exposed one remaining active proof-wrapper example in
+the retained proof-surfaces contract. Its source was corrected in M3 and propagated
+through the stack. At the resulting top, the public/help/currentness/protection
+guard passed 18 cases, source-reconciliation guard passed 2, and the selected
+carriage/invoke/independent-owner guard passed 18. Generated interface/catalogue/
+command checks were clean. Hosted statuses remain attached to each PR and must be
+checked at its accepted head; this evidence record is not an accepted-head receipt.
+
+Validation supports these bounded implementation claims. Independent acceptance,
+issue/parent closure, full P1 intent satisfaction and final RC admission are still
+distinct. Total development tokens/time and longitudinal operating benefit were
+not measured. The draft-only comparison above gives no basis to claim a net cost
+reduction. Scratch examples are disposable once this evidence and native Planning
+handoff are retained; no extra Memory record is justified.
