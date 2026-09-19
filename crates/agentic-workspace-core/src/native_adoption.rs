@@ -147,7 +147,7 @@ pub(crate) fn ownership_baseline(target: &Path) -> Result<Value, CoreError> {
 pub(crate) fn declarations(owner: &mut Value) {
     owner["requests"].as_array_mut().unwrap().extend([
         json!({"kind":READ,"result_kind":"agentic-workspace/repository-adoption/v1","input_schema":{"type":"object","additionalProperties":false,"properties":{}}}),
-        json!({"kind":EDIT,"result_kind":"agentic-workspace/repository-adoption/v1","input_schema":{"type":"object","additionalProperties":false,"required":["mode","expected_revision"],"properties":{"mode":{"enum":["adopt","remove","recover"]},"expected_revision":{"type":"string"},"disposition":{"enum":["preserve"]},"answer":{"enum":["authorize-write"]}}}})
+        json!({"kind":EDIT,"result_kind":"agentic-workspace/repository-adoption/v1","input_schema":{"type":"object","additionalProperties":false,"required":["mode","expected_revision"],"properties":{"mode":{"enum":["adopt","remove","recover","reconcile-payload"]},"expected_revision":{"type":"string"},"disposition":{"enum":["preserve"]},"answer":{"enum":["authorize-write"]}}}})
     ]);
     owner["operations"].as_array_mut().unwrap().push(json!({"id":OP,"semantic_revision":"repository-foothold-v1","input_schema":{"type":"object","additionalProperties":false,"required":["target","request","binding","post_revision"],"properties":{"target":{"type":"string"},"request":{"type":"object"},"binding":{"type":"object"},"post_revision":{"type":"string"}}},"result_kind":"agentic-workspace/repository-adoption-result/v1","effects":["configuration-source"],"reads":["configuration"]}));
     for row in owner["requests"].as_array_mut().unwrap().iter_mut() {
@@ -168,6 +168,97 @@ fn observe(target: &Path, mode: &str) -> Result<Value, CoreError> {
     let c = contract();
     let identity = bytes(&root, IDENTITY)?;
     let held = held(target, &root)?;
+    if mode == "reconcile-payload" {
+        // Refresh only artifact-owned identity after independently verifying every
+        // installed postimage. This is not custody for host edits or adoption.
+        let provenance = ".agentic-workspace/payload-provenance.json";
+        let before = bytes(&root, provenance)?;
+        let current: Value = before
+            .as_deref()
+            .and_then(|s| serde_json::from_str(s).ok())
+            .unwrap_or(Value::Null);
+        let mut blockers = Vec::new();
+        if current["kind"] != "agentic-workspace/payload-provenance/v1"
+            || current["payload_schema"] != "agentic-workspace/payload/v1"
+            || current["release_identity"]["package"] != "agentic-workspace"
+            || !current.as_object().is_some_and(|o| {
+                o.keys().all(|k| {
+                    [
+                        "kind",
+                        "payload_schema",
+                        "payload_capabilities",
+                        "payload_files",
+                        "release_identity",
+                        "rule",
+                    ]
+                    .contains(&k.as_str())
+                })
+            })
+            || !current["release_identity"].as_object().is_some_and(|o| {
+                o.keys()
+                    .all(|k| ["package", "version"].contains(&k.as_str()))
+            })
+            || !current["release_identity"]["version"].is_string()
+            || !["payload_files", "payload_capabilities"].iter().all(|k| {
+                current[k]
+                    .as_array()
+                    .is_some_and(|a| a.iter().all(Value::is_string))
+            })
+            || current["rule"]
+                != serde_json::from_slice::<Value>(&crate::native_payload::shipped(provenance)?)
+                    .map_err(err)?["rule"]
+        {
+            blockers.push("unrecognized payload identity preserved".to_owned());
+        }
+        let mut observations = BTreeMap::new();
+        for path in crate::native_payload::paths()
+            .into_iter()
+            .filter(|p| *p != provenance)
+        {
+            let observed = bytes(&root, path)?;
+            observations.insert(path.to_owned(), revision(&observed));
+            let expected = match crate::native_payload::desired(target, path) {
+                Ok(raw) => String::from_utf8(raw).map_err(err)?,
+                Err(error) => {
+                    blockers.push(format!("{path}: {error}; preserve content"));
+                    continue;
+                }
+            };
+            if observed.as_ref().map(|s| s.replace("\r\n", "\n"))
+                != Some(expected.replace("\r\n", "\n"))
+            {
+                blockers.push(format!(
+                    "{path}: current artifact bytes not established; preserve content"
+                ));
+            }
+        }
+        let after = String::from_utf8(crate::native_payload::shipped(provenance)?).map_err(err)?;
+        let pending = match held.as_ref() {
+            Some(record) if !committed(target, &root, record)? => Some(record),
+            _ => None,
+        };
+        if pending.is_some() {
+            blockers.push("interrupted adoption effect requires exact recovery".to_owned());
+        }
+        observations.insert(provenance.to_owned(), revision(&before));
+        let mut installed = held
+            .as_ref()
+            .map(|r| r["invocation"]["arguments"]["binding"]["state"]["installed"].clone())
+            .unwrap_or(json!({}));
+        installed[provenance] = revision(&Some(after.clone()));
+        let baseline = ownership_baseline(target)?;
+        let updates = if before.as_deref() == Some(after.as_str()) {
+            json!({})
+        } else {
+            json!({provenance:{"before":revision(&before),"after":after}})
+        };
+        return Ok(
+            json!({"contract_revision":digest(&c)?,"mode":mode,"enclave":null,
+            "observations":observations,"updates":updates,"installed":installed,
+            "ownership_baseline":baseline,"preserved":[],"blockers":blockers,
+            "identity":revision(&identity),"prior_custody":held.as_ref().map(digest).transpose()?,"pending":pending}),
+        );
+    }
     let mut observations = BTreeMap::new();
     let mut updates = BTreeMap::new();
     let mut preserved = Vec::new();
@@ -480,6 +571,9 @@ pub(crate) fn view(
                 json!({"mode":"remove","expected_revision":digest(&observe(target,"remove")?)?})
             )
         ]);
+        result["adoption_requests"].as_array_mut().unwrap().push(template(
+            EDIT, json!({"mode":"reconcile-payload","expected_revision":digest(&observe(target,"reconcile-payload")?)?})
+        ));
         if !state["pending"].is_null() {
             result["recovery_requests"] = json!([template(
                 EDIT,
@@ -504,7 +598,18 @@ pub(crate) fn view(
             .as_object()
             .ok_or_else(|| err("no interrupted adoption effect"))?;
         let record = Value::Object(record.clone());
-        if record["invocation"]["arguments"]["binding"]["policy"] != *binding {
+        let previous_policy = &record["invocation"]["arguments"]["binding"]["policy"];
+        // Payload conformance is the repaired observation, not governing policy.
+        // Recovery still binds all configuration sources, artifact and owner code.
+        let same_policy = if record["invocation"]["arguments"]["request"]["arguments"]["mode"]
+            == "reconcile-payload"
+        {
+            !previous_policy["payload_recovery_policy"].is_null()
+                && previous_policy["payload_recovery_policy"] == binding["payload_recovery_policy"]
+        } else {
+            *previous_policy == *binding
+        };
+        if !same_policy {
             return Err(err(
                 "adoption recovery governing configuration changed; preserve",
             ));

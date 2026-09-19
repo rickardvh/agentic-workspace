@@ -363,7 +363,8 @@ pub(crate) fn view_selected(
             return Ok(result);
         }
     };
-    let binding = json!({"sources":current,"effective_policy_revision":config["revision"],"capability_revision":contract["revision"]});
+    let binding = json!({"sources":current,"effective_policy_revision":config["revision"],"capability_revision":contract["revision"],
+        "payload_recovery_policy": {"sources":config["sources"],"artifact_profile":config["artifact_profile"],"owner_revision":owner["revision"]}});
     result["contribution"]["revision"] = json!(digest(&binding)?);
     let template = |kind: &str, args: Value| json!({"kind":"agentic-workspace/public-request/v1","id":kind,"owner":"configuration","owner_revision":owner["revision"],"source_revision":digest(&binding).unwrap(),"capability_revision":contract["revision"],"task_identity":work,"request_kind":kind,"arguments":args});
     result["behavior_request"] = template(

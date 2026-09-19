@@ -1,11 +1,9 @@
 {
-  "blockers": [
-    "Migration slices 3449-3453 and 3456-3458 require accepted C3 3448. Implementation validation and a current-agent walkthrough do not constitute independent acceptance."
-  ],
+  "blockers": [],
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "Design 3454 and capability PRs 3460/3461/3462 merged at master 329cd1880. C3 3448 installed/exposure proof is implemented and ready for independent review: neutral authored resources, installed native path, actual Codex discovery and explicit current-agent activation, bounded semantic response and reuse/loss. M1-M5, contraction and documentation remain pending; their accepted-C3 prerequisite remains open until independent acceptance."
+    "frontier": "C3 #3464 accepted and merged. M1 startup/intent fragments committed locally; payload reconciliation implemented. Continue remaining P1 stacked implementation under explicit user authorization."
   },
   "creation_provenance": {
     "custody": {
@@ -37,7 +35,7 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Obtain externally initiated C3 review/acceptance, then resume M1-M5 in dependency-ordered stacked PRs. No self-review, approval or reviewer dispatch. Preserve final migration/contraction/docs and fresh RC obligations.",
+  "next_action": "Continue all authorized P1 implementation in stacked PRs. User explicitly instructed on 2026-09-19 not to stop at intermediate acceptance prerequisites; independent review, issue closeout and release admission remain separate. Never self-review, approve or dispatch a reviewer.",
   "owner_level": "epic",
   "parent": {
     "issue": "3445"
@@ -60,7 +58,7 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050"
   ],
   "relationships": {},
-  "revision": 9,
+  "revision": 10,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -81,18 +79,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/82d87681c739b29ff5d12f1127dff1a477a7eafd2b4460bb9db04908e4e011b8.attempt.json",
-        "revision": "sha256:0d7e633b7becf7d5b3ef342e105f3b8f35037ddfff4f6b1a714e130cda24ed64",
+        "path": ".agentic-workspace/local/effects/fe127381ac7fac28b234bd8775d510ef69e2f78b7e7277762ad3eab100c6ec72.attempt.json",
+        "revision": "sha256:0ea6949ffb4fbe4a569f367d3679336ee6f650bbc78fe27966c8a47d4a57e369",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/82d87681c739b29ff5d12f1127dff1a477a7eafd2b4460bb9db04908e4e011b8.result.json",
-        "revision": "sha256:2059e26fdd870e84afbd51391f80063a5a3a81838347fe193589ae9c88cb0dc0",
+        "path": ".agentic-workspace/local/effects/fe127381ac7fac28b234bd8775d510ef69e2f78b7e7277762ad3eab100c6ec72.result.json",
+        "revision": "sha256:404ed3e0edfa544da4e3444ea34d5dfb05520628d6bea5d2f36cdd66ce0c6f83",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:65366884137ca7a77040c533345207517111076b697f7d1b49c9e030cc80f239",
+    "invocation_revision": "sha256:d8c3b64d24338d28db851f9967983b8618a8e37b3202bf66c472c2f3593bf423",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -100,7 +98,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:2ca35ce87d810e5a15c7362046b6e1d91bb4fda2e22d556a926fb47e39df7dca",
+        "document_revision": "sha256:175fca3d8bdae7ec3717fe73d9de02510c0e024006c7ac4b1fa4b394b2f7e8b0",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }
