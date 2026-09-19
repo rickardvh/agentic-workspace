@@ -1,9 +1,10 @@
 # P1 powerskill source audit and proposed implementation boundary
 
-Status: reconciled to the externally shaped issue contract and decomposition in
-[the shaping reply](https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790).
-Ready for focused independent recheck; no independent acceptance or implementation
-completion is claimed. Owner: #3409 under #3408 / #3445.
+Status: historical design record from accepted #3454 under #3409 / #3445.
+The current implementation disposition and bounded evidence are recorded in
+[P1 migration integration](powerskill-p1-integration.md). The proposal and
+future-tense statements below describe the design subject, not a second active
+workflow or a claim that implementation/review has completed.
 
 Audit subject: `cc2b236b0d0a546d0c47c9c1e59ede857d679477` (2026-09-19).
 The working checkout was clean before creating this lane's Planning owner. Both
@@ -54,8 +55,8 @@ or execution on any AW host.
 `M` means MIGRATE; `K` means KEEP_NATIVE (or keep an already adequate transparent
 skill unchanged); `R` means RETIRE_OR_MERGE. These are proposed dispositions for
 review, not permission to remove binding meaning. Mixed groups identify both
-sides of the boundary. M1â€“M5 are bounded implementation destinations under #3411;
-C1â€“C3 below belong to #3410.
+sides of the boundary. M1Ã¢â‚¬â€œM5 are bounded implementation destinations under #3411;
+C1Ã¢â‚¬â€œC3 below belong to #3410.
 
 | Group and current source/consumer | Disposition and destination | Guarantee retained / subtraction obligation | Agent-facing; public; module consequence |
 | --- | --- | --- | --- |
@@ -214,13 +215,13 @@ only; actual host activation, execution and benefit remain C3/#3411 evidence.
 | M1 / #3449 under #3411 | C3; startup/intent/reference consolidation | Small full-loaded entry, same manual sources, direct and unavailable path; no binding obligation loss |
 | M2 / #3450 under #3411 | C3; configuration/correction/bootstrap procedure migration | Authorized write, deferred/unknown result, receiving-owner consequence and preservation |
 | M3 / #3451 under #3411 | C3; resource/proof-specific adaptation consuming C2b, sequence extraction and deletion | Equivalent direct/skill restrictions; typed receipt continuation; no repeated uncertain effect; helpers removed |
-| M4 / #3452 under #3411 | Coordination outcome covering M4aâ€“M4d; not an implementation leaf | Complete original Planning/Assignment obligation; all four leaves accepted before coordination closeout |
+| M4 / #3452 under #3411 | Coordination outcome covering M4aÃ¢â‚¬â€œM4d; not an implementation leaf | Complete original Planning/Assignment obligation; all four leaves accepted before coordination closeout |
 | M4a / #3456 under #3452 | C3; intake, decompose, tighten, reporting, intent verification and closeout | Planning continuity/custody; intent/claim separation; duplicate deletion; direct/manual parity |
 | M4b / #3457 under #3452 | C3; assurance/manual delegation and returned-result procedure | Local/manual/non-local boundaries; Assignment admission and return recovery; no P2 delegation strategy |
 | M4c / #3458 under #3452 | C3; review-pass and finding-promotion continuation | Externally initiated findings; Planning-owned continuation only; independent review/claim authority retained |
-| M4d / #3459 under #3452 | Accepted M4aâ€“M4c; retire/merge high-assurance lifecycle, orchestrator workflow and autopilot umbrellas | Unique-meaning disposition; duplicate deletion and no resurrection; no replacement workflow taxonomy |
+| M4d / #3459 under #3452 | Accepted M4aÃ¢â‚¬â€œM4c; retire/merge high-assurance lifecycle, orchestrator workflow and autopilot umbrellas | Unique-meaning disposition; duplicate deletion and no resurrection; no replacement workflow taxonomy |
 | M5 / #3453 under #3411 | C3; Memory and maintainer reference consolidation | Candidate consequences survive bypass; no-retention and receiving evidence; independent review unchanged |
-| #3411 integration | M1â€“M5 | Audit-subject-to-current-head sweep, package exposure and one bounded final host walkthrough; every M/R row accounted for |
+| #3411 integration | M1Ã¢â‚¬â€œM5 | Audit-subject-to-current-head sweep, package exposure and one bounded final host walkthrough; every M/R row accounted for |
 | #3442 / #3443 | Accepted #3408 | Fresh actual public/field inventory; complete remove/merge dispositions, direct operations, neutral modules, generated parity and no resurrection |
 | #3404 / #3405 -> #3406 | Accepted #3441 | Final contract references and integrated customization guide validated against actual supported artifact |
 

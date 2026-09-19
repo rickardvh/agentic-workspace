@@ -201,6 +201,9 @@ See [Modules](package/modules.md) and [Extensibility and public boundary](extens
 ## Repo-customization boundary
 
 A host repository can affect dynamic control without creating a reusable module.
+Start with the [customization walkthrough](customization.md) and its canonical
+instruction/skill references; the internal model below is not additional public
+authoring syntax.
 
 Scoped Markdown owns ordinary repo guidance. Repo-owned config, specialized stage-bound compatibility obligations, skills, canonical guidance, ownership, proof declarations, and deterministic repository operations can contribute through narrower source-owned roles.
 
@@ -214,7 +217,12 @@ Overlapping cross-cutting instruction mechanisms compile through one internal no
 
 Conditions use a deliberately weak three-valued predicate model. Unknown enforcing applicability blocks only the matching action or claim while unrelated direct work remains cheap; advisory surfacing or preference stays inactive and diagnosable. The IR executes nothing, mutates nothing, and stores no generic obligations or repository knowledge.
 
-Use the existing `instruction_clause_projection` selector to explain matched facts, source revisions, composed effects, satisfiers, conflicts, and the resulting bounded recovery. See the [schema reference](reference/instruction-clause-program.md) and [migration map](maintainer/instruction-clause-migration-map.md).
+Inspect the current native `start` instruction and procedure detail for source
+identity, applicability, requirements and supported recovery. The historical
+`instruction_clause_projection` selector is a maintenance surface, not a public
+native command. The [schema reference](reference/instruction-clause-program.md)
+and [migration map](maintainer/instruction-clause-migration-map.md) retain its
+internal representation.
 
 ## External adapter boundary
 

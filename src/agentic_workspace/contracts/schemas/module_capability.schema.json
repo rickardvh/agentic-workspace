@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/module-capability.schema.json",
-  "title": "Agentic Workspace Public Module Capability Contract",
-  "description": "Small capability-first contract for peer modules. Workspace owns resolve, act, and reconcile; modules declare only domain identity, ownership, source-owned facts, relevance, optional capabilities, and result semantics.",
+  "title": "Historical Python Module Capability Fixture",
+  "description": "Source-maintenance compatibility fixture only, not an installed module API. Current native owner authoring is independent_owner with capability-contract/v1; see docs/module-capability-contract.md.",
   "type": "object",
   "required": [
     "schema_version",

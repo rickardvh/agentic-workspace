@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Merge Planning intake, decomposition and tightening into selected work fragments; consolidate intent/closeout and retain linear reporting."
+issues = [3456, 3452, 3411, 3445]

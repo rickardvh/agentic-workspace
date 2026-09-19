@@ -369,3 +369,16 @@ def test_selected_module_preparation_never_fills_refused_grants(tmp_path, indepe
     edit["arguments"]["value"]["fixture-notebook"]["binding"] = "sha256:" + "0" * 64
     with pytest.raises(AssertionError, match="descriptor changed"):
         call(edit)
+
+
+@pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
+def test_facts_only_owner_needs_no_action_or_custody(tmp_path, independent_binary, independent_cli, surface, monkeypatch):
+    monkeypatch.setenv("AGENTIC_WORKSPACE_CORE_BINARY", str(independent_binary))
+    context = setup(tmp_path, independent_binary, "fixture-facts")
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    value = consume(surface, independent_binary, independent_cli, context, host_path=os.environ["PATH"])
+    owner = value["independent_owners"]["fixture-facts"]
+    assert owner["facts"]["source"]["text"] == "Current bounded input."
+    assert owner["requests"] == []
+    assert not value["decision_packet"]["ready_actions"]
+    assert {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()} == before

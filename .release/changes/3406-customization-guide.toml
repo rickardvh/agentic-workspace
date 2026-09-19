@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Connect the public customization journey to canonical instruction and skill references."
+issues = [3406, 3403, 3445]

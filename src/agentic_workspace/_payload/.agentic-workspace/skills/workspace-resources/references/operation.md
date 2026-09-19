@@ -1,15 +1,27 @@
 # Propose and carry an exact resource operation
 
-Use the configured `resources --target <repo> --task <task> --input <request.json>`
-primitive with the current changed paths. The Python/TypeScript/JSON resources
-entrypoints use this same native owner. Submit fresh intent such as
-`{"operation":"scratch-create"}`; this first call observes and proposes only.
+Use the exact current resource proposal request:
+
+```agentic-owner-reference
+{"kind":"request","owner":"workspace-resources","id":"resources/propose/v1"}
+```
+
+Supply fresh intent in its `arguments.request`, such as
+`{"operation":"scratch-create"}`, through the shared startup request carriage.
+This observes and proposes only. Resolve the resulting exact action identity,
+for example `workspace.resources.scratch-create`, then invoke only its current
+returned reference/envelope. Selection never executes; proposals reject an
+`expected_revision` supplied as an attempt to execute during start.
+
+The configured `resources --target <repo> --task <task> --input <request.json>`
+primitive and Python/TypeScript/JSON resources entrypoints remain directly useful
+without a skill. They use the same native owner and fresh intent shape.
 For isolation, supply the concrete `need`, `reason`, returned `policy_revision`
 and `policy_answer: permits-isolation` only when current instructions permit it.
 Missing judgment, stale policy or protection yields rather than executing.
 
-When the owner returns an `action`, carry that exact object to the same resources
-primitive. It already contains target, task, changed paths, selected resource and
+On the direct primitive path, when the owner returns an `action`, carry that
+exact object to the same resources primitive. It already contains target, task, changed paths, selected resource and
 current revision; do not rebuild it or choose an arbitrary action from other work.
 The native owner reobserves policy, path identity, retention and custody before
 effects. Inspect `effect_outcome` and the returned path/build environment.

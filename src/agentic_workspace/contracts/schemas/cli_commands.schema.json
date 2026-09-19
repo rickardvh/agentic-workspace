@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/cli-commands.schema.json",
-  "title": "Cli Commands",
-  "description": "CLI command manifest used to validate command metadata and parser parity.",
+  "title": "Historical Source-Maintenance CLI Metadata",
+  "description": "Retained parser fixtures only. These declarations neither install commands nor provide fallback execution. The native_cli declaration in source_decision_contract.json is the public boundary.",
   "type": "object",
   "required": [
     "schema_version",
@@ -26,12 +26,32 @@
     "local_execution_effects": {
       "type": "object",
       "description": "Program-wide ignored local effects that may occur independently of shared command mutability.",
-      "required": ["authority", "condition", "effects", "rule"],
+      "required": [
+        "authority",
+        "condition",
+        "effects",
+        "rule"
+      ],
       "properties": {
-        "authority": {"type": "string", "description": "Authority class of the local effects."},
-        "condition": {"type": "string", "description": "Runtime condition that enables the local effects."},
-        "effects": {"type": "array", "items": {"type": "string"}, "description": "Possible ignored local writes."},
-        "rule": {"type": "string", "description": "Boundary between local diagnostics and shared command authority."}
+        "authority": {
+          "type": "string",
+          "description": "Authority class of the local effects."
+        },
+        "condition": {
+          "type": "string",
+          "description": "Runtime condition that enables the local effects."
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Possible ignored local writes."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Boundary between local diagnostics and shared command authority."
+        }
       },
       "additionalProperties": false
     },

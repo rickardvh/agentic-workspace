@@ -5,11 +5,11 @@ governing_intents = ["Preserve only the context that is expensive to rediscover 
 anti_intents = ["Do not become a visible workflow framework the user must consciously operate.", "Do not grow a surface maze where every good idea becomes another durable file or command.", "Do not optimize one local step while making the overall loop heavier.", "Do not let package-owned and repo-owned artifacts blur into ambiguous authority.", "Do not create a skills runtime, mandatory workflow phase machine, hidden semantic classifier, or universal policy language.", "Do not treat successful validation, matched source records, or a published preview as whole-intent or stable-release acceptance.", "Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions.", "Do not treat current local tooling preferences as durable package requirements without explicit justification."]
 decision_tests = ["Favor work that preserves human intent more faithfully across time.", "Favor work that makes bounded execution cheaper to start, continue, hand off, review, or finish.", "Favor work that removes, compresses, or backgrounds visible residue instead of adding new first-line surfaces.", "Favor work that sharpens ownership, preserves source-owned policy and currentness-bound interpretations, and makes important operating choices machine-consumable.", "Favor work that improves portability by reducing accidental repo-, language-, agent-, vendor-, or local-tool assumptions.", "Favor work that makes the correct action easy to construct before validation runs.", "Question work that mainly adds framework feel, narrative residue, or new visible concepts without replacing older ones.", "Question work that treats validation success alone as proof that the larger intent was satisfied.", "Question work that relies on repeated validation failures as the authoring interface for package-owned artifacts or workflows."]
 open_questions = []
-interpretation_notes = "Semantically reconciled on 2026-09-17 against every declared source, preserving the decision-value interpretation from PR #3395. SYSTEM_INTENT.md adds practical current-state sufficiency and meaningful re-anchoring: current owner facts and reachable references support continuation without requiring identical agent behavior, a global snapshot or a new belief-state store. Changed relevance requires reconsideration; delivery is not understanding; lost disposable carriage differs from missing irreplaceable evidence. README.md remains consistent with this source-owned skills-first model. Preserve architecture principles and existing ownership boundaries. This interpretation does not establish paired-history runtime proof or completion of issues #3393 or #3394."
+interpretation_notes = "Semantically reconciled on 2026-09-17 against every declared source, preserving the decision-value interpretation from PR #3395. SYSTEM_INTENT.md adds practical current-state sufficiency and meaningful re-anchoring: current owner facts and reachable references support continuation without requiring identical agent behavior, a global snapshot or a new belief-state store. Changed relevance requires reconsideration; delivery is not understanding; lost disposable carriage differs from missing irreplaceable evidence. README.md remains consistent with this source-owned skills-first model. Preserve architecture principles and existing ownership boundaries. This interpretation does not establish paired-history runtime proof or completion of issues #3393 or #3394. Reconciled the P1 customization navigation and facts-only module clarification on 2026-09-19: README now reaches the single ordinary-skill/instruction journey, and independently owned read-only facts can justify a module without persistent state. These changes preserve the existing skills-first, quiet, source-owned intent; no new governing goal or independent acceptance is inferred."
 confidence = "high"
 needs_review = false
 preferred_source = "SYSTEM_INTENT.md"
-last_synced_at = "2026-09-17"
+last_synced_at = "2026-09-19"
 
 [[source_records]]
 path = "SYSTEM_INTENT.md"
@@ -21,9 +21,9 @@ line_count = 246
 [[source_records]]
 path = "README.md"
 present = true
-sha256 = "587660015b088a6aa01a314c9cdc1b40892839778f7df3accda4db12189b746f"
+sha256 = "643862552c54041da101c0788a85c2ec2cd220e8df3c78404c0cb8d068c9b2d7"
 first_heading = "Agentic Workspace"
-line_count = 186
+line_count = 191
 
 [[architecture_principles]]
 id = "host-agnostic-agent-judgment"

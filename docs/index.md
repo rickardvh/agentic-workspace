@@ -4,6 +4,8 @@ Start with the repository [README](../README.md) for first contact. Use the smal
 
 ## Start here
 
+- [Customize repository behavior](customization.md) — one receipt example, from a rule and ordinary skill to optional selected procedure.
+
 - [Everyday use](everyday-use.md) — the canonical AW skill, scoped policy, continuity, retention, and precise owner tools in ordinary work.
 - [Package overview](package/overview.md) — source-owned operating context and dynamic control without a mandatory command/phase loop.
 - [Installation and adoption](agentic-workspace-install.md) — release identity, prerequisites, repository adoption/removal, and support boundaries.
@@ -24,7 +26,7 @@ Start with the repository [README](../README.md) for first contact. Use the smal
 | How does an agent use AW? | [Everyday use](everyday-use.md) and the [canonical skill](../.agentic-workspace/skills/workspace-startup/SKILL.md) |
 | What does Workspace own versus repository sources? | [Architecture](architecture.md) |
 | How do modules extend AW without changing the loop? | [Modules](package/modules.md) and [Extensibility and public boundary](extension-boundary.md) |
-| How does repo customization differ from modules/adapters? | [Architecture](architecture.md) |
+| How do I author repository behavior, and when is a module needed? | [Customization walkthrough](customization.md), [instruction reference](package/scoped-instructions.md), [skill reference](package/skill-authoring.md) |
 | How do I install, adopt, or remove AW? | [Installation and adoption](agentic-workspace-install.md) |
 | What is the security/trust boundary? | [Threat model](security/threat-model.md) |
 | What files/state exist in a host repo and who owns them? | [Installed surfaces](package/installed-surfaces.md) and generated [surface catalogue](reference/installed-surface-catalogue.md) |

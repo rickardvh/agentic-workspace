@@ -1,41 +1,18 @@
 ---
 name: memory-hygiene
-description: Assess current selected Memory notes or advisory facts and request exact retain, retire, or receiving-owner-admitted promotion without adopting the corpus.
+description: Select bounded Memory disposition, source repair or declaration hygiene while native owners retain evidence and authority.
 ---
 
-# Memory Hygiene
+# Memory hygiene
 
-Use the configured AW invocation from the repository adapter. Run `start --target . --task "<task>" --format json`, repeating `--changed <path>` for known paths. Follow the current decision packet before effects.
+Use selected current Memory detail and the shared startup owner carriage. Read
+only the relevant sources. Select [the current question](procedure.md), or read
+the same references manually:
 
-1. Use the delivered `advisory_context` and selected owner detail for relevant material. Source identity is not factual currentness.
-2. Select one entry from `memory.disposition.requests`. Preserve its source and optional fact identity. Supply the bounded disposition and reason: retain useful advisory value; retire only with a current obsolete/no-future-value judgment; promote only after a stronger owner has absorbed the complete selected lesson.
-3. For promotion, select an exact entry from `memory.receiving_admissions`. Copy its `receiving_admission` into the request's `receiver`. A whole note requires its complete lesson in a current admitted repository decision plus an exact source-context reference. An advisory fact additionally preserves its stable identity in that decision. A path, hash, matching excerpt, test result or agent assertion is insufficient.
-4. Resolve the request to obtain the exact proposed write and bounded human question. The human supplies the authorization answer; capability availability is not approval of a particular note. Do not answer for the human or reuse an unrelated authorization. Defer preserves all sources.
-5. Invoke only the returned `primary_action`, with the same target/task/changed context and JSON format. Resolve again. On interruption the current frontier carries an exact safe recovery action when one is established. Invoke only that action; preserve unresolved custody and never replay the original write.
+- [Retain, retire or promote selected material](references/disposition.md).
+- [Repair and receiving evidence](references/repair.md).
+- [Inspect bounded declaration hygiene](references/declarations.md).
 
-The write changes only the selected entry's disposition metadata in the existing manifest. Notes, other entries, comments and external authorship remain preserved. It grants no continuing corpus custody, factual truth, Planning progress, proof, completion, target quality or policy authority.
-
-When evidence exposes a source inconsistency, use the responsible source's
-authorized repair workflow (Workspace's selected correction procedure when
-available), then reassess the note. Keep legitimate scoped differences and useful
-rationale. Narrowing, merging or rewriting prose needs its actual owner operation
-or ordinary authorized source workflow; metadata disposition is not generic
-deletion or a universal promotion writer. Verify the receiving consequence before
-claiming the advice was absorbed, and keep unavailable admission explicit.
-
-Retirement and promotion suppress advisory selection only while current source and admitted attempt evidence support the disposition. Promotion also needs a current receiver. Source, policy, capability or receiving-authority drift can expose the retained lesson again. Unrelated manifest edits conservatively require renewed disposition evidence. Reconcile that result; do not delete the former note to hide it.
-
-No matching Memory means no corpus sweep or write. Creating notes, rewriting their prose, changing routing, resolving ambiguous historical provenance, and admitting a receiving decision remain separate owner work when no current operation offers them. Report that gap instead of using retired module commands or editing stale source bytes directly.
-
-## Selected declaration hygiene
-
-Use the configured native AW invocation directly; no Python helper is required.
-Keep the same target/task/changed context when resolving the exact route-selection
-request with `start --input <request.json>`. Missing native execution means
-unexecuted/unknown hygiene; source reading does not establish a clean result.
-
-Select the current `memory/hygiene` semantic route through the native owner's returned route-selection request, then read `memory.hygiene` from fresh `start` output. The shared native owner checks at most 128 declared notes against `rules.canonical_dirs` and `rules.task_board_globs`. Findings name the source and the remaining owner judgment. This does not scan the repository or grant source-write/proof authority. An absent, malformed or unavailable source means unexecuted/unknown hygiene, never clean hygiene.
-
-Routing/compactness derives from per-note `note_type = "routing"`; there is no global mandatory-read list. Core-document governance belongs to repository instructions and selected Verification, not Memory. Ordinary work does not select this maintenance route.
-
-At selected consultation/disposition, use `summary` and fact `review_context` to assess future value and a possible receiving owner. Dates are advisory reminders, not freshness proof. Exact dependencies, stale triggers and contradictions can require reconciliation. Only current native custody admits disposition; a manifest status or authority label cannot suppress a lesson or authorize promotion. Unsupported declaration keys require source-owner repair, not a compatibility interpretation.
+No signal requires no capture retrospective. Optional method selection cannot
+waive explicit candidate obligations, human authorization or receiving evidence.
+Missing native runtime leaves current custody unknown; preserve managed sources.

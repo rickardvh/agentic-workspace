@@ -1,117 +1,57 @@
-# Module Capability Contract
+# Native module capability contract
 
-Agentic Workspace modules are peer capability contributors to the existing operating decision. A module describes its domain; Workspace owns `resolve -> act -> reconcile`.
+An independent module supplies deterministic domain semantics through the Rust
+`agentic_workspace_core::independent_owner` API. Link its crate into a native core
+assembly; Python, TypeScript, JSON and CLI clients all project that authority.
+Python entry points and the former `module-capability/v2` schema are historical
+source-maintenance fixtures, not installed extension or fallback execution paths.
 
-The versioned public contract is `agentic-workspace/module-capability/v2`, registered through the Python entry-point group `agentic_workspace.modules`. An entry point returns either the contract object directly or `{ "contract": ..., "operations": ... }`.
+## Small authoring boundary
 
-## Author-facing shape
+| Declaration | Domain meaning |
+| --- | --- |
+| Registration owner/revision/api_version | Implementation identity and compatibility. |
+| Registration describe | Lazily returns the domain descriptor, settings schema and required exact source paths. |
+| Registration resolve | Deterministically observes bounded Context and returns current domain facts, blockers, request templates and an optional prepared operation. It is not an agent workflow callback. |
+| Description capability | One capability-contract/v1 owner: domains, effect classes, typed requests and operations. Unknown owner fields fail closed. |
+| Description configuration_schema | Durable module settings; no task answer or workflow cursor. |
+| Description sources | Exact bounded repository sources, separately admitted for reading and freshly observed including absence. |
+| Context | Current work, settings, observed sources and an optional typed owner request. |
+| Resolution | Facts, blockers, requests and optional prepared operation; all may be empty. |
+| PreparedOperation / Publication | Exact owner result and optional immutable owner-namespaced publication, admitted by core before effect. |
 
-A module declares six things:
+A facts-only owner returns `Resolution { facts, ..Default::default() }` and declares
+no operation or publication. A read-only operation may return a bounded computed
+result without state. An effectful operation additionally declares its own effect
+class and prepares publication. Neither needs act/reconcile hooks, posture fields,
+startup phases, report slots or mandatory skills.
 
-1. `name`, `description`, and `compatibility`: stable identity plus the reader epoch and required generic capabilities.
-2. `ownership`: module-owned roots and effect classes, plus explicit authority the module cannot acquire.
-3. `relevance`: bounded task terms and path prefixes that decide whether the contribution belongs in the current contract.
-4. `facts`: optional typed, source-owned, revision/currentness-bound values that existing instruction clauses may reference. Modules define values, not predicate or effect operators.
-5. `capabilities`: optional `resources`, `skills`, typed `operations`, and semantic `setup_concerns`. Omit dimensions the module does not use.
-6. `result_semantics`: the result schema, guaranteed fields, effect fields, and warning fields the kernel may reconcile.
+The repository admits implementation/descriptor revisions, scope, exact reads,
+effects, claims, restrictions and settings separately in `modules.independent`.
+Linking and descriptor claims do not grant any authority. Configuration owns the
+bounded authorization to change those grants. Missing, changed or revoked owner
+admission cannot be replaced by a skill or client-built invocation.
 
-Dependencies, conflicts, and selection rank are optional. Unknown additive metadata is allowed. Unknown required capabilities and newer reader epochs fail closed.
+## Optional procedure
 
-```python
-def module_provider():
-    return {
-        "contract": {
-            "schema_version": "agentic-workspace/module-capability/v2",
-            "name": "signals",
-            "description": "Read bounded build signals.",
-            "compatibility": {
-                "reader_epoch": 1,
-                "required_capabilities": ["module-resources-v1", "module-facts-v1", "module-setup-concerns-v1"],
-            },
-            "ownership": {
-                "roots": [],
-                "effect_classes": [],
-                "authority_exclusions": [
-                    "cannot grant mutation, proof, or completion authority"
-                ],
-            },
-            "relevance": {
-                "task_terms": ["build signal"],
-                "path_prefixes": ["build/signals/"],
-            },
-            "facts": [
-                {
-                    "id": "signals.build-risk",
-                    "type": "string",
-                    "value": "elevated",
-                    "source": {
-                        "owner": "signals",
-                        "revision": "signal-r1",
-                        "current": True,
-                    },
-                }
-            ],
-            "capabilities": {
-                "resources": [
-                    {
-                        "id": "signals.latest",
-                        "ref": "signals://latest",
-                        "read_only": True,
-                    }
-                ],
-                "setup_concerns": [
-                    {
-                        "id": "retention-policy",
-                        "semantic_revision": "signals.retention-policy/v1",
-                        "source_revision": "signals-config-r1",
-                        "status": "human-decision-required",
-                        "materiality": "recommended",
-                        "owner": "signals.retention-policy",
-                        "applicability": {"kind": "module-enabled"},
-                        "route": {"kind": "human-decision", "id": "signals.retention-policy"},
-                        "question": "How long should imported build signals be retained?",
-                    }
-                ],
-            },
-            "result_semantics": {
-                "schema_version": "signals/result/v1",
-                "guaranteed_fields": ["status"],
-                "effect_fields": [],
-                "warning_fields": ["warnings"],
-            },
-        }
-    }
-```
+A module may distribute ordinary SKILL.md plus relative resources. Register its
+passive registry path using the repository's existing skill discovery contract;
+no native owner-name switch or phase hook is needed. An optional procedure can
+nominate a current request/action by generic exact identity. The owner validates
+all submitted material. Removing the skill cannot remove domain restrictions.
+A module need not ship any skill. A skill need not belong to a module.
 
-```toml
-[project.entry-points."agentic_workspace.modules"]
-signals = "signals_module:module_provider"
-```
+## Currentness, effects and removal
 
-This read-only module declares no operations, workflow phases, posture fragments, closeout hooks, or lifecycle callbacks. The kernel supplies quiet lifecycle defaults.
+Core binds requests and prepared operations to work, observed source revisions,
+settings and repository admission. Direct callers use current start/invoke without
+selecting a skill. Facts-only results create no custody. Immutable publication
+uses existing attempts and recovery; unknown effects cannot be retried as new work.
+Foreign-owner material remains evidence for that owner's separate admission.
+Disabling/removing a module removes its contribution, not repository-owned outputs.
 
-## Admission and composition
-
-Workspace validates identity and compatibility before using a contribution. Selected modules with malformed contracts, unsupported required capabilities, missing dependencies, explicit conflicts, overlapping owned roots, or colliding effect classes fail with the competing owners and a repository-configuration recovery owner.
-
-Only enabled, installed, compatible, and relevant modules contribute to the current operating decision. Irrelevant modules and their facts remain absent from first-line context. A contribution may provide facts or route resources, skills, or operations, but its authority remains bounded by `ownership.authority_exclusions`.
-
-Fact ids and types are stable contract declarations. Each value names the module owner plus a non-empty revision and explicit currentness bit. Workspace admits these values directly into the existing instruction IR; it does not persist them in a central fact store. A repo-owned bounded clause may consume a current fact, while stale revisions evaluate as unknown. The ordinary start and implement compilers merge that existing source-owned program with relevant module facts before compiling the operating decision.
-
-A contract with one or more facts must include `module-facts-v1` in `compatibility.required_capabilities`. This makes readers that do not support facts reject the module instead of accepting it while silently ignoring source-owned facts.
-
-A contract with one or more setup concerns must likewise require `module-setup-concerns-v1`. Concern ids are stable within the module; Workspace namespaces them as `module:<module>:<id>`. `semantic_revision` changes only when the decision meaning changes, while `source_revision` changes when the authoritative source snapshot changes. Status is one of `satisfied`, `inference-ready`, `human-decision-required`, or `not-applicable`; materiality is `recommended` or `action-required`; applicability is currently the generic `module-enabled` predicate. The route names the module-owned detail, skill, operation, or human decision that can resolve the concern.
-
-A setup concern may include `source_obligation` when the enabled capability depends on repository-owned semantic content. It names the semantic need, source class and owner, current status/candidates, safe auto-bind posture, affected claims, and one continuation. Workspace transports that declaration generically; the module owner remains authoritative for its status and effects. See [Repo-source obligations](repo-source-obligation-contract.md).
-
-Setup consumes only concerns from explicitly enabled, installed, compatible modules. It compares the current semantic/source set with compact receipts from the last completed reconciliation. Newly applicable or changed concerns may create pressure; unchanged concerns stay quiet, cosmetic descriptor changes do not reopen setup, and disabling a module retires its receipts without replay. The receipt is current-state evidence, not a chronological setup version or history, and it never enables or upgrades a capability automatically.
-
-When a module operation includes `facts`, the list is the module owner's reconciled current snapshot: values may refresh declared ids and types, and an empty list removes the facts from the next contribution. Before accepting that result, Workspace reloads the module's public contract provider and requires its facts to match the reported snapshot. The previously discovered contract remains immutable; a fresh discovery therefore observes the new revision, stale marker, or removal without relying on process-local Workspace mutation. An operation result that omits `facts` leaves the module owner's current snapshot unchanged.
-
-Typed operations are invoked through the generic module-operation boundary. Results must contain their guaranteed fields and may report only declared effect classes. Module-local success cannot set unrelated mutation, proof, parent-intent, or completion authority.
-
-Removing a module means deselecting its capability contract. Repo-owned promoted outputs remain under their existing owners; no cached module contribution remains authoritative after a fresh resolution.
-
-## Internal compatibility metadata
-
-The root package still carries broader first-party lifecycle and distribution metadata in `module_registry.json`. That metadata is an internal compatibility surface, not the public authoring API. Planning, Memory, and Verification publish the same capability-first contract used by external modules where their semantics overlap.
+See [native owner authoring and recovery](maintainer/independent-native-owners.md)
+and the separate [neutral fixture](../tests/fixtures/native-independent-owner/src/lib.rs).
+Its assembly links the crate without adding either fixture identity to core.
+Planning, Memory and Verification retain their current domain semantics; first-party
+packaging does not confer independent authority or define a required module slot.

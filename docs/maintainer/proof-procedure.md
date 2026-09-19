@@ -12,8 +12,11 @@ Optional method drift does not invalidate independently current native authority
 
 Resources retain the exact `resources` primitive: its result is a current bounded
 observation/proposal or an effect outcome after carrying its exact returned action.
-The resource method uses generic passive question/branch selection and that direct
-owner transport; it does not invent a public decision-packet resource reference.
+The resource method uses generic passive question/branch selection and the exact
+`resources/propose/v1` request from `workspace-resources`. Its adapter exposes the
+same primitive proposal as a current action through generic start/invoke owner
+references. Start cannot execute by carrying expected_revision. The dedicated
+resources transport remains available to direct callers.
 This primitive owns path bounds, policy, Git registrations, leases, retention and
 recovery. It is not a sequence of other public effects. Direct API callers do not
 need an optional skill. `compose` is rejected instead of preserving a legacy flow.
