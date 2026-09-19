@@ -23,7 +23,7 @@ satisfaction, or closeout mechanics.
 2. Route intent and parent/lane/slice shaping to `planning-work`; tighten a
    newly created bounded execplan through `planning-work`.
 3. When the canonical assignment owner names unresolved assurance input, route
-   that pre-decision assessment to `planning-assurance-delegation` and return
+   that pre-decision assessment to `planning-assignment` and return
    its evidence to the assignment owner.
 4. Follow the resulting structured assignment state:
    - selected-current-target work continues through the ordinary direct-work
@@ -33,8 +33,8 @@ satisfaction, or closeout mechanics.
    - missing, stale, tied, or unsafe assignment state returns to the exact
      shaping, probe, repair, override, or human-decision action named by the
      current decision.
-5. Route manual transport to `planning-manual-delegation` and delegated returns
-   to `planning-returned-result`; do not duplicate their procedures here.
+5. Route manual transport to `planning-assignment` and delegated returns
+   to `planning-assignment`; do not duplicate their procedures here.
 6. Route validation to AW-owned proof, semantic satisfaction to
    `planning-closeout-trust`, and closeout mechanics and residue
    distillation to `planning-closeout-trust`.

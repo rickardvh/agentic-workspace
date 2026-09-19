@@ -3,18 +3,12 @@
 The registry owns discovery; native owners retain state, authority and effects.
 Use the target configured `start`/`invoke` and shared startup carriage.
 
-- `planning-manual-delegation`
-  - delegate through canonical assignment export and import without trusting worker claims
-- `planning-returned-result`
-  - admit or route a returned delegated result through authoritative assignment operations
 - `bootstrap-upgrade`
   - upgrade planning bootstrap files for an already bootstrapped repository safely
 - `planning-autopilot`
   - execute bounded planning slices from checked-in planning surfaces until the active objective reaches an authorized terminal outcome
 - `planning-orchestrator-workflow`
   - execute the sole post-assignment orchestrator procedure from a binding canonical assignment and action gate without reselecting the target
-- `planning-assurance-delegation`
-  - supply unresolved assurance and capability evidence before the canonical assignment decision exists
 - `planning-high-assurance-lifecycle`
   - route broad or high-assurance work across canonical planning, assignment, proof, intent, and closeout owners without duplicating their procedures
 - `planning-closeout-trust`
@@ -27,7 +21,9 @@ Use the target configured `start`/`invoke` and shared startup carriage.
   - project active planning state, proof expectations, and next-action guidance from canonical summary JSON
 - `planning-work`
   - Shape upstream work, bound structure and tighten native Planning continuity.
+- `planning-assignment`
+  - Supply requested assessment, carry admitted transport and reconcile returned work.
 
 Canonical sources are under `packages/planning/skills`; installed and generated
-copies are distributions of these same resources. Missing runtime permits source
-reads only. No optional method waives native restrictions.
+copies distribute the same resources. Missing runtime permits source reads only.
+No optional method waives native restrictions.

@@ -10,55 +10,6 @@
   },
   "skills": [
     {
-      "id": "planning-manual-delegation",
-      "path": "planning-manual-delegation/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "delegate through canonical assignment export and import without trusting worker claims",
-      "activation_hints": {
-        "verbs": [
-          "delegate",
-          "export",
-          "import",
-          "handoff"
-        ],
-        "nouns": [
-          "manual delegation",
-          "manual transport",
-          "assignment packet"
-        ],
-        "when": [
-          "manual transport admitted"
-        ]
-      }
-    },
-    {
-      "id": "planning-returned-result",
-      "path": "planning-returned-result/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "admit or route a returned delegated result through authoritative assignment operations",
-      "activation_hints": {
-        "verbs": [
-          "admit",
-          "integrate",
-          "reject",
-          "repair",
-          "reassign"
-        ],
-        "nouns": [
-          "returned result",
-          "worker return",
-          "delegated return",
-          "assignment result"
-        ],
-        "when": [
-          "delegated run returned",
-          "assignment admission required"
-        ]
-      }
-    },
-    {
       "id": "bootstrap-upgrade",
       "path": "bootstrap-upgrade/SKILL.md",
       "scope": "bundled",
@@ -170,45 +121,6 @@
         "excludes": [
           "selected current target",
           "absent or unresolved assignment"
-        ]
-      }
-    },
-    {
-      "id": "planning-assurance-delegation",
-      "path": "planning-assurance-delegation/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "supply unresolved assurance and capability evidence before the canonical assignment decision exists",
-      "activation_hints": {
-        "verbs": [
-          "assess",
-          "classify"
-        ],
-        "nouns": [
-          "pre-assignment assurance",
-          "unresolved risk",
-          "capability evidence",
-          "proof requirement"
-        ],
-        "phrases": [
-          "pre-assignment assurance classification",
-          "unresolved assignment input",
-          "capability evidence before assignment"
-        ],
-        "when": [
-          "canonical assignment is absent and its owner requests unresolved assurance input"
-        ]
-      },
-      "activation_contract": {
-        "authority": "canonical assignment owner",
-        "requires": [
-          "assignment absent or unresolved",
-          "named assurance input"
-        ],
-        "excludes": [
-          "binding assignment",
-          "dispatch",
-          "returned-result handling"
         ]
       }
     },
@@ -426,6 +338,17 @@
       "summary": "Shape upstream work, bound structure and tighten native Planning continuity.",
       "semantic_routes": [
         "planning/work/continuity"
+      ],
+      "procedure_resource": "procedure.md"
+    },
+    {
+      "id": "planning-assignment",
+      "path": "planning-assignment/SKILL.md",
+      "scope": "bundled",
+      "stability": "package-managed",
+      "summary": "Supply requested assessment, carry admitted transport and reconcile returned work.",
+      "semantic_routes": [
+        "planning/assignment/lifecycle"
       ],
       "procedure_resource": "procedure.md"
     }

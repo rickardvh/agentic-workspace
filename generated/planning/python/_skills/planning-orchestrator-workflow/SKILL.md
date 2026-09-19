@@ -13,7 +13,7 @@ structured inputs; task wording does not activate this procedure.
 When the canonical assignment selects the current target, continue through the
 ordinary direct-work owner and do not load this skill. When assignment is absent
 or unresolved, return to the canonical assignment owner; use
-`planning-assurance-delegation` only if that owner requests unresolved
+`planning-assignment` only if that owner requests unresolved
 assurance input.
 
 ## Primary Ownership
@@ -36,14 +36,14 @@ skill consumes their result and never recomputes it.
    dispatch action directly; no separate delegation request is needed. Execute
    only the transport or dispatch route admitted by the current action:
    - use the host's typed internal/automatic dispatch action when present;
-   - route admitted manual transport to `planning-manual-delegation` and the
+   - route admitted manual transport to `planning-assignment` and the
      canonical `assignment.export` / `assignment.import` operations;
    - use an admitted external adapter only with the same assignment identity,
      revision, work bounds, and return contract.
 4. Track returned, failed, blocked, cancelled, stale, or stopped work through
    the canonical delegated-run lifecycle. Transport success is not worker
    success, admission, integration, proof, or closeout.
-5. Route every return to `planning-returned-result`. Use the exact current
+5. Route every return to `planning-assignment`. Use the exact current
    `assignment.admit`, `assignment.reject`, `assignment.repair`,
    `assignment.reassign`, `assignment.override`, or `assignment.integrate`
    action rather than hand-editing lifecycle state.

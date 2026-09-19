@@ -637,8 +637,8 @@
       "rationale": "Upgrade workflow skill supports package maintenance and lifecycle work rather than daily repo execution."
     },
     {
-      "source_path": "packages/planning/skills/planning-assurance-delegation/SKILL.md",
-      "installed_path": ".agentic-workspace/planning/skills/planning-assurance-delegation/SKILL.md",
+      "source_path": "packages/planning/skills/planning-assignment/SKILL.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assignment/SKILL.md",
       "classification": "config-enabled extension",
       "owner": "planning skills extension",
       "rationale": "Assurance and delegation steering is useful where skills and delegation targets are configured, but core planning must still work without skill support."
@@ -677,20 +677,6 @@
       "classification": "config-enabled extension",
       "owner": "planning skills extension",
       "rationale": "Orchestrator workflow should be opt-in for repos and agents that actually delegate."
-    },
-    {
-      "source_path": "packages/planning/skills/planning-manual-delegation/SKILL.md",
-      "installed_path": ".agentic-workspace/planning/skills/planning-manual-delegation/SKILL.md",
-      "classification": "config-enabled extension",
-      "owner": "planning skills extension",
-      "rationale": "Manual delegation guidance is an opt-in extension for agents and repositories that delegate work."
-    },
-    {
-      "source_path": "packages/planning/skills/planning-returned-result/SKILL.md",
-      "installed_path": ".agentic-workspace/planning/skills/planning-returned-result/SKILL.md",
-      "classification": "config-enabled extension",
-      "owner": "planning skills extension",
-      "rationale": "Returned-result admission guidance is an opt-in extension for delegated work."
     },
     {
       "source_path": "packages/planning/skills/planning-promote-review-findings/SKILL.md",
@@ -1059,6 +1045,48 @@
     {
       "source_path": "packages/planning/skills/planning-closeout-trust/procedure.md",
       "installed_path": ".agentic-workspace/planning/skills/planning-closeout-trust/procedure.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-assignment/references/assessment.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assignment/references/assessment.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-assignment/references/binding.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assignment/references/binding.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-assignment/references/manual.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assignment/references/manual.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-assignment/references/return.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assignment/references/return.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-assignment/references/recovery.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assignment/references/recovery.md",
+      "classification": "config-enabled extension",
+      "owner": "planning skills extension",
+      "rationale": "Selected shared procedure; native owners retain state and authority."
+    },
+    {
+      "source_path": "packages/planning/skills/planning-assignment/procedure.md",
+      "installed_path": ".agentic-workspace/planning/skills/planning-assignment/procedure.md",
       "classification": "config-enabled extension",
       "owner": "planning skills extension",
       "rationale": "Selected shared procedure; native owners retain state and authority."

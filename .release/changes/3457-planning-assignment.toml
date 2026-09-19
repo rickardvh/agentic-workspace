@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Merge Planning assessment, manual handoff and returned-result guidance into selected Assignment procedure without changing binding authority."
+issues = [3457, 3452, 3411, 3445]
