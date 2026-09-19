@@ -133,10 +133,14 @@ pub(crate) fn resolve(value: Value) -> Result<(Value, Value), CoreError> {
         json!({"contributions":contributions, "intent":intent.clone(), "capability_contract":contract}),
     )?;
     intent.as_object_mut().unwrap().remove("public_request");
+    let mut discovery = json!({"parent":parent,"children":children,"next_after":next_after});
+    if !resource.is_null() {
+        discovery["resource"] = resource;
+    }
     Ok((
         json!({"kind":"agentic-workspace/semantic-route-result/v1", "status":if stale {"stale"} else {"current"},
         "request_identity":request_identity, "decision":decision, "requests":templates, "capability_contract":contract,
-        "discovery":{"parent":parent,"children":children,"next_after":next_after,"resource":resource}, "authority_effect":"applicability-only"}),
+        "discovery":discovery, "authority_effect":"applicability-only"}),
         intent,
     ))
 }
