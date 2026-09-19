@@ -3,7 +3,7 @@
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "M4 implementation published through #3471; M5 Memory fragments and maintainer reference repair implemented. Next aggregate migration proof and public/module contraction."
+    "frontier": "M5 published as #3472. Public contraction inventory/demotion complete over M3 removal; next module contract simplification, aggregate host walkthrough and final docs."
   },
   "creation_provenance": {
     "custody": {
@@ -42,7 +42,7 @@
   },
   "phase": "implementation",
   "proof": {
-    "observed": "M5 19 native candidate/disposition cases passed, including no-retention, receiving evidence, source drift and candidate claim carriage without Memory prompt. Generated Memory mirrors current.",
+    "observed": "Ten public-help, resource transport and removed-wrapper proof checks passed across native/JSON/Python/TypeScript projections.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
@@ -58,7 +58,7 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050"
   ],
   "relationships": {},
-  "revision": 17,
+  "revision": 18,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -79,18 +79,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/be39fc43ebf365416cc0031deff34aa5cd7a0e3d4c01113b5afab472f85ba488.attempt.json",
-        "revision": "sha256:775ddadccf4e4c477d5d96b43e9fb1db41d6b49f92ebbe7c9f4c61cb518abf2b",
+        "path": ".agentic-workspace/local/effects/497aa82e7b5179984db4815d3018c7ce1086ad2045af9ba8f6374072c05092f8.attempt.json",
+        "revision": "sha256:1cc5811166487aa60b1a1f0afe05c5e272aeeba5cc958321627e464d48af537f",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/be39fc43ebf365416cc0031deff34aa5cd7a0e3d4c01113b5afab472f85ba488.result.json",
-        "revision": "sha256:8f6747c135f7385e36daacae9e754ad71e37e28f643c1b2d903c86e28680fc8c",
+        "path": ".agentic-workspace/local/effects/497aa82e7b5179984db4815d3018c7ce1086ad2045af9ba8f6374072c05092f8.result.json",
+        "revision": "sha256:9c8e3c47edc0d8cc02bbf563eb7a99daa376575717d98b77f4b457e544fc8655",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:6c92a578742a5b6021fab3462287db85bca03d702e026fa2693b506b8e58055e",
+    "invocation_revision": "sha256:e1464681eabf97621f450631adf5260d7a4031e9680f69b8c28f4e35ea5cdc94",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -98,7 +98,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:4c5c2299ed0bec3efcd1c75e91a823d62ec610cce4e75f7554466ad16184e3c4",
+        "document_revision": "sha256:72266266c9d5b90100283401427ce434938df7af9d30d464baa4df5ab94d7b88",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }

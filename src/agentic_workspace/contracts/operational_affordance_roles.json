@@ -1,17 +1,17 @@
 {
   "schema_version": "agentic-workspace/operational-affordance-roles/v1",
-  "principle": "Ordinary outputs should expose one primary next action and keep diagnostics, history, and inventories behind selectors or verbose detail unless they change that action.",
+  "principle": "Historical source-maintenance presentation fixtures only; no current public command or procedure authority. Native owner resolution and optional skills replace the former role taxonomy.",
   "command_roles": [
     {
       "command": "start",
       "role": "ordinary_first_contact",
-      "first_line": true,
+      "first_line": false,
       "primary_next_action": "choose-smallest-workflow-shape"
     },
     {
       "command": "implement --changed",
       "role": "changed_path_first_contact",
-      "first_line": true,
+      "first_line": false,
       "primary_next_action": "inspect changed paths and selected proof"
     },
     {

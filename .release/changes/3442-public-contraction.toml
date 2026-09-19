@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "major"
+summary = "Complete P1 public surface contraction and demote historical command audiences; exact native owner operations remain direct."
+issues = [3442, 3441, 3445]
