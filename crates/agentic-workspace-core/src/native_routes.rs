@@ -742,7 +742,7 @@ mod tests {
         );
         assert_eq!(source(&target.0).unwrap(), vocabulary);
         assert!(!target.0.join(".agentic-workspace/local").exists());
-        for invalid in ["../escape.md", "/absolute.md", "missing.md"] {
+        for invalid in ["../escape.md", "/absolute.md"] {
             let mut broken = form.clone();
             broken["branches"][0]["next"] = json!(invalid);
             target.write(resource, &format!("```agentic-procedure\n{broken}\n```\n"));
@@ -760,6 +760,59 @@ mod tests {
         );
         // A broken optional resource does not make the ordinary skill disappear.
         assert_eq!(procedure(&target.0, "note").unwrap()["status"], "current");
+    }
+
+    #[test]
+    fn unrealized_branch_bodies_do_not_participate_in_question_currentness() {
+        let target = Target::new();
+        target.write("tools/skills/REGISTRY.json", &json!({"skills":[{"id":"note","path":"note/SKILL.md","semantic_routes":["note/change"],"procedure_resource":"procedure.md"}]}).to_string());
+        target.write("tools/skills/note/SKILL.md", "Read procedure.md");
+        let form = json!({"kind":"agentic-workspace/procedure/v1","id":"q","question":"Does this affect users?","context":["context.md"],"branches":[{"id":"yes","description":"Visible change","next":"user.md"},{"id":"no","description":"Internal change","next":"internal.md"}]});
+        let resource = "tools/skills/note/procedure.md";
+        target.write(resource, &format!("```agentic-procedure\n{form}\n```\n"));
+        target.write("tools/skills/note/context.md", "Current judgment context");
+        target.write("tools/skills/note/user.md", "Selected user body");
+        let question =
+            || procedure(&target.0, "note").unwrap()["procedures"][0]["resource"].clone();
+        // An absent destination cannot be hydrated; it remains a lazy reference.
+        let first = question();
+        assert_eq!(first["status"], "current");
+        assert_eq!(first["dependencies"].as_array().unwrap().len(), 1);
+        target.write("tools/skills/note/internal.md", "Unrealized branch body");
+        assert_eq!(question(), first);
+        // The reader rejects non-UTF8 resources when actually selected. Ordinary
+        // admission must not touch that body or make it part of the question.
+        fs::write(target.0.join("tools/skills/note/internal.md"), [0xff]).unwrap();
+        assert_eq!(question(), first);
+        let selected = |path: &str| {
+            discovery(json!({"target":target.0,"exact":"note/change","selection":{"source_ref":"tools/skills/REGISTRY.json","skill_id":"note","resource":path}})).unwrap()["routes"][0]["sources"][0]["procedure"]["resource"].clone()
+        };
+        let user = selected("tools/skills/note/user.md");
+        assert_eq!(user["status"], "current");
+        assert_eq!(user["dependencies"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            selected("tools/skills/note/internal.md")["status"],
+            "unavailable"
+        );
+        fs::remove_file(target.0.join("tools/skills/note/internal.md")).unwrap();
+        assert_eq!(selected("tools/skills/note/user.md"), user);
+        assert_eq!(
+            selected("tools/skills/note/internal.md")["status"],
+            "unavailable"
+        );
+        target.write("tools/skills/note/user.md", "Changed selected body");
+        assert_ne!(
+            selected("tools/skills/note/user.md")["revision"],
+            user["revision"]
+        );
+        assert_eq!(question(), first);
+        target.write("tools/skills/note/context.md", "Changed judgment context");
+        let changed_context = question();
+        assert_ne!(changed_context["revision"], first["revision"]);
+        let mut changed = form;
+        changed["question"] = json!("Does this affect maintainers?");
+        target.write(resource, &format!("```agentic-procedure\n{changed}\n```\n"));
+        assert_ne!(question()["revision"], changed_context["revision"]);
     }
 
     #[test]

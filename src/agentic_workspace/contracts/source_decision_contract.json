@@ -79,7 +79,8 @@
         "question_or_description_bytes": 8192
       },
       "authority_effect": "none",
-      "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities."
+      "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities.",
+      "currentness": "Question source and declared judgment context are revision-bound. Branch destinations remain path-validated references; only a selected destination body is read and added to selected-detail dependencies."
     }
   },
   "public_requests": {

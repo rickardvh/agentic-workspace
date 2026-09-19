@@ -115,6 +115,7 @@ pub(crate) fn detail(
             return Err(error("invalid or over-limit procedure question"));
         }
         let mut ids = BTreeSet::new();
+        let mut references = BTreeSet::new();
         let mut dependencies = BTreeSet::new();
         let mut branches = Vec::new();
         for branch in question.branches {
@@ -126,12 +127,13 @@ pub(crate) fn detail(
                 return Err(error("invalid or duplicate procedure branch"));
             }
             let next = reference(&path, &branch.next)?;
-            dependencies.insert(next.clone());
+            references.insert(next.clone());
             branches.push(json!({"id":branch.id,"description":branch.description,"next":next}));
         }
         let mut context = Vec::new();
         for item in question.context {
             let next = reference(&path, &item)?;
+            references.insert(next.clone());
             dependencies.insert(next.clone());
             context.push(next);
         }
@@ -145,10 +147,16 @@ pub(crate) fn detail(
             "source_revision":revision,"question":question.question,"branches":branches,"context":context,
             "dependencies":material,"authority_effect":"none"});
         if let Some(selected) = selected {
-            if selected != path && !dependencies.contains(selected) {
+            if selected != path && !references.contains(selected) {
                 return Err(error("resource is not declared by this procedure"));
             }
             let (body, revision) = read(root, selected)?;
+            if selected != path && !dependencies.contains(selected) {
+                result["dependencies"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"reference":selected,"revision":revision}));
+            }
             result["selected"] = json!({"reference":selected,"revision":revision,"text":body});
         }
         result["revision"] = json!(crate::digest(
