@@ -20,6 +20,9 @@ def resource(surface, binary, native, context):
         for path in context.get("changed", []):
             args += ["--changed", path]
         payload = context["request"]
+        if "expected_revision" in payload:
+            args = [str(native), "resources", "--input", "-"]
+            payload = context
     elif surface == "json":
         args = [str(binary)]
         payload = {"resources": context}
@@ -179,7 +182,8 @@ def test_resource_procedure_yields_isolation_judgment_and_preserves_dirty_work(t
     assert not path.exists()
 
 
-def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("surface", ["native", "json"])
+def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared_core_binary, native_cli, surface):
     repo = tmp_path / "repo"
     repo.mkdir()
     repository(repo)
@@ -191,7 +195,7 @@ def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared
     path = tmp_path / "isolated"
 
     def call(op, **extra):
-        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": op, "path": str(path), **extra}})
+        return resource(surface, shared_core_binary, native_cli, {**context, "request": {"operation": op, "path": str(path), **extra}})
 
     quiet = call("worktree-create")
     assert "action" not in quiet and not path.exists()
@@ -202,7 +206,11 @@ def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared
         "policy_answer": "permits-isolation",
     }
     proposal = call("worktree-create", **request)
-    created = resource("json", shared_core_binary, native_cli, proposal["action"])
+    missing_policy = json.loads(json.dumps(proposal["action"]))
+    missing_policy["request"]["policy_answer"] = None
+    blocked = resource(surface, shared_core_binary, native_cli, missing_policy)
+    assert blocked["blockers"] and "action" not in blocked and not path.exists()
+    created = resource(surface, shared_core_binary, native_cli, proposal["action"])
     assert created["effect_outcome"] == "committed"
     assert path.exists()
     (path / "untracked.txt").write_text("must preserve")
@@ -210,7 +218,7 @@ def test_worktree_policy_necessity_clean_teardown_and_integrity(tmp_path, shared
     assert protected["blockers"] and "action" not in protected
     (path / "untracked.txt").unlink()
     remove = call("worktree-remove")
-    assert resource("json", shared_core_binary, native_cli, remove["action"])["effect_outcome"] == "committed"
+    assert resource(surface, shared_core_binary, native_cli, remove["action"])["effect_outcome"] == "committed"
     assert not path.exists() and str(path).replace("\\", "/") not in git(repo, "worktree", "list", "--porcelain")
     assert git(repo, "rev-parse", "HEAD") == original["head"]
     assert git(repo, "rev-parse", "--is-bare-repository") == original["bare"]
@@ -463,7 +471,8 @@ def test_unleased_or_tracked_tool_roots_cannot_be_adopted_for_cleanup(tmp_path, 
     assert not path.exists()
 
 
-def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_path, shared_core_binary, native_cli):
+@pytest.mark.parametrize("surface", ["native", "json"])
+def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_path, shared_core_binary, native_cli, surface):
     from tests.test_native_public_cli import consume
 
     for ref in [".agentic-workspace/skills/REGISTRY.json", ".agentic-workspace/skills/workspace-resources/SKILL.md"]:
@@ -480,7 +489,7 @@ def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_pa
     context = {"target": str(tmp_path), "task": "Prepare temporary analysis material"}
 
     def call(**material):
-        return resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create", **material}})
+        return resource(surface, shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create", **material}})
 
     unresolved = call()
     assert "action" not in unresolved and any("applicability" in b for b in unresolved["blockers"])
@@ -506,11 +515,11 @@ def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_pa
     negative = next(r for r in fresh["route_requests"] if r["request_kind"] == "semantic-routes/select/v1")
     negative["arguments"] = {"posture": "none", "routes": []}
     proposed = call(route_request=negative)
-    created = resource("json", shared_core_binary, native_cli, proposed["action"])
+    created = resource(surface, shared_core_binary, native_cli, proposed["action"])
     assert created["effect_outcome"] == "committed"
     assert proposed["action"]["request"]["route_request"] == negative
     removed = resource(
-        "json",
+        surface,
         shared_core_binary,
         native_cli,
         {
@@ -522,4 +531,64 @@ def test_resource_route_applicability_matches_ordinary_and_composed_entry(tmp_pa
             },
         },
     )
-    assert resource("json", shared_core_binary, native_cli, removed["action"])["effect_outcome"] == "committed"
+    assert resource(surface, shared_core_binary, native_cli, removed["action"])["effect_outcome"] == "committed"
+
+
+def test_cli_exact_resource_envelope_preserves_context_and_currentness(tmp_path, shared_core_binary, native_cli):
+    import copy
+
+    context = {"target": str(tmp_path), "task": "Bounded CLI lifecycle", "changed": ["source.txt"]}
+    unrelated = tmp_path / "source.txt"
+    unrelated.write_text("Preserve unrelated source")
+
+    def propose(operation, **extra):
+        return resource("native", shared_core_binary, native_cli, {**context, "request": {"operation": operation, **extra}})
+
+    def execute(action, *flags):
+        return subprocess.run(
+            [str(native_cli), "resources", "--input", "-", *flags],
+            input=json.dumps(action),
+            text=True,
+            capture_output=True,
+            cwd=ROOT,
+        )
+
+    proposal = propose("scratch-create")
+    action = proposal["action"]
+    path = Path(proposal["path"])
+    assert not path.exists()
+    control = resource("json", shared_core_binary, native_cli, {**context, "request": {"operation": "scratch-create"}})
+    assert control["action"] == action
+    for flags in [("--target", str(ROOT)), ("--task", "other"), ("--changed", "other.txt")]:
+        rejected = execute(action, *flags)
+        assert rejected.returncode == 2 and "conflicts with the exact input envelope" in rejected.stderr
+        assert not path.exists()
+    for field, value in [("target", str(ROOT)), ("task", "other"), ("changed", ["other.txt"])]:
+        forged = copy.deepcopy(action)
+        forged[field] = value
+        rejected = execute(forged)
+        assert rejected.returncode != 0 or json.loads(rejected.stdout).get("effect_outcome") != "committed"
+        assert not path.exists()
+    # Matching flags, including native canonical-path spelling, assert rather than override.
+    result = execute(action, "--target", str(tmp_path), "--task", context["task"], "--changed", "source.txt")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["effect_outcome"] == "committed" and path.is_dir()
+    stale = execute(action)
+    assert stale.returncode != 0 and "changed" in stale.stderr
+    removal = propose("scratch-remove", path=action["request"]["path"])
+    (path / "new.txt").write_text("New material stales the cleanup proposal")
+    assert execute(removal["action"]).returncode != 0 and path.exists()
+    fresh = propose("scratch-remove", path=action["request"]["path"])
+    result = execute(fresh["action"])
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["effect_outcome"] == "committed" and not path.exists()
+    assert unrelated.read_text() == "Preserve unrelated source"
+
+    # Policy drift cannot be bypassed by carrying an otherwise well-formed envelope.
+    pending = propose("scratch-create")
+    policy = tmp_path / ".agentic-workspace/instructions/resource.md"
+    policy.parent.mkdir(parents=True)
+    policy.write_text("---\nprotect: [.agentic-workspace/local/scratch/**]\n---\nPreserve resources.\n")
+    rejected = execute(pending["action"])
+    assert rejected.returncode != 0 or json.loads(rejected.stdout).get("effect_outcome") != "committed"
+    assert not path.exists() and "action" not in propose("scratch-create")

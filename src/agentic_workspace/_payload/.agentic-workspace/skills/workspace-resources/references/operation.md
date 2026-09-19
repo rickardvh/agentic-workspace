@@ -21,7 +21,12 @@ and `policy_answer: permits-isolation` only when current instructions permit it.
 Missing judgment, stale policy or protection yields rather than executing.
 
 On the direct primitive path, when the owner returns an `action`, carry that
-exact object to the same resources primitive. It already contains target, task, changed paths, selected resource and
+exact object to the same resources primitive. For the CLI, pass it unchanged
+with `resources --input <action.json>` (or `--input -`); omit context flags to
+use the envelope's context. Explicit target, task and changed flags must match
+the envelope; they cannot override it. Initial proposals still accept the bare
+request with target/task/changed supplied as CLI flags.
+The action already contains target, task, changed paths, selected resource and
 current revision; do not rebuild it or choose an arbitrary action from other work.
 The native owner reobserves policy, path identity, retention and custody before
 effects. Inspect `effect_outcome` and the returned path/build environment.

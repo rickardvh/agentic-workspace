@@ -46,6 +46,7 @@ struct Parsed {
     command: String,
     values: Value,
     input_path: Option<String>,
+    explicit: BTreeSet<String>,
 }
 
 fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
@@ -86,7 +87,7 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
             .ok_or_else(|| format!("unknown option or positional argument: {}", args[index]))?;
         let field = option["field"].as_str().unwrap();
         let multiple = option["multiple"].as_bool().unwrap_or(false);
-        if !multiple && !seen.insert(field.to_owned()) {
+        if !seen.insert(field.to_owned()) && !multiple {
             return Err(format!("{flag} may be supplied only once"));
         }
         index += 1;
@@ -147,7 +148,49 @@ fn parse(contract: &Value, args: &[String]) -> Result<Option<Parsed>, String> {
         command: args[0].clone(),
         values: Value::Object(values),
         input_path,
+        explicit: seen,
     }))
+}
+
+fn carry_input(contract: &Value, parsed: &mut Parsed, input: Value) -> Result<(), String> {
+    let command = contract["commands"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|command| command["name"] == parsed.command)
+        .unwrap();
+    let field = command["input_field"].as_str().unwrap();
+    if command["accepts_input_envelope"] == true && input.get(field).is_some() {
+        // Preserve the exact owner envelope. Explicit argv is an assertion,
+        // never an override; absent defaults must not replace bound context.
+        for (key, value) in parsed.values.as_object().unwrap() {
+            if !parsed.explicit.contains(key) {
+                continue;
+            }
+            let same = if key == "target" {
+                match (value.as_str(), input[key].as_str()) {
+                    (Some(left), Some(right)) => {
+                        match (fs::canonicalize(left), fs::canonicalize(right)) {
+                            (Ok(left), Ok(right)) => left == right,
+                            _ => false,
+                        }
+                    }
+                    _ => false,
+                }
+            } else {
+                value == &input[key]
+            };
+            if !same {
+                return Err(format!(
+                    "explicit {key} conflicts with the exact input envelope"
+                ));
+            }
+        }
+        parsed.values = input;
+    } else {
+        parsed.values[field] = input;
+    }
+    Ok(())
 }
 
 fn run() -> Result<(), (&'static str, String)> {
@@ -179,13 +222,7 @@ fn run() -> Result<(), (&'static str, String)> {
     } else {
         Value::Null
     };
-    let command = contract["commands"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .find(|command| command["name"] == parsed.command)
-        .unwrap();
-    parsed.values[command["input_field"].as_str().unwrap()] = input;
+    carry_input(&contract, &mut parsed, input).map_err(|error| ("invalid-cli-input", error))?;
     // The CLI owns only argv/JSON transport. Every semantic operation runs in
     // the same colocated executable used by the JSON/Python/Node adapters.
     let executable = env::current_exe().map_err(|error| ("core-location", error.to_string()))?;
