@@ -14,3 +14,9 @@ source, policy, Assignment and Verification restrictions and uncertain effects.
 ```agentic-owner-reference
 {"kind":"request","owner":"planning","id":"planning/update/v1"}
 ```
+
+Continue while the user's authorized objective has safe remaining work; a completed
+milestone alone does not end the session. Stop for completion, a real blocker or
+user direction, without widening scope. This is ordinary agent continuation, not
+a scheduler, launcher or final-response admission service. Keep validation, issue
+completion and intent satisfaction distinct.

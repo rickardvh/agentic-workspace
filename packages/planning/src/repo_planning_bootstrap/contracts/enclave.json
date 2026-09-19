@@ -170,25 +170,7 @@
       "lifetime": "current-version"
     },
     {
-      "path": ".agentic-workspace/planning/skills/planning-autopilot/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
       "path": ".agentic-workspace/planning/skills/planning-closeout-trust/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-high-assurance-lifecycle/SKILL.md",
-      "scope": "exact",
-      "class": "managed-support",
-      "lifetime": "current-version"
-    },
-    {
-      "path": ".agentic-workspace/planning/skills/planning-orchestrator-workflow/SKILL.md",
       "scope": "exact",
       "class": "managed-support",
       "lifetime": "current-version"

@@ -37,143 +37,6 @@
       }
     },
     {
-      "id": "planning-autopilot",
-      "path": "planning-autopilot/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "execute bounded planning slices from checked-in planning surfaces until the active objective reaches an authorized terminal outcome",
-      "host_entrypoint": {
-        "operation_id": "autopilot.run",
-        "command": "agentic-workspace autopilot --target <repo> --executor-command <agent-command> --format json",
-        "argv_template": [
-          "autopilot",
-          "--target",
-          "{target}",
-          "--executor-command",
-          "{executor_command}",
-          "--format",
-          "json"
-        ],
-        "required": true,
-        "ordinary_path_unavoidable": true,
-        "rule": "Planning Autopilot activation must enter the package-owned autopilot.run boundary so model-authored finals are admitted before output."
-      },
-      "activation_hints": {
-        "verbs": [
-          "run",
-          "execute",
-          "implement",
-          "continue",
-          "finish",
-          "ship"
-        ],
-        "nouns": [
-          "autopilot",
-          "milestone",
-          "execplan",
-          "planned work",
-          "active task"
-        ],
-        "phrases": [
-          "run autopilot",
-          "execute active milestone",
-          "implement current milestone",
-          "continue planned work"
-        ],
-        "when": [
-          "active milestone",
-          "bounded slice",
-          "checked-in plan"
-        ]
-      }
-    },
-    {
-      "id": "planning-orchestrator-workflow",
-      "path": "planning-orchestrator-workflow/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "execute the sole post-assignment orchestrator procedure from a binding canonical assignment and action gate without reselecting the target",
-      "activation_hints": {
-        "nouns": [
-          "assigned orchestrator",
-          "binding assignment",
-          "delegated run",
-          "assignment action gate"
-        ],
-        "phrases": [
-          "binding non-local assignment",
-          "assigned orchestrator workflow",
-          "reconcile delegated return"
-        ],
-        "when": [
-          "structured current decision names this runtime as assigned orchestrator",
-          "binding assignment selects a non-local target and admits dispatch or return reconciliation"
-        ]
-      },
-      "activation_contract": {
-        "authority": "canonical current decision",
-        "requires": [
-          "assigned-orchestrator role",
-          "binding assignment identity and revision",
-          "non-local selected target",
-          "allowed action identity and revision"
-        ],
-        "excludes": [
-          "selected current target",
-          "absent or unresolved assignment"
-        ]
-      }
-    },
-    {
-      "id": "planning-high-assurance-lifecycle",
-      "path": "planning-high-assurance-lifecycle/SKILL.md",
-      "scope": "bundled",
-      "stability": "package-managed",
-      "summary": "route broad or high-assurance work across canonical planning, assignment, proof, intent, and closeout owners without duplicating their procedures",
-      "activation_hints": {
-        "verbs": [
-          "classify",
-          "decompose",
-          "plan",
-          "delegate",
-          "prove",
-          "close"
-        ],
-        "nouns": [
-          "high assurance",
-          "lifecycle",
-          "intent satisfaction",
-          "multi-lane work",
-          "epic",
-          "closeout"
-        ],
-        "phrases": [
-          "high assurance planning lifecycle",
-          "preserve intent satisfaction",
-          "broad high assurance work",
-          "multi-lane planning work",
-          "whole epic",
-          "recoverable planned work",
-          "intent proof closeout"
-        ],
-        "when": [
-          "work is broad or cross-boundary",
-          "an initially small slice grows into multiple planning lanes",
-          "intent preservation matters more than local task completion",
-          "canonical phase owners must remain distinct"
-        ]
-      },
-      "activation_contract": {
-        "authority": "enabled-AW startup and Planning custody",
-        "role": "umbrella-router",
-        "excludes": [
-          "dispatch procedure",
-          "returned-result admission procedure",
-          "integration procedure"
-        ]
-      }
-    },
-    {
       "id": "planning-closeout-trust",
       "path": "planning-closeout-trust/SKILL.md",
       "scope": "bundled",
@@ -281,7 +144,9 @@
     },
     {
       "id": "planning-review-continuation",
-      "required_resources": ["planning-review-template"],
+      "required_resources": [
+        "planning-review-template"
+      ],
       "path": "planning-review-continuation/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",

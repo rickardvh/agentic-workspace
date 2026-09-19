@@ -19,3 +19,10 @@ Manual-only and unavailable transport are honest states, not failed automatic wo
 Use [manual carriage](manual.md) when admitted. Neither this reference nor a
 selected skill provides launch authority. Unsupported transport yields to the
 current owner's recovery; do not invent command recipes or copy a transcript.
+
+A worker receives the sealed assignment and explicit transport metadata. It stays
+within its assigned scope, proof, authority and escalation bounds; it cannot
+change target, admit or integrate its own return, or claim parent completion.
+Planning may expose an exact continuity update for a sealed handoff or admitted
+return, including pending-update recovery. Use that current action without
+reconstructing a retention request; unresolved custody remains unresolved.
