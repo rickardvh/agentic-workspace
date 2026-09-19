@@ -3,7 +3,7 @@
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "C3 #3464 accepted and merged. M1 startup/intent fragments committed locally; payload reconciliation implemented. Continue remaining P1 stacked implementation under explicit user authorization."
+    "frontier": "M1 #3465 ready for independent review. M2 setup/correction fragments and package lifecycle consolidation implemented; native owner facts and effects retained. Continue M3 then M4a-d/M5 and contraction/docs."
   },
   "creation_provenance": {
     "custody": {
@@ -42,7 +42,7 @@
   },
   "phase": "implementation",
   "proof": {
-    "observed": "C3: two native exposure/recovery tests, 12 route and four answer tests pass; installed wheel/sdist identity and installed lifecycle pass; two isolated Python/npm release consumer tests pass; four public adapter cases and two repository lifecycle cases pass; generated agent/catalogue checks current. Actual Codex app 26.915.4065.0 with current Astra explicitly loaded the neutral skill and judged this test-only patch internal; installed AW 0.51.0 Windows/MSVC runtime returned the internal fragment, reused current answer and exposed unresolved lost carriage. Codex CLI 0.154.0 skills/list discovered enabled repo-scoped change-note. Only this bounded host setup observed; unrelated personal malformed-skill metadata did not block fixture discovery. Factored ordinary comparator uses less source/protocol overhead; latency, tokens, total cost and broader semantic quality unknown. No P1, issue closure, independent acceptance or final release claim.",
+    "observed": "M1: native build, 20 skills-first, 11 adoption, 31 Configuration checks. M2: 24 skills-first/Configuration checks and six Memory prompt checks pass.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
@@ -58,7 +58,7 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3461#issuecomment-5741243050"
   ],
   "relationships": {},
-  "revision": 10,
+  "revision": 11,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -79,18 +79,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/fe127381ac7fac28b234bd8775d510ef69e2f78b7e7277762ad3eab100c6ec72.attempt.json",
-        "revision": "sha256:0ea6949ffb4fbe4a569f367d3679336ee6f650bbc78fe27966c8a47d4a57e369",
+        "path": ".agentic-workspace/local/effects/b7dabfdc01fbcf697fce012b6e96031f79076582a42cc89030f602ed395db366.attempt.json",
+        "revision": "sha256:be24eb34ff5b9c973ef4e79c3acb6f61c2e7a58752981ef910838eea7733b046",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/fe127381ac7fac28b234bd8775d510ef69e2f78b7e7277762ad3eab100c6ec72.result.json",
-        "revision": "sha256:404ed3e0edfa544da4e3444ea34d5dfb05520628d6bea5d2f36cdd66ce0c6f83",
+        "path": ".agentic-workspace/local/effects/b7dabfdc01fbcf697fce012b6e96031f79076582a42cc89030f602ed395db366.result.json",
+        "revision": "sha256:cb0a82714a272d5b3d59cc28b4850755cf4913c81408be4e47a22231005b1b07",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:d8c3b64d24338d28db851f9967983b8618a8e37b3202bf66c472c2f3593bf423",
+    "invocation_revision": "sha256:a61b25057cb49c234c6f0424626e836f475dc7217e42fe54eee398f011954c81",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -98,7 +98,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:175fca3d8bdae7ec3717fe73d9de02510c0e024006c7ac4b1fa4b394b2f7e8b0",
+        "document_revision": "sha256:b6ace8fbf4e8b7aa5c140d4ff13b3105e507905832d43d0e5371d0f175cb36e9",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }

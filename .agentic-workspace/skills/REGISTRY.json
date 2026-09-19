@@ -205,7 +205,8 @@
           "workspace surfaces need to be populated after init or install",
           "mature repo discovery needs bounded pre-seed routing"
         ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "workspace-resources",
@@ -281,7 +282,8 @@
         "when": [
           "a trusted correction should change later repository behavior"
         ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     }
   ]
 }

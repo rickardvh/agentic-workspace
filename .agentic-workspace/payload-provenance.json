@@ -22,7 +22,17 @@
     ".agentic-workspace/skills/workspace-intent-discovery/references/shape.md",
     ".agentic-workspace/skills/workspace-startup/references/constraints.md",
     ".agentic-workspace/skills/workspace-intent-discovery/references/intent.md",
-    ".agentic-workspace/skills/workspace-intent-discovery/procedure.md"
+    ".agentic-workspace/skills/workspace-intent-discovery/procedure.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/selection.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/consequences.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/package.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/references/boundaries.md",
+    ".agentic-workspace/skills/workspace-setup-jumpstart/procedure.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/destination.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/instructions.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/other.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/references/opportunity.md",
+    ".agentic-workspace/skills/workspace-instruction-correction/procedure.md"
   ],
   "payload_schema": "agentic-workspace/payload/v1",
   "release_identity": {

@@ -397,21 +397,19 @@ def _assemble_memory_list_skills_payload(*, registry: Any, arguments: dict[str, 
 
 def _build_agent_prompt(command: str, *, target: str | None) -> str:
     target_root = target or "./repo"
-    source = resolve_upgrade_source(target)
-    runner = _preferred_git_runner_command(source)
-    target_args = _target_args(target)
-    bootstrap_skills = _bootstrap_skills_path(target)
-    upgrade_runner = _upgrade_runner_command(target)
-    if command == "install":
-        return f"Do not ask the user to install or clone anything locally first. Run `{runner} init{target_args}`. Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific memory notes stay under `.agentic-workspace/memory/repo/`."
-    if command == "adopt":
-        return f"Do not ask the user to install or clone anything locally first. Run `{runner} adopt{target_args}`. Next, use the `install` skill at `{bootstrap_skills}` to finish installation conservatively. When installation is complete, run `{runner} bootstrap-cleanup{target_args}` and point out that `{target_root}/.agentic-workspace/memory/` is the bootstrap-managed surface while repo-specific memory notes stay under `.agentic-workspace/memory/repo/`."
+    if command in {"install", "adopt", "upgrade", "uninstall"}:
+        return (
+            f"For {command}, read `{target_root}/.agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md` "
+            "and its shared `references/package.md`. Use the target's configured native invocation and exact "
+            "Configuration requests for its footprint. Preserve custom content and optional Memory state; "
+            "domain setup or removal needs its own owner and authority. If the shared source or runtime is "
+            "unavailable, preserve material and report the exact lifecycle gap."
+        )
     if command == "populate":
+        source = resolve_upgrade_source(target)
+        runner = _preferred_git_runner_command(source)
+        target_args = _target_args(target)
         return f"Run `{runner} current show{target_args}`. Treat any shared `project-state.md` or `task-context.md` output as migration residue. Move durable facts into normal Memory notes or canonical docs, active state into planning/status, and transient context into local-only scratch before deleting those legacy files."
-    if command == "upgrade":
-        return f"Do not ask the user to install or clone anything locally first. Use the checked-in `memory-upgrade` skill under `{_managed_skills_path(target)}/`. It should use the recorded upgrade source automatically, run the packaged upgrade flow for this repo, prefer the installed `agentic-memory` CLI when available, otherwise fall back to `{upgrade_runner} upgrade --target <repo>`, and report any conservative manual-review items."
-    if command == "uninstall":
-        return f"Run `{runner} uninstall{target_args}`. Review any manual-review items before removing repo-local memory content. If bundled product skills are available, use `bootstrap-uninstall` to finish the uninstall conservatively."
     raise ValueError(f"Unknown prompt command: {command}")
 
 
