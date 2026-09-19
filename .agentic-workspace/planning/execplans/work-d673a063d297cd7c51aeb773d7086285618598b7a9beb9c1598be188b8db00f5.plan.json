@@ -3,7 +3,7 @@
   "canonical_core": {},
   "continuation": {
     "end_state": "Close/archive/remove this active epic through Planning when it no longer has continuation value. Retain the audit only as a useful compact accepted design record.",
-    "frontier": "PR 3454 reconciled to external shaping at da890148e. C1 passive resource admission/detail implemented on codex/3446-procedure-admission, ready for independent review after commit. Capability remaining: 3447 C2a -> 3455 C2b -> 3448 C3, then complete migration including Planning leaves 3456-3459, contraction and docs. No independent acceptance or issue closure claimed."
+    "frontier": "Audit reconciliation pushed in PR 3454. C1 implemented in stacked PR 3460 at 18b712fb2. C2a semantic answer carriage implemented on codex/3447-procedure-answers; focused protocol/currentness tests pass. C2b 3455, C3 3448, full migration, contraction and docs remain. Independent review/issue acceptance remains external."
   },
   "creation_provenance": {
     "custody": {
@@ -35,14 +35,14 @@
     "external_posture": "observation",
     "next_action": "durable"
   },
-  "next_action": "Publish C1 stacked on 3454, then implement semantic question/answer carriage and currentness in 3447. Keep resource/proof adaptation in 3451 and independent review externally initiated.",
+  "next_action": "Publish C2a stacked on 3460, implement generic owner-reference seam 3455, then package/host capability 3448. Reconcile stale prepare.py expectation in the existing host-exposure test during C3.",
   "owner_level": "epic",
   "parent": {
     "issue": "3445"
   },
   "phase": "implementation",
   "proof": {
-    "observed": "C1: both native binaries built; 11 native route tests pass including operating-path lazy resource delivery, source drift, malformed/unsafe/missing resources and qualified collision selection. Generated contract catalogue and language facade checks pass. No semantic progression, actual-host behavior, independent acceptance or P1 closure established.",
+    "observed": "C2a: both binaries build; 2 focused public-path semantic answer/currentness tests pass; generated catalogue and language facade checks pass. Broader native run: 135 passed, 2 failed, 3 ignored. Config temporary-directory collision passed isolated rerun; host-exposure test persistently expects absent prepare.py at native_skill_exposure.rs:508, deferred to C3 packaging scope. No green full-suite, model judgment, independent acceptance or P1 closure claim.",
     "strategy": "Source-bound audit first; native behavioral classes and generated/installed conformance for changed contracts; bounded actual-host walkthrough; source-owner reconciliation. No issue or lane closure inferred from implementation validation."
   },
   "references": [
@@ -52,7 +52,7 @@
     "https://github.com/rickardvh/agentic-workspace/pull/3454#issuecomment-5740901790"
   ],
   "relationships": {},
-  "revision": 4,
+  "revision": 5,
   "scope": {
     "excluded": [
       "P2 and P3 implementation",
@@ -73,18 +73,18 @@
     "custody": {
       "attempt": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/b65f2e3ecfc935818cfcf6acbc4c2146f1a02a00e489a47f13fd4ba571fa9654.attempt.json",
-        "revision": "sha256:fd1ff05fdfc2e80ad290bc81a3665d21af7c514d2d3116af87199a7392326afe",
+        "path": ".agentic-workspace/local/effects/62edf5f1c510827761fd8ee05802c19e51b5733eb9cc3e1e8a2667affe261a61.attempt.json",
+        "revision": "sha256:5e55015f473d51f82ee5a4d834f8f6626f7bd49fe8c6fdae7e36992808a61199",
         "target": "."
       },
       "committed": {
         "owner": "planning",
-        "path": ".agentic-workspace/local/effects/b65f2e3ecfc935818cfcf6acbc4c2146f1a02a00e489a47f13fd4ba571fa9654.result.json",
-        "revision": "sha256:b481c97f6042f7bc30ed5c246082389e842908b0d72425c94fbee97830c03067",
+        "path": ".agentic-workspace/local/effects/62edf5f1c510827761fd8ee05802c19e51b5733eb9cc3e1e8a2667affe261a61.result.json",
+        "revision": "sha256:f5d2cf7a48ae6dc493a8d2761a16bdb38c43053a81a28eb0c0354b2f79609371",
         "target": "."
       }
     },
-    "invocation_revision": "sha256:8f9ba764a7e4c5cc365caa66c0a6384e2145df451ce1f640d844e9c4c5db636c",
+    "invocation_revision": "sha256:b3ee647fdc363cd8e40c8b07271dcc8371007a73409e2deb86698598c3133150",
     "kind": "agentic-planning/update-provenance/v2",
     "outcome": {
       "effects": [
@@ -92,7 +92,7 @@
       ],
       "status": "applied",
       "value": {
-        "document_revision": "sha256:2ecb318bd6c37942a12f4171a87c3dcd8bafba4f08bd3c23b347ace1310314c3",
+        "document_revision": "sha256:7804da2c7a6fcdf27c9de37d8693ecd00c1debe03581e4f5486e2da8e2d78c33",
         "owner_id": "work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5",
         "owner_path": ".agentic-workspace/planning/execplans/work-d673a063d297cd7c51aeb773d7086285618598b7a9beb9c1598be188b8db00f5.plan.json"
       }

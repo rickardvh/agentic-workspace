@@ -900,6 +900,102 @@
       },
       "required": ["target", "sources"], "additionalProperties": false
     },
+    "procedure_answer_input": {
+      "type": "object",
+      "properties": {
+        "selection": {
+          "type": "object",
+          "properties": {
+            "route": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "source_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "skill_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "instance": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "route",
+            "source_ref",
+            "skill_id",
+            "instance"
+          ],
+          "additionalProperties": false
+        },
+        "answer": {
+          "type": "object",
+          "properties": {
+            "disposition": {
+              "enum": [
+                "answered",
+                "unknown",
+                "defer",
+                "no-match",
+                "conflict"
+              ]
+            },
+            "branches": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              }
+            },
+            "material": {
+              "description": "Optional advisory semantic material; entire answer bounded to 16 KiB, without authority envelopes."
+            },
+            "evidence": {
+              "type": "array",
+              "maxItems": 32,
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "reference": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  "revision": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  }
+                },
+                "required": [
+                  "reference",
+                  "revision"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "disposition"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "selection"
+      ],
+      "additionalProperties": false
+    },
     "semantic_route_discovery": {
       "type": "object",
       "properties": {

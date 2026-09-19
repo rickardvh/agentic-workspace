@@ -80,6 +80,39 @@
       },
       "authority_effect": "none",
       "capability_scope": "Passive admission and selected detail only; semantic answers and owner continuation are separate capabilities."
+    },
+    "procedure_answers": {
+      "owner": "procedure",
+      "requests": [
+        "procedure/select/v1",
+        "procedure/answer/v1"
+      ],
+      "dispositions": [
+        "answered",
+        "unknown",
+        "defer",
+        "no-match",
+        "conflict"
+      ],
+      "optional": [
+        "bounded semantic material",
+        "exact repository evidence references with observed revision"
+      ],
+      "carriage": "Exact public answer request; caller-owned, disposable, no global answer storage",
+      "binding": [
+        "current work",
+        "qualified skill/resource identity",
+        "caller-selected instance",
+        "question/source/dependency revision",
+        "relied-upon evidence revision"
+      ],
+      "limits": {
+        "answer_bytes": 16384,
+        "branches": 32,
+        "evidence_refs": 32
+      },
+      "authority_effect": "none",
+      "reentry": "Lost carriage exposes an unresolved question; changed relevant basis requires reconsideration. Supplied-answer validation establishes protocol/currentness, not semantic truth."
     }
   },
   "public_requests": {

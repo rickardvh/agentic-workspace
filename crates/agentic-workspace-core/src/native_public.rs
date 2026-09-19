@@ -428,6 +428,7 @@ fn resolve_selected(
             json!(digest(&configuration["capability_contract"])?);
     }
     let contract = combined_contract(&[
+        &crate::native_procedure_answer::contract()?,
         &config_write_contract,
         &decision_read_contract,
         &configuration["capability_contract"],
@@ -466,6 +467,13 @@ fn resolve_selected(
     }
     let (independent_contributions, independent_views) =
         independent.resolve(target, &work, &contract, &requests)?;
+    let procedure = crate::native_procedure_answer::view(
+        target,
+        &work,
+        routes.as_ref().unwrap_or(&Value::Null),
+        request_for("procedure"),
+        &contract,
+    )?;
     if let Some(request) = request_for("startup-adapter") {
         startup_adapter = crate::native_startup::view(
             target,
@@ -1469,6 +1477,7 @@ fn resolve_selected(
     if let Some(v) = planning_identity.as_object_mut() {
         v.remove("portable_continuation");
     }
+    public["procedure"] = procedure;
     let mut memory_identity = public["memory"].clone();
     if let Some(object) = memory_identity.as_object_mut() {
         object.remove("advisory_context");
