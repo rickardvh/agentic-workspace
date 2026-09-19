@@ -30,7 +30,8 @@
           "knowledge should survive the session",
           "anti-rediscovery capture"
         ]
-      }
+      },
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "memory-consultation-and-residue",
@@ -99,7 +100,8 @@
           "priority": 10,
           "description": "Inspect bounded Memory declaration hygiene and separately authorized disposition."
         }
-      ]
+      ],
+      "procedure_resource": "procedure.md"
     },
     {
       "id": "memory-refresh",

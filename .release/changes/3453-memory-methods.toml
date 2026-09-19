@@ -1,0 +1,4 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Split Memory capture and hygiene into selected references while preserving native candidate and publication authority."
+issues = [3453, 3411, 3445]

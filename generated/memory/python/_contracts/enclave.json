@@ -246,6 +246,54 @@
       "scope": "subtree",
       "class": "mutable-state",
       "lifetime": "durable"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/references/destination.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/references/publication.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/references/candidate.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-capture/procedure.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/disposition.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/repair.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/references/declarations.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
+    },
+    {
+      "path": ".agentic-workspace/memory/skills/memory-hygiene/procedure.md",
+      "scope": "exact",
+      "class": "managed-support",
+      "lifetime": "current-version"
     }
   ]
 }
