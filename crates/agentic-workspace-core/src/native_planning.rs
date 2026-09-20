@@ -308,6 +308,50 @@ pub(crate) fn resolve(
     resolve_with_contract(target, current_work, request, None)
 }
 
+/// A posture answer refines an independent relation; it cannot override a
+/// different relation or posture. Validate both envelopes against current owner
+/// sources before selecting the refinement, regardless of carriage order.
+pub(crate) fn compose_answers<'a>(
+    target: &Path,
+    work: &Value,
+    requests: &'a [Value],
+    contract: &Value,
+) -> Result<Option<&'a Value>, CoreError> {
+    let find = |kind: &str| {
+        requests
+            .iter()
+            .find(|r| r["owner"] == "planning" && r["request_kind"] == kind)
+    };
+    let continuation = find("planning/continuation/v1");
+    let posture = find("planning/posture/v1");
+    if let (Some(relation), Some(posture)) = (continuation, posture) {
+        for request in [relation, posture] {
+            let current = resolve_with_contract(target, work, Some(request), Some(contract))?;
+            if current["status"] == "stale" {
+                return Err(CoreError::new(
+                    "stale Planning answer composition; resolve current Planning choices",
+                ));
+            }
+        }
+        let args = &relation["arguments"];
+        let declared_posture = if args["answer"] == "unrelated-direct" {
+            Some("direct")
+        } else {
+            args["task_posture"].as_str()
+        };
+        if !matches!(
+            args["answer"].as_str(),
+            Some("independent" | "unrelated-direct")
+        ) || declared_posture.is_some_and(|answer| posture["arguments"]["answer"] != answer)
+        {
+            return Err(CoreError::new(
+                "conflicting Planning relation/posture answers",
+            ));
+        }
+    }
+    Ok(posture.or(continuation))
+}
+
 /// Existing artifact-profile intent is realized by this bounded Planning owner.
 /// Scratchpad presence is uncertain source context, never current work custody.
 pub(crate) fn artifact_profile(target: &Path, profile: &Value) -> Result<Value, CoreError> {

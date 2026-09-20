@@ -163,28 +163,6 @@ fn resolve_selected(
         ));
     }
     let request_for = |owner: &str| requests.iter().find(|request| request["owner"] == owner);
-    let planning_request = requests
-        .iter()
-        .find(|r| {
-            r["owner"] == "planning"
-                && matches!(
-                    r["request_kind"].as_str(),
-                    Some("planning/continuation/v1" | "planning/posture/v1")
-                )
-        })
-        .or_else(|| {
-            input
-                .invocation
-                .as_ref()
-                .filter(|i| {
-                    matches!(
-                        i["operation_id"].as_str(),
-                        Some("planning.create" | "planning.update" | "planning.update-recover")
-                    )
-                })
-                .and_then(|i| i["arguments"].get("planning_request"))
-                .filter(|r| r.is_object())
-        });
     let creation_request = requests
         .iter()
         .find(|r| r["owner"] == "planning" && r["request_kind"] == "planning/create/v1");
@@ -678,6 +656,20 @@ fn resolve_selected(
             memory[field] = capture;
         }
     }
+    let planning_request = native_planning::compose_answers(target, &work, &requests, &contract)?
+        .or_else(|| {
+            input
+                .invocation
+                .as_ref()
+                .filter(|i| {
+                    matches!(
+                        i["operation_id"].as_str(),
+                        Some("planning.create" | "planning.update" | "planning.update-recover")
+                    )
+                })
+                .and_then(|i| i["arguments"].get("planning_request"))
+                .filter(|r| r.is_object())
+        });
     let mut planning = if executing
         && input
             .invocation
