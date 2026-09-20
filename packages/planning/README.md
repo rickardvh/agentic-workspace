@@ -1,6 +1,6 @@
 # Agentic Planning
 
-Agentic Planning is the Agentic Workspace module for active execution ownership, bounded intent continuity, decomposition, and continuation. It is one peer capability in the generic `resolve -> act -> reconcile` loop, not the workflow engine or conceptual center of AW.
+Agentic Planning is the Agentic Workspace module for active execution ownership, bounded intent continuity, decomposition, and continuation. It is one peer capability in the generic `resolve -> act -> reconcile` loop, not the workflow engine or conceptual centre of AW.
 
 Use the root `agentic-workspace` CLI for ordinary host-repo work. The `agentic-planning` CLI is the explicit module maintenance/debugging surface.
 
@@ -31,7 +31,7 @@ Execplans now treat four fields as first-class:
 - `Iterative Follow-Through`: what the slice enabled, deferred, discovered, and still needs to prove
 - `Execution Summary`: what was delivered, validated, routed, retained, and how later work resumes
 
-Required continuation for an unfinished larger intended outcome must be routed into a checked-in bounded owner before the current slice closes. Keep `Iterative Follow-Through` current when a slice stops intentionally. Planning progress alone does not authorize a parent or issue completion claim.
+Required continuation for an unfinished larger intended outcome must be routed into a checked-in bounded owner before the current slice closes. Keep `Iterative Follow-Through` current when a slice stops intentionally. Planning progress alone does not authorise a parent or issue completion claim.
 
 Fresh installs do not create `.agentic-workspace/planning/state.toml`. Upgrade treats an existing file as legacy compatibility input: it migrates uniquely useful owner or issue relations, records local migration dispositions, removes the aggregate, and remains idempotent. Ordinary create, activate, close, archive, and reconcile operations never rewrite it.
 

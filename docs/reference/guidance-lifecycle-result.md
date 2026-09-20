@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agent guidance lifecycle operation result
 
 Structured result of a bounded agent-guidance lifecycle query or mutation.

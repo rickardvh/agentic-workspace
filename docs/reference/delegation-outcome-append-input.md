@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # delegation_outcome_append_input.schema
 
 External client input contract for delegation-outcome.append.

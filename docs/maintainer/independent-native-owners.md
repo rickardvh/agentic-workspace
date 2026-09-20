@@ -19,7 +19,7 @@ revision, exact descriptor digest, reads, effects, exclusive claims, restriction
 scope and durable settings in `modules.independent`. Declared capabilities do
 not supply these grants. Current Configuration requests read and propose changes
 to that source; settings requirements return that same owner route. Configuration
-retains its exact bounded human-answer authorization for a write.
+retains its exact bounded human-answer authorisation for a write.
 
 First-line discovery inspects compact identities and admitted scopes. A relevant
 changed path or explicit current owner request selects detail; other installed
@@ -54,7 +54,7 @@ Read-only results create no durable state. Effectful results use immutable
 owner-namespaced sources and the existing attempt store. The complete carrier is
 bounded before effect admission. Publication acquires an absent destination;
 foreign content is preserved. Exact prepared and published carriers retain the
-original attempt through finalization and replay. A committed source that has
+original attempt through finalisation and replay. A committed source that has
 disappeared requires an owner restoration decision. An interrupted admission
 without a complete carrier remains explicit uncertainty; a guessed filename or
 client-supplied custody label cannot repair it.

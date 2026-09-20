@@ -82,7 +82,7 @@
               "type": "string",
               "description": "File content keyed by fixture-relative path."
             },
-            "description": "Files to materialize before running this fixture."
+            "description": "Files to materialise before running this fixture."
           },
           "setup_steps": {
             "type": "array",
@@ -129,7 +129,7 @@
               "additionalProperties": false,
               "description": "A setup command that prepares the fixture before adapter execution."
             },
-            "description": "Optional setup commands that run after file materialization and before adapter execution."
+            "description": "Optional setup commands that run after file materialisation and before adapter execution."
           }
         },
         "additionalProperties": false,
@@ -160,7 +160,7 @@
             }
           },
           "additionalProperties": false,
-          "description": "Expected process exit behavior."
+          "description": "Expected process exit behaviour."
         },
         "stdout": {
           "type": "object",
@@ -289,7 +289,7 @@
             }
           },
           "additionalProperties": false,
-          "description": "Repeated-run behavior expected from the adapter."
+          "description": "Repeated-run behaviour expected from the adapter."
         },
         "safety": {
           "type": "object",

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Evaluation Summary
 
 Compact derived status for registered evaluations and local observations.

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Context Templates
 
 Source-maintenance model only; not native/public command authority. Template registry for compact context fragments used by workspace commands.

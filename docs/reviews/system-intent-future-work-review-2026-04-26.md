@@ -22,9 +22,9 @@ Evidence read for this review:
 
 The earlier embodiment review is directionally right: Agentic Workspace has moved from aspirational doctrine toward real operational substrate. My stronger conclusion is that the next bottleneck is no longer "does the system have the right concepts?" It mostly does. The bottleneck is whether those concepts make ordinary work cheaper without teaching agents and maintainers a growing private operating culture.
 
-The system is at an inflection point. It has enough structure to preserve intent, route work, inspect ownership, expose surface-value pressure, and keep active planning out of chat. That is substantial progress. But the same success creates a new risk: every fix now has an obvious place to become another contract, report field, memory note, adapter, schema, or review artifact.
+The system is at an inflection point. It has enough structure to preserve intent, route work, inspect ownership, expose surface-value pressure, and keep active planning out of chat. That is substantial progress. But the same success creates a new risk: every fix now has an obvious place to become another contract, report field, memory note, adapter, schema, or review artefact.
 
-Future work should therefore optimize for operational compression:
+Future work should therefore optimise for operational compression:
 
 ```text
 make the existing compact surfaces more decisive
@@ -87,7 +87,7 @@ Future work should make the report behave more like a router than an encyclopedi
 - default output should privilege health, current work, next action, warnings, and selector hints
 - deep detail should sit behind sections or profile selectors
 - every high-volume module contribution should justify why it belongs in the default profile
-- warnings should be summarized into decision-grade groups before the raw list appears
+- warnings should be summarised into decision-grade groups before the raw list appears
 
 ### 2. Open external work is not yet quiet
 
@@ -214,7 +214,7 @@ Acceptance standard:
 
 ### 5. Continue contract extraction only where it removes implementation archaeology
 
-Not every Python-owned behavior needs immediate extraction. The priority should be high-trust, repeated, inspectable behavior that agents or checks must reason about.
+Not every Python-owned behaviour needs immediate extraction. The priority should be high-trust, repeated, inspectable behaviour that agents or checks must reason about.
 
 Acceptance standard:
 
@@ -240,7 +240,7 @@ The repo should not need every external item active, but open work should have a
 
 Acceptance standard:
 
-- tracked and untracked open external items are summarized by decision state
+- tracked and untracked open external items are summarised by decision state
 - current-lane readiness stays separate from roadmap quietness
 - unresolved external pressure appears as guidance, not noisy raw backlog
 
@@ -255,7 +255,7 @@ Future work should be challenged when any of these are true:
 - it stores active planning or sequencing in Memory
 - it leaves reusable learning trapped only in archived plans
 - it introduces an alignment score or workflow engine where a descriptive view would do
-- it optimizes prompt size while increasing human review or maintenance burden
+- it optimises prompt size while increasing human review or maintenance burden
 - it hardens this monorepo's tooling or agent preferences into a portable product contract
 
 ## Suggested Measures

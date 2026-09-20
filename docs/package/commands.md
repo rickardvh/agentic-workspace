@@ -31,7 +31,7 @@ Use a returned reference for specific detail; `--projection full` is useful when
 you deliberately need the expanded response, for example while debugging an
 integration. Neither option changes permission to act.
 
-## Submit a request, then perform an authorized change
+## Submit a request, then perform an authorised change
 
 A *request* asks the component responsible for a concern to interpret supplied
 material. An *action* is the exact operation that component has prepared. They
@@ -46,7 +46,7 @@ agentic-workspace start --target . --task "Change the users API" \
 ```
 
 The response may ask a question, identify a restriction or offer an action.
-After the required authorization, save the exact returned action in `action.json`:
+After the required authorisation, save the exact returned action in `action.json`:
 
 ```bash
 agentic-workspace invoke --target . --task "Change the users API" \

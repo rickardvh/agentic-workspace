@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Local Delegation Outcomes
 
 Local delegation outcome log used to tune target-profile recommendations.

@@ -203,7 +203,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Category used to choose validation, rendering, or routing behavior."
+          "description": "Category used to choose validation, rendering, or routing behaviour."
         },
         "required": {
           "type": "boolean",

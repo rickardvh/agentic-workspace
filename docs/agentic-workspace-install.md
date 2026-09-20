@@ -3,17 +3,19 @@
 Install the AW executable, add its integration to a Git repository, then give your coding agent a small task. The installation route does not restrict your project's programming language: Rust, Python and TypeScript consumers use the same core.
 
 <a id="before-execution-trust-boundary"></a>
+
 ## Before you start
 
 Use an agent that can read repository files and run commands. Agents with repository read access only can inspect saved context, but cannot perform AW operations.
 
 **AW is not a sandbox.** Its configured commands run with your filesystem access and credentials. Review the repository and proposed commands before allowing execution. See [security](security/threat-model.md) for details.
 
-The commands below pin **v1.0.0-rc.9**, a published release candidate for testing, not stable support. This is an explicit example version, not a moving “latest” alias. For stable use, choose the release in the [stable install reference](reference/support-bearing-install.md). Older releases may not contain the behavior described here.
+The commands below pin **v1.0.0-rc.9**, a published release candidate for testing, not stable support. This is an explicit example version, not a moving “latest” alias. For stable use, choose the release in the [stable install reference](reference/support-bearing-install.md). Older releases may not contain the behaviour described here.
 
 <a id="prebuilt-packages-and-source-installs"></a>
 <a id="runtime-prerequisites-and-support-boundary"></a>
 <a id="stablesupport-bearing-prerequisites"></a>
+
 ## 1. Install the runtime
 
 Choose **one** route. Python, npm and native archives contain prebuilt executables; Cargo builds from source.
@@ -66,6 +68,7 @@ You should see the installed command help. A missing or mismatched core is an in
 
 <a id="adopt-a-target-repository"></a>
 <a id="current-native-adoption-boundary"></a>
+
 ## 2. Add AW to your repository
 
 Open the Git repository where you want the agent to work. Installing the executable has not changed that repository.
@@ -74,7 +77,7 @@ Ask your agent:
 
 > Add Agentic Workspace to this repository. Run `agentic-workspace start --target . --task "Adopt AW in this repository" --projection full --format json`. Follow Configuration's returned `repository_adoption_request`, show me the proposed files, and ask for any required authorization. Preserve existing instructions and do not enable optional capabilities yet.
 
-The agent submits the exact returned requests through `start --input` and the authorized action through `invoke`. These are machine requests, not JSON you need to assemble. The [lifecycle reference](package/lifecycle.md) explains the transport for clients that need it.
+The agent submits the exact returned requests through `start --input` and the authorised action through `invoke`. These are machine requests, not JSON you need to assemble. The [lifecycle reference](package/lifecycle.md) explains the transport for clients that need it.
 
 After successful adoption, inspect the diff. Expect a small managed section in `AGENTS.md` and package integration under `.agentic-workspace/`, including the main skill and ownership metadata. Adoption does not invent project policy, choose optional modules or create task records.
 
@@ -82,6 +85,7 @@ Review and commit the shared integration files. Do not commit ignored machine-lo
 
 <a id="use-an-adopted-repository"></a>
 <a id="a-small-repository-journey"></a>
+
 ## 3. Try a small task
 
 Ask the agent:
@@ -95,6 +99,7 @@ In a fresh session, ask the agent to read the same entry point. It should be abl
 Continue with [Everyday use](everyday-use.md), or [configure project rules](customization.md) when you have a specific requirement.
 
 <a id="choose-a-release-identity"></a>
+
 ## Other releases and later maintenance
 
 Use the selected release's version, packages and platform limits together. A prerelease remains experimental even when its installation checks pass. Do not use a bare package name that might resolve to an older, different interface during the v1 transition.

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Operation Primitives Registry
 
 Registry of implementation primitives referenced by operation contracts.
@@ -18,18 +19,18 @@ Registry of implementation primitives referenced by operation contracts.
 | `ir_model.boundary_rules` | array of string | yes |  | Rules that keep the primitive set from becoming an ad hoc programming language. |  |  |
 | `ir_model.composition_ladder` | array of string | no |  | Hierarchy of primitive, fragment, operation, and command responsibilities. |  |  |
 | `ir_model.fragment_rules` | array of string | no |  | Rules for operation-local IR fragments and their promotion boundary. |  |  |
-| `ir_model.defer_when` | array of string | no |  | Signals that behavior should remain a named runtime primitive instead of being decomposed further. |  |  |
+| `ir_model.defer_when` | array of string | no |  | Signals that behaviour should remain a named runtime primitive instead of being decomposed further. |  |  |
 | `module_ir_ownership` | object | no |  | Ownership boundary for module-owned operation IR namespaces. |  |  |
 | `module_ir_ownership.rule` | string | no |  | Boundary rule for module-owned operation IR namespaces. |  |  |
-| `module_ir_ownership.namespaces` | array of object | yes |  | Module namespaces that may own operation IR without making codegen package behavior module-specific. |  |  |
+| `module_ir_ownership.namespaces` | array of object | yes |  | Module namespaces that may own operation IR without making codegen package behaviour module-specific. |  |  |
 | `primitive_extension_boundary` | object | no |  | Rules that separate shared codegen primitives from module-specific primitive extensions. |  |  |
 | `primitive_extension_boundary.portable_support_rule` | string | yes |  | Rule for when target-executor primitives count as portable shared primitive coverage. |  |  |
 | `primitive_extension_boundary.module_extension_rule` | string | yes |  | Rule for keeping module-specific primitives explicit as domain-runtime extensions. |  |  |
-| `primitive_extension_boundary.target_support_rule` | string | yes |  | Rule requiring each generated target to implement shared primitives or visibly report unsupported/deferred behavior. |  |  |
+| `primitive_extension_boundary.target_support_rule` | string | yes |  | Rule requiring each generated target to implement shared primitives or visibly report unsupported/deferred behaviour. |  |  |
 | `primitive_extension_boundary.target_support_matrix` | array of object | yes |  | Target support or explicit unsupported reporting for shared primitives and module/domain-runtime extensions. |  |  |
 | `primitive_taxonomy` | object | no |  | Completion-tier taxonomy for primitive references used by operation contracts. |  |  |
 | `primitive_taxonomy.classification_rule` | string | yes |  | Rule used to classify each primitive into a completion tier. |  |  |
 | `primitive_taxonomy.tier_definitions` | array of object | yes |  | Completion tiers that separate portable codegen primitives, package-domain primitives, and deferred or out-of-scope debt. |  |  |
 | `primitive_taxonomy.tier_2_required_audit_fields` | array of string | yes |  | Audit fields that every Tier 2 package-domain primitive must carry. |  |  |
-| `primitive_taxonomy.generic_behavior_rule` | string | yes |  | Rule preventing generic deterministic behavior from being hidden behind package-domain primitive classification. |  |  |
+| `primitive_taxonomy.generic_behavior_rule` | string | yes |  | Rule preventing generic deterministic behaviour from being hidden behind package-domain primitive classification. |  |  |
 | `primitives` | array of object | yes |  | Ordered primitives entries used by this contract. |  |  |

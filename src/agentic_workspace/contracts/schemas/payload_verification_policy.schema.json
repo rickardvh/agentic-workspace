@@ -230,7 +230,7 @@
       }
     },
     "status_files": {
-      "description": "Payload files to summarize in declarative status reports.",
+      "description": "Payload files to summarise in declarative status reports.",
       "type": "array",
       "items": {
         "type": "object",

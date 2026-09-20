@@ -7,7 +7,7 @@
   "properties": {
     "target": {"type": "string", "description": "Repository root containing policy and proof-subject inputs."},
     "format": {"type": "string", "enum": ["text", "json"], "description": "Requested command output format."},
-    "candidate_json": {"type": "string", "minLength": 2, "description": "Serialized provider-neutral external evidence candidate."},
+    "candidate_json": {"type": "string", "minLength": 2, "description": "Serialised provider-neutral external evidence candidate."},
     "host_result_ref": {"type": "string", "pattern": "^external-evidence-host-result:[A-Za-z0-9._-]+$", "description": "Opaque reference resolved only by the package-trusted host boundary."}
   },
   "additionalProperties": false,

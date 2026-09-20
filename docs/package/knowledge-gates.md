@@ -32,7 +32,7 @@ knowledge gate:
 | `record_resolution_to` | owner surface for evidence or dismissal |
 | `resolution_state` | `open`, `consulted`, `dismissed`, `stale`, `missing`, `unavailable`, `captured`, or `superseded` |
 | `closeout_boundaries` | completion, merge, or issue-closure boundaries imposed by the gate |
-| `fallback` | safe behavior when a CLI, source, or external access is unavailable |
+| `fallback` | safe behaviour when a CLI, source, or external access is unavailable |
 
 The gate record should be omitted when no route can change the current work.
 Commands may expose a count or selector when a gate exists but should not dump
@@ -57,7 +57,7 @@ Knowledge gates can be triggered by:
   or known-gap reporting;
 - module participation declarations that match the current loop step;
 - external source freshness policies that require current vendor, legal,
-  platform, or product behavior before design or claim;
+  platform, or product behaviour before design or claim;
 - closeout residue that must be captured or dismissed before the work can be
   honestly claimed complete.
 
@@ -162,7 +162,7 @@ the unsatisfied work to a durable owner. If a recommended gate was skipped,
 closeout should lower confidence or explain why the skipped source could not
 change the result.
 
-## Fallback Behavior
+## Fallback Behaviour
 
 When the CLI cannot emit gate detail, use the normal source authority model:
 identify the owner surface, read the smallest routeable selector, and record the

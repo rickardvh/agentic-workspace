@@ -19,15 +19,15 @@ remove composite alpha boundaries before v1.
 | --- | --- | --- |
 | Route / operating decision | Workspace operating decision plus the current `route` `ProjectionConstituentSpec`; task, selected owner, Planning, changed paths, and route inputs invalidate it | Existing whole-projection reuse exists; v1 owner-boundary disposition remains under #2981/#2989 |
 | Verification operating projection | Verification constituent; task, changed paths, and Verification inputs invalidate it | Existing whole-projection reuse exists; v1 owner-boundary disposition remains under #2981/#2989 |
-| Verification semantic-slice contribution | Verification partition keyed by normalized Planning slice revision and proof-policy identity | Owner-specific repair in this PR; target, transport, assignment, and run retries reuse it |
+| Verification semantic-slice contribution | Verification partition keyed by normalised Planning slice revision and proof-policy identity | Owner-specific repair in this PR; target, transport, assignment, and run retries reuse it |
 | Selected proof | Current `selected_proof` constituent keyed by task, changed paths, proof subject, and proof inputs | Existing whole-projection reuse exists; proof strategy/evidence lifetime remains under #2981/#2989 |
 | Closeout trust | Current `closeout_trust` constituent keyed by task, owner, Planning, changed paths, proof subject, and closeout inputs | Existing whole-projection reuse exists; v1 owner-boundary disposition remains under #2981/#2989 |
-| Planning normalized slice / frontier | Planning semantic revision and the derived frontier tracked by #2970 | Route to #2970; do not copy it into another reuse store |
+| Planning normalised slice / frontier | Planning semantic revision and the derived frontier tracked by #2970 | Route to #2970; do not copy it into another reuse store |
 | Parent/sibling ready-work conclusions | Derived Planning frontier tracked by #2970 | Route to #2970; no peer queue or cache |
 | Context/read-first selection | Query-shaped operating projection; selected Memory enrichment adds only its declared index and manifest dependencies | Existing whole-projection reuse exists; ordinary partial re-resolution remains under #2981/#2989 |
 | Assignment target eligibility and ranking | #2210 assignment policy over current target evidence and runtime facts | Existing separation exists, but stable eligibility versus volatile ranking/economics still requires the #2981/#2989 disposition |
 | Reused-versus-reresolved attribution | #2967/#2969 evaluation and attribution owners | This PR exposes `reused` versus `resolution-required`; downstream interpretation remains with those issues |
-| Direct/simple decisions | Acting agent | Deliberately ephemeral; no mandatory lookup or retained artifact |
+| Direct/simple decisions | Acting agent | Deliberately ephemeral; no mandatory lookup or retained artefact |
 
 ## Measured cases
 
@@ -65,7 +65,7 @@ declares them. Unrelated worktree, Memory, module, target, transport, or run
 changes therefore cannot invalidate the Verification semantic conclusion.
 A changed Planning semantic revision or proof-policy revision suppresses the
 old semantic payload and returns an exact Verification re-resolution action.
-Uncertainty and target-selection judgment are never promoted into hard
+Uncertainty and target-selection judgement are never promoted into hard
 authority by reuse.
 
 ## Final architecture disposition

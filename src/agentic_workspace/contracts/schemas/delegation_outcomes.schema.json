@@ -109,7 +109,7 @@
           },
           "source_ref": {
             "type": "string",
-            "description": "Stable reference to the source artifact, review, proof, or local ledger."
+            "description": "Stable reference to the source artefact, review, proof, or local ledger."
           },
           "producer_class": {
             "type": "string",

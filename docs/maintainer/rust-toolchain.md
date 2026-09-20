@@ -1,10 +1,10 @@
-# Rust source builds and native artifacts
+# Rust source builds and native artefacts
 
 `rust-toolchain.toml` is the compiler and component authority for this repository.
 Use ordinary `cargo` commands from the checkout; rustup selects and installs the
 declared release, minimal profile, rustfmt and Clippy. Do not independently select
 `+stable` in admission or release commands. Update the declaration deliberately,
-then validate the locked workspace and native artifact set before acceptance.
+then validate the locked workspace and native artefact set before acceptance.
 
 Source-build compatibility is **the pinned toolchain only**. There is no lower
 MSRV promise; the workspace metadata points to that same declaration instead of
@@ -20,7 +20,7 @@ A future unsafe requirement needs a deliberate workspace policy change and revie
 Rustc and default Clippy remain the primary source lint stack, with warnings
 denied by the ordinary Clippy command. No additional Clippy rules or broad lint
 groups are enabled without a concrete uncovered invariant; blanket panic API bans
-would conflate production behavior with test assertions.
+would conflate production behaviour with test assertions.
 
 Native wheel/npm/archive producers reject a different observed compiler release
 or a compiler wrapper/override. They record the declaration digest, observed
@@ -30,7 +30,7 @@ and build helper. Missing Git identity in an unpacked source archive is reported
 as unknown, never borrowed from another build. These manifests describe build
 observations; signed release attestations remain the provenance owner.
 
-The current public preview artifact class is Linux x86_64 on the exercised Ubuntu
+The current public preview artefact class is Linux x86_64 on the exercised Ubuntu
 hosts, using the declared Python/Node combinations. Windows local builds exercise
 Windows code, but do not establish a published Windows support class. macOS,
 other architectures and libc compatibility classes remain unclaimed until

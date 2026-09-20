@@ -27,7 +27,7 @@ a reason to switch to another implementation.
 Each example asks the same question about the Git repository in the current
 working directory. Run it from that repository, or change `target`. The result
 is JSON describing the current context and available next steps; the exact
-content depends on the repository. A successful query does not authorize a write.
+content depends on the repository. A successful query does not authorise a write.
 
 ### Rust
 

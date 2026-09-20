@@ -28,9 +28,9 @@
       "description": "Root wheel selected by the receipt.",
       "required": ["name", "url", "sha256"],
       "properties": {
-        "name": {"type": "string", "description": "Artifact filename."},
-        "url": {"type": "string", "format": "uri", "description": "Immutable release artifact URL."},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Artifact digest."}
+        "name": {"type": "string", "description": "Artefact filename."},
+        "url": {"type": "string", "format": "uri", "description": "Immutable release artefact URL."},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Artefact digest."}
       },
       "additionalProperties": false
     },

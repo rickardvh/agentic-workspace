@@ -41,25 +41,25 @@ The staging directory and native archive must be absent before creation.
 `scripts/check/check_native_release_topology.py` consumes exactly one wheel,
 source archive, npm archive and native archive from `--artifact-dir`. It installs
 the packages in isolated consumers, clears tool lookup and source overrides,
-performs a carried owner-authorized write through each binding, checks binary
+performs a carried owner-authorised write through each binding, checks binary
 tampering rejection, and compares both packaged executables byte-for-byte with
-the standalone pair. It does not rebuild artifacts. Its receipt binds exact
+the standalone pair. It does not rebuild artefacts. Its receipt binds exact
 asset hashes, source commit, proof implementation, Node version and execution
 context; verification rejects stale inputs. Historical receipt filenames remain
 for release manifest compatibility, with the new `native-release-conformance/v1`
 kind. Historical generated-command proofs remain source-only checks.
 
 The final promotion composer uses this same receipt validator for the exact
-source and artifact set. Only intact hosted proofs from clean source may satisfy
-its semantic runtime lanes; a passed status or recognized Node version alone
+source and artefact set. Only intact hosted proofs from clean source may satisfy
+its semantic runtime lanes; a passed status or recognised Node version alone
 cannot admit a receipt.
 
-Host-labelled artifacts establish support only for the host exercised. Before
+Host-labelled artefacts establish support only for the host exercised. Before
 hosted proof and registry publication, Linux wheels are audited against
 `manylinux_2_39_x86_64`; only compatible wheels are relabelled, with their native
 executable bytes unchanged. Source builds alone do not establish that ABI. The
 release matrix runs the same isolated native proof per host/runtime, and final
-release/preview checks prove the bytes actually published. The required publication set is Windows, macOS and Linux on x64 and ARM64, declared in `.github/release-platforms.json`. Each platform builds natively and installs the assembled Python, npm and standalone artifacts with Rust absent from the consumer PATH. Previously published Linux-only artifacts retain their original boundary. Preview assets remain non-support-bearing; stable
+release/preview checks prove the bytes actually published. The required publication set is Windows, macOS and Linux on x64 and ARM64, declared in `.github/release-platforms.json`. Each platform builds natively and installs the assembled Python, npm and standalone artefacts with Rust absent from the consumer PATH. Previously published Linux-only artefacts retain their original boundary. Preview assets remain non-support-bearing; stable
 promotion still requires the separate exact-subject server, runtime, install,
 redistribution and security receipts. Implementation completion does not grant
 independent review acceptance, merge readiness or parent-issue closure.
@@ -68,12 +68,12 @@ The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on A
 
 ## Exact installed owner conformance
 
-Explicit exhaustive CI builds one coordinated artifact set before Workspace,
+Explicit exhaustive CI builds one coordinated artefact set before Workspace,
 Planning handoff and declared-runtime proof. Those jobs download the same assets
 and select `AW_NATIVE_ARTIFACT_DIR`; existing shared fixtures then install the
 wheel/npm packages outside the checkout and extract the native pair. Source
 commit, manifest identities and actual executable bytes must agree. Missing or
-mismatched artifacts fail before owner execution, without a Cargo fallback.
+mismatched artefacts fail before owner execution, without a Cargo fallback.
 Public consumers clear development binary/module overrides and use the installed
 bindings, retaining the original owner assertions rather than duplicating semantics.
 Scenarios preserve required host tools such as Git for pinned-source admission;
@@ -87,7 +87,7 @@ its simulated provider response does not establish live-provider availability.
 
 The existing topology checker retains receipts on each declared runtime and Node
 semantic major. Those receipts prove installed topology and exact asset identity;
-owner, Planning and custody behavior is evidenced by the corresponding CI job
+owner, Planning and custody behaviour is evidenced by the corresponding CI job
 results. Neither the receipt alone nor the workflow prerequisite aggregate supplies
 independent admission or a publication decision. Ordinary PR checks remain bounded.
 
@@ -100,20 +100,20 @@ dispatch and source-ancestry check both trust `master`; the historical
 `reconstruction_source_commit` manifest key and `--reconstruction-ref` option remain
 compatible. A non-master override is limited to local preparation and cannot push.
 
-Candidate A remains [Alpha](../maturity-model.md#candidate-a-disposition-3275).
+Candidate A remains [Alpha](../maturity-model.md#alpha).
 The intended version is `preview-v0.55.0`, subject to a fresh unused-version check.
 The implementation stack does not create or reserve that tag. After the stack is
 accepted and merged, record the exact accepted `master` SHA and run the existing
 preview preparation flow with `--version 0.55.0 --source-commit <accepted-sha>`.
 Supply `--isolation-policy-revision` only after reading the resource owner's current
-policy and judging that it permits the concrete normalization isolation. Add
+policy and judging that it permits the concrete normalisation isolation. Add
 `--push` only for the accepted publication run. The resource owner manages the
 temporary release checkout and cleanup; a dirty failure must retain its evidence.
 
 Require successful exact-source CI/security, installed native runtime proof,
 provenance, manifest and checksum checks from the existing preview workflow. Then
 run `scripts/release/preview_release.py --check-published preview-v0.55.0 --repo
-rickardvh/agentic-workspace` from the exact artifact checkout, and the existing
+rickardvh/agentic-workspace` from the exact artefact checkout, and the existing
 public install smoke on its supported host against the published assets. The
 source checkout can instead use `--admit-tag` with the exact `--artifact-commit`
 to verify Git objects without substituting its development version. Local tests
@@ -136,13 +136,13 @@ was published on 2026-09-15 as an immutable, non-support-bearing Alpha preview.
 | Identity | Exact value |
 | --- | --- |
 | Accepted master source | `b5a7748a493a6ea257ec4ad5a9696336a66bfdf2` |
-| Release-only artifact commit | `ce0eef8cc89bbecdbda39fbe0051118dd9492eae` |
+| Release-only artefact commit | `ce0eef8cc89bbecdbda39fbe0051118dd9492eae` |
 | Manifest SHA-256 | `bf04966bff10f1fb16889d52098b8f5f5acef5a74126c1f581fdefa395f5930d` |
 | Root Linux x64 wheel SHA-256 | `4d26fa2057bdaa36469093333e1d9bc4d6c80099ab53a3dfbecc9c232d7a8474` |
 
 The [publication run](https://github.com/rickardvh/agentic-workspace/actions/runs/34946934597)
 passed exact source/tag/parent admission, all three hosted runtime jobs, native
-artifact conformance, install/redistribution/security readiness, provenance,
+artefact conformance, install/redistribution/security readiness, provenance,
 manifest/checksums and public-byte installation/start. The public smoke reports
 runtime `0.55.0`. A separate downloaded-asset verification returned `complete: true`
 for all 13 release assets. `gh attestation verify` on the downloaded manifest
@@ -166,12 +166,13 @@ succeeded. Do not broaden cleanup to unrelated ignored files or worktrees. Hoste
 Dependabot alerts 1–3 still reported open for removed member locks when checked;
 the active workspace lock and exact preview security checks passed. No hosted
 alert dismissal or closure is inferred from source removal.
+
 ## Candidate B publication record
 
 The accepted executable-skill stack is published as non-support-bearing
 [`preview-v0.56.0`](https://github.com/rickardvh/agentic-workspace/releases/tag/preview-v0.56.0).
 Source `3fd508feba856354e30fd4afc82930f2e6012c87` is the single parent of release-only
-artifact `87cf9ea4b2b0e1d6d59152ef707c3900b5b90595`.
+artefact `87cf9ea4b2b0e1d6d59152ef707c3900b5b90595`.
 [Run 34962615722](https://github.com/rickardvh/agentic-workspace/actions/runs/34962615722)
 passed runtime/package/security/provenance and public-byte installation/start proof.
 The [Candidate B reconciliation](../reviews/candidate-b-publication.md) records
@@ -192,19 +193,19 @@ Candidate C has no publication record here. Reopened #3361 owns the remaining
 PyPI/npm bootstrap, trusted-publisher and public-byte/install outcome; reopened
 #3362 owns the corresponding paired Cargo outcome. Their merged repository
 implementations do not close those external requirements. Release-owner
-environment setup and exact hosted artifacts also remain required.
+environment setup and exact hosted artefacts also remain required.
 Follow the existing first-stable RC preparation path
 from the fresh accepted master after reconciliation, then publish/exercise
 `v1.0.0-rc.1`. Only an independently accepted RC may feed fresh stable
 preparation/admission/publication under #2985. Closed pre-C #3283 is superseded.
 
-# Coordinated Cargo distribution
+## Coordinated Cargo distribution
 
 The public Cargo surface is the existing `agentic-workspace-core` and
 `agentic-workspace-cli` crates, in that publication order. Both versions come from
 the release owner's `package_versions.cargo` mapping; the source manifests and
-their two local Cargo.lock entries are normalized together. Third-party lock
-resolution is not a release-only normalization.
+their two local Cargo.lock entries are normalised together. Third-party lock
+resolution is not a release-only normalisation.
 
 After the corresponding registry publication receipt passes, install both exact
 versions into the same Cargo root, core first. For the first candidate:
@@ -239,7 +240,7 @@ crates.io requires the first version of each crate to exist before configuring a
 trusted publisher. The package owner performs that one-time bootstrap only from
 an independently admitted release: download its admitted assets, run the same
 staging/byte comparison, publish core before CLI using a short-lived manually
-authorized credential, and verify the public bytes. Record the receipt and revoke
+authorised credential, and verify the public bytes. Record the receipt and revoke
 the bootstrap credential. Configure the calling workflows `preview-release.yml`
 and `release.yml` for `rickardvh/agentic-workspace`, environment `cargo-registry`,
 before ordinary OIDC publication. The registry workflow contains no persistent
@@ -249,4 +250,4 @@ and [authentication action](https://github.com/rust-lang/crates-io-auth-action).
 
 Account bootstrap, trusted-publisher configuration and live registry receipts are
 external acceptance steps. Local staging/build/install proof does not establish
-their completion or authorize the final RC/stable release.
+their completion or authorise the final RC/stable release.

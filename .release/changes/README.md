@@ -1,6 +1,6 @@
 # Release Changesets
 
-Product PRs that affect packaged behavior, generated outputs, release policy, or
+Product PRs that affect packaged behaviour, generated outputs, release policy, or
 shipped payloads must add one TOML changeset in this directory.
 
 ```toml

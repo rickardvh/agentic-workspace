@@ -7,7 +7,7 @@
       "type": "string"
     },
     "behavior_class": {
-      "description": "Stable behavior class for semantic correction identity.",
+      "description": "Stable behaviour class for semantic correction identity.",
       "type": "string"
     },
     "canonical_owner_evidence_ref": {
@@ -23,7 +23,7 @@
       "type": "string"
     },
     "desired_behavior": {
-      "description": "Behavior the correction says should replace the previous behavior.",
+      "description": "Behaviour the correction says should replace the previous behaviour.",
       "type": "string"
     },
     "dry_run": {
@@ -31,7 +31,7 @@
       "type": "boolean"
     },
     "event_json": {
-      "description": "Serialized correction event payload.",
+      "description": "Serialised correction event payload.",
       "type": "string"
     },
     "evidence_hash": {
@@ -79,7 +79,7 @@
       "type": "string"
     },
     "replaced_behavior": {
-      "description": "Behavior boundary being corrected or superseded.",
+      "description": "Behaviour boundary being corrected or superseded.",
       "type": "string"
     },
     "route_decisions": {
@@ -102,7 +102,7 @@
       "type": "string"
     },
     "surface": {
-      "description": "Concrete operation or artifact surface where the correction applies.",
+      "description": "Concrete operation or artefact surface where the correction applies.",
       "type": "string"
     },
     "source": {

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Decision-point carry inspect result
 
 Exact ignored-local carry ownership, lifecycle, and safe recovery projection.

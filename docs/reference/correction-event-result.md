@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Correction event operation result
 
 Result envelope emitted by generated correction-event lifecycle operations.
@@ -18,6 +19,6 @@ Result envelope emitted by generated correction-event lifecycle operations.
 | `store_ref` | string | no |  | Repository-relative correction-event store path, when available. |  |  |
 | `receipt_ref` | string | no |  | Repository-relative operation receipt path, when available. |  |  |
 | `admission` | object | no |  | Admission, rejection, low-authority, retention, and routing details. |  |  |
-| `target_profile` | string | no |  | Uniquely resolved configured profile whose stable identity was initialized. |  |  |
+| `target_profile` | string | no |  | Uniquely resolved configured profile whose stable identity was initialised. |  |  |
 | `target_id` | string | no |  | Persisted or proposed stable local target identity. |  |  |
 | `config_path` | string | no |  | Ignored local configuration path that owns the stable target identity. |  |  |

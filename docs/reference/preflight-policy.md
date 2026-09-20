@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Preflight Policy
 
 Source-maintenance model only; not native/public command authority. Policy for preflight routing, takeover context, and strict preflight gates.

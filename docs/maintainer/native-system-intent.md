@@ -8,7 +8,7 @@ interpreted fields are returned only through the owner-provided
 `system-intent/read-current-source/v1` request. The shared public request envelope
 binds each read to the current task, source and capability revisions.
 
-The original governing source remains authoritative for acting-agent judgment.
+The original governing source remains authoritative for acting-agent judgement.
 Its summary, governing/anti-intents, decision tests and recorded review fields are
 not promoted into machine proof or human acceptance. Current source hashes do not
 prove the interpretation correct. Missing or unreadable governing sources and
@@ -28,11 +28,11 @@ source taxonomy, intent store, acceptance flag or arbitrary-file reader exists.
 A stale, invalid or unreviewed interpretation exposes
 `system_intent.reconciliation.requests`. Read every governing source and the
 retained interpretation using their exact read requests. Supply the complete
-proposed TOML, a `faithful` or `revised` semantic judgment, and the reason for that
-judgment through `system-intent/edit-source/v1`. `unresolved` preserves the gap.
+proposed TOML, a `faithful` or `revised` semantic judgement, and the reason for that
+judgement through `system-intent/edit-source/v1`. `unresolved` preserves the gap.
 The proposed `source_records` must match the declared sources (historical
 universal-newline SHA-256 format); constructing these records is bookkeeping
-**after** semantic review, never the judgment itself. Preserve useful human-owned
+**after** semantic review, never the judgement itself. Preserve useful human-owned
 why, unresolved questions and extension fields when revising the interpretation.
 
 The returned proposal exposes before/after material and binds raw governing
@@ -43,7 +43,7 @@ there is no effect. Invoke the returned action to publish only
 Source, policy or proposed-content changes invalidate the dependent answer/action.
 No Git HEAD, timestamp, source-read success or digest comparison supplies semantic
 acceptance. The owner validates structural currentness, not the truth of an
-agent's judgment or authority beyond the accepted exact owner answer.
+agent's judgement or authority beyond the accepted exact owner answer.
 
 Publication uses shared authenticated attempt custody, a bounded preparation
 marker and atomic source replacement. An interrupted final outcome exposes an

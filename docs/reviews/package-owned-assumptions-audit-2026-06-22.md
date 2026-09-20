@@ -14,9 +14,9 @@ Reviewed current built-in assumptions that could accidentally remain package-own
 - Split `_emit_workspace_operation_output` into named AW-owned output policy helpers while leaving generated-owned JSON and selected-output mechanics outside the retained package policy boundary.
 - Updated Python runtime and operation execution inventories so the remaining hand-owned output dispatcher is justified as a narrowed policy dispatcher, not generic output rendering.
 
-## Agent Judgment
+## Agent Judgement
 
-This review note is not runtime routing authority and is not a maintained inventory. It records the audit context only; durable conclusions should move into config, contracts, external intent, planning state, learned Memory, or be removed. The agent owns judgment about whether an identified assumption is still needed and where it belongs.
+This review note is not runtime routing authority and is not a maintained inventory. It records the audit context only; durable conclusions should move into config, contracts, external intent, planning state, learned Memory, or be removed. The agent owns judgement about whether an identified assumption is still needed and where it belongs.
 
 ## Verification Decision
 

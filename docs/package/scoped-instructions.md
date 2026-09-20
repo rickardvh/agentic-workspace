@@ -2,16 +2,16 @@
 
 Use an instruction for a repository rule, context requirement, evidence obligation
 or write protection. Use a skill for a reusable method. A short rule needs no
-skill, and an ordinary skill needs no instruction. Optional branch judgments never
+skill, and an ordinary skill needs no instruction. Optional branch judgements never
 change repository policy or satisfy required proof.
 
 This page describes the current native source contract. Check the selected
 [release and installation evidence](../agentic-workspace-install.md) before
-assuming an older installed artifact supports it. Use your configured AW invocation
+assuming an older installed artefact supports it. Use your configured AW invocation
 in place of `agentic-workspace` below; no historical instruction CLI is required.
 
 For reusable methods, see [skill authoring](skill-authoring.md). Follow the
-[customization walkthrough](../customization.md) to combine them in one task.
+[customisation walkthrough](../customization.md) to combine them in one task.
 
 ## Choose scope and lifetime
 
@@ -30,7 +30,7 @@ small metadata vocabulary is:
 | --- | --- |
 | `paths` | Limit applicability by repository-relative glob; omit for global scope. |
 | `read` | Supply named context for reasoning; availability does not prove it correct. |
-| `reconcile` | Require current consistency judgment for exact canonical files, without compulsory editing. |
+| `reconcile` | Require current consistency judgement for exact canonical files, without compulsory editing. |
 | `use` | Prefer an existing replaceable procedure; no guaranteed host activation, effect permission or proof. |
 | `checks` | Require current evidence through Verification; `- run: ...` declares a concrete command. |
 | `protect` | Restrict writes to matching paths; cannot grant permission elsewhere. |
@@ -38,7 +38,7 @@ small metadata vocabulary is:
 Use simple inline lists or indented list entries, not general YAML expressions,
 nested conditions or powerskill predicates. Unknown keys, malformed lists,
 unterminated front matter and unsafe paths remain explicit source problems.
-The reader still recognizes historical `routes` metadata for compatibility; it
+The reader still recognises historical `routes` metadata for compatibility; it
 is not an additional preferred public authoring field. Meaning-based skill
 selection belongs to procedure, separately from instruction policy.
 
@@ -102,7 +102,7 @@ by hand is not admission. A current protection is not permission to run a comman
 
 The native authoring path can create or replace one exact shared/local Markdown
 source. Ask the agent to present the entire proposed file and the current bounded
-instruction-write authorization question. To drive it directly:
+instruction-write authorisation question. To drive it directly:
 
 1. Run the `start` command above. Copy its exact
    `instructions.authoring.requests` entry for `instructions/edit-source/v1`.
@@ -113,20 +113,20 @@ instruction-write authorization question. To drive it directly:
    decision. The responsible human supplies `authorize-write` or `defer` in its
    returned response request; return that request through `start --input`.
    An agent must not invent an actor label or answer for the human.
-4. If authorized, invoke only the exact returned action with `invoke --target .`
+4. If authorised, invoke only the exact returned action with `invoke --target .`
    and the same task/changed context plus `--input action.json`. Re-run `start`.
    Expect a committed effect and current source admission, or retain the owner's
    explicit failure/recovery state. A receipt is not task completion.
 
 No special request schema needs to be authored; preserve all owner-issued fields.
 For a crash, use the exact recovery action at the current frontier. Do not repeat
-a consumed authorization, edit managed custody or overwrite a collision.
+a consumed authorisation, edit managed custody or overwrite a collision.
 
 ## Add evidence or protection deliberately
 
 To require consistency with the context file, add
 `reconcile: [docs/receipt-format.md]`. A reviewed and still-correct file needs no
-edit; the following section explains admission of that judgment.
+edit; the following section explains admission of that judgement.
 
 A separate command example assumes Python is installed. Create `src/receipt.py`:
 
@@ -180,7 +180,7 @@ Propose `updated` or `reviewed-current`, with a reason, for each named source:
 - `reviewed-current`: the source was checked against the resulting work and needs
   no change.
 
-Material alone does not admit a judgment. Verification constructs the complete
+Material alone does not admit a judgement. Verification constructs the complete
 proposal and a bounded confirm/defer request in the decision packet's pending
 decisions. With no current admitted delegated authority for this scope, obtain
 the human answer to that exact request. Neither a model assertion nor an actor

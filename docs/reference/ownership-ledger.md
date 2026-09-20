@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Ownership Ledger
 
 Optional repo-local ownership ledger for Agentic Workspace managed surfaces, authority surfaces, and host-repo subsystem boundaries.

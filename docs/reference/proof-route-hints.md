@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Proof Route Hints
 
 Proof route lessons discovered during lifecycle setup/adopt or promoted from Memory. Candidate hints are not host policy; confirmed and negative lessons require provenance and owner routing.

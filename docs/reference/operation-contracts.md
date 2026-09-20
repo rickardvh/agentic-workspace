@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Operation Contracts Registry
 
 Registry of operation contracts exposed by workspace commands or adapters.

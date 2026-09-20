@@ -6,9 +6,9 @@ Agentic Workspace should make repositories easier and cheaper for agents to oper
 
 Its core product idea is simple:
 
-- preserve a bounded set of **operating context** because it can materially change agent behavior;
+- preserve a bounded set of **operating context** because it can materially change agent behaviour;
 - dynamically resolve the relevant part into the current operating contract;
-- let specialized modules extend what the loop can know and do without changing the loop itself.
+- let specialised modules extend what the loop can know and do without changing the loop itself.
 
 The product should feel smaller than the implementation behind it and should earn every visible surface it keeps.
 
@@ -18,7 +18,7 @@ For the current product model, start with [`docs/package/overview.md`](package/o
 
 ### 1. Keep context only when it changes future decisions
 
-Repository persistence is not free. Preserve a fact, state, procedure, or lesson when its current or durable availability materially changes safe agent behavior and its future value exceeds its reread and maintenance cost.
+Repository persistence is not free. Preserve a fact, state, procedure, or lesson when its current or durable availability materially changes safe agent behaviour and its future value exceeds its reread and maintenance cost.
 
 Do not persist chat, logs, plans, reviews, histories, or arbitrary repository facts merely because they exist.
 
@@ -26,7 +26,7 @@ Do not persist chat, logs, plans, reviews, histories, or arbitrary repository fa
 
 AW should not ingest or mirror the repository simply to make it knowable.
 
-Source code, canonical docs, tests, history, and normal project artifacts keep their existing owners. Rich semantic search, RAG, embeddings, knowledge graphs, or broader repository models may be useful specialized modules, but core AW should remain simpler.
+Source code, canonical docs, tests, history, and normal project artefacts keep their existing owners. Rich semantic search, RAG, embeddings, knowledge graphs, or broader repository models may be useful specialised modules, but core AW should remain simpler.
 
 ### 3. Surface less, later
 
@@ -51,7 +51,7 @@ Small certainly-needed context can be cheaper to deliver now than behind another
 
 Repository and module sources keep semantic authority. Workspace composes their current effect; it should not create a second source of truth.
 
-A generated instruction or operating contract is useful because it is cheap to consume, not because it replaces the source that authorized it.
+A generated instruction or operating contract is useful because it is cheap to consume, not because it replaces the source that authorised it.
 
 Current context should be sufficient for the next supported decision, including exact source routes and explicit unknowns where more observation is needed. Equivalent task, authority, evidence/effects and environment observations should expose equivalent material action and claim boundaries regardless of conversation history. This is a practical continuity property, not a literal Markov model, global state snapshot, or demand for identical model choices.
 
@@ -68,7 +68,7 @@ Good dynamic control should normally end in something the agent can actually do:
 
 A transition name without a supported route is not an adequate instruction.
 
-A question should identify what is unresolved, why it changes the action or claim, and what bounded answer is needed. Do not ask the human to repeat facts available from current sources or decisions already admitted by standing authority. Preserve a truthful insufficient-evidence path rather than forcing a choice. Carry a uniquely determined authorized action without a model turn just to select it; genuinely different choices must remain visible.
+A question should identify what is unresolved, why it changes the action or claim, and what bounded answer is needed. Do not ask the human to repeat facts available from current sources or decisions already admitted by standing authority. Preserve a truthful insufficient-evidence path rather than forcing a choice. Carry a uniquely determined authorised action without a model turn just to select it; genuinely different choices must remain visible.
 
 ### 6. Use one generic loop
 
@@ -80,7 +80,7 @@ Do not create another phase-specific decision engine when the existing operating
 
 After a consequential result, make its supported claim, remaining uncertainty and continuation recoverable through current owners. A decision delta may help a continuing consumer, but a delta alone must not become the only way a fresh consumer can understand current work. Preserve confirmed effects independently of continuation failure; an unknown effect requires recovery, not replay.
 
-### 7. Modules specialize the loop; they do not redefine it
+### 7. Modules specialise the loop; they do not redefine it
 
 Modules own independently reusable domain capabilities. They may contribute relevant context/procedure, typed operations, and bounded result/reconciliation facts.
 
@@ -93,7 +93,7 @@ Ownership should follow meaning rather than convenience.
 - canonical repository truth stays in canonical repository surfaces;
 - Workspace owns cross-cutting control composition;
 - modules own their domain state and semantics;
-- repo customization owns host policy and durable operating choices;
+- repo customisation owns host policy and durable operating choices;
 - external adapters own transport/vendor integration;
 - local runtime state remains lower-authority local state unless deliberately promoted.
 
@@ -107,17 +107,17 @@ Do not preserve a growing `posture` or personality framework simply because more
 
 ### 10. Direct work must stay direct
 
-Small, obvious work should not acquire Planning, Memory, Verification, review, handoff, or other artifacts merely because those capabilities are installed.
+Small, obvious work should not acquire Planning, Memory, Verification, review, handoff, or other artefacts merely because those capabilities are installed.
 
 Irrelevance and absence are valid states. A capability that is not needed should be silent.
 
 ### 11. Help the agent do the job; do not script the job
 
-AW should be opinionated about authority, effects, proof/claim boundaries, ownership, and safe transitions. It should not micromanage ordinary implementation judgment.
+AW should be opinionated about authority, effects, proof/claim boundaries, ownership, and safe transitions. It should not micromanage ordinary implementation judgement.
 
 Prefer thin contracts and exact escalation over scheduler-like choreography.
 
-### 12. Optimize total successful-completion cost
+### 12. Optimise total successful-completion cost
 
 Measure the whole path: rereads, rediscovery, clarification, retries, route reversals, proof reruns, handoff reconstruction, repair, and user roundtrips.
 
@@ -129,7 +129,7 @@ Do not save model tokens by creating human bureaucracy. Do not replace total com
 
 Repeated human steering, wrong-owner work, stale context, repeated rediscovery, proof confusion, or late reconciliation repair should create pressure to improve the actual owner or control path.
 
-A permanent warning in another subsystem is a poor substitute for fixing deterministic behavior.
+A permanent warning in another subsystem is a poor substitute for fixing deterministic behaviour.
 
 ### 14. Preserve graceful partial compliance
 
@@ -152,9 +152,9 @@ Do not turn extensibility into:
 - a credential store;
 - or a new user-visible command/phase for every capability.
 
-### 16. Repo customization is different from a module
+### 16. Repo customisation is different from a module
 
-Ordinary host-specific guidance belongs in scoped Markdown. Repo-owned config, specialized stage-bound compatibility obligations, skills, canonical guidance, ownership, or deterministic repo operations remain narrower owners when scoped guidance cannot express the required semantics.
+Ordinary host-specific guidance belongs in scoped Markdown. Repo-owned config, specialised stage-bound compatibility obligations, skills, canonical guidance, ownership, or deterministic repo operations remain narrower owners when scoped guidance cannot express the required semantics.
 
 A reusable domain capability with its own state/resources, operations, compatibility, and lifecycle may justify a module. Do not turn every repository rule into one.
 
@@ -198,7 +198,7 @@ Public docs should be simpler than the implementation.
 Use an abstraction ladder:
 
 1. core product model;
-2. specialized capability concepts only when relevant;
+2. specialised capability concepts only when relevant;
 3. generated exact references;
 4. maintainer procedure;
 5. historical evidence.
@@ -207,7 +207,7 @@ Links compose docs; copied truth creates drift. Introduce the subject and purpos
 
 ### 23. Portability beats dogfooding cleverness
 
-Do not generalize this repository's language, structure, environment manager, provider, or current modules into universal requirements without evidence.
+Do not generalise this repository's language, structure, environment manager, provider, or current modules into universal requirements without evidence.
 
 Prefer narrow contracts and plain ownership boundaries that still make sense in another repository and with another agent.
 
@@ -223,7 +223,7 @@ Select proof for the claims and failure modes still unresolved, not the number o
 
 A change is moving in the right direction when it helps answer yes to questions such as:
 
-- Does this preserve or route operating context that materially changes behavior?
+- Does this preserve or route operating context that materially changes behaviour?
 - Does the information arrive when it can change a decision, without unnecessary discovery hops?
 - Does the current agent get a constructible action, real choice, bounded question, or recovery rather than a forced primary action?
 - Does source ownership remain explicit?
@@ -262,5 +262,5 @@ Preserve the context that governs agent work.
 Surface only what matters now.
 Act through the supported route.
 Reconcile what changed.
-Let modules specialize the loop without enlarging it.
+Let modules specialise the loop without enlarging it.
 Stay quiet.

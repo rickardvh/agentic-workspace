@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/report-contract-manifest.schema.json",
   "title": "Report Contract Manifest",
-  "description": "Source-maintenance model only; not native/public command authority. Manifest describing report sections, schemas, and selector behavior.",
+  "description": "Source-maintenance model only; not native/public command authority. Manifest describing report sections, schemas, and selector behaviour.",
   "type": "object",
   "required": [
     "schema_version",

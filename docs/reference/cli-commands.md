@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Historical Source-Maintenance CLI Metadata
 
 Retained parser fixtures only. These declarations neither install commands nor provide fallback execution. The native_cli declaration in source_decision_contract.json is the public boundary.

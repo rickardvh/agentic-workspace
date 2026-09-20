@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Structured File Inventory
 
 Inventory of structured files, validators, ownership, and freshness checks.
@@ -13,7 +14,7 @@ Inventory of structured files, validators, ownership, and freshness checks.
 | (root) | object | yes |  | Inventory of structured files, validators, ownership, and freshness checks. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"agentic-workspace/structured-file-inventory/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `schema_version` | const `"structured-file-inventory/v1"` | yes |  | Contract version for this document. |  |  |
-| `rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `statuses` | array of enum `"schema-backed"`, `"typed-validator-backed"`, `"generated-derived"`, `"source-checkout-diagnostic"`, `"freeform-prohibited-gap"` | yes |  | Ordered statuses entries used by this contract. |  |  |
 | `storage_classes` | array of enum `"source-of-truth"`, `"non-reconstructable-decision"`, `"generated-required-adapter"`, `"local-cache"`, `"reconstructable-external-snapshot"`, `"historical-audit-distillation"`, `"recovery-diagnostic"`, `"removable-duplicate"`, `"diagnostic-fixture"`, `"platform-tooling"` | yes |  | Ordered storage classes entries used by this contract. |  |  |
 | `entries` | array of object | yes |  | Ordered entries entries used by this contract. |  |  |

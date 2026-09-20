@@ -1,7 +1,10 @@
 # Learning promotion and subtraction
 
-Promotion is a decision over existing owner operations, not a new mutation
-surface. Its inputs are the provisional owner identity, later effectiveness,
+Use this reference when a retained lesson could be enforced more reliably by a
+test, tool, contract or other canonical source. Promotion moves that lesson to
+the responsible component and removes advice that the new source makes redundant.
+
+Promotion uses existing owner operations. Its inputs are the provisional owner identity, later effectiveness,
 source authority, current repository state, configured improvement latitude,
 expected future cost, and the target owner's revision-bound operation.
 

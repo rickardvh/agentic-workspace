@@ -60,10 +60,10 @@ C1Ã¢â‚¬â€œC3 below belong to #3410.
 
 | Group and current source/consumer | Disposition and destination | Guarantee retained / subtraction obligation | Agent-facing; public; module consequence |
 | --- | --- | --- | --- |
-| Startup SKILL.md: ordinary use, evidence, correction, specialized routes, exact requests, unavailable runtime, residue | M, M1: small entry plus referenced procedure fragments | Preserve evidence sufficiency, authority distinctions and actual no-runtime limits. Remove duplicated full-tree text from the entry; do not create a second manual flow. | simplify/migrate; keep start/invoke; none |
+| Startup SKILL.md: ordinary use, evidence, correction, specialised routes, exact requests, unavailable runtime, residue | M, M1: small entry plus referenced procedure fragments | Preserve evidence sufficiency, authority distinctions and actual no-runtime limits. Remove duplicated full-tree text from the entry; do not create a second manual flow. | simplify/migrate; keep start/invoke; none |
 | `workspace-intent-discovery`, `workspace-work-shape` | M/R, M1: one intent procedure with vocabulary as a reference | Agent decides meaning and work shape; remove duplicate shape/routing prose and reference-only skill catalogue entry where no independent consumer needs it. | merge; no new operation; retain Planning domain meaning |
 | `workspace-transition-gates` | R, M1: retain unique interpretive material with relevant startup/proof fragments | Delete competing phase choreography and stale fallback names; preserve actual restrictions through native owners. | retire/merge; #3442 audits surviving gate concepts; none |
-| Setup SKILL.md plus `native_configuration_procedure::{concern,observe,attach}` | M/K, M2: setup fragments over exact Configuration requests | Move method selection/post-write interpretation to skills. Keep effective configuration facts, write permissions, affected-owner observation and confirmed-effect semantics native. Do not relabel all `observe` branches as procedure. | migrate; keep useful behavior observation pending #3442; retain domain meaning |
+| Setup SKILL.md plus `native_configuration_procedure::{concern,observe,attach}` | M/K, M2: setup fragments over exact Configuration requests | Move method selection/post-write interpretation to skills. Keep effective configuration facts, write permissions, affected-owner observation and confirmed-effect semantics native. Do not relabel all `observe` branches as procedure. | migrate; keep useful behaviour observation pending #3442; retain domain meaning |
 | Correction SKILL.md: instruction vs advisory vs decision vs ordinary source repair | M, M2: selected destination fragments | Keep publication, source delegations, receiving evidence, no-retention and recovery in current owners. Remove repeated request-transport instructions already owned by startup. | migrate; keep exact writers; none |
 | `native_resources::compose` and resource SKILL.md | M/K, M3: generic bounded composition plus resource fragments | Remove skill-name selection and fixed proposal/action choreography. Keep resource observation, path bounds, policy, retention, Git registration, leases and cleanup recovery native. | migrate; remove compose-specific facade after equivalent direct owner access; none |
 | `native_proof_procedure::view/present` and proof SKILL.md | M/K, M3: proof sequence over generic composition | Remove fixed prepare/execute/admit sequence and SKILL/COMMAND switch. Keep unique-required-action determination, exact check execution, receipt admission, strict claims and no-retry recovery in Verification. | migrate; proof-procedure removal under #3442 after migration; retain Verification meaning |
@@ -157,7 +157,7 @@ Owner composition consumes current typed results and exact returned references
 by stable public identity, without copied action fields or private JSON pointers.
 Effect/traversal bounds and no-progress detection are native implementation safety,
 not author-programmed loop, retry or effect controls. Admission and recovery remain
-with the owner and its explicit typed continuations; uncertainty never authorizes
+with the owner and its explicit typed continuations; uncertainty never authorises
 replay. C2b supplies the generic public reference seam. Resource/proof adaptations
 consume it in M3 rather than becoming generic capability special cases.
 
@@ -183,7 +183,7 @@ executes nothing, and refresh/removal preserve host edits and effect custody.
 ## Neutral authoring walkthrough (design example, not executable syntax)
 
 A host skill `change-note` has a small entry pointing to its procedure resource.
-The resource asks: "Does the observed change alter behavior visible to a user?
+The resource asks: "Does the observed change alter behaviour visible to a user?
 Compare the stated intent with the patch; defer when evidence is insufficient."
 Two named branches point to `user-note.md` and `internal-note.md`. An answer may
 include a concise impact summary and exact evidence refs without a local schema.
@@ -209,11 +209,11 @@ only; actual host activation, execution and benefit remain C3/#3411 evidence.
 | Unit | Dependency and complete PR outcome | Required present evidence |
 | --- | --- | --- |
 | C1 / #3446 under #3410 | Reconciled #3409 shaping per external reply; passive source/resource form, qualified identity, validation and inspectable selected detail | Plain skill unaffected; missing/unsafe resource and collision; lazy branch delivery; source drift |
-| C2a / #3447 under #3410 | C1; semantic question/answer carriage and currentness only | Cross-task/instance and stale answers; lost material; unresolved/conflict; supplied-answer protocol proof does not establish model judgment |
+| C2a / #3447 under #3410 | C1; semantic question/answer carriage and currentness only | Cross-task/instance and stale answers; lost material; unresolved/conflict; supplied-answer protocol proof does not establish model judgement |
 | C2b / #3455 under #3410 | C2a; generic exact current owner-reference continuation/composition | Current public identity; owner validation/authority; missing/ambiguous/no-progress; confirmed/uncertain recovery; one read-only and one existing effect/request case |
 | C3 / #3448 under #3410 | C2b; installable bundle lifecycle and supported host vertical path | Installed Python/TypeScript/JSON/native parity where transport differs; host-owned edits, refresh/removal; neutral actual host walkthrough |
 | M1 / #3449 under #3411 | C3; startup/intent/reference consolidation | Small full-loaded entry, same manual sources, direct and unavailable path; no binding obligation loss |
-| M2 / #3450 under #3411 | C3; configuration/correction/bootstrap procedure migration | Authorized write, deferred/unknown result, receiving-owner consequence and preservation |
+| M2 / #3450 under #3411 | C3; configuration/correction/bootstrap procedure migration | Authorised write, deferred/unknown result, receiving-owner consequence and preservation |
 | M3 / #3451 under #3411 | C3; resource/proof-specific adaptation consuming C2b, sequence extraction and deletion | Equivalent direct/skill restrictions; typed receipt continuation; no repeated uncertain effect; helpers removed |
 | M4 / #3452 under #3411 | Coordination outcome covering M4aÃ¢â‚¬â€œM4d; not an implementation leaf | Complete original Planning/Assignment obligation; all four leaves accepted before coordination closeout |
 | M4a / #3456 under #3452 | C3; intake, decompose, tighten, reporting, intent verification and closeout | Planning continuity/custody; intent/claim separation; duplicate deletion; direct/manual parity |
@@ -223,10 +223,10 @@ only; actual host activation, execution and benefit remain C3/#3411 evidence.
 | M5 / #3453 under #3411 | C3; Memory and maintainer reference consolidation | Candidate consequences survive bypass; no-retention and receiving evidence; independent review unchanged |
 | #3411 integration | M1Ã¢â‚¬â€œM5 | Audit-subject-to-current-head sweep, package exposure and one bounded final host walkthrough; every M/R row accounted for |
 | #3442 / #3443 | Accepted #3408 | Fresh actual public/field inventory; complete remove/merge dispositions, direct operations, neutral modules, generated parity and no resurrection |
-| #3404 / #3405 -> #3406 | Accepted #3441 | Final contract references and integrated customization guide validated against actual supported artifact |
+| #3404 / #3405 -> #3406 | Accepted #3441 | Final contract references and integrated customisation guide validated against actual supported artefact |
 
 These units match the externally shaped GitHub sub-issue graph. The shaping reply
-authorizes implementation after artifact reconciliation; independent acceptance
+authorises implementation after artefact reconciliation; independent acceptance
 and issue closure remain separate. #3410 cannot close from C1,
 and #3411 cannot close from a proving subset. Public/module contraction must use
 the post-migration head, not prematurely freeze this proposal. Fresh final RC and
@@ -234,15 +234,15 @@ stable admission remain #3277/#2985 after accepted P1.
 
 ## Validation, uncertainty and completion cost
 
-This patch adds no product behavior or permanent tests. Source inspection and the
+This patch adds no product behaviour or permanent tests. Source inspection and the
 successful native build establish the observed baseline only. Existing frontier,
 route, effect, Planning and Memory tests identify reusable proof classes; they
 have not been run as proof of this proposed extension. No source-only walkthrough
-is counted as model behavior or measured economic benefit.
+is counted as model behaviour or measured economic benefit.
 
 Independent shaping acceptance remains required for #3409 closure. The external
 shaping reply settles the minimum contract and issue boundaries and permits
-implementation after this reconciliation. The revised artifacts are ready for
+implementation after this reconciliation. The revised artefacts are ready for
 focused recheck; the implementation agent does not self-approve this design or
 request a reviewer to approve its own implementation.
 
@@ -254,7 +254,7 @@ bare Python invocation, corrected Windows path queries and bounded request
 reentry. Total successful-completion cost and host comparative economics are
 unmeasured; they are not zero.
 
-## Artifact end-state
+## Artefact end-state
 
 After independent acceptance, retain this audit only as a compact design record
 while its dispositions and rationale remain useful. It is not an active workflow

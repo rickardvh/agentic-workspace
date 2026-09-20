@@ -23,10 +23,10 @@ selection boundary additionally bypasses these optional builders:
 - Configuration field-edit catalogues. Recovery/deferred choices, source binding
   and any submitted proposal still resolve.
 - Verification command-choice/report alternatives, profile catalogue hashes and
-  duplicated judgment packets. Obligations, applicability gaps, source identity,
+  duplicated judgement packets. Obligations, applicability gaps, source identity,
   evidence admission and exact selected execution remain mandatory.
 - Planning portability diagnostics, including metadata probes of referenced
-  local artifacts. Current Planning state and reconciliation remain mandatory.
+  local artefacts. Current Planning state and reconciliation remain mandatory.
 
 Memory bodies, selected skill resources and claim-review source reads already
 had selected-request boundaries; those remain. Parsing/hashing governing source
@@ -72,7 +72,7 @@ exact route and command from authenticated publication custody and validates onl
 that selection; post-effect composition does not request alternative detail.
 There is no production telemetry store.
 
-Before this receipt-reentry correction, the public JSON fixture measured UTF-8 compact serialization on Windows:
+Before this receipt-reentry correction, the public JSON fixture measured UTF-8 compact serialisation on Windows:
 
 | Declared commands | Full bytes | Compact bytes | Carriage bytes | Full ms | Frontier ms |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -93,6 +93,6 @@ projections, current source changes and committed-effect recovery. The proof
 procedure tests cover receipt admission, scope/measurement integration and both
 mandatory-source failure and optional method drift after a committed check.
 
-Stop after these distinct behavior classes, current native/adapter contract
-checks and payload checks pass. Tests establish implementation behavior; issue
+Stop after these distinct behaviour classes, current native/adapter contract
+checks and payload checks pass. Tests establish implementation behaviour; issue
 acceptance, source reconciliation and independent review remain separate.

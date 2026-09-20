@@ -23,7 +23,7 @@ not independently accept the later implementation subject reconciled below.
 ## Accepted constituent evidence
 
 Each linked PR retains its exact-head independent review and bounded closure
-assessment. Reuse those judgments rather than reviewing our own implementation.
+assessment. Reuse those judgements rather than reviewing our own implementation.
 
 | Integrated obligation | Accepted work and disposition |
 | --- | --- |
@@ -47,7 +47,7 @@ The current contract is the native Configuration schema/reader and generated
 not this report. The accepted contraction above disposes retired fields. Current
 families have the following consumers; this is not a new permanent field ledger:
 
-- Workspace invocation/instruction source, module selection, workflow artifact
+- Workspace invocation/instruction source, module selection, workflow artefact
   profile, clarification and initiative choices feed startup, instruction
   delivery, domain admission or selected executable preparation. Current tests
   exercise an actual instruction-source change, procedural preference changes,
@@ -59,7 +59,7 @@ families have the following consumers; this is not a new permanent field ledger:
   and an accepted config write does not admit operational state. Instruction and
   decision-record trust revisions were preserved in this reconciliation.
 - Assignment policy, target identity/scope, transport feasibility, guarantees and
-  cost/confidence inputs feed eligibility and explicit comparative judgment.
+  cost/confidence inputs feed eligibility and explicit comparative judgement.
   Descriptive priors are decision inputs, not measured economics or dispatch
   authority. This task obtained native `admitted-local` after current comparison;
   no unavailable non-local patch transport was fabricated.
@@ -74,19 +74,19 @@ families have the following consumers; this is not a new permanent field ledger:
   former declarations remain rejected; retained development-package fixtures do
   not resurrect a Python runtime.
 
-## Integrated behavior and partial compliance
+## Integrated behaviour and partial compliance
 
 The current tests exercise native, JSON, Python and TypeScript entry where those
-tests parameterize the public surfaces. Skills use the same current requests and
+tests parameterise the public surfaces. Skills use the same current requests and
 actions as direct callers; they do not acquire policy or effect authority.
 
 The ordinary learning journey starts with “Check the repaired export and preserve
 its result”, without a Memory request. An admitted producer emits an explicit
-future-value candidate. The current owner nominates a bounded judgment that
+future-value candidate. The current owner nominates a bounded judgement that
 survives carriage/reentry. Separate cases choose no retention, an already-absorbed
-stronger source, or authorized advisory capture. A fresh relevant task receives
+stronger source, or authorised advisory capture. A fresh relevant task receives
 the captured advice; changing its dependency removes stale advice. Nothing infers
-hidden reasoning, and nomination does not authorize publication. These are
+hidden reasoning, and nomination does not authorise publication. These are
 deterministic public journeys, not a new live-model compliance experiment.
 
 Other integrated journeys cover exact ready dispatch, in-flight no-relaunch,
@@ -94,7 +94,7 @@ retention/return propagation to Planning, direct recovery, and interrupted effec
 Unknown, unavailable, stale and not-applicable remain different. Confirmed effects
 survive failed continuation; uncertain effects cannot be blindly retried. A sole
 required proof action is carried only after scope/strategy/authority are settled;
-multiple legitimate alternatives and sufficiency/review remain judgment.
+multiple legitimate alternatives and sufficiency/review remain judgement.
 
 Quiet controls include absent config/module state, direct resources with no owner
 calls, no-signal learning, local Assignment, fresh repository-only readers, and
@@ -121,10 +121,10 @@ concurrent validation, not a latency benchmark or economic improvement claim.
 The instrumented Rust fixture reports full builder events increasing from 4 to
 258 while compact and selected-proof events each stay at 1. Receipt admission and
 post-effect continuation do not enumerate 128 untaken alternatives. Large selected
-Memory stays deferred until expansion, which materializes exactly one body while
+Memory stays deferred until expansion, which materialises exactly one body while
 preserving authority. This measures actual construction, not JSON omission alone.
 
-Accepted #3338 compares optimized portable and host paths: each needs two caller
+Accepted #3338 compares optimised portable and host paths: each needs two caller
 interactions, two shell/native invocations and four owner calls. A host projection
 only saves ephemeral carriage storage; it does not earn another adapter. Retries,
 recovery, currentness and residue remain part of the comparison. No hidden host
@@ -159,7 +159,7 @@ python -m pytest -q -n 4 tests/test_native_readonly_handoff.py tests/test_native
 ```
 
 This reuses the accepted child package/CI evidence rather than claiming a new
-whole-repository or release-artifact pass. In particular, #3357 repaired the
+whole-repository or release-artefact pass. In particular, #3357 repaired the
 Memory, retained TypeScript Planning and isolated-wheel compatibility failures.
 Historical strict maintainer Planning residue remains outside this bounded lane;
 no operational history was deleted to make acceptance appear clean.
@@ -176,8 +176,8 @@ All declared System Intent sources and the previous retained interpretation were
 read through the native owner. Semantic revision replaces the older query-first
 preference with the current skills-first responsibility split, lazy actionable
 frontier, partial-compliance learning and authority-preserving transitions. The
-host-agnostic agent-judgment principle is preserved and its scope includes Rust.
-The source-bound proposal and authorized `system-intent.write` returned
+host-agnostic agent-judgement principle is preserved and its scope includes Rust.
+The source-bound proposal and authorised `system-intent.write` returned
 `effect_outcome.status=committed`; fresh reentry reports `source_currentness=matched`
 and no reconciliation gaps. Task alignment still reports
 `unresolved-owner-judgment`: matching sources does not accept the whole task.
@@ -187,7 +187,7 @@ and no reconciliation gaps. Task alignment still reports
 The first rewrite accidentally replaced the host-agnostic principle and its
 non-enum keyword-routing guardrail summaries with the top-level product summary.
 Both specific summaries are now restored through a fresh native source-bound
-proposal, authorization and committed write. Parsed-content assertions confirmed
+proposal, authorisation and committed write. Parsed-content assertions confirmed
 the top-level skills-first summary and source records stayed unchanged. Fresh
 reentry again reports matching sources, no gaps and unresolved task alignment.
 
@@ -195,7 +195,7 @@ That correction exposed a bounded owner-path gap: a semantically incorrect mirro
 with matching hashes offered no edit request. An explicit retained-interpretation
 read now returns the existing source-bound proposal request. Ordinary reads and
 governing-source reads remain quiet; publication still requires exact proposal
-authorization. No schema or generated adapter interface changed.
+authorisation. No schema or generated adapter interface changed.
 
 After this correction, the paired native build, **21 System Intent tests** across
 native/JSON/Python/TypeScript and **19 frontier/skills-first tests** passed. The
@@ -235,7 +235,7 @@ publish. It changes no runtime, release identity, proof requirement or CI floor.
 
 The outstanding implementation sequence recorded by the original aggregate has
 landed. #3360 supplies canonical RC identity; #3365–#3367 supply the public
-facades, exact PyPI/npm artifact projection and independently packaged Cargo
+facades, exact PyPI/npm artefact projection and independently packaged Cargo
 pair. Their implementation reviews distinguish repository proof from account
 bootstrap and actual public-registry acceptance. #3361 and #3362 are reopened:
 their repository implementations are merged, but their existing completion rules
@@ -266,11 +266,11 @@ it does not establish a recurring field ledger or reapprove implementation.
 | Aggregate obligation | Evidence and current disposition |
 | --- | --- |
 | Retained shared/local fields and built-in declarations have consumers | The Configuration effectiveness section above maps the surviving families to native consumers, with #3320–#3323, #3328/#3333 and #3343 proof. #3384 adds current repository adoption/removal rather than resurrecting installer commands. |
-| Skills consume native meaning; material consequences and settled mechanics reach actions | #3331/#3335 and #3344/#3345 cover standard resources, sole-required proof, Memory recovery, binding dispatch and Planning continuity. #3386 repairs host feasibility while preserving explicit comparative judgment. Genuine alternatives and claim sufficiency remain judgments. |
-| Advisory delivery, observable learning and no-retention | #3344's ordinary-prompt nomination/capture/fresh-use and stronger-owner/no-retention journeys remain the evidence. Advice is not acknowledgment or proof; hidden reasoning/transcript capture is not introduced. The latest dogfood did not exercise these journeys and adds no live-model effectiveness claim. |
+| Skills consume native meaning; material consequences and settled mechanics reach actions | #3331/#3335 and #3344/#3345 cover standard resources, sole-required proof, Memory recovery, binding dispatch and Planning continuity. #3386 repairs host feasibility while preserving explicit comparative judgement. Genuine alternatives and claim sufficiency remain judgements. |
+| Advisory delivery, observable learning and no-retention | #3344's ordinary-prompt nomination/capture/fresh-use and stronger-owner/no-retention journeys remain the evidence. Advice is not acknowledgement or proof; hidden reasoning/transcript capture is not introduced. The latest dogfood did not exercise these journeys and adds no live-model effectiveness claim. |
 | Lazy frontier, dependent currentness and confirmed-effect preservation | #3335's construction/transport observations above, #3330/#3332 recovery, and #3382's exact source-aware publication/pruning corrections. Repeated full queries in the dogfood were predominantly caller-side response loss, not proof of a new runtime caching defect. |
 | No blind replay and quiet direct/no-signal/local/no-runtime paths | Reuse the existing external-effect, resources, Memory, proof, Planning and no-runtime controls above. #3386 preserves unknown/unavailable/local distinctions. Diagnostic capture failure remains visible and does not manufacture authority. |
-| Canonical procedure, host bundles, schemas, examples and bindings converge | #3360/#3365–#3367 establish the release/distribution contract; #3384/#3385 establish current host authority; #3389 covers active command-bearing guidance, native recovery, maintenance producers and generated metadata. Retained source-maintenance catalogs do not become public commands. |
+| Canonical procedure, host bundles, schemas, examples and bindings converge | #3360/#3365–#3367 establish the release/distribution contract; #3384/#3385 establish current host authority; #3389 covers active command-bearing guidance, native recovery, maintenance producers and generated metadata. Retained source-maintenance catalogues do not become public commands. |
 
 The [ordinary-use disposition](https://github.com/rickardvh/agentic-workspace/issues/3277#issuecomment-5704330451)
 and [follow-up evidence](https://github.com/rickardvh/agentic-workspace/issues/3277#issuecomment-5712017888)
@@ -285,7 +285,7 @@ payoff and delegation economics remain with #3191/#3192 and the post-v1 owners.
 Master [CI](https://github.com/rickardvh/agentic-workspace/actions/runs/35213952642)
 and [Security baseline](https://github.com/rickardvh/agentic-workspace/actions/runs/35213952696)
 passed for the exact implementation subject above. These are source checks, not
-RC artifact, registry or support-bearing receipts. The finite aggregate remains
+RC artefact, registry or support-bearing receipts. The finite aggregate remains
 reviewable independently; its acceptance is not inferred from these green runs.
 
 Read-only publication observations on 2026-09-17 found no `v1.0.0-rc.1` release
@@ -298,14 +298,14 @@ After independent acceptance and merge of this reconciliation:
 
 1. Resolve the fresh accepted master SHA. Use the existing
    `scripts/release/preview_release.py --rc v1.0.0-rc.1 --source-commit <accepted-sha>`
-   preparation path and current resource-policy judgment. Inspect its exact
+   preparation path and current resource-policy judgement. Inspect its exact
    release-only child before adding `--push`. Do not freeze an RC from the older
    source named in this report merely to bypass the final reconciliation.
 2. Complete open #3361 through the existing [language-registry bootstrap](../release-and-versioning.md#public-language-registries)
    and open #3362 through the [paired Cargo bootstrap](../maintainer/native-release-topology.md#coordinated-cargo-distribution).
    First-publication credentials, if required, apply only to the admitted bytes;
    ordinary publication uses the configured trusted identities. Recover the same
-   immutable tag and artifacts after partial publication.
+   immutable tag and artefacts after partial publication.
 3. Collect the exact GitHub prerelease, PyPI/npm/Cargo byte and public-install
    receipts together with hosted runtime, provenance, security and checksums.
    Keep #3361/#3362 open until their own external publication, trusted-publisher
@@ -328,9 +328,9 @@ The paired native build and `make maintainer-surfaces` also passed. This selecti
 includes `test_release_candidate.py`, `test_registry_release.py`,
 `test_cargo_release.py`, the existing immutable-tag recovery/trusted-dispatch
 cases in `test_preview_release.py`, and the active command-authority inventory.
-It does not publish a candidate or stand in for hosted artifact proof.
+It does not publish a candidate or stand in for hosted artefact proof.
 No new test or permanent CI step is warranted: the changed
 claim is a truthful implementation frontier and release handoff. Stop after that
 bounded evidence and documentation checks; escalate only a named new source,
-artifact, registry-identity or recovery defect. Historical timings above are not
+artefact, registry-identity or recovery defect. Historical timings above are not
 fresh cost measurements or whole-task savings.

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # External Evidence Operation Result
 
 Stateless external evidence admission or current-query result returned by the public operation boundary.

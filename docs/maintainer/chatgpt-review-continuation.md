@@ -14,7 +14,7 @@ Install `git`, an authenticated `gh`, and a `codex` CLI that can resume the orig
 
 The repository does not install a project `Stop` hook. Each initial or resumed continuation must explicitly run `handoff --pr <number> --existing-only` after proof and push; `CODEX_THREAD_ID` supplies the exact session identity. This avoids repository-wide lifecycle work on unrelated Codex stops while preserving exact-session and exact-head binding.
 
-For bounded unattended automation after all active user and plugin hook sources have been reviewed, `poll --bypass-hook-trust` passes Codex's explicit `--dangerously-bypass-hook-trust` only to the exact resumed invocation and records `hook_trust_mode: automation-bypass` in local state. The flag authorizes every enabled hook in that invocation, so do not use it before checking those external hook sources.
+For bounded unattended automation after all active user and plugin hook sources have been reviewed, `poll --bypass-hook-trust` passes Codex's explicit `--dangerously-bypass-hook-trust` only to the exact resumed invocation and records `hook_trust_mode: automation-bypass` in local state. The flag authorises every enabled hook in that invocation, so do not use it before checking those external hook sources.
 
 `handoff --existing-only` updates only an existing state record for the same branch and exact session; for a fresh all-open dispatch, it may bind the one pre-created `fresh-session-in-progress` record. It never creates a new opt-in or starts the poller.
 
@@ -54,34 +54,6 @@ The command resolves the branch only from that open PR and still requires the de
 
 ## Poll or watch
 
-## Declared stack restacking
-
-Use `tools/review_stack_ops.py` for descendants that must move after a reviewed base changes. It requires a JSON declaration with every PR, branch, old base, new base, and expected remote head written as a full SHA; it never discovers a rewrite target from branch ordering or abbreviated IDs:
-
-```json
-{
-  "kind": "agentic-workspace/review-stack-restack/v1",
-  "base": {"pr_number": 100, "branch": "base-fix", "head": "<full-sha>"},
-  "descendants": [
-    {
-      "pr_number": 101,
-      "branch": "dependent-change",
-      "old_base": "<full-sha>",
-      "new_base": "<full-sha>",
-      "old_remote_head": "<full-sha>"
-    }
-  ]
-}
-```
-
-Plan and verify ancestry plus stable aggregate patch identity without publishing:
-
-```powershell
-uv run python tools/review_stack_ops.py --declaration stack.json --receipt restack-receipt.json
-```
-
-After inspecting that receipt, add `--publish` to use an exact `--force-with-lease=<ref>:<old-head>` for every declared descendant. Add `--update-pr-bodies` only when the PR bodies should receive an `aw-exact-head` marker from the observed published heads. All rewrites are prepared before the first push. A pre-publication failure leaves branches and PR bodies unchanged; a later failure records precisely which pushes or metadata edits succeeded, because multi-ref GitHub publication is bounded but not atomic.
-
 Run one cheap deterministic poll:
 
 ```powershell
@@ -114,11 +86,39 @@ When the maintainer chooses to merge that exact reviewed head, use the repositor
 uv run python tools/review_stack_ops.py --merge-pr 123 --reviewed-head <full-sha> --merge-method merge --receipt merge-receipt.json
 ```
 
-The operation checks current CI and the caller-supplied reviewed head; independent review and merge authorization remain the maintainer's responsibility. It does not create or mechanically establish review authority. Standalone PRs keep the ordinary `gh pr merge --match-head-commit` transport. A GitHub stack, or an ordinary transport refusal requiring asynchronous merge, uses GitHub's `merge-async` endpoint with the same head and merge method. Accepted or pending responses are not completion: the operation polls the request and then observes the PR in terminal merged state before returning success. A changed head, failed check, rejection, failure, or timeout leaves descendant branches untouched and records one exact failure in the receipt.
+The operation checks current CI and the caller-supplied reviewed head; independent review and merge authorisation remain the maintainer's responsibility. It does not create or mechanically establish review authority. Standalone PRs keep the ordinary `gh pr merge --match-head-commit` transport. A GitHub stack, or an ordinary transport refusal requiring asynchronous merge, uses GitHub's `merge-async` endpoint with the same head and merge method. Accepted or pending responses are not completion: the operation polls the request and then observes the PR in terminal merged state before returning success. A changed head, failed check, rejection, failure, or timeout leaves descendant branches untouched and records one exact failure in the receipt.
 
 After a successful blocked-review continuation records a new handoff head, the same bounded watcher keeps running and polls that head. It exits only on merge-ready, recovery, explicit stop/cleanup, or the configured poll limit; no manual watcher restart is needed between review cycles.
 The watcher may also be started while an exact-session resume is already in progress. It waits for that resume's explicit handoff instead of treating the transient `resume-in-progress` state as terminal.
 Explicit `--existing-only` continuation handoffs preserve the loop's configured cycle and repeated-blocker limits. Change those limits only with a new maintainer opt-in handoff.
+
+## Declared stack restacking
+
+Use `tools/review_stack_ops.py` for descendants that must move after a reviewed base changes. It requires a JSON declaration with every PR, branch, old base, new base, and expected remote head written as a full SHA; it never discovers a rewrite target from branch ordering or abbreviated IDs:
+
+```json
+{
+  "kind": "agentic-workspace/review-stack-restack/v1",
+  "base": {"pr_number": 100, "branch": "base-fix", "head": "<full-sha>"},
+  "descendants": [
+    {
+      "pr_number": 101,
+      "branch": "dependent-change",
+      "old_base": "<full-sha>",
+      "new_base": "<full-sha>",
+      "old_remote_head": "<full-sha>"
+    }
+  ]
+}
+```
+
+Plan and verify ancestry plus stable aggregate patch identity without publishing:
+
+```powershell
+uv run python tools/review_stack_ops.py --declaration stack.json --receipt restack-receipt.json
+```
+
+After inspecting that receipt, add `--publish` to use an exact `--force-with-lease=<ref>:<old-head>` for every declared descendant. Add `--update-pr-bodies` only when the PR bodies should receive an `aw-exact-head` marker from the observed published heads. All rewrites are prepared before the first push. A pre-publication failure leaves branches and PR bodies unchanged; a later failure records precisely which pushes or metadata edits succeeded, because multi-ref GitHub publication is bounded but not atomic.
 
 ## Inspect, stop, recover, and clean up
 

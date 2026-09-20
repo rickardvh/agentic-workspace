@@ -118,7 +118,7 @@ authority, freshness, and promotion pressure. It does not collapse Memory,
 Planning, ADRs, assurance requirements, workflow obligations, proof, or closeout
 trust into a new generic knowledge store.
 
-Still requiring agent or human judgment:
+Still requiring agent or human judgement:
 
 - whether a Memory promotion candidate should actually become docs, config,
   assurance, ADR, checks, or be dismissed;

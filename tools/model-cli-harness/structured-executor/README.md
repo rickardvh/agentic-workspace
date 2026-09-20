@@ -8,13 +8,13 @@ repository state owner.
 The kernel has three boundaries:
 
 - `kernel.py` is a pure reducer over bounded referential state.
-- `store.py` owns atomic scratch persistence, content-addressed artifacts,
+- `store.py` owns atomic scratch persistence, content-addressed artefacts,
   journal recovery, and restart re-observation.
 - `replay.py` reconstructs semantic identities without invoking models, AW,
   subprocesses, the network, or repository mutation.
 
 Large packets, patches, results, and future model responses belong in separate
-content-addressed artifacts. The state keeps references only. A restart is a
+content-addressed artefacts. The state keeps references only. A restart is a
 committed deterministic transition and forces authoritative domain
 re-observation before any action candidate can be selected.
 

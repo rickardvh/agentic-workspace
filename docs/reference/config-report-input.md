@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # config_report_input.schema
 
 External client input contract for the config.report operation.

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/operation-conformance-test-ir.schema.json",
   "title": "Operation Conformance Test IR",
-  "description": "Schema-coupled behavioral conformance cases for operation contracts and implementation artifacts.",
+  "description": "Schema-coupled behavioural conformance cases for operation contracts and implementation artefacts.",
   "type": "object",
   "required": [
     "schema_version",
@@ -72,7 +72,7 @@
       "properties": {
         "preserve": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "Behavioral intent that migrated IR cases must preserve."
+          "description": "Behavioural intent that migrated IR cases must preserve."
         },
         "do_not_preserve": {
           "$ref": "#/$defs/non_empty_strings",
@@ -85,7 +85,7 @@
         },
         "first_migration_tranche": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "Existing behavior areas that should migrate first once the runner exists."
+          "description": "Existing behaviour areas that should migrate first once the runner exists."
         },
         "handwritten_retention_boundary": {
           "$ref": "#/$defs/non_empty_strings",
@@ -111,7 +111,7 @@
         "adapter_kinds": {
           "type": "array",
           "minItems": 3,
-          "description": "Adapter kinds the operation conformance runner may use to invoke implementation artifacts or wrapper boundaries.",
+          "description": "Adapter kinds the operation conformance runner may use to invoke implementation artefacts or wrapper boundaries.",
           "items": {
             "type": "object",
             "required": [
@@ -148,7 +148,7 @@
         "normalization_rule": {
           "type": "string",
           "minLength": 1,
-          "description": "Rule for where result and error normalization should be declared."
+          "description": "Rule for where result and error normalisation should be declared."
         }
       },
       "additionalProperties": false,
@@ -191,7 +191,7 @@
       "items": {
         "$ref": "#/$defs/target"
       },
-      "description": "Generated operation artifacts that the IR-defined runner should be able to execute or compare."
+      "description": "Generated operation artefacts that the IR-defined runner should be able to execute or compare."
     },
     "proof_output": {
       "type": "object",
@@ -228,7 +228,7 @@
         "routing_rule": {
           "type": "string",
           "minLength": 1,
-          "description": "Rule for selecting the runner as proof when operation contracts, artifacts, adapters, or wrapper surfaces change."
+          "description": "Rule for selecting the runner as proof when operation contracts, artefacts, adapters, or wrapper surfaces change."
         }
       },
       "additionalProperties": false,
@@ -274,7 +274,7 @@
       "items": {
         "$ref": "#/$defs/test_case"
       },
-      "description": "Initial representative cases proving the IR can express success, error, and cross-target parity behavior."
+      "description": "Initial representative cases proving the IR can express success, error, and cross-target parity behaviour."
     }
   },
   "additionalProperties": false,
@@ -373,7 +373,7 @@
                   "operation-conformance",
                   "wrapper-smoke"
                 ],
-                "description": "Proof role for this artifact reference; cli.process artifacts use wrapper-smoke."
+                "description": "Proof role for this artefact reference; cli.process artefacts use wrapper-smoke."
               },
               "source_ref": {
                 "type": "string",

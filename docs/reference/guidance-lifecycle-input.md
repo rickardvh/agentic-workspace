@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agent guidance lifecycle operation input
 
 Inputs for a bounded agent-guidance lifecycle query or mutation.
@@ -15,7 +16,7 @@ Inputs for a bounded agent-guidance lifecycle query or mutation.
 | `format` | enum `"text"`, `"json"` | no |  | Requested command output format. |  |  |
 | `guidance_id` | string | no |  | Stable identifier of the guidance record to inspect or mutate. |  |  |
 | `expected_revision` |  | no |  | Required current record revision for revision-guarded mutation. |  |  |
-| `expected_record_revisions_json` | string | no |  | Serialized map of guidance identifiers to expected revisions for multi-record mutation. |  |  |
+| `expected_record_revisions_json` | string | no |  | Serialised map of guidance identifiers to expected revisions for multi-record mutation. |  |  |
 | `reason` | string | no |  | Human-readable reason recorded for the lifecycle transition. |  |  |
 | `instruction` | string | no |  | Prescriptive guidance text used when creating, replacing, or splitting guidance. |  |  |
 | `replacement_guidance_id` | string | no |  | Identifier of the guidance record that replaces the selected record. |  |  |

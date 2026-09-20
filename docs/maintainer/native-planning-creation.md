@@ -33,10 +33,9 @@ independent/direct semantics and is rejected alongside `planning.create`.
 This preserves the separation established by #2175/#2229 and #2277/#2279:
 current work binds admission, actor-local selection supplies a hint, and semantic
 relation and required transition remain distinct. There is no new task registry
-or relevance classifier. Reworded continuation still requires explicit judgment.
+or relevance classifier. Reworded continuation still requires explicit judgement.
 
-
-The public Planning `planning/create/v1` request creates one current compact `planning-execplan/v1` owner. Request material uses the canonical schema's existing field definitions. The acting agent authors outcome, scope, constraints, stops, dependency facts, proof obligations, continuation and next action. Rust supplies only the confined work-bound identity/path and initial planned/shaping revision; it does not fill placeholder judgments or generate proof.
+The public Planning `planning/create/v1` request creates one current compact `planning-execplan/v1` owner. Request material uses the canonical schema's existing field definitions. The acting agent authors outcome, scope, constraints, stops, dependency facts, proof obligations, continuation and next action. Rust supplies only the confined work-bound identity/path and initial planned/shaping revision; it does not fill placeholder judgements or generate proof.
 
 Creation exclusively acquires an absent owner document. It does not acquire a selector, alter the former Planning state file, or activate another owner. Its result offers a separate exact current continuation request. Existing selector ownership remains preserved. Direct unrelated work creates no state.
 
@@ -97,7 +96,7 @@ substitute the old task identity. Stale source, capability, continuation and
 unrelated work are rejected.
 
 Recovery has its own common admission and result. Under the existing Planning
-lock it finalizes only the original prepared outcome, returning original
+lock it finalises only the original prepared outcome, returning original
 outcome/custody separately from its own. It writes no material Plan bytes and
 grants neither proof nor terminality. Interruption before its own result remains
 common attempt uncertainty; an independently observable committed original
@@ -157,7 +156,7 @@ returned work cannot regress to assigned, and integrated work sheds obsolete
 integration-pending state. Unknown or other-assignment observations are
 preserved for responsible-owner reconciliation. Existing return adoption clears
 only its own retained continuation after actual result admission/integration.
-The final canonical document and serialized source bound are checked before
+The final canonical document and serialised source bound are checked before
 admission, with exact published bytes checked again before writing.
 
 This advances proportional #2970/#2947 continuation without claiming complete

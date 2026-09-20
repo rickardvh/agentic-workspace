@@ -5,7 +5,7 @@ selected process transport now exposes `delegation.dispatch` directly. The core
 carries the same exact request and prerequisites previously returned in nested
 detail. Explicit clients retain that request API. Local assignments stay direct;
 manual and unsupported transports remain handoffs. Target comparison, override,
-input completeness, capability and return judgment remain explicit decisions.
+input completeness, capability and return judgement remain explicit decisions.
 
 Planning similarly carries exact handoff retention and admitted/integrated return
 adoption to its existing `planning.update` action. Current owner selection and
@@ -16,7 +16,7 @@ Continuation classification still selects frontier versus accepted_progress.
 
 An exact pending Planning postimage exposes `planning.update-recover` only after
 same-owner continuation is admitted. It cannot answer that semantic question,
-authorize a selector transfer or introduce material. Original pending custody
+authorise a selector transfer or introduce material. Original pending custody
 remains visible. Recovery revalidates the exact postimage and current authority.
 
 ## Cost and authority

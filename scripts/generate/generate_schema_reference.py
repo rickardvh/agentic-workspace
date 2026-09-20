@@ -220,6 +220,7 @@ def render_schema_reference(schema_path: Path, *, repo_root: Path = REPO_ROOT) -
 
     lines = [
         "<!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->",
+        "",
         f"# {title}",
         "",
         description,

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agentic-workspace.local/schemas/generated_behavior_stratification.schema.json",
-  "title": "Generated behavior stratification",
-  "description": "Authoritative layer model for generated behavior, operation IR, adapters, conformance cases, wrappers, and retained handwritten test/runtime boundaries.",
+  "title": "Generated behaviour stratification",
+  "description": "Authoritative layer model for generated behaviour, operation IR, adapters, conformance cases, wrappers, and retained handwritten test/runtime boundaries.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -20,7 +20,7 @@
   "properties": {
     "kind": {
       "const": "agentic-workspace/generated-behavior-stratification/v1",
-      "description": "Stable document kind for the generated behavior stratification manifest."
+      "description": "Stable document kind for the generated behaviour stratification manifest."
     },
     "schema_version": {
       "const": "agentic-workspace/generated-behavior-stratification/v1",
@@ -33,7 +33,7 @@
     "rule": {
       "type": "string",
       "minLength": 1,
-      "description": "Top-level rule for where stable generated behavior changes must be expressed."
+      "description": "Top-level rule for where stable generated behaviour changes must be expressed."
     },
     "layers": {
       "type": "array",
@@ -41,7 +41,7 @@
       "items": {
         "$ref": "#/$defs/layer"
       },
-      "description": "Ordered generated-behavior strata from primitive contracts through retained ordinary-test boundaries."
+      "description": "Ordered generated-behaviour strata from primitive contracts through retained ordinary-test boundaries."
     },
     "retained_hand_owned_boundaries": {
       "type": "array",
@@ -248,7 +248,7 @@
         "retained_boundary_ref": {
           "type": "string",
           "minLength": 1,
-          "description": "Id of the retained_hand_owned_boundaries entry that authorizes this group."
+          "description": "Id of the retained_hand_owned_boundaries entry that authorises this group."
         },
         "proof_route": {
           "type": "string",
@@ -301,7 +301,7 @@
           "items": {
             "$ref": "#/$defs/bypass_guardrail"
           },
-          "description": "Checked guardrails that prevent future generated-behavior work from bypassing contracts, IR, cases, or explicit boundaries."
+          "description": "Checked guardrails that prevent future generated-behaviour work from bypassing contracts, IR, cases, or explicit boundaries."
         },
         "unresolved": {
           "type": "array",

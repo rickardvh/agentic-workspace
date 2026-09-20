@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Evaluation Authority Refresh Result
 
 Result returned after refreshing observation authority from live public state.

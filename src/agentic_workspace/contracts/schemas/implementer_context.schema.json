@@ -76,7 +76,7 @@
       "properties": {
         "kind": {
           "const": "agentic-workspace/operating-loop-decision/v1",
-          "description": "Discriminator for the normalized operating-loop decision packet."
+          "description": "Discriminator for the normalised operating-loop decision packet."
         },
         "closeout_state": {
           "description": "Structural closeout state derived from Memory, Planning, and Verification facts.",
@@ -336,7 +336,7 @@
         },
         "operating_posture": {
           "type": "object",
-          "description": "Resolved optimization, artifact, initiative, assurance, and delegation posture for this task.",
+          "description": "Resolved optimisation, artefact, initiative, assurance, and delegation posture for this task.",
           "additionalProperties": true
         },
         "improvement_obligations": {
@@ -871,7 +871,7 @@
         },
         "proof_factors": {
           "type": "object",
-          "description": "Structural proof factors; the agent owns proof proportionality judgment."
+          "description": "Structural proof factors; the agent owns proof proportionality judgement."
         },
         "risk_flags": {
           "type": "array",
@@ -1369,7 +1369,7 @@
     },
     "action_signals": {
       "type": "object",
-      "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
+      "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgement.",
       "additionalProperties": true
     },
     "task_posture_packet": {
@@ -1378,11 +1378,11 @@
     },
     "memory_decision_packet": {
       "$ref": "#/$defs/memory_decision_packet",
-      "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent."
+      "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgement with the agent."
     },
     "operating_loop": {
       "$ref": "#/$defs/operating_loop",
-      "description": "Normalized operating-loop closeout decision projection derived from structured Memory, Planning, and Verification facts."
+      "description": "Normalised operating-loop closeout decision projection derived from structured Memory, Planning, and Verification facts."
     },
     "memory_consult": {
       "type": "object",
@@ -1391,7 +1391,7 @@
     },
     "architecture_principles": {
       "type": "object",
-      "description": "Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths.",
+      "description": "Structured architecture-principle routing packet derived from the normalised system-intent record and changed paths.",
       "additionalProperties": true
     },
     "planning_revision": {
@@ -1575,7 +1575,7 @@
             "description": "One required acceptance reconciliation check."
           },
           "minItems": 1,
-          "description": "Checklist for mapping requested outcomes to delivered behavior and proof."
+          "description": "Checklist for mapping requested outcomes to delivered behaviour and proof."
         },
         "compact_closeout_prompt": {
           "type": "string",
@@ -1591,7 +1591,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Closeout guard against passing self-authored tests while missing requested behavior."
+      "description": "Closeout guard against passing self-authored tests while missing requested behaviour."
     },
     "intent_acknowledgement": {
       "type": "object",
@@ -1803,7 +1803,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Objective-drift judgment the agent owns."
+            "description": "Objective-drift judgement the agent owns."
           },
           "description": "Semantic acceptance decisions AW must not infer from prompt keyword markers."
         }
@@ -1874,7 +1874,7 @@
             "description": "One class of guidance the command cannot infer."
           },
           "minItems": 1,
-          "description": "Information classes that still require human or agent judgment."
+          "description": "Information classes that still require human or agent judgement."
         },
         "when_uncertain": {
           "type": "string",
@@ -1963,7 +1963,7 @@
         },
         "task_assignment_disposition": {
           "type": "object",
-          "description": "Typed parent-custody and bounded-child assignment disposition. Parent orchestrator custody does not authorize unresolved bounded-child implementation.",
+          "description": "Typed parent-custody and bounded-child assignment disposition. Parent orchestrator custody does not authorise unresolved bounded-child implementation.",
           "additionalProperties": true
         },
         "implementation_allowed": {

@@ -23,13 +23,13 @@ are source configuration; the current bounded Configuration writer does not expo
 those fields. No interpreted Assignment state was edited.
 
 An ordinary native startup with the same implementation requirement then showed
-`codex_sol:native:codex-app-server/v1` as authorized, safe, constructible and
+`codex_sol:native:codex-app-server/v1` as authorised, safe, constructible and
 eligible for `read-only` and `unapplied-patch`. The host observation was available.
-Terra and Luna were excluded by the acting judgment that their source prohibitions
-apply to this boundary-changing task. The current comparative judgment selected
+Terra and Luna were excluded by the acting judgement that their source prohibitions
+apply to this boundary-changing task. The current comparative judgement selected
 Astra for architecture, integration and proof work, considering Sol as a feasible
 alternative and the cost of transferring the coupled change. That is a task
-judgment, not a measured economic result or unconditional preference for local work.
+judgement, not a measured economic result or unconditional preference for local work.
 
 The regression uses a controlled adapter through all four current consumers:
 native CLI, JSON, Python and TypeScript. It proves unknown internal binding blocks
@@ -53,7 +53,8 @@ worker turn or completion-cost benchmark was run. Provider failure remains an
 execution outcome and cannot become proof of target quality or issue completion.
 Implementation is offered for independent review; this report is not a PR review,
 approval, merge, or release verdict.
-# Installed host-adapter distribution disposition
+
+## Installed host-adapter distribution disposition
 
 The #3383 layer owns the installed Codex bridge. Lower adoption and public-procedure
 layers retain the four-file Python binding/launcher plus paired Rust executables.

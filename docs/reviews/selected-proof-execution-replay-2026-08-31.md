@@ -48,7 +48,7 @@ The #1891 semantic scope (`reporting_support.py`, `workspace_runtime_core.py`, `
 - no `--record-receipt` in the primary continuation;
 - explicit manual interoperability availability behind `proof_receipt_bridge`.
 
-This replay also guards the discovered template boundary: the selected set contains a supported `<paths>` command, and ordinary guidance now materializes it before admission just as the executor does.
+This replay also guards the discovered template boundary: the selected set contains a supported `<paths>` command, and ordinary guidance now materialises it before admission just as the executor does.
 
 A materially different `README.md` proof lane selects one command and also returns `next.action=execute-selected-proof`, with manual recording absent from the primary continuation and retained only as explicit detail/recovery.
 

@@ -6,7 +6,7 @@ Date: 2026-05-05
 
 This review checks whether settings in `.agentic-workspace/config.toml`
 and `.agentic-workspace/config.local.toml` concretely affect Agentic
-Workspace tool output or behavior, or whether they mainly rely on agents
+Workspace tool output or behaviour, or whether they mainly rely on agents
 noticing and following advice.
 
 The review used these surfaces:
@@ -21,7 +21,7 @@ The review used these surfaces:
 ## Summary
 
 Most configured settings are consumed by tool surfaces, but many are still
-structured advice rather than hard behavior.
+structured advice rather than hard behaviour.
 
 The strongest settings change command output, selected modules, startup
 adapters, lifecycle metadata, compatibility diagnostics, proof suggestions,
@@ -43,8 +43,8 @@ Hard:
 
 Operational:
 
-- Values directly change package output, installation behavior, lifecycle
-  behavior, selected files, command strings, or diagnostics.
+- Values directly change package output, installation behaviour, lifecycle
+  behaviour, selected files, command strings, or diagnostics.
 - Examples: `workspace.default_preset`, `workspace.agent_instructions_file`,
   `workspace.workflow_artifact_profile`, `workspace.cli_invoke`,
   `system_intent.*`, and `update.modules.*`.
@@ -165,14 +165,14 @@ ignored, and must not override checked-in Memory, Planning, config, or docs.
    skips those surfaces can miss them. Even when visible, they are not
    represented as a blocking gate.
 
-2. `assurance.strict_closeout` sounds stronger than the observed behavior in
+2. `assurance.strict_closeout` sounds stronger than the observed behaviour in
    no-active-plan workflows. It shapes closeout/proof guidance, but the force
    depends on using Planning or closeout reports.
 
 3. The current enforcement taxonomy is not yet a first-class audit. `config`
    reports classes, but there is no dedicated command that says which field is
    hard, which field only changes advice, which field appears unused, and
-   which field claims stronger behavior than observed.
+   which field claims stronger behaviour than observed.
 
 4. Advisory fields can look like policy to humans while acting as suggestions
    to agents. This is especially relevant for `workflow_obligations`,
@@ -180,7 +180,7 @@ ignored, and must not override checked-in Memory, Planning, config, or docs.
    posture.
 
 5. Local delegation settings are now visible in `start` and `implement`, but
-   the default `suggest` mode means behavior depends on the agent choosing to
+   the default `suggest` mode means behaviour depends on the agent choosing to
    act on the suggestion. That is correct for human control, but the output
    should continue to be explicit that `suggest` is not execution.
 
@@ -214,7 +214,7 @@ ignored, and must not override checked-in Memory, Planning, config, or docs.
    be to prepare a packet and stop. For `auto`, outputs should identify which
    local safety conditions made execution permissible.
 
-5. Treat optimization and improvement settings as output posture, not
+5. Treat optimisation and improvement settings as output posture, not
    execution control.
 
    `optimization_bias` should remain explicitly limited to density and residue

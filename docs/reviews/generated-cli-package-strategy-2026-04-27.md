@@ -34,14 +34,14 @@ TypeScript:
 Docker proof:
 
 - Put Node/TypeScript setup inside generated-package test containers.
-- Expose generated-package tests through Python-owned proof/check commands so ordinary repo development stays Python-centered.
+- Expose generated-package tests through Python-owned proof/check commands so ordinary repo development stays Python-centred.
 - Do not require Docker for root unit tests unless generated-package paths are touched.
 
 Shell adapters:
 
 - Defer bash and PowerShell generation until the IR has proven Python and TypeScript targets.
 - Treat shell outputs as thin wrappers, completion/help projections, or runtime package delegates.
-- Do not let shell behavior become authoritative.
+- Do not let shell behaviour become authoritative.
 
 ## Custom Codegen Boundary
 
@@ -57,7 +57,7 @@ Avoid custom code:
 - handwritten option parsers per target
 - target-specific copies of command semantics
 - runtime primitive implementations inside generators
-- generator logic that infers behavior from Python source
+- generator logic that infers behaviour from Python source
 
 ## Canonical Flow
 

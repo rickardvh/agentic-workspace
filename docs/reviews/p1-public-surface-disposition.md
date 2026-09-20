@@ -8,7 +8,7 @@ at the post-#3475 head before #3442/#3441 administrative closure.
 | Current surface | Disposition | Actual consumer and authority consequence |
 | --- | --- | --- |
 | start, compact/full/carried, exact detail references | KEEP_EXACT | CLI, Python, TypeScript and JSON clients resolve current domain facts, restrictions and requests; no effects. |
-| invoke, exact action/reference carriage | KEEP_EXACT | The same clients invoke a current owner action; reobservation and owner authorization remain mandatory. |
+| invoke, exact action/reference carriage | KEEP_EXACT | The same clients invoke a current owner action; reobservation and owner authorisation remain mandatory. |
 | worker entry/expand/return | KEEP_EXACT | Sealed Assignment manual/process transport; distinct from owner admission, integration or execution authority. |
 | resources audit/scratch/worktree operations | KEEP_EXACT | Native path, policy, Git lease and recovery semantics; useful directly, independently of skills. |
 | resources/propose/v1 | KEEP_EXACT | Generic start clients and exact owner-reference fragments observe a proposal through the same resource primitive; discovery never executes it. |

@@ -18,7 +18,7 @@ This slice implements the safe local decomposition available now: Planning
 runtime projection wrappers now declare repeated operation-call value mapping,
 defaults, and coercions through `_call_planning_operation` and
 `_planning_operation_value`, with focused regression tests. It does not claim a
-generated minimization count reduction. The remaining count is still 36 because
+generated minimisation count reduction. The remaining count is still 36 because
 command-generation cannot yet render and prove the generic operation-call
 adapter or the conditional dispatch adapter without hiding package-owned
 mutation semantics.
@@ -85,7 +85,7 @@ View/output formatting:
 These remain Planning view policy and compatibility formatting. They should be
 split only after a declared view-render policy exists with equivalent proof.
 
-Irreducible planning judgment:
+Irreducible planning judgement:
 
 - `close_planning_item`
 - `create_review_record`
@@ -95,7 +95,7 @@ Irreducible planning judgment:
 - `verify_payload`
 
 These own Planning-specific inspection, payload, handoff, review, close-item,
-or status judgment rather than portable deterministic generated behavior.
+or status judgement rather than portable deterministic generated behaviour.
 
 ## Implemented Safe Decomposition
 
@@ -108,10 +108,10 @@ Implemented now:
 - refactored Planning runtime projection mutation wrappers through that adapter
 - added regression tests for lane creation mapping, archive conditional branch
   mapping, archive execplan mapping, and closeout inverted retain-archive
-  behavior
+  behaviour
 - updated `python_runtime_projection_inventory.json` and
   `python_operation_execution_inventory.json` with the #1657 grouping and
-  minimization disposition
+  minimisation disposition
 
 Runtime source edit classification:
 
@@ -154,7 +154,7 @@ Why retained:
   portable adapter can be generated and proven
 - archive conditional dispatch needs command-generation#73
 - lifecycle, reconcile, lane/archive/closeout, payload, handoff, review, and
-  status functions still own Planning mutation safety, provenance, or judgment
+  status functions still own Planning mutation safety, provenance, or judgement
 - view/report/prompt output functions still own Planning compatibility policy
 
 This slice advances #1649 but does not satisfy the whole parent issue.

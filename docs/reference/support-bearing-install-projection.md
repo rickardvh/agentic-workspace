@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Support-Bearing Install Projection
 
 Checked-in projection of the latest immutable release-owned installation receipt.
@@ -22,7 +23,7 @@ Checked-in projection of the latest immutable release-owned installation receipt
 | `receipt.url` | string | yes |  | Immutable receipt asset URL. |  |  |
 | `receipt.sha256` | string | yes |  | Receipt content digest. |  |  |
 | `artifact` | object | yes |  | Root wheel selected by the receipt. |  |  |
-| `artifact.name` | string | yes |  | Artifact filename. |  |  |
-| `artifact.url` | string | yes |  | Immutable release artifact URL. |  |  |
-| `artifact.sha256` | string | yes |  | Artifact digest. |  |  |
+| `artifact.name` | string | yes |  | Artefact filename. |  |  |
+| `artifact.url` | string | yes |  | Immutable release artefact URL. |  |  |
+| `artifact.sha256` | string | yes |  | Artefact digest. |  |  |
 | `install_command` | string | yes |  | Exact human-copyable command projected from the release receipt. |  |  |

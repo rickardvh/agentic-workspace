@@ -727,7 +727,7 @@
       ".agentic-workspace/OWNERSHIP.toml",
       ".agentic-workspace/READING.json"
     ],
-    "rule": "Public host derivation reads only explicitly promoted portable sources or another declared host materialization; source-maintenance-only semantic inputs are forbidden."
+    "rule": "Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden."
   },
   "enclave": {
     "owner": "workspace",

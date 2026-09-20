@@ -26,7 +26,7 @@ pair. Batches do not retain a cache between owner evaluations. A subsequent
 source change is re-read and rejected.
 
 Remaining native evidence work includes independently deriving the actual
-execution runtime, selected strategy coverage and authenticated returned judgment.
+execution runtime, selected strategy coverage and authenticated returned judgement.
 Legacy Python runtime binding is preserved for compatibility; it is not copied
 from a stored receipt and treated as a current native runtime observation. A new
 native execution producer must bind the environment its command actually needs.
@@ -37,19 +37,19 @@ malformed identity negatives and independent language/JSON consumers protect thi
 boundary. These checks do not satisfy the separate expensive-proof reuse,
 independent review, native dogfood or supported-provider lifecycle gates.
 
-Exact task-claim judgment matching is also shared Rust authority. Python supplies
+Exact task-claim judgement matching is also shared Rust authority. Python supplies
 existing producer-index admission, proof sufficiency and observed freshness in
 bounded internal batches; callers cannot inject these observations through native
 `start`. Native receipt consumption uses the same matcher. Matching a current
 publication to the exact task and fingerprint is reported separately from having
-current evidence, and cannot replace required manual or independent judgment.
+current evidence, and cannot replace required manual or independent judgement.
 Missing/malformed matching fingerprints never match each other. Native runtime,
 strategy coverage and authenticated independent-review ingress remain unresolved.
 
-A task judgment also binds the exact normalized task/change request using the
+A task judgement also binds the exact normalised task/change request using the
 existing direct-task identity owner, independently of its durable Planning subject.
 Two different requested outcomes under the same Plan cannot share a slice-complete
-judgment solely because the Plan revision and proof inputs match. Older direct
-judgments whose work reference already proves that exact identity can derive this
-binding; older Planning judgments without it require renewed judgment. Whitespace
-normalization does not mint new semantic work or change Planning attempt custody.
+judgement solely because the Plan revision and proof inputs match. Older direct
+judgements whose work reference already proves that exact identity can derive this
+binding; older Planning judgements without it require renewed judgement. Whitespace
+normalisation does not mint new semantic work or change Planning attempt custody.

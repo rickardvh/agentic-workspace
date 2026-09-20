@@ -216,12 +216,12 @@
             "docs-contract",
             "host-config"
           ],
-          "description": "Canonical owner for behavior-relevant facts related to the aid."
+          "description": "Canonical owner for behaviour-relevant facts related to the aid."
         },
         "promote_behavior_relevant_facts_to": {
           "type": "string",
           "minLength": 1,
-          "description": "Target surface for behavior-relevant facts if the aid reveals reusable package behavior."
+          "description": "Target surface for behaviour-relevant facts if the aid reveals reusable package behaviour."
         },
         "agent_decision": {
           "type": "string",
@@ -272,7 +272,7 @@
             "module-manifest",
             "docs-contract"
           ],
-          "description": "How agents or tooling should discover the promoted artifact."
+          "description": "How agents or tooling should discover the promoted artefact."
         },
         "trigger": {
           "type": "string",
@@ -316,7 +316,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Conditions and retention behavior when the aid is no longer useful."
+      "description": "Conditions and retention behaviour when the aid is no longer useful."
     }
   },
   "allOf": [

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Evaluation issue disposition
 
 Auditable disposition of implementation work and the evaluation registered for an issue.

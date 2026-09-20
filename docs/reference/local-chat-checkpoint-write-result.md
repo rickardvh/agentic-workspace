@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace local chat checkpoint write result
 
 Stdout payload emitted after writing or refreshing the ignored local chat checkpoint record.

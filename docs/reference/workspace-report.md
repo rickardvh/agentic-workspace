@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Workspace Report
 
 Combined workspace report payload for installed modules, config posture, diagnostics, and next-action routing.
@@ -36,7 +37,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | Allowed target relation value for routing or validation. |  |  |
 | `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | Fixed compatibility value required by this contract. |  |  |
 | `invoked_cli_identity.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
-| `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | yes |  | Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts. |  |  |
+| `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | yes |  | Compatibility assessment across executable, repo payload, generated artefacts, and adapter contracts. |  |  |
 | `installed_state_compatibility.kind` | const `"agentic-workspace/installed-state-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `installed_state_compatibility.status` | enum `"compatible"`, `"upgrade-recommended"`, `"payload-upgrade-required"`, `"blocking-drift"` | yes |  | Current installed-state compatibility classification. |  |  |
 | `installed_state_compatibility.reason` | string | no |  | Short explanation for the selected status. |  |  |
@@ -91,7 +92,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `installed_state_compatibility.payload_repair_subflow.rule` | string | yes |  | Safety and command-rendering boundary for payload repair. |  |  |
 | `installed_state_compatibility.executable` | object | yes |  | Executable identity and compatibility classification. |  |  |
 | `installed_state_compatibility.payload` | object | yes |  | Installed repo payload compatibility and sync guidance. |  |  |
-| `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |
+| `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artefact freshness classification. |  |  |
 | `installed_state_compatibility.adapter_contracts` | array of object | no |  | Entry-surface adapter contracts covered by this model. |  |  |
 | `installed_state_compatibility.next_action` | string \| null | no |  | Suggested command when drift requires or recommends action. |  |  |
 | `installed_state_compatibility.action_effect` | object | no |  | Action and claim effect for the installed-state compatibility condition. |  |  |
@@ -114,12 +115,12 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `repo_posture` | object | yes |  | Effective repo posture ref, digest, provenance route, reorientation triggers, and closeout/report adherence visibility. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional report-visible dynamic instruction packet with selected posture, module contributions, and provenance. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
-| `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
+| `task_posture_packet.operating_posture` | object | yes |  | Resolved optimisation, artefact, initiative, assurance, and delegation posture for this task. |  |  |
 | `task_posture_packet.improvement_pressure_evaluation` | object | no |  | Session and repository improvement-pressure evaluation compiled into task posture. |  |  |
 | `task_posture_packet.dogfooding_signal_status` | object | no |  | Session dogfooding signal disposition and capture routing status. |  |  |
 | `task_posture_packet.dogfooding_obligations` | array of object | no |  | Dogfooding obligations that affect closeout and improvement capture. |  |  |
-| `task_posture_packet.optimization_effect` | object | no |  | Operational effects of the configured optimization posture. |  |  |
-| `task_posture_packet.operational_effectiveness` | object | no |  | Operational effectiveness matrix combining friction, proof, output, and optimization signals. |  |  |
+| `task_posture_packet.optimization_effect` | object | no |  | Operational effects of the configured optimisation posture. |  |  |
+| `task_posture_packet.operational_effectiveness` | object | no |  | Operational effectiveness matrix combining friction, proof, output, and optimisation signals. |  |  |
 | `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
 | `task_posture_packet.improvement_pressure_records` | array of object | yes |  | Admitted improvement-pressure candidate facts preserved for the canonical operating decision. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
@@ -182,14 +183,14 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `applicable_intent.authority_boundary.authority_class` | enum `"hard-gate"`, `"advisory-support"`, `"observed-facts"`, `"agent-owned"` | yes |  | Dominant authority class for the surface. |  |  |
 | `applicable_intent.authority_boundary.enforced_by_aw` | array of string | yes |  | Hard gates or constraints AW enforces for this surface. |  |  |
 | `applicable_intent.authority_boundary.observed_by_aw` | array of string | yes |  | Mechanical facts, evidence, path state, or configuration AW observed. |  |  |
-| `applicable_intent.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgment. |  |  |
+| `applicable_intent.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgement. |  |  |
 | `applicable_intent.authority_boundary.candidate_routes` | array of string | yes |  | Possible routes AW surfaced for the agent to evaluate. |  |  |
 | `applicable_intent.authority_boundary.proof_hints` | array of string | yes |  | Proof burden or validation hints relevant to the surface. |  |  |
-| `applicable_intent.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
+| `applicable_intent.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgements the agent owns. |  |  |
 | `applicable_intent.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
 | `applicable_intent.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
 | `applicable_intent.rule` | string | no |  | Usage rule for when this projection should be consulted. |  |  |
-| `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths. |  |  |
+| `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalised system-intent record and changed paths. |  |  |
 | `local_aw_state` | object | yes |  | Compact ownership-aware status for tracked, ignored, local-only, cache, payload, policy, and proof AW surfaces. |  |  |
 | `local_footprint` | object | yes |  | Tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing. |  |  |
 | `bootstrap_footprint` | object | no |  | Legacy checked-in AW payload migration plan with preserve/remove/write actions, durable state preservation, and explicit mirror-intent guard. |  |  |
@@ -197,8 +198,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `improvement_pressure_evaluation` | object | no |  | Session and repository improvement-pressure evaluation compiled into report posture. |  |  |
 | `dogfooding_signal_status` | object | no |  | Session dogfooding signal disposition and capture routing status. |  |  |
 | `dogfooding_obligations` | array of object | no |  | Dogfooding obligations that affect closeout and improvement capture. |  |  |
-| `optimization_effect` | object | no |  | Operational effects of the configured optimization posture. |  |  |
-| `operational_effectiveness` | object | no |  | Operational effectiveness matrix combining friction, proof, output, and optimization signals. |  |  |
+| `optimization_effect` | object | no |  | Operational effects of the configured optimisation posture. |  |  |
+| `operational_effectiveness` | object | no |  | Operational effectiveness matrix combining friction, proof, output, and optimisation signals. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
 | `verification` | object | yes |  | Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |
 | `requirement_grounding` | object | no |  | Report-visible requirement grounding projection for selected report sections. |  |  |
@@ -211,8 +212,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `surface_value_guardrail` | object | yes |  | Durable-surface review guardrail for avoiding unnecessary new surfaces. |  |  |
 | `effective_authority` | object | yes |  | Resolved authority hierarchy for workspace, module, and repo-owned surfaces. |  |  |
 | `operational_compression` | object | yes |  | Compression signals that keep ordinary agent startup and reporting cheap. |  |  |
-| `successful_completion_cost` | object | yes |  | Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions. |  |  |
-| `reasoning_economy` | object | yes |  | Visible-artifact reasoning-economy evidence classes, ledger examples, and behavior fixtures for report and closeout artifacts. |  |  |
+| `successful_completion_cost` | object | yes |  | Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimisation decisions. |  |  |
+| `reasoning_economy` | object | yes |  | Visible-artefact reasoning-economy evidence classes, ledger examples, and behaviour fixtures for report and closeout artefacts. |  |  |
 | `completion_contract` | object | yes |  | Derived Planning completion-contract lens for done, partial, blocked, and continuation-required decisions. |  |  |
 | `parent_intent_status` | ref `#/$defs/parent_intent_status` | no |  | Derived parent/original-intent status packet used to prevent slice proof from being reported as parent completion. |  |  |
 | `parent_intent_status.kind` | const `"agentic-workspace/parent-intent-status/v1"` | yes |  | Discriminator for the parent/original-intent status packet. |  |  |
@@ -225,23 +226,23 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `structured_findings` | object | yes |  | Structured finding residue shape for review and promotion routing. |  |  |
 | `external_evidence_safety` | object | yes |  | External evidence freshness, divergence, stale-after, and closeout-safety projection. |  |  |
 | `workflow_compliance_summary` | object | yes |  | Derived review and recovery summary of workflow entrypoint, satisfied or missing gates, trust impact, and recovery action. |  |  |
-| `closeout_report` | object | yes |  | Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, behavior-preservation proof/caveat facts, closeout-first review-compression contract, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary. |  |  |
+| `closeout_report` | object | yes |  | Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, behaviour-preservation proof/caveat facts, closeout-first review-compression contract, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary. |  |  |
 | `closeout_report.authority_boundary` | ref `#/$defs/authority_boundary` | no |  | Authority boundary showing which closeout/report signals are AW-enforced, observed, recommended, or agent-owned. |  |  |
 | `closeout_report.authority_boundary.kind` | const `"agentic-workspace/authority-boundary/v1"` | yes |  | Discriminator for the authority-boundary packet. |  |  |
 | `closeout_report.authority_boundary.surface` | string | yes |  | Payload surface whose authority categories are being described. |  |  |
 | `closeout_report.authority_boundary.authority_class` | enum `"hard-gate"`, `"advisory-support"`, `"observed-facts"`, `"agent-owned"` | yes |  | Dominant authority class for the surface. |  |  |
 | `closeout_report.authority_boundary.enforced_by_aw` | array of string | yes |  | Hard gates or constraints AW enforces for this surface. |  |  |
 | `closeout_report.authority_boundary.observed_by_aw` | array of string | yes |  | Mechanical facts, evidence, path state, or configuration AW observed. |  |  |
-| `closeout_report.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgment. |  |  |
+| `closeout_report.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgement. |  |  |
 | `closeout_report.authority_boundary.candidate_routes` | array of string | yes |  | Possible routes AW surfaced for the agent to evaluate. |  |  |
 | `closeout_report.authority_boundary.proof_hints` | array of string | yes |  | Proof burden or validation hints relevant to the surface. |  |  |
-| `closeout_report.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
+| `closeout_report.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgements the agent owns. |  |  |
 | `closeout_report.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
 | `closeout_report.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
 | `closeout_report.intent_evidence` | object | no |  | Closeout intent provenance showing whether interpreted intent came from planning evidence, user text, issue/reference evidence, handoff evidence, or agent inference. |  |  |
 | `closeout_report.interpreted_intent` | object | no |  | Requested outcome, intent-source evidence, satisfaction status, and closure decision rendered for the closeout report. |  |  |
 | `closeout_report.decision_review` | object | no |  | Derived review packet for agent-authored system decision facts, owner-model split, completeness, absence routing, and durable-owner guidance. |  |  |
-| `closeout_report.review_compression` | object | no |  | Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, behavior-preserving refactor semantic-risk focus, detail routes, and human-owned decisions. |  |  |
+| `closeout_report.review_compression` | object | no |  | Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, behaviour-preserving refactor semantic-risk focus, detail routes, and human-owned decisions. |  |  |
 | `closeout_report.validation` | object | no |  | Closeout validation projection, including proof confidence and behavior_preservation facts when preservation claims, proof classes, unsupported claims, or caveats were recorded. |  |  |
 | `closeout_report.closeout_adoption` | object | no |  | Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports. |  |  |
 | `closeout_report.completion_gate` | ref `#/$defs/completion_gate` | no |  | Closeout transition gate that blocks full completion or closure-language claims when active human intent is unsatisfied and no explicit human-accepted partial scope exists. |  |  |
@@ -252,12 +253,12 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.completion_gate.claim_level_requested` | string | yes |  | Requested claim level being evaluated. |  |  |
 | `closeout_report.completion_gate.claim_level_allowed` | string | yes |  | Highest claim level supported by the gate. |  |  |
 | `closeout_report.completion_gate.required_next_action` | anyOf | yes |  | Required transition before the workflow can stop or claim completion. |  |  |
-| `closeout_report.completion_gate.claim_authorization` | ref `#/$defs/claim_authorization` | yes |  | Structured claim classes and closure actions authorized or blocked by the gate. |  |  |
-| `closeout_report.completion_gate.claim_authorization.kind` | const `"agentic-workspace/claim-authorization/v1"` | yes |  | Discriminator for structured completion claim authorization. |  |  |
+| `closeout_report.completion_gate.claim_authorization` | ref `#/$defs/claim_authorization` | yes |  | Structured claim classes and closure actions authorised or blocked by the gate. |  |  |
+| `closeout_report.completion_gate.claim_authorization.kind` | const `"agentic-workspace/claim-authorization/v1"` | yes |  | Discriminator for structured completion claim authorisation. |  |  |
 | `closeout_report.completion_gate.claim_authorization.allowed_claim_classes` | array of enum `"partial_progress"`, `"local_pr_complete"`, `"slice_complete"`, `"leaf_issue_complete"`, `"lane_complete"`, `"parent_issue_complete"`, `"parent_complete"`, `"full_intent_complete"`, `"mutation_baseline_revalidation"`, `"issue_closure"` | yes |  | Claim classes renderers may use. |  |  |
 | `closeout_report.completion_gate.claim_authorization.blocked_claim_classes` | array of enum `"partial_progress"`, `"local_pr_complete"`, `"slice_complete"`, `"leaf_issue_complete"`, `"lane_complete"`, `"parent_issue_complete"`, `"parent_complete"`, `"full_intent_complete"`, `"mutation_baseline_revalidation"`, `"issue_closure"` | yes |  | Claim classes renderers must not use. |  |  |
 | `closeout_report.completion_gate.claim_authorization.closure_actions` | array of object | yes |  | Structured closure actions such as issue closure for concrete targets. |  |  |
-| `closeout_report.completion_gate.claim_authorization.renderer_rule` | string | yes |  | Renderer rule requiring templates to be selected only from authorized claim classes/actions. |  |  |
+| `closeout_report.completion_gate.claim_authorization.renderer_rule` | string | yes |  | Renderer rule requiring templates to be selected only from authorised claim classes/actions. |  |  |
 | `closeout_report.completion_gate.claim_authorization.diagnostics` | object | yes |  | Human-readable examples for explanation only; not the enforcement model. |  |  |
 | `closeout_report.completion_gate.claim_authorization.diagnostics.unsafe_claim_examples` | array of string | yes |  | Human-readable examples of unsafe completion prose for explanation only. |  |  |
 | `closeout_report.completion_gate.claim_authorization.diagnostics.diagnostic_only` | const `true` | yes |  | Marker that unsafe_claim_examples are diagnostics, not enforcement rules. |  |  |
@@ -270,7 +271,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.completion_gate.continuation.owner_surface` | string | no |  | Planning, lane, decomposition, or other durable surface that owns the residual intent. |  |  |
 | `closeout_report.completion_gate.continuation.created_or_required` | boolean | no |  | Whether follow-on work has been created or is required before full completion can be claimed. |  |  |
 | `closeout_report.completion_gate.continuation.reason` | string | no |  | Why continuation or follow-on routing is required. |  |  |
-| `closeout_report.completion_gate.authority_boundary` | object | yes |  | Boundary stating AW enforces the transition rule while the agent owns semantic satisfaction judgment and the human owns accepted narrowing. |  |  |
+| `closeout_report.completion_gate.authority_boundary` | object | yes |  | Boundary stating AW enforces the transition rule while the agent owns semantic satisfaction judgement and the human owns accepted narrowing. |  |  |
 | `closeout_report.completion_gate.rule` | string | no |  | Invariant enforced by the completion gate. |  |  |
 | `continuation_next_actions` | object | yes |  | Evidence-ranked next actions for safe continuation. |  |  |
 | `migration_pilot_template` | object | yes |  | Optional migration-pilot decomposition template with parity and rollout boundaries. |  |  |

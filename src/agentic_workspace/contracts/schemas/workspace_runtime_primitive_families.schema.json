@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agentic-workspace.local/schemas/workspace_runtime_primitive_families.schema.json",
   "title": "Workspace runtime primitive families",
-  "description": "Family-level ownership inventory for root workspace_runtime_primitives.py behavior and high-confidence declarative migrations.",
+  "description": "Family-level ownership inventory for root workspace_runtime_primitives.py behaviour and high-confidence declarative migrations.",
   "type": "object",
   "required": [
     "schema_version",
@@ -54,7 +54,7 @@
         "enforcement": {
           "type": "string",
           "minLength": 1,
-          "description": "Checker behavior that keeps the core boundary fail-closed."
+          "description": "Checker behaviour that keeps the core boundary fail-closed."
         },
         "consumer_modules": {
           "type": "array",
@@ -224,7 +224,7 @@
         "core_role": {
           "type": "string",
           "minLength": 1,
-          "description": "Why this family is shared core behavior rather than a generated or owner-module entrypoint."
+          "description": "Why this family is shared core behaviour rather than a generated or owner-module entrypoint."
         },
         "exclusion_rule": {
           "type": "string",
@@ -310,12 +310,12 @@
             "schema_version": {
               "type": "string",
               "minLength": 1,
-              "description": "Expected command-generation generated artifact metadata schema version."
+              "description": "Expected command-generation generated artefact metadata schema version."
             },
             "source_ir_schema_version": {
               "type": "string",
               "minLength": 1,
-              "description": "Expected command package IR schema version used as generated artifact source."
+              "description": "Expected command package IR schema version used as generated artefact source."
             },
             "target_layout_versions": {
               "type": "object",
@@ -340,7 +340,7 @@
             }
           },
           "additionalProperties": false,
-          "description": "CG-owned generated artifact metadata expectations consumed by generated package proof."
+          "description": "CG-owned generated artefact metadata expectations consumed by generated package proof."
         },
         "generated_or_contract_refs": {
           "type": "array",
@@ -349,7 +349,7 @@
             "type": "string",
             "minLength": 1
           },
-          "description": "Contract, generated artifact, or package surfaces related to this family."
+          "description": "Contract, generated artefact, or package surfaces related to this family."
         },
         "proof_refs": {
           "type": "array",

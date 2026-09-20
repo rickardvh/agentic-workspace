@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Correction event operation input
 
 Input accepted by generated correction-event lifecycle operations.
@@ -12,13 +13,13 @@ Input accepted by generated correction-event lifecycle operations.
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Input accepted by generated correction-event lifecycle operations. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `authority` | string | no |  | Claimed correction authority; not trusted without a trusted authority receipt. |  |  |
-| `behavior_class` | string | no |  | Stable behavior class for semantic correction identity. |  |  |
+| `behavior_class` | string | no |  | Stable behaviour class for semantic correction identity. |  |  |
 | `canonical_owner_evidence_ref` | string | no |  | Evidence that the named canonical owner already owns the corrected invariant; required with the canonical-owner route. |  |  |
 | `canonical_owner_ref` | string | no |  | Existing policy, guidance, configuration, issue, or other canonical owner that already owns the corrected invariant. |  |  |
 | `delivery_id` | string | no |  | Stable delivery identifier for this correction event. |  |  |
-| `desired_behavior` | string | no |  | Behavior the correction says should replace the previous behavior. |  |  |
+| `desired_behavior` | string | no |  | Behaviour the correction says should replace the previous behaviour. |  |  |
 | `dry_run` | boolean | no |  | When true, report the intended operation without applying a storage mutation. |  |  |
-| `event_json` | string | no |  | Serialized correction event payload. |  |  |
+| `event_json` | string | no |  | Serialised correction event payload. |  |  |
 | `evidence_hash` | string | no |  | Hash of evidence supporting the correction. |  |  |
 | `evidence_ref` | string | no |  | Reference to evidence supporting the correction. |  |  |
 | `format` | enum `"text"`, `"json"` | no |  | Requested output format. |  |  |
@@ -28,12 +29,12 @@ Input accepted by generated correction-event lifecycle operations.
 | `predecessor_event_id` | string | no |  | Prior correction event being disputed, withdrawn, or superseded. |  |  |
 | `producer_class` | string | no |  | Producer class used for authority resolution. |  |  |
 | `producer_id` | string | no |  | Producer identity used for audit and authority resolution. |  |  |
-| `replaced_behavior` | string | no |  | Behavior boundary being corrected or superseded. |  |  |
+| `replaced_behavior` | string | no |  | Behaviour boundary being corrected or superseded. |  |  |
 | `route_decisions` | array of string | no |  | Requested routing decisions for trusted correction events, including evidence-backed canonical-owner disposition without duplicate retention. |  |  |
 | `scope_class` | string | no |  | Scope class where the correction applies. |  |  |
 | `phase` | string | no |  | Workflow phase where the correction applies. |  |  |
 | `subsystem` | string | no |  | Subsystem boundary where the correction applies. |  |  |
-| `surface` | string | no |  | Concrete operation or artifact surface where the correction applies. |  |  |
+| `surface` | string | no |  | Concrete operation or artefact surface where the correction applies. |  |  |
 | `source` | string | no |  | Human-readable correction source label. |  |  |
 | `source_ref` | string | no |  | Stable source reference for audit and idempotency. |  |  |
 | `target` | string | no |  | Target repository path. |  |  |

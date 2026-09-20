@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Repo Friction Policy
 
 Policy for classifying repo friction and deciding whether to fix, route, or defer it.
@@ -15,7 +16,7 @@ Policy for classifying repo friction and deciding whether to fix, route, or defe
 | `workspace_self_adaptation` | object | yes |  | Workspace self adaptation details used by this contract. |  |  |
 | `workspace_self_adaptation.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
 | `workspace_self_adaptation.summary` | string | yes |  | Short human-readable summary for this entry. |  |  |
-| `workspace_self_adaptation.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `workspace_self_adaptation.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `workspace_self_adaptation.applies_to` | array of string | yes |  | Ordered applies to entries used by this contract. |  |  |
 | `workspace_self_adaptation.bounded_by` | array of string | yes |  | Ordered bounded by entries used by this contract. |  |  |
 | `friction_response_order` | array of object | yes |  | Ordered friction response order entries used by this contract. |  |  |
@@ -33,7 +34,7 @@ Policy for classifying repo friction and deciding whether to fix, route, or defe
 | `repo_directed_improvement_threshold.collaboration_bias` | string | yes |  | Collaboration bias text value used by this contract. |  |  |
 | `validation_friction` | object | yes |  | Validation friction details used by this contract. |  |  |
 | `validation_friction.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
-| `validation_friction.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `validation_friction.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `validation_friction.failure_classification` | array of object | yes |  | Ordered failure classification entries used by this contract. |  |  |
 | `validation_friction.correct_by_design_remedy_order` | array of string | yes |  | Ordered correct by design remedy order entries used by this contract. |  |  |
 | `validation_friction.repeated_failure_signal` | string | yes |  | Repeated failure signal text value used by this contract. |  |  |

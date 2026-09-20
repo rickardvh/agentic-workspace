@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/workflow-artifact-profiles.schema.json",
-  "title": "Workflow Artifact Profiles",
-  "description": "Profiles describing native workflow artifacts and their sync rules.",
+  "title": "Workflow Artefact Profiles",
+  "description": "Profiles describing native workflow artefacts and their sync rules.",
   "type": "object",
   "required": [
     "schema_version",
@@ -44,9 +44,9 @@
             "type": "array",
             "items": {
               "type": "string",
-              "description": "One entry in the native artifacts list."
+              "description": "One entry in the native artefacts list."
             },
-            "description": "Ordered native artifacts entries used by this contract."
+            "description": "Ordered native artefacts entries used by this contract."
           },
           "canonical_surfaces": {
             "type": "array",

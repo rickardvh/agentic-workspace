@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Context Authority Declaration
 
 Authority and lifecycle declaration for one AW-consumed context surface class.

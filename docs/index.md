@@ -24,7 +24,7 @@ Use the [reference index](reference/index.md) to look up a particular interface.
 
 [Integrate an agent or tool](extension-boundary.md) · [Add a capability](module-capability-contract.md)
 
-For a project-specific rule or skill, start with [configuration](customization.md). Extending AW is a separate task, not a prerequisite for customizing a repository.
+For a project-specific rule or skill, start with [configuration](customization.md). Extending AW is a separate task, not a prerequisite for customising a repository.
 
 ## Contribute to AW
 

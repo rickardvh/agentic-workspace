@@ -20,10 +20,10 @@ domains:
 - runtime support: passed;
 - generated semantic conformance: passed;
 - install identity: passed;
-- redistribution and license: passed;
+- redistribution and licence: passed;
 - security and supply chain: ready.
 
-The promotion artifact map binds the published Python wheels and sdists, npm
+The promotion artefact map binds the published Python wheels and sdists, npm
 tarballs, semantic-conformance receipts, install and redistribution receipts,
 SBOM, and security receipt by SHA-256. GitHub's published asset digests match
 those promotion subjects. The coordinated release manifest references the
@@ -68,7 +68,7 @@ admitted merge branch through
 
 The release risks eliminated by the lane are accidental third-party Python
 resolution, mutable-branch support installs, unproven runnable generated
-targets, source-only artifact claims, missing install/reference closure,
+targets, source-only artefact claims, missing install/reference closure,
 unlicensed or contradictory package metadata, unprotected promotion, incomplete
 runtime claims, and missing supply-chain admission.
 
@@ -78,7 +78,7 @@ advertised. The project remains classified Alpha, which is a maturity statement
 and does not weaken or bypass the support-bearing promotion gate.
 
 Closure is honest because a public protected-commit release exercised the same
-promotion decision and exact artifacts that publication consumed, and the last
+promotion decision and exact artefacts that publication consumed, and the last
 distribution slice succeeded from clean resolution through a later process.
 
 [release]: https://github.com/rickardvh/agentic-workspace/releases/tag/v0.40.1

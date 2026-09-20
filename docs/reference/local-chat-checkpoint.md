@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace local chat checkpoint
 
 Ignored local-only continuity checkpoint used to rehydrate a chat after compaction or resume without treating local notes as closure evidence.

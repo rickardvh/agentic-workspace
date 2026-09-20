@@ -66,7 +66,7 @@ Tracked by #644. This PR promotes the stable package-local read-only commands th
 
 ## Lifecycle Dry-Run And Mutation Commands
 
-Tracked by #642. This lane added black-box conformance for lifecycle dry-run/refusal behavior without enabling mutation-capable generated adapters:
+Tracked by #642. This lane added black-box conformance for lifecycle dry-run/refusal behaviour without enabling mutation-capable generated adapters:
 
 - `install.lifecycle.dry-run.process` proves install dry-run plan shape and no writes.
 - `init.lifecycle.dry-run.process` proves init dry-run plan shape and no writes.
@@ -77,9 +77,9 @@ Tracked by #642. This lane added black-box conformance for lifecycle dry-run/ref
 
 Lifecycle commands stay below `mutation-capable-adapter` until generated adapters can prove:
 
-- dry-run behavior separately from apply behavior;
+- dry-run behaviour separately from apply behaviour;
 - strict preflight gate handling before mutation;
-- destructive-refusal behavior before runtime primitive invocation;
+- destructive-refusal behaviour before runtime primitive invocation;
 - human review requirements in generated help/error paths;
 - black-box failure coverage for unsafe or incomplete invocations.
 

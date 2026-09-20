@@ -55,7 +55,7 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --aw-dependency-mode local-wheelhouse
 ```
 
-`--aw-dependency-mode local-wheelhouse` builds wheels from the current checkout, copies them into the disposable fixture, patches the copied root wheel to point at sibling fixture-local wheels, and makes the fixture depend on that single root wheel. It still exercises packaged artifacts through `uv sync`; it does not use editable installs or copy raw source into the sandbox image.
+`--aw-dependency-mode local-wheelhouse` builds wheels from the current checkout, copies them into the disposable fixture, patches the copied root wheel to point at sibling fixture-local wheels, and makes the fixture depend on that single root wheel. It still exercises packaged artefacts through `uv sync`; it does not use editable installs or copy raw source into the sandbox image.
 
 The runner defaults to dry-run. It copies the scenario fixture into the configured local scratch root under `.agentic-workspace/local/scratch/model-cli-harness`, renders the prompt, writes `run.json`, and prints the exact CLI command it would execute. Add `--execute` only when you intentionally want to spend model calls and allow the configured CLI to operate in the copied fixture.
 
@@ -98,7 +98,7 @@ Suites live under `tools/model-cli-harness/suites/`. Each suite defines:
 - `block_on_preflight_failure`: whether missing requirements should prevent model execution.
 - `provider_home_env` and `provider_home_path`: optional state-isolation hook used by `--isolate-provider-home`.
 - `sandbox`: optional sandbox adapter metadata. The result record includes `sandbox.kind`, `backend`, `agent`, `identity`, `repo_path`, `setup_status`, `setup_failures`, and `evidence: sandbox-backed`.
-- `artifact_capture`: optional host artifact capture from adapter-visible paths. The `codex-sbx` adapter writes the final message inside the mounted fixture and the harness copies it back to the standard run-local `share_path`.
+- `artifact_capture`: optional host artefact capture from adapter-visible paths. The `codex-sbx` adapter writes the final message inside the mounted fixture and the harness copies it back to the standard run-local `share_path`.
 - `scenarios`: disposable fixture name, human prompt or `prompt_variants`, expected signals, scoring notes, and optional metadata scoring.
 - `fixtures`: copied repos under `tools/model-cli-harness/fixtures/`.
 
@@ -113,7 +113,7 @@ Scenario metadata can express common scoring without adding Python branches:
 - `forbidden_response_phrases`: final/transcript text must not contain these phrases.
 - `required_artifact_patterns`: paths that must exist in the copied fixture after an executed run.
 
-To add another model CLI, add an adapter entry with a command list. Do not hard-code CLI behavior in the runner unless it is common to all adapters.
+To add another model CLI, add an adapter entry with a command list. Do not hard-code CLI behaviour in the runner unless it is common to all adapters.
 
 ## Scenario Coverage
 
@@ -123,7 +123,7 @@ The current suite evaluates these semi-realistic workflow pressure points. The p
 - `direct-task-minimal-overhead`: whether a tiny edit stays direct and avoids creating planning residue.
 - `broad-work-decomposition`: whether broad product work is classified and decomposed before implementation.
 - `cli-discovery-before-planning`: whether an agent verifies actual Agentic Workspace commands instead of hallucinating lifecycle commands or mixing in runtime-native plan commands.
-- `planning-artifact-integrity`: whether a created planning artifact lands on canonical schema-backed surfaces and is checked with `summary`.
+- `planning-artifact-integrity`: whether a created planning artefact lands on canonical schema-backed surfaces and is checked with `summary`.
 - `native-plan-bridge`: whether an agent can use native/private planning while bridging durable decisions into repo-visible Agentic Workspace state.
 - `memory-consult-before-edit`: whether an agent consults the Memory index and a narrow durable note before a context-sensitive edit.
 - `memory-learning-capture`: whether repeated friction becomes compact durable Memory instead of staying in chat.
@@ -204,9 +204,9 @@ Large evaluator prompts should use file-backed prompt transport. The default sui
 
 The first episode pack is intentionally small:
 
-- `intent-proof-packaging-specifier.json`: Packaging `===` original-string behavior, aimed at intent-proof and residual-risk scoring.
-- `reuse-abstraction-pluggy.json`: Pluggy multi-implementation unregister behavior, aimed at abstraction/reuse, agent-switch continuation, and same-agent continuation comparison.
-- `intent-proof-click-pager.json`: Click `CliRunner` / pager closed-file behavior, aimed at proof confidence for user-visible CLI behavior.
+- `intent-proof-packaging-specifier.json`: Packaging `===` original-string behaviour, aimed at intent-proof and residual-risk scoring.
+- `reuse-abstraction-pluggy.json`: Pluggy multi-implementation unregister behaviour, aimed at abstraction/reuse, agent-switch continuation, and same-agent continuation comparison.
+- `intent-proof-click-pager.json`: Click `CliRunner` / pager closed-file behaviour, aimed at proof confidence for user-visible CLI behaviour.
 - `managed-planning-state-agentic-workspace.json`: AW invalid Planning fixture, aimed at managed-state and wrong-owner edit traps.
 
 Most records pin real upstream repos and reference fixes; the managed-state episode uses a repo-local fixture so it can exercise AW-owned surfaces without mutating this checkout. Ordinary CI should use fake-adapter tests for deterministic coverage. Real model executions are maintainer evidence and should be reviewed with the evaluator output and transcripts, not treated as a leaderboard.
@@ -244,11 +244,11 @@ uv run python scripts/model_cli_harness/run_model_cli_harness.py `
   --postmortem-feedback
 ```
 
-Treat the answer as evidence, not as ground truth. Separate provider/model limitations from package and harness improvements, and promote only feedback that explains observed behavior or suggests a compact, safer next-step surface.
+Treat the answer as evidence, not as ground truth. Separate provider/model limitations from package and harness improvements, and promote only feedback that explains observed behaviour or suggests a compact, safer next-step surface.
 
 Postmortem feedback must be isolated from the copied repo and tool access. Adapters can provide a separate `postmortem_command` and `{postmortem_cwd}` for this purpose. If an adapter cannot provide a true no-tool/no-repo reflection mode, mark `postmortem_feedback_supported` as `false`; the harness then records an unsupported postmortem status instead of launching a second tool-using coding session.
 
-`tools/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artifacts when the evidence supports that.
+`tools/model-cli-harness/model-task-weakness-ledger.json` is the source-checkout-only ledger for repeated weak points. Keep entries compact: area, scenario, models, status, failure classes, evidence references, owner, next probe, and priority. Promote only recurring or high-consequence findings; dismiss one-off provider/runtime failures as acceptable variance or fixture artefacts when the evidence supports that.
 
 The #1600 external-agent evaluation lane is defined in `tools/model-cli-harness/external-agent-evaluation/`. Use that pack when maintainer work needs the scorecard/taxonomy, evaluator invariants, canonical scenario probes, historical failure fixtures, promotion decisions, surface simplification decisions, operational decision trace, or lane-level closure report. Validate it with:
 

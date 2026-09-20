@@ -21,7 +21,7 @@ Private target identities and values are deliberately omitted.
 | Machine-local targets: model_family, provider | migrate | Identity metadata in the same ignored local instruction; canonical target IDs and revisions remain unchanged. |
 | Machine-local target current_economic_evidence | obsolete | Its recorded observation was expired and explicitly unknown. No current economic evidence was established; guidance preserves that boundary without an evidence claim. |
 | Harness shared config: schema_version | obsolete | Validated current shared fixture. |
-| Harness workspace.optimization_bias | migrate | Scoped configuration-behavior instruction requests concise agent-readable output. |
+| Harness workspace.optimization_bias | migrate | Scoped configuration-behaviour instruction requests concise agent-readable output. |
 | Harness workflow_obligations.config_closeout: summary, stage, scope_tags, commands, review_hint | migrate | Scoped instruction requires effective-config inspection and reporting before completion when relevant. Current owner inspection replaces the unavailable command recipe. |
 | Harness local config: schema_version | obsolete | Validated current local fixture. |
 | Harness runtime capability booleans | obsolete | Synthetic observations are not runtime facts. Scoped guidance requires current observation. |
@@ -29,7 +29,7 @@ Private target identities and values are deliberately omitted.
 | Harness delegation.mode=auto | migrate | delegation.transport_authority=automatic; independent safety=false still prevents automatic execution. |
 | Harness targets: strength, task_fit, capability_classes | migrate | Scoped target-selection preferences; hard prohibitions remain in config. |
 | Harness targets: execution_methods | migrate | Canonical manual transports. The docs worker had no executable command, so no executable was invented; the instruction records manual handoff. |
-| Harness escalation_target, human_control_modes | obsolete | Current Assignment judgment selects targets; canonical transport authority and independent human review remain. |
+| Harness escalation_target, human_control_modes | obsolete | Current Assignment judgement selects targets; canonical transport authority and independent human review remain. |
 | Test-only recommended-control source excerpt | obsolete | Deleted acceptance/preservation fixture. Current repository commit-after-proof guidance already lives in AGENTS.md and scoped instructions. |
 | Native independent-owner fixture: schema_version, revision, contract_revision | migrate | No config marker; one exact implementation/contract binding with identical grants, scope, reads and settings. |
 | Embedded operation-conformance config: version markers | obsolete | The same generated operations use unversioned sources. |
@@ -49,7 +49,7 @@ human preferences. No trust revision is advanced to HEAD by this cleanup.
 No populated cli_compatibility requirement was found in the actual repository or
 machine-local sources. Its human-config negotiation and repair machinery is
 removed. Independently current payload target/capability requirements remain with
-Payload; configured invocation remains with Workspace. Installed artifact identity
+Payload; configured invocation remains with Workspace. Installed artefact identity
 and byte/provenance checks retain their existing owner.
 
 ## Deleted machinery
@@ -79,7 +79,7 @@ recorded waivers and currentness are not policy input.
 Current proof policy with a disabled Verification owner remains a completion
 restriction. Local safety and human-review constraints remain independent.
 Configuration grants neither proof nor source trust. Package payload refresh
-continues to require exact artifact bytes and an authorized file proposal.
+continues to require exact artefact bytes and an authorised file proposal.
 
 Validation must cover creation/read/edit, old-input rejection before state,
 configured proof and safety, exact independent grants, payload currentness,
@@ -93,7 +93,7 @@ Ownership and payload provenance identify current non-configuration contracts.
 Their identity/admission semantics are unchanged. Semantic-route and Planning
 source custody transitions are current non-configuration owners. Historical
 release fragments, decision records and review reports retain their provenance.
-Runtime admission wire names identify the executing artifact and pre-state
+Runtime admission wire names identify the executing artefact and pre-state
 boundary; they no longer negotiate human-config reader requirements. Generic
 operation/adapter compatibility fingerprints concern executable contracts, not
 prerelease human configuration.
@@ -102,16 +102,16 @@ prerelease human configuration.
 
 - `runtime_compatibility.rs`, its input schema, and native ingress retain the
   pre-state wire identity. They validate the current schema and report executing
-  artifact facts; no configured epochs, version negotiations, or capability bags
-  are read. Installed-state compatibility validates current artifact provenance
+  artefact facts; no configured epochs, version negotiations, or capability bags
+  are read. Installed-state compatibility validates current artefact provenance
   and the Payload-owned floor.
 - `native_routes.rs`, `native_planning.rs`, and corresponding `former` tests
   preserve source custody for current route/Planning records. They do not decode
   another human config grammar.
 - `assurance_applicability.rs` labels unresolved semantic scope as `legacy_scope`;
-  this is current task judgment over Verification-owned declarations, not a
+  this is current task judgement over Verification-owned declarations, not a
   former configuration reader. Requirement `level` remains canonical;
-  subsystem profile's `level` alias is removed in favor of `assurance_level`.
+  subsystem profile's `level` alias is removed in favour of `assurance_level`.
 - `config.py`'s legacy delegation-outcome path and `session_logging.py`'s event
   recovery concern recorded evidence/logs. Neither supplies human configuration.
 - `client.py` operation compatibility fingerprints and TypeScript package payload
@@ -150,9 +150,9 @@ preparation/startup checks also pass. Required hosted merge validation is report
 on the PR for the pushed correction head, separately from this local evidence.
 
 The first correction's hosted run passed the public integration guard and exposed
-a later lifecycle serialization failure. The result adapter now converts nested
+a later lifecycle serialisation failure. The result adapter now converts nested
 configuration dataclasses and tuples into JSON values. The existing skills-first
-lifecycle suite passes all 18 tests, including initialization and upgrade with and
+lifecycle suite passes all 18 tests, including initialisation and upgrade with and
 without a mirrored payload.
 
 - Actual shared and ignored local sources load through the closed Python reader;

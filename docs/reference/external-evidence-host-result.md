@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # External Evidence Host Result
 
 Producer custody resolved by a package-trusted host signature and referenced opaquely by callers.

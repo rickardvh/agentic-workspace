@@ -4,7 +4,7 @@ Local chat checkpoints are ignored, machine-local continuity hints stored at `.a
 
 They use `kind: agentic-workspace/local-chat-checkpoint/v2` and are intentionally not durable AW evidence. A checkpoint may record the current task, repo root, remote URL, branch, PR or issue refs, local HEAD, upstream HEAD, short dirty-state notes, the last proof command names, blockers, and the next safe command. It must point to durable sources such as issues, PRs, checked-in Planning, Memory, docs, reviews, or proof receipts instead of copying raw transcript or policy text. Older `agentic-workspace/local-chat-checkpoint/v1` records are legacy local hints and should be treated as stale until rewritten.
 
-Local work threads generalize checkpoints into multiple selectable continuation handles under `.agentic-workspace/local/work-threads/`. Startup projects an existing checkpoint through the `work_threads` selector as `checkpoint-default` when useful, but the checkpoint remains local-only, advisory, non-evidence, and safe to ignore or replace.
+Local work threads generalise checkpoints into multiple selectable continuation handles under `.agentic-workspace/local/work-threads/`. Startup projects an existing checkpoint through the `work_threads` selector as `checkpoint-default` when useful, but the checkpoint remains local-only, advisory, non-evidence, and safe to ignore or replace.
 
 The required resume rule is: treat older chat as advisory and re-read `durable_sources` before making claims.
 
@@ -13,7 +13,7 @@ Guardrails:
 - Store only under `.agentic-workspace/local/`, which is gitignored.
 - Do not store secrets, auth tokens, raw chat transcripts, broad logs, or durable policy.
 - Do not treat the checkpoint as closure evidence.
-- Promote durable decisions to checked-in AW artifacts, issues, PRs, docs, reviews, or proof receipts.
+- Promote durable decisions to checked-in AW artefacts, issues, PRs, docs, reviews, or proof receipts.
 
 Example:
 

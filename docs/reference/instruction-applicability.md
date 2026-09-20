@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Scoped instruction applicability
 
 Current path scope and agent-selected route applicability only; never binding or execution authority.

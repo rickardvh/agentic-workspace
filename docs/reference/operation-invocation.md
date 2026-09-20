@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Operation Invocation
 
 Typed invocation for a routed AW action. This object owns machine action identity; rendered commands are display or manual transport forms.
@@ -29,7 +30,7 @@ Typed invocation for a routed AW action. This object owns machine action identit
 | `expected_input_revision` | string | no |  | Optional revision or freshness precondition for the input state. |  |  |
 | `expected_transition` | string | no |  | Expected state transition that distinguishes progress from a same-state loop. |  |  |
 | `idempotency_key` | string | yes |  | Stable retry identity derived from operation, arguments, revision, and transition. |  |  |
-| `claim_effect` | string | no |  | Claim or proof effect authorized when the invocation succeeds. |  |  |
+| `claim_effect` | string | no |  | Claim or proof effect authorised when the invocation succeeds. |  |  |
 | `stale_action_rejection` | object | no |  | Fail-closed stale-action policy for consumers executing this invocation. |  |  |
 | `renderings` | object | no |  | Display or manual transport renderings derived from the typed invocation. |  |  |
 | `renderings.cli` | string | no |  | CLI rendering for humans or manual execution. |  |  |

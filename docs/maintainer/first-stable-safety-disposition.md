@@ -32,7 +32,7 @@ module-specific choreography in the canonical skill.
 
 ## Candidate preparation and review (#3227, #3236)
 
-The clarified requirement is behavioral: an agent that implemented or materially
+The clarified requirement is behavioural: an agent that implemented or materially
 changed a PR must not review/approve it or spawn/direct a reviewer to do so.
 `AGENTS.md`, delivered on ordinary Codex entry, carries the rule to report
 `ready for independent review` and stop after implementation or review fixes.
@@ -45,7 +45,7 @@ App, relay, watermark or replacement enforcement layer is required. Existing
 historical-comment intake remains able to read old reviews; it does not grant
 this implementing agent approval authority. No new permanent regression suite
 is added for the instruction. Ordinary implementation/re-review replay supplies
-the behavioral evidence: encounter missing independent review, report readiness,
+the behavioural evidence: encounter missing independent review, report readiness,
 and stop without approving or manufacturing a reviewer.
 
 The hook removes Git's `rev-parse --local-env-vars` environment variables from
@@ -72,7 +72,7 @@ this table supplies none of them.
 
 | Retained family | Commit/retry and ownership boundary | Existing evidence |
 | --- | --- | --- |
-| Configuration write, recover, defer | Exact authorized source preimage and retained postimage; creation is exclusive; interrupted publication recovers or preserves unknown material. | Native configuration/advisory tests and Rust configuration interruption cases. |
+| Configuration write, recover, defer | Exact authorised source preimage and retained postimage; creation is exclusive; interrupted publication recovers or preserves unknown material. | Native configuration/advisory tests and Rust configuration interruption cases. |
 | Instruction write/recover | Exact source/policy/human authority, exclusive absent creation, current preimage before replacement; no path-based acquisition. | Native instruction tests, including protected source and publication interruption. |
 | Planning reconcile/create/update/recover | Source-owner admission or explicit transfer precedes replacement; durable attempts and source/currentness distinguish replay, recovery and uncertainty. | Shared-core custody/race cases, native creation/lifetime and Rust process-interruption cases. |
 | Memory disposition and Memory/repository decision capture/recover | Bounded current owner authority, captured pre/postimage, exact manifest publication and policy-drift rejection. | Native Memory disposition/capture and Rust interruption cases. |
@@ -98,7 +98,7 @@ operation and no prefilled destructive confirmation. Static package path lists
 do not grant deletion authority.
 
 Current Configuration residuals stay visible at their source revision until the
-relevant owner consumes them or the affected behavior remains blocked. Planning
+relevant owner consumes them or the affected behaviour remains blocked. Planning
 selection/material without current custody is preserved; `continue-selected`
 establishes task relationship, not source transfer. Memory advisory sources and
 retained system-intent interpretation remain source observations with explicit
@@ -107,7 +107,7 @@ empty successful state. These are current owner boundaries, not a continuing
 generic migration workflow. Existing native source/custody tests cover valid-
 looking unowned content, malformed sources, explicit transfer, and direct quietness.
 
-The checkout's payload roster was repaired with explicit user authorization to
+The checkout's payload roster was repaired with explicit user authorisation to
 match the declared source manifest. It adds the two installed skills and removes
 the retired operating-loop entry; it does not rewrite historical installation
 time or claim a new release. The negative payload test now constructs a missing
@@ -128,7 +128,7 @@ events; they do not restore the retired public `session-log` command family or
 become Planning, Memory, Verification, target evidence, or completion inputs.
 Native policy/path, disabled-overhead, invalid-source, corrupted/foreign-state,
 concurrent-registration and export tests cover this retained boundary. Exact
-release-artifact and platform revalidation remains #2990.
+release-artefact and platform revalidation remains #2990.
 
 ## Proof and retention
 

@@ -2,10 +2,10 @@
   "$id": "agentic-workspace/assignment_lifecycle_result.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": true,
-  "description": "Result emitted by public assignment lifecycle operations, including transition status, mutation effect, local artifacts, and recovery guidance.",
+  "description": "Result emitted by public assignment lifecycle operations, including transition status, mutation effect, local artefacts, and recovery guidance.",
   "properties": {
     "artifact_refs": {
-      "description": "Local artifact references written or inspected during the lifecycle transition.",
+      "description": "Local artefact references written or inspected during the lifecycle transition.",
       "items": {
         "type": "string"
       },

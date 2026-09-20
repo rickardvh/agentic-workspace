@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Planning integration receipt
 
 Checked-in target-branch receipt for an applied Planning lifecycle integration proposal.

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Semantic task route contracts
 
 Repo-owned route identities and agent-selected current-work applicability facts. Routes do not grant mutation, proof, review, policy, or claim authority.

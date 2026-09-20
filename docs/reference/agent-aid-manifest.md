@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agent Aid Manifest
 
 Manifest for a checked-in agent aid such as a script, runbook, prompt, template, check, or skill.
@@ -36,15 +37,15 @@ Manifest for a checked-in agent aid such as a script, runbook, prompt, template,
 | `validation.absent_reason` | string | no |  | Reason validation commands are intentionally absent. |  |  |
 | `authority_boundary` | object | no |  | Boundary that prevents advisory aids from becoming hidden workflow or package authority. |  |  |
 | `authority_boundary.runtime_authority` | enum `"none"`, `"advisory-only"`, `"canonical"` | yes |  | Whether this aid can act as package runtime authority. |  |  |
-| `authority_boundary.fact_owner` | enum `"agent-aid"`, `"external-intent-evidence"`, `"planning-state"`, `"memory"`, `"docs-contract"`, `"host-config"` | yes |  | Canonical owner for behavior-relevant facts related to the aid. |  |  |
-| `authority_boundary.promote_behavior_relevant_facts_to` | string | no |  | Target surface for behavior-relevant facts if the aid reveals reusable package behavior. |  |  |
+| `authority_boundary.fact_owner` | enum `"agent-aid"`, `"external-intent-evidence"`, `"planning-state"`, `"memory"`, `"docs-contract"`, `"host-config"` | yes |  | Canonical owner for behaviour-relevant facts related to the aid. |  |  |
+| `authority_boundary.promote_behavior_relevant_facts_to` | string | no |  | Target surface for behaviour-relevant facts if the aid reveals reusable package behaviour. |  |  |
 | `authority_boundary.agent_decision` | string | yes |  | Decision that remains owned by the agent. |  |  |
 | `promotion` | object | yes |  | Promotion path if the aid should become more canonical or package-owned. |  |  |
 | `promotion.target_kind` | enum `"command"`, `"check"`, `"skill"`, `"runbook"`, `"prompt"`, `"template"`, `"module-component"`, `"docs-contract"` | yes |  | Kind of destination this entry may promote or point to. |  |  |
 | `promotion.target` | string | yes |  | Destination file, surface, package, or record referenced by this entry. |  |  |
-| `promotion.discovery_route` | enum `"repo-command"`, `"repo-check"`, `"skills"`, `"runbook"`, `"prompt-template"`, `"module-manifest"`, `"docs-contract"` | yes |  | How agents or tooling should discover the promoted artifact. |  |  |
+| `promotion.discovery_route` | enum `"repo-command"`, `"repo-check"`, `"skills"`, `"runbook"`, `"prompt-template"`, `"module-manifest"`, `"docs-contract"` | yes |  | How agents or tooling should discover the promoted artefact. |  |  |
 | `promotion.trigger` | string | yes |  | Condition that activates this rule, promotion, or retirement path. |  |  |
 | `promotion.retention_after_promotion` | enum `"delete"`, `"archive"`, `"shrink"`, `"keep"` | yes |  | What happens to the original aid after promotion. |  |  |
-| `retirement` | object | yes |  | Conditions and retention behavior when the aid is no longer useful. |  |  |
+| `retirement` | object | yes |  | Conditions and retention behaviour when the aid is no longer useful. |  |  |
 | `retirement.trigger` | string | yes |  | Condition that activates this rule, promotion, or retirement path. |  |  |
 | `retirement.retention_after_retirement` | enum `"delete"`, `"archive"`, `"keep"` | yes |  | What happens to the aid record after retirement. |  |  |

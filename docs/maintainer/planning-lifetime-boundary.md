@@ -30,7 +30,7 @@ Planning action: no revision increment, postimage or bookkeeping commit.
 
 A real change to durable meaning still requires an exact admitted update.
 Physical source revisions, invocation custody and postimage checks remain exact;
-semantic lifetime filtering never authorizes stale source or operation replay.
+semantic lifetime filtering never authorises stale source or operation replay.
 
 ## Returned work
 
@@ -73,6 +73,7 @@ Owner lifecycle disposition remains separate from task completion. Git inclusion
 and a closed owner grant neither proof nor task-completion authority. Existing
 Verification/source/claim restrictions and residual obligations remain intact;
 there is no merged=true or passing-command shortcut.
+
 ## Validation
 
 The public lifetime fixture exercises native, JSON, Python and TypeScript:

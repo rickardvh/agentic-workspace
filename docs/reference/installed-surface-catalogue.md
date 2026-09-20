@@ -1,11 +1,12 @@
 <!-- GENERATED FILE: edit workspace_surfaces.json and rerun `make render-schema-reference`. -->
+
 # Current Installed-Surface Catalogue
 
 The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.
 
-- Contract digest: `sha256:699ff94101ec0e144e1a1f446e92dc1c0e0152fcea2e9acab5f43cfcac6eeb94`
+- Contract digest: `sha256:9165b6c4a4020e14660b799344cd017df8c163b177b96d11eb5a3293c944170f`
 
-| Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |
+| Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |
 | --- | --- | --- | --- | --- | --- |
 | `.agentic-workspace/READING.json` | package-managed | target-derived | adopted-host | `configuration.repository-adoption` | Repository-only source orientation bound to the ownership ledger |
 | `.agentic-workspace/OWNERSHIP.toml` | package-managed | host-composed | adopted-host | `configuration.repository-adoption` | Current source/lifetime declarations for runtime and repository-only readers |
@@ -51,7 +52,7 @@ The public v1 host footprint is one Configuration-owned contract. Adoption, refr
 | `.agentic-workspace/skills/workspace-proof-selection/references/learning.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 | `.agentic-workspace/skills/workspace-proof-selection/procedure.md` | package-managed | package-verbatim | adopted-host | `configuration.repository-adoption` | Repository-local selected procedure or its declared executable dependency |
 
-Public host derivation reads only explicitly promoted portable sources or another declared host materialization; source-maintenance-only semantic inputs are forbidden.
+Public host derivation reads only explicitly promoted portable sources or another declared host materialisation; source-maintenance-only semantic inputs are forbidden.
 
 Portable source promotions:
 
@@ -110,7 +111,7 @@ Only the declared workflow fence in `AGENTS.md` is managed. Text outside it rema
 - promoted-output: `docs/decisions`
 - Local diagnostic ignore rule: `.agentic-workspace/local/.gitignore`; created only when absent and preserved with local state on removal.
 
-Current-version updates treat `.agentic-workspace/` as a closed enclave. Every file is covered by one current owner/class/lifetime declaration, including explicitly mutable, customization and local subtrees. Unclassified residue is included in the exact authorized removal proposal; ambiguous declarations block reconciliation. Inventory is bounded and never traverses links or junctions. Current managed-file conflict rules still apply. A second successful reconciliation is quiet. De-adoption preserves independent state and remains a separate operation.
+Current-version updates treat `.agentic-workspace/` as a closed enclave. Every file is covered by one current owner/class/lifetime declaration, including explicitly mutable, customisation and local subtrees. Unclassified residue is included in the exact authorised removal proposal; ambiguous declarations block reconciliation. Inventory is bounded and never traverses links or junctions. Current managed-file conflict rules still apply. A second successful reconciliation is quiet. De-adoption preserves independent state and remains a separate operation.
 
 Workspace declarations live in `workspace_surfaces.json` under `enclave`; Planning, Memory and Verification each own `contracts/enclave.json` in their package source. Owners register classification through a generic linked inventory; Workspace neither lists module identities nor refreshes their support. Repository OWNERSHIP.toml admits independent owner paths through explicit enclave rows (path, scope, owner, class, lifetime) and preserves repo_owned authority surfaces. Independent native publication namespaces follow current modules.independent admissions. Ambiguous overlaps block cleanup; broad legacy module roots do not hide residue. New repository extensions can also live under `.agentic-workspace/custom/`; scoped repository instructions remain under `.agentic-workspace/instructions/`.
 

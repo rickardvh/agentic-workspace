@@ -13,7 +13,7 @@ Issues: #1672, #1674, #1676
 
 ## Boundaries
 
-There is intentionally no `assumption_migration` report section and no maintained package-owned assumptions inventory. Package-owned conclusions must be removed or moved directly to the correct authority surface. Review notes may record dogfooding evidence, but ordinary-loop behavior must come from contracts, declared config, planning state, external intent, Memory, or runtime facts.
+There is intentionally no `assumption_migration` report section and no maintained package-owned assumptions inventory. Package-owned conclusions must be removed or moved directly to the correct authority surface. Review notes may record dogfooding evidence, but ordinary-loop behaviour must come from contracts, declared config, planning state, external intent, Memory, or runtime facts.
 
 Current direct migrations are bounded as follows:
 

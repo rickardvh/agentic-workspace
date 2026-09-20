@@ -126,7 +126,7 @@
         },
         "rule": {
           "type": "string",
-          "description": "Policy rule that explains this contract behavior."
+          "description": "Policy rule that explains this contract behaviour."
         },
         "component_classes": {
           "type": "array",
@@ -256,7 +256,7 @@
             },
             "rule": {
               "type": "string",
-              "description": "Policy rule that explains this contract behavior."
+              "description": "Policy rule that explains this contract behaviour."
             }
           },
           "additionalProperties": false,
@@ -373,9 +373,9 @@
             "type": "array",
             "items": {
               "type": "string",
-              "description": "One entry in the generated artifacts list."
+              "description": "One entry in the generated artefacts list."
             },
-            "description": "Ordered generated artifacts entries used by this contract."
+            "description": "Ordered generated artefacts entries used by this contract."
           },
           "startup_steps": {
             "type": "array",

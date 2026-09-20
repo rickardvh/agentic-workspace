@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source contracts and rerun `make render-schema-reference`. -->
+
 # Source-Maintenance Surface Inventory
 
 Exact footprint, ownership, and availability values generated from `source_maintenance_surfaces.json` and `module_registry.json`.
@@ -751,7 +752,7 @@ File count: 56
 
 ## Required and optional references
 
-| Target | Kind | Profiles | Modules | Availability / degraded behavior |
+| Target | Kind | Profiles | Modules | Availability / degraded behaviour |
 | --- | --- | --- | --- | --- |
 | `.agentic-workspace/adoption-receipt.json` | `optional` | necessary-surfaces, full-mirror | — | Treat configuration readiness as unresolved until install creates the adoption receipt. |
 | `.agentic-workspace/OWNERSHIP.toml` | `installed-local` | necessary-surfaces, full-mirror | — | required in the selected footprint |
@@ -796,5 +797,5 @@ File count: 56
 | Module-owned | A selected module owns only its declared roots and additions. |
 | Generated/derived | Rebuildable projections are owned by their source contract and generator. |
 | Local-only | Ignored diagnostics, logs, caches, and machine preferences are not shared authority. |
-| Optional/degraded | Absence is explicit and produces the listed degraded behavior rather than invented state. |
+| Optional/degraded | Absence is explicit and produces the listed degraded behaviour rather than invented state. |
 | Promoted output | Output becomes durable only through an explicit owning repository or module operation. |

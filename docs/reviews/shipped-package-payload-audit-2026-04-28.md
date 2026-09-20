@@ -30,7 +30,7 @@ This is evidence/history for #460, not ordinary operating input. It exists to ma
 
 - Added an explicit packaging assertion that memory has no required shipped current-memory baseline.
 - Removed the optional `routing-feedback.md` seed from the memory packaging test's required core payload set.
-- Kept #459's generated CLI package metadata boundary and later moved command adapter metadata out of package-local generated Python modules into generated JSON artifacts.
+- Kept #459's generated CLI package metadata boundary and later moved command adapter metadata out of package-local generated Python modules into generated JSON artefacts.
 
 ## Follow-Up Candidates
 
@@ -50,4 +50,3 @@ This is evidence/history for #460, not ordinary operating input. It exists to ma
 - `pyproject.toml`
 - `packages/planning/pyproject.toml`
 - `packages/memory/pyproject.toml`
-

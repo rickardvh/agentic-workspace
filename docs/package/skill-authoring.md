@@ -6,11 +6,11 @@ grants permission, admits evidence or replaces required review.
 
 This reference describes the post-contraction source contract. Check the selected
 [installation and release evidence](../agentic-workspace-install.md) before using
-it with an older artifact. The [integration record](../reviews/powerskill-p1-integration.md)
-separates source, installed-artifact and observed host evidence.
+it with an older artefact. The [integration record](../reviews/powerskill-p1-integration.md)
+separates source, installed-artefact and observed host evidence.
 
 For binding rules, see [scoped instructions](scoped-instructions.md). Follow the
-[customization walkthrough](../customization.md) for the complete receipt example.
+[customisation walkthrough](../customization.md) for the complete receipt example.
 
 ## Start with an ordinary skill
 
@@ -71,10 +71,10 @@ information instead of guessing.
 Manual alternatives: [user-visible](user-note.md), [internal](internal-note.md).
 ````
 
-Create `user-note.md`: “State the observable before/after behavior and any action
+Create `user-note.md`: “State the observable before/after behaviour and any action
 the user needs to take. Return the draft to the caller. Do not publish or mutate
 repository state.” Create `internal-note.md`: “Describe the implementation change
-and the evidence that public behavior remains the same. Return the draft to the
+and the evidence that public behaviour remains the same. Return the draft to the
 caller. Do not publish or mutate repository state.”
 
 These are the [neutral fixture's](../../tests/fixtures/change-note/SKILL.md)
@@ -117,7 +117,7 @@ agentic-workspace start --target . --task "Draft a note for a total-format chang
    the answer affects. Open the named source for the full criteria. This explains
    provenance and consequence, not hidden model reasoning.
 4. Copy the returned `procedure/answer/v1` request, preserving its identity fields.
-   Set only `arguments.answer` to the agent's judgment, then return it through
+   Set only `arguments.answer` to the agent's judgement, then return it through
    `start --input request.json` again.
 
 For a patch showing `format_total(12)` change from `"12"` to `"$12"`, with an
@@ -157,7 +157,7 @@ same identity. Do not recreate identity fields from prose or a branch name.
 For evidence-dependent answers, add `evidence` inside the answer, with entries
 `{"reference":"patch.txt","revision":"sha256:<64 lowercase hex characters>"}`.
 The reference is repository-relative. Compute the revision from UTF-8 text after
-normalizing CRLF to LF, for example with Python's normal text read:
+normalising CRLF to LF, for example with Python's normal text read:
 
 ```python
 from hashlib import sha256
@@ -165,7 +165,7 @@ from pathlib import Path
 print("sha256:" + sha256(Path("patch.txt").read_text(encoding="utf-8").encode("utf-8")).hexdigest())
 ```
 
-Carry the same answer on unchanged re-entry: a current answered judgment avoids
+Carry the same answer on unchanged re-entry: a current answered judgement avoids
 redundant questioning. Change the evidence to an internal refactor preserving
 `"12"`, then re-enter with that retained answer: its evidence revision is stale,
 so reconsider and answer `internal` from the new evidence. A hash establishes
@@ -221,7 +221,7 @@ invocation. Do not label a present script an admitted effect or turn its output
 into constructed owner actions. Missing dependencies require repair or the same
 manual method, with unavailable runtime guarantees left unavailable.
 
-## Customize and repair
+## Customise and repair
 
 Edit your repository-owned bundle and registry together; remove its row when
 removing the bundle. Reobserve selected detail after changes. Keep package-owned
@@ -242,7 +242,7 @@ resolved honestly.
 | Missing question/context | Restore the named file or repair the declaration; do not invent its contents. |
 | Missing selected leaf | Restore that destination; admission of the question did not pre-read every leaf. |
 | Multiple sources for a route | Select a returned qualified identity or clarify the intended source. |
-| Stale answer/evidence | Reobserve the change and supply a fresh judgment through the current request. |
+| Stale answer/evidence | Reobserve the change and supply a fresh judgement through the current request. |
 | Lost carriage | Re-select and answer from current sources; no cursor reconstruction. |
 | Runtime unavailable | Read the same Markdown and draft with available tools; leave owner effects/proof unresolved. |
 

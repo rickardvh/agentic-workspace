@@ -1,9 +1,13 @@
 # Learning effectiveness ownership
 
-Consequential learning does not create a universal learning ledger. Later
-attribution joins the destination owner's existing identity and revision to the
+Use this reference when checking whether retained guidance helped later work.
+Each component that retains a lesson owns its identity and revision; later
+evidence must identify the exact lesson it evaluates.
+
+Attribution joins the destination owner's existing identity and revision to the
 canonical operating-decision identity and source-owned later outcome evidence.
-Only material later outcomes enter the composition.
+Only material later outcomes enter the composition. This uses the existing
+owners' records rather than creating a universal learning ledger.
 
 | Destination | Existing identity | Later evidence owner | Existing consequence destination |
 | --- | --- | --- | --- |
@@ -12,7 +16,7 @@ Only material later outcomes enter the composition.
 | Repo improvement | `candidate_id` + candidate/action revision | Evaluation plus admitted proof | repo-improvement effectiveness and source owner |
 | Agent aid or shortcut | `aid_id` + `aid_revision` | demonstrated comparable use/value | existing aid/adaptation promotion |
 
-The owner identity is not replaced or normalized. The compiler derives only an
+The owner identity is not replaced or normalised. The compiler derives only an
 ephemeral join key so that equivalent evidence deduplicates. A recurrence with
 no matching projected owner revision is a routing miss. Changed owner or repo
 authority makes the learning stale/superseded. Agent self-report alone stays

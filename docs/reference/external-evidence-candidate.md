@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # External Evidence Candidate
 
 Provider-neutral candidate reference that remains untrusted until repository proof policy admits it.

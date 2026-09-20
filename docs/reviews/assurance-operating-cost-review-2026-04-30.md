@@ -62,12 +62,12 @@
 - Keep proof execution evidence in `agentic-workspace proof` selection output, where high-risk reviewers already look.
 - Do not add a new host-feedback command yet; the template is cheaper and matches #600's stated preference.
 - Do not ingest #627 into planning now; it is a plausible hotspot signal, not a blocking bug or repeated failure.
-- Do not close or absorb #595 from this lane; the source checkout cannot honestly prove another host repo's adaptive-assurance behavior.
+- Do not close or absorb #595 from this lane; the source checkout cannot honestly prove another host repo's adaptive-assurance behaviour.
 
 ## Privacy And Sensitivity
 
 - Omitted host details: none; this report uses the public source checkout.
-- Redactions or anonymization: none.
+- Redactions or anonymisation: none.
 - Evidence that should stay in the host repo: future #595 host-specific files, logs, and private planning state.
 
 ## Conversion To Focused Issues

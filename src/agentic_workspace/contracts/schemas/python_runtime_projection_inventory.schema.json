@@ -116,7 +116,7 @@
         "rule": {
           "type": "string",
           "minLength": 1,
-          "description": "Rule for proving migrated ordinary command behavior is IR/codegen-owned and fail-closed."
+          "description": "Rule for proving migrated ordinary command behaviour is IR/codegen-owned and fail-closed."
         },
         "representative_migrations": {
           "type": "array",
@@ -127,7 +127,7 @@
           "description": "Representative ordinary command migrations that prove the IR/codegen ownership boundary."
         }
       },
-      "description": "Representative ordinary command behavior that has moved behind command-package IR/codegen, plus the remaining runtime primitive boundary."
+      "description": "Representative ordinary command behaviour that has moved behind command-package IR/codegen, plus the remaining runtime primitive boundary."
     },
     "entries": {
       "type": "array",
@@ -185,7 +185,7 @@
             "runtime-cli",
             "operation-ir-executor"
           ],
-          "description": "Kind of generated Python runtime projection artifact."
+          "description": "Kind of generated Python runtime projection artefact."
         },
         "provenance_status": {
           "enum": [
@@ -243,7 +243,7 @@
         "operation_id": {
           "type": "string",
           "minLength": 1,
-          "description": "Generated operation id that owns the migrated command behavior."
+          "description": "Generated operation id that owns the migrated command behaviour."
         },
         "adapter_id": {
           "type": "string",
@@ -280,7 +280,7 @@
             ]
           },
           "uniqueItems": true,
-          "description": "Command behavior fields that are now owned by command package IR and generated artifacts."
+          "description": "Command behaviour fields that are now owned by command package IR and generated artefacts."
         },
         "generated_runtime_handlers": {
           "type": "array",
@@ -383,7 +383,7 @@
             "source_module": {
               "type": "string",
               "minLength": 1,
-              "description": "Runtime source module that still owns nondeterministic or mutation behavior."
+              "description": "Runtime source module that still owns nondeterministic or mutation behaviour."
             },
             "source_symbol": {
               "type": "string",
@@ -408,7 +408,7 @@
             "why_runtime_owned": {
               "type": "string",
               "minLength": 1,
-              "description": "Reason this behavior remains runtime-owned instead of deterministic IR/codegen data."
+              "description": "Reason this behaviour remains runtime-owned instead of deterministic IR/codegen data."
             }
           },
           "description": "Exact accepted runtime boundary that remains after the representative command migration."
@@ -419,7 +419,7 @@
           "description": "Rule enforced by checks when the IR, generated command, generated operation, or runtime boundary drifts."
         }
       },
-      "description": "One representative ordinary command migration from handwritten behavior to IR/codegen ownership."
+      "description": "One representative ordinary command migration from handwritten behaviour to IR/codegen ownership."
     },
     "accepted_runtime_boundary": {
       "type": "object",
@@ -535,7 +535,7 @@
             "generated-command-behavior-move-required",
             "front-door-dispatch-extraction-candidate"
           ],
-          "description": "Issue #1357 minimization classification used to distinguish true primitive ownership from generated-command behavior that must move."
+          "description": "Issue #1357 minimisation classification used to distinguish true primitive ownership from generated-command behaviour that must move."
         },
         "minimization_route": {
           "enum": [
@@ -548,7 +548,7 @@
         "minimization_owner": {
           "type": "string",
           "minLength": 1,
-          "description": "Reviewable owner for the current boundary and the next minimization decision."
+          "description": "Reviewable owner for the current boundary and the next minimisation decision."
         },
         "minimization_tracking_issue": {
           "type": "string",

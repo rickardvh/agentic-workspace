@@ -36,7 +36,7 @@
     },
     "irrelevant_history": {
       "type": "boolean",
-      "description": "Agent/human judgment that explicit drift_log fields have no continuation value."
+      "description": "Agent/human judgement that explicit drift_log fields have no continuation value."
     },
     "intent": {
       "type": "object",
@@ -448,7 +448,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Unaccounted source fields requiring Planning or agent judgment."
+          "description": "Unaccounted source fields requiring Planning or agent judgement."
         },
         "omitted_history": {
           "type": "array",
@@ -528,7 +528,7 @@
       "additionalProperties": false
     },
     "selection_transition": {
-      "description": "Native release or human-authorized legacy transfer.",
+      "description": "Native release or human-authorised legacy transfer.",
       "oneOf": [
         {
           "$ref": "#/$defs/native_selection_transition"

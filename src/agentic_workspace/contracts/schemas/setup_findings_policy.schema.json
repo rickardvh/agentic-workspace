@@ -19,7 +19,7 @@
     },
     "artifact_path": {
       "type": "string",
-      "description": "Artifact path text value used by this contract."
+      "description": "Artefact path text value used by this contract."
     },
     "accepted_kind": {
       "type": "string",

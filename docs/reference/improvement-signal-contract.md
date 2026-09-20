@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Improvement Signal Contract
 
 Source-maintenance model only; not native/public command authority. Contract for classifying improvement signals and routing them to the right owner surface.
@@ -15,7 +16,7 @@ Source-maintenance model only; not native/public command authority. Contract for
 | `schema_version` | const `"agentic-workspace/improvement-signal-contract/v1"` | yes |  | Contract version for this document. |  |  |
 | `kind` | const `"workspace-improvement-signal-contract/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `role` | const `"candidate-shape-not-backlog"` | yes |  | Fixed role value required by this contract. |  |  |
-| `rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `candidate_kind` | const `"workspace-improvement-signal-candidate/v1"` | yes |  | Fixed candidate kind value required by this contract. |  |  |
 | `required_fields` | array of string | yes |  | Ordered required fields entries used by this contract. |  |  |
 | `kinds` | array of string | yes |  | Ordered kinds entries used by this contract. |  |  |
@@ -24,7 +25,7 @@ Source-maintenance model only; not native/public command authority. Contract for
 | `validation_remedy_order` | array of string | yes |  | Ordered validation remedy order entries used by this contract. |  |  |
 | `correct_by_design_review` | object | yes |  | Correct by design review details used by this contract. |  |  |
 | `correct_by_design_review.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
-| `correct_by_design_review.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `correct_by_design_review.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `correct_by_design_review.ask_when` | array of string | yes |  | Ordered ask when entries used by this contract. |  |  |
 | `correct_by_design_review.questions` | array of string | yes |  | Ordered questions entries used by this contract. |  |  |
 | `correct_by_design_review.preferred_remediation_order` | array of string | yes |  | Ordered preferred remediation order entries used by this contract. |  |  |

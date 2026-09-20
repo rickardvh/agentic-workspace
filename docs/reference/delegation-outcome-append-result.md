@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # delegation_outcome_append_result.schema
 
 Schema-validated result envelope for delegation-outcome.append.

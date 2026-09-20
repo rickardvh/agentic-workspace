@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Optional selected executable material
 
 Flat material references in an existing skill registry. No execution or authority is implied.

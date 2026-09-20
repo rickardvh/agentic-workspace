@@ -51,7 +51,7 @@
               "type": "string",
               "minLength": 1
             },
-            "description": "Former semantic scope hints retained for current judgment; raw task words do not decide applicability."
+            "description": "Former semantic scope hints retained for current judgement; raw task words do not decide applicability."
           },
           "applies_to_semantic_routes": {
             "type": "array",
@@ -67,7 +67,7 @@
               "type": "string",
               "minLength": 1
             },
-            "description": "Source selectors for current Planning references; former prose references require current judgment."
+            "description": "Source selectors for current Planning references; former prose references require current judgement."
           },
           "applies_to_proof_profiles": {
             "type": "array",
@@ -255,10 +255,10 @@
         },
         "decisions": {
           "$ref": "#/$defs/decisions",
-          "description": "Applicability judgments keyed by current requirement identifier; unknown identifiers are rejected."
+          "description": "Applicability judgements keyed by current requirement identifier; unknown identifiers are rejected."
         }
       },
-      "description": "Optional agent scope judgment bound to the exact source, task and work; it cannot waive exact positive facts or missing owner facts."
+      "description": "Optional agent scope judgement bound to the exact source, task and work; it cannot waive exact positive facts or missing owner facts."
     }
   },
   "$defs": {
@@ -273,7 +273,7 @@
         ],
         "description": "Current applicability disposition for the named requirement; unresolved preserves the obligation gap."
       },
-      "description": "Applicability judgments keyed by current requirement identifier; unknown identifiers are rejected."
+      "description": "Applicability judgements keyed by current requirement identifier; unknown identifiers are rejected."
     },
     "arguments": {
       "type": "object",
@@ -284,12 +284,12 @@
       "properties": {
         "decisions": {
           "$ref": "#/$defs/decisions",
-          "description": "Applicability judgments keyed by current requirement identifier; unknown identifiers are rejected."
+          "description": "Applicability judgements keyed by current requirement identifier; unknown identifiers are rejected."
         }
       },
-      "description": "Smallest current applicability judgment packet; source and task binding live in its public request envelope."
+      "description": "Smallest current applicability judgement packet; source and task binding live in its public request envelope."
     }
   },
-  "description": "Current source facts and exact agent applicability judgment; no evidence, waiver, execution or claim authority.",
+  "description": "Current source facts and exact agent applicability judgement; no evidence, waiver, execution or claim authority.",
   "x-agentic-workspace-doc-role": "contract-reference"
 }

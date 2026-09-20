@@ -35,8 +35,8 @@ Each retained input is read by command-package generation:
 | Category | Scope | Why retained |
 | --- | --- | --- |
 | `pyproject.toml`, `uv.lock` | shared | Select the command-generation implementation and locked toolchain. |
-| `LICENSE`, `.github/release-ownership.json` | shared | Supply generated package license and release metadata. |
-| `scripts/generate/generate_command_packages.py`, `workspace_command_generation.py` | shared | Define generation and Agentic Workspace rendering behavior. |
+| `LICENSE`, `.github/release-ownership.json` | shared | Supply generated package licence and release metadata. |
+| `scripts/generate/generate_command_packages.py`, `workspace_command_generation.py` | shared | Define generation and Agentic Workspace rendering behaviour. |
 | `command_package_ir.json` | shared | Defines package owners, targets, commands, and referenced contracts. |
 | primitive manifest and Python/TypeScript support sources | shared | Define generated primitive support and copied runtime support. |
 | referenced operation contracts | owner-scoped | Only contracts referenced by one package contribute to that owner's receipt. |

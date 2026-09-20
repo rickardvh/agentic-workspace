@@ -25,7 +25,7 @@ Verification does **not** own:
 - CI as a system;
 - arbitrary raw transcript storage.
 
-Passing a Verification protocol can contribute evidence to the current operating contract. It does not by itself establish semantic intent satisfaction or authorize a broader completion claim.
+Passing a Verification protocol can contribute evidence to the current operating contract. It does not by itself establish semantic intent satisfaction or authorise a broader completion claim.
 
 ## How it participates
 
@@ -40,6 +40,9 @@ When Verification is irrelevant, it should stay out of first-line context and or
 The full Verification manifest remains module-owned; Workspace should consume only the bounded current contribution needed for routing, proof/claim composition, or recovery.
 
 ## Module CLI
+
+The module CLI is source-maintenance tooling. From a source checkout, inspect a
+target repository with:
 
 ```text
 agentic-verification report --target ./repo --format json
@@ -70,7 +73,7 @@ roles require source repair. There is no partial/default policy substitution.
 Selected protocol commands are candidates through the same native proof owner.
 
 Purpose, steps, observations, review aids and escalation prose support selected
-human/agent judgment. They do not automatically compose lanes, satisfy evidence,
+human/agent judgement. They do not automatically compose lanes, satisfy evidence,
 authenticate reviewers or control retention. Retired numeric precedence, role,
 composition and escalation-ID knobs are preserved as source review guidance in
 existing review aids. Populated measurement requirements remain restrictive with

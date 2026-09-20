@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Context authority owner result
 
 Binds a context authority result to the owner operation and execution receipt that made it admissible.

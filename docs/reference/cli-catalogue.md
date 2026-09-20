@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit source_decision_contract.json and rerun `make render-schema-reference`. -->
+
 # Current CLI Catalogue
 
 Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.
@@ -30,7 +31,7 @@ Generated from the same `native_cli` declaration used by the native executable. 
 | `--delivered` | — | — | Exact delivery_refs already held by this continuing consumer; suppress unchanged source prose only, never owner checks or obligations. |
 | `--input` | — | — | JSON input file, or - for stdin; start accepts one current owner request or a bounded array; invoke requires an exact action. |
 
-Use `--help` for the installed artifact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.
+Use `--help` for the installed artefact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.
 
 `start` is current resolution; `invoke` consumes one exact returned action. `resources` and `worker` are bounded dedicated tools. A request, route, packet seal or successful process does not grant mutation, ownership, proof or completion authority. Optional machine-local diagnostics remain distinct from repository mutation.
 

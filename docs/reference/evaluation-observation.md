@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Evaluation Observation
 
 One local-first append record for an owner-bound evaluation.

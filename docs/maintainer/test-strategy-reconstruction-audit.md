@@ -47,7 +47,7 @@ these are not pure parser primitives disguised as root integration.
 | Protected scratch, malformed config, current owner references, malformed custody | Distinct resource negative cases retained once; none is replaced by a happy-path cleanup smoke test. |
 | Owned real Cargo/pytest/venv outputs versus unknown ignored material | Resource output-lease journey retains real tools, unlock recovery and unknown-data preservation, once instead of four times. |
 | Unleased or tracked tool roots | Resource negative retained; no retroactive cleanup adoption or tracked-source deletion is permitted. |
-| Preview creation consumer | Moved into `test_preview_release.py::test_preview_creation_consumer_reuses_native_terminal_lifecycle`; retains failed-normalization evidence and terminal teardown, outside unconditional merge CI. |
+| Preview creation consumer | Moved into `test_preview_release.py::test_preview_creation_consumer_reuses_native_terminal_lifecycle`; retains failed-normalisation evidence and terminal teardown, outside unconditional merge CI. |
 | Negative route conclusion and opaque registry appearance | `test_native_former_routes.py::test_negative_route_conclusion_reuses_until_opaque_discovery_changes`, one core journey. |
 | Shared/local instruction composition and local loss | `test_native_instruction_write.py::test_real_local_instruction_owner_composes_and_loses_only_local_sources`, one cross-owner journey. |
 | Exact correction, forged content, current delivery, drift | Instruction writer retains both canonical scopes because local ignore/untracked and portable checked-in custody differ; removes the adapter multiplier. |
@@ -59,8 +59,8 @@ these are not pure parser primitives disguised as root integration.
 | Local reconciliation, inline check and grant withdrawal | `test_native_instruction_verification.py` retains current native command evidence, separate reconciliation obligation and policy withdrawal once. |
 | Checks plus protection, source drift | Same composition owner retains real current evidence releasing only the completion restriction, protected write rejection and restoration on drift, once. |
 | Explicit config grant, deferred continuation | Two cases absorbed into `test_native_configuration_write.py`; current policy and fresh-session resume without policy-state pollution each run once. |
-| Semantic claim versus process success, stale resulting work | `test_native_claim_review.py` retains exact human judgment, real proof evidence and stale-work rejection once. |
-| Claim review with unfinished Planning subject | Claim-review owner retains normalized selected subject and unchanged open plan; no terminal grant. |
+| Semantic claim versus process success, stale resulting work | `test_native_claim_review.py` retains exact human judgement, real proof evidence and stale-work rejection once. |
+| Claim review with unfinished Planning subject | Claim-review owner retains normalised selected subject and unchanged open plan; no terminal grant. |
 
 No unique failure class was dropped. No temporary priority test file remains.
 The audit is bounded to these batches; it does not assert that all historical
@@ -89,7 +89,7 @@ These are 10 Python cases and the focused native contracts, selected for distinc
 ordinary merge boundaries. The larger owner suites remain available to current
 claim-driven focused or exhaustive validation, not attached wholesale to merge
 CI. The existing merge-versus-release stage-policy test now guards this boundary.
-Preview/stable workflow files, exact-head dispatch admission, artifact proof and
+Preview/stable workflow files, exact-head dispatch admission, artefact proof and
 publication gates are unchanged. The moved preview fixture remains discoverable
 by the existing preview suite and exhaustive test discovery; it was not deleted
 or weakened to save merge runtime.
@@ -101,7 +101,7 @@ delivers the current strategy via `read`, and requires the test/CI disposition
 before permanent proof is added or presented for approval. It leaves all source
 protections and proof owners intact. `pr-review-recheck` now audits that disposition,
 lower-level replacements, repetition, durable names, CI cost and failure
-localization, with material violations blocking approval.
+localisation, with material violations blocking approval.
 
 The strategy's controlled review examples are exercised by inspection: the
 four-adapter stale-source addition fails because its semantic owner and parity
@@ -117,7 +117,7 @@ per-test archive or second selection framework was introduced.
 Issue shaping now names durable failure/authority classes, factors observations
 shared across acceptance criteria, and reserves surface matrices for distinct
 transport/parity claims. It references the same testing strategy as implementation
-and review. The ordinary instruction applies to behavior changes even when no
+and review. The ordinary instruction applies to behaviour changes even when no
 test has yet been proposed, so a fix does not default to permanent test growth.
 
 The strategy explicitly separates evidence design, current patch validation and
@@ -126,7 +126,7 @@ Existing coverage is inspected before adding a case, and source-owned floors
 remain binding while replaceable commands/fixtures may be consolidated. Review
 now audits both that retention decision and the bounded stop/escalate argument.
 The controlled examples in the strategy trace shaping, validation, retention and
-review: stale-source reproduction reuses an existing behavior class, while a
+review: stale-source reproduction reuses an existing behaviour class, while a
 previously unprotected lossy-Unicode transport class justifies a minimal permanent
 adapter case. They also state what named residual risk would trigger escalation.
 

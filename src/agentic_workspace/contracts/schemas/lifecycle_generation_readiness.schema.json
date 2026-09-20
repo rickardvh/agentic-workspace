@@ -167,7 +167,7 @@
               },
               "apply_mutation": {
                 "$ref": "#/$defs/capability_state",
-                "description": "Maturity of mutation/apply behavior for this command."
+                "description": "Maturity of mutation/apply behaviour for this command."
               },
               "verify": {
                 "$ref": "#/$defs/capability_state",

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Implementer Context Payload
 
 Cheap implementer context for a bounded changed-path scope.
@@ -17,10 +18,10 @@ Cheap implementer context for a bounded changed-path scope.
 | `current_decision` | object | no |  | Compact state-delta decision packet for the implementation workflow, derived from the implement decision packet rather than prompt prose. |  |  |
 | `message_economy` | object | no |  | State-backed message economy packet that tells agents when to speak, stay compact, or expand during implementation. |  |  |
 | `evidence_bundle` | object | no |  | Minimal selector-backed evidence bundle for the implementation current decision, including missing proof evidence when stronger claims are blocked. |  |  |
-| `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
+| `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgement. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when changed paths, task facts, config posture, workflow obligations, or module contributions affect implementation routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
-| `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
+| `task_posture_packet.operating_posture` | object | yes |  | Resolved optimisation, artefact, initiative, assurance, and delegation posture for this task. |  |  |
 | `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
 | `task_posture_packet.improvement_pressure_records` | array of object | yes |  | Admitted improvement-pressure candidate facts preserved for the canonical operating decision. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
@@ -40,7 +41,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `task_posture_packet.provenance` | array of object | yes |  | Config, obligation, module, or command sources used to assemble this packet. |  |  |
 | `task_posture_packet.dynamic_instruction_projection` | object | yes |  | Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion. |  |  |
 | `task_posture_packet.posture_adherence` | object | yes |  | Closeout/report visibility for whether the selected posture was followed or requires explanation. |  |  |
-| `memory_decision_packet` | ref `#/$defs/memory_decision_packet` | no |  | Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent. |  |  |
+| `memory_decision_packet` | ref `#/$defs/memory_decision_packet` | no |  | Command-backed Memory pull/capture decision packet that keeps semantic judgement with the agent. |  |  |
 | `memory_decision_packet.kind` | const `"agentic-workspace/memory-decision-packet/v1"` | yes |  | Discriminator for the Memory decision packet. |  |  |
 | `memory_decision_packet.stage` | string | yes |  | Workflow stage that produced the packet. |  |  |
 | `memory_decision_packet.force` | string | yes |  | Whether Memory pull/capture is not applicable, recommended, or required before a claim. |  |  |
@@ -50,8 +51,8 @@ Cheap implementer context for a bounded changed-path scope.
 | `memory_decision_packet.capture` | object | yes |  | Durable-learning capture status, candidate owner surfaces, and capture commands. |  |  |
 | `memory_decision_packet.authority_boundary` | object | yes |  | Boundary separating what AW observes and recommends from agent and human decisions. |  |  |
 | `memory_decision_packet.limits` | array of string | no |  | Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims. |  |  |
-| `operating_loop` | ref `#/$defs/operating_loop` | no |  | Normalized operating-loop closeout decision projection derived from structured Memory, Planning, and Verification facts. |  |  |
-| `operating_loop.kind` | const `"agentic-workspace/operating-loop-decision/v1"` | yes |  | Discriminator for the normalized operating-loop decision packet. |  |  |
+| `operating_loop` | ref `#/$defs/operating_loop` | no |  | Normalised operating-loop closeout decision projection derived from structured Memory, Planning, and Verification facts. |  |  |
+| `operating_loop.kind` | const `"agentic-workspace/operating-loop-decision/v1"` | yes |  | Discriminator for the normalised operating-loop decision packet. |  |  |
 | `operating_loop.closeout_state` | enum `"no_closeout_needed"`, `"ready_for_full_closure"`, `"partial_claim_only"`, `"blocked_missing_proof"`, `"blocked_active_planning"`, `"residue_routing_required"` | yes |  | Structural closeout state derived from Memory, Planning, and Verification facts. |  |  |
 | `operating_loop.safe_claim` | enum `"none"`, `"full"`, `"partial"`, `"blocked"` | yes |  | Maximum structurally safe completion claim class for this output. |  |  |
 | `operating_loop.residue_owner` | enum `"memory"`, `"planning"`, `"verification"`, `"docs"`, `"issue"`, `"config"`, `"none"` | yes |  | Primary owner surface for unresolved residue or blockers. |  |  |
@@ -73,7 +74,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `operating_loop.verification.blocks_full_closure` | boolean | yes |  | Whether the proof state structurally blocks an unqualified full closure claim. |  |  |
 | `operating_loop.reasons` | array of object | yes |  | Short structured reason codes explaining blockers or residue. |  |  |
 | `memory_consult` | object | no |  | Memory consultation packet used to surface route-matched durable knowledge without bulk-reading Memory. |  |  |
-| `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths. |  |  |
+| `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalised system-intent record and changed paths. |  |  |
 | `planning_revision` | object | no |  | Optimistic Planning state revision observed by this implementer read surface. |  |  |
 | `context_authority_projection` | object | no |  | Registry-owned authority selection and changed-path guardrail for the implementation consumer. |  |  |
 | `active_plan_reliance` | object | no |  | Permission signal separating command-written integrity, planning freshness, and active-plan reliance. |  |  |
@@ -138,7 +139,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `proof_route_strategy_consumer_gate` | object | no |  | Live proof-route strategy consumer gate that re-resolves and compares route-health identity before action, handoff, or closeout. |  |  |
 | `handoff_proof_route_consumer_gate` | object | no |  | Live proof-route strategy consumer gate projected into handoff requirements before handoff or closeout claims. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
-| `acceptance_reconciliation` | object | yes |  | Closeout guard against passing self-authored tests while missing requested behavior. |  |  |
+| `acceptance_reconciliation` | object | yes |  | Closeout guard against passing self-authored tests while missing requested behaviour. |  |  |
 | `acceptance_reconciliation.kind` | const `"agentic-workspace/acceptance-reconciliation/v1"` | yes |  | Discriminator for the acceptance reconciliation guidance. |  |  |
 | `acceptance_reconciliation.status` | string | yes |  | Whether acceptance reconciliation is required before closeout for the current context. |  |  |
 | `acceptance_reconciliation.rule` | string | yes |  | Why validation alone is not enough for closeout. |  |  |
@@ -146,7 +147,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `acceptance_reconciliation.acceptance_items` | array of object | yes |  | Definition-of-done items inferred from task intent. |  |  |
 | `acceptance_reconciliation.acceptance_item_count` | integer | yes |  | Number of acceptance items to reconcile before closeout. |  |  |
 | `acceptance_reconciliation.acceptance_closeout_rule` | string | yes |  | Acceptance-specific closeout rule for claiming done. |  |  |
-| `acceptance_reconciliation.checklist` | array of string | yes |  | Checklist for mapping requested outcomes to delivered behavior and proof. |  |  |
+| `acceptance_reconciliation.checklist` | array of string | yes |  | Checklist for mapping requested outcomes to delivered behaviour and proof. |  |  |
 | `acceptance_reconciliation.compact_closeout_prompt` | string | yes |  | Short prompt agents can use before final answer or lane closeout. |  |  |
 | `acceptance_reconciliation.task_text_available` | boolean | yes |  | Whether the CLI invocation included task text to reconcile. |  |  |
 | `acceptance_reconciliation.task_carry_forward_hint` | string | yes |  | Short reminder to preserve task text across start and implement calls. |  |  |
@@ -196,7 +197,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `inference_limits` | object | yes |  | Limits of changed-path implementer-context inference. |  |  |
 | `inference_limits.rule` | string | yes |  | Boundary for what implement --changed can derive from available workspace state. |  |  |
 | `inference_limits.can_infer` | array of string | yes |  | Information classes derived from paths, config, active planning, or package metadata. |  |  |
-| `inference_limits.cannot_infer` | array of string | yes |  | Information classes that still require human or agent judgment. |  |  |
+| `inference_limits.cannot_infer` | array of string | yes |  | Information classes that still require human or agent judgement. |  |  |
 | `inference_limits.when_uncertain` | string | yes |  | Routing instruction when changed-path context is insufficient. |  |  |
 | `execution_posture` | object | yes |  | Actionable local execution posture for orchestration before implementation. |  |  |
 | `execution_posture.kind` | const `"agentic-workspace/execution-posture/v1"` | yes |  | Discriminator for the execution posture payload. |  |  |
@@ -204,7 +205,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.capability_posture.status` | string | yes |  | Whether capability posture was inferred, configured, or unavailable. |  |  |
 | `execution_posture.capability_posture.posture` | object | yes |  | Human-readable posture details used for review. |  |  |
 | `execution_posture.capability_posture.scope_evidence` | object | yes |  | Observed scope evidence; the agent owns semantic task classification. |  |  |
-| `execution_posture.capability_posture.proof_factors` | object | yes |  | Structural proof factors; the agent owns proof proportionality judgment. |  |  |
+| `execution_posture.capability_posture.proof_factors` | object | yes |  | Structural proof factors; the agent owns proof proportionality judgement. |  |  |
 | `execution_posture.capability_posture.risk_flags` | array of string | yes |  | Risk signals inferred from paths or task text. |  |  |
 | `execution_posture.capability_posture.inspection_evidence_required` | array of string | yes |  | Context required before trusting the posture. |  |  |
 | `execution_posture.capability_posture.guidance_authority` | string | yes |  | Authority used to provide structural guidance. |  |  |
@@ -247,7 +248,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |
 | `execution_posture.ready_handoff` | anyOf | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
 | `execution_posture.delegation_decision` | object | yes |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals. |  |  |
-| `execution_posture.task_assignment_disposition` | object | no |  | Typed parent-custody and bounded-child assignment disposition. Parent orchestrator custody does not authorize unresolved bounded-child implementation. |  |  |
+| `execution_posture.task_assignment_disposition` | object | no |  | Typed parent-custody and bounded-child assignment disposition. Parent orchestrator custody does not authorise unresolved bounded-child implementation. |  |  |
 | `execution_posture.implementation_allowed` | boolean | no |  | Whether the current implement posture may proceed under assignment and safety gates. |  |  |
 | `execution_posture.assignment_policy` | object | no |  | Configured best-fit assignment policy for the current target and task scope. |  |  |
 | `execution_posture.target_evidence` | object | no |  | Provenance-aware target suitability evidence for the current changed-path scope. |  |  |

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace final response admission result
 
 Host admission boundary result for a model-authored final response attempt.
@@ -13,9 +14,9 @@ Host admission boundary result for a model-authored final response attempt.
 | (root) | object | yes |  | Host admission boundary result for a model-authored final response attempt. |  | x-agentic-workspace-doc-role: "reference" |
 | `kind` | const `"agentic-workspace/final-response-admission-result/v1"` | yes |  | Stable discriminator for final-response admission command output. |  |  |
 | `status` | enum `"accepted_terminal_final"`, `"accepted_bounded_report"`, `"rejected_auto_resumed"` | yes |  | Whether the host accepted final custody transfer or rejected the attempt and resumed work. |  |  |
-| `terminal_outcome_contract` | object | yes |  | Terminal outcome contract used to decide whether a final response is authorized. |  |  |
+| `terminal_outcome_contract` | object | yes |  | Terminal outcome contract used to decide whether a final response is authorised. |  |  |
 | `admission` | object | yes |  | Detailed admission decision, including rejection and resume transition facts. |  |  |
-| `continuation_operation` | object | yes |  | Ordinary AW continuation operation executed after an unauthorized final response. |  |  |
+| `continuation_operation` | object | yes |  | Ordinary AW continuation operation executed after an unauthorised final response. |  |  |
 | `checkpoint_write` | object | yes |  | Local checkpoint write result for the persisted admission slice. |  |  |
 | `checkpoint_before` | object | yes |  | Local admission checkpoint state observed before this command. |  |  |
 | `checkpoint_after` | object | yes |  | Local admission checkpoint state observed after this command. |  |  |

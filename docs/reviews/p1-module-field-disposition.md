@@ -10,7 +10,7 @@ historical Python module model advertised by the superseded authoring documents.
 | describe / resolve | KEEP_DOMAIN: lazy domain descriptor and deterministic observation, not agent phases. |
 | capability domains/effects/requests/operations; source/config schemas | KEEP_DOMAIN: independent fact/effect/currentness meaning, strict admitted bounds. |
 | Context and Resolution facts/blockers/requests/prepared result | KEEP_DOMAIN: current domain input/output; optional operation permits facts-only ownership. |
-| Repository independent admissions | KEEP_DOMAIN: authorization and source/effect grants cannot migrate to optional skills. |
+| Repository independent admissions | KEEP_DOMAIN: authorisation and source/effect grants cannot migrate to optional skills. |
 | Registry participation_model, including recommended_loop, module_can_contribute, task_posture_model, conflict/projection/dynamic-instruction recipes | REMOVE: deleted model and schema fields. No consumer requires a replacement; historical diagnostic defaults remain empty. |
 | First-party modules[].participation loop_steps/declares/posture_triggers/dynamic_projection/authority_boundaries/conflict_provenance | REMOVE: deleted all three rows and schema. Actual native domain restrictions remain in each owner; optional selection/sequence is in M1-M5. |
 | Historical startup_steps/workflow_surfaces/install signals | KEEP_DOMAIN, internal distribution only: source-maintenance lifecycle detection/preservation still consumes paths, not native module phases. |

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Scoped instruction operation input
 
 Inputs shared by generated scoped Markdown instruction operations.

@@ -6,7 +6,7 @@ Related issues: #1680, #1695
 
 ## Context
 
-Recent #1680 dogfooding showed that ordinary `start` and `implement` payloads can become a token sink when diagnostic packets are emitted by default. The first guardrail should make output-size drift visible before changing more behavior.
+Recent #1680 dogfooding showed that ordinary `start` and `implement` payloads can become a token sink when diagnostic packets are emitted by default. The first guardrail should make output-size drift visible before changing more behaviour.
 
 ## Initial Tiny Budgets
 

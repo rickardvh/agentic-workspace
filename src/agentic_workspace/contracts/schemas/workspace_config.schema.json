@@ -180,7 +180,7 @@
           "x-agentic-workspace-effective-default-source": "product-default-or-autodetected-existing"
         },
         "workflow_artifact_profile": {
-          "description": "Shape of generated workflow and handoff artifacts.",
+          "description": "Shape of generated workflow and handoff artefacts.",
           "enum": [
             "repo-owned",
             "gemini"
@@ -276,7 +276,7 @@
           "default": false
         },
         "strict_closeout": {
-          "description": "Require a current task-bound Verification claim judgment before completion, even when no protocol matches. False does not waive independently binding proof or review obligations.",
+          "description": "Require a current task-bound Verification claim judgement before completion, even when no protocol matches. False does not waive independently binding proof or review obligations.",
           "type": "boolean",
           "default": false
         },

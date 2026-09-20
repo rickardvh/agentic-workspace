@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Selected Verification obligation execution requirements",
-  "description": "Agent judgment about execution requirements for one current source-owned obligation. This never authenticates reviewers, admits evidence, or satisfies other closeout obligations.",
+  "description": "Agent judgement about execution requirements for one current source-owned obligation. This never authenticates reviewers, admits evidence, or satisfies other closeout obligations.",
   "$defs": {
     "arguments": {
       "type": "object",
@@ -130,7 +130,7 @@
         "object",
         "null"
       ],
-      "description": "Current source-issued requirement judgment request, or null to request unresolved detail."
+      "description": "Current source-issued requirement judgement request, or null to request unresolved detail."
     }
   },
   "x-agentic-workspace-doc-role": "schema-reference"

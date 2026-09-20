@@ -1,7 +1,7 @@
 # Skills-first interface conformance
 
 PR #3228 is the cumulative C53 interface lane under #3207. This report separates
-implemented behavior from parent completion and platform evidence.
+implemented behaviour from parent completion and platform evidence.
 
 ## Source and derivation
 
@@ -10,7 +10,7 @@ implemented behavior from parent completion and platform evidence.
 instructions/config own policy, domain records own state/evidence, and Rust owns
 exact semantics and effects. `WORKFLOW.md` is a compatibility pointer.
 
-The canonical skill also treats explicit future-behavior corrections as owner
+The canonical skill also treats explicit future-behaviour corrections as owner
 reconciliation input, keeps one-off requests non-retained, respects current scope,
 and requires a verified owner outcome before claiming retention. An unavailable
 owner/path is reported explicitly; apologies, chat promises and Memory notes do
@@ -57,7 +57,7 @@ fallback), and exact path scope still applies when the semantic route is stale.
 The native instruction and former-route suites cover real repository procedures,
 custom registry admission, missing procedure refs, and preserved former state.
 This reuses the existing Rust route owner; there is no second selector or session
-registry. The legacy persisted-input schema remains distinct from the normalized
+registry. The legacy persisted-input schema remains distinct from the normalised
 currentness result, and neither is an effect authority.
 
 The fixtures are executable consumer journeys, not a controlled model-quality
@@ -90,7 +90,7 @@ the previous implementation required an additional discovery request.
 uses `OWNERSHIP.toml` for selective repository-source orientation. It requires exact
 source paths/revisions, keeps runtime/local/live facts unknown, and grants no
 managed mutation, proof or completion authority. Missing, stale, malformed or
-insufficient sources narrow conclusions rather than synthesize an operating decision.
+insufficient sources narrow conclusions rather than synthesise an operating decision.
 
 This does not demonstrate the full #3217 GitHub/tree-only black-box journey with
 no executable dependencies, all selective owner journeys, or its full revision and

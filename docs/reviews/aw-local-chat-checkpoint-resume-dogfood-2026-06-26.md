@@ -61,7 +61,7 @@ This confirmed the checkpoint is visible early enough to prevent relying on comp
 
 ## What Was Missing
 
-The ordinary resume run also hit the lane-shaping gate because `#1700` and `#1704` matched roadmap candidates and there was no active planning owner yet. That safety behavior was correct, but the checkpoint did not help pick the bounded candidate route or explain that the next safe durable step was promoting the already-matched #1704 candidate.
+The ordinary resume run also hit the lane-shaping gate because `#1700` and `#1704` matched roadmap candidates and there was no active planning owner yet. That safety behaviour was correct, but the checkpoint did not help pick the bounded candidate route or explain that the next safe durable step was promoting the already-matched #1704 candidate.
 
 This means local checkpoints reduced chat-history dependence, but they did not fully reduce planning reorientation cost for roadmap-backed resume tasks.
 

@@ -7,7 +7,7 @@ same sources. Their registry entries no longer select native executable wrappers
 Proof fragments nominate exact public Verification request/action identities with
 the generic `agentic-owner-reference` fence. Missing or ambiguous references yield.
 Selection never executes. The caller retains exact current scope/strategy requests,
-invokes the authorized action, and supplies its receipt to current Verification.
+invokes the authorised action, and supplies its receipt to current Verification.
 Optional method drift does not invalidate independently current native authority.
 
 Resources retain the exact `resources` primitive: its result is a current bounded
@@ -35,7 +35,7 @@ fallback keeps the old wrappers callable. The later #3442 aggregate disposition
 includes these rows and the remaining public concepts.
 
 Confirmed effects remain distinct from continuation. Loss of continuation cannot
-authorize replay. Fresh owner recovery uses existing custody. Domain restrictions,
+authorise replay. Fresh owner recovery uses existing custody. Domain restrictions,
 source reconciliation, independent review and future-value candidate obligations
 survive missing optional skills. No new evidence store or procedure cursor exists.
 

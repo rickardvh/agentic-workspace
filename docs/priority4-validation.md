@@ -40,26 +40,26 @@ semantic claim sufficiency remain distinct.
 
 `verification/reconcile-sources/v1` keeps its recoverable Verification receipt.
 A shared policy delegation for the exact canonical source and resulting-work path
-set can authorize the acting agent's semantic judgment. Removing/changing that
-policy invalidates dependent judgment currentness. No delegation supplies an
+set can authorise the acting agent's semantic judgement. Removing/changing that
+policy invalidates dependent judgement currentness. No delegation supplies an
 independent reviewer or weakens another owner's proof floor.
 
 `verification/review-claim/v1` provides a bounded positive semantic claim-review
 path over exact current work/Planning subject, source postimages, strategy and
 current evidence. A human answer or exact current policy delegation supplies the
-judgment. Caller carriage can reuse that answer only while every binding remains
+judgement. Caller carriage can reuse that answer only while every binding remains
 current; no rendered outcome or process-local authority is retained. Ordinary
 unrequested work does not scan claim postimages or create proof/Planning state.
-The accepted answer removes only Verification's generic semantic-judgment gap;
+The accepted answer removes only Verification's generic semantic-judgement gap;
 source reconciliation, required checks, strategy/profile/assurance floors, other
 owners and unfinished Planning remain independently binding. Required external
 review without an admitted sufficient producer returns an exact review gap; a
-semantic agent judgment never impersonates independent acceptance.
+semantic agent judgement never impersonates independent acceptance.
 
 ## Configuration source lifetime and decisions
 
 The existing durable-choice writer remains the mutation owner. An explicit shared
-policy delegation for an exact config source can authorize ordinary durable edits;
+policy delegation for an exact config source can authorise ordinary durable edits;
 module enablement, independent capability admission and delegation-policy editing
 still require the exact human decision. Discovery/defaults are not recommendations
 or permission. Source, policy, capability and postimage drift invalidate answers.
@@ -68,11 +68,11 @@ A deliberate deferred choice can invoke `configuration.defer-choice`. One bounde
 current owner continuation per source/key lives in
 `.agentic-workspace/local/configuration/`, outside human policy. It uses existing
 attempt custody, survives a fresh task/process and exposes a newly current resume
-request. Changed context requires fresh judgment; a resumed successful source edit
+request. Changed context requires fresh judgement; a resumed successful source edit
 consumes its continuation. This is unresolved choice custody, not setup history,
 learned state, a questionnaire engine or permission to replay an old answer.
 
-| Recognized source intent | Current disposition |
+| Recognised source intent | Current disposition |
 | --- | --- |
 | Shared/local invocation and source selection | Retained durable choice; exact source writer |
 | Local safety and review ceilings | Retained, intersected by current native policy; source protections also cover config writes |
@@ -86,7 +86,7 @@ learned state, a questionnaire engine or permission to replay an old answer.
 
 The lived-in shared/local policy sources are not rewritten by this lane. The
 existing roughly 945-to-120-line shared-config reduction remains an ownership
-result, not a line-count acceptance rule. Source disposition tests cover recognized
+result, not a line-count acceptance rule. Source disposition tests cover recognised
 former intent and unaffected direct work; read-only discovery creates no provider
 work. Full automatic host delegation/adaptation stays with the later lane.
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/optimization-bias-policy.schema.json",
-  "title": "Optimization Bias Policy",
+  "title": "Optimisation Bias Policy",
   "description": "Policy describing output tradeoffs for agent efficiency, balance, and human legibility.",
   "type": "object",
   "required": [
@@ -116,9 +116,9 @@
           "minItems": 1,
           "items": {
             "type": "string",
-            "description": "One entry in the honors bias list."
+            "description": "One entry in the honours bias list."
           },
-          "description": "Ordered honors bias entries used by this contract."
+          "description": "Ordered honours bias entries used by this contract."
         },
         "stays_invariant": {
           "type": "array",

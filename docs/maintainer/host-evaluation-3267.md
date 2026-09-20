@@ -19,7 +19,7 @@ and admit the exact command receipt. Native Configuration exposed the canonical
 skill directories through owned `.agents/skills` junctions. Actual Codex 0.154.0
 app-server `skills/list` discovered all six product skills in each repository.
 The selected standard `workspace-proof-selection/SKILL.md` was byte-identical to
-the canonical source and contributed 5,184 bytes in each arm. The six serialized
+the canonical source and contributed 5,184 bytes in each arm. The six serialised
 discovery rows measured 3,151/3,175 bytes; the difference is target path length.
 An unrelated global skill had a frontmatter error in both catalogues; it did not
 prevent product discovery. No nested model execution or inherited-tool parity
@@ -30,7 +30,7 @@ prepared exact request across the genuine command-selection boundary, then
 parsing the shell result. The portable arm already performs this with a
 disposable JSON response file and ordinary PowerShell. It does not require the
 model to reconstruct owner revisions or request fields. The command choice is
-agent judgment and must not be silently automated by a host wrapper.
+agent judgement and must not be silently automated by a host wrapper.
 
 ## One tested host mechanism
 
@@ -44,7 +44,7 @@ interactive shells, or a child model's tools.
 
 Both arms used the same core binary, canonical standard skill, source grammar,
 current policy and check-to-receipt procedure. Neither used a full operating
-diagnostic as its normal comparison answer. Both summarized the same native
+diagnostic as its normal comparison answer. Both summarised the same native
 decision/effect fields for inspection; the portable shell can make that same
 projection without host machinery. Raw native results were still counted.
 Both stopped with command evidence admitted and claim review not requested;
@@ -57,7 +57,7 @@ neither claimed task completion or independent review.
 | Explicit owner calls reported by the method | 4 | 4 |
 | Native prepare result bytes | 7,832 | 7,836 |
 | Native execute result bytes | 15,483 | 15,503 |
-| Same normalized visible summary bytes, both steps | 1,196 | 1,196 |
+| Same normalised visible summary bytes, both steps | 1,196 | 1,196 |
 | Selected canonical skill bytes | 5,184 | 5,184 |
 | Prepare elapsed ms | 115 | 326 |
 | Execute elapsed ms | 2,636 | 2,897 |
@@ -134,7 +134,7 @@ probe receipts in these fixtures were unreferenced. These raw UTF-8 results excl
 and bound identities differ. Both elapsed measurements here surround only the
 child process, unlike the original host timer; they remain single observations,
 not a causal latency claim. Host orchestration, tool schemas, context, setup and
-measurement extraction remain additional nonzero costs. No new token or normalized
+measurement extraction remain additional nonzero costs. No new token or normalised
 summary measurement is claimed.
 
 Both preparations returned `required_execution.status=not-settled`: the fixture
@@ -150,7 +150,7 @@ receipt through compact and composed paths with zero untaken choice/report
 builders. Full/compact claim restrictions remain equal. The Rust suite passed
 128 tests (3 existing ignored), and the targeted frontier/proof/strategy/scope/
 measurement/carriage/continuation/skill lane passed 116 tests. These establish
-implementation behavior; acceptance of #3335 remains an independent review duty.
+implementation behaviour; acceptance of #3335 remains an independent review duty.
 
 The refreshed selected journey still removes only the disposable response file
 in the richer arm. `NO_ADAPTER` is unchanged. The prior uncertainty, recovery and
@@ -160,12 +160,12 @@ is claimed.
 ## Decision and stop rule
 
 For this remaining burden the host changes where an exact JSON value is held,
-but removes no caller judgment boundary, native call, effect admission or claim
+but removes no caller judgement boundary, native call, effect admission or claim
 obligation. The portable path already avoids protocol reconstruction and eager
 optional owner detail. Saving one disposable response file does not justify
 maintaining a host-specific adapter and its availability/recovery contract.
 
 Stop with this one access-audited comparison and **NO_ADAPTER**. Do not build a
-vendor matrix, generalized CLI mirroring layer, or speculative integration child.
+vendor matrix, generalised CLI mirroring layer, or speculative integration child.
 The broader candidate/parent lane and independent acceptance of the portable
 stack remain separate from this evaluation's disposition.

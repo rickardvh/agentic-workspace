@@ -21,7 +21,7 @@ The source for this disposition is the former implementation at
 `src/agentic_workspace/contracts/operations/assignment.close.json` and
 `assignment.reassign.json`, their
 process conformance vectors and the former public-client lifecycle tests. Git
-preserves that evidence; its successful former-host behavior is not current native
+preserves that evidence; its successful former-host behaviour is not current native
 product proof.
 
 | Former responsibility | Current disposition |
@@ -38,13 +38,13 @@ date, fingerprints and observations, with the existing `stale` status and an
 explicit retirement reason. Regeneration accepts an explicitly retired receipt
 as historical content; clients still exclude it from readiness. Removing the
 marker restores strict fingerprint checks. This is not a new successful execution
-or current artifact admission. The former refresh runner still calls superseded
+or current artefact admission. The former refresh runner still calls superseded
 commands such as `install`, so its failed run cannot renew those receipts.
 
 Proof combines rejected retired operations through Python/TypeScript clients,
 rejected disguised owner requests through native CLI/JSON/Python/TypeScript,
 generated surface consistency, and the retained native patch/Planning/proof
-lifecycle. Full public capability ingress and exact artifact support remain with
+lifecycle. Full public capability ingress and exact artefact support remain with
 #2606/#2986/#3077/#2909/#2990. This slice does not close those parents.
 
 Validation on the source checkout: eight public owner-request rejection cases,

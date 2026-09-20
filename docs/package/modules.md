@@ -2,7 +2,7 @@
 
 These optional capabilities preserve different kinds of useful work. Choose them
 for a recurring need, not as steps every task must pass through. Their runtime
-behavior is included in the shared native product; users do not install three
+behaviour is included in the shared native product; users do not install three
 separate module runtimes.
 
 ## Planning
@@ -23,7 +23,7 @@ constraint, the reason an approach failed, or useful advice whose assumptions ca
 be stated. Keep canonical project facts in their existing documents rather than
 copying them into notes.
 
-Advice remains advice. A correction intended to govern future behavior belongs in
+Advice remains advice. A correction intended to govern future behaviour belongs in
 project instructions or another authoritative source, not merely a Memory note.
 Ask the agent to revise or retire a lesson when its dependencies change.
 

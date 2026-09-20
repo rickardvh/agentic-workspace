@@ -19,7 +19,7 @@ Use the strongest existing home before inventing a new surface:
 - Canonical docs: human-facing build, validation, release, ownership, or workflow policy.
 - Tests/checks/contracts: lessons that can become enforceable validation.
 - Planning: active or bounded future work that needs sequencing.
-- Issue follow-up: product or repo improvements needing review and prioritization.
+- Issue follow-up: product or repo improvements needing review and prioritisation.
 - Local-only scratch: machine-local probe output that is not shared authority.
 
 ## Proof Selection

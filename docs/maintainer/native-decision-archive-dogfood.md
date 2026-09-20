@@ -83,7 +83,7 @@ but keep separate effect, source and durable ownership. Only fallback publicatio
 updates Memory's manifest. Repository publication remains ordinary Markdown,
 and later rationale reads retain their non-authoritative boundary. Existing
 immutable publication carriers support recovery and detect a lost repository
-source; they are not a second canonical decision archive. Serialized carriers
+source; they are not a second canonical decision archive. Serialised carriers
 are bounded before admission, and configured source protection applies to their
 exact write destinations, including recovery custody.
 
@@ -92,7 +92,7 @@ decision and this repository's existing archive convention in isolated temporary
 repositories. It proves repository output, no-retention, fresh affected recall,
 unrelated quietness, source/convention loss, bounded publication and recovery
 through the public consumers. Fixture answers prove the mechanism, not new
-authorization to create a real repository decision. No artificial ADR or April
+authorisation to create a real repository decision. No artificial ADR or April
 note promotion is added to the lived-in archive.
 
 ## Standing policy delegation
@@ -117,7 +117,7 @@ decision owner.
 
 Matching uses exact path-set equality and the actual durable owner, without
 wildcards, subset matching, task keywords or semantic classification. The grant
-authorizes future material decisions within that scope; it is not approval of
+authorises future material decisions within that scope; it is not approval of
 one particular proposal. A different scope or owner returns the complete bounded
 human request. A matching grant derives the agent basis inside the owner, which
 binds the complete material, current work, dependencies, supersession, destination,

@@ -12,8 +12,8 @@ This report closes the operating-context documentation lane. It records subtract
 | Exact commands/options/effects | schema-shape pages plus hand-written command tables | generated `docs/reference/cli-catalogue.md` |
 | Exact installed footprint/availability | hand-written installed-surface inventory plus raw contract | generated `docs/reference/installed-surface-catalogue.md` |
 | Installation/support/security | distributed install, release, maturity, threat, and package pages | `docs/agentic-workspace-install.md` + threat model; generated support-install projection owns exact command |
-| Maturity/evidence | package prose, dates, reviews, metadata, harness artifacts | `docs/maturity-model.md` + `docs/evidence-and-support.md`; package metadata and release receipts remain machine owners |
-| Exact schema shapes | generated schema pages | unchanged generated schema pages, explicitly labeled as shapes rather than value catalogues |
+| Maturity/evidence | package prose, dates, reviews, metadata, harness artefacts | `docs/maturity-model.md` + `docs/evidence-and-support.md`; package metadata and release receipts remain machine owners |
+| Exact schema shapes | generated schema pages | unchanged generated schema pages, explicitly labelled as shapes rather than value catalogues |
 | Maintainer/history | several pages under the public package path | maintainer docs/reviews; two contract-referenced compatibility pages remain visibly maintainer-only |
 
 ## Dispositions and subtraction
@@ -23,7 +23,7 @@ This report closes the operating-context documentation lane. It records subtract
 - Removed `docs/package/generated-behavior-closure-inventory.md`; current exact facts come from generated contract catalogues and maintainer checks.
 - Compressed the hand-written command map from 714 to 271 words and the installed-surface page from 1,649 to 363 words.
 - Compressed the Planning README from 4,338 to 517 words and Memory README from 4,092 to 429 words. Both now explain only domain purpose, ownership, generic-loop participation, support route, and deeper owner paths. The Planning payload list remains because a checker mechanically binds it to installer authority.
-- Retained `cli-boundary-tests.md` and `generated-behavior-test-inventory.md` at compatibility paths because checked-in generated-behavior contracts name them. Both now identify themselves as maintainer-only and are absent from first-contact navigation.
+- Retained `cli-boundary-tests.md` and `generated-behavior-test-inventory.md` at compatibility paths because checked-in generated-behaviour contracts name them. Both now identify themselves as maintainer-only and are absent from first-contact navigation.
 - Removed active issue-number framing from current package documentation and removed manual-date freshness claims from maturity/documentation status.
 - Added the requested small glossary and evidence/support summary. These replace distributed definitions and marketing-style maturity inference rather than add another product abstraction.
 
@@ -45,7 +45,7 @@ Planning, Memory, and Verification remain named as shipped examples but not fixe
 - `generate_contract_catalogues.py` renders all command/subcommand/option values from `cli_commands.json` plus option groups, and all profile/module footprint cells from `workspace_surfaces.json` plus the module registry.
 - Catalogue headers carry deterministic source-contract digests. Drift tests compare complete checked-in content to fresh rendering.
 - Shared-state mutability is distinct from optional ignored local session/cache/log effects in command authority data and the generated view.
-- Verification selected-but-unconfigured behavior is rendered from optional/degraded reference declarations.
+- Verification selected-but-unconfigured behaviour is rendered from optional/degraded reference declarations.
 - The support-bearing install page is generated from a checked-in projection of the immutable v0.41.1 release receipt, including receipt digest, dereferenced source commit, wheel URL/hash, and exact command. The release receipt remains authority.
 - Schema pages remain generated shape references and are no longer advertised as current-value catalogues.
 

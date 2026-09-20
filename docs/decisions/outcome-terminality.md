@@ -6,7 +6,7 @@ Status: current reconstruction boundary. Repository-owned decision; no AW instal
 
 Owner-local quiescence does not establish task terminality; closure concerns the selected outcome and its required obligations.
 
-Do not terminalize a task from settled owners or block its completion on optional advice. Require the selected outcome owner and current required obligations to establish closure.
+Do not terminalise a task from settled owners or block its completion on optional advice. Require the selected outcome owner and current required obligations to establish closure.
 
 ## Rationale and alternatives
 
@@ -24,7 +24,7 @@ The structured authority basis binds the current repository intent document. The
 
 ## Scope, evidence and supersession
 
-Exact initial applicability: `path:crates/agentic-workspace-core/src/lib.rs`, `path:tests/test_v1_contract.py`. This bounded selection does not claim all future semantic applicability; broader relevance remains agent/owner judgment.
+Exact initial applicability: `path:crates/agentic-workspace-core/src/lib.rs`, `path:tests/test_v1_contract.py`. This bounded selection does not claim all future semantic applicability; broader relevance remains agent/owner judgement.
 
 Authority/evidence: [#2989](https://github.com/rickardvh/agentic-workspace/issues/2989); [#2606](https://github.com/rickardvh/agentic-workspace/issues/2606); [System intent](../../SYSTEM_INTENT.md).
 

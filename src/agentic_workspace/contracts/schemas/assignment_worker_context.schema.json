@@ -90,7 +90,7 @@
       "properties": {
         "semantic_source": {"const": "canonical-assignment-identity", "description": "Only assignment identity supplies worker semantics."},
         "claim_authority": {"description": "Assignment-owned claim ceilings carried to the worker.", "type": "object"},
-        "scope_widening_allowed": {"const": false, "description": "The projection cannot authorize scope widening."}
+        "scope_widening_allowed": {"const": false, "description": "The projection cannot authorise scope widening."}
       },
       "required": ["semantic_source", "claim_authority", "scope_widening_allowed"],
       "type": "object"

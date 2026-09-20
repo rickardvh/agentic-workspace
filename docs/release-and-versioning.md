@@ -1,5 +1,9 @@
 # Release And Versioning
 
+Use this guide to prepare a coordinated AW release and identify the evidence
+required before publication. For installing an existing release, use
+[Getting started](agentic-workspace-install.md).
+
 Agentic Workspace uses coordinated workspace releases: one root
 `agentic-workspace` Python distribution (wheel and sdist), one TypeScript CLI npm
 package, and a paired native CLI/core archive share one numeric version. Separate
@@ -12,9 +16,9 @@ testing previews use the distinct `preview-vMAJOR.MINOR.PATCH` namespace.
 
 The checked-in master ruleset requires `Merge sufficiency`. Ordinary non-draft PRs and pushes to `master` run the compact merge check; the integrated commit receives that server-observed prerequisite before release preparation can proceed. It does not establish release readiness. The live master ruleset is a separate cutover: this reconstruction change does not replace its existing requirements before the new check exists on the protected line.
 
-The support-bearing release workflows begin with read-only admission jobs. They query GitHub check runs for the exact source commit through `scripts/release/support_bearing_promotion.py`; only a downstream job receives tag, release, pull-request, or dispatch write permissions. Stable publication additionally composes `support-bearing-promotion.json` from exact-commit server and runtime receipts plus the existing packed-artifact semantic, install, distribution/license, and security receipts. Missing, stale, mismatched, failed, or unsupported evidence fails closed.
+The support-bearing release workflows begin with read-only admission jobs. They query GitHub check runs for the exact source commit through `scripts/release/support_bearing_promotion.py`; only a downstream job receives tag, release, pull-request, or dispatch write permissions. Stable publication additionally composes `support-bearing-promotion.json` from exact-commit server and runtime receipts plus the existing packed-artefact semantic, install, distribution/license, and security receipts. Missing, stale, mismatched, failed, or unsupported evidence fails closed.
 
-Contributors can replay the exact packed npm-artifact semantic lane with `make packed-artifact-conformance`. The Make target and hosted CI invoke the same `run_generated_command_package_proof.py --packed-conformance` authority; its receipt identifies every tarball digest, the Node runtime, the conformance registry, and whether the execution was local or hosted. A local pass proves that semantic lane only. Hosted runner provisioning, permissions, services, artifact upload, other jobs, and required-check aggregation remain host-only evidence, so local replay never claims a hosted CI pass.
+Contributors can replay the exact packed npm-artefact semantic lane with `make packed-artifact-conformance`. The Make target and hosted CI invoke the same `run_generated_command_package_proof.py --packed-conformance` authority; its receipt identifies every tarball digest, the Node runtime, the conformance registry, and whether the execution was local or hosted. A local pass proves that semantic lane only. Hosted runner provisioning, permissions, services, artefact upload, other jobs, and required-check aggregation remain host-only evidence, so local replay never claims a hosted CI pass.
 
 The authoritative required check, runtime matrix, Node semantic majors, and receipt names for support-bearing promotion live in `.github/support-bearing-promotion.json`. Domain checkers remain authoritative for their own evidence. Preview publication reuses applicable package, install, semantic, security, SBOM, checksum, and provenance authorities but does not create a support-bearing promotion receipt.
 
@@ -24,10 +28,10 @@ The ordinary support-bearing downstream path should be:
 
 1. CI proves the source tree.
 2. CI builds the root wheel and sdist, npm tarball, and paired native archive.
-3. CI proves installation from built artifacts outside the source tree,
+3. CI proves installation from built artefacts outside the source tree,
    including the single-root-wheel public install path.
 4. CI publishes a GitHub Release tagged `vMAJOR.MINOR.PATCH`.
-5. The release contains those admitted artifacts,
+5. The release contains those admitted artefacts,
    `SHA256SUMS`, and `agentic-workspace-release-manifest.json`.
 6. Host repositories can verify release identity, payload provenance, checksums,
    generated-command contract version, and command-generation dependency from the
@@ -37,8 +41,8 @@ The ordinary support-bearing downstream path should be:
 
 `pyproject.toml` at the repo root is the canonical version source. During a
 coordinated stable or preview release, every shipped Python package `pyproject.toml`
-and generated TypeScript CLI `package.json` must be normalized to the same numeric
-version before artifacts are built.
+and generated TypeScript CLI `package.json` must be normalised to the same numeric
+version before artefacts are built.
 
 The next coordinated version must be greater than:
 
@@ -68,7 +72,7 @@ docs together.
 - semver labels;
 - stable and preview release-commit allowed paths;
 - shipped Python and TypeScript package lists;
-- per-package artifact prefixes;
+- per-package artefact prefixes;
 - TypeScript package roots, tarball prefixes, runtime requirements, and publish
   policy;
 - payload schema or installed-state provenance surfaces;
@@ -114,7 +118,7 @@ For an explicit candidate:
 uv run python scripts/release/preview_release.py --version <unused-version> --source-commit <exact-master-sha> --push
 ```
 
-The helper does not commit version normalization to `master`. It creates a
+The helper does not commit version normalisation to `master`. It creates a
 detached release-only commit whose single parent is the selected master source,
 permits only the exact release-owned paths listed
 by `preview_release_commit_allowed_paths`, writes preview release metadata/notes,
@@ -122,15 +126,15 @@ updates the coordinated lockfile, and creates the immutable
 `preview-vMAJOR.MINOR.PATCH` tag. With `--push`, only that tag is pushed.
 
 The helper explicitly dispatches `.github/workflows/preview-release.yml` on
-`master` with the existing tag and exact artifact SHA. Tag pushes
+`master` with the existing tag and exact artefact SHA. Tag pushes
 do not trigger this publisher. Its read-only admission job checks out the trusted
 dispatch commit and runs that verifier against the tag as data, including source
 ancestry and the release-only delta. A tag cannot substitute its own verifier or
 workflow to admit itself. Only successful admission allows downstream jobs to
-check out the admitted artifact SHA and acquire publication permissions. The
+check out the admitted artefact SHA and acquire publication permissions. The
 workflow then builds the coordinated Python, TypeScript and native
 release assets, exercises packaged install and generated-command semantics, emits security
-readiness and an SBOM, creates checksums and artifact attestations, and publishes a
+readiness and an SBOM, creates checksums and artefact attestations, and publishes a
 GitHub Release marked prerelease.
 
 `agentic-workspace-preview-release-manifest.json` records both identities:
@@ -148,7 +152,7 @@ Release URL and digest, so a tester does not need a repository checkout or a
 mutable branch install.
 
 Rerunning the helper for the same existing tag/source verifies and reuses that
-immutable subject. A reused version with a different source, artifact commit, tag,
+immutable subject. A reused version with a different source, artefact commit, tag,
 or package identity fails closed. If publication fails after the tag is created,
 recovery follows that same immutable tag rather than allocating a second package
 version.
@@ -191,8 +195,8 @@ uv run python scripts/release/preview_release.py --rc v1.0.0-rc.1
 uv run python scripts/release/preview_release.py --rc v1.0.0-rc.1 --push
 ```
 
-As with previews, release normalization uses the native resource owner and may
-require the current isolation-policy revision. The RC artifact is a release-only
+As with previews, release normalisation uses the native resource owner and may
+require the current isolation-policy revision. The RC artefact is a release-only
 child of the exact candidate source. The shared publisher keeps runtime/package,
 install, security, SBOM, checksum, attestation and public-byte smoke authorities.
 RC publication is a non-support-bearing GitHub prerelease; it cannot contain or
@@ -222,7 +226,7 @@ uv run python scripts/generate/generate_external_consumer_profile.py
 uv run python scripts/generate/generate_command_packages.py
 ```
 
-Preparation normalizes versions to `1.0.0`, preserves every consumed changeset
+Preparation normalises versions to `1.0.0`, preserves every consumed changeset
 summary in the stable release note alongside the accepted RC/source identity, and
 records `.release/promotions/v1.0.0.json`. Review and commit those changes through
 the existing release PR flow. The stable tag planner and publisher verify the
@@ -237,14 +241,14 @@ The stable publisher also requires complete RC publication and all existing fres
 exact-stable-subject checks, runtime/package/install/security and support-bearing
 promotion receipts. The stable manifest carries the RC promotion record. RC
 acceptance is not stable admission, byte-identical packaging or a maturity/platform
-promotion: the permitted version normalization necessarily changes package bytes.
+promotion: the permitted version normalisation necessarily changes package bytes.
 
 ### Explicit post-RC proof reconciliation
 
 A reviewed proof-only correction does not establish a new product candidate.
 The release owner may explicitly admit it in
 `.release/proof-reconciliations/<accepted-RC-tag>.json`. This is reviewed release
-policy, not a request that a candidate can use to authorize itself. The record
+policy, not a request that a candidate can use to authorise itself. The record
 pins the RC tag/artifact/product source, the independently accepted reconciliation
 commit and its finite changed-path set, and the release-tooling commit and exact
 paths needed to support that admission. The acceptance reference records the
@@ -267,14 +271,14 @@ rejection inputs. The exact proof commit and finite path set remain required.
 
 The stable promotion record keeps `source_commit` as the accepted RC product
 source and separately binds the preparation source, both immutable reconciliation
-revisions and the admission digest (UTF-8 text with normalized newlines). The
-ordinary value-aware normalization verifier then compares the stable subject to
+revisions and the admission digest (UTF-8 text with normalised newlines). The
+ordinary value-aware normalisation verifier then compares the stable subject to
 that admitted preparation source. It does not exempt proof files from the stable
 delta: further proof/tooling changes require a new explicit admission. Original
 exact-source promotions remain valid without a reconciliation record.
 
 This relationship does not reuse old receipts or waive stable evidence. Fresh
-exact-stable-subject admission, independent release review and public artifact
+exact-stable-subject admission, independent release review and public artefact
 verification remain required. Do not allocate a new RC solely to work around
 proof-owner residue; a product-semantic fix still requires a new RC.
 
@@ -298,8 +302,8 @@ summary = "Describe the user-visible release note."
 The semver label is the maintainer-owned compatibility decision, and every
 changeset in the PR must declare the same bump as that label. Docs-only or
 planning-only changes can skip a semver label and changeset unless they affect
-packaged behavior, compatibility, release policy, generated outputs, shipped
-payloads, or release workflow behavior.
+packaged behaviour, compatibility, release policy, generated outputs, shipped
+payloads, or release workflow behaviour.
 
 ## Release PR
 
@@ -327,8 +331,8 @@ package-affecting PRs merge first, the release workflow updates the same release
 PR and recomputes the version from all remaining changesets.
 
 The generated stable release manifest is intentionally not committed. It belongs
-to the release artifact set. The release PR must not mix product behavior changes
-with version normalization. The committed release note is the durable reviewable
+to the release artefact set. The release PR must not mix product behaviour changes
+with version normalisation. The committed release note is the durable reviewable
 record of consumed changeset summaries and is used as the GitHub Release body.
 
 ## Release Tagging
@@ -356,7 +360,7 @@ commit so publication does not depend on GitHub starting a second workflow from 
 repository-token tag push. If tag push succeeds but dispatch or publication
 fails, rerunning the preparer computes the same verified tag/source commit and
 re-dispatches the publisher without creating another version bump. Once the
-release artifacts exist, later preparer runs become no-ops for that tag.
+release artefacts exist, later preparer runs become no-ops for that tag.
 
 ## Stable Tag Publisher
 
@@ -372,7 +376,7 @@ verify that:
 5. every TypeScript package remains publishable;
 6. `.release/releases/vMAJOR.MINOR.PATCH.md` exists and becomes the GitHub
    Release body;
-7. all artifacts and checksums match; and
+7. all artefacts and checksums match; and
 8. `agentic-workspace-release-manifest.json` records the same tag and source
    commit that were built.
 
@@ -383,7 +387,7 @@ subject in place of the verified support-bearing release commit.
 ## Stable Release Recovery
 
 Stable publication recovery follows the existing tag, not a new changeset. The
-recovery report inspects the `Release` workflow because artifact build and
+recovery report inspects the `Release` workflow because artefact build and
 publication failures happen there. For an active failed publisher run, the
 intended repair is to redispatch the same tag and source commit:
 
@@ -424,7 +428,7 @@ or Dockerfile refs do not match the selected release.
 ## All-Or-Nothing Invariant
 
 A support-bearing coordinated release is all-or-nothing. If any Python package
-version, TypeScript package version, lockfile entry, generated artifact, wheel,
+version, TypeScript package version, lockfile entry, generated artefact, wheel,
 sdist, npm tarball, checksum, release manifest entry, install proof, or support-
 bearing evidence is inconsistent, the stable workflow must fail before publishing
 the release.
@@ -439,7 +443,7 @@ metadata. A complete prerelease with matching source/artifact manifest and asset
 checksums is a no-op. Otherwise it rechecks the remote tag and dispatches the
 current reconstruction publisher with that same tag and P. This also recovers
 failed/cancelled publication without trusting or selecting an earlier tag-owned
-run. Per-tag concurrency serializes dispatches; a queued retry sees a complete
+run. Per-tag concurrency serialises dispatches; a queued retry sees a complete
 publication as a no-op. Missing or mismatched tags fail admission. The tag is never
 moved, deleted, or recreated for recovery. A read-only registration run on a
 reconstruction push that changes the workflow makes it discoverable by GitHub's
@@ -447,8 +451,8 @@ dispatch API before it exists on master. That registration event cannot admit or
 publish a preview. Publication requires explicit dispatch on reconstruction;
 an unavailable dispatch remains an explicit failure with the tag retained.
 
-Preview normalization refreshes the four exact generator-owned fingerprint
-receipts after version and lockfile normalization, using the existing generator.
+Preview normalisation refreshes the four exact generator-owned fingerprint
+receipts after version and lockfile normalisation, using the existing generator.
 These release-only receipt updates stay on P.
 
 Publisher retries inspect existing release bytes before building and again
@@ -457,10 +461,10 @@ and previews cannot update the latest-release pointer. If a partial publication
 cannot reproduce its existing bytes, recovery stops with that precise gap rather
 than changing the public identity.
 
-A preview may retain its already-created immutable tag if later artifact
+A preview may retain its already-created immutable tag if later artefact
 publication fails; that is a recovery identity, not a successful release claim.
 The preview publisher must still fail rather than publish a complete prerelease
-when its coordinated artifacts, receipts, checksums, or provenance are
+when its coordinated artefacts, receipts, checksums, or provenance are
 inconsistent.
 
 The identity invariants are:
@@ -488,7 +492,8 @@ or preview tag, and installed-state compatibility compares that payload
 provenance against the current executable version. Host repositories should be
 able to answer which AW release installed or last refreshed `.agentic-workspace/`
 without reconstructing state from release notes or package filenames.
-# Public language registries
+
+## Public language registries
 
 RC and stable publication project the same admitted wheel/sdist/npm tarball to
 PyPI and npm after the existing publisher succeeds. Exploratory `preview-v0.x`
@@ -504,7 +509,7 @@ the default package; publishing stable v1 replaces it. A mismatching channel on 
 requires inspection of its history and a separate deliberate tag repair, never an
 automatic rollback of a newer release. Registry verification downloads public bytes,
 checks integrity and performs clean PyPI/npm installs before recording
-`registry-publication.json` as a workflow artifact. This receipt is additional
+`registry-publication.json` as a workflow artefact. This receipt is additional
 distribution evidence; it does not modify an immutable release manifest or grant
 stable support by itself.
 
@@ -520,9 +525,9 @@ and npm 11.5.1 with Node 24 on GitHub-hosted runners. See the
 [PyPI publisher guide](https://docs.pypi.org/trusted-publishers/using-a-publisher/)
 and [npm publisher guide](https://docs.npmjs.com/trusted-publishers/).
 
-Before hosted artifact proof, Linux wheels are audited against
+Before hosted artefact proof, Linux wheels are audited against
 `manylinux_2_39_x86_64`. Only a wheel whose ELF dependencies satisfy that ABI is
-relabeled. Native executable bytes are never repaired or replaced during tagging;
+relabelled. Native executable bytes are never repaired or replaced during tagging;
 the existing exact-pair proof still compares wheel, npm and native archive bytes.
 Other host classes are not newly admitted by registry availability.
 

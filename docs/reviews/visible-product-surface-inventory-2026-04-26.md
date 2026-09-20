@@ -2,7 +2,7 @@
 
 Purpose: compact inventory for #352 so the next #230 subtraction slice can choose from checked-in evidence instead of rediscovering the visible product shape. This is review evidence, not an operating contract or startup surface.
 
-Classification vocabulary used here: core entrypoint, generated adapter, secondary/deep surface, machine contract, local-only surface, review artifact, historical/compatibility residue, and candidate for compression/removal.
+Classification vocabulary used here: core entrypoint, generated adapter, secondary/deep surface, machine contract, local-only surface, review artefact, historical/compatibility residue, and candidate for compression/removal.
 
 ## Core Entrypoints
 
@@ -44,8 +44,8 @@ Classification vocabulary used here: core entrypoint, generated adapter, seconda
 | Surface | Classification | Why not first-line |
 | --- | --- | --- |
 | Archived execplans | historical/compatibility residue | Useful for recovery; closeout distillation should carry reusable learning. |
-| `.agentic-workspace/planning/reviews/*.review.json` | review artifact | Useful for reconciliation; not ordinary startup reading. |
-| `docs/reviews/*.md` | review artifact | Evidence/history for future issue creation and slice selection; not ordinary operating input. |
+| `.agentic-workspace/planning/reviews/*.review.json` | review artefact | Useful for reconciliation; not ordinary startup reading. |
+| `docs/reviews/*.md` | review artefact | Evidence/history for future issue creation and slice selection; not ordinary operating input. |
 | Closed issue evidence in `.agentic-workspace/planning/external-intent-evidence.json` | machine contract | Used by reconcile/summary; not manually scanned by agents. |
 
 ## Package Machinery To Keep Hidden
@@ -61,7 +61,7 @@ Classification vocabulary used here: core entrypoint, generated adapter, seconda
 1. Thin `llms.txt` so it says `AGENTS.md -> agentic-workspace start -> summary/proof` and stops restating config/lifecycle doctrine.
 2. Compress `tools/AGENT_QUICKSTART.md` and `tools/AGENT_ROUTING.md` behind the same compact-query path: `start` first, summary/proof/config/report only when needed.
 3. Add a report-router shape guard so new sections cannot silently make default report act like the full profile.
-4. Keep historical review artifacts out of startup routing; use summary/reconcile counts and review selectors instead.
+4. Keep historical review artefacts out of startup routing; use summary/reconcile counts and review selectors instead.
 5. Keep `tools/agent-manifest.json` as machine-readable generated output, but avoid pointing ordinary agents to read it unless they need a structured mirror.
 
 ## Next Slice Recommendation

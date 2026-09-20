@@ -1,5 +1,11 @@
 # Session logging
 
+Use this reference when interpreting or exporting AW session diagnostics.
+
+Agentic Workspace records each logical session in one append-only `events.jsonl` file under the local session-logging registry namespace. That shared stream owns the monotonic sequence across physical rotations. Each event retains its physical session id, while the adjacent physical-session `session.md` and `index.json` files remain human-readable and query-friendly compatibility projections.
+
+## Coverage and evidence limits
+
 Analysis and export describe the **known recorded stream**. An internally complete
 stream is compatible with unknown whole-task coverage: no gap event does not prove
 that no host work went uncaptured. `coverage.subject` identifies index agreement;
@@ -13,19 +19,24 @@ context. They do not fabricate events or ingest transcripts. Source/export comma
 counts refer to recorded completions, including native-only streams. Metadata-only
 repetition with omitted arguments cannot establish redundant routing.
 
-Agentic Workspace records each logical session in one append-only `events.jsonl` file under the local session-logging registry namespace. That shared stream owns the monotonic sequence across physical rotations. Each event retains its physical session id, while the adjacent physical-session `session.md` and `index.json` files remain human-readable and query-friendly compatibility projections.
+## Recorded events
 
 Every event follows `session_log_event.schema.json` and carries a stable event id, timestamp, monotonic sequence, event type, logical and physical session ids, optional parent/correlation ids, and a typed payload. `command.started` and `command.completed` share an entry id, making interrupted commands visible. Historical source-maintenance captures may also contain `workflow.transition` events; current native capture is described below. Identifiers derived from host-provided correlation values are salted hashes, so raw host identities are not written to disk.
 
 Physical rotations append through the same logical-stream lock and never restart its sequence. A host can link delegated or resumed work by passing the parent raw logical identity in `AW_SESSION_LOG_PARENT_LOGICAL_IDENTITY` and an optional correlation value in `AW_SESSION_LOG_CORRELATION_ID`. AW stores only private derived ids. If the logical identity is missing but either explicit parent or correlation continuity resolves an existing owner, AW records a metadata-only `logging.gap` in that owner's stream without creating identityless state. If no owner can be resolved, the host must retain `AW_SESSION_LOG_GAP_REASON` until the next identified write, which consumes it into the resolvable stream. Temporarily disabling capture uses the same continuity rules.
 
-`uv run --frozen python scripts/maintainer/session_diagnostics.py export --target .` produces one share-review candidate ending in `.jsonl.gz`. Without an explicit `--id` or `--path`, it includes the current logical session, its physical rotations, and linked delegated descendants. The first record is an `export.manifest`; later records are one normalized event per line in global sequence order. Large text output remains in per-command blob files referenced by path, byte count, and SHA-256 from completion events; export converts available stdout and stderr into bounded `output.chunk` events so no line grows without limit. Binary or unavailable blobs remain digest references. `--no-artifacts` retains hashes and coverage metadata without output bytes.
+## Export for inspection
 
-Exports preserve the raw local logs, normalize known machine-local paths, and disclose time, gap, child-session, and artifact coverage. Event ordering is deterministic for unchanged source streams; deliberately variable manifest creation metadata gives each export its own hash. Normalization is not secret scanning or transfer approval: review the generated stream before sharing it.
+Review an export before sharing it. Path normalisation is not secret scanning or
+transfer approval; exports can include command output.
+
+`uv run --frozen python scripts/maintainer/session_diagnostics.py export --target .` produces one share-review candidate ending in `.jsonl.gz`. Without an explicit `--id` or `--path`, it includes the current logical session, its physical rotations, and linked delegated descendants. The first record is an `export.manifest`; later records are one normalised event per line in global sequence order. Large text output remains in per-command blob files referenced by path, byte count, and SHA-256 from completion events; export converts available stdout and stderr into bounded `output.chunk` events so no line grows without limit. Binary or unavailable blobs remain digest references. `--no-artifacts` retains hashes and coverage metadata without output bytes.
+
+Exports preserve the raw local logs, normalise known machine-local paths, and disclose time, gap, child-session, and artefact coverage. Event ordering is deterministic for unchanged source streams; deliberately variable manifest creation metadata gives each export its own hash.
 
 Raw sessions, derived views, blobs, and exports are ignored local diagnostics. AW does not automatically promote, upload, or delete them; they remain under `.agentic-workspace/local/` until the workspace's local retention or cleanup process removes them.
 
-Older Markdown/index-only sessions remain readable. Existing physical JSONL streams are deterministically migrated into the logical stream on the next identified session resolution; export synthesizes migration events and explicit gap records when it must recover chronology from derived views alone. A malformed or partial JSONL tail does not hide later valid events; readers report the damaged record and continue from subsequent complete lines.
+Older Markdown/index-only sessions remain readable. Existing physical JSONL streams are deterministically migrated into the logical stream on the next identified session resolution; export synthesises migration events and explicit gap records when it must recover chronology from derived views alone. A malformed or partial JSONL tail does not hide later valid events; readers report the damaged record and continue from subsequent complete lines.
 
 ## Native transport capture
 
@@ -35,9 +46,9 @@ Native events contain timing, command identity, transport outcome, request/resul
 
 An absent registry is created exclusively with exact common attempt/commit custody. A later native command verifies that custody before appending or registering a new logical identity. The existing registry retains only its latest publication provenance; immutable attempt/commit evidence uses the common effect store. Historical registries, including native registries created before this provenance existed, remain readable but unavailable for native mutation. Unknown or torn state is preserved.
 
-A stable OS owner lock serializes admitted native registration writers, and the retained Python writer refuses native publication carriers. Exact source bytes are rechecked before replacement; this is cooperating-owner serialization, not filesystem compare-and-swap against arbitrary external writers. Process interruption after exact registry publication can finish its planned immutable commit. Interruption before publication leaves the attempt censored and does not blindly retry registration. Capture stays failure-isolated in both cases. Common custody references retain confined machine-local target/path identity outside exported diagnostic events; path-mode redaction applies to captured event paths, not proof of local file custody.
+A stable OS owner lock serialises admitted native registration writers, and the retained Python writer refuses native publication carriers. Exact source bytes are rechecked before replacement; this is cooperating-owner serialisation, not filesystem compare-and-swap against arbitrary external writers. Process interruption after exact registry publication can finish its planned immutable commit. Interruption before publication leaves the attempt censored and does not blindly retry registration. Capture stays failure-isolated in both cases. Common custody references retain confined machine-local target/path identity outside exported diagnostic events; path-mode redaction applies to captured event paths, not proof of local file custody.
 
-This closes the bounded new-identity registration gap for newly custody-created native registries. Historical transfer, interrupted-command capture/rotation, and separate release-artifact acceptance under #2990 remain unresolved; #2995 is not declared complete.
+This closes the bounded new-identity registration gap for newly custody-created native registries. Historical transfer, interrupted-command capture/rotation, and separate release-artefact acceptance under #2990 remain unresolved; #2995 is not declared complete.
 
 Source-checkout maintainers can use `uv run --frozen python scripts/maintainer/session_diagnostics.py analyze --target .` or the same script with `export --no-artifacts` to read registered native streams through the current logical identity. This is maintained diagnostic tooling, not an installed/public command. The former command-generation session-log model is source-maintenance-only. Native caller origin is explicitly unknown. Native capture does not introduce a separate analysis command or log store.
 

@@ -8,7 +8,7 @@ This review records the current architecture and proof for #2680 and #2690. It i
 | --- | --- | --- | --- | --- |
 | Relevant Memory before action | Memory route/manifest | startup or implement projection → `compile_operating_decision` | `memory_effectiveness.projected_contributions` changes the canonical decision | Memory lifecycle operations |
 | Other durable guidance before action | context-authority registry owner | `context_authority_projection` → `source_guidance` | compact decision-dimension reference | registered source-owner operation |
-| Signed human correction after action | independent host adapter | `correction-event.submit --trusted-host-event-json …` → trusted-authority custody | pending normalization or admitted correction signal | correction-event lifecycle, then selected route owner |
+| Signed human correction after action | independent host adapter | `correction-event.submit --trusted-host-event-json …` → trusted-authority custody | pending normalisation or admitted correction signal | correction-event lifecycle, then selected route owner |
 | Evaluation or other known result after action | producing owner | `future_context_signals` → existing context consequences and reconciliation | claim bound plus one typed owner action | the signal's registered owner operation |
 
 The operating decision composes effects; it does not copy source semantics or manufacture authority. Reconciliation checks whether a known signal has an owner/disposition and never writes Memory, guidance, Planning, or policy directly.
@@ -19,7 +19,7 @@ An independent host can now pass its signed event envelope to the generated `cor
 
 The first host call may contain only compact evidence identity and applicability hints. It returns `pending-normalization`, writes the signed observation to the existing trusted-authority event store, and does not create a correction event or choose a durable route. Replays are no-ops. A later submit names the opaque `host_event_ref` and supplies semantic identity; it enters the existing correction store as `accepted-unrouted`. A final update can route or dismiss it. No transcript, vendor adapter registry, or second correction store was added.
 
-The regression fixture deliberately gives the corrected implementation agent zero correction actions: the test host calls the generated Python operation directly with a signed, minimally classified observation. The observation survives, appears as a relevant normalization action, normalizes into the existing owner, and remains visible until routed. Vendor conversation APIs that do not expose feedback must report `future_context_capture.status = unavailable`; the repository does not simulate host authority.
+The regression fixture deliberately gives the corrected implementation agent zero correction actions: the test host calls the generated Python operation directly with a signed, minimally classified observation. The observation survives, appears as a relevant normalisation action, normalises into the existing owner, and remains visible until routed. Vendor conversation APIs that do not expose feedback must report `future_context_capture.status = unavailable`; the repository does not simulate host authority.
 
 ## Replacement and demotion map
 
@@ -38,7 +38,7 @@ Start, implement, proof, summary, and reconciliation retain their phase-owned co
 
 - No applicable context: the identical live prompt produced no routed-note read, selector call, reconciliation action, `read_first`, or Memory attention. Ordinary startup/proof projection caches remained local and ignored; no checked-in residue was created.
 - Relevant Memory: the changed-path route now places the narrow note in `decision_packet.action.read_first`. Two live current-head runs both consulted it without the prompt naming Memory or a capture command. Candidate-only contributions remain distinguishable and cannot claim projected use.
-- Host correction: one idempotent host operation preserves evidence while the corrected agent performs zero correction actions. Normalization and disposition occur only when needed.
+- Host correction: one idempotent host operation preserves evidence while the corrected agent performs zero correction actions. Normalisation and disposition occur only when needed.
 - Non-correction post-action residue: a live partial-compliance run ignored the staged session-improvement signal, while ordinary startup still exposed `dogfooding_signal_status=unresolved` and its existing owner selector. The failure is visible without the prompt reminding the model about the signal.
 - Agent-proposed learning: remains an `agent-proposed` candidate. It may be routed for owner review but creates no human, policy, proof, or stronger-owner authority and blocks no claim by itself.
 - Stronger-owner counterexample: existing Memory effectiveness tests retain genuinely advisory facts while recommending shrink/stub/delete only when a deterministic owner absorbs the lesson.
@@ -47,4 +47,4 @@ The full measurements are in `future-context-live-evaluation-2026-08-24.json`. A
 
 ## Proof boundary
 
-Focused tests cover signed-host import, forged-authority rejection, replay deduplication, incomplete normalization, admitted-but-unrouted state, separate disposition, relevant/unrelated selection, generated Python invocation, generic non-correction evaluation residue, low-authority agent candidates, unavailable host capture, and quiet no-context behavior. The checked live evidence binds the historical miss, two current-head replays, the identical no-context control, and the non-correction partial-compliance counterexample by transcript and summary digests. Generated Python and TypeScript packages carry the new public inputs; external-consumer and operation contracts remain the shared interface authority.
+Focused tests cover signed-host import, forged-authority rejection, replay deduplication, incomplete normalisation, admitted-but-unrouted state, separate disposition, relevant/unrelated selection, generated Python invocation, generic non-correction evaluation residue, low-authority agent candidates, unavailable host capture, and quiet no-context behaviour. The checked live evidence binds the historical miss, two current-head replays, the identical no-context control, and the non-correction partial-compliance counterexample by transcript and summary digests. Generated Python and TypeScript packages carry the new public inputs; external-consumer and operation contracts remain the shared interface authority.

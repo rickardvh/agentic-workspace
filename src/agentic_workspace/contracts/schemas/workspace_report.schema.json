@@ -142,7 +142,7 @@
     },
     "installed_state_compatibility": {
       "$ref": "#/$defs/installed_state_compatibility",
-      "description": "Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts."
+      "description": "Compatibility assessment across executable, repo payload, generated artefacts, and adapter contracts."
     },
     "selected_modules": {
       "type": "array",
@@ -269,7 +269,7 @@
     },
     "architecture_principles": {
       "type": "object",
-      "description": "Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths.",
+      "description": "Structured architecture-principle routing packet derived from the normalised system-intent record and changed paths.",
       "additionalProperties": true
     },
     "local_aw_state": {
@@ -312,12 +312,12 @@
     },
     "optimization_effect": {
       "type": "object",
-      "description": "Operational effects of the configured optimization posture.",
+      "description": "Operational effects of the configured optimisation posture.",
       "additionalProperties": true
     },
     "operational_effectiveness": {
       "type": "object",
-      "description": "Operational effectiveness matrix combining friction, proof, output, and optimization signals.",
+      "description": "Operational effectiveness matrix combining friction, proof, output, and optimisation signals.",
       "additionalProperties": true
     },
     "assurance_requirements": {
@@ -370,11 +370,11 @@
     },
     "successful_completion_cost": {
       "type": "object",
-      "description": "Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions."
+      "description": "Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimisation decisions."
     },
     "reasoning_economy": {
       "type": "object",
-      "description": "Visible-artifact reasoning-economy evidence classes, ledger examples, and behavior fixtures for report and closeout artifacts.",
+      "description": "Visible-artefact reasoning-economy evidence classes, ledger examples, and behaviour fixtures for report and closeout artefacts.",
       "additionalProperties": true
     },
     "completion_contract": {
@@ -430,7 +430,7 @@
         },
         "review_compression": {
           "type": "object",
-          "description": "Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, behavior-preserving refactor semantic-risk focus, detail routes, and human-owned decisions."
+          "description": "Derived closeout-first human review guide naming the selected work-shape mode, first-inspection facts and contract, rendered fact requirements, behaviour-preserving refactor semantic-risk focus, detail routes, and human-owned decisions."
         },
         "validation": {
           "type": "object",
@@ -445,7 +445,7 @@
           "description": "Closeout transition gate that blocks full completion or closure-language claims when active human intent is unsatisfied and no explicit human-accepted partial scope exists."
         }
       },
-      "description": "Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, behavior-preservation proof/caveat facts, closeout-first review-compression contract, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary."
+      "description": "Derived operator-facing closeout report profile, traceability, completeness, decision-review facts, behaviour-preservation proof/caveat facts, closeout-first review-compression contract, closeout adoption rubric, validation, gaps, closure boundary, final-response rendering guidance, and profile-bound rendered closeout summary."
     },
     "continuation_next_actions": {
       "type": "object",
@@ -571,7 +571,7 @@
         },
         "operating_posture": {
           "type": "object",
-          "description": "Resolved optimization, artifact, initiative, assurance, and delegation posture for this task.",
+          "description": "Resolved optimisation, artefact, initiative, assurance, and delegation posture for this task.",
           "additionalProperties": true
         },
         "improvement_pressure_evaluation": {
@@ -594,12 +594,12 @@
         },
         "optimization_effect": {
           "type": "object",
-          "description": "Operational effects of the configured optimization posture.",
+          "description": "Operational effects of the configured optimisation posture.",
           "additionalProperties": true
         },
         "operational_effectiveness": {
           "type": "object",
-          "description": "Operational effectiveness matrix combining friction, proof, output, and optimization signals.",
+          "description": "Operational effectiveness matrix combining friction, proof, output, and optimisation signals.",
           "additionalProperties": true
         },
         "improvement_obligations": {
@@ -972,7 +972,7 @@
         },
         "claim_authorization": {
           "$ref": "#/$defs/claim_authorization",
-          "description": "Structured claim classes and closure actions authorized or blocked by the gate."
+          "description": "Structured claim classes and closure actions authorised or blocked by the gate."
         },
         "residual_intent": {
           "type": "string",
@@ -1026,7 +1026,7 @@
         },
         "authority_boundary": {
           "type": "object",
-          "description": "Boundary stating AW enforces the transition rule while the agent owns semantic satisfaction judgment and the human owns accepted narrowing."
+          "description": "Boundary stating AW enforces the transition rule while the agent owns semantic satisfaction judgement and the human owns accepted narrowing."
         },
         "rule": {
           "type": "string",
@@ -1049,7 +1049,7 @@
       "properties": {
         "kind": {
           "const": "agentic-workspace/claim-authorization/v1",
-          "description": "Discriminator for structured completion claim authorization."
+          "description": "Discriminator for structured completion claim authorisation."
         },
         "allowed_claim_classes": {
           "type": "array",
@@ -1117,7 +1117,7 @@
         },
         "renderer_rule": {
           "type": "string",
-          "description": "Renderer rule requiring templates to be selected only from authorized claim classes/actions."
+          "description": "Renderer rule requiring templates to be selected only from authorised claim classes/actions."
         },
         "diagnostics": {
           "type": "object",
@@ -1143,7 +1143,7 @@
         }
       },
       "additionalProperties": true,
-      "description": "Structured authorization for completion claim classes and closure actions."
+      "description": "Structured authorisation for completion claim classes and closure actions."
     },
     "authority_boundary": {
       "type": "object",
@@ -1201,7 +1201,7 @@
             "type": "string",
             "minLength": 1
           },
-          "description": "Advisory next actions or support signals AW recommends without owning semantic judgment."
+          "description": "Advisory next actions or support signals AW recommends without owning semantic judgement."
         },
         "candidate_routes": {
           "type": "array",
@@ -1225,7 +1225,7 @@
             "type": "string",
             "minLength": 1
           },
-          "description": "Semantic, route, proof-proportionality, or completion judgments the agent owns."
+          "description": "Semantic, route, proof-proportionality, or completion judgements the agent owns."
         },
         "human_owned_decisions": {
           "type": "array",
@@ -1242,7 +1242,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgment."
+      "description": "Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgement."
     },
     "invoked_cli_identity": {
       "type": "object",
@@ -1518,7 +1518,7 @@
         },
         "generated_artifacts": {
           "type": "object",
-          "description": "Generated artifact freshness classification.",
+          "description": "Generated artefact freshness classification.",
           "additionalProperties": true
         },
         "adapter_contracts": {

@@ -20,8 +20,8 @@ core dispatch. Use it as a working source example alongside the
 [owner API](../crates/agentic-workspace-core/src/independent_owner.rs).
 
 Begin with a capability that observes one exact repository source and reports a
-bounded fact. That lets you establish discovery, repository authorization and
-source-change behavior before adding writes.
+bounded fact. That lets you establish discovery, repository authorisation and
+source-change behaviour before adding writes.
 
 The implementation has three parts:
 
@@ -39,16 +39,16 @@ assembly. The default distribution contains no independently registered owners.
 A facts-only implementation returns its facts and leaves the other `Resolution`
 fields empty. It needs no dummy operation, output file or skill.
 
-## Authorize use in a repository
+## Authorise use in a repository
 
 Linking code makes it available; it does not give it access to every repository.
-The repository separately authorizes the exact implementation and descriptor,
+The repository separately authorises the exact implementation and descriptor,
 scope, source reads, effects, claims, restrictions and durable settings through
 `modules.independent`.
 
 Use the current Configuration requests to inspect and propose that configuration.
 Do not copy a grant from an unrelated example. Missing, changed or revoked
-authorization must remain visible rather than turning into an empty successful
+authorisation must remain visible rather than turning into an empty successful
 result. Unrelated modules should stay out of the current query.
 
 The core supplies `Context`: current work, admitted settings, freshly observed
@@ -61,7 +61,7 @@ choosing how the agent should perform a task.
 Declare its request and operation schemas, then return a `PreparedOperation`
 when the current request supports it. The caller submits an intention; the module
 prepares the exact action and result. The core checks the work, sources, settings,
-authorization and declared effects before execution.
+authorisation and declared effects before execution.
 
 For retained output, `Publication` supports immutable acquisition under the
 owner's namespace. It does not permit replacing an arbitrary file, rewriting an
@@ -85,7 +85,7 @@ before assembly. Publication constraints are not protection against malicious
 Rust code running in the same process.
 
 Validate ordinary observation, irrelevant/disabled absence, changed source or
-authorization, and malformed requests. An effectful module also needs evidence
+authorisation, and malformed requests. An effectful module also needs evidence
 for exact publication, collision preservation and interrupted recovery. Reuse
 core contract coverage; add adapter tests only for distinct transport risks.
 

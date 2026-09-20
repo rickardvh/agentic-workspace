@@ -65,7 +65,7 @@
         "additionalProperties": false,
         "description": "One entry in the rules list."
       },
-      "description": "Policy rules that explain this contract behavior."
+      "description": "Policy rules that explain this contract behaviour."
     },
     "lane_proof_kinds": {
       "type": "object",
