@@ -65,13 +65,22 @@ pub(crate) fn resolve_with_targets(
     pin: &str,
     targets: &[String],
 ) -> Result<Value, CoreError> {
-    let documents = instruction_source::preserve_governance(
-        target,
-        pin,
-        instruction_source::current_sources(target)?,
-    )?;
+    let observed = instruction_source::current_sources(target)?;
+    let (documents, discovery_gap) =
+        match instruction_source::preserve_governance(target, pin, observed.clone()) {
+            Ok(documents) => (documents, None),
+            Err(error) => (observed, Some(error.to_string())),
+        };
     let mut rows = Vec::new();
     let mut blockers = Vec::new();
+    if let Some(reason) = &discovery_gap {
+        blockers.push(blocker(
+            "governance",
+            "admitted-source-discovery-unavailable",
+            reason,
+            vec!["claim:complete".into()],
+        ));
+    }
     let mut scopes: BTreeSet<String> = [
         "task",
         "claim:complete",
@@ -193,6 +202,7 @@ pub(crate) fn resolve_with_targets(
         .collect();
     Ok(
         json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
+        "governance_discovery":if discovery_gap.is_some(){json!({"status":"unavailable","reason":discovery_gap})}else{json!({"status":"observed"})},
         "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers,
             "material":if material.is_empty(){Value::Null}else{json!(material)}},
         "authority_boundary":"read/guidance surface context; reconcile requires a current source judgment; use prefers a replaceable procedure; requirement references retain their owner; only admitted reconcile/checks/protect bind and none grants proof or execution"}),
