@@ -1100,6 +1100,9 @@ fn resolve_selected(
                 .unwrap()
                 .extend(reconciliation["decisions"].as_array().unwrap().clone());
         }
+        if reconciliation["material"].is_array() {
+            verification["contribution"]["material"] = reconciliation["material"].clone();
+        }
         verification["source_reconciliation"] = reconciliation.clone();
         // Reobserve these owner obligations on every selected-Plan entry. Direct
         // work remains stateless; this projection never creates Planning.

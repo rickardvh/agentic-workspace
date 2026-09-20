@@ -364,3 +364,44 @@ def test_escaped_receipt_budget_rejects_before_admission(tmp_path, shared_core_b
         call({"invocation": action})
     assert not (tmp_path / ".agentic-workspace/local/effects").exists()
     assert not (tmp_path / ".agentic-workspace/proof/receipts").exists()
+
+
+def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_path, shared_core_binary, native_cli):
+    context = repository(tmp_path)
+    for index in range(270):
+        (tmp_path / f"src/item-{index:03}.txt").write_text("unchanged consumer")
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    material_request = call()["verification"]["source_reconciliation"]["material_request"]
+    material = call({"request": material_request})["verification"]["source_reconciliation"]["material"]
+    assert 1 <= len(material) <= 16
+    assert all(row["text"] and row["revision"] for row in material)
+    for group in range(5):
+        owner = call()["verification"]["source_reconciliation"]
+        assert owner["coverage"]["total"] == 271
+        assert owner["coverage"]["accepted"] == group * 64
+        assert len(owner["proposal"]["work_postimages"]) <= 64
+        answer = answer_for(call)
+        action = call({"request": answer})["decision_packet"]["primary_action"]
+        assert call({"invocation": action})["status"] == "applied"
+        # Fresh process and different task cannot erase repository-level coverage.
+        context["task"] = f"Continue exact source consistency group {group}"
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["status"] == "current"
+    assert owner["coverage"]["accepted"] == 271
+    assert owner["coverage"]["accepted_groups"] == 5
+    (tmp_path / "src/item-269.txt").write_text("changed consumer")
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["coverage"]["accepted"] == 256
+    assert owner["coverage"]["pending"] == 15
+    answer = answer_for(call)
+    (tmp_path / "src/added.txt").write_text("new membership")
+    with pytest.raises(AssertionError, match="stale or differs"):
+        call({"request": answer})
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["coverage"]["total"] == 272
+    assert owner["coverage"]["accepted"] == 256
+    (tmp_path / "docs/guide.md").write_text("changed governing source")
+    assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0

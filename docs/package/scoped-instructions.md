@@ -193,12 +193,23 @@ evidence of the bounded answer, not deciding authority or a semantic truth oracl
 It satisfies only the source-reconciliation obligation; other completion checks
 remain pending. No source body is copied into a documentation store.
 
-Currentness binds the current work, selected Planning subject when present,
+Currentness binds the selected Planning subject when present,
 canonical sources, declared context dependencies, applicable instruction
 admission, relevant work files, policy and capability revisions. Every entry
 reobserves the declared file set, including additions made outside AW. An incomplete
 caller change list or a quiet event stream cannot prove freshness. Discovery is
-bounded; a scope too large or unsafe to observe remains unresolved for completion.
+bounded; an unsafe or incompletely observed scope remains unresolved for completion.
+
+Large scopes are assessed in groups of at most 64 consumers. The proposal names
+the exact group; `coverage` reports total, accepted and pending consumers. Publish
+the group, then request the next one. A fresh process can recover accepted groups
+from Verification receipts without the original task or conversation. New tasks
+still need their own current publication authority. Completion requires coverage
+of the entire current set, not a sample or the sum of overlapping groups.
+
+A consumer change invalidates its group; a canonical source or governing policy
+change invalidates dependent groups. New consumers require additional coverage.
+These observations mean reconsideration, not that every consumer needs editing.
 
 Unresolved obligations are reobserved on Planning-owned continuation. Direct work
 does not acquire Planning. Unrelated scoped work has no reconciliation obligation;
