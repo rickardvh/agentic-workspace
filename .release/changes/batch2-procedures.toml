@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Make selected procedural preferences executable and retire Planning agent-manifest."
-issues = [3277, 3314, 3316]

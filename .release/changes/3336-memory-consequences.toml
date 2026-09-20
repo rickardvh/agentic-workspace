@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Deliver selected advisory Memory, expose exact recovery, and nominate explicitly observed future-value candidates."
-issues = [3336, 3340, 3341, 3277]

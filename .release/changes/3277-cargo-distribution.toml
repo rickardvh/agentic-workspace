@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Coordinate paired Cargo source archives, exact-version installation and trusted crates.io publication with the release subject."

@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Make Assignment controls and effective diagnostics precedence consequential and reject unsupported transport declarations."
-issues = [3277, 3303, 3313]

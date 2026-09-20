@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Bind System Intent publication custody to current source, recover over-capacity owned scratch through bounded pruning, and scope session diagnostic completeness to the recorded stream."

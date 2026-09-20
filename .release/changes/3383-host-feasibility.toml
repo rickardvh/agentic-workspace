@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Keep unbound internal workers unresolved and bind sealed host transport feasibility to current adapter capability before Assignment comparison and dispatch."
-issues = [3383]

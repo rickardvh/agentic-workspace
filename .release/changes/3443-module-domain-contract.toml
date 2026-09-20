@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "major"
-summary = "Remove historical module participation choreography and document the smaller native domain capability boundary."
-issues = [3443, 3441, 3445]

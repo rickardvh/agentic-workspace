@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Remove Python preparation helpers from portable Workspace and Memory skills and use existing native procedures."
-issues = [3430, 3431]

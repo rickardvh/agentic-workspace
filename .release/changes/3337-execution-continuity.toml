@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Expose ready binding dispatch and admitted Planning continuity actions without request-copying turns."
-issues = [3337, 3339, 3277]

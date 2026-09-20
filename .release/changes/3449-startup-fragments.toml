@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Load startup and intent procedure selectively from shared manual/native resources and retire duplicate reference skills."
-issues = [3449, 3411, 3445]

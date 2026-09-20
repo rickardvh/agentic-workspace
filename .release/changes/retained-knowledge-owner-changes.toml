@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Capture bounded advisory knowledge and route current correction, friction and initiative through existing owner publication authority."
-issues = [3208, 2570, 3040, 2726, 2647, 2648, 2809]

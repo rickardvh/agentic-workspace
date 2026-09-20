@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "major"
-summary = "Remove three redundant Planning workflow umbrellas and retain bounded continuation and Assignment custody in narrow references."
-issues = [3459, 3452, 3411, 3445]

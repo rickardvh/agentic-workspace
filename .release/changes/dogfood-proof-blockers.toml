@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Preserve quoted proof arguments on Windows and admit repository evidence strategy in the operating-decision schema."
-issues = [2931, 2932]

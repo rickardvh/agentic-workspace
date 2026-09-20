@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "minor"
-summary = "Resolve procedure nominations and direct public owner identities to exact current owner references without changing effect authority."
-issues = [3455, 3410, 3445]

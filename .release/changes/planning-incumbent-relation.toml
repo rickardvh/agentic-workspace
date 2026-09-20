@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Separate remembered Planning selection scope from current-work relation and independent task posture while preserving native custody checks."
-issues = [3294]

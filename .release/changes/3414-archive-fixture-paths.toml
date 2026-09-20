@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Construct negative Windows archive-path fixtures without literal absolute paths so release preparation passes the unchanged source hygiene checker."
