@@ -1585,9 +1585,11 @@ fn owner_requests(request: Option<&Value>) -> Result<Vec<Value>, CoreError> {
     ))
     .expect("checked schema");
     let schema = json!({"$schema":declaration["$schema"], "$defs":declaration["$defs"], "$ref":"#/$defs/public_request_set"});
-    crate::schema_validator(&schema, "native public requests")?
-        .validate(request)
-        .map_err(|e| CoreError::new(e.to_string()))?;
+    if !crate::schema_validator(&schema, "native public requests")?.is_valid(request) {
+        return Err(crate::invalid_public_request(
+            crate::PublicRequestShape::Set,
+        ));
+    }
     let mut requests = request
         .as_array()
         .cloned()
@@ -2168,6 +2170,92 @@ fn invoke_inner(value: Value, progress: &mut InvocationProgress) -> Result<Value
     executed["post_effect_changed_paths"] = native_planning::post_effect_paths();
     let result = finish_invocation(&input, &target, invocation, &executed, progress)?;
     Ok(result)
+}
+
+#[cfg(test)]
+mod request_diagnostic_tests {
+    use super::*;
+
+    #[test]
+    fn request_shape_errors_are_value_free_and_serialized_byte_bounded() {
+        let root =
+            std::env::temp_dir().join(format!("aw-request-diagnostics-{}", std::process::id()));
+        std::fs::create_dir(&root).unwrap();
+        let initial = start(json!({"target":root,"task":"Synthetic request validation"})).unwrap();
+        let valid = initial["configuration_write"]["creation_discovery_request"].clone();
+        let prepare = |request: Value| {
+            crate::prepare_request_value(json!({
+                "request":request,"current_work":initial["current_work"],
+                "capability_contract":initial["capability_contract"]
+            }))
+        };
+        assert!(owner_requests(Some(&valid)).is_ok());
+        assert!(prepare(valid.clone()).is_ok());
+        let check = |error: CoreError| {
+            let message = error.to_string();
+            assert!(!message.contains("PRIVATE"));
+            assert!(!message.contains("\\\"\n"));
+            let diagnostic = json!({"error":{"code":"invalid-source-decision","message":message}});
+            assert!(
+                serde_json::to_vec(&diagnostic).unwrap().len()
+                    < crate::PUBLIC_REQUEST_DIAGNOSTIC_MAX_BYTES
+            );
+            assert!(message.contains("request"));
+        };
+        for size in [1, 100, 10_000] {
+            let marker = format!("PRIVATE{}", "\\\"\n秘密".repeat(size));
+            let mut wrong = json!({});
+            wrong[&marker] = json!({"nested":[marker.clone()]});
+            for value in [
+                wrong.clone(),
+                json!([wrong.clone()]),
+                json!({"view":wrong,"carriage":wrong}),
+            ] {
+                check(owner_requests(Some(&value)).unwrap_err());
+            }
+            let many = Value::Array(vec![wrong.clone(); size.min(100)]);
+            check(owner_requests(Some(&many)).unwrap_err());
+            let members: serde_json::Map<String, Value> = (0..size.min(100))
+                .map(|index| (format!("PRIVATE{index}"), wrong.clone()))
+                .collect();
+            check(owner_requests(Some(&Value::Object(members))).unwrap_err());
+            let mut deep = wrong.clone();
+            for _ in 0..size.min(32) {
+                deep = json!({"PRIVATE":deep});
+            }
+            let mut invalid = initial["planning"]["creation_requests"][0].clone();
+            invalid["arguments"] = json!({"material":deep});
+            check(prepare(invalid).unwrap_err());
+            let mut nested = valid.clone();
+            nested["task_identity"][&marker] = json!(marker);
+            check(owner_requests(Some(&json!([valid.clone(), nested.clone()]))).unwrap_err());
+            check(prepare(nested).unwrap_err());
+            for field in ["owner", "request_kind"] {
+                let mut unknown = valid.clone();
+                unknown[field] = json!(marker);
+                check(prepare(unknown).unwrap_err());
+            }
+            for args in [
+                wrong.clone(),
+                json!({"unexpected":wrong}),
+                json!({"answer":marker}),
+                json!(marker),
+            ] {
+                let mut invalid = initial["planning"]["creation_requests"][0].clone();
+                invalid["arguments"] = args;
+                check(prepare(invalid).unwrap_err());
+            }
+        }
+        for shape in [
+            crate::PublicRequestShape::Set,
+            crate::PublicRequestShape::Envelope,
+            crate::PublicRequestShape::Arguments,
+        ] {
+            check(crate::invalid_public_request(shape));
+        }
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 0);
+        std::fs::remove_dir(root).unwrap();
+    }
 }
 
 #[cfg(test)]

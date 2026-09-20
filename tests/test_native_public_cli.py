@@ -27,6 +27,35 @@ def test_native_help_matches_declared_command_inventory(native_cli: Path) -> Non
         assert parsed.returncode == 0, (command, parsed.stderr)
 
 
+def test_native_request_shape_error_transport_is_bounded_and_value_free(tmp_path, shared_core_binary, native_cli):
+    context = {"target": str(tmp_path), "task": "Synthetic validation probe"}
+    carried = consume("native", shared_core_binary, native_cli, {**context, "projection": "carried"})
+    before = {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+    marker = "AW_SYNTHETIC_PRIVATE_MARKER"
+    # Native tests own the growth/nested/schema matrix. These two CLI shapes
+    # prove error-code, stream, exit and actual UTF-8 serialization fidelity.
+    carried[marker] = {marker: '\\"\n秘密' * 10_000}
+    for rejected in ({marker: "x" * 10_000}, carried):
+        result = subprocess.run(
+            [str(native_cli), "start", "--target", str(tmp_path), "--task", context["task"], "--input", "-", "--format", "json"],
+            input=json.dumps(rejected).encode(),
+            capture_output=True,
+            check=False,
+        )
+        assert result.returncode == 2
+        assert result.stdout == b""
+        assert len(result.stderr) <= 512
+        assert marker.encode() not in result.stderr
+        error = json.loads(result.stderr)["error"]
+        assert error["code"] == "invalid-source-decision"
+        assert "request" in error["message"] and "carriage" in error["message"]
+    # Owner-issued input still resolves normally and no rejection creates state.
+    full = consume("native", shared_core_binary, native_cli, context)
+    valid = full["configuration_write"]["creation_discovery_request"]
+    consume("native", shared_core_binary, native_cli, {**context, "request": valid})
+    assert before == {p.relative_to(tmp_path): p.read_bytes() for p in tmp_path.rglob("*") if p.is_file()}
+
+
 @pytest.mark.parametrize("surface", ["native", "json", "python", "typescript"])
 @pytest.mark.parametrize("retired", ["close", "reassign"])
 def test_retired_assignment_commands_do_not_become_hidden_owner_requests(
