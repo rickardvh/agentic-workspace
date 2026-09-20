@@ -1,235 +1,109 @@
-# Installing and adopting Agentic Workspace
+# Getting started
 
-Use this page to select an Agentic Workspace release, understand its support boundary, and use it in a host repository. The source repository is documentation and package source; cloning it and copying payload files is not the normal installation or adoption path.
+Install the AW executable, add its integration to a Git repository, then give your coding agent a small task. The installation route does not restrict your project's programming language: Rust, Python and TypeScript consumers use the same core.
 
-Installation and repository adoption are distinct. Installing AW gives you the selected runtime/artifacts. Adoption establishes the small package-owned foothold that lets ordinary skills-first operation begin.
+<a id="before-execution-trust-boundary"></a>
+## Before you start
 
-## Before execution: trust boundary
+Use an agent that can read repository files and run commands. Agents with repository read access only can inspect saved context, but cannot perform AW operations.
 
-**Agentic Workspace is not a sandbox.** Review and trust the host repository before allowing AW to execute repository-configured proof routes or explicitly supplied executor commands. Those admitted shell routes inherit the caller's filesystem and credential authority.
+**AW is not a sandbox.** Its configured commands run with your filesystem access and credentials. Review the repository and proposed commands before allowing execution. See [security](security/threat-model.md) for details.
 
-External issue, PR, and service text is data, not execution permission. Credentials should remain in the platform/environment credential boundary rather than checked-in AW state.
+The commands below pin **v1.0.0-rc.9**, a published release candidate for testing, not stable support. This is an explicit example version, not a moving “latest” alias. For stable use, choose the release in the [stable install reference](reference/support-bearing-install.md). Older releases may not contain the behavior described here.
 
-See the [threat model and supply-chain boundary](security/threat-model.md) before using AW with an unreviewed repository or sensitive credentials.
+<a id="prebuilt-packages-and-source-installs"></a>
+<a id="runtime-prerequisites-and-support-boundary"></a>
+<a id="stablesupport-bearing-prerequisites"></a>
+## 1. Install the runtime
 
-## Choose a release identity
+Choose **one** route. Python, npm and native archives contain prebuilt executables; Cargo builds from source.
 
-Use an immutable published release identity. Do not infer installable or support-bearing bytes from a branch, source checkout, proposed version, or CI build.
+The RC provides x64 and ARM64 packages for Windows, macOS and Linux. macOS requires 15.0 or later on Intel and 14.0 or later on Apple Silicon. Linux requires glibc 2.39 or newer; Alpine/musl and 32-bit systems are not covered. These limits come from the [platform declaration](../.github/release-platforms.json); check the selected release before using other versions or environments.
 
-### Stable / support-bearing
+### npm / TypeScript
 
-For ordinary supported use, start with the generated [support-bearing install projection](reference/support-bearing-install.md). It identifies the current stable GitHub Release and its `distribution-install-readiness.json` receipt, including the exact hash-bound root-wheel installation command.
+With a tested Node major (20, 24 or 25), install the published archive:
 
-The release receipt is the installation authority. A source checkout can contain newer capabilities than the current stable release and does not upgrade the published support contract. If the generated projection still names an older stable release while a new major release is being prepared, that is preferable to guessing a future install identity.
-
-Stable language-registry artifacts are projections of the same admitted release only after `registry-publication.json` confirms their exact versions and digests. Registry publication does not create a second semantic release. Cargo distribution likewise belongs to the coordinated release and uses the release-declared same-version core/CLI pair and its publication evidence.
-
-### Release candidates
-
-An explicitly published `v1.0.0-rc.N` is a prerelease identity for final external validation before `v1.0.0`. Its release class is `release-candidate` and it is **not support-bearing**.
-
-Use the exact install information attached to that RC. Do not substitute the stable tag, a different version spelling, or registry resolution without the corresponding publication receipt. RC Python, npm, Cargo, and native projections are one coordinated prerelease subject, not independent release authorities.
-
-See the [release and versioning contract](release-and-versioning.md#first-stable-release-candidates) for RC/promotion mechanics.
-
-### Exploratory previews
-
-An explicitly published `preview-vMAJOR.MINOR.PATCH` GitHub prerelease is an immutable exploratory testing identity. It is intentionally **non-support-bearing**.
-
-For a preview:
-
-1. open the exact preview GitHub prerelease;
-2. read its `agentic-workspace-preview-release-manifest.json`;
-3. read `distribution-install-readiness.json` from the same release;
-4. verify both name the same preview subject and non-support-bearing release class;
-5. run only the exact install command from that receipt.
-
-Previews may prove useful packaged behavior, but they do not establish stable compatibility, production support, registry availability, or broader platform support.
-
-### Source and debug routes
-
-Editable installs, source-checkout invocation, `uvx`, `pipx run`, and other development/debug routes can be useful for maintainers. They are not support-bearing installation identities unless a release policy explicitly says otherwise.
-
-## Prebuilt packages and source installs
-
-New releases require prebuilt Python wheels, a universal npm package, and paired
-native archives for Windows, macOS, and Linux on x64 and ARM64. The release
-publisher must receive a successful compiler-free installation receipt from each
-platform before publishing any packages. The required set is maintained in
-[release-platforms.json](../.github/release-platforms.json).
-
-Use the matching entry in the release's `distribution-install-readiness.json`
-`platforms` list when installing from GitHub. PyPI selects the compatible wheel;
-the npm package selects its packaged OS/architecture binaries. Neither route
-requires Rust. Linux wheels currently require glibc 2.39 or newer; Alpine/musl and
-32-bit systems are not part of this declared set.
-
-The published macOS minimum is **macOS 15.0 on Intel x64** and **macOS 14.0 on Apple Silicon ARM64**, as declared in `.github/release-platforms.json`. Both Rust executables are built with that explicit `MACOSX_DEPLOYMENT_TARGET`; Python wheel tags and the platform inventory bound by installation receipts carry the same minimum. Compiler-free macOS coverage is limited to these versions and newer. Older macOS versions are not covered by release installation proof.
-
-A Git dependency is a **source build**, even when pinned to a release tag. It
-requires the exact Rust toolchain declared by that source plus the host linker.
-Cargo installation also builds from source. Use a wheel, npm archive, or native
-archive for installation without Rust. npm Git installation from the repository
-root is not supported; use the published `.tgz` or the registry package.
-
-Previously published `v1.0.0-rc.2` artifacts remain Linux x64 only. This new
-requirement does not change those immutable bytes or establish support for an
-unpublished successor.
-
-## Runtime prerequisites and support boundary
-
-This page owns the current native prerequisite model; the selected immutable release and its receipts own the exact public support claim for those bytes.
-
-| Concern | Current native contract | Unknown or excluded unless a selected release says otherwise |
-| --- | --- | --- |
-| Python | 3.11â€“3.14; 3.11/3.13/3.14 exercised, 3.12 bounded by the minimum/primary lanes | later versions and alternative implementations |
-| Node | npm projection exercised on majors 20, 24 and 25 | other majors |
-| Git/repository | Git working tree for shared checked-in operating context and ownership | non-Git hosts |
-| Network | required to obtain release assets and for explicitly configured external adapters | ordinary local operation does not imply a network service |
-| OS/architecture | each published release must prove its declared Windows/macOS/Linux x64 and ARM64 artifacts | old releases do not gain new platform coverage; musl, 32-bit and other targets remain excluded |
-| Credentials | remain in caller/platform boundaries | AW as a credential host or sandbox |
-| Runtime tools | repository-configured commands run with caller authority | arbitrary host tools being bundled or silently trusted |
-
-The root wheel declares Python 3.11 or newer. Standalone native execution requires neither Python nor Node. Building AW from source additionally requires the repository's exact `rust-toolchain.toml`; installed native artifacts do not require Cargo merely because AW itself is implemented in Rust.
-
-Do not widen a release's support boundary from this source table. If the selected release omits a platform or runtime guarantee, treat it as unproven.
-
-See [Evidence and support](evidence-and-support.md) for how deterministic proof, release support, and live-agent evidence differ.
-
-## Adopt a target repository
-
-The target is the Git repository where the agent will work. Runtime installation does not silently mutate the current directory.
-
-Run ordinary current resolution against the target:
-
-```bash
-agentic-workspace start --target . --task "Inspect this repository" --format json
+```sh
+npm install --global "https://github.com/rickardvh/agentic-workspace/releases/download/v1.0.0-rc.9/agentic-workspace-workspace-cli-1.0.0-rc.9.tgz"
 ```
 
-On artifacts containing the current repository-adoption owner, an unadopted target exposes Configuration's `repository_adoption_request`. Follow that exact request, inspect the bounded proposal, supply only the requested authorization, and execute the returned action through `invoke`.
+The package selects its bundled executables for your operating system and architecture. This command uses the GitHub release asset and does not depend on a matching npm registry publication.
 
-The adoption operation owns the public host footprint. It establishes package-managed skills, ownership/read-profile metadata, provenance, adoption identity, and the declared managed fence in `AGENTS.md`. It does **not** create `.agentic-workspace/config.toml`, choose optional modules/providers, initialize Planning/Memory/Verification state, or treat existing repository content as package-owned.
+### Python
 
-Edited, unowned, conflicting, or unsafe destinations are preserved and reported. Interrupted publication uses the same owner's exact recovery path. An already-adopted/current repository is a no-op rather than a recurring setup phase.
+Use Python 3.11–3.14 and `uv`. Download the wheel matching your machine from the [RC assets](https://github.com/rickardvh/agentic-workspace/releases/tag/v1.0.0-rc.9), then pass that wheel to `uv tool install`.
 
-Historical `init`, `install`, `setup`, `upgrade`, or module lifecycle command families are not the v1 adoption model.
+For example, Linux x64 with glibc 2.39 or newer:
 
-## Use an adopted repository
+```sh
+uv tool install "https://github.com/rickardvh/agentic-workspace/releases/download/v1.0.0-rc.9/agentic_workspace-1.0.0rc9-py3-none-manylinux_2_39_x86_64.whl#sha256=1cfb9a3b241319cce188525ff800d7d941537d73607a0410a3c9849a18e93336"
+```
 
-Follow the target's small entry point to the canonical `workspace-startup` skill. The skill owns reusable procedure; repository instructions/config own policy; domain owners own current state/evidence.
+For another supported platform, select its wheel rather than changing only the filename in this hash-bound command. The release's `distribution-install-readiness.json` contains the corresponding platform-specific install commands and digests.
 
-The native executable exposes:
+### Rust / Cargo
 
-- `start`
-- `invoke`
-- `resources`
-- `worker`
+Install both executables from the same source tag, using the Rust toolchain declared by that tag and a working host linker:
 
-Use `agentic-workspace --help` from the selected artifact for exact current options. The [generated native CLI catalogue](reference/cli-catalogue.md) owns the source-bound command reference.
+```sh
+cargo install --locked --git https://github.com/rickardvh/agentic-workspace --tag v1.0.0-rc.9 agentic-workspace-core agentic-workspace-cli
+```
 
-If executable AW is unavailable, the same canonical skill defines a bounded repository-only read path using `.agentic-workspace/READING.json`. That path can recover repository-recorded context but cannot establish machine-local state, fresh proof, runtime capability, mutation permission, or completion.
+This is a source build, not a compiler-free installation. Rust applications can also use the core as a library; see the [language APIs](architecture/shared-rust-core.md). Use a same-version coordinated pair when installing published crates instead.
 
-After adoption, continue giving your agent ordinary tasks. The skill and current owner results should make AW disappear from attention when it has nothing relevant to add.
+### Standalone executable
 
-## Public host footprint
+Download the matching native archive from the same release. Extract **both** `agentic-workspace` and `agentic-workspace-core` together and put their directory on `PATH`. On Windows, the filenames end in `.exe`. This route requires neither Python nor Node.
 
-The current public host footprint has one Configuration-owned contract. Adoption, refresh, and removal use the same declared file set; optional domain state is never established merely because the repository adopts AW.
+For any route, confirm the agent's environment can find the installation:
 
-The generated [installed-surface catalogue](reference/installed-surface-catalogue.md) is the exact authority for those files and their lifetimes.
+```sh
+agentic-workspace --help
+```
 
-In summary:
+You should see the installed command help. A missing or mismatched core is an installation error, not a reason to switch to a historical Python command host.
 
-- package-managed integration includes `READING.json`, `OWNERSHIP.toml`, the repository-local AW skill registry/bundles, adoption identity, payload provenance, and the managed `AGENTS.md` fence;
-- repo-owned config/instructions remain repo-owned;
-- Planning, Memory, and Verification retain their own domain state;
-- `.agentic-workspace/local/` remains machine-local;
-- promoted repository output remains with its promoted owner;
-- unknown paths are preserved.
+<a id="adopt-a-target-repository"></a>
+<a id="current-native-adoption-boundary"></a>
+## 2. Add AW to your repository
 
-Historical payload-mirroring profiles and executable fallback maintenance are source-maintenance concerns, not public host profiles or native CLI commands.
+Open the Git repository where you want the agent to work. Installing the executable has not changed that repository.
 
-## Refresh managed payload
+Ask your agent:
 
-An adopted repository can require package-managed files and provenance to match the selected artifact. Ordinary package files match shipped bytes; ownership is a composition of portable package facts and repository-owned declarations.
+> Add Agentic Workspace to this repository. Run `agentic-workspace start --target . --task "Adopt AW in this repository" --projection full --format json`. Follow Configuration's returned `repository_adoption_request`, show me the proposed files, and ask for any required authorization. Preserve existing instructions and do not enable optional capabilities yet.
 
-The portable ownership source is `src/agentic_workspace/contracts/portable_ownership.toml` in the AW source distribution. The AW checkout's own `OWNERSHIP.toml` remains development policy and is not a host template. Configuration preserves host subsystem definitions, authority declarations, and supported extensions while updating portable facts. A changed package fact requires an exact match to the authenticated prior package baseline; conflicting or unknown declarations remain blocked. Adoption records that baseline separately from the resulting host ledger.
+The agent submits the exact returned requests through `start --input` and the authorized action through `invoke`. These are machine requests, not JSON you need to assemble. The [lifecycle reference](package/lifecycle.md) explains the transport for clients that need it.
 
-For older adoption records without a structured baseline, the committed ledger postimage supplies the historical package baseline only when it matches the authenticated installed hash. Refresh uses that baseline to retire unchanged source-repository policy while preserving host additions and edited retired declarations. Conflicts with current package facts still block. If the historical postimage is unavailable, only an unchanged ledger matching the old installed hash can establish the baseline; unknown customized bytes do not gain inferred package custody. Historical postimages are migration evidence, never current portable payload inputs. The portable read profile retains the installed skill-registry route without the source-maintenance registry reference.
+After successful adoption, inspect the diff. Expect a small managed section in `AGENTS.md` and package integration under `.agentic-workspace/`, including the main skill and ownership metadata. Adoption does not invent project policy, choose optional modules or create task records.
 
-The public host-surface contract declares `package-verbatim`, `host-composed`, and `target-derived` materialization modes. Generation reads only explicitly promoted portable sources or another declared host output. The native build validates those input edges and carries the mode into Configuration; its generic copy function rejects composite and derived surfaces. Source-maintenance copying cannot supply or retire a public host output.
+Review and commit the shared integration files. Do not commit ignored machine-local state. [Your repository and data](package/installed-surfaces.md) explains the distinction. An existing conflicting file should be preserved and reported, not overwritten to complete setup.
 
-Adoption derives `READING.json` from its resulting host ledger in the same bounded change. A per-file profile refresh binds to the ledger currently on disk, including its Git blob identity. After refreshing ownership, refresh its profile or run adoption to converge both files. A second pass preserves current composite bytes. Standalone Memory and Planning fallbacks carry only portable module-root declarations.
+<a id="use-an-adopted-repository"></a>
+<a id="a-small-repository-journey"></a>
+## 3. Try a small task
 
-When refresh is supported, Configuration exposes `payload_discovery_request` with exact per-file proposals. Inspect those proposals, supply only the bounded authorization requested, execute the returned exact action through `invoke`, and resolve again. Interrupted publication uses the same owner's recovery path.
+Ask the agent:
 
-This operation is bounded to the artifact's declared package files. It cannot accept arbitrary replacement paths/bytes, initialize human policy, reset domain state, or turn unknown ownership into deletion authority. Host ownership meaning is preserved by composition, and unknown edits to the generated profile envelope block replacement.
+> Read this repository's AW entry point. Identify the instructions and checks relevant to correcting one documentation error, then make that correction. Explain what you changed and what you checked. Do not create a plan or lesson unless it has a concrete future use.
 
-Installing a newer runtime artifact does not itself reconcile the target's checked-in package surfaces.
+The entry point leads to `.agentic-workspace/skills/workspace-startup/SKILL.md`. The agent should use relevant project guidance, make the edit and report its checks. A successful task does not require an extra Planning or Memory record.
 
-## Remove AW from a repository
+In a fresh session, ask the agent to read the same entry point. It should be able to discover the integration without the setup conversation. This checks discovery; it does not guarantee every agent will follow the guidance correctly.
 
-Repository removal uses the same current ownership model rather than a separate legacy uninstaller.
+Continue with [Everyday use](everyday-use.md), or [configure project rules](customization.md) when you have a specific requirement.
 
-Configuration can expose the repository-adoption owner's exact removal and recovery requests. Before removing canonical skill targets, remove authenticated `.agents/skills/<name>` discovery links through their existing skill-exposure owner.
+<a id="choose-a-release-identity"></a>
+## Other releases and later maintenance
 
-Removal deletes only package-owned integration whose custody/currentness still matches. It preserves repo-owned configuration and instructions outside the managed fence, Planning/Memory/Verification state, local state, promoted output, and unknown content. Edited package surfaces or ambiguous custody block deletion instead of widening ownership from path recognition.
+Use the selected release's version, packages and platform limits together. A prerelease remains experimental even when its installation checks pass. Do not use a bare package name that might resolve to an older, different interface during the v1 transition.
 
-A successful removal leaves the repository unadopted. Re-adoption later uses the normal adoption path and does not depend on a persistent removal ledger.
+[Compatibility and support](evidence-and-support.md) explains the release evidence. Publishing mechanics belong in the [release guide](release-and-versioning.md), not in repository setup.
 
-Package-manager uninstallation and repository de-adoption are distinct: uninstalling the executable does not by itself remove the repository's checked-in AW integration.
-
-## Standard project skill discovery
-
-In an adopted repository, Configuration can expose the current package registry's main and specialized product skills through `skill_exposure_request`. Submit the exact current request, use an offered `expose_request`, supply the authorized answer, and execute the returned action through `invoke`. The same owner provides authenticated removal and interrupted-result recovery.
-
-Exposure uses `.agents/skills/<name>` links to canonical `.agentic-workspace/skills/<name>` bundles. Unix uses relative symlinks; Windows uses NTFS junctions because ordinary symlink creation can require privileges. Canonical updates and bundle-relative resources remain visible without maintaining a second copy. Reference-only and maintainer skills are not exported.
-
-A filesystem that cannot create the applicable link returns an explicit gap. Never replace a colliding host skill. Reconcile that path explicitly before requesting exposure again. Do not recursively delete `.agents/skills`.
-
-Listing or exposing a skill is procedure discovery. It does not establish policy applicability, effect permission, evidence, or issue closure.
-
-## Stable invocation after adoption
-
-The native `agentic-workspace` boundary remains the ordinary deterministic product authority unless the host uses another supported thin projection over the same Rust-owned operations.
-
-Repository compatibility/config surfaces identify the expected invocation and contract. Machine-local executable paths and credentials should not become durable shared repository state. If the target owns a dependency lock, use the repository's supported environment-manager mode without silently rewriting that lock merely to invoke AW.
-
-## If the CLI is missing
-
-Recover through the exact install receipt for the release class you deliberately selected:
-
-- stable: the [support-bearing install projection](reference/support-bearing-install.md) and its immutable stable release receipt;
-- release candidate: the exact RC release receipt;
-- preview: the exact preview release receipt.
-
-Then return to the canonical skill and the operations exposed by those bytes.
-
-Prefer a repository's normal tool/dependency convention when it can preserve the same compatible installed identity. Temporary/debug runners remain temporary routes, not evidence that a repeatable installation has been established.
-
-## A small repository journey
-
-1. Install the immutable release class you intend to exercise using its exact receipt.
-2. Run `start` in the target repository. If Configuration returns `repository_adoption_request`, follow the exact request/action to establish the public footprint.
-3. Follow the repository entry point to the canonical skill.
-4. Start a direct task:
-
-   ```bash
-   agentic-workspace start --target . --task "Clarify one README sentence" --format json
-   ```
-
-   The current contract may remain direct: edit the canonical README, run proportionate validation, reconcile the bounded result, and create no Planning/Memory/Verification artifact when there is no future-relevant residue.
-5. For continuity-sensitive work, Planning may become relevant through progressive discovery. Follow the current owner operation rather than learning a second mandatory workflow.
-6. After acting, reconcile only what changed: passing proof supports its bounded claim; unfinished parent intent stays unfinished; useful anti-rediscovery residue may route to Memory; Verification contributes evidence only when configured and relevant.
-
-Exact current commands are in the [CLI catalogue](reference/cli-catalogue.md). Exact installed files are in the [surface catalogue](reference/installed-surface-catalogue.md). Exact public release identity belongs to the selected immutable release and its receipts.
-
-## Do not
-
-- clone the AW source repository into a temporary directory as the normal installation strategy;
-- hand-copy package payload into a host repository;
-- substitute a mutable branch for an immutable stable or prerelease identity;
-- use historical `init`/upgrade/module command families as an adoption fallback;
-- treat a successful runtime install as proof that the repository has been adopted;
-- treat package-manager uninstallation as repository de-adoption;
-- delete `.agentic-workspace/` wholesale to remove AW;
-- treat local logs, caches, scratch files, or copied plan material as shared proof or current owner authority.
+<a id="refresh-managed-payload"></a>
+<a id="remove-aw-from-a-repository"></a>
+<a id="public-host-footprint"></a>
+<a id="standard-project-skill-discovery"></a>
+<a id="stable-invocation-after-adoption"></a>
+For updates, removal and optional host skill discovery, use [Your repository and data](package/installed-surfaces.md). <a id="if-the-cli-is-missing"></a>For a missing executable or unsuccessful setup, use [Troubleshooting](troubleshooting.md).
