@@ -405,3 +405,33 @@ def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_
     assert owner["coverage"]["accepted"] == 256
     (tmp_path / "docs/guide.md").write_text("changed governing source")
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
+
+
+def test_current_group_projection_ignores_history_and_preserves_missing_evidence(tmp_path, shared_core_binary, native_cli):
+    import json
+
+    context = repository(tmp_path)
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+    call({"invocation": action})
+    receipt = tmp_path / action["arguments"]["receipt_ref"]
+    for index in range(300):
+        (receipt.parent / f"source-reconciliation-historical-{index}.json").write_text("historical, not operational")
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
+    (tmp_path / "docs/guide.md").write_text("Changed source basis")
+    assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
+    action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+    call({"invocation": action})
+    projection = next((tmp_path / ".agentic-workspace/proof/current").glob("source-reconciliation-*.json"))
+    assert json.loads(projection.read_text()) == [action["arguments"]["receipt_ref"]]
+    assert receipt.exists()  # superseded immutable evidence is preserved
+    current_receipt = tmp_path / action["arguments"]["receipt_ref"]
+    current_receipt.unlink()
+    with pytest.raises(AssertionError, match="current reconciliation receipt unavailable"):
+        call()
+    projection.write_text("corrupt current projection")
+    with pytest.raises(AssertionError):
+        call()

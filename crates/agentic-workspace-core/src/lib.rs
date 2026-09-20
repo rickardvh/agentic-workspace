@@ -4,6 +4,7 @@ pub mod assurance_applicability;
 pub mod attempt;
 pub mod attempt_store;
 pub mod continuity;
+mod current_projection;
 pub mod decision_source;
 mod dependency_binding;
 pub mod direct_task;

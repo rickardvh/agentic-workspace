@@ -292,6 +292,13 @@ pub fn restrict_pending(
             destination.to_owned(),
             format!("{destination}.tmp"),
             ".agentic-workspace/local/effects/source-reconciliation.lock".into(),
+            crate::native_source_reconciliation::projection_path(&action["arguments"]["binding"])?,
+            format!(
+                "{}.tmp",
+                crate::native_source_reconciliation::projection_path(
+                    &action["arguments"]["binding"]
+                )?
+            ),
         ]);
         for source in view["sources"].as_array().into_iter().flatten() {
             if source["applicable"] == true

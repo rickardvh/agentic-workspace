@@ -310,7 +310,8 @@ pub(crate) fn view(
     static PRODUCER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         digest(&json!([
             include_str!("native_source_reconciliation.rs"),
-            include_str!("dependency_binding.rs")
+            include_str!("dependency_binding.rs"),
+            include_str!("current_projection.rs")
         ]))
         .unwrap()
     });
@@ -347,6 +348,72 @@ struct Inputs<'a> {
     contract: &'a Value,
 }
 
+// Only this owner-local current projection is operational. Historical immutable
+// receipts are never enumerated. Absence grants no coverage; malformed or missing
+// referenced evidence is an explicit gap, not a reason to resurrect history.
+pub(crate) fn projection_path(binding: &Value) -> Result<String, CoreError> {
+    Ok(format!(
+        ".agentic-workspace/proof/current/source-reconciliation-{}.json",
+        &digest(&binding["relation_id"])?[7..]
+    ))
+}
+fn current_groups(root: &Dir, binding: &Value) -> Result<Vec<String>, CoreError> {
+    let Some(value) = crate::current_projection::read(root, &projection_path(binding)?)? else {
+        return Ok(Vec::new());
+    };
+    let paths: Vec<String> = serde_json::from_value(value).map_err(err)?;
+    if paths.len() > 4096 || paths.iter().collect::<BTreeSet<_>>().len() != paths.len() {
+        return Err(err("invalid bounded current reconciliation projection"));
+    }
+    for path in &paths {
+        if !path.starts_with(".agentic-workspace/proof/receipts/source-reconciliation-")
+            || !path.ends_with(".json")
+        {
+            return Err(err("invalid current reconciliation reference"));
+        }
+        crate::decision_source::relative(path)?;
+    }
+    Ok(paths)
+}
+fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<(), CoreError> {
+    let mut paths = Vec::new();
+    for old_path in current_groups(root, binding)? {
+        let bytes = native_planning::read(root, &old_path)?
+            .or(native_planning::read(root, &format!("{old_path}.tmp"))?)
+            .ok_or_else(|| err("current reconciliation receipt unavailable"))?;
+        let record: Value = serde_json::from_slice(&bytes).map_err(err)?;
+        let old = &record["invocation"]["arguments"]["binding"];
+        retained(target, &old_path, old)?
+            .ok_or_else(|| err("current reconciliation custody unavailable"))?;
+        let group = old["work_postimages"]
+            .as_object()
+            .ok_or_else(|| err("invalid current group"))?;
+        let mut projected = binding.clone();
+        projected["work_postimages"] = Value::Object(
+            group
+                .keys()
+                .map(|key| Ok((key.clone(), observe(root, key)?)))
+                .collect::<Result<_, CoreError>>()?,
+        );
+        // A new source/policy basis supersedes all old groups. An overlapping
+        // group supersedes the whole prior judgment, never individual subjects.
+        if same_basis(&projected, old)?
+            && !group
+                .keys()
+                .any(|key| binding["work_postimages"].get(key).is_some())
+        {
+            paths.push(old_path);
+        }
+    }
+    paths.push(path.to_owned());
+    if paths.len() > 4096 {
+        return Err(err(
+            "current reconciliation projection exceeds subject bound",
+        ));
+    }
+    crate::current_projection::write(root, &projection_path(binding)?, &json!(paths))
+}
+
 fn grouped_view(
     inputs: Inputs<'_>,
     request: Option<&Value>,
@@ -360,57 +427,36 @@ fn grouped_view(
     let mut uncovered: BTreeSet<String> = all.keys().cloned().collect();
     let mut evidence = Vec::new();
     let mut selected = None;
-    let directory = ".agentic-workspace/proof/receipts";
-    native_planning::read(&root, &format!("{directory}/.aw-confinement"))?;
-    if let Ok(entries) = root.read_dir(directory) {
-        let mut count = 0;
-        for entry in entries {
-            let entry = entry.map_err(err)?;
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if !name.starts_with("source-reconciliation-") || !name.ends_with(".json") {
-                continue;
+    for path in current_groups(&root, &binding)? {
+        let bytes = native_planning::read(&root, &path)?
+            .or(native_planning::read(&root, &format!("{path}.tmp"))?)
+            .ok_or_else(|| err("current reconciliation receipt unavailable"))?;
+        let record: Value = serde_json::from_slice(&bytes).map_err(err)?;
+        let old = &record["invocation"]["arguments"]["binding"];
+        let group = old["work_postimages"]
+            .as_object()
+            .ok_or_else(|| err("invalid current group"))?;
+        let mut projected = binding.clone();
+        projected["work_postimages"] = Value::Object(
+            group
+                .keys()
+                .filter_map(|key| all.get(key).map(|v| (key.clone(), v.clone())))
+                .collect(),
+        );
+        if !same_basis(&projected, old)? {
+            continue;
+        }
+        let prior = retained(target, &path, old)?;
+        if request
+            .is_some_and(|r| r["arguments"]["binding_revision"] == digest(old).unwrap_or_default())
+        {
+            selected = Some(old.clone());
+        }
+        if let Some(prior) = prior.filter(|p| p["committed"] == true && p["published"] == true) {
+            for key in group.keys() {
+                uncovered.remove(key);
             }
-            count += 1;
-            if count > 256 {
-                return Err(err(
-                    "source reconciliation retained group discovery exceeds bounded history",
-                ));
-            }
-            let path = format!("{directory}/{name}");
-            let Some(bytes) = native_planning::read(&root, &path)? else {
-                continue;
-            };
-            let record: Value = match serde_json::from_slice(&bytes) {
-                Ok(record) => record,
-                Err(_) => continue,
-            };
-            let old = &record["invocation"]["arguments"]["binding"];
-            let Some(group) = old["work_postimages"].as_object() else {
-                continue;
-            };
-            let mut projected = binding.clone();
-            projected["work_postimages"] = Value::Object(
-                group
-                    .keys()
-                    .filter_map(|key| all.get(key).map(|v| (key.clone(), v.clone())))
-                    .collect(),
-            );
-            if !same_basis(&projected, old)? {
-                continue;
-            }
-            let prior = retained(target, &path, old)?;
-            if request.is_some_and(|r| {
-                r["arguments"]["binding_revision"] == digest(old).unwrap_or_default()
-            }) {
-                selected = Some(old.clone());
-            }
-            if let Some(prior) = prior.filter(|p| p["committed"] == true && p["published"] == true)
-            {
-                for key in group.keys() {
-                    uncovered.remove(key);
-                }
-                evidence.push(prior["value"].clone());
-            }
+            evidence.push(prior["value"].clone());
         }
     }
     let total = all.len();
@@ -435,6 +481,9 @@ fn grouped_view(
     } else {
         group_view(inputs, request, context, group, &membership)?
     };
+    if output["status"] == "current" && !uncovered.is_empty() {
+        output["status"] = json!("partial");
+    }
     output["coverage"] = json!({"status":if uncovered.is_empty() && !evidence.is_empty(){"current"}else if covered>0{"partial"}else{"unassessed"},"total":total,"accepted":covered,"pending":uncovered.len(),"membership_revision":membership,"complete_enumeration":true,"group_limit":GROUP_SIZE,"accepted_groups":evidence.len()});
     Ok(output)
 }
@@ -796,6 +845,7 @@ pub(crate) fn execute(
         root.remove_file(&temporary).map_err(err)?;
     }
     revalidate()?;
+    publish_group(&root, target, binding, path)?;
     let committed = crate::attempt_store::commit(
         json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
     )?;
