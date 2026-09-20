@@ -10,7 +10,7 @@ to the [user guide](../index.md).
 | Understand where an implementation belongs | [Architecture and source layout](../architecture.md) |
 | Choose or change tests | [Testing strategy](testing-strategy.md) |
 | Update generated references | [Contracts and reference maintenance](../package/contracts.md) |
-| Write human documentation | [Documentation maintenance](../documentation-status.md) |
+| Write human documentation | [Documentation style guide](../documentation-style-guide.md) |
 | Prepare a release | [Release and versioning](../release-and-versioning.md) and [native distribution topology](native-release-topology.md) |
 | Configure recurring research or monitoring | [Scheduled maintainer tasks](scheduled-tasks/README.md) |
 
