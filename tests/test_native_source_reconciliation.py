@@ -451,6 +451,8 @@ def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_
         answer = answer_for(call)
         action = call({"request": answer})["decision_packet"]["primary_action"]
         assert call({"invocation": action})["status"] == "applied"
+        repeated = call({"request": answer})["verification"]["source_reconciliation"]
+        assert repeated["status"] == ("partial" if group < 4 else "current")
         # Fresh process and different task cannot erase repository-level coverage.
         context["task"] = f"Continue exact source consistency group {group}"
     owner = call()["verification"]["source_reconciliation"]

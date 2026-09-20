@@ -200,13 +200,14 @@ pub(crate) fn resolve_with_targets(
         .iter()
         .filter(|row| row["applicable"] == true)
         .collect();
-    Ok(
-        json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
-        "governance_discovery":if discovery_gap.is_some(){json!({"status":"unavailable","reason":discovery_gap})}else{json!({"status":"observed"})},
+    let mut result = json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
         "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers,
             "material":if material.is_empty(){Value::Null}else{json!(material)}},
-        "authority_boundary":"read/guidance surface context; reconcile requires a current source judgment; use prefers a replaceable procedure; requirement references retain their owner; only admitted reconcile/checks/protect bind and none grants proof or execution"}),
-    )
+        "authority_boundary":"read supplies context; admitted reconcile/governed_by require current judgment; use suggests procedure; checks/protect and requirements retain owner authority; none grants proof or effects"});
+    if let Some(reason) = discovery_gap {
+        result["governance_discovery"] = json!({"status":"unavailable","reason":reason});
+    }
+    Ok(result)
 }
 
 /// The instruction owner retains its existing protection authority over newly
