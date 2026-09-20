@@ -9,7 +9,7 @@ Issues: #1673, #1675, #1677, #1678
 - `docs/maintainer/non-enum-keyword-routing-audit.json` now carries enum-backed `decision_authority` for each string-table row.
 - `scripts/check/check_contract_tooling_surfaces.py` rejects any `decision-affecting-package-policy` row, forcing migration to structured authority before the audit can pass.
 - `.agentic-workspace/agent-aids/scripts/github-issue-body/manifest.json` now records an `authority_boundary` with `runtime_authority: none` and `fact_owner: external-intent-evidence`.
-- `scripts/check/check_agent_aids.py` rejects GitHub-specific advisory aids that route behavior-relevant facts anywhere other than external-intent evidence.
+- `scripts/check/check_agent_aids.py` rejects GitHub-specific advisory aids that route behaviour-relevant facts anywhere other than external-intent evidence.
 - `tools/model-cli-harness/external-agent-evaluation/scorecard-taxonomy.json` now records that harness output is maintainer-evaluation evidence, not runtime authority.
 - `scripts/model_cli_harness/external_agent_evaluation_lane.py` validates that the harness authority boundary remains present.
 
@@ -21,11 +21,11 @@ The deleted package-owned assumptions inventory is not restored. These findings 
 - GitHub issue-body helper: checked-in agent-aid manifest plus external-intent evidence contract;
 - model CLI harness: external-agent evaluation lane pack plus validator.
 
-Agent judgment remains responsible for applying these facts. The package may surface diagnostics, normalized external intent, or harness evidence, but it does not route work from arbitrary prose markers, GitHub template phrasing, or provider CLI assumptions.
+Agent judgement remains responsible for applying these facts. The package may surface diagnostics, normalised external intent, or harness evidence, but it does not route work from arbitrary prose markers, GitHub template phrasing, or provider CLI assumptions.
 
 ## GitHub Issue-Body Handoff
 
-The GitHub issue-body aid remains a renderer. Its structured input can carry issue-shaping text, but behavior-relevant facts used by AW runtime surfaces must be promoted into provider-neutral external-intent evidence before they influence routing or scope.
+The GitHub issue-body aid remains a renderer. Its structured input can carry issue-shaping text, but behaviour-relevant facts used by AW runtime surfaces must be promoted into provider-neutral external-intent evidence before they influence routing or scope.
 
 Renderer-owned input example:
 
@@ -57,7 +57,7 @@ Renderer-owned input example:
 }
 ```
 
-Behavior-relevant promoted fact shape:
+Behaviour-relevant promoted fact shape:
 
 ```json
 {
@@ -81,7 +81,7 @@ Behavior-relevant promoted fact shape:
 }
 ```
 
-This handoff is deliberately one-way: the aid renders a GitHub issue body, while external-intent evidence owns the normalized facts that runtime planning and summary surfaces may consume.
+This handoff is deliberately one-way: the aid renders a GitHub issue body, while external-intent evidence owns the normalised facts that runtime planning and summary surfaces may consume.
 
 ## Non-Consumption Proof
 

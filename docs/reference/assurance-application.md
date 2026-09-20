@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Assurance Application Identity
 
 Source-bound identity for why one repository assurance requirement applies to current work.

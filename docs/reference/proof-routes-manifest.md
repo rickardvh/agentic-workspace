@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Proof Routes Manifest
 
 Source-maintenance model only; not native/public command authority. Manifest of named proof routes and their validation commands.

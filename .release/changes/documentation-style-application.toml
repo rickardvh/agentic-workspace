@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Apply British English and reader-first organisation to documentation and generated references, preserving public identifiers and command spellings."

@@ -48,6 +48,7 @@ def render_cli_catalogue() -> str:
     manifest = _load(CLI_PATH)["native_cli"]
     lines = [
         "<!-- GENERATED FILE: edit source_decision_contract.json and rerun `make render-schema-reference`. -->",
+        "",
         "# Current CLI Catalogue",
         "",
         "Generated from the same `native_cli` declaration used by the native executable. The main AW skill is the ordinary agent procedure; this page is tool reference, not a mandatory command loop.",
@@ -73,7 +74,7 @@ def render_cli_catalogue() -> str:
     lines.extend(
         [
             "",
-            "Use `--help` for the installed artifact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.",
+            "Use `--help` for the installed artefact's actual command boundary. Owner requests returned by `start` expose domain operations without adding domain CLI subcommands.",
             "",
             "`start` is current resolution; `invoke` consumes one exact returned action. `resources` and `worker` are bounded dedicated tools. A request, route, packet seal or successful process does not grant mutation, ownership, proof or completion authority. Optional machine-local diagnostics remain distinct from repository mutation.",
             "",
@@ -94,13 +95,14 @@ def render_surface_catalogue() -> str:
     surfaces = _load(SURFACES_PATH)
     lines = [
         "<!-- GENERATED FILE: edit workspace_surfaces.json and rerun `make render-schema-reference`. -->",
+        "",
         "# Current Installed-Surface Catalogue",
         "",
         "The public v1 host footprint is one Configuration-owned contract. Adoption, refresh, and removal use the same file set. Optional domain state is never established by adoption.",
         "",
         f"- Contract digest: `sha256:{_digest([SURFACES_PATH])}`",
         "",
-        "| Surface | Ownership | Materialization | Lifetime | Establish / refresh / remove | Consumer |",
+        "| Surface | Ownership | Materialisation | Lifetime | Establish / refresh / remove | Consumer |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
     for row in surfaces["surfaces"]:
@@ -128,7 +130,7 @@ def render_surface_catalogue() -> str:
     lines.extend(
         [
             "",
-            "Current-version updates treat `.agentic-workspace/` as a closed enclave. Every file is covered by one current owner/class/lifetime declaration, including explicitly mutable, customization and local subtrees. Unclassified residue is included in the exact authorized removal proposal; ambiguous declarations block reconciliation. Inventory is bounded and never traverses links or junctions. Current managed-file conflict rules still apply. A second successful reconciliation is quiet. De-adoption preserves independent state and remains a separate operation.",
+            "Current-version updates treat `.agentic-workspace/` as a closed enclave. Every file is covered by one current owner/class/lifetime declaration, including explicitly mutable, customisation and local subtrees. Unclassified residue is included in the exact authorised removal proposal; ambiguous declarations block reconciliation. Inventory is bounded and never traverses links or junctions. Current managed-file conflict rules still apply. A second successful reconciliation is quiet. De-adoption preserves independent state and remains a separate operation.",
             "",
             "Workspace declarations live in `workspace_surfaces.json` under `enclave`; Planning, Memory and Verification each own `contracts/enclave.json` in their package source. Owners register classification through a generic linked inventory; Workspace neither lists module identities nor refreshes their support. Repository OWNERSHIP.toml admits independent owner paths through explicit enclave rows (path, scope, owner, class, lifetime) and preserves repo_owned authority surfaces. Independent native publication namespaces follow current modules.independent admissions. Ambiguous overlaps block cleanup; broad legacy module roots do not hide residue. New repository extensions can also live under `.agentic-workspace/custom/`; scoped repository instructions remain under `.agentic-workspace/instructions/`.",
             "",
@@ -164,6 +166,7 @@ def render_maintenance_catalogue() -> str:
     }
     lines = [
         "<!-- GENERATED FILE: edit the source contracts and rerun `make render-schema-reference`. -->",
+        "",
         "# Source-Maintenance Surface Inventory",
         "",
         "Exact footprint, ownership, and availability values generated from `source_maintenance_surfaces.json` and `module_registry.json`.",
@@ -197,7 +200,7 @@ def render_maintenance_catalogue() -> str:
             "",
             "## Required and optional references",
             "",
-            "| Target | Kind | Profiles | Modules | Availability / degraded behavior |",
+            "| Target | Kind | Profiles | Modules | Availability / degraded behaviour |",
             "| --- | --- | --- | --- | --- |",
         ]
     )
@@ -231,7 +234,7 @@ def render_maintenance_catalogue() -> str:
             "| Module-owned | A selected module owns only its declared roots and additions. |",
             "| Generated/derived | Rebuildable projections are owned by their source contract and generator. |",
             "| Local-only | Ignored diagnostics, logs, caches, and machine preferences are not shared authority. |",
-            "| Optional/degraded | Absence is explicit and produces the listed degraded behavior rather than invented state. |",
+            "| Optional/degraded | Absence is explicit and produces the listed degraded behaviour rather than invented state. |",
             "| Promoted output | Output becomes durable only through an explicit owning repository or module operation. |",
         ]
     )
@@ -245,19 +248,20 @@ def render_support_install() -> str:
     return "\n".join(
         [
             "<!-- GENERATED FILE: edit the source projection and rerun `make render-schema-reference`. -->",
+            "",
             "# Current Support-Bearing Install",
             "",
             "Human-copyable projection of the latest stable release-owned installation receipt.",
             "",
-            "This receipt describes only its named release. It does not install newer branch or admitted-but-unpublished behavior; consult the [installation guide](../agentic-workspace-install.md) for the current implementation boundary.",
+            "This receipt describes only its named release. It does not install newer branch or admitted-but-unpublished behaviour; consult the [installation guide](../agentic-workspace-install.md) for the current implementation boundary.",
             "",
             f"- Release: [{projection['version']}]({projection['release_url']})",
             f"- Published: `{projection['published_at']}`",
             f"- Dereferenced source commit: `{projection['source_commit']}`",
             f"- Receipt: [{receipt['kind']}]({receipt['url']})",
             f"- Receipt digest: `sha256:{receipt['sha256']}`",
-            f"- Root artifact: [{artifact['name']}]({artifact['url']})",
-            f"- Artifact digest: `sha256:{artifact['sha256']}`",
+            f"- Root artefact: [{artifact['name']}]({artifact['url']})",
+            f"- Artefact digest: `sha256:{artifact['sha256']}`",
             "",
             "```bash",
             projection["install_command"],

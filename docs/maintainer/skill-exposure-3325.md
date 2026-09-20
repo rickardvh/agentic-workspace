@@ -3,7 +3,7 @@
 ## Boundary and implementation
 
 Configuration exposes six current main/specialized product bundles selected from
-its canonical registry. It offers exact read, proposal, authorization, effect and
+its canonical registry. It offers exact read, proposal, authorisation, effect and
 recovery requests through the existing `start`/`invoke` boundary and
 `configuration-source` restriction scope. The same attempt store authenticates
 link ownership. There is no new registry, CLI family, runtime detector or
@@ -59,7 +59,7 @@ read-only --json`, the fixture CWD, and this ordinary prompt (no AW wording):
 | --- | --- | --- |
 | Product skills discovered | 6 | 6 |
 | Names + descriptions, characters | 1,177 | 1,177 |
-| Serialized product metadata, UTF-8 bytes including fixture paths | 3,133 | 3,163 |
+| Serialised product metadata, UTF-8 bytes including fixture paths | 3,133 | 3,163 |
 | Completed host tool calls | 4 | 3 |
 | Actual selected reads | startup + resources through `.agents/skills` | canonical startup + resources |
 | Total reported input tokens across the turn | 188,929 | 154,992 |
@@ -92,7 +92,7 @@ this host selected the skills without it.
 ## Identity, executable resources and output
 
 The exposed intent preparation script was actually executed with the paired
-native CLI, a clear semantic judgment and the same target/task as a second call
+native CLI, a clear semantic judgement and the same target/task as a second call
 through its canonical path. The entire JSON result and revision matched:
 `prepared`, `direct`, procedure-only authority, no effects. Canonical/exposed
 resource bytes and resolved directories matched. This exercises the script's

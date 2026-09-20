@@ -17,7 +17,7 @@ Observed sequence:
 Counts:
 
 - Explicit generic AW-maintenance actions: 0.
-- User semantic decisions requested during implementation: 0 (the fixture deliberately exercises one modeled semantic choice).
+- User semantic decisions requested during implementation: 0 (the fixture deliberately exercises one modelled semantic choice).
 - Agent-executed typed reconciliation transitions: 2 (Planning owner selection and persisted instruction disposition).
 - Redundant rediscovery after canonical admission: 0 in the maintained replay.
 - Fresh-runtime semantic replay: quiet.

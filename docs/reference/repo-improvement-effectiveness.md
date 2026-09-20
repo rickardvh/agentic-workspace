@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Repository Improvement Effectiveness
 
 Sparse owner-bound recurrence, shifted-cost, Evaluation, and residue-retirement result for one completed repository improvement.

@@ -6,7 +6,7 @@ Issues reviewed: #2606, #2607, #2613, and #2623.
 
 ## Decision
 
-The reopened gaps are resolved as one subtractive composition change. Independent modules may publish optional, typed, revisioned facts, but those facts enter the existing instruction IR and operating decision. Scoped Markdown is the ordinary repository-authored instruction surface; workflow obligations remain only as a specialized compatibility surface for stage-bound lifecycle behavior.
+The reopened gaps are resolved as one subtractive composition change. Independent modules may publish optional, typed, revisioned facts, but those facts enter the existing instruction IR and operating decision. Scoped Markdown is the ordinary repository-authored instruction surface; workflow obligations remain only as a specialised compatibility surface for stage-bound lifecycle behaviour.
 
 This change adds no fact store, module-defined instruction operator, second decision compiler, or new authority owner. Command strings remain descriptive metadata and never become obligation identity.
 
@@ -17,17 +17,17 @@ This change adds no fact store, module-defined instruction operator, second deci
 | Stable source-owned module facts (#2606, #2607) | `src/agentic_workspace/module_contract.py`, `src/agentic_workspace/contracts/schemas/module_capability.schema.json`, `tests/test_module_contract.py` | Facts have a stable id, declared type and type-checked value, module-owner identity, revision, and currentness. Facts are optional, ids fail closed on collision, and operation results may refresh only facts declared by the module contract. |
 | Existing decision composition (#2606, #2623) | `src/agentic_workspace/instruction_clause_ir.py`, `src/agentic_workspace/operating_decision.py`, `tests/test_module_extension_scenario_matrix.py` | The ordinary start and implement projection compilers merge relevant module facts with an existing repo-owned instruction program. Its bounded completion restriction changes the compiled operating decision only for the current elevated fact; stale, removed, and irrelevant facts produce no restriction. No module can define a new instruction clause or decision operator. |
 | Out-of-tree extension proof (#2607) | `tests/fixtures/external_signals_module/src/external_signals/__init__.py`, `tests/test_module_contract.py`, `tools/model-cli-harness/external-agent-evaluation/module-extension-scenario-measurements.json` | The independent fixture publishes `elevated@signal-r1`, refreshes it to `clear@r7`, and the next module contribution observes the refreshed snapshot. Omitted fact results preserve the snapshot; empty snapshots remove it. The fixture remains within existing capability and completion-cost budgets. |
-| Ordinary repository instruction authoring (#2613) | `.agentic-workspace/instructions/workspace-operating.md`, `.agentic-workspace/config.toml`, `src/agentic_workspace/contracts/workflow_definition_format.json`, workspace-default contract and schema tests | Generic startup and boundary guidance moved to scoped Markdown. Contract, schema, defaults, config, inventory, and generated references identify scoped Markdown as ordinary and workflow obligations as specialized compatibility only. |
-| Specialized lifecycle compatibility (#2613, #2623) | `.agentic-workspace/config.toml`, `tests/test_workspace_defaults_cli.py` | The remaining obligations are stage-bound adapter refresh, post-proof commit, dogfooding closeout, and external-system intent refresh. Their ids remain stable metadata; embedded command strings do not define identity or widen authority. |
+| Ordinary repository instruction authoring (#2613) | `.agentic-workspace/instructions/workspace-operating.md`, `.agentic-workspace/config.toml`, `src/agentic_workspace/contracts/workflow_definition_format.json`, workspace-default contract and schema tests | Generic startup and boundary guidance moved to scoped Markdown. Contract, schema, defaults, config, inventory, and generated references identify scoped Markdown as ordinary and workflow obligations as specialised compatibility only. |
+| Specialised lifecycle compatibility (#2613, #2623) | `.agentic-workspace/config.toml`, `tests/test_workspace_defaults_cli.py` | The remaining obligations are stage-bound adapter refresh, post-proof commit, dogfooding closeout, and external-system intent refresh. Their ids remain stable metadata; embedded command strings do not define identity or widen authority. |
 
 ## Integrated subtraction check
 
 - Reused the existing module contribution packet, instruction IR, operating-decision compiler, and module operation result path.
 - Reused the existing source-owned instruction-program boundary for repo clauses; no fact predicate was added to scoped Markdown or module contracts.
 - Removed two generic workflow obligations instead of translating them into another obligation registry.
-- Kept module facts optional so first-party modules without facts preserve their existing normalized contract.
+- Kept module facts optional so first-party modules without facts preserve their existing normalised contract.
 - Kept fact applicability repository-owned and revision-aware; modules provide source data, not execution or claim authority.
-- Kept the existing specialized obligation consumer only for lifecycle behavior that survives a stage transition.
+- Kept the existing specialised obligation consumer only for lifecycle behaviour that survives a stage transition.
 
 ## Dogfooding and operating-cost assessment
 
@@ -36,7 +36,7 @@ This change adds no fact store, module-defined instruction operator, second deci
 - `needless_complexity_found`: two generic obligations and the public presentation of obligations as a primary component family were removed or demoted.
 - `correct_by_design_assessment`: ordinary guidance now has one authoring surface; modules use one optional fact field and the existing operation result for refresh.
 - `surfaces_added`: one optional module-contract field and one repo-scoped Markdown file; no command, store, operator, or workflow phase.
-- `surfaces_removed_merged_or_demoted`: two generic obligations were removed and the remaining obligation family became specialized compatibility-only.
+- `surfaces_removed_merged_or_demoted`: two generic obligations were removed and the remaining obligation family became specialised compatibility-only.
 - `artifact_footprint_changed`: contract/schema/generated references and this closure review changed; Planning and Memory ownership did not.
 - `shipped_default_footprint_changed`: unchanged for modules that omit facts; ordinary host guidance is smaller and more direct.
 - `signals_consumed`: the reopened issue comments requiring typed fact lifecycle, out-of-tree proof, ordinary scoped Markdown, and integrated subtraction review.
@@ -65,8 +65,8 @@ Durable-residue result: validation passed; all four issue outcomes are implement
 
 ## Test-evidence decision
 
-The correction proof is behavior-class coverage, not historical fixture residue. `tests/test_module_contract.py` owns the public module/result boundary; the existing module-extension scenario matrix owns root orchestration through the ordinary start and implement decision compilers. The matrix shares setup across relevant, irrelevant, stale, and removed cases, while the out-of-tree fixture proves refresh followed by re-resolution. No existing test was pruned or replaced, and no command-specific regression cluster was added.
+The correction proof is behaviour-class coverage, not historical fixture residue. `tests/test_module_contract.py` owns the public module/result boundary; the existing module-extension scenario matrix owns root orchestration through the ordinary start and implement decision compilers. The matrix shares setup across relevant, irrelevant, stale, and removed cases, while the out-of-tree fixture proves refresh followed by re-resolution. No existing test was pruned or replaced, and no command-specific regression cluster was added.
 
 ## Residue
 
-No unresolved product gap remains within these four reopened issues. Future fact types or lifecycle consumers require concrete source-owner semantics and must compose through the same existing decision boundary rather than creating a parallel store or operator system. The dogfooding review found no session-specific improvement signal that belongs in Memory; unrelated stale Planning artifacts remain with their existing owner and were not activated or modified.
+No unresolved product gap remains within these four reopened issues. Future fact types or lifecycle consumers require concrete source-owner semantics and must compose through the same existing decision boundary rather than creating a parallel store or operator system. The dogfooding review found no session-specific improvement signal that belongs in Memory; unrelated stale Planning artefacts remain with their existing owner and were not activated or modified.

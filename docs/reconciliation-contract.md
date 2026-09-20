@@ -11,7 +11,7 @@ Reconciliation is the post-action part of the ordinary `resolve -> act -> reconc
 
 The contract keeps action result, semantic intent, parent intent, proof, external evidence, residue, and continuation distinct. Passing proof can support a bounded claim, but it cannot satisfy semantic intent, close a parent, or grant a module global completion authority.
 
-Direct work can terminate with no Planning, Memory, Verification, or closeout artifact when its intent is satisfied and no residue remains. Non-terminal results name a recovery owner and supply an operation, command, or explicit human decision. Existing Planning archive/closeout, proof, and reporting surfaces remain domain operations or derived detail; `operating_decision.reconciliation` is the cross-cutting claim/action composition owner.
+Direct work can terminate with no Planning, Memory, Verification, or closeout artefact when its intent is satisfied and no residue remains. Non-terminal results name a recovery owner and supply an operation, command, or explicit human decision. Existing Planning archive/closeout, proof, and reporting surfaces remain domain operations or derived detail; `operating_decision.reconciliation` is the cross-cutting claim/action composition owner.
 
 External state is evidence rather than Planning authority. A changed or closed external item therefore produces one of these explicit choices:
 

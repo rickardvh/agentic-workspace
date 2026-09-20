@@ -2,7 +2,7 @@
 
 Use this template when a host repository runs Agentic Workspace and needs to report findings back to this package without copying host-private state or turning the report into a new evaluation framework.
 
-The report should be compact enough to file as a Markdown issue, review artifact, or checked-in host note. Fill only the fields that materially affect product follow-up.
+The report should be compact enough to file as a Markdown issue, review artefact, or checked-in host note. Fill only the fields that materially affect product follow-up.
 
 ## Report Header
 
@@ -63,11 +63,11 @@ Use this section when assurance, planning, or proof machinery changed the cost o
 ## Privacy And Sensitivity
 
 - Omitted host details:
-- Redactions or anonymization:
+- Redactions or anonymisation:
 - Evidence that should stay in the host repo:
 
 ## Conversion To Focused Issues
 
 Create a package issue only when the row is product-general or likely product-general, has concrete evidence, and the suggested correction is narrower than the report.
 
-Use the review/friction issue template for trust gaps or operating-cost friction. Use the bug template only for actual broken or unintended behavior. Leave repo-local adaptation needs in the host repo.
+Use the review/friction issue template for trust gaps or operating-cost friction. Use the bug template only for actual broken or unintended behaviour. Leave repo-local adaptation needs in the host repo.

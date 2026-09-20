@@ -32,7 +32,7 @@ execution_guarantees = ["reasoning.general", "context.large"]
 transports = [{ kind = "manual" }]
 ```
 
-Required guarantees narrow eligibility before comparative judgment. Matched
+Required guarantees narrow eligibility before comparative judgement. Matched
 preferences inform the agent's comparison among eligible alternatives; they do
 not grant execution, safety or proof authority. A manual-only target can win,
 and the retained current target can win when it satisfies the requirements.
@@ -119,7 +119,7 @@ evaluation, patch integration where applicable, Planning adoption and Verificati
 After resolving replacement Assignment B, the returned
 `delegation/reconcile-prior-result/v1` request accepts original execution custody A
 and a disposition. `replace` preserves the committed original outcome and allows
-the current B dispatch. Missing or in-flight custody cannot authorize replacement;
+the current B dispatch. Missing or in-flight custody cannot authorise replacement;
 use the original attempt recovery owner. The original record is never rewritten.
 
 `reuse-readonly` admits an original completed read-only return only when current

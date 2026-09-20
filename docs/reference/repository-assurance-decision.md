@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Repository Assurance Decision
 
 Bounded output produced by a configured repository assurance classifier.

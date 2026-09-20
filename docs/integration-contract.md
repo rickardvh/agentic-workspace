@@ -23,7 +23,7 @@ One concern has one primary owner:
 3. Memory says what durable knowledge is expensive to rediscover.
 4. Verification says what evidence protocols, proof routes, bundles, or gaps are
    relevant.
-5. The agent owns semantic judgment and completion claims using those facts.
+5. The agent owns semantic judgement and completion claims using those facts.
 
 Module interaction should reduce rereads and duplicated authority. If the same
 guidance appears in multiple modules, tighten ownership instead of relying on

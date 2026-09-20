@@ -25,14 +25,14 @@ A source-declared native Verification command may emit complete JSON stdout with
 strings are bounded to 2048 bytes; total stdout is bounded to 8192 bytes and must
 be untruncated. Only a currently admitted receipt nominates the observation. A
 failure, retry, ordinary prose, transcript or private reasoning does not nominate
-anything. The producer suggestion is untrusted and cannot authorize retention.
+anything. The producer suggestion is untrusted and cannot authorise retention.
 
 The ordinary executable proof procedure carries this candidate to a Memory
 question. The agent judges future value and chooses unresolved, no retention,
 stronger owner/already absorbed, or advisory Memory. Stronger-owner disposition
 requires a current non-Memory source containing the complete bounded lesson; it
-records an agent judgment, not owner admission. Advisory publication uses the
-existing exact human/delegated capture authorization. Multiple candidates remain
+records an agent judgement, not owner admission. Advisory publication uses the
+existing exact human/delegated capture authorisation. Multiple candidates remain
 explicit; publication requires a single selected evidence scope. No new ledger,
 session or event store is introduced.
 
@@ -49,14 +49,14 @@ under the startup skill and leave runtime nomination/publication unestablished.
 Existing Memory owner tests cover interruption stages, policy drift and current
 selection, including actual historical underuse material. Two public journeys
 cover bounded advice delivery/large-detail activation and a non-Memory-worded
-proof task through nomination, disposition, authorized publication and fresh
+proof task through nomination, disposition, authorised publication and fresh
 relevant delivery. Existing adapter conformance owns transport parity; these
 journeys use one public transport. There is no new ordinary CI command or polling
 loop. The additional work is bounded selected-source delivery and parsing one
-already-read admitted command artifact. This evidence supports these owner
+already-read admitted command artefact. This evidence supports these owner
 consequences, not whole-release acceptance or empirical agent learning quality.
 
-The native frontier construction observer checks zero large-body materializations
+The native frontier construction observer checks zero large-body materialisations
 for compact entry and exactly one on selected Memory/proof expansion, including
 UTF-8 and CRLF chunk boundaries. Public stale/missing/dependency checks remain
-unchanged. Streaming hashing preserves the existing normalized source identity.
+unchanged. Streaming hashing preserves the existing normalised source identity.

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Historical Python Module Capability Fixture
 
 Source-maintenance compatibility fixture only, not an installed module API. Current native owner authoring is independent_owner with capability-contract/v1; see docs/module-capability-contract.md.

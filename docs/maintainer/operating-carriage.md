@@ -22,14 +22,14 @@ transport, not owner selection, admission, effects, proof or recovery.
 Questions can carry owner-supplied `material`, bound into question identity and
 preserved in both projections. Native Planning supplies its selected subject;
 Configuration, Memory/decision capture and source reconciliation supply the
-before/after or publication proposal needed for judgment. The renderer never
-dispatches on owner names. Owners must include material that changes judgment;
+before/after or publication proposal needed for judgement. The renderer never
+dispatches on owner names. Owners must include material that changes judgement;
 an opaque proposal digest alone is insufficient context for confirmation.
 
 Owner contributions also carry current operating `material` in the shared
 decision packet. Requested startup/System Intent source text and applicable
 instruction guidance remain visible in every projection. Unrequested source
-bodies stay lazy. Delivery still grants no acknowledgment, satisfaction, proof
+bodies stay lazy. Delivery still grants no acknowledgement, satisfaction, proof
 or effect authority; a compact projection cannot silently discard a requested
 source response and then call it delivered.
 The required startup source-read request accompanies its source identity, so
@@ -45,10 +45,10 @@ returns `authority: detail-only`; changing work or source identity rejects the
 old reference. No session or persistent reference registry is required.
 
 For a skill consuming these tools, keep the work context in host code, show the
-decision-bearing material, and supply the reference plus new judgment. Request
+decision-bearing material, and supply the reference plus new judgement. Request
 `projection: carried` on the answer to retain the ensuing exact action for
 invocation. This avoids reconstructing immutable request fields. It does not
-authorize an automatic sequence of actions. Carried invocation goes directly
+authorise an automatic sequence of actions. Carried invocation goes directly
 to native effect admission, including structured stale rejection and recovery;
 it must not require the committed action to reappear in a fresh pre-effect view.
 
@@ -89,7 +89,7 @@ the generic continuation silently grants a selection, proof or completion claim.
 - `carriage`: the immutable issued envelopes and unchanged original context.
 
 The host keeps `carriage` in its own local object or temporary file and delivers
-only `view` to the model. Passing both fields to the model defeats the optimization.
+only `view` to the model. Passing both fields to the model defeats the optimisation.
 There is no AW session, latest-action handle, durable registry or authority grant.
 References bind the exact envelope, selector and original work context by digest.
 
@@ -133,9 +133,9 @@ requires exact equality before returning detail. Detail cannot answer or execute
 Currentness drift, corruption, unknown references and work changes fail closed.
 Loss of the host object recovers through fresh `start` from current sources.
 
-Hosts can connect a predetermined authorized operation after a bounded answer,
+Hosts can connect a predetermined authorised operation after a bounded answer,
 without a model turn to copy its envelope. They must return control for a new
-question, changed currentness, unsupported capability, authority/proof judgment
+question, changed currentness, unsupported capability, authority/proof judgement
 or uncertainty. No general `while primary_action: invoke` loop is provided.
 
 ## Measurement and residual acceptance
@@ -158,7 +158,7 @@ include the fixture's target spelling and may vary with the temporary path):
 | Direct/no-signal model-visible JSON bytes | 82,556 | 2,762 |
 | Configuration question model-visible JSON bytes | 101,914 | 4,432 |
 | Model-generated answer plus action protocol bytes | 4,241 | 114 |
-| Model turns: answer, then one known authorized write | 2 | 1 |
+| Model turns: answer, then one known authorised write | 2 | 1 |
 | Public calls through that write | 3 | 3 |
 | Required detail fetches | 0 | 0 |
 | Internal resolutions for the answer | 1 | 2 |
@@ -174,7 +174,6 @@ material helpers, more aggressive owner-provided material summaries,
 source-delivery and route continuation (#2661/#2930), profiled derivation reuse
 (#2981), worker entry and effective host-context measurement (#2818/#2947), and
 cumulative #2909/release admission. A committed effect is not evidence of parent completion.
-
 
 ## Truthful invoke continuation
 
@@ -219,12 +218,10 @@ decision; no latency reduction is claimed. No registry or executor was introduce
 
 Measured fixture on 2026-09-10 (UTF-8 JSON bytes; temporary target path length
 contributes to the baseline): 4,022 model-generated protocol bytes become 114;
-public calls 4 become 3, explicitly modeled interactions 3 become 1, post-invoke
-entry calls 1 become 0, required detail calls stay 0, and bounded judgments stay
-1. These are deterministic interaction-trace counts, not a provider-token or
+public calls 4 become 3, explicitly modelled interactions 3 become 1, post-invoke
+entry calls 1 become 0, required detail calls stay 0, and bounded judgements stay 1. These are deterministic interaction-trace counts, not a provider-token or
 live-model timing benchmark. The first-slice measurement above used a different
 temporary target and omitted the post-effect entry context.
-
 
 ## Small required startup source
 
@@ -233,13 +230,13 @@ The configured startup source owner now delivers exact UTF-8 guidance of at most
 or authority threshold. It uses the same owner-issued read request and read/config
 revalidation as explicit delivery. That exact request is still attached to every
 affected action and revalidated at execution. Larger sources retain the compact
-exact read request; optional capability or procedure catalogs are not loaded.
+exact read request; optional capability or procedure catalogues are not loaded.
 
 Automatic delivery failures remain explicit and restricted, with the exact source
 and recovery in the decision. Missing, changed, invalid or unavailable sources do
 not gain authority. Delivery grants no understanding, rule satisfaction, source
 adoption, proof or completion. Fresh clients receive current bytes; no read grant
-or acknowledgment database is written. Continuing-consumer redelivery suppression
+or acknowledgement database is written. Continuing-consumer redelivery suppression
 remains separate #2661 work.
 
 The 70-byte required-guidance fixture was compared with the paired native binary
@@ -258,11 +255,10 @@ boundary. Keep these regressions until that public owner contract is replaced
 with equally direct cross-surface and negative-currentness evidence; test counts
 alone are not acceptance or closure.
 
-
 ### Profiled source-owner derivation
 
 Transient release instrumentation counted startup schema parsing and governing-source
-read attempts during one small-source `start` and an authorized configuration `invoke`.
+read attempts during one small-source `start` and an authorised configuration `invoke`.
 Before removing the unused recursive view construction, `start` parsed the 58,763-byte
 startup input schema three times and `invoke` twelve times. Afterwards those counts
 are two and eight. Instrumented governing-source read attempts remain five and twenty:
@@ -275,10 +271,10 @@ Sampled schema-parse phase totals were 0.474 -> 0.373 ms for `start` and 1.690 -
 or statistical performance claims. Instrumentation was removed after measurement.
 No new observation is reused across a currentness barrier and no retained cache exists.
 
-Deliberately not memoized: a governing-source observation still needs current bytes,
+Deliberately not memoised: a governing-source observation still needs current bytes,
 source selection and configuration identity. A cache would add validation/storage
 work without removing those required observations. A cross-process cache for this
-sub-millisecond schema derivation was not justified by this profile: serialized
+sub-millisecond schema derivation was not justified by this profile: serialised
 JSON would still require parsing while adding cache I/O, producer validation and
 maintenance. No cross-process cache was implemented or benchmarked; deleting the
 unused construction avoids that residue. Wider positive/negative semantic reuse and selective invalidation

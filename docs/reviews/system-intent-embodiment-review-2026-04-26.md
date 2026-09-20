@@ -4,7 +4,7 @@
 
 This review assesses how well Agentic Workspace currently embodies its stated system intent.
 
-It is a review artifact, not an operating contract. It should help future planning and review distinguish:
+It is a review artefact, not an operating contract. It should help future planning and review distinguish:
 
 - what has landed
 - what intent it serves
@@ -17,7 +17,7 @@ Agentic Workspace now embodies its stated intent moderately well in direction an
 
 The core intent is clear: Agentic Workspace should be a quiet, repo-native continuity and execution layer that preserves human intent, reduces restart/handoff/review cost, keeps bounded work cheap to verify, and avoids becoming a visible workflow framework or second source of truth.
 
-The system is visibly moving in that direction. Recent work has made startup, planning, command metadata, policies, issue lanes, and extraction work more explicit and machine-readable. However, the implementation still depends heavily on large Python-owned behavior, prose-heavy Memory and planning surfaces, and human/agent discipline to promote durable learning rather than letting it remain in archived or conversational residue.
+The system is visibly moving in that direction. Recent work has made startup, planning, command metadata, policies, issue lanes, and extraction work more explicit and machine-readable. However, the implementation still depends heavily on large Python-owned behaviour, prose-heavy Memory and planning surfaces, and human/agent discipline to promote durable learning rather than letting it remain in archived or conversational residue.
 
 Current rough assessment:
 
@@ -51,7 +51,7 @@ It also identifies anti-intents:
 
 - do not become a visible workflow framework
 - do not grow a surface maze
-- do not optimize a local step while making the total loop heavier
+- do not optimise a local step while making the total loop heavier
 - do not blur package-owned and repo-owned authority
 
 The system-intent contract adds a second important principle: bounded slices may narrow means and proof, but must not silently replace the larger intended outcome. Ordinary compact inspection should answer what larger outcome a slice serves, whether it is actually closed, where continuation lives, and what evidence justified closure.
@@ -71,13 +71,13 @@ This is one of the strongest parts of the system. It does not ask agents to unde
 
 ### 2.2 Planning has become a real continuity substrate
 
-Planning has moved toward checked-in active state rather than chat-only continuation. `.agentic-workspace/planning/state.toml` and `.agentic-workspace/planning/execplans/` are recognizable continuity surfaces.
+Planning has moved toward checked-in active state rather than chat-only continuation. `.agentic-workspace/planning/state.toml` and `.agentic-workspace/planning/execplans/` are recognisable continuity surfaces.
 
 That matches the intended shape: active execution state belongs in planning, not in scattered chat or generic memory. It also supports mixed-agent workflows because active work can be resumed from repo-owned residue.
 
-### 2.3 System intent has a normalized workspace-owned declaration
+### 2.3 System intent has a normalised workspace-owned declaration
 
-The current system-intent workflow distinguishes source material from the compiled declaration. Repo-owned sources are directional input; `.agentic-workspace/system-intent/intent.toml` is the normalized workspace-owned view.
+The current system-intent workflow distinguishes source material from the compiled declaration. Repo-owned sources are directional input; `.agentic-workspace/system-intent/intent.toml` is the normalised workspace-owned view.
 
 This is strongly aligned with the repo's intent. It keeps host-repo authoring unconstrained while still giving Agentic Workspace a compact operational compass.
 
@@ -96,7 +96,7 @@ This is the right conceptual shape for preserving the right context without maki
 
 ### 2.5 The package is now seriously moving away from Python as hidden authority
 
-PR #304 completed a major first extraction slice. It moved command/option metadata, module registry metadata, policy payloads, setup findings policy, preflight policy, workflow artifact profiles, repo-friction policy, and workspace surface/path manifests into checked-in contract JSON with schemas and checks.
+PR #304 completed a major first extraction slice. It moved command/option metadata, module registry metadata, policy payloads, setup findings policy, preflight policy, workflow artefact profiles, repo-friction policy, and workspace surface/path manifests into checked-in contract JSON with schemas and checks.
 
 That directly advances the stated intent: stable truths become inspectable and portable, while Python becomes more of an adapter/implementation layer.
 
@@ -130,9 +130,9 @@ PR #304 completed an important declarative extraction slice, but the first pract
 
 Related parent lane: #309.
 
-### 3.5 Procedural behavior is still mostly implementation-owned
+### 3.5 Procedural behaviour is still mostly implementation-owned
 
-The procedural operation-contract work begins a contract-first path, but the whole CLI behavior is not yet inspectable through implementation-independent contracts. Every CLI command and subcommand should eventually have an operation contract, and CI should validate command-to-operation parity.
+The procedural operation-contract work begins a contract-first path, but the whole CLI behaviour is not yet inspectable through implementation-independent contracts. Every CLI command and subcommand should eventually have an operation contract, and CI should validate command-to-operation parity.
 
 Related follow-up: #313.
 
@@ -144,7 +144,7 @@ Status: medium-high.
 
 Strengths:
 
-- System intent is explicit and normalized.
+- System intent is explicit and normalised.
 - Planning carries active intent and current continuation.
 - Standing intent has a classification and owner-routing model.
 - Recent issue work carefully distinguishes landed slices from unresolved underlying intent.
@@ -178,9 +178,9 @@ Status: medium.
 
 Strengths:
 
-- Package-owned artifacts are mostly under `.agentic-workspace/`.
+- Package-owned artefacts are mostly under `.agentic-workspace/`.
 - The system consistently prefers compact query surfaces over broad reading.
-- Recent proposals emphasize local-only state, removability, and not making local memory authoritative.
+- Recent proposals emphasise local-only state, removability, and not making local memory authoritative.
 
 Weaknesses:
 
@@ -242,7 +242,7 @@ Checked-in Memory is not the right home for everything; chat-only memory is too 
 
 Follow-up: #328.
 
-### Gap 4: Implementation-independent behavior is not complete
+### Gap 4: Implementation-independent behaviour is not complete
 
 Declarative extraction landed, but operation contracts, input/output schemas, Python loader boundaries, and parity/conformance checks remain ongoing.
 
@@ -256,7 +256,7 @@ Follow-up: #338.
 
 ### Gap 6: Agents need a compact effective authority view
 
-The system has the ingredients for intent/authority review, but agents still need to synthesize multiple surfaces to judge whether current work aligns with system intent.
+The system has the ingredients for intent/authority review, but agents still need to synthesise multiple surfaces to judge whether current work aligns with system intent.
 
 Follow-up: #339.
 
@@ -314,6 +314,6 @@ The most intent-faithful next order is:
 
 Agentic Workspace is no longer merely describing its intended shape; it is beginning to implement it. The strongest evidence is the merged declarative-contract extraction, compact planning/startup surfaces, and explicit standing-intent/system-intent contracts.
 
-But the deepest promise is not yet fully real: the package does not yet reliably turn work into durable, queryable system understanding. Memory remains too prose-first, closeout learning is not consistently promoted, and procedural behavior is still mostly Python-owned.
+But the deepest promise is not yet fully real: the package does not yet reliably turn work into durable, queryable system understanding. Memory remains too prose-first, closeout learning is not consistently promoted, and procedural behaviour is still mostly Python-owned.
 
 The system currently embodies its intent best as a careful, repo-native operating substrate in transition. Its next challenge is to make the transition real without becoming the heavy framework it explicitly does not want to be.

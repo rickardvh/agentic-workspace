@@ -33,12 +33,12 @@ A typical interaction is:
 1. Call `start` for the work context and present relevant information.
 2. When a returned request needs new material or an answer, collect only that
    input and submit the same current request through `start`.
-3. When an action is authorized, pass that exact action to `invoke`.
+3. When an action is authorised, pass that exact action to `invoke`.
 4. Show what happened and use the returned continuation or recovery route.
 
 These are supported interactions, not mandatory phases for every task. An agent
 may already have enough information to work directly. Selecting a skill helps it
-follow a procedure; it does not authorize a write or satisfy a test requirement.
+follow a procedure; it does not authorise a write or satisfy a test requirement.
 
 Keep the original target, task and affected paths with the exchange. Let AW check
 whether the request still applies when it is used. Do not manufacture action IDs,
@@ -69,7 +69,7 @@ implementing that specific capability.
 
 ## Check the integration
 
-Exercise an ordinary query, a request needing an answer, an authorized effect,
+Exercise an ordinary query, a request needing an answer, an authorised effect,
 rejection after relevant inputs change, and recovery after interruption. Test
 transport-specific risks such as lost fields, encoding or unavailable executables
 without reimplementing AW's semantic rules in the adapter.
@@ -78,5 +78,5 @@ AW is not a sandbox: configured commands use the caller's filesystem and
 credential access. Read the [security guide](security/threat-model.md) before
 exposing effectful operations to an agent or remote client.
 
-To introduce new deterministic domain behavior rather than transport existing
+To introduce new deterministic domain behaviour rather than transport existing
 operations, use the [native module contract](module-capability-contract.md).

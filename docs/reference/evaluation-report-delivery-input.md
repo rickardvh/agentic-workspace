@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Evaluation report and delivery operation input
 
 Common generated-client input envelope for evaluation report preview, local delivery, external request, adapter receipt, status, and retry operations. Runtime handlers enforce per-command required fields.

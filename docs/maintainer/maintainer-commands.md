@@ -7,18 +7,18 @@ Start with [Contribute to AW](contributor-playbook.md) for setup and change boun
 
 | Command | Result |
 | --- | --- |
-| `make setup` | Synchronize the shared environment and install this clone's Git hooks. |
+| `make setup` | Synchronise the shared environment and install this clone's Git hooks. |
 | `make install-hooks` | Restore the repository-managed hooks without requesting a different workflow. |
-| `make sync-all` | Synchronize the shared workspace environment. |
+| `make sync-all` | Synchronise the shared workspace environment. |
 | `cargo build --locked --workspace --bins` | Build the paired native CLI and core with the pinned toolchain. |
 
 Build both binaries before using source-checkout AW and after changes to Rust or
 bundled resources. The [Makefile](../../Makefile) and
-[toolchain guide](rust-toolchain.md) define the exact setup behavior.
+[toolchain guide](rust-toolchain.md) define the exact setup behaviour.
 
 ## Check a change
 
-Choose evidence for the changed behavior using the [testing strategy](testing-strategy.md).
+Choose evidence for the changed behaviour using the [testing strategy](testing-strategy.md).
 These are available commands, not a checklist to run in full on every patch.
 
 | Command | Purpose |
@@ -30,12 +30,12 @@ These are available commands, not a checklist to run in full on every patch.
 | `make typecheck` | Run workspace type checks. |
 | `make check` | Run the broader root validation composition when the claim warrants it. |
 
-For a caller that has already synchronized dependencies, use the corresponding
+For a caller that has already synchronised dependencies, use the corresponding
 available `*-nosync` target rather than repeating setup. Test execution is serial
 by default; parallel execution needs a deliberate local capacity choice.
 
 The Git hook runs its own bounded formatting/lint/type checks. Passing it does not
-replace focused proof for the changed behavior. Hosted **Merge sufficiency** and
+replace focused proof for the changed behaviour. Hosted **Merge sufficiency** and
 explicit exhaustive admission are separate evidence levels; see the testing
 strategy for their current scope.
 
@@ -51,11 +51,11 @@ Read a generated file's source notice before choosing a command.
 | `make maintainer-surfaces` | Check the relevant maintained source/payload/routing surfaces. |
 
 These commands maintain source-derived output; they do not adopt another
-repository or authorize edits to retained owner state. Package-specific refresh
-and release artifact checks belong to the [source/payload boundary](source-payload-operational-install.md)
+repository or authorise edits to retained owner state. Package-specific refresh
+and release artefact checks belong to the [source/payload boundary](source-payload-operational-install.md)
 and [native distribution reference](native-release-topology.md).
 
-## Specialized maintenance
+## Specialised maintenance
 
 Use the dedicated procedure rather than copying a long command from a historical
 report: [release and versioning](../release-and-versioning.md),

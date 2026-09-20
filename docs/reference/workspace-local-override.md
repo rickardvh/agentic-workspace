@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Local Mixed-Agent Override
 
 Human configuration. Unknown fields are rejected; absence uses owner defaults.
@@ -26,7 +27,7 @@ Human configuration. Unknown fields are rejected; absence uses owner defaults.
 | `delegation.required_execution_guarantees` | array of string | no | `[]` | Hard execution constraints checked before best-fit comparison. Only source-current adapter guarantees satisfy them; unknown names or unsupported guarantees leave a route ineligible. Names are extensible and do not select a provider or continuity mode. |  |  |
 | `clarification` | object | no |  | Machine-local clarification control for when agents should stop for human input instead of guessing or widening scope. |  |  |
 | `clarification.mode` | enum `"ask-first"`, `"suggest"`, `"auto-continue"` | no | `"suggest"` | Local control mode for clarification: stop and ask before proceeding when intent is unclear, surface the ask-human option without forcing it, or continue with the best bounded interpretation unless a hard blocker is present. |  |  |
-| `session_logging` | object | no |  | Machine-local session logging and path-normalization preferences. |  |  |
+| `session_logging` | object | no |  | Machine-local session logging and path-normalisation preferences. |  |  |
 | `session_logging.enabled` | boolean | no |  | Whether this checkout should keep ignored local AW command session logs. |  |  |
 | `session_logging.path_mode` | enum `"absolute"`, `"repo-relative"`, `"redacted"` | no | `"absolute"` | Canonical setting for how local filesystem paths should be represented in session log markdown, indexes, and summaries. |  |  |
 | `delegation_targets` | object | no |  | Named local delegation targets available to this runtime. |  |  |
@@ -36,7 +37,7 @@ Human configuration. Unknown fields are rejected; absence uses owner defaults.
 | `delegation_targets.<^.+$>.aliases` | array of string | no |  | Previous or alternate local profile names. Ambiguous aliases fail closed. |  |  |
 | `delegation_targets.<^.+$>.identity_status` | enum `"active"`, `"retired"`, `"superseded"`, `"ambiguous"`, `"unavailable"` | no | `"active"` | Human-owned target eligibility/lifecycle control. Any non-active value prohibits execution; it does not report observed runtime availability. |  |  |
 | `delegation_targets.<^.+$>.execution_guarantees` | array of string | no |  | Current provider-neutral local execution capability facts; replaces overlapping target task/strength routing fields. |  |  |
-| `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | Advisory execution-boundary context for comparative judgment; never availability or authorization. |  |  |
+| `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | Advisory execution-boundary context for comparative judgement; never availability or authorisation. |  |  |
 | `delegation_targets.<^.+$>.confidence` | number | no |  | Human-authored advisory prior for this target profile from 0 to 1. Admitted lifecycle outcomes belong to the target-evidence owner and must not rewrite this configuration. This prior grants no execution or completion authority. |  |  |
 | `delegation_targets.<^.+$>.transports` | array of object | yes |  | Supported internal/current-host, manual handoff, process and named native-command transports. Process/native require command argv and use stdout; timeout applies only to those executable variants. Native adapter identity distinguishes command variants and grants no capability. |  |  |
 | `delegation_targets.<^.+$>.cost_class` | enum `"cheap"`, `"standard"`, `"premium"`, `"unknown"` | no | `"unknown"` | Advisory relative cost class used for down-routing only when quality and proof remain safe. |  |  |

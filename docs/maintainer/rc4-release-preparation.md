@@ -5,7 +5,7 @@ next candidate; it does not announce publication or stable support.
 
 ## Changes since RC3
 
-- Use absolute GitHub documentation and license links in the shared README so
+- Use absolute GitHub documentation and licence links in the shared README so
   the packaged description works on PyPI, npm, and crates.io.
 - Include that README in the staged npm package and therefore the universal
   six-platform npm archive.
@@ -20,13 +20,13 @@ next candidate; it does not announce publication or stable support.
 After this PR merges, use the existing `scripts/release/preview_release.py`
 preparer with `--rc v1.0.0-rc.4` and the accepted merged source commit. Its native
 resource procedure supplies any required isolation admission. The preparer
-creates the release-only artifact commit and coordinates Python `1.0.0rc4`
+creates the release-only artefact commit and coordinates Python `1.0.0rc4`
 with npm and Cargo `1.0.0-rc.4`, lockfiles, payload identity, and generated
-release notes. Do not merge those artifact-only version changes into the source
+release notes. Do not merge those artefact-only version changes into the source
 branch or reuse the RC3 tag or package versions.
 
 The existing release workflow builds all six declared native targets, checks
-compiler-free Python/npm installs, and publishes the admitted GitHub artifacts
+compiler-free Python/npm installs, and publishes the admitted GitHub artefacts
 to the registries. Registry credentials use the configured trusted publishers
 and existing environment approvals.
 

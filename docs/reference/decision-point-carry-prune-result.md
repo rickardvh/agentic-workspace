@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Decision-point carry prune result
 
 Exact-key, context-guarded ignored-local carry prune result.

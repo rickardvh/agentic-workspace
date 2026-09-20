@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # config_report_result.schema
 
 Schema-validated result envelope for config.report.

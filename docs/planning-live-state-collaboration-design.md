@@ -31,12 +31,12 @@ Benefits:
 
 - unrelated lanes can mutate separate files;
 - same-branch handoff can point directly at one item;
-- merge conflicts become more localized.
+- merge conflicts become more localised.
 
 Costs:
 
 - startup must project a compact index;
-- migration and garbage collection become package behavior;
+- migration and garbage collection become package behaviour;
 - many tiny files can increase repo noise and read overhead;
 - users may confuse per-item records with an archive.
 

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace target support
 
 Workspace-owned target support declarations consumed through the command-generation target-extension contract.

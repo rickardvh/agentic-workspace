@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Setup Findings Promotion Policy
 
 Source-maintenance model only; not native/public command authority. Policy for promoting setup findings into docs, planning, config, checks, or issues.
@@ -12,7 +13,7 @@ Source-maintenance model only; not native/public command authority. Policy for p
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Source-maintenance model only; not native/public command authority. Policy for promoting setup findings into docs, planning, config, checks, or issues. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `"agentic-workspace/setup-findings-policy/v1"` | yes |  | Contract version for this document. |  |  |
-| `artifact_path` | string | yes |  | Artifact path text value used by this contract. |  |  |
+| `artifact_path` | string | yes |  | Artefact path text value used by this contract. |  |  |
 | `accepted_kind` | string | yes |  | Accepted kind text value used by this contract. |  |  |
 | `promotion_confidence_threshold` | number | yes |  | Promotion confidence threshold contract value used by this contract. |  |  |
 | `accepted_classes` | array of object | yes |  | Ordered accepted classes entries used by this contract. |  |  |

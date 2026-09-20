@@ -108,7 +108,7 @@
         },
         "rule": {
           "type": "string",
-          "description": "Policy rule that explains this contract behavior."
+          "description": "Policy rule that explains this contract behaviour."
         },
         "report_when": {
           "type": "array",

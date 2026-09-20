@@ -11,9 +11,9 @@ remain external. Documentation follows this implemented contract.
 | #3409 group | Implemented disposition | Retained native meaning / evidence |
 | --- | --- | --- |
 | Startup | M1 #3465 small entry/shared selected references | Exact source/owner carriage, ordinary and no-runtime boundaries; skills-first suite. |
-| Intent discovery and work shape | M1 merge into intent references; old shape entry removed | Agent judgment and native Planning custody remain distinct. |
+| Intent discovery and work shape | M1 merge into intent references; old shape entry removed | Agent judgement and native Planning custody remain distinct. |
 | Transition gates | M1 retired entry and merged unique interpretation | Native binding requirements survive bypass; no second phase taxonomy. |
-| Setup and Configuration behavior | M2 #3466 selected setup references | Native config, authorization, affected-owner observation and post-effect truth; Configuration cases. |
+| Setup and Configuration behaviour | M2 #3466 selected setup references | Native config, authorisation, affected-owner observation and post-effect truth; Configuration cases. |
 | Correction | M2 selected destination references | Responsible source authority, no-retention and publication/recovery remain native. |
 | Resources compose | M3 #3467 removed; this integration adds exact owner adapter | Same resource primitive policy/path/lease/retention/recovery; direct tool retained. Six generic resource-reference and 13 direct lifecycle cases. |
 | Proof procedure | M3 native wrapper deleted; generic exact Verification references | Required action, execution, receipts and claim restrictions remain native; no retry on lost continuation. |
@@ -38,7 +38,7 @@ one maintained source. No native dispatch selects an M1-M5 skill by name.
 The resource adapter completes an M3 omission found during integration: it exposes
 `resources/propose/v1` and exact `workspace.resources.*` actions through existing
 start/invoke references. Proposal discovery cannot execute, and branch selection
-cannot authorize an effect. The dedicated resources tool is unchanged. Route
+cannot authorise an effect. The dedicated resources tool is unchanged. Route
 policy dependencies remain current across both transports. Tests cover stale
 replay, changed protection, non-executing proposals and all four public transports.
 No accepted disposition was reclassified merely to avoid implementation.
@@ -58,7 +58,7 @@ bounded temporary repository. No module or custom runtime code was needed. The
 acting agent inspected the emitted question and alternatives, answered unknown
 without patch evidence, then selected visible for the observed change from `12`
 to `$12`. The delivered user-note fragment returned a draft only. After cited
-patch evidence changed to a behavior-preserving refactor, native re-entry marked
+patch evidence changed to a behaviour-preserving refactor, native re-entry marked
 the retained answer stale. The agent reconsidered and selected internal: no user
 note was needed. No publication, proof or independent review was inferred.
 
@@ -66,8 +66,8 @@ These were model-authored semantic choices carried by a small script, not a
 claim that scripted answer acceptance proves semantic quality. The actual installed
 wheel separately passed adoption, complete payload delivery, owner effects,
 standard `.agents` exposure, neutral branch delivery, edited-source preservation
-and exposure removal. That test proves installed protocol/lifecycle behavior;
-it does not measure autonomous host judgment.
+and exposure removal. That test proves installed protocol/lifecycle behaviour;
+it does not measure autonomous host judgement.
 
 For the neutral source snapshot, full entry material was 417 bytes, the shared
 question resource 714, and the selected visible/internal branches 184/197 bytes.
@@ -75,13 +75,13 @@ The fair plain-skill path reads the same entry, question and one selected branch
 not the whole tree. It needs no AW call for this draft-only task. The AW exercise
 used 11 native entries across discovery, semantic answer/reentry and evidence
 checks, including two authoring retries from incorrectly hashing CRLF bytes
-instead of normalized LF text. Three deliberate semantic dispositions were
+instead of normalised LF text. Three deliberate semantic dispositions were
 unknown, visible and internal. No owner publication or uncertain effect occurred.
 
 AW adds exact source/evidence currentness, explicit unresolved carriage and lazy
 selected delivery here; it does not demonstrate lower total cost for this tiny
 example. Model token/latency cost, broader completion economics and longitudinal
-payoff are unmeasured, not zero. The hash normalization pitfall is carried into the
+payoff are unmeasured, not zero. The hash normalisation pitfall is carried into the
 skill authoring reference so users need not rediscover it. Native/protocol tests
 and this bounded host observation do not establish cross-host support or release
 admission.
@@ -121,7 +121,7 @@ The remaining P1 implementation after merged #3464 is published as a linear stac
 | Resource integration and audit accounting | #3475 |
 | Instruction reference | #3476 |
 | Skill authoring reference | #3477 |
-| Customization journey/navigation | #3478 |
+| Customisation journey/navigation | #3478 |
 
 Independent review accepted #3465–#3474 as implementation slices at their reviewed
 heads; those lower heads are unchanged by this repair. #3467 alone does not close
@@ -137,7 +137,7 @@ delivery and a malformed-source diagnostic. The optional helper produced compari
 data only. The instruction fixture's documented unittest command passed. Navigation
 files/anchors were checked; no permanent tests were added for these reversible
 documentation changes. Current official Agent Skills syntax was consulted separately
-from observed host evidence. README's customization link and facts-only module
+from observed host evidence. README's customisation link and facts-only module
 clarification were semantically reconciled through the native system-intent owner,
 preserving architecture principles and unrelated admissions.
 
@@ -170,7 +170,7 @@ decision revision maps now include relevant owners only, retaining all schemas
 in full introspection and re-resolving selected effects before admission.
 
 The repaired #3475 run passed 149 cases: all four former-selection transport
-budgets, resource owner behavior, and shared-core admission/currentness tests.
+budgets, resource owner behaviour, and shared-core admission/currentness tests.
 Measured Windows full/non-resource/state/compact/candidate sizes were
 84,489 / 79,998 / 27,995 / 3,434 / 1,066 JSON bytes. This is bounded diagnostic
 growth with ordinary budgets preserved, not an unqualified size improvement.

@@ -55,7 +55,7 @@ Keep it structural: directory `README.md`, `AGENTS.template.md`, `*.template.md`
 
 ## Installation boundary
 
-Follow the canonical workspace startup/setup skill and the selected artifact's
+Follow the canonical workspace startup/setup skill and the selected artefact's
 actual owner operations. Do not copy whole module trees into a lived-in target.
 The standalone `agentic-memory` entrypoint is a module maintenance surface;
 it does not replace the ordinary native Workspace procedure or grant domain
@@ -184,7 +184,7 @@ Ask one more question before expanding a note: what repo change would let this n
 ## Upgrade model
 
 Use the canonical workspace procedure and exact operations exposed by the selected
-artifact. Standalone module maintenance retains its existing install/adopt/upgrade/
+artefact. Standalone module maintenance retains its existing install/adopt/upgrade/
 uninstall boundary over declared static payload, without owning whole domain roots.
 Inspect proposed changes and preserve repository-specific meaning. Use explicit
 entrypoint patching only for the package's managed fence; unrelated human prose

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Runtime Semantic Exceptions
 
 Temporary exact-symbol exceptions for ordinary command semantics that remain in runtime code while IR/codegen support is incomplete.

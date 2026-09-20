@@ -16,7 +16,7 @@ proposal and bounded deciding answer, bound to its complete source postimage,
 scope, dependencies and current policy. Its publication receipt is separate
 custody, not deciding authority. A filename, tracked status, inline actor label
 or successful write is insufficient. Changed records still require source-owner
-reconciliation; prior publication does not authorize later edits.
+reconciliation; prior publication does not authorise later edits.
 
 An agent may also decide under current explicit shared policy delegating this
 durable owner and exact path set. The decision owner binds the full material,
@@ -25,7 +25,7 @@ records the matching policy basis without claiming authenticated identity.
 Absent a matching grant, the complete bounded human request remains required.
 See [standing policy delegation](../maintainer/native-decision-archive-dogfood.md#standing-policy-delegation).
 
-Prefer adding a few decisions with future value over summarizing history. The
+Prefer adding a few decisions with future value over summarising history. The
 April `installed-system-consolidation-2026-04-05.md` Memory note has an explicit
 human-directed retirement in the Memory manifest. Its original text remains
 available as historical material; it is neither promoted here nor an active peer

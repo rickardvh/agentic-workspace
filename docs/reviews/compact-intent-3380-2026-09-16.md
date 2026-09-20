@@ -21,8 +21,8 @@ changed path `SYSTEM_INTENT.md`.
 | --- | --- |
 | Default compact start | Reported `retained-interpretation-source-currentness-unproven` and an exact lazy System Intent detail reference. |
 | Targeted owner detail | Returned exact read requests for the governing source and retained interpretation, plus `system-intent/edit-source/v1`. No unrelated owner detail or full projection was fetched. |
-| Source reads and semantic proposal | Read both exact owner requests. Supplied only content, `judgment=revised`, and a reason. The complete postimage added the preferred source and its normalized-text SHA-256 record. |
-| Compact and carried authorization | Both exposed the bounded `intent-write-authorization` response request. Only its answer was changed to `authorize-write`; current context came from carriage. |
+| Source reads and semantic proposal | Read both exact owner requests. Supplied only content, `judgment=revised`, and a reason. The complete postimage added the preferred source and its normalised-text SHA-256 record. |
+| Compact and carried authorisation | Both exposed the bounded `intent-write-authorization` response request. Only its answer was changed to `authorize-write`; current context came from carriage. |
 | Selected carried action | `system-intent.write`, action view transport `use-exact-carried-envelope`, reference `sha256:935528a872142c9facb1ea5f42f70085428ca8595151e61a0916cce4df5ea805`. |
 | Stale-task negative | Changing the carriage context's task returned `effect_outcome.status=rejected-before-effect`, `effects=[]`, and `altered carried envelope`. No effect was attempted. |
 | Exact invocation | Passing the unmodified carriage and returned action reference committed `system-intent-source`; owner status was `applied`. |
@@ -53,5 +53,5 @@ No Rust implementation or test inspection was required during this reproducer.
 The owning procedure already explains exact owner requests and carried
 currentness. This report retains the bounded disposition and transport distinction
 to prevent rediscovery. Disposable fixture/transcript data is not a new product
-artifact or a permanent test. Other task/posture combinations and historical
+artefact or a permanent test. Other task/posture combinations and historical
 incidents remain outside this observation.

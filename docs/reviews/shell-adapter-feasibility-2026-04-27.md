@@ -11,12 +11,12 @@ Safe generated shell surfaces:
 - command and option help derived from the shared definition
 - argument validation that does not inspect repository state
 - completion metadata where the target shell supports it cleanly
-- wrapper invocation that delegates runtime behavior to the owning package
+- wrapper invocation that delegates runtime behaviour to the owning package
 - effect and preflight hints rendered from the same operation metadata
 
 Out of scope for generated shell adapters:
 
-- runtime primitive behavior
+- runtime primitive behaviour
 - live workspace inspection
 - rich JSON/report rendering beyond passing through runtime output
 - host-repository, agent, or issue-tracker assumptions

@@ -89,4 +89,4 @@ checks of `rules.canonical_dirs` and `rules.task_board_globs`. It checks declara
 not the repository corpus. Routing compactness derives from note type. Retired
 core-document flags were disabled in the shipped policy; repository instructions
 and Verification own any document-governance requirement. Missing tools or sources
-mean unexecuted maintenance. Findings never authorize retirement or promotion.
+mean unexecuted maintenance. Findings never authorise retirement or promotion.

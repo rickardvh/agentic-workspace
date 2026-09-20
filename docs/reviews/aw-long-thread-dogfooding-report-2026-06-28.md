@@ -16,7 +16,7 @@ Assurance level: medium. Evidence comes from the visible chat transcript, local 
 
 Requested outcome:
 
-- Ingest and prioritize open issues in a new branch from `master`.
+- Ingest and prioritise open issues in a new branch from `master`.
 - Group issues into lanes, promote lanes into active planning, implement lanes as PRs, address PR comments, fix CI/release failures, clean stale/completed issues, and eventually release.
 - Dogfood AW while doing the work and report what the experience shows about current product state.
 
@@ -40,7 +40,7 @@ Closure decision:
 
 Residue destination:
 
-- Checked-in review artifact: this file.
+- Checked-in review artefact: this file.
 - GitHub issues: #1826, #1827, #1828, #1829, #1830, #1831, #1832, #1833.
 
 ## Assurance And Proof
@@ -151,7 +151,7 @@ Omitted host details:
 
 - No private host repository content is included. This report concerns the public AW source checkout and public GitHub refs.
 
-Redactions or anonymization:
+Redactions or anonymisation:
 
 - None needed beyond not copying long command logs into this document.
 

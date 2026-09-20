@@ -13,7 +13,7 @@ provider, and records the selected files' blob identities and relevant fields.
 If the provider lacks immutable identities, currentness remains unverified.
 Changed selected dependencies require reconsideration; unrelated file changes
 do not invalidate unchanged blobs. Blob identity establishes bytes, not truth,
-proof admission or authorization.
+proof admission or authorisation.
 
 The same generated metadata ships in the root package. Installation derives the
 profile from the generic host ledger, including its preserved subsystem overlay;
@@ -46,7 +46,7 @@ generated task snapshot, return admission or correction retention in this path.
 the shipped profile into selected Planning, instructions, Memory and Verification
 sources, with exact blob/dependency drift and unrelated-history controls. The
 harness supplies repository blob identities; it does not execute AW on behalf
-of the consumer. Semantic selection is explicit fixture judgment, not a product
+of the consumer. Semantic selection is explicit fixture judgement, not a product
 classifier. This tests available references and boundaries, not a promise that
 every external model obeys instructions. Existing install/payload tests cover
 host derivation and incompatible/malformed source rejection. The ordinary
@@ -59,7 +59,7 @@ The architecture remains:
 | Deterministic resolution, action/currentness/admission, publication/recovery | Rust core and admitted Rust domain owners |
 | Native/Python/TypeScript/JSON ingress and exact carriage | Thin transports over the same core |
 | Durable intent, constraints, Planning, Memory and proof sources | Their existing repository/domain owners |
-| Procedure and semantic selection | Canonical skill plus agent/human judgment |
+| Procedure and semantic selection | Canonical skill plus agent/human judgement |
 | Static read-profile bytes | Mechanical build/install projection of ownership metadata |
 
 The existing wrapper guard (`test_target_bindings_cannot_hide_reducer_semantics`)
@@ -73,5 +73,5 @@ The promotion ledger must reflect the actual integrated reconstruction identity
 and open stack. Only independent final-owner acceptance can change its delayed
 closures. #2929, #3191, #3192 and research P3 remain later evidence unless a
 concrete defect is promoted. #2909/#3059 exact-candidate aggregate acceptance,
-#2616 final public truth, #3077/#2990 artifact review and #3014 promotion remain
+#2616 final public truth, #3077/#2990 artefact review and #3014 promotion remain
 separate gates. An unmerged stack is not C54.

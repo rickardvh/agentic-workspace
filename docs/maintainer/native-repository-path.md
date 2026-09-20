@@ -10,9 +10,9 @@ bindings. Repository generators and checks may use Python, but are not an
 alternate authority for ordinary product operations.
 
 The Python distribution's optional command entry point launches its paired native
-executable. The source runner resolves this checkout's native artifacts directly,
+executable. The source runner resolves this checkout's native artefacts directly,
 without choosing an editable Python distribution or refreshing a generated CLI.
-Missing native artifacts fail closed. Older `init`, `summary`, `implement` and
+Missing native artefacts fail closed. Older `init`, `summary`, `implement` and
 other former-host commands are not a compatibility fallback; use the current
 native request/action contract. Maintainer generators remain separate tooling.
 
@@ -27,7 +27,7 @@ switch to the former host.
 
 The former Planning bridge preserves established selection and material:
 
-- A recognized former source is readable context, not native mutation custody.
+- A recognised former source is readable context, not native mutation custody.
 - An occupied legacy selector requires the exact owner-produced, revision-bound
   transfer request and an explicit human answer. Transfer preserves the selector's
   selection and the plan bytes. It grants neither proof nor completion.
@@ -40,7 +40,7 @@ The former Planning bridge preserves established selection and material:
 - Pending writes retain their original invocation and postimage format across
   software changes; recovery does not silently rewrite the uncertain effect.
 
-Native payload admission compares installed bytes with the artifact's bundled
+Native payload admission compares installed bytes with the artefact's bundled
 payload and checks the configured release/capability requirement. A provenance
 label cannot hide drift. Required-before-work and required-before-claim keep
 their distinct force, as do advisory compatibility and closeout obligations.
@@ -71,7 +71,7 @@ quality. The existing context-cost contract records process-input bytes and
 elapsed time; provider framing, tokens, internal retries and downstream burden
 remain unknown when the adapter cannot observe them.
 
-Assignment offers a bounded use/repair/reject judgment for that current execution.
+Assignment offers a bounded use/repair/reject judgement for that current execution.
 Planning may retain the admitted summary through its existing writer into the
 selected owner's continuation frontier. Fresh re-entry is still required; proof
 execution carries the exact Planning continuation. One current retained result
@@ -103,7 +103,7 @@ ownership remains unchanged. Immutable attempt/result evidence under the
 existing local effects area attests only this exact edit; it grants no continuing
 custody or other owner authority. If source publication succeeds before receipt
 publication, fresh entry offers an exact `configuration_write.recovery_requests`
-request which finalizes the retained receipt without rewriting configuration.
+request which finalises the retained receipt without rewriting configuration.
 An old write action is stale after success; use fresh resolution for a new edit.
 This bounded writer does not satisfy #2767's broader configure-once outcome.
 

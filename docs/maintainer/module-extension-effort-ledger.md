@@ -19,7 +19,7 @@ This ledger records the non-module repository files touched while proving the `a
 | `tests/fixtures/external_signals_module/**` | External package fixture | Copied outside the checkout and installed as its own distribution during the conformance test. Its `pyproject.toml`, provider, resources, operation, and results are the complete external author work. |
 | `tests/test_module_contract.py` | Generic conformance harness | Proves installed discovery, relevance/irrelevance, read-only resources, typed operation/results, incompatibility, ownership conflict, and clean removal/restart. |
 | `tests/test_workspace_modules_cli.py` | Existing CLI compatibility proof | Confirms the generic registry remains inspectable; it contains no fixture identity switch. |
-| `tests/test_workspace_skills_cli.py`, skill registry/schema/generated skill files, and plugin manifest | Generated/package synchronization | Keeps existing shipped projections consistent after contract generation; none are required when an external package is installed. |
+| `tests/test_workspace_skills_cli.py`, skill registry/schema/generated skill files, and plugin manifest | Generated/package synchronisation | Keeps existing shipped projections consistent after contract generation; none are required when an external package is installed. |
 | Documentation and generated schema references | Public explanation/reference | Explain the seam and derive exact contract fields; they do not register a module. |
 | Planning and release metadata | Work tracking | Records the lane and release note only; it has no runtime role. |
 
@@ -35,7 +35,7 @@ Its checked-in measurements are produced by
 `scripts/model_cli_harness/module_extension_scenarios.py`. The collector runs
 module discovery, compatibility/ownership admission, the ordinary startup
 posture projection, and any routed operation, then derives cost values from the
-resulting trace. Tests recompute that artifact and enforce scenario-owned
+resulting trace. Tests recompute that artefact and enforce scenario-owned
 budgets, so maintainers cannot satisfy the evidence contract by typing expected
 metric values into the matrix. Credentialed live-provider evidence remains an
 explicitly optional supplement.

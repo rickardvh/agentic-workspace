@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # view_spec.schema
 
 Declarative view projection spec for generated command outputs.

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Proof Route Cost Replay
 
 Historical replay evidence comparing proof-route selection cost before and after a routed proof decision.

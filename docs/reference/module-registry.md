@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Module Registry
 
 Source-maintenance distribution and domain inventory only. Native module authority is the Rust independent_owner API and capability-contract/v1. No procedural participation or phase registration model.
@@ -28,7 +29,7 @@ Source-maintenance distribution and domain inventory only. Native module authori
 | `component_model.alignment` | string | yes |  | Alignment text value used by this contract. |  |  |
 | `component_model.runtime_dependency` | const `"none"` | yes |  | Fixed runtime dependency value required by this contract. |  |  |
 | `component_model.source_of_truth` | string | yes |  | Source of truth text value used by this contract. |  |  |
-| `component_model.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `component_model.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `component_model.component_classes` | array of object | yes |  | Ordered component classes entries used by this contract. |  |  |
 | `component_model.adapter_boundary` | object | yes |  | Adapter boundary details used by this contract. |  |  |
 | `component_model.adapter_boundary.future_adapter` | string | yes |  | Future adapter text value used by this contract. |  |  |
@@ -40,7 +41,7 @@ Source-maintenance distribution and domain inventory only. Native module authori
 | `workspace_components.scope.audience` | const `"shipped-host-repo"` | yes |  | Fixed audience value required by this contract. |  |  |
 | `workspace_components.scope.role` | string | yes |  | Role text value used by this contract. |  |  |
 | `workspace_components.scope.excludes` | array of string | yes |  | Ordered excludes entries used by this contract. |  |  |
-| `workspace_components.scope.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `workspace_components.scope.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `workspace_components.components` | ref `#/$defs/module_components` | yes |  | Components declared by this registry or package surface. |  |  |
 | `workspace_components.components.resources` | array of ref `#/$defs/resource_component` | yes |  | Ordered resources entries used by this contract. |  |  |
 | `workspace_components.components.tools` | array of ref `#/$defs/tool_component` | yes |  | Ordered tools entries used by this contract. |  |  |

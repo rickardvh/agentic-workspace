@@ -1,6 +1,10 @@
 # Continuation Readiness Projections
 
-Agentic Workspace uses derived projections for completion, repair, finding, external-evidence, migration, compaction, and automation-readiness questions. These projections assemble facts from Planning, Verification, report state, and provider-agnostic external evidence. They do not create a new state store, workflow runner, ticket bridge, or agent-owned classifier.
+Use this reference to interpret report sections that help an agent decide how to
+continue work. A projection is a derived view of existing facts, rather than a
+separate record to maintain.
+
+Agentic Workspace uses these views for completion, repair, finding, external-evidence, migration, compaction, and automation-readiness questions. They assemble facts from Planning, Verification, report state, and provider-agnostic external evidence. They do not create a new state store, workflow runner, ticket bridge, or agent-owned classifier.
 
 Use them when a compact report answer should make continuation cheaper without making AW decide the work for the agent.
 
@@ -9,10 +13,10 @@ Use them when a compact report answer should make continuation cheaper without m
 | Report section | Purpose |
 | --- | --- |
 | `completion_contract` | Shows the Planning completion-contract lens: what must become true, what proves it, how final satisfaction differs from bounded slice success, constraints, out-of-bounds work, iteration rule, and blocked stop condition. |
-| `repair_loop_residue` | Summarizes validation-driven repair residue: observed problem, inspection findings, focused change, validation evidence, remaining gap, continuation input, and stop reason. |
+| `repair_loop_residue` | Summarises validation-driven repair residue: observed problem, inspection findings, focused change, validation evidence, remaining gap, continuation input, and stop reason. |
 | `structured_findings` | Provides a compact finding shape with owner and disposition fields so review, friction, Verification, and promotion residue can be routed or dismissed. |
-| `external_evidence_safety` | Summarizes external source freshness, local state, divergence, stale-after, closeout safety, and refresh route without making external systems authoritative. |
-| `workflow_compliance_summary` | Summarizes expected entrypoint, observed workflow use, satisfied or missing gates, skipped or unavailable steps, trust impact, and recovery action for takeover, recovery, review, and closeout. |
+| `external_evidence_safety` | Summarises external source freshness, local state, divergence, stale-after, closeout safety, and refresh route without making external systems authoritative. |
+| `workflow_compliance_summary` | Summarises expected entrypoint, observed workflow use, satisfied or missing gates, skipped or unavailable steps, trust impact, and recovery action for takeover, recovery, review, and closeout. |
 | `continuation_next_actions` | Ranks next actions by available evidence, confidence, validation route, and stop condition. |
 | `migration_pilot_template` | Defines an optional migration-pilot decomposition pattern with inventory, target design, parity proof, validation, and rollout boundaries. |
 | `compact_output_criteria` | Names the fields compact outputs must preserve or point to: intent, evidence, next action, stop condition, changed surfaces, and unresolved risk. |
@@ -34,9 +38,9 @@ AW should not own:
 - runtime orchestration;
 - workflow dispatch;
 - secrets management;
-- provider-specific ticket or CI synchronization;
+- provider-specific ticket or CI synchronisation;
 - global task management;
-- the final reasoning judgment about whether work is direct, planned, delegated, done, partial, or blocked.
+- the final reasoning judgement about whether work is direct, planned, delegated, done, partial, or blocked.
 
 ## Use In Workflow
 

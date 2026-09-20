@@ -6,13 +6,13 @@ Installation supplies the executable. **Adoption** establishes its small reposit
 
 ## Request the change
 
-Call `start` for the actual target/task and inspect Configuration's returned `repository_adoption_request`. Submit that exact request through `start --input` to obtain the available adoption, refresh, removal or recovery requests. Inspect the proposal and supply only its requested authorization before invoking the returned action.
+Call `start` for the actual target/task and inspect Configuration's returned `repository_adoption_request`. Submit that exact request through `start --input` to obtain the available adoption, refresh, removal or recovery requests. Inspect the proposal and supply only its requested authorisation before invoking the returned action.
 
-Do not generate effect-bearing fields from filenames or a schema example. An absent operation is an unsupported path for that artifact, not permission to emulate it with file copies. The [CLI reference](../reference/cli-catalogue.md) describes the transport.
+Do not generate effect-bearing fields from filenames or a schema example. An absent operation is an unsupported path for that artefact, not permission to emulate it with file copies. The [CLI reference](../reference/cli-catalogue.md) describes the transport.
 
 ## Preserve the right material
 
-The [host-surface contract](../../src/agentic_workspace/contracts/workspace_surfaces.json) drives the package file set and its materialization. Some files match package bytes; ownership combines portable package facts with supported project declarations; the read profile derives from the resulting ownership ledger.
+The [host-surface contract](../../src/agentic_workspace/contracts/workspace_surfaces.json) drives the package file set and its materialisation. Some files match package bytes; ownership combines portable package facts with supported project declarations; the read profile derives from the resulting ownership ledger.
 
 Use those operations rather than maintaining a second install/removal list. Package provenance does not make unrelated project content removable. Shared configuration, independent domain records, local state and unknown content remain separately owned. Edited or conflicting package material can require resolution before replacement or deletion.
 

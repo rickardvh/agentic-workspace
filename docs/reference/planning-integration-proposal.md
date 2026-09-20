@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Planning integration proposal
 
 Checked-in feature-branch proposal for a later target-branch Planning lifecycle transition.

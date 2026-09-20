@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace local work thread
 
 Ignored local-only continuation handle used to resume one actor's work without treating local cursor state as durable task, proof, or closure evidence.

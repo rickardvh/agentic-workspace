@@ -6,7 +6,7 @@ Related issues: #1680, #1693
 
 ## Context
 
-The #1689 dogfooding slice produced broad `make test-workspace` failures with repeated failure lines. The expensive part was not only rerunning the suite; it was reading large repeated logs before identifying that the active faults were localized proof-selection regressions.
+The #1689 dogfooding slice produced broad `make test-workspace` failures with repeated failure lines. The expensive part was not only rerunning the suite; it was reading large repeated logs before identifying that the active faults were localised proof-selection regressions.
 
 ## Change
 

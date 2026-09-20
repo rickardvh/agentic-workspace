@@ -1,5 +1,6 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
-# Optimization Bias Policy
+
+# Optimisation Bias Policy
 
 Policy describing output tradeoffs for agent efficiency, balance, and human legibility.
 
@@ -16,6 +17,6 @@ Policy describing output tradeoffs for agent efficiency, balance, and human legi
 | `owner_surface` | string | yes |  | Owner surface text value used by this contract. |  |  |
 | `must_not_change` | array of string | yes |  | Ordered must not change entries used by this contract. |  |  |
 | `surface_boundary` | ref `#/$defs/surfaceBoundary` | yes |  | Surface boundary referenced contract shape used by this contract. |  |  |
-| `surface_boundary.honors_bias` | array of string | yes |  | Ordered honors bias entries used by this contract. |  |  |
+| `surface_boundary.honors_bias` | array of string | yes |  | Ordered honours bias entries used by this contract. |  |  |
 | `surface_boundary.stays_invariant` | array of string | yes |  | Ordered stays invariant entries used by this contract. |  |  |
 | `modes` | array of object | yes |  | Ordered modes entries used by this contract. |  |  |

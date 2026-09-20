@@ -44,7 +44,7 @@ The supported enforcement boundary is the shared Rust `start`/`invoke` boundary
 used by native, Python, TypeScript and JSON clients. It mechanically gates native
 patch integration and preserves required Assignment restrictions during
 Verification claim re-entry, including generic `complete` and `pr-complete`
-claims. A successful check or exact claim judgment cannot discharge an unresolved
+claims. A successful check or exact claim judgement cannot discharge an unresolved
 Assignment. Runtime failure, a stale request, or an unavailable required transport
 does not supply permission to continue locally.
 
@@ -65,8 +65,8 @@ choice does not authenticate earlier externally performed implementation:
 work must preserve that result class through the existing task-requirements
 request. Arbitrary editor, shell and Git actions remain outside mechanical
 control; callers that conceal those actions cannot claim AW enforced them.
-Unsupported materialized returns require current owner re-resolution or a new
-supported captured-baseline patch journey; they cannot be relabeled into proof
+Unsupported materialised returns require current owner re-resolution or a new
+supported captured-baseline patch journey; they cannot be relabelled into proof
 of prior compliance. No implicit override or retired reassignment command is
 provided.
 
@@ -82,7 +82,7 @@ cleanup guarantees remain unknown; read-only discovery creates no provider work.
 Direct work without an Assignment requirement gains no admission procedure.
 
 Process output is an unproven observation. Assignment's current `use-result`
-judgment admits that exact returned result. Integration then constructs a new
+judgement admits that exact returned result. Integration then constructs a new
 proposal against current file contents, retaining disjoint concurrent edits and
 uniform current line endings. Divergent overlap requires repair. An identical
 already-present delta requires no repeated file write.
@@ -93,13 +93,13 @@ are re-observed. Changed authority stales the return or integration before effec
 Root `.agentic-workspace` sources/custody and Git metadata cannot be mutated by
 this operation; their dedicated owners retain authority.
 
-A checkout-wide native patch lock serializes integrations. Exact retained
+A checkout-wide native patch lock serialises integrations. Exact retained
 producer custody and before/postimages allow interrupted publication to resume
 without running the worker again. Unknown temporaries, changed postimages and
-unrecognized lock contents are preserved. The result's public re-entry exposes
+unrecognised lock contents are preserved. The result's public re-entry exposes
 typed integration evidence to Assignment and Planning; Planning adoption of a
 patch result waits for current integration. Verification remains responsible for
-proof and its current concrete subject. Neither worker success, result judgment,
+proof and its current concrete subject. Neither worker success, result judgement,
 publication custody nor integration grants proof or parent completion.
 
 After Planning retains the integrated result, a current native Verification check

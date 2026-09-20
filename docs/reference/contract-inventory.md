@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Workspace Contract Inventory
 
 Inventory of contract surfaces, owners, validators, and freshness checks.

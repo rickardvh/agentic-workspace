@@ -49,7 +49,7 @@ Use `.agentic-workspace/docs/compatibility-policy.md` for stable-versus-mutable 
 ## Upgrade And Removal
 
 - Can upgrades replace or reconcile the surface deterministically?
-- Is uninstall behavior obvious, especially for product-managed versus repo-owned surfaces?
+- Is uninstall behaviour obvious, especially for product-managed versus repo-owned surfaces?
 - Would a maintainer know whether local customisation is expected, preserved, or overwritten?
 
 ## Review Bar

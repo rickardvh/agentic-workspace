@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/operation-artifact-registry.schema.json",
-  "title": "Operation Artifact Registry",
-  "description": "Registry mapping operation contracts to implementation artifacts, adapters, wrapper surfaces, conformance cases, and proof routing.",
+  "title": "Operation Artefact Registry",
+  "description": "Registry mapping operation contracts to implementation artefacts, adapters, wrapper surfaces, conformance cases, and proof routing.",
   "type": "object",
   "required": [
     "schema_version",
@@ -15,7 +15,7 @@
   "properties": {
     "schema_version": {
       "const": "agentic-workspace/operation-artifact-registry/v1",
-      "description": "Operation artifact registry contract version."
+      "description": "Operation artefact registry contract version."
     },
     "summary": {
       "type": "string",
@@ -40,7 +40,7 @@
         },
         "ordinary_startup_visibility": {
           "const": "not-startup-workflow",
-          "description": "Confirms that artifact registry data is hidden from ordinary startup routing."
+          "description": "Confirms that artefact registry data is hidden from ordinary startup routing."
         },
         "rule": {
           "type": "string",
@@ -54,7 +54,7 @@
     "artifacts": {
       "type": "array",
       "minItems": 1,
-      "description": "Executable artifacts that claim to implement operation contracts.",
+      "description": "Executable artefacts that claim to implement operation contracts.",
       "items": {
         "type": "object",
         "required": [
@@ -74,24 +74,24 @@
           "artifact_id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-            "description": "Stable artifact identifier."
+            "description": "Stable artefact identifier."
           },
           "operation_id": {
             "type": "string",
             "minLength": 1,
-            "description": "Operation contract implemented by the artifact."
+            "description": "Operation contract implemented by the artefact."
           },
           "package_id": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_.-]*$",
-            "description": "Command package owning the artifact."
+            "description": "Command package owning the artefact."
           },
           "target": {
             "enum": [
               "python",
               "typescript"
             ],
-            "description": "Generated target family for the artifact."
+            "description": "Generated target family for the artefact."
           },
           "adapter_id": {
             "enum": [
@@ -99,14 +99,14 @@
               "typescript.function",
               "cli.process"
             ],
-            "description": "Adapter used to execute the artifact."
+            "description": "Adapter used to execute the artefact."
           },
           "proof_role": {
             "enum": [
               "operation-conformance",
               "wrapper-smoke"
             ],
-            "description": "Whether the artifact proves operation semantics or only wrapper boundary smoke."
+            "description": "Whether the artefact proves operation semantics or only wrapper boundary smoke."
           },
           "symbol": {
             "type": "string",
@@ -116,23 +116,23 @@
           "source_ref": {
             "type": "string",
             "minLength": 1,
-            "description": "Canonical source reference that owns artifact generation."
+            "description": "Canonical source reference that owns artefact generation."
           },
           "wrapper_refs": {
             "$ref": "#/$defs/strings",
-            "description": "Wrapper surfaces delegating to this artifact."
+            "description": "Wrapper surfaces delegating to this artefact."
           },
           "case_ids": {
             "$ref": "#/$defs/non_empty_strings",
-            "description": "Operation conformance case ids that apply to this artifact."
+            "description": "Operation conformance case ids that apply to this artefact."
           },
           "path_refs": {
             "$ref": "#/$defs/non_empty_strings",
-            "description": "Generated or contract paths whose changes should select this artifact."
+            "description": "Generated or contract paths whose changes should select this artefact."
           },
           "stale_when": {
             "$ref": "#/$defs/non_empty_strings",
-            "description": "Conditions that make this artifact registry entry stale."
+            "description": "Conditions that make this artefact registry entry stale."
           }
         },
         "additionalProperties": false

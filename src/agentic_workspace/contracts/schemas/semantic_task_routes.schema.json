@@ -23,7 +23,7 @@
       "additionalProperties": false
     },
     "resolved_task_fact": {
-      "description": "Shared Rust-normalized currentness result consumed by native, JSON, Python and TypeScript owners. This is a projection, never persisted authority.",
+      "description": "Shared Rust-normalised currentness result consumed by native, JSON, Python and TypeScript owners. This is a projection, never persisted authority.",
       "type": "object",
       "required": [
         "posture",

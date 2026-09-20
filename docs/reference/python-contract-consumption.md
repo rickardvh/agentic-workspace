@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Python Contract Consumption Policy
 
 Policy describing how Python runtime code consumes contract files.

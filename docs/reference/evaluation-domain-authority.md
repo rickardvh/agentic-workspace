@@ -15,7 +15,7 @@ owned; evidence admission and observation status remain generic Evaluation.
 
 Long-horizon episodes retain scenario fixtures, rubric scores, comparisons, and
 harness execution. Their admitted result is projected as a generic observation
-with the episode artifact as evidence, not duplicated as a second conclusion
+with the episode artefact as evidence, not duplicated as a second conclusion
 store.
 
 Specialist commands may remain convenient, but they write through or losslessly

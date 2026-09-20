@@ -6,7 +6,7 @@ Related issues: #1680, #1694
 
 ## Context
 
-The #1689 dogfooding slice reran broad workspace proof while the active fault was localized to proof-selection behavior. That repeated the expensive `make test-workspace` loop before the repair narrowed to focused proof tests.
+The #1689 dogfooding slice reran broad workspace proof while the active fault was localised to proof-selection behaviour. That repeated the expensive `make test-workspace` loop before the repair narrowed to focused proof tests.
 
 ## Change
 

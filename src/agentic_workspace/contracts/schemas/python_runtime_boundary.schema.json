@@ -152,7 +152,7 @@
         },
         "rule": {
           "type": "string",
-          "description": "Policy rule that explains this contract behavior."
+          "description": "Policy rule that explains this contract behaviour."
         },
         "responsibility_classes": {
           "type": "array",

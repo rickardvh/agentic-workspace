@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Planning same-owner reconciliation
 
 Trusted Planning host boundary. Source custody is admitted outside this payload; shape, names and hashes cannot establish it.
@@ -15,7 +16,7 @@ Trusted Planning host boundary. Source custody is admitted outside this payload;
 | `target` | string | yes |  | Host-selected target root. |  |  |
 | `relevant` | boolean | yes |  | Agent/human-owned Planning applicability; false does not read sources or create files. |  |  |
 | `source` | anyOf | no |  | Established Planning source custody, not caller-created authority. |  |  |
-| `irrelevant_history` | boolean | no |  | Agent/human judgment that explicit drift_log fields have no continuation value. |  |  |
+| `irrelevant_history` | boolean | no |  | Agent/human judgement that explicit drift_log fields have no continuation value. |  |  |
 | `intent` | object | no |  | Current work and requested outcome context. |  |  |
 | `capability_contract` | object \| null | no |  | Independently admitted capability/effect contract. |  |  |
 | `custody` | anyOf | no |  | Current reconciliation custody supplied by the responsible host. |  |  |

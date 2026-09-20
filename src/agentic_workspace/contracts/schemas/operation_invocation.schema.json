@@ -89,7 +89,7 @@
     },
     "claim_effect": {
       "type": "string",
-      "description": "Claim or proof effect authorized when the invocation succeeds."
+      "description": "Claim or proof effect authorised when the invocation succeeds."
     },
     "stale_action_rejection": {
       "type": "object",

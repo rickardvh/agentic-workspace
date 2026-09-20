@@ -32,7 +32,7 @@ the producer's status never substitutes for that comparison. The producer owns
 the declared aggregation and environment observation, just as it owns the raw
 samples; native custody does not establish an unobserved nested tool environment.
 
-Only complete stdout in the current native execution's hashed private artifact
+Only complete stdout in the current native execution's hashed private artefact
 is eligible. Manual receipts, historical assurance files, labels, unbound JSON,
 truncated output, and command success without the observation cannot satisfy it.
 No new evidence store is introduced. Reuse the current receipt reference with
@@ -43,14 +43,14 @@ repair reason for failed conditions.
 
 `current-measurement-satisfied` removes only that measurement's missing evidence
 condition. Other evidence labels, independent reviewer custody, source-intent
-reconciliation and task claim judgment remain separate requirements. This does
+reconciliation and task claim judgement remain separate requirements. This does
 not assert that the repository's historical performance thresholds are met or
 that old pytest producers already emit this compact format.
 
 ## Evidence and cost
 
 The native public scope journey tests a selected command, replay without repeat
-execution, negative and stale judgments, path precedence, unknown scope, and a
+execution, negative and stale judgements, path precedence, unknown scope, and a
 quiet unrelated control. The measurement journey executes a maintained fixture
 which measures five real file reads, then uses controlled threshold, sample,
 identity and output negatives. It checks manual-result rejection, stale source

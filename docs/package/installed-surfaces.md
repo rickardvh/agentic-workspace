@@ -33,7 +33,7 @@ A shared plan helps another session understand the work. It does not transfer a 
 
 ## What you can change
 
-Write project guidance and methods in repository-owned sources; ask the agent to use the current AW operation when publishing or changing managed records. Do not customize installed package skills in place: an update must be able to distinguish your work from package material.
+Write project guidance and methods in repository-owned sources; ask the agent to use the current AW operation when publishing or changing managed records. Do not customise installed package skills in place: an update must be able to distinguish your work from package material.
 
 Text outside the AW section in `AGENTS.md` remains yours. `OWNERSHIP.toml` combines portable package facts with supported project declarations, so it is not a template to replace wholesale. `READING.json` is generated from that ledger; changing its contents manually can make the read path stale.
 

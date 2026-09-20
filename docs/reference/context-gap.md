@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Context Gap
 
 Task-relevant coverage or population gap derived from declared AW input consumers and existing findings.

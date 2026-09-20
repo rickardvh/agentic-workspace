@@ -38,7 +38,7 @@
         },
         "rule": {
           "type": "string",
-          "description": "Policy rule that explains this contract behavior."
+          "description": "Policy rule that explains this contract behaviour."
         },
         "applies_to": {
           "type": "array",
@@ -83,7 +83,7 @@
           },
           "rule": {
             "type": "string",
-            "description": "Policy rule that explains this contract behavior."
+            "description": "Policy rule that explains this contract behaviour."
           }
         },
         "additionalProperties": false,
@@ -208,7 +208,7 @@
         },
         "rule": {
           "type": "string",
-          "description": "Policy rule that explains this contract behavior."
+          "description": "Policy rule that explains this contract behaviour."
         },
         "failure_classification": {
           "type": "array",

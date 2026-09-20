@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Improvement Latitude Policy
 
 Source-maintenance model only; not native/public command authority. Policy describing how much improvement initiative agents may take by latitude setting.
@@ -32,7 +33,7 @@ Source-maintenance model only; not native/public command authority. Policy descr
 | `examples.repo_directed_improvement_next` | array of string | yes |  | Ordered repo directed improvement next entries used by this contract. |  |  |
 | `incidental_finding_policy` | object | yes |  | Incidental finding policy details used by this contract. |  |  |
 | `incidental_finding_policy.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
-| `incidental_finding_policy.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `incidental_finding_policy.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `incidental_finding_policy.report_when` | array of string | yes |  | Ordered report when entries used by this contract. |  |  |
 | `incidental_finding_policy.report_how` | array of string | yes |  | Ordered report how entries used by this contract. |  |  |
 | `incidental_finding_policy.do_not_report` | array of string | yes |  | Ordered do not report entries used by this contract. |  |  |

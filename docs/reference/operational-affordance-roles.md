@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Operational Affordance Roles
 
 Classifies first-contact commands, advisory warnings, and report sections by next-action value.

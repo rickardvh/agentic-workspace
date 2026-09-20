@@ -16,7 +16,7 @@ Local preferences cannot relax shared requirements. Keep credentials in your nor
 
 ## Save a project rule
 
-Ask the agent for the behavior you want:
+Ask the agent for the behaviour you want:
 
 > For this repository, read `docs/api-contract.md` before changing files under `src/api/`. Preserve existing response fields unless the API owner approves a change. Save this as shared guidance and show me where it applies.
 
@@ -36,7 +36,7 @@ The path identifies when the instruction applies; `read` identifies a prerequisi
 
 Then inspect both a matching and an unrelated task. The matching task should surface the rule; the unrelated task should not acquire an API requirement.
 
-The [scoped-instruction reference](package/scoped-instructions.md) explains `paths`, `read`, `reconcile`, `use`, `checks` and `protect`, including a worked inspection command. Add those fields only when their behavior is needed.
+The [scoped-instruction reference](package/scoped-instructions.md) explains `paths`, `read`, `reconcile`, `use`, `checks` and `protect`, including a worked inspection command. Add those fields only when their behaviour is needed.
 
 ## Change an existing setting
 
@@ -52,7 +52,7 @@ A saved setting is only part of the check. For an executable location, also veri
 
 A rule says what must hold. A skill explains how to perform a recurring kind of work.
 
-For example, a change-note skill can tell an agent to compare the patch with accepted behavior and draft a user-facing note only when behavior changed. Keep that method in repository-owned files, such as `tools/skills/change-note/SKILL.md`, rather than editing an installed AW skill.
+For example, a change-note skill can tell an agent to compare the patch with accepted behaviour and draft a user-facing note only when behaviour changed. Keep that method in repository-owned files, such as `tools/skills/change-note/SKILL.md`, rather than editing an installed AW skill.
 
 Start with ordinary Markdown the agent can read directly. The [skill-authoring guide](package/skill-authoring.md) shows that complete example, then adds optional questions, selectively loaded branches and a deterministic helper. Those additions are useful only when they reduce repeated work; an ordinary skill does not need them.
 
@@ -64,8 +64,8 @@ Ask the agent to enable the relevant capability and identify any configuration i
 
 A new project rule or method usually needs no module. A separately reusable capability with its own facts or operations may justify one; that is the [module-authoring](module-capability-contract.md) path.
 
-## Change or undo a customization
+## Change or undo a customisation
 
-Ask the agent to locate the existing rule, setting or skill and change that source, rather than adding a competing copy. Inspect the diff and check the affected behavior again. Remove obsolete advice when its assumptions no longer hold.
+Ask the agent to locate the existing rule, setting or skill and change that source, rather than adding a competing copy. Inspect the diff and check the affected behaviour again. Remove obsolete advice when its assumptions no longer hold.
 
 If the native operation rejects a change, preserve the source and inspect the reported conflict. Do not bypass the rejection by editing managed state. See [Troubleshooting](troubleshooting.md).

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace local work-thread prune result
 
 Stdout payload emitted after dry-running or pruning ignored local work-thread records.

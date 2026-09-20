@@ -1,4 +1,4 @@
-# Native workflow artifact profile
+# Native workflow artefact profile
 
 The existing `repo-owned` profile uses current bounded Planning sources and
 worktree-local selection. Its projection points at the actual current Planning
@@ -10,7 +10,7 @@ Planning state remains with the existing Planning projection.
 
 The existing `gemini` profile permits optional runtime scratchpads. Absence of
 `implementation_plan.md`, `task.md` and `walkthrough.md` requires no transfer or
-new artifact. Existing or unreadable files are retained as exact source
+new artefact. Existing or unreadable files are retained as exact source
 observations, without interpreting their names or contents as current work
 custody. Their unresolved durable-fact transfer restricts existing delegation
 and completion/review boundaries, not unrelated task execution. The typed native

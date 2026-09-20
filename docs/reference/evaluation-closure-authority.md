@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Evaluation Closure Authority
 
 Issue closeout split between present-tense implementation proof and longitudinal evaluation.
@@ -11,10 +12,10 @@ Issue closeout split between present-tense implementation proof and longitudinal
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Issue closeout split between present-tense implementation proof and longitudinal evaluation. |  | x-agentic-workspace-doc-role: "contract-reference" |
-| `kind` | const `"agentic-workspace/evaluation-closure-authority/v1"` | yes |  | Discriminator identifying closeout authorization under the evaluation split. |  |  |
+| `kind` | const `"agentic-workspace/evaluation-closure-authority/v1"` | yes |  | Discriminator identifying closeout authorisation under the evaluation split. |  |  |
 | `implementation_proof` | enum `"complete"`, `"blocked"` | yes |  | Present-tense implementation proof status. |  |  |
 | `longitudinal_evaluation` | enum `"not-required"`, `"valid"`, `"invalid"` | yes |  | Whether remaining future uncertainty is backed by a valid evaluation. |  |  |
-| `evaluation_admission` | enum `"not-required"`, `"definition-only"`, `"fresh-bound-ready"`, `"invalid"` | no |  | How the longitudinal evaluation was admitted for closure authorization. |  |  |
+| `evaluation_admission` | enum `"not-required"`, `"definition-only"`, `"fresh-bound-ready"`, `"invalid"` | no |  | How the longitudinal evaluation was admitted for closure authorisation. |  |  |
 | `issue_closure_authorized` | boolean | yes |  | Whether issue closure may be claimed under the split proof/evaluation rule. |  |  |
 | `blocked_reasons` | array of enum `"implementation-incomplete"`, `"present-tense-proof-incomplete"`, `"longitudinal-evaluation-invalid"` | yes |  | Reasons closure remains blocked. |  |  |
-| `rule` | string | yes |  | Human-readable authorization rule. |  |  |
+| `rule` | string | yes |  | Human-readable authorisation rule. |  |  |

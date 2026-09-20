@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Selector Contracts Manifest
 
 Source-maintenance model only; not native/public command authority. Manifest for selector contracts that expose focused report or query sections.

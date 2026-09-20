@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Evaluation Definitions
 
 Canonical compact definitions for owner-bound longitudinal evaluations.

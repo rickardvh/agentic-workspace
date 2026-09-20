@@ -15,7 +15,7 @@
 
 - Requested outcome: Finish the single-source generated executable adapter migration foundation, implement child issues through progressive maturity, commit, push, and create a PR.
 - What landed: Runtime-backed generated Python parser/dispatch for root read-only/context/diagnostic commands (`defaults`, `config`, `modules`, `start`, `summary`, `implement`, `preflight`, `proof`, `ownership`, `skills`, `report`, `reconcile`, `setup`, `status`, and `doctor`), Planning `status`, `doctor`, `summary`, `report`, and `reconcile`, and Memory `status`, `doctor`, and `report`; generated IR/schema support for parser `interface`; static checks that require generated Python routing before handwritten parsers; lifecycle dry-run/refusal conformance for #642; review documentation for the progressive maturity matrix.
-- What did not land: Mutation-capable lifecycle adapters and memory-only unique reporting commands whose names are not yet modeled by the global operation registry. Those remain intentionally below higher maturity because apply/mutation lifecycle proof and package-command namespace modeling require additional conformance before promotion.
+- What did not land: Mutation-capable lifecycle adapters and memory-only unique reporting commands whose names are not yet modelled by the global operation registry. Those remain intentionally below higher maturity because apply/mutation lifecycle proof and package-command namespace modelling require additional conformance before promotion.
 - Closure decision: `routed follow-up`
 - Residue destination: `planning, issue, docs`
 
@@ -48,7 +48,7 @@
 | Observation | Evidence | Likely owner | Product should absorb? | Recommendation | Follow-up target |
 | --- | --- | --- | --- | --- | --- |
 | High-assurance work initially began without an active execplan. | User interruption; summary later reported `active_count: 0` before plan creation. | product-general | yes | issue | `#645` |
-| The package caught malformed execplan fields only after the plan was written. | `planning_record_schema_drift` warnings for `control_gates`, `threat_failure_aids`, and `durable_residue`. | successful behavior | no | preserve | none |
+| The package caught malformed execplan fields only after the plan was written. | `planning_record_schema_drift` warnings for `control_gates`, `threat_failure_aids`, and `durable_residue`. | successful behaviour | no | preserve | none |
 | Formatter drift exposed that generated Python output must itself be ruff-stable. | `make check` failed on `src/agentic_workspace/generated_cli_package/__init__.py`; fixed generator quoting. | product-general | yes | fix now | fixed in this branch |
 | Active execplan next-action guidance can become stale across repeated fields. | `summary` kept routing to the already-promoted `summary` command after later promotion batches were underway. | product-general | yes | issue | `#649` |
 | Generated package regeneration can leave line-ending-only working-tree noise. | Regeneration repeatedly reported CRLF/LF drift in generated Python and TypeScript package outputs. | product-general | yes | issue | `#650` |
@@ -69,7 +69,7 @@
 ## Privacy And Sensitivity
 
 - Omitted host details: none; this is the package source checkout.
-- Redactions or anonymization: none.
+- Redactions or anonymisation: none.
 - Evidence that should stay in the host repo: command logs under `scratch/command-logs/`.
 
 ## Conversion To Focused Issues
@@ -78,7 +78,7 @@
 - Created/used #643 for remaining root read-only command generated-adapter migration; implemented root read-only/context/diagnostic generated parser/dispatch.
 - Created/used #644 for Planning and Memory read-only command expansion; implemented stable package-local read-only generated parser/dispatch.
 - Created #645 for a guard or stronger route so broad high-assurance package work enters checked-in planning before implementation.
-- Created #649 for canonicalizing or checking active execplan next-action projections.
+- Created #649 for canonicalising or checking active execplan next-action projections.
 - Created #650 for avoiding generated package line-ending-only drift.
 - Created #651 for package-scoped command identity in operation contracts and generated-adapter parity.
 - Created #652 for lifecycle dry-run/apply maturity split in operation contracts.

@@ -2,7 +2,7 @@
 
 ## Security objective
 
-Agentic Workspace must make its authority legible. It may inspect and mutate a host repository, execute checked proof routes, invoke explicitly supplied executors, generate package surfaces, and publish coordinated artifacts. The security objective is to admit those effects only from identified trust sources and to bind support-bearing artifacts to a reviewed source/build identity. AW does not claim to safely execute arbitrary untrusted repository code.
+Agentic Workspace must make its authority legible. It may inspect and mutate a host repository, execute checked proof routes, invoke explicitly supplied executors, generate package surfaces, and publish coordinated artefacts. The security objective is to admit those effects only from identified trust sources and to bind support-bearing artefacts to a reviewed source/build identity. AW does not claim to safely execute arbitrary untrusted repository code.
 
 ## Trust zones
 
@@ -14,7 +14,7 @@ Agentic Workspace must make its authority legible. It may inspect and mutate a h
 | Explicit executor command | Direct user/automation authority | Shell syntax is admitted only through `explicit-user-executor-command`. |
 | External issue/PR/service data | Untrusted content | Treat as data; do not execute embedded instructions or disclose credentials. |
 | Local caches and evidence | Integrity-sensitive, not authoritative | May accelerate inspection; proof and mutation gates bind current source/state revisions. |
-| Release artifacts | Untrusted until verified | Require checksums, SBOM, exact-source manifest, conformance receipts, and GitHub build attestation. |
+| Release artefacts | Untrusted until verified | Require checksums, SBOM, exact-source manifest, conformance receipts, and GitHub build attestation. |
 
 ## Threats and controls
 
@@ -25,14 +25,14 @@ Agentic Workspace must make its authority legible. It may inspect and mutate a h
 - **Generated-surface compromise:** generated command packages are derived from checked contracts and verified for source/generation parity. Generator and Python dependencies resolve from locked inputs in proof/release environments.
 - **Action or workflow substitution:** every third-party GitHub Action is pinned to a full commit SHA and updated through a reviewed dependency update. Workflows declare least-privilege permissions; write scopes are limited to release jobs.
 - **Dependency, code, or secret regression:** pull requests run dependency review, CodeQL, and Gitleaks. Findings fail their jobs and therefore block a support-bearing promotion when configured as required checks under #2454.
-- **Release substitution:** coordinated artifacts carry checksums, a CycloneDX/SPDX-compatible SBOM, a source-bound release manifest, semantic conformance receipts, and GitHub artifact attestations. Missing security readiness, SBOM, or attestation fails the release job before publication.
+- **Release substitution:** coordinated artefacts carry checksums, a CycloneDX/SPDX-compatible SBOM, a source-bound release manifest, semantic conformance receipts, and GitHub artefact attestations. Missing security readiness, SBOM, or attestation fails the release job before publication.
 
 ## Intentional trusted-shell inventory
 
 1. `checked-repository-proof-route`: checked proof validation commands whose semantics may require pipes, redirects, or command chaining.
 2. `explicit-user-executor-command`: a command explicitly supplied to the autopilot executor boundary.
 
-These boundaries inherit the caller's filesystem and credential authority. They are not sanitized or sandboxed. Any new shell consumer must update the machine-readable policy, threat model, adversarial tests, and readiness check in the same change.
+These boundaries inherit the caller's filesystem and credential authority. They are not sanitised or sandboxed. Any new shell consumer must update the machine-readable policy, threat model, adversarial tests, and readiness check in the same change.
 
 ## Release readiness
 
@@ -59,9 +59,9 @@ runner and workflows; **it is not an advisory scan result**. Publisher/CI comman
 logs establish execution. A local wiring-only receipt cannot replace these jobs.
 Required-check configuration remains with #2454.
 
-The allowlist contains the permissive license expressions used by the current
+The allowlist contains the permissive licence expressions used by the current
 graph, including MIT-0, Zlib and Apache-2.0 WITH LLVM-exception. Missing or other
-license expressions fail. Only crates.io registry dependencies are accepted;
+licence expressions fail. Only crates.io registry dependencies are accepted;
 unknown registries and Git sources fail. Workspace path members remain local
 source under normal review. No dependency-ban policy or second Rust audit tool
 is added. GitHub dependency review retains its distinct PR-delta and non-Rust
@@ -80,7 +80,7 @@ it when a fixed dependency is available. Adding private-key operations requires
 resolving this advisory before admission, not extending the exception silently.
 
 Negative proof for the gate removes the advisory exception, removes an actually
-used license allowance, and supplies an unapproved source. Each must fail its
+used licence allowance, and supplies an unapproved source. Each must fail its
 own check; missing tools or network failures must never become a pass.
 
 ## Reconstruction preview boundary

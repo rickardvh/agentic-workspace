@@ -55,14 +55,14 @@
         "reader_epoch": {
           "type": "integer",
           "minimum": 0,
-          "description": "Reader contract epoch implemented by this executing artifact."
+          "description": "Reader contract epoch implemented by this executing artefact."
         },
         "reader_capabilities": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Reader features implemented by this executing artifact, reported as executing-artifact facts."
+          "description": "Reader features implemented by this executing artefact, reported as executing-artefact facts."
         }
       },
       "description": "Identity and supported reader capabilities observed from the executing package, never supplied by ordinary start callers."

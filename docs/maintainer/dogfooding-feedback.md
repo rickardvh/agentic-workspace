@@ -12,7 +12,7 @@ Use this surface for questions like:
 
 - should this repo symptom become a product issue or lane?
 - is the friction package-local, boundary-related, install-flow related, or only monorepo-local?
-- does the right fix belong in planning, memory, routing, checks, lifecycle behavior, or the repo itself?
+- does the right fix belong in planning, memory, routing, checks, lifecycle behaviour, or the repo itself?
 - is the pressure strong enough to justify adding new planned work now?
 
 ## Routing Rule
@@ -57,14 +57,14 @@ Checked-in packs live under `tools/model-cli-harness/feedback/`.
 
 Each pack must include:
 
-- the normalized failure taxonomy used by the run;
+- the normalised failure taxonomy used by the run;
 - the capture template fields required from each record and finding;
 - at least three frozen task fixtures that can later become runner scenarios;
 - one or more captured records naming model, agent surface, task, failure class, severity, evidence, suggested lane, status, and issue refs;
-- an aggregation summary that turns repeated classes into prioritization signal.
+- an aggregation summary that turns repeated classes into prioritisation signal.
 
 Use the checked-in `tools/model-cli-harness/feedback/2026-06-04-codex-copilot-stage1.json` pack as the first template.
-The local source transcripts can stay under `.agentic-workspace/local/evaluations`; the checked-in pack should carry only the durable, comparable evidence needed for prioritization.
+The local source transcripts can stay under `.agentic-workspace/local/evaluations`; the checked-in pack should carry only the durable, comparable evidence needed for prioritisation.
 
 ## Admission Rule
 
@@ -89,9 +89,9 @@ Repo-directed improvement should clear a higher bar. One-off agent discomfort, l
 ## Dogfooding Rules
 
 - Treat this monorepo as the proving ground for shipped agent workflows.
-- Prefer fixing the shipped package or contract over adding repo-local workaround residue when the problem clearly generalizes.
-- Do not normalize repo-specific hacks as product behavior.
-- When a symptom does not generalize cleanly, route it into repo-owned planning, memory, or docs instead of forcing a package change.
+- Prefer fixing the shipped package or contract over adding repo-local workaround residue when the problem clearly generalises.
+- Do not normalise repo-specific hacks as product behaviour.
+- When a symptom does not generalise cleanly, route it into repo-owned planning, memory, or docs instead of forcing a package change.
 - When the answer is plausibly yes to "should the product have found, prevented, or made this cheaper?", record that signal durably.
 
 ## Practical Standard

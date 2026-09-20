@@ -346,7 +346,7 @@
         "additionalProperties": false,
         "description": "One entry in the steps list."
       },
-      "description": "Primitive implementation steps that define operation behavior."
+      "description": "Primitive implementation steps that define operation behaviour."
     },
     "ir_plan": {
       "type": "object",
@@ -363,7 +363,7 @@
             "representative",
             "complete"
           ],
-          "description": "How much of the operation behavior is expressed as target-executor IR."
+          "description": "How much of the operation behaviour is expressed as target-executor IR."
         },
         "summary": {
           "type": "string",
@@ -621,7 +621,7 @@
         "description": {
           "type": "string",
           "minLength": 1,
-          "description": "Behavior described by this target-executor step."
+          "description": "Behaviour described by this target-executor step."
         },
         "inputs": {
           "type": "array",

@@ -21,8 +21,8 @@ runtime resolution, or detail fetch occurs.
 | Preparation-local source reads (excluding imports/request load) | 1 form | 1 form + 1 helper |
 | YAML parses / request schema validations | 1 / 1 | 1 / 1 |
 | Preparation SHA-256 digests, no additional source refs | 0 | 3 |
-| Request JSON bytes, compact serialization | 1373 | 1373 |
-| Result JSON bytes, compact serialization | 1501 | 2221 |
+| Request JSON bytes, compact serialisation | 1373 | 1373 |
+| Result JSON bytes, compact serialisation | 1501 | 2221 |
 | Body bytes | 1033 | 873 |
 | Preparation elapsed | 4.12 ms | 4.78 ms |
 | Fresh-process elapsed, including Python/imports | 158.36 ms | 161.37 ms |
@@ -99,7 +99,7 @@ assertion now expects the shell block; one focused owner case covers embedded
 fences, a changed render language, and unsupported render syntax. This extends
 form-structure fidelity without a new CI lane or adapter matrix. All 34 focused
 issue-body/agent-aid cases pass. The earlier measurement remains a pre-correction
-trace; it is not relabeled as a measurement of the corrected helper. Independent
+trace; it is not relabelled as a measurement of the corrected helper. Independent
 recheck is still required.
 
 ## Trusted review preparation (#3261)
@@ -107,7 +107,7 @@ recheck is still required.
 The ordinary independent-review skill now names one standard-library helper,
 loaded from exact selected trusted Git bytes with Python isolated imports. The
 review subject never selects or supplies executable tooling. Eligibility is an
-external custody judgment; the helper's assertion is not proof of independence.
+external custody judgement; the helper's assertion is not proof of independence.
 No review or approval of the implementation was performed by its implementer.
 
 The existing GitHub GET transport is sufficient for collection: PR, all file
@@ -122,10 +122,10 @@ The fixture has 101 files and one linked issue. First preparation and recheck ea
 perform nine logical GETs (pagination adds physical requests when required), one
 Git tree listing and five exact Git blob reads (four guidance files plus helper).
 Both reobserve external state; none of those reads is cached across an authority
-barrier. The first compact-serialized packet is 29215 bytes and unchanged recheck
+barrier. The first compact-serialised packet is 29215 bytes and unchanged recheck
 15384 bytes. Seven unchanged evidence bodies are replaced by exact prior identity
 references. Obligations are retained unchanged. A lost comparison returns full
-preparation. Source IDs/digests are carried; they are not semantic acknowledgment.
+preparation. Source IDs/digests are carried; they are not semantic acknowledgement.
 
 Manual collection requires those nine logical requests plus guidance reads and
 model assembly/comparison. The executable path exposes one caller invocation for
@@ -156,7 +156,7 @@ Baseline: accepted master `7cfca6a17`, which includes Candidate A and #3285/#328
 Their latest comments ask for this reconciliation; closure itself is not used as
 proof. The table numbers refer to the ordered acceptance checkboxes in each
 issue's current body. Grouped rows disposition every criterion without converting
-these closed reconstruction owners into future optimization backlogs.
+these closed reconstruction owners into future optimisation backlogs.
 
 Current source/evidence anchors:
 
@@ -169,7 +169,7 @@ Current source/evidence anchors:
   entry, unrelated changes and opaque discovery-set additions with no residue;
   native route admission owns source membership, not caller change history.
 - Native Planning lifetime and source-reconciliation owners/tests preserve
-  semantic subject lifetime, source-set changes, bounded semantic judgment and
+  semantic subject lifetime, source-set changes, bounded semantic judgement and
   current repair; `native_instructions.rs` and `native_config.rs` remain policy
   owners. No helper result replaces their authority.
 - `docs/maintainer/operating-carriage.md` records the accepted within-operation
@@ -182,7 +182,7 @@ Current source/evidence anchors:
 | Owner / criteria | Disposition | Current meaning and evidence |
 | --- | --- | --- |
 | #3059: 1–6, 8–9, 11, 13–14 | satisfied on current master | Compact/carried exact references and material; changed-work rejection; truthful continuation; selective source delivery and fresh reconstruction. Existing carriage/invoke/source owners and tests above. |
-| #3059: 7 | satisfied on current master | Bounded answer plus already-authorized action is machine-carried; no generic action loop. Resource composition in #3265 is an additional consumer, not a prerequisite retroactively reopening this outcome. |
+| #3059: 7 | satisfied on current master | Bounded answer plus already-authorised action is machine-carried; no generic action loop. Resource composition in #3265 is an additional consumer, not a prerequisite retroactively reopening this outcome. |
 | #3059: 10 | satisfied on current master | Duplicate immutable derivation was eliminated with measured parse reduction; fresh barrier observations remain. |
 | #3059: 12 | satisfied on current master | Accepted Assignment self-sufficient entry/return boundary remains; unobservable host context is explicitly unknown rather than a false savings claim. |
 | #3059: 15 | obsolete/superseded | Reconstruction's exact first-cutover #2909 gate was consumed by accepted cutover/Candidate A. Candidate B has its own current preview admission; it cannot reuse old release acceptance. |
@@ -201,7 +201,8 @@ explicit Candidate B owners; neither calls for broad reconstruction, a generic
 why API or cross-domain delta. No new issue is created merely to obtain #2929
 creation dogfood. Its real-creation replay remains bounded-inapplicable unless
 subsequent integration exposes a legitimate new issue need.
-# Review feedback follow-through
+
+## Review feedback follow-through
 
 The #3287 review identified that file-identity comparison did not supply the actual
 follow-up code patch. Recheck preparation now requests the exact prior-head to
@@ -318,7 +319,7 @@ the current native resource semantics and left zero containers.
 | Public calls, create + cleanup | 4 | 2 |
 | Native resource-owner resolutions | 4 | 4 |
 | Additional selected availability checks | 0 | 4 |
-| Serialized result bytes, all calls | 7450 | 4869 |
+| Serialised result bytes, all calls | 7450 | 4869 |
 | Elapsed including processes | 175.39 ms | 148.52 ms |
 | Residual resource containers | 0 | 0 |
 
@@ -332,8 +333,8 @@ existing owner-reference observation. No repair/retry occurred in this final
 trace; development corrected the result's exact cleanup-context carriage.
 
 For worktrees, the deterministic public-call sequence contracts from proposal,
-judgment-proposal, action (3) to proposal, judgment-plus-action (2), retaining the
-one semantic necessity/policy judgment. Cleanup contracts from 2 calls to 1.
+judgement-proposal, action (3) to proposal, judgement-plus-action (2), retaining the
+one semantic necessity/policy judgement. Cleanup contracts from 2 calls to 1.
 Fresh recovery similarly reobserves the same path and composes only the currently
 available action. Direct use remains zero calls (or zero owner calls for an
 explicit direct result). Those are procedure counts, not measured model inference.
@@ -343,7 +344,7 @@ explicit direct result). Those are procedure counts, not measured model inferenc
 The existing resource owner suite is reused for dirty/untracked/ignored material,
 unique commits, interrupted registration/output cleanup, source/policy drift and
 owner references. Two composition cases add only direct/scratch/reentry and
-isolation-judgment handoff boundaries. Existing minimal/mirrored install lifecycle
+isolation-judgement handoff boundaries. Existing minimal/mirrored install lifecycle
 cases now create/clean a composed resource and reject it after uninstall; they
 do not duplicate the preservation matrix in every adapter. The combined resource
 and skills-first suite passes 30 cases in 35.37 seconds.

@@ -29,7 +29,7 @@
     },
     "action_signals": {
       "type": "object",
-      "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
+      "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgement.",
       "additionalProperties": true
     },
     "decision_packet": {
@@ -74,7 +74,7 @@
     },
     "memory_decision_packet": {
       "$ref": "#/$defs/memory_decision_packet",
-      "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent."
+      "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgement with the agent."
     },
     "invoked_cli_identity": {
       "$ref": "#/$defs/invoked_cli_identity",
@@ -82,7 +82,7 @@
     },
     "installed_state_compatibility": {
       "$ref": "#/$defs/installed_state_compatibility",
-      "description": "Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts."
+      "description": "Compatibility assessment across executable, repo payload, generated artefacts, and adapter contracts."
     },
     "sibling_repo_aw_freshness": {
       "$ref": "#/$defs/sibling_repo_aw_freshness",
@@ -340,7 +340,7 @@
     },
     "skills": {
       "type": "object",
-      "description": "Compact startup projection over skill routing, required skill, recommendations, and catalog drill-down.",
+      "description": "Compact startup projection over skill routing, required skill, recommendations, and catalogue drill-down.",
       "additionalProperties": true
     },
     "context": {
@@ -890,7 +890,7 @@
         },
         "operating_posture": {
           "type": "object",
-          "description": "Resolved optimization, artifact, initiative, assurance, and delegation posture for this task.",
+          "description": "Resolved optimisation, artefact, initiative, assurance, and delegation posture for this task.",
           "additionalProperties": true
         },
         "improvement_obligations": {
@@ -1295,7 +1295,7 @@
         },
         "generated_artifacts": {
           "type": "object",
-          "description": "Generated artifact freshness classification.",
+          "description": "Generated artefact freshness classification.",
           "additionalProperties": true
         },
         "adapter_contracts": {
@@ -1522,7 +1522,7 @@
         },
         "rule": {
           "type": "string",
-          "description": "Policy rule that explains this contract behavior."
+          "description": "Policy rule that explains this contract behaviour."
         },
         "query": {
           "type": "string",
@@ -1822,7 +1822,7 @@
                 "type": "string",
                 "minLength": 1
               },
-              "description": "Advisory next actions or support signals AW recommends without owning semantic judgment."
+              "description": "Advisory next actions or support signals AW recommends without owning semantic judgement."
             },
             "candidate_routes": {
               "type": "array",
@@ -1846,7 +1846,7 @@
                 "type": "string",
                 "minLength": 1
               },
-              "description": "Semantic, route, proof-proportionality, or completion judgments the agent owns."
+              "description": "Semantic, route, proof-proportionality, or completion judgements the agent owns."
             },
             "human_owned_decisions": {
               "type": "array",
@@ -1863,7 +1863,7 @@
             }
           },
           "additionalProperties": false,
-          "description": "Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgment."
+          "description": "Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgement."
         },
         "fallback_if_cli_unavailable": {
           "type": "string",

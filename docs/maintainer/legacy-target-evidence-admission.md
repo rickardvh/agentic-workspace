@@ -5,7 +5,7 @@ The historical producer-store reader cannot establish target quality from editab
 | Family | Missing authority at this legacy boundary |
 | --- | --- |
 | `aw-proof` | Current producer publication, task/assignment binding and causal target responsibility |
-| `human-review` | Authenticated current judgment and exact target/claim binding |
+| `human-review` | Authenticated current judgement and exact target/claim binding |
 | `retry-outcome` | Admitted current retry lifecycle and causal outcome binding |
 | `handoff-outcome` | Admitted current return/integration lifecycle and causal outcome binding |
 | `closeout-outcome` | Current owner completion/evidence admission and causal outcome binding |

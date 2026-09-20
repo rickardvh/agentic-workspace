@@ -8,7 +8,7 @@ This map distinguishes source-specific authoring from the shared internal contro
 | Skill recommendation and activation ranking | `prefer` | Compile advisory ranking; retain SkillSpec capability and procedure ownership. Fixed phase/module gates become removal candidates. |
 | Assurance requirements and proof lanes | `require` | Compile only the cross-cutting satisfier/target edge; retain classification and evidence admission with their domain owners. |
 | Action and claim ceilings | `restrict` | Compile bounded targets; retain operation, ownership, proof, and human authority as the permission owners. |
-| Target and correction guidance | `surface`, `prefer`, or owner-derived fact | Retain rich domain judgment at the guidance owner; compile only bounded cross-cutting consequences. |
+| Target and correction guidance | `surface`, `prefer`, or owner-derived fact | Retain rich domain judgement at the guidance owner; compile only bounded cross-cutting consequences. |
 | Module relevance | fact plus `surface`/`prefer` | Capabilities remain module-owned; remove fixed first-party slot assumptions as compatibility consumers migrate. |
 | Task posture and workflow obligations | source authoring sugar or removal | Compile material requirements/restrictions; background labels that have no decision effect. |
 

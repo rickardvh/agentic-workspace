@@ -6,10 +6,10 @@ This page records the current ecosystem stance without turning it into a promise
 
 For the broader long-horizon capability map behind that stance, see `docs/agent-os-capabilities.md`.
 
-For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This roadmap is supporting context, not an immediate product promise.
+For current shipped package behaviour, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This roadmap is supporting context, not an immediate product promise.
 
 When the current stance changes, update this page and move any concrete next work into `roadmap` in `.agentic-workspace/planning/state.toml` instead of accumulating latent backlog prose here.
-Use a doctrine-refresh review when the current ecosystem stance may have drifted from actual shipped behavior or extraction discipline.
+Use a doctrine-refresh review when the current ecosystem stance may have drifted from actual shipped behaviour or extraction discipline.
 
 ## Role Boundary
 
@@ -76,7 +76,7 @@ Consider extraction only when dogfooding shows all of the following:
 
 - module-specific installer helpers
 - workspace glue that only exists to compose the current first-party set or still depends on sibling internals
-- checks that still derive their real behavior from one module's internal contract
+- checks that still derive their real behaviour from one module's internal contract
 
 ## Discipline Rule
 
@@ -84,5 +84,5 @@ Prefer sharper documentation, liveness checks, and consistency hardening over ad
 
 Current stance on shared tooling:
 
-- prefer one managed source over new shared helpers when one module still clearly owns the behavior
+- prefer one managed source over new shared helpers when one module still clearly owns the behaviour
 - extract broader shared tooling only after cross-module reuse and maintenance cost are both clearly proven

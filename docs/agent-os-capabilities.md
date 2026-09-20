@@ -10,7 +10,7 @@ It is the durable home for the capability structure of an agent-oriented checked
 
 This document is not a bounded roadmap, backlog, or implementation plan.
 
-For current shipped package behavior, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This page is vision-oriented supporting context.
+For current shipped package behaviour, start with [`docs/index.md`](index.md) and [`docs/package/overview.md`](package/overview.md). This page is vision-oriented supporting context.
 
 Long-horizon direction can change as the product evolves.
 When a capability description, promotion stance, or architectural emphasis no longer matches current dogfooding reality, update this document directly and route any newly-bounded follow-on into `roadmap` in `.agentic-workspace/planning/state.toml` instead of leaving stale intent embedded here.
@@ -81,7 +81,7 @@ Update this page directly when any of the following happens:
 - Role: thin workspace-level lifecycle orchestration and reporting across first-party modules
 - Current home: `agentic-workspace`
 
-The composition layer is intentionally thin. It exists to centralize lifecycle entrypoints and cross-module reporting without absorbing module-owned domain logic.
+The composition layer is intentionally thin. It exists to centralise lifecycle entrypoints and cross-module reporting without absorbing module-owned domain logic.
 Its shared workspace report now gives a compact combined-state view for installed modules, mixed-agent posture, effective repo output posture, and next-action guidance so agents do not need to inspect raw module files first.
 Reusable repository output preferences belong in scoped instructions. Product rendering defaults remain visible through `defaults --section optimization_bias`; they grant no execution-routing authority.
 
@@ -89,13 +89,13 @@ Reusable repository output preferences belong in scoped instructions. Product re
 
 Agentic Planning's core boundary is active execution state: compact startup routing, active state, execplan routing, proof expectations, archive discipline, and lifecycle recovery.
 
-Recent payload compression moved non-core planning-adjacent surfaces out of the default install. They remain available as optional package payload or package-maintainer artifacts, but they should not be treated as ordinary first-contact input.
+Recent payload compression moved non-core planning-adjacent surfaces out of the default install. They remain available as optional package payload or package-maintainer artefacts, but they should not be treated as ordinary first-contact input.
 
 Current boundary decisions:
 
 - Review / audit and review-finding promotion are extraction candidates, not planning core.
 - External work intake, external intent evidence, and reconciliation are extraction candidates, not planning core.
-- Autopilot, orchestration, bounded delegated judgment, and capability-aware execution are optional extensions for now.
+- Autopilot, orchestration, bounded delegated judgement, and capability-aware execution are optional extensions for now.
 - Reporting, signal hygiene, standing intent, and knowledge-promotion workflow are optional extensions for now.
 - Generated-surface trust and maintainer proof remain internal maintainer/development machinery unless the command-generation extraction lane proves a broader reusable boundary.
 
@@ -105,7 +105,7 @@ Current boundary decisions:
 
 - Checks / proof surfaces
 - Ownership / authority mapping
-- Bounded delegated judgment
+- Bounded delegated judgement
 - Generated-surface trust
 - Review / audit lane
 - Intake / triage
@@ -138,7 +138,7 @@ Several are now explicitly optional or extraction candidates rather than plannin
 ### Checks / Proof Surfaces
 
 - Current category: `internal capability`
-- Problem solved: documentation, installed surfaces, generated artifacts, and memory can drift away from the real contract without fast detection
+- Problem solved: documentation, installed surfaces, generated artefacts, and memory can drift away from the real contract without fast detection
 - Why an agent wants it in checked-in form: lightweight proof surfaces reduce rereading and lower the need for manual trust calibration
 - Current home: primarily inside module-owned checks and workspace aggregation
 - Promotion stance: keep internal unless repeated cross-module reuse produces a stable, selectively adoptable proof contract
@@ -153,11 +153,11 @@ Several are now explicitly optional or extraction candidates rather than plannin
 - Promotion stance: important internal capability, not currently a standalone product target
 - Evidence required for further promotion: repeated cross-repo demand for a reusable ownership contract with stable schemas and selective-adoption value
 
-### Bounded Delegated Judgment
+### Bounded Delegated Judgement
 
 - Current category: `future candidate`
 - Problem solved: repositories lose efficiency when humans must micromanage routine execution or when agents continue confidently past the point where escalation is warranted
-- Why an agent wants it in checked-in form: explicit decision authority, confidence-sensitive escalation, and constraint-driven execution make it possible for humans to set direction while agents own bounded local judgment
+- Why an agent wants it in checked-in form: explicit decision authority, confidence-sensitive escalation, and constraint-driven execution make it possible for humans to set direction while agents own bounded local judgement
 - Current home: optional planning guidance, mixed-agent config reporting, workflow contracts, and startup instructions that define when to proceed, when to improve the proposed approach, and when to stop and ask
 - Promotion stance: optional extension for now; future candidate only if the contract proves stable enough to stand apart from planning rather than duplicating it
 - Evidence required for further promotion: repeated dogfooding showing that task intent, local authority, and escalation boundaries can be expressed portably across repos and tools without vendor-specific routing assumptions
@@ -211,7 +211,7 @@ Several are now explicitly optional or extraction candidates rather than plannin
 
 - Current category: `internal capability`
 - Problem solved: generated maintainer and routing surfaces become liabilities when they are stale or unclear in origin
-- Why an agent wants it in checked-in form: trusted generated artifacts can reduce orientation cost only when provenance and freshness are explicit
+- Why an agent wants it in checked-in form: trusted generated artefacts can reduce orientation cost only when provenance and freshness are explicit
 - Current home: generated Python/TypeScript projections, package-local generated CLI bridges, render/check helpers, proof selectors, and maintainer tests
 - Promotion stance: keep internal and maintainer/development-only unless generic command-generation work proves a broader reusable boundary
 - Evidence required for further promotion: strong cross-module or cross-repo demand for a generic generated-surface trust layer with stable shared rules that do not assume planning payload internals
@@ -237,15 +237,15 @@ Several are now explicitly optional or extraction candidates rather than plannin
 ### Handoff / Execution Summaries
 
 - Current category: `unlikely to stand alone`
-- Problem solved: work becomes harder to resume when results, blockers, and validation outcomes are not summarized in a consistent shape
+- Problem solved: work becomes harder to resume when results, blockers, and validation outcomes are not summarised in a consistent shape
 - Why an agent wants it in checked-in form: structured handoff makes continuation and review cheaper across sessions and contributors
 - Current home: planning outputs, lifecycle reports, and selected memory or review surfaces
 - Promotion stance: supporting capability, not a standalone product target today
 - Evidence required for further promotion: repeated proof that a reusable summary contract has independent value across repos without simply duplicating planning state
 
-## Human Direction And Agent Judgment
+## Human Direction And Agent Judgement
 
-The long-horizon target is not unrestricted autonomy. It is bounded delegated judgment.
+The long-horizon target is not unrestricted autonomy. It is bounded delegated judgement.
 
 The intended operating shape is:
 
@@ -265,10 +265,10 @@ That requires the ecosystem to encode, cheaply and explicitly:
 - what conditions require stopping and asking instead of continuing wastefully
 
 This is primarily a planning and workflow-contract concern today, not a separate product promise.
-The value of the capability is that it lets humans step back to intent and constraints while keeping agent judgment bounded, auditable, and restartable.
-The current product stance keeps this as optional or future-candidate behavior until it is proven repo-, agent-, tool-, and language-agnostic.
+The value of the capability is that it lets humans step back to intent and constraints while keeping agent judgement bounded, auditable, and restartable.
+The current product stance keeps this as optional or future-candidate behaviour until it is proven repo-, agent-, tool-, and language-agnostic.
 
-## Extraction / Productization Criteria
+## Extraction / Productisation Criteria
 
 Promote or extract a capability only when dogfooding shows all of the following:
 
@@ -292,4 +292,3 @@ It should hold only bounded future candidates, promotion triggers, and sequencin
 `docs/ecosystem-roadmap.md` records the current ecosystem stance: what is shipped today, what remains internal for now, and the discipline for extraction.
 
 This document is broader. It records the capability map itself and the intended architectural role of those capabilities without turning them into a queue or package promise.
-

@@ -21,7 +21,7 @@ What is still fragile:
 - `.agentic-workspace/planning/state.toml` is a shared hot file because it selects live future work.
 - Two branches editing the same active execplan will conflict like any same-file collaboration.
 - Durable Memory notes can conflict when several branches update one broad note.
-- Config and ownership conflicts need human or strong-review judgment because they change policy.
+- Config and ownership conflicts need human or strong-review judgement because they change policy.
 - JSON and TOML are reviewable, but manual merge resolution can still be awkward.
 
 The practical rule is:

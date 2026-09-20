@@ -46,7 +46,7 @@ The JSON schema now mirrors that model: it validates supported field shapes, inc
 4. Use local delegation posture to shape handoff packets and closeout trust.
    Keep local targets advisory, but wire weak/strong target signals into bounded delegation guidance, expected proof burden, and lower-trust closeout recommendations.
 
-5. Let optimization bias select verbosity budgets.
+5. Let optimisation bias select verbosity budgets.
    The field should influence default report selector hints and payload density more directly while preserving the same machine truth behind explicit selectors.
 
 6. Promote freshness metadata into lifecycle recommendations.
@@ -57,6 +57,5 @@ The JSON schema now mirrors that model: it validates supported field shapes, inc
 - Do not turn local config into shared repo authority.
 - Do not make advisory fields silently execute commands.
 - Prefer strengthening existing query outputs over adding new commands.
-- Keep schema and loader behavior aligned: if runtime accepts with warnings, schema should not claim hard rejection.
+- Keep schema and loader behaviour aligned: if runtime accepts with warnings, schema should not claim hard rejection.
 - When a field remains advisory, expose that fact directly in machine-readable output.
-

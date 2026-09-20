@@ -16,4 +16,3 @@ Possible target names for a future migration:
 - keep Python import module names stable until a separate migration is justified.
 
 Do not reintroduce `*-bootstrap` command aliases for ordinary lifecycle operations. Use bootstrap terminology only for actual install/adopt/upgrade payload lifecycle concepts.
-

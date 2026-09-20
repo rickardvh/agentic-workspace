@@ -26,14 +26,14 @@ delta, runtime/session owner or new effect/proof authority was introduced.
 
 - Tag: `preview-v0.56.0`.
 - Accepted source: `3fd508feba856354e30fd4afc82930f2e6012c87`.
-- Release-only artifact commit: `87cf9ea4b2b0e1d6d59152ef707c3900b5b90595`.
+- Release-only artefact commit: `87cf9ea4b2b0e1d6d59152ef707c3900b5b90595`.
 - Publisher: [run 34962615722](https://github.com/rickardvh/agentic-workspace/actions/runs/34962615722).
 - Public release: [preview-v0.56.0](https://github.com/rickardvh/agentic-workspace/releases/tag/preview-v0.56.0).
 
 The publisher completed successfully. Admission and the three Linux runtime lanes
 (Python 3.11/Node 20, Python 3.13/Node 24 and Python 3.14/Node 24) passed, along with
 package/install/start, security, provenance and public-byte smoke. Exact npm
-artifact conformance passed on Node 20, 24 and 25. The release has 13 assets.
+artefact conformance passed on Node 20, 24 and 25. The release has 13 assets.
 The distribution remains Alpha and the preview is non-support-bearing; no Windows,
 macOS or manylinux release support is inferred from these Linux x64 receipts.
 
@@ -45,7 +45,7 @@ package/native identities, coordinated version, receipt inventory and checksums
 matched. `gh attestation verify` also verified the downloaded manifest against the
 repository's trusted master publisher and run 34962615722. Its SHA-256 is
 `976cb4d2c9cc7dc637711140ad1c9fb926130f27f3840c64ed02d12ea28e856b`.
-Security readiness belongs to this exact artifact; it does not claim that GitHub's
+Security readiness belongs to this exact artefact; it does not claim that GitHub's
 separately tracked legacy Dependabot alerts were closed.
 
 ## Consequential issue-creation dogfood (#2929)
@@ -53,7 +53,7 @@ separately tracked legacy Dependabot alerts were closed.
 The earlier no-new-issue disposition was accurate during implementation. Actual
 preview publication exposed a recurring, bounded maintainer-consumer defect:
 commit hooks created unleased `.ruff_cache`, `.uv-cache-root`, package Ruff caches
-and `scratch/validation-results` in the normalization worktree. Native resources
+and `scratch/validation-results` in the normalisation worktree. Native resources
 correctly preserved them. The release helper then raised from cleanup after tag
 push and publisher dispatch, suppressing its structured publication result.
 
@@ -85,7 +85,7 @@ to the helper's object schema. The prepared result bound current form/helper/inp
 and two local source files, preserved the bug form's shell rendering, supplied
 the `[Bug]:` title prefix and `bug` label, and granted no write authority.
 
-The authorized task included routing actionable dogfood findings; the creation
+The authorised task included routing actionable dogfood findings; the creation
 skill supplied the transport procedure. `gh issue create --body-file` performed
 one creation. A fresh `gh issue view` confirmed the intended title, body and label.
 The issue's identity and residual scope are explicitly carried here and into the
@@ -108,8 +108,8 @@ latency or total-operating-cost reduction claim. The live creation required an
 input repair; publication required manual cache disposition. Both costs are part
 of the observed result, not hidden by successful current-state queries.
 
-The normalization worktree was necessary because release preparation rewrites
-tracked package versions. Native policy judgment preceded its creation. After
+The normalisation worktree was necessary because release preparation rewrites
+tracked package versions. Native policy judgement preceded its creation. After
 publication, exact newly-created hook output was preserved in task scratch and
 the UV cache cleaned through `uv cache clean`; native composed teardown of the
 same worktree returned `committed` with no blockers. The main checkout and

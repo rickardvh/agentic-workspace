@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Planning issue relation
 
 Durable strategic relation between an external work item and a Planning lane.

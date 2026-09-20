@@ -2,7 +2,7 @@
 
 Priority 2 under #3208 composes existing owners through the main workspace skill
 and ordinary Rust-backed requests. Semantic nomination remains agent/human
-judgment. Currentness, destination restrictions, exact publication and recovery
+judgement. Currentness, destination restrictions, exact publication and recovery
 remain executable owner responsibilities.
 
 ## Knowledge destinations
@@ -19,7 +19,7 @@ Its `lesson` and `rationale` are not a decision record, policy, proof or target
 evidence. `confirm-retention` admits the exact proposal, separately from material
 authorship, which remains unattributed. Existing exact Memory policy delegation
 can admit the retention choice without another human answer. A no-retention
-advisory request returns without publication or an authorization roundtrip.
+advisory request returns without publication or an authorisation roundtrip.
 
 The note and manifest use the existing bounded capture publication/recovery
 implementation. The advisory representation has its own request/result identity
@@ -36,7 +36,7 @@ does not add another decision archive or reinterpret former Memory as decisions.
 ## Corrections, friction and initiative
 
 The existing correction skill selects lifetime and owner from meaning. Machine
-behavior stays in local ignored instructions; portable repository behavior stays
+behaviour stays in local ignored instructions; portable repository behaviour stays
 in checked-in instructions. Decisions, advisory knowledge, owner defects and
 proportionate Planning retain their own destinations. An absent host-delivered
 correction cannot be inferred from hidden conversation or promised as retained.
@@ -48,7 +48,7 @@ validation and supersession meaning. The proposed delta remains the destination
 owner's ordinary `content` or `key/value`; there is no parallel change format.
 Evidence references are confined exact source paths and must match current bytes.
 The nomination is bound to the proposal and invocation, so stale evidence cannot
-authorize a write.
+authorise a write.
 
 The ordinary configuration contract lists supported source/key pairs; full value
 schemas are delivered through `configuration/read-choice/v1` for the selected
@@ -76,7 +76,7 @@ semantic postimage; instructions additionally require current publication
 admission. A related filename does not suffice. Repeating a completed change
 becomes quiet through this comparison. `report` and `no-action` have no durable
 backlog, suppression list or continuation store. A changed source needs a fresh
-judgment. Other code, skill and Verification repairs remain work under their own
+judgement. Other code, skill and Verification repairs remain work under their own
 existing procedures; these two typed writers do not claim universal mutation.
 
 ## Current evidence and limits

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Startup Context Payload
 
 Startup routing payload returned when an agent needs the minimum safe context for entering or resuming work in a repository.
@@ -15,7 +16,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `target` | string | yes |  | Resolved target repository for the startup decision. |  |  |
 | `communication_contract` | object | no |  | Compact communication and reasoning-economy contract for decision-first, state-backed agent output. |  |  |
 | `workflow_participation` | object | no |  | Compact reminder that enabled Agentic Workspace workflow participation is mandatory; advisory fields only guide choices inside that workflow. |  |  |
-| `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
+| `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgement. |  |  |
 | `decision_packet` | object | no |  | Authoritative ordinary startup decision packet that merges decision identity, immediate action, allowed and forbidden effects, proof and claim boundaries, routed owner restrictions, attention signals, and exact detail routes. |  |  |
 | `current_decision` | ref `#/$defs/current_decision` | no |  | State-delta decision view derived from the shared state-delta core. |  |  |
 | `current_decision.kind` | const `"agentic-workspace/current-decision/v1"` | yes |  | Discriminator for the current decision view. |  |  |
@@ -72,7 +73,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `pre_test_evidence_guardrail` | object | no |  | Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
-| `task_posture_packet.operating_posture` | object | yes |  | Resolved optimization, artifact, initiative, assurance, and delegation posture for this task. |  |  |
+| `task_posture_packet.operating_posture` | object | yes |  | Resolved optimisation, artefact, initiative, assurance, and delegation posture for this task. |  |  |
 | `task_posture_packet.improvement_obligations` | array of object | yes |  | Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence. |  |  |
 | `task_posture_packet.improvement_pressure_records` | array of object | yes |  | Admitted improvement-pressure candidate facts preserved for the canonical operating decision. |  |  |
 | `task_posture_packet.skill_routes` | array of object | yes |  | Task-selected skills, prompts, or routing fragments. |  |  |
@@ -93,7 +94,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `task_posture_packet.dynamic_instruction_projection` | object | yes |  | Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion. |  |  |
 | `task_posture_packet.posture_adherence` | object | yes |  | Closeout/report visibility for whether the selected posture was followed or requires explanation. |  |  |
 | `task_path_references` | object | no |  | Observed named repo paths from task text, classified as conceptual-reference or path-scoped-work. Conceptual references do not create changed-path routing authority; explicit path-work intent or --changed paths can route path-scoped workflow. |  |  |
-| `memory_decision_packet` | ref `#/$defs/memory_decision_packet` | no |  | Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent. |  |  |
+| `memory_decision_packet` | ref `#/$defs/memory_decision_packet` | no |  | Command-backed Memory pull/capture decision packet that keeps semantic judgement with the agent. |  |  |
 | `memory_decision_packet.kind` | const `"agentic-workspace/memory-decision-packet/v1"` | yes |  | Discriminator for the Memory decision packet. |  |  |
 | `memory_decision_packet.stage` | string | yes |  | Workflow stage that produced the packet. |  |  |
 | `memory_decision_packet.force` | string | yes |  | Whether Memory pull/capture is not applicable, recommended, or required before a claim. |  |  |
@@ -118,7 +119,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `invoked_cli_identity.target_relation` | enum `"inside-target"`, `"outside-target"`, `"no-target"` | yes |  | Allowed target relation value for routing or validation. |  |  |
 | `invoked_cli_identity.compatibility` | const `"not-evaluated"` | yes |  | Fixed compatibility value required by this contract. |  |  |
 | `invoked_cli_identity.expectation_source` | string | no |  | Expectation source text value used by this contract. |  |  |
-| `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | no |  | Compatibility assessment across executable, repo payload, generated artifacts, and adapter contracts. |  |  |
+| `installed_state_compatibility` | ref `#/$defs/installed_state_compatibility` | no |  | Compatibility assessment across executable, repo payload, generated artefacts, and adapter contracts. |  |  |
 | `installed_state_compatibility.kind` | const `"agentic-workspace/installed-state-compatibility/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
 | `installed_state_compatibility.status` | enum `"compatible"`, `"upgrade-recommended"`, `"payload-upgrade-required"`, `"blocking-drift"` | yes |  | Current installed-state compatibility classification. |  |  |
 | `installed_state_compatibility.reason` | string | no |  | Short explanation for the selected status. |  |  |
@@ -150,7 +151,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `installed_state_compatibility.invocation_resolution` | object | no |  | Non-mutating classification of the configured environment-manager invocation. |  |  |
 | `installed_state_compatibility.executable` | object | yes |  | Executable identity and compatibility classification. |  |  |
 | `installed_state_compatibility.payload` | object | yes |  | Installed repo payload compatibility and sync guidance. |  |  |
-| `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |
+| `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artefact freshness classification. |  |  |
 | `installed_state_compatibility.adapter_contracts` | array of object | no |  | Entry-surface adapter contracts covered by this model. |  |  |
 | `installed_state_compatibility.next_action` | string \| null | no |  | Suggested command when drift requires or recommends action. |  |  |
 | `installed_state_compatibility.action_effect` | object | no |  | Action and claim effect for the installed-state compatibility condition. |  |  |
@@ -233,21 +234,21 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `next_safe_action.continuation_owner_required` | boolean | no |  | Whether unfinished intent needs an explicit continuation owner before closeout. |  |  |
 | `next_safe_action.memory_consultation_status` | string | yes |  | Memory consultation or durable-residue status relevant to the next action. |  |  |
 | `next_safe_action.detail_selector` | string | yes |  | Exact selector for expanding next-safe-action detail. |  |  |
-| `next_safe_action.authority_boundary` | object | no |  | Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgment. |  |  |
+| `next_safe_action.authority_boundary` | object | no |  | Authority boundary showing what AW enforces, observes, recommends, or leaves to agent and human judgement. |  |  |
 | `next_safe_action.authority_boundary.kind` | const `"agentic-workspace/authority-boundary/v1"` | yes |  | Discriminator for the authority-boundary packet. |  |  |
 | `next_safe_action.authority_boundary.surface` | string | yes |  | Payload surface whose authority categories are being described. |  |  |
 | `next_safe_action.authority_boundary.authority_class` | enum `"hard-gate"`, `"advisory-support"`, `"observed-facts"`, `"agent-owned"` | yes |  | Dominant authority class for the surface. |  |  |
 | `next_safe_action.authority_boundary.enforced_by_aw` | array of string | yes |  | Hard gates or constraints AW enforces for this surface. |  |  |
 | `next_safe_action.authority_boundary.observed_by_aw` | array of string | yes |  | Mechanical facts, evidence, path state, or configuration AW observed. |  |  |
-| `next_safe_action.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgment. |  |  |
+| `next_safe_action.authority_boundary.recommended_by_aw` | array of string | yes |  | Advisory next actions or support signals AW recommends without owning semantic judgement. |  |  |
 | `next_safe_action.authority_boundary.candidate_routes` | array of string | yes |  | Possible routes AW surfaced for the agent to evaluate. |  |  |
 | `next_safe_action.authority_boundary.proof_hints` | array of string | yes |  | Proof burden or validation hints relevant to the surface. |  |  |
-| `next_safe_action.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgments the agent owns. |  |  |
+| `next_safe_action.authority_boundary.agent_owned_decisions` | array of string | yes |  | Semantic, route, proof-proportionality, or completion judgements the agent owns. |  |  |
 | `next_safe_action.authority_boundary.human_owned_decisions` | array of string | yes |  | Intent, acceptance, or handoff decisions requiring human ownership when present. |  |  |
 | `next_safe_action.authority_boundary.reporting_rule` | string | yes |  | How agents should report the boundary without overstating AW authority. |  |  |
 | `next_safe_action.fallback_if_cli_unavailable` | string | no |  | Conservative fallback when the preferred CLI cannot be used. |  |  |
 | `next_safe_action.source_fields` | array of enum `"immediate_next_allowed_action"`, `"workflow_sufficiency"`, `"skill_routing"`, `"memory_consult"`, `"planning_safety_gate"`, `"proof"`, `"closeout_trust_inspection"`, `"continuation_state"` | no |  | Startup fields used to derive the packet. |  |  |
-| `skills` | object | no |  | Compact startup projection over skill routing, required skill, recommendations, and catalog drill-down. |  |  |
+| `skills` | object | no |  | Compact startup projection over skill routing, required skill, recommendations, and catalogue drill-down. |  |  |
 | `context` | object | no |  | Supporting startup context for the primary next-safe-action decision, including compatibility projections for detail fields. |  |  |
 | `context.pre_test_evidence_guardrail` | object | no |  | Selector-first location for the optional non-blocking pre-test evidence-owner advisory; mirrors the root field when startup exposes the guardrail in context detail. |  |  |
 | `parent_intent_status` | object | no |  | Parent/original-intent status preserving larger intent across bounded startup and implementation slices. |  |  |
@@ -275,7 +276,7 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `durable_intent` | object | no |  | Compact durable task, subsystem, and system intent pressure to consider before implementation. |  |  |
 | `skill_routing` | ref `#/$defs/skill_routing` | no |  | Skill-discovery route and fallback guidance for task-specific instructions. |  |  |
 | `skill_routing.status` | string | yes |  | Current lifecycle, readiness, or health state. |  |  |
-| `skill_routing.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `skill_routing.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `skill_routing.query` | string | yes |  | Query text value used by this contract. |  |  |
 | `skill_routing.advanced_route_rule` | string | no |  | Advanced route rule text value used by this contract. |  |  |
 | `skill_routing.available_advanced_route_command` | string | no |  | Available advanced route command text value used by this contract. |  |  |

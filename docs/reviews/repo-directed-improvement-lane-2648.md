@@ -28,10 +28,10 @@ After this lane:
 - the operating decision exposes one permitted initiative class, exact owner, and next action;
 - small already-owned changes stay in the current task;
 - standalone work receives a checked-in Planning owner and resume identity;
-- ineffective or locally optimized changes return to the originating owner with their existing identity;
+- ineffective or locally optimised changes return to the originating owner with their existing identity;
 - mature success removes recurring pressure instead of asking the human to keep polling a report.
 
-The real dogfood sequence in `docs/reviews/repo-improvement-effectiveness-dogfood-2652.json` records a proof-routing workaround becoming a repository improvement and being checked across later equivalent #2668 and #2669 work. Its observations are admitted through the registered Evaluation definition and bound owner context; the artifact is evidence, not conclusion authority. Unrelated Planning suite runs fell from two to zero, removing 171.6 attributable seconds while focused changed-claim coverage remained present.
+The real dogfood sequence in `docs/reviews/repo-improvement-effectiveness-dogfood-2652.json` records a proof-routing workaround becoming a repository improvement and being checked across later equivalent #2668 and #2669 work. Its observations are admitted through the registered Evaluation definition and bound owner context; the artefact is evidence, not conclusion authority. Unrelated Planning suite runs fell from two to zero, removing 171.6 attributable seconds while focused changed-claim coverage remained present.
 
 ## Direct-work cost and residue
 
@@ -59,13 +59,13 @@ The fixture matrix proves that:
 
 ## Remaining limits
 
-- AW does not invent arbitrary code transformations; the agent and repository source owner still own implementation judgment.
+- AW does not invent arbitrary code transformations; the agent and repository source owner still own implementation judgement.
 - Longitudinal conclusions remain qualitative and owner-bound. They require comparable task shape and cannot prove causality from absence alone.
 - External issue/review delivery still depends on the configured host integration; the core route remains host-agnostic.
 - The PR stack must merge in dependency order before GitHub can close #2649–#2652 and this parent.
 
 These limits are intentional authority and evidence boundaries, not missing pieces of the requested loop.
 
-## Closure judgment
+## Closure judgement
 
 Closure is honest after the terminal stack member merges. The full signal → consequence → bounded action/disposition → present proof → later recurrence/value check → retirement loop is operational across all five latitude modes, includes real dogfood evidence, preserves human-owned boundaries, and stays quiet for no-signal or mature-resolved work.

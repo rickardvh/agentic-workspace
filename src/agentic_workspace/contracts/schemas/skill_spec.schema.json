@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/skill-spec.schema.json",
   "title": "Module-neutral SkillSpec Contract",
-  "description": "Source-maintenance model only; not native/public command authority. Package-owned skill behavior projected from one compiled operating decision; specialized procedures remain behind routed skill owners.",
+  "description": "Source-maintenance model only; not native/public command authority. Package-owned skill behaviour projected from one compiled operating decision; specialised procedures remain behind routed skill owners.",
   "type": "object",
   "required": [
     "schema_version",
@@ -35,7 +35,7 @@
       "items": {
         "$ref": "#/$defs/generated_plugin_target"
       },
-      "description": "Framework-native plugin/adaptor targets generated from SkillSpec without owning product behavior."
+      "description": "Framework-native plugin/adaptor targets generated from SkillSpec without owning product behaviour."
     },
     "generated_target_behavior_fixtures": {
       "type": "array",
@@ -43,7 +43,7 @@
       "items": {
         "$ref": "#/$defs/generated_target_behavior_fixture"
       },
-      "description": "Target-agnostic behavior fixtures that generated skills and plugins must preserve."
+      "description": "Target-agnostic behaviour fixtures that generated skills and plugins must preserve."
     },
     "migration_status": {
       "const": "source-maintenance-only",
@@ -81,7 +81,7 @@
         },
         "fallback_when_missing": {
           "$ref": "#/$defs/non_empty_string",
-          "description": "Conservative behavior when the field is absent or the output is unavailable."
+          "description": "Conservative behaviour when the field is absent or the output is unavailable."
         }
       },
       "additionalProperties": false,
@@ -179,11 +179,11 @@
       "properties": {
         "no_artifact_by_default": {
           "type": "boolean",
-          "description": "Whether routine use of this skill should avoid creating review, planning, memory, or handoff artifacts."
+          "description": "Whether routine use of this skill should avoid creating review, planning, memory, or handoff artefacts."
         },
         "artifact_creation_allowed_when": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "Conditions that justify durable artifact creation."
+          "description": "Conditions that justify durable artefact creation."
         },
         "ordinary_work_rule": {
           "$ref": "#/$defs/non_empty_string",
@@ -191,7 +191,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Proportionality and artifact policy for the skill."
+      "description": "Proportionality and artefact policy for the skill."
     },
     "generated_target_requirements": {
       "type": "object",
@@ -290,7 +290,7 @@
         },
         "fallback_when_cli_unavailable": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "No-CLI fallback behavior preserved by the generated plugin."
+          "description": "No-CLI fallback behaviour preserved by the generated plugin."
         },
         "must_preserve": {
           "$ref": "#/$defs/non_empty_strings",
@@ -364,7 +364,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "A representative generated-target behavior fixture."
+      "description": "A representative generated-target behaviour fixture."
     },
     "spec": {
       "type": "object",
@@ -403,11 +403,11 @@
         },
         "applies_when": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "Conditions that should route an agent to this skill behavior."
+          "description": "Conditions that should route an agent to this skill behaviour."
         },
         "proportionality": {
           "$ref": "#/$defs/proportionality",
-          "description": "Artifact and proportionality policy for this skill."
+          "description": "Artefact and proportionality policy for this skill."
         },
         "preferred_cli_commands": {
           "type": "array",
@@ -438,11 +438,11 @@
         },
         "forbidden_actions": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "Actions this skill must not instruct or normalize."
+          "description": "Actions this skill must not instruct or normalise."
         },
         "fallback_when_cli_unavailable": {
           "$ref": "#/$defs/non_empty_strings",
-          "description": "Conservative behavior when the preferred CLI cannot be used."
+          "description": "Conservative behaviour when the preferred CLI cannot be used."
         },
         "proof_obligations": {
           "$ref": "#/$defs/non_empty_strings",
@@ -458,7 +458,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "A single skill behavior contract."
+      "description": "A single skill behaviour contract."
     }
   },
   "additionalProperties": false,

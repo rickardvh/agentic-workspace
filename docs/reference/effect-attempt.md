@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Exact retained effect attempt
 
 Record shape only. Rust checks identity and current admission; the host supplies independently established custody.

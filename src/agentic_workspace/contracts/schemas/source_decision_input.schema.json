@@ -33,7 +33,7 @@
           "properties": {
         "required_claims": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true, "description": "Outcome-owner-declared claims that must be currently allowed before completion; absence of their owner or evidence does not waive them."},
             "id": {"type": "string", "minLength": 1, "description": "Stable intended outcome identity."},
-            "owner": {"type": "string", "minLength": 1, "description": "Owner authorized to establish the intended outcome."},
+            "owner": {"type": "string", "minLength": 1, "description": "Owner authorised to establish the intended outcome."},
             "claim": {"type": "string", "minLength": 1, "description": "Claim that must be allowed for terminal status."}
           },
           "required": ["id", "owner", "claim"]
@@ -60,7 +60,7 @@
   "additionalProperties": false,
   "$defs": {
     "readonly_handoff_inputs": {
-  "description": "Current acting-agent completeness judgment for necessary read-only assignment inputs; source readability/currentness is observed separately.",
+  "description": "Current acting-agent completeness judgement for necessary read-only assignment inputs; source readability/currentness is observed separately.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -280,7 +280,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 2048,
-          "description": "Current task-specific strategy judgment, never proof or reviewer authentication."
+          "description": "Current task-specific strategy judgement, never proof or reviewer authentication."
         }
       },
       "description": "Current Verification strategy assessment bound by its public request to exact task, work, source and capability identities."
@@ -333,7 +333,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 8192,
-          "description": "Bounded reported command text; retaining it does not authorize execution."
+          "description": "Bounded reported command text; retaining it does not authorise execution."
         },
         "result": {
           "enum": [
@@ -373,11 +373,11 @@
           "items": {
             "type": "string"
           },
-          "description": "Current normalized changed paths."
+          "description": "Current normalised changed paths."
         },
         "execute_selected": {
           "const": true,
-          "description": "Explicitly selects the effectful execution and publication behavior of proof.report."
+          "description": "Explicitly selects the effectful execution and publication behaviour of proof.report."
         },
         "selection": {
           "type": "object",
@@ -486,7 +486,7 @@
       }
     },
     "verification_claim_request": {
-      "description": "Request current Verification judgment for an exact work-bound claim. Evidence references identify candidates; they do not authenticate producers or assert acceptance.",
+      "description": "Request current Verification judgement for an exact work-bound claim. Evidence references identify candidates; they do not authenticate producers or assert acceptance.",
       "type": "object",
       "additionalProperties": false,
       "required": ["claim_class"],
@@ -517,7 +517,7 @@
         "reason": {
           "type": "string",
           "minLength": 1,
-          "description": "Agent/human judgment explaining lack of future retention value."
+          "description": "Agent/human judgement explaining lack of future retention value."
         },
         "authority": {
           "$ref": "#/$defs/decision_authority",
@@ -571,7 +571,7 @@
             "$ref": "#/$defs/decision_dismissal",
             "description": "Owner-admitted dismissal."
           },
-          "description": "Explicit judgments, each bound to decision revision and current authority evidence."
+          "description": "Explicit judgements, each bound to decision revision and current authority evidence."
         }
       },
       "required": [
@@ -696,7 +696,7 @@
     },
     "material_decision": {
       "type": "object",
-      "description": "Semantic record. Normalization does not admit its authorship, authority or source custody.",
+      "description": "Semantic record. Normalisation does not admit its authorship, authority or source custody.",
       "properties": {
         "id": {
           "type": "string",
@@ -1017,7 +1017,7 @@
     "semantic_route_choice": {
       "type": "object",
       "properties": {
-        "posture": {"enum": ["selected", "none", "unresolved"], "description": "Acting-agent semantic judgment."},
+        "posture": {"enum": ["selected", "none", "unresolved"], "description": "Acting-agent semantic judgement."},
         "routes": {"type": "array", "items": {"$ref": "#/$defs/route_id"}, "maxItems": 16, "uniqueItems": true, "description": "Exact shared leaf identities; no authority-bearing fields."}
       },
       "required": ["posture", "routes"], "additionalProperties": false,
@@ -1216,7 +1216,7 @@
             "type": "object",
             "properties": {
               "claim": {"type": "string", "minLength": 1, "description": "Grantable claim identity."},
-              "owner": {"type": "string", "minLength": 1, "description": "Sole capability owner authorized to grant the claim."}
+              "owner": {"type": "string", "minLength": 1, "description": "Sole capability owner authorised to grant the claim."}
             },
             "required": ["claim", "owner"],
             "additionalProperties": false
@@ -1260,7 +1260,7 @@
         "operation_id": {"type": "string", "minLength": 1},
         "dependency_revision": {"type": "string", "minLength": 1, "description": "Owner-derived revision of material action dependencies, excluding unrelated source changes."},
         "source_requests": {"type": "array", "maxItems": 16, "items": {"$ref": "#/$defs/public_request"}, "description": "Exact current source-owner requests retained as invocation dependencies; delivery is not proof or mutation authority."},
-        "effect_generation": {"type": "string", "description": "Owner-authorized repeat boundary; absent means the initial logical effect, never ambient revision churn."},
+        "effect_generation": {"type": "string", "description": "Owner-authorised repeat boundary; absent means the initial logical effect, never ambient revision churn."},
         "arguments": {"type": "object"},
         "effects": {"type": "array", "items": {"type": "string", "minLength": 1}},
         "authority": {"type": "string", "minLength": 1}
@@ -1318,7 +1318,7 @@
         "relevant": {"type": "boolean"},
         "settled": {"type": "boolean"},
         "facts": {"type": "object"},
-        "material": {"description": "Owner-supplied current operating context that must remain visible in every projection, including delivered source text and applicable instruction guidance. It grants no effect, proof or acknowledgment authority."},
+        "material": {"description": "Owner-supplied current operating context that must remain visible in every projection, including delivered source text and applicable instruction guidance. It grants no effect, proof or acknowledgement authority."},
         "blockers": {"type": "array", "items": {"$ref": "#/$defs/blocker"}},
         "decisions": {"type": "array", "items": {"$ref": "#/$defs/decision"}},
         "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
@@ -1333,7 +1333,7 @@
         "request_response": {
           "type": "object",
           "properties": {
-            "request_identity": {"type": "string", "minLength": 1, "description": "Complete normalized identity returned by the shared request preparation boundary."},
+            "request_identity": {"type": "string", "minLength": 1, "description": "Complete normalised identity returned by the shared request preparation boundary."},
             "consequence_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}, "description": "Exact current owner consequences answering this request only; empty for a settled response."},
             "status": {"enum": ["action", "decision", "blocked", "settled"], "description": "Kind of exact owner response present in this contribution."}
           },
@@ -1359,7 +1359,7 @@
       "additionalProperties": false
     },
     "task_judgment_input": {
-      "description": "Internal current owner observations for exact task judgment; no public source or producer authority ingress.",
+      "description": "Internal current owner observations for exact task judgement; no public source or producer authority ingress.",
       "oneOf": [
         {
           "type": "object",
@@ -1512,12 +1512,12 @@
     },
     "task_requirements_judgment": {
       "type": "object",
-      "description": "Acting agent task judgment, not policy or Verification authority.",
+      "description": "Acting agent task judgement, not policy or Verification authority.",
       "properties": {
         "target_scope": {
           "type": "object",
           "maxProperties": 32,
-          "description": "Current acting-agent applicability judgments for exact configured forbidden task classes. Applies denies the target; not-applicable does not grant capability or override policy. Omitted or unresolved remains blocked. Never durable configuration.",
+          "description": "Current acting-agent applicability judgements for exact configured forbidden task classes. Applies denies the target; not-applicable does not grant capability or override policy. Omitted or unresolved remains blocked. Never durable configuration.",
           "additionalProperties": {
             "type": "object",
             "properties": {

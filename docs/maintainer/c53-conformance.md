@@ -15,7 +15,7 @@ that the unchanged baseline already passed those stale guards.
 This report is implementation-owned preflight, not independent review. After this
 PR is reviewed and merged, the release owner must select/rebind the final exact
 C53 source including these public docs. A runtime-equivalent base is not a receipt
-for a different complete tree. P53 normalization, publication and public-byte
+for a different complete tree. P53 normalisation, publication and public-byte
 install proof remain Priority 7. Do not check candidate rows or close #3207 from
 this report alone. No support-bearing admission is claimed.
 
@@ -23,7 +23,7 @@ this report alone. No support-bearing admission is claimed.
 
 The [authority graph](../architecture/shared-rust-core.md) separates declarative
 contracts, one Rust executable owner implementation, domain/source authority,
-transport and agent/human judgment. Current native `start`/`invoke` use that core;
+transport and agent/human judgement. Current native `start`/`invoke` use that core;
 `resources` and `worker` are bounded tools over its existing owners. Skills are
 procedure and selective disclosure, never a second runtime or mandatory phase
 model. No runtime code or capability branch is added here.
@@ -50,13 +50,13 @@ new test suite, execution engine or ordinary-CI tranche.
 | --- | --- | --- |
 | Fresh tiny bootstrap/main skill, selective known leaf | `test_skills_first_interface.py` | Fresh native/JSON/Python/Node consumers reach a bounded Configuration write; stale work/procedure invalidates reuse. Skills alone grant no claim. |
 | Local/shared correction, policy and fresh delivery | `test_native_instruction_write.py` | Exact publication, protected source, interruption, changed-byte preservation and shared-source portability. |
-| Current config, source/proof/claim distinction | `test_native_claim_review.py`, core Configuration/Verification contracts | Process success is insufficient; current judgment, source obligations, Planning residuals and independent-review ceilings survive. |
+| Current config, source/proof/claim distinction | `test_native_claim_review.py`, core Configuration/Verification contracts | Process success is insufficient; current judgement, source obligations, Planning residuals and independent-review ceilings survive. |
 | Quiet direct/no-signal work and burden | `test_operating_journey_measurement`, fresh native source observation | Empty target is direct and leaves zero files. Full/compact costs and internal call tradeoffs remain visible. |
 | Opaque entry and global currentness | `test_global_reconciliation_observes_opaque_new_work` | Newly observed work requires current source reconciliation rather than history-based permission. |
 | Portable Planning and worker context | Native creation/clone and capsule/typed-return journeys | Fresh process/environment recovers meaning with new local custody; worker returns remain unproven until current owner admission. |
 | Returned work and local quiescence versus whole outcome | Planning-owned patch integration, independent-result consumption, claim-review tests, shared outcome vectors | A finished process/owner/patch is not completion of selected work; pending integration, proof and parent residuals remain. |
 | Structured local resources/isolation | Scratch ownership/cleanup and worktree policy/teardown journeys | Owned scratch can be cleaned; unknown ignored or unleased/tracked content remains. Required policy and teardown are exercised. |
-| No-runtime behavior | Canonical main skill static fallback and interface conformance | Selective read-only source orientation only. Executable authority, retained corrections, proof and provider state remain unknown. |
+| No-runtime behaviour | Canonical main skill static fallback and interface conformance | Selective read-only source orientation only. Executable authority, retained corrections, proof and provider state remain unknown. |
 
 The shared outcome vectors include `owner-settled-is-not-terminal`,
 `request-settled-is-not-owner-quiescence`, `explicit-current-outcome-is-terminal`,
@@ -80,7 +80,7 @@ Planning reconcile/create/update/recover, Verification report/source reconciliat
 instruction write/recover, Assignment patch integration and Delegation dispatch.
 Configured Memory and independent owners add only admitted bounded effects;
 Resources has its own dedicated local-resource boundary. Reading this inventory
-is not an authorization to invoke an operation.
+is not an authorisation to invoke an operation.
 
 | Effect family | Safety disposition | Recheck contribution |
 | --- | --- | --- |
@@ -104,7 +104,7 @@ reference now teach one canonical skill plus exact tools. Copyable instruction
 material is kept separate from publication authority. The CLI catalogue removes
 over 1,900 lines of misleading historical commands and its existing freshness
 check remains binding. The installed-surface catalogue is refreshed and explicitly
-labels source-maintenance lifecycle profiles, not available native initialization.
+labels source-maintenance lifecycle profiles, not available native initialisation.
 The installation guide reports the missing native adoption command rather than
 using an old host. Current source use and future public-byte installation are
 separate claims. #2616 final support/platform reconciliation remains with #2990.
@@ -115,13 +115,13 @@ The runtime recheck uses existing owner/contract tests; no permanent aggregate
 suite, matrix generator or recurring CI work is added. The catalogue test changes
 its authority from the retired command manifest to the live native declaration.
 The existing architecture guard changes only for the accepted bounded transport
-forms and keeps its no-domain-semantics checks. These are maintained behavioral
+forms and keeps its no-domain-semantics checks. These are maintained behavioural
 boundaries, not incident-specific regression additions.
 
 Stop after the selected risks and normal commit checks pass. Escalate a concrete
 failed safety/currentness/constructibility path to its smallest owner; do not
 substitute a generic all-tests run or historical migration failures for current
-candidate evidence. Independent final-tree acceptance and Priority 7 artifact
+candidate evidence. Independent final-tree acceptance and Priority 7 artefact
 proof are explicit remaining release-owner work, not silently passing results.
 
 ## Current run results (2026-09-13, Windows x86-64)

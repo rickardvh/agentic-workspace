@@ -7,7 +7,7 @@ independent review; this record does not establish acceptance of any layer.
 | --- | --- | --- |
 | planning-high-assurance-lifecycle | Current native restrictions remain binding; planning-work and closeout distinguish custody, evidence and intent. | Broad phase selection and repeated handoffs. |
 | planning-orchestrator-workflow | Assignment binding reference retains orchestrator/worker custody and exact Planning continuity recovery; native Assignment retains target authority. | Full dispatch/return/proof sequence and unsupported assignment command recipes. |
-| planning-autopilot | planning-work continuity says to continue safe authorized remaining work, with no scheduler or launcher. | Separate startup/validation/continuation loop and host entrypoint metadata. |
+| planning-autopilot | planning-work continuity says to continue safe authorised remaining work, with no scheduler or launcher. | Separate startup/validation/continuation loop and host entrypoint metadata. |
 
 All three entries and their package, installed, Python and TypeScript skill copies
 are removed. No compatibility skill or replacement umbrella is introduced.

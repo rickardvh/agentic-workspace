@@ -1,10 +1,10 @@
 # Setup Findings Contract
 
-Setup findings are optional agent-produced input from post-bootstrap discovery. They let setup, review, validation friction, and memory-improvement signals enter one improvement-intake path without making setup a repo analyzer.
+Setup findings are optional agent-produced input from post-bootstrap discovery. They let setup, review, validation friction, and memory-improvement signals enter one improvement-intake path without making setup a repo analyser.
 
-## Artifact
+## Artefact
 
-The optional artifact is `tools/setup-findings.json` with kind `workspace-setup-findings/v1`. It is validated against `src/agentic_workspace/contracts/schemas/setup_findings.schema.json`.
+The optional artefact is `tools/setup-findings.json` with kind `workspace-setup-findings/v1`. It is validated against `src/agentic_workspace/contracts/schemas/setup_findings.schema.json`.
 
 Use:
 
@@ -24,4 +24,4 @@ Dismiss or keep transient any finding that is speculative, generic, broad, missi
 
 ## Boundaries
 
-Do not build a workspace-owned analyzer. Do not auto-write Planning or Memory state from setup input. Do not preserve findings that have no durable owner or bounded next action.
+Do not build a workspace-owned analyser. Do not auto-write Planning or Memory state from setup input. Do not preserve findings that have no durable owner or bounded next action.

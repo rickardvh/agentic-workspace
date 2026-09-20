@@ -47,7 +47,7 @@ authority vocabulary.
 | `mirror_policy` | one of the mirror policies in this document |
 | `capture_intent` | `ignore`, `capture`, `promote`, or `demote` |
 
-`knowledge_gate` describes blocking or claim-limiting behavior:
+`knowledge_gate` describes blocking or claim-limiting behaviour:
 
 | Field | Meaning |
 | --- | --- |
@@ -64,7 +64,7 @@ Knowledge routes may point at these source kinds:
 
 | Kind | Canonical owner | Typical use |
 | --- | --- | --- |
-| repo doc | the checked-in document or owning package area | current package behavior, local architecture, public or maintainer guidance |
+| repo doc | the checked-in document or owning package area | current package behaviour, local architecture, public or maintainer guidance |
 | external doc | the external publisher | vendor APIs, platform rules, legal or product facts that can change outside the repo |
 | issue | the issue tracker | requested outcome, acceptance pressure, parent epic context, stakeholder comments |
 | PR | the pull request and review threads | proposed change, review decisions, merge blockers, branch-specific evidence |
@@ -75,7 +75,7 @@ Knowledge routes may point at these source kinds:
 | Verification protocol | verification module or repo-native proof contract | proof routes, evidence expectations, stale conditions, and known gaps |
 | human or chat capture | the specific human confirmation or captured transcript | high-context intent that must be promoted, dismissed, or treated as local-only |
 
-A route records the owner. Agentic Workspace may select, summarize, or project a
+A route records the owner. Agentic Workspace may select, summarise, or project a
 route, but the owner remains the source named by the route.
 
 ## Authority Classes
@@ -84,15 +84,15 @@ Every routed source should be treated as one of these authority classes:
 
 | Authority class | Meaning | Conflict handling |
 | --- | --- | --- |
-| canonical repo | checked-in source owns current repo behavior | update or link this source before claiming a different repo rule |
+| canonical repo | checked-in source owns current repo behaviour | update or link this source before claiming a different repo rule |
 | module-owned | a module contract, README, or manifest owns the rule | defer to the module owner unless root orchestration explicitly overrides it |
 | generated from contract | generated reference projects a machine-readable source | change the source contract and regenerate, not the generated page alone |
 | external authoritative | external publisher owns the fact | verify freshness before design or claim when the fact may have changed |
 | tracker intent | issue or PR owns requested outcome, review pressure, or merge state | preserve parent and child issue boundaries; do not close parent intent accidentally |
 | human-confirmed | an explicit human message governs the current slice | capture the decision into the right durable owner before it becomes hidden memory |
-| Memory durable | Memory owns reusable anti-rediscovery context | promote to docs or config if it starts governing product behavior |
+| Memory durable | Memory owns reusable anti-rediscovery context | promote to docs or config if it starts governing product behaviour |
 | Planning active | Planning owns current execution state | close or archive only when the intended work is actually satisfied or routed |
-| local-only | machine-local, private, or low-confidence knowledge | do not check in or generalize without explicit promotion |
+| local-only | machine-local, private, or low-confidence knowledge | do not check in or generalise without explicit promotion |
 | inferred | agent inference from evidence | expose as inference and seek a stronger owner before making it a hard rule |
 
 When sources conflict, the route should surface the conflict and name the likely
@@ -130,7 +130,7 @@ and a maintenance rule.
 | compact projection | startup or report needs a small decision-relevant extract | include provenance and freshness state |
 | generated reference | a source contract can regenerate the projection | never hand-edit generated authority |
 | Memory capture | a durable fact prevents repeated rediscovery | keep it compact and routeable; do not store execution history |
-| docs promotion | a Memory note or repeated route now governs product behavior | move the governing statement into canonical docs or contracts |
+| docs promotion | a Memory note or repeated route now governs product behaviour | move the governing statement into canonical docs or contracts |
 | local-only capture | the knowledge is private, machine-specific, or uncertain | keep it out of checked-in repo state unless explicitly promoted |
 | no mirror | external terms, volatile docs, or broad source material | point at the source and require freshness verification |
 
@@ -145,7 +145,7 @@ Freshness is route-specific:
   owner says they are generated or stale;
 - generated references are stale when their source contract changed without
   regeneration;
-- external docs are stale when the task depends on current behavior and the
+- external docs are stale when the task depends on current behaviour and the
   source could have changed since the last verification;
 - issues and PRs are stale when new comments, review states, labels, or merge
   status can change the intended outcome;
@@ -247,7 +247,7 @@ Knowledge routing is implemented as a compact task-posture contribution across
 the ordinary loop, not as a parallel source workflow. The integration boundary
 is:
 
-| Loop surface | Integration behavior | Proof anchor |
+| Loop surface | Integration behaviour | Proof anchor |
 | --- | --- | --- |
 | Startup and summary | Emit `task_posture_packet` only when task facts, changed paths, configured obligations, or module participation change routing; otherwise omit knowledge gates from ordinary startup. | `tests/test_workspace_start_preflight_cli.py::test_start_default_surfaces_compact_task_posture_packet`; `tests/test_workspace_start_preflight_cli.py::test_summary_selector_surfaces_task_posture_packet` |
 | Implement | Match task text and changed paths to pre-work knowledge gates, blocked actions, proof boundaries, closeout boundaries, and authority provenance before edit claims. | `tests/test_workspace_implement_cli.py::test_implement_surfaces_pre_work_knowledge_gate_for_source_authority_task` |
@@ -270,7 +270,7 @@ Memory is a durable anti-rediscovery owner, not a shadow documentation system.
 Promote into Memory when a compact fact, invariant, mistake, runbook, or routing
 hint is durable, non-private, reusable, and cheaper to preserve than rediscover.
 Promote from Memory into canonical docs, config, contracts, or ADRs when the fact
-starts governing product behavior or contributor obligations.
+starts governing product behaviour or contributor obligations.
 
 Demote or remove Memory authority when the note is stale, duplicated by a
 canonical source, too broad to route, local-only, or only records one execution

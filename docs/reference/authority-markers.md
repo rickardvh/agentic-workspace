@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Authority Marker Policy
 
 Authority marker policy for identifying generated, adapter, repo-owned, and safe-to-edit surfaces.

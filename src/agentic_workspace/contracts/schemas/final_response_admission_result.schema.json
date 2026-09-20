@@ -32,7 +32,7 @@
     },
     "terminal_outcome_contract": {
       "type": "object",
-      "description": "Terminal outcome contract used to decide whether a final response is authorized."
+      "description": "Terminal outcome contract used to decide whether a final response is authorised."
     },
     "admission": {
       "type": "object",
@@ -40,7 +40,7 @@
     },
     "continuation_operation": {
       "type": "object",
-      "description": "Ordinary AW continuation operation executed after an unauthorized final response."
+      "description": "Ordinary AW continuation operation executed after an unauthorised final response."
     },
     "checkpoint_write": {
       "type": "object",

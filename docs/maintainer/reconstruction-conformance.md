@@ -5,7 +5,7 @@ ledger. Green PR checks do not establish that every inherited prototype test or
 public operation has a current native disposition.
 
 The later [C54 conformance input](c54-conformance-input.md) maps the proposed
-complete source behavior to current owner evidence. It is pre-integration input,
+complete source behaviour to current owner evidence. It is pre-integration input,
 not independent acceptance or a selected release candidate.
 
 Current C53 recheck: [c53-conformance.md](c53-conformance.md). The September 9 findings below remain historical diagnostic evidence; the C53 report names current dispositions without rewriting those old outcomes.
@@ -52,5 +52,5 @@ corrections in this slice. It does **not** establish a passing `make check-nosyn
 
 These bounded runs used `--maxfail=5`; additional failures may remain after the
 reported ones. They are diagnostic progress, not exhaustive candidate evidence.
-Exact artifact admission, cross-owner aggregate journeys, repository-lifetime
+Exact artefact admission, cross-owner aggregate journeys, repository-lifetime
 benefit, and the other current #2909 completion requirements remain open.

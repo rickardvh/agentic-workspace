@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Assignment lifecycle operation input
 
 Input accepted by public assignment lifecycle operations that prepare handoff packets, import returns, admit or reject results, integrate admitted work, and record lifecycle maintenance actions.
@@ -15,29 +16,29 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | `configuration_revision` | string | no |  | Current source-resolved execution configuration offer revision. An intention only; replacing an assignment also requires exact source-owner or repair admission. |  |  |
 | `configuration_id` | string | no |  | One eligible configuration from the paired revision; target, transport and adapter-owned topology stay bound together. |  |  |
 | `admission_status` | enum `"admitted"`, `"rejected"`, `"repair-requested"` | no |  | Reviewer decision recorded for an imported assignment return. |  |  |
-| `artifact_ref` | string | no |  | Path or durable reference to a lifecycle artifact, such as an export packet or imported return record. |  |  |
+| `artifact_ref` | string | no |  | Path or durable reference to a lifecycle artefact, such as an export packet or imported return record. |  |  |
 | `assignment_id` | string | no |  | Stable Planning assignment identifier for the delegated run. |  |  |
 | `assignment_ref` | string | no |  | Alias for planning_assignment_ref for hosts that already expose assignment refs. |  |  |
 | `assignment_revision` | string | no |  | Current assignment authority revision that the lifecycle operation is scoped to. |  |  |
-| `dry_run` | boolean | no |  | Whether to compute the lifecycle transition without applying local artifact writes. |  |  |
+| `dry_run` | boolean | no |  | Whether to compute the lifecycle transition without applying local artefact writes. |  |  |
 | `expires_at` | string | no |  | Optional expiration timestamp for temporary overrides or lifecycle decisions. |  |  |
 | `format` | enum `"text"`, `"json"` | no |  | Requested command output format. |  |  |
 | `planning_assignment_ref` | string | no |  | Optional repo-relative checked-in Planning assignment ref; omitted uses .agentic-workspace/planning/assignments/<assignment-id>.assignment.json. |  |  |
 | `reason` | string | no |  | Human-readable reason for rejection, repair, reassignment, cleanup, close, or override actions. |  |  |
 | `return_id` | string | no |  | Stable identifier for a returned assignment result packet. |  |  |
-| `return_json` | string | no |  | Serialized worker return payload awaiting admission. |  |  |
-| `return_file` | string | no |  | Repo-contained UTF-8 file holding one serialized worker return payload awaiting admission; mutually exclusive with return_json. |  |  |
-| `review_result_json` | string | no |  | Serialized producer-owned independent-review result envelope to admit through assignment.admit. |  |  |
+| `return_json` | string | no |  | Serialised worker return payload awaiting admission. |  |  |
+| `return_file` | string | no |  | Repo-contained UTF-8 file holding one serialised worker return payload awaiting admission; mutually exclusive with return_json. |  |  |
+| `review_result_json` | string | no |  | Serialised producer-owned independent-review result envelope to admit through assignment.admit. |  |  |
 | `review_result_ref` | string | no |  | Repo-relative path to a producer-owned independent-review result envelope. |  |  |
 | `host_result_ref` | string | no |  | Opaque host/adapter independent-review result ref to import and admit. |  |  |
 | `required_mode` | enum `"fresh-context"`, `"separate-actor"`, `"distinct-provider"`, `"human"` | no |  | Required separation mode for independent-review admission. |  |  |
 | `changed` | array of string | no |  | Changed paths whose independent-review scope must match the admitted result. |  |  |
 | `changed_paths` | array of string | no |  | Changed paths whose independent-review scope must match the admitted result. |  |  |
-| `run_id` | string | no |  | Stable assignment run identifier used for local lifecycle artifact storage. |  |  |
+| `run_id` | string | no |  | Stable assignment run identifier used for local lifecycle artefact storage. |  |  |
 | `scope` | string | no |  | Bounded scope for reassignment, repair, cleanup, close, or override records. |  |  |
 | `target` | string | no |  | Target repository path for the lifecycle operation. |  |  |
 | `task` | string | no |  | Full human intent bound into the canonical assignment identity. |  |  |
 | `target_name` | string | no |  | Named target or worker lane that receives the assignment packet. |  |  |
 | `task_proof_receipt_ref` | string | no |  | Repo-relative AW proof receipt whose assignment obligation must match the run being closed. |  |  |
-| `transport` | enum `"manual"`, `"internal"`, `"cli"`, `"api"` | no |  | Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorized internal or CLI route executes the sealed packet through its target adapter. |  |  |
-| `task_judgment_json` | string | no |  | JSON transport for the canonical typed task judgment; not Verification or policy authority. |  |  |
+| `transport` | enum `"manual"`, `"internal"`, `"cli"`, `"api"` | no |  | Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorised internal or CLI route executes the sealed packet through its target adapter. |  |  |
+| `task_judgment_json` | string | no |  | JSON transport for the canonical typed task judgement; not Verification or policy authority. |  |  |

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # External Evidence Operation Input
 
 Public submit/query input that carries candidate JSON and an opaque trusted-host reference without custody assertions.
@@ -13,5 +14,5 @@ Public submit/query input that carries candidate JSON and an opaque trusted-host
 | (root) | object | yes |  | Public submit/query input that carries candidate JSON and an opaque trusted-host reference without custody assertions. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `target` | string | no |  | Repository root containing policy and proof-subject inputs. |  |  |
 | `format` | enum `"text"`, `"json"` | no |  | Requested command output format. |  |  |
-| `candidate_json` | string | no |  | Serialized provider-neutral external evidence candidate. |  |  |
+| `candidate_json` | string | no |  | Serialised provider-neutral external evidence candidate. |  |  |
 | `host_result_ref` | string | no |  | Opaque reference resolved only by the package-trusted host boundary. |  |  |

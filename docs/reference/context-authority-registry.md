@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Context Authority Registry
 
 Versioned source of truth for ordinary operating-decision authority surfaces and consumer requirements.

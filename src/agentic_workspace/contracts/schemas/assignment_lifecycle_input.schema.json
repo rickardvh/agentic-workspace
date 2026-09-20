@@ -30,7 +30,7 @@
       "type": "string"
     },
     "artifact_ref": {
-      "description": "Path or durable reference to a lifecycle artifact, such as an export packet or imported return record.",
+      "description": "Path or durable reference to a lifecycle artefact, such as an export packet or imported return record.",
       "type": "string"
     },
     "assignment_id": {
@@ -48,7 +48,7 @@
       "type": "string"
     },
     "dry_run": {
-      "description": "Whether to compute the lifecycle transition without applying local artifact writes.",
+      "description": "Whether to compute the lifecycle transition without applying local artefact writes.",
       "type": "boolean"
     },
     "expires_at": {
@@ -77,15 +77,15 @@
       "type": "string"
     },
     "return_json": {
-      "description": "Serialized worker return payload awaiting admission.",
+      "description": "Serialised worker return payload awaiting admission.",
       "type": "string"
     },
     "return_file": {
-      "description": "Repo-contained UTF-8 file holding one serialized worker return payload awaiting admission; mutually exclusive with return_json.",
+      "description": "Repo-contained UTF-8 file holding one serialised worker return payload awaiting admission; mutually exclusive with return_json.",
       "type": "string"
     },
     "review_result_json": {
-      "description": "Serialized producer-owned independent-review result envelope to admit through assignment.admit.",
+      "description": "Serialised producer-owned independent-review result envelope to admit through assignment.admit.",
       "type": "string"
     },
     "review_result_ref": {
@@ -121,7 +121,7 @@
       "type": "array"
     },
     "run_id": {
-      "description": "Stable assignment run identifier used for local lifecycle artifact storage.",
+      "description": "Stable assignment run identifier used for local lifecycle artefact storage.",
       "minLength": 1,
       "type": "string"
     },
@@ -147,7 +147,7 @@
       "type": "string"
     },
     "transport": {
-      "description": "Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorized internal or CLI route executes the sealed packet through its target adapter.",
+      "description": "Transport channel used for the assignment packet or returned result; manual prepares a handoff, while a configuration-authorised internal or CLI route executes the sealed packet through its target adapter.",
       "enum": [
         "manual",
         "internal",
@@ -160,7 +160,7 @@
       "type": "string",
       "minLength": 2,
       "maxLength": 16384,
-      "description": "JSON transport for the canonical typed task judgment; not Verification or policy authority."
+      "description": "JSON transport for the canonical typed task judgement; not Verification or policy authority."
     }
   },
   "title": "Assignment lifecycle operation input",

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Generated Command Check Inventory
 
 AW-side inventory that classifies generated-command checks against the command-generation target matrix baseline.
@@ -14,7 +15,7 @@ AW-side inventory that classifies generated-command checks against the command-g
 | `schema_version` | const `"agentic-workspace/generated-command-check-inventory/v1"` | yes |  | Contract version for the generated-command check inventory. |  |  |
 | `summary` | string | yes |  | Short summary of the inventory purpose. |  |  |
 | `generic_baseline` | object | yes |  | The command-generation-owned target baseline that AW consumes. |  |  |
-| `generic_baseline.owner` | const `"command-generation"` | yes |  | Package that owns generic generated target behavior. |  |  |
+| `generic_baseline.owner` | const `"command-generation"` | yes |  | Package that owns generic generated target behaviour. |  |  |
 | `generic_baseline.source_refs` | array of string | yes |  | Sources that define the generic target baseline. |  |  |
 | `generic_baseline.rule` | string | yes |  | Boundary rule for generic target baseline ownership. |  |  |
 | `classification_rule` | string | yes |  | Rule used to classify AW-side generated-command checks. |  |  |

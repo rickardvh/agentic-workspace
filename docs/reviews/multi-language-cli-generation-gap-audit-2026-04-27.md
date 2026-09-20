@@ -56,7 +56,7 @@ Smallest safe proof: generate a TypeScript package fixture for the same eligible
 
 ## Blockers To Shell Adapters
 
-Bash and PowerShell should wait until Python and TypeScript prove the IR. Shell adapters are plausible for thin wrappers, help/completion, and delegation to runtime packages. They should not embed runtime primitive behavior.
+Bash and PowerShell should wait until Python and TypeScript prove the IR. Shell adapters are plausible for thin wrappers, help/completion, and delegation to runtime packages. They should not embed runtime primitive behaviour.
 
 ## Recommended First Implementation Slice
 
@@ -72,7 +72,7 @@ Bash and PowerShell should wait until Python and TypeScript prove the IR. Shell 
 - TypeScript types: use `json-schema-to-typescript` or `quicktype` if a real TypeScript package target grows beyond a tiny fixture.
 - TypeScript CLI parser: prefer Commander.js or Yargs over custom option parsing.
 - Python CLI parser: keep argparse for runtime compatibility, but derive parser metadata from the command-package IR.
-- Containerized proof: use Docker Compose or plain Dockerfiles invoked by a Python check wrapper.
+- Containerised proof: use Docker Compose or plain Dockerfiles invoked by a Python check wrapper.
 
 ## Acceptance Evidence
 

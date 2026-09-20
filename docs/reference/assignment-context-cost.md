@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Assignment context cost
 
 Provider-neutral contextual cost recorded for one assignment transport execution. Unobservable metrics remain explicit nulls.
@@ -14,7 +15,7 @@ Provider-neutral contextual cost recorded for one assignment transport execution
 | `kind` | const `"agentic-workspace/assignment-context-cost/v1"` | yes |  | Versioned context-cost discriminator. |  |  |
 | `transport` | string | yes |  | Configured transport method used for execution. |  |  |
 | `adapter_revision` | string | yes |  | Revision digest of the adapter configuration that produced the observation. |  |  |
-| `configuration_context` | string \| null | no |  | Shared-core digest of comparable execution settings and continuity mode, excluding individual lineage references. Missing context does not authorize pooling with a current configuration. |  |  |
+| `configuration_context` | string \| null | no |  | Shared-core digest of comparable execution settings and continuity mode, excluding individual lineage references. Missing context does not authorise pooling with a current configuration. |  |  |
 | `assignment_packet_bytes` | integer | yes |  | Exact UTF-8 byte size of the canonical assignment export packet. |  |  |
 | `rendered_prompt_bytes` | integer | yes |  | Exact UTF-8 byte size transmitted as the worker prompt. |  |  |
 | `effective_input_tokens` | integer \| null | yes |  | Effective worker input tokens when exposed by the adapter or host. |  |  |

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Assignment worker context
 
 Bounded worker-facing projection mechanically derived from canonical assignment authority. It intentionally omits transport configuration, parent conversation, and broad workspace state. Generic startup under the same current launch identity projects this bounded authority or exact assignment recovery instead of coordinator context.
@@ -41,5 +42,5 @@ Bounded worker-facing projection mechanically derived from canonical assignment 
 | `authority` | object | yes |  | Explicit semantic-source and claim-authority limits. |  |  |
 | `authority.semantic_source` | const `"canonical-assignment-identity"` | yes |  | Only assignment identity supplies worker semantics. |  |  |
 | `authority.claim_authority` | object | yes |  | Assignment-owned claim ceilings carried to the worker. |  |  |
-| `authority.scope_widening_allowed` | const `false` | yes |  | The projection cannot authorize scope widening. |  |  |
+| `authority.scope_widening_allowed` | const `false` | yes |  | The projection cannot authorise scope widening. |  |  |
 | `return_contract` | object | yes |  | Structured delegated-return contract projected from the canonical assignment packet. |  |  |

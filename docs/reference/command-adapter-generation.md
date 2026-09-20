@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Command Adapter Generation Contract
 
 Contract that connects command shapes, operation contracts, primitives, schemas, and adapter projections.

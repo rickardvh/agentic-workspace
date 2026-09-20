@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Operating Decision
 
 Derived internal decision composed from admitted AW authority surfaces. It emits exactly one primary action or one typed blocker.
@@ -86,11 +87,11 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `cross_owner_enforcement.rule` | string | yes |  | Authority boundary for specialist facts and peer projections. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
-| `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |
+| `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalisation claims. |  |  |
 | `primary_action` | object | yes |  | Exactly one typed primary action when status is actionable; empty otherwise. |  |  |
 | `action_identity` | object | no |  | Typed operation identity and live input revision used for execution-safety comparison. |  |  |
 | `external_blocker` | object | yes |  | Exactly one typed blocker when status is blocked; empty otherwise. |  |  |
-| `blocked_claim_classes` | array of string | no |  | Claim classes this decision does not authorize. |  |  |
+| `blocked_claim_classes` | array of string | no |  | Claim classes this decision does not authorise. |  |  |
 | `provenance` | object | no |  | Specialist authority inputs and owners preserved for traceability. |  |  |
 | `replacement_map` | object | yes |  | Compatibility map from older overlapping fields to their derived or demoted source. |  |  |
 | `replacement_map.<name>` | string | no |  | Replacement, demotion, or derivation rule for one legacy field. |  |  |

@@ -3,12 +3,13 @@
 **Audit date:** 2026-08-08  
 **Audited revision:** [642ec80946fdb8aaf3bac1b527385a130a194df4](https://github.com/rickardvh/agentic-workspace/commit/642ec80946fdb8aaf3bac1b527385a130a194df4) on remote master  
 **Latest published release at audit time:** [v0.36.2](https://github.com/rickardvh/agentic-workspace/releases/tag/v0.36.2), published 2026-07-30  
-**Audit mode:** Source read-only; the report itself is the only intended repository artifact  
+**Audit mode:** Source read-only; the report itself is the only intended repository artefact
+
 **Primary lens:** Improve the Agentic Workspace package so the same failure classes are prevented in generic host repositories
 
 > **Overall assessment: at risk.** Agentic Workspace has an unusually clear product thesis, strong type coverage, a substantial test and contract corpus, and thoughtful lifecycle safety concepts. It is not yet operating like a dependable beta distribution. The most important gaps are release-gate composition, clean-host install closure, package identity and licensing, runtime ownership, operational-health gating, and proof that the product reduces more work than it creates.
 
-The right next direction is a stabilization tranche, not another broad capability tranche. The package should make invalid states hard to produce and impossible to ship before asking host repositories or agents to compensate for them.
+The right next direction is a stabilisation tranche, not another broad capability tranche. The package should make invalid states hard to produce and impossible to ship before asking host repositories or agents to compensate for them.
 
 ---
 
@@ -33,10 +34,10 @@ Treat the current line as an actively dogfooded alpha/beta candidate, pause new 
 
 | Order | Action | Why it comes first |
 | --- | --- | --- |
-| 1 | Make semantic conformance mandatory for every shipped target and artifact | A package that declares native mutation-capable adapters must not ship known contract divergence |
+| 1 | Make semantic conformance mandatory for every shipped target and artefact | A package that declares native mutation-capable adapters must not ship known contract divergence |
 | 2 | Make freshness proof reproducible in Git, wheel, sdist, npm tarball, and no-Git container contexts | Current container proof is structurally unable to pass |
 | 3 | Make every module footprint referentially closed and leave a durable executable invocation | A generic host must still be operable when the one-shot installer is gone |
-| 4 | Resolve license and package-name/distribution identity | Missing license and occupied PyPI dependency names block safe adoption |
+| 4 | Resolve licence and package-name/distribution identity | Missing licence and occupied PyPI dependency names block safe adoption |
 | 5 | Protect master and make required CI prove the actual supported matrix | Direct pushes currently bypass PR CI and trigger a write-capable release workflow |
 | 6 | Collapse the shadow runtime into one canonical implementation | Roughly 37,000 function lines are duplicated between two runtime modules |
 | 7 | Introduce live-health, output-size, archive-retention, and diagnostic-signal budgets | The package currently detects cost and residue without making them consequential |
@@ -45,9 +46,9 @@ Treat the current line as an actively dogfooded alpha/beta candidate, pause new 
 
 ## 2. Health scorecard
 
-The labels below are directional engineering judgments, not a certification.
+The labels below are directional engineering judgements, not a certification.
 
-| Area | Status | Evidence-backed judgment |
+| Area | Status | Evidence-backed judgement |
 | --- | --- | --- |
 | Product thesis and design doctrine | **Healthy** | [README](../../README.md), [System Intent](../../SYSTEM_INTENT.md), and [design principles](../design-principles.md) define a coherent problem, anti-intents, ownership model, and cost test |
 | Python implementation and static quality | **Mixed / generally strong** | Lint, formatting, type checking, full bounded validation, Python adapter conformance, and primitive conformance passed; annotation coverage is above 98% |
@@ -60,7 +61,7 @@ The labels below are directional engineering judgments, not a certification.
 | Output economy and agent usability | **At risk** | Key lifecycle and selected report payloads are tens to hundreds of kilobytes |
 | Planning and Memory lifecycle hygiene | **At risk** | 1,011 checked-in AW files, 636 archived plans, 211 findings, and live-lane warnings conflict with the low-residue goal |
 | Security and supply chain | **Critical baseline gap** | No security policy, branch protection, scanning, SBOM, signature, or attestation; two intentional shell-execution boundaries lack a published threat model |
-| Release and adoption readiness | **Critical** | No root PyPI package, no npm packages, two Python dependency names owned by unrelated projects, no license, and 86 releases in 42 days |
+| Release and adoption readiness | **Critical** | No root PyPI package, no npm packages, two Python dependency names owned by unrelated projects, no licence, and 86 releases in 42 days |
 | Direction and lifecycle sustainability | **At risk** | Seven concurrent draft feature PRs and 44 open issues expand the surface while foundation gaps remain |
 | Maintainer sustainability | **At risk** | Effective human bus factor is one amid 3,241 commits and very high recent churn |
 
@@ -76,15 +77,15 @@ The report should not obscure the foundation worth preserving.
 
 3. **Static quality is strong.** The production tree has 4,286 Python functions. Return annotations cover 99.3%, parameters are annotated or are self/cls in 99.4%, and 98.5% of functions are fully annotated by that measure. Ruff, Ty, and format checks passed.
 
-4. **There is meaningful behavioral proof.** The bounded validation suite passed; generated Python adapter conformance passed; command-generation primitive conformance passed locally and in Docker; the four npm package self-test suites passed in Docker.
+4. **There is meaningful behavioural proof.** The bounded validation suite passed; generated Python adapter conformance passed; command-generation primitive conformance passed locally and in Docker; the four npm package self-test suites passed in Docker.
 
-5. **Release artifacts have useful integrity metadata.** The release workflow builds all package artifacts together, writes SHA-256 checksums, records a coordinated manifest, verifies source commit and asset hashes, and publishes all-or-nothing. Preserve this design and add identity/signing rather than replacing it.
+5. **Release artefacts have useful integrity metadata.** The release workflow builds all package artefacts together, writes SHA-256 checksums, records a coordinated manifest, verifies source commit and asset hashes, and publishes all-or-nothing. Preserve this design and add identity/signing rather than replacing it.
 
 6. **The necessary-surface install is materially smaller than the source dogfood tree.** The released memory-only install used 30 total files, 28 below .agentic-workspace, and roughly 74 KB under that directory. The footprint direction is right; its reference closure is not yet complete.
 
 7. **Runtime dependencies are comparatively lean.** The three module packages have few or no third-party runtime dependencies. TypeScript packages have no npm dependencies. This is a valuable supply-chain and portability property.
 
-8. **The project actively captures dogfood friction.** Many current issues came from real operational use. The improvement is to make evidence deduplicated, prioritized, and gate-changing rather than to stop dogfooding.
+8. **The project actively captures dogfood friction.** Many current issues came from real operational use. The improvement is to make evidence deduplicated, prioritised, and gate-changing rather than to stop dogfooding.
 
 ---
 
@@ -119,11 +120,11 @@ A host can receive a package whose declared command, option, error, exit, and re
 
 #### Preventive AW package change
 
-- Add a release-owned target matrix in which every artifact marked runnable must pass its complete semantic conformance registry.
-- Make maturity and publishability derived from the proof result. A failing target should be excluded or labeled non-runnable; handwritten metadata must not overrule proof.
+- Add a release-owned target matrix in which every artefact marked runnable must pass its complete semantic conformance registry.
+- Make maturity and publishability derived from the proof result. A failing target should be excluded or labelled non-runnable; handwritten metadata must not overrule proof.
 - Run a fast representative semantic shard on every relevant PR and the complete registry on release candidates.
 - Run against the minimum and current supported Node majors, not only the newest release image.
-- Generate a compact machine-readable failure summary and preserve full logs as build artifacts.
+- Generate a compact machine-readable failure summary and preserve full logs as build artefacts.
 - Make the release manifest include the conformance subject fingerprint and proof receipt for each package.
 
 #### Exit criteria
@@ -178,12 +179,12 @@ This isolates the failure to the source-fingerprint/proof boundary, not Docker a
 
 #### Generic host impact
 
-Any proof tied to a Git index identity becomes unusable for installed wheels, sdists, npm tarballs, source archives, vendored tools, or build containers. The package can then either reject healthy artifacts as stale or skip the proof that would have caught real drift.
+Any proof tied to a Git index identity becomes unusable for installed wheels, sdists, npm tarballs, source archives, vendored tools, or build containers. The package can then either reject healthy artefacts as stale or skip the proof that would have caught real drift.
 
 #### Preventive AW package change
 
 - Define a transportable content manifest whose identity is independent of .git.
-- Separate “source checkout acceleration identity” from “artifact semantic identity.” Git metadata may optimize a local scan, but it must not be a required cross-environment field.
+- Separate “source checkout acceleration identity” from “artifact semantic identity.” Git metadata may optimise a local scan, but it must not be a required cross-environment field.
 - Include every declared input in container contexts, or explicitly define context-specific manifests whose equivalence is contract-backed.
 - Test freshness from five environments: Git checkout, no-Git source tree, sdist, wheel installation, and packed npm tarball.
 - Decode subprocess output explicitly as UTF-8 with a bounded replacement/error policy on Windows.
@@ -192,7 +193,7 @@ Any proof tied to a Git index identity becomes unusable for installed wheels, sd
 #### Exit criteria
 
 - Both Docker conformance commands pass from a clean clone.
-- The same artifact identity is observed in source, wheel/sdist, and npm-tarball tests.
+- The same artefact identity is observed in source, wheel/sdist, and npm-tarball tests.
 - Missing Git metadata never changes semantic freshness.
 - Failure reporting remains valid UTF-8 on supported Windows/Python combinations.
 
@@ -217,7 +218,7 @@ Any proof tied to a Git index identity becomes unusable for installed wheels, sd
 - A direct GitHub v0.36.2 root-wheel URL works and correctly streams the coordinated module wheels.
 - [The root installation guide](../agentic-workspace-install.md) tells the reader to install a stable CLI into the target environment but does not provide a concrete root package locator or durable command.
 - Memory and Planning READMEs provide Git-based examples pinned to mutable master, not a version tag or commit.
-- The unpatched root [pyproject](../../pyproject.toml) declares ordinary dependencies named agentic-memory, agentic-planning, and agentic-verification. The release workflow has to rewrite the wheel metadata to direct GitHub asset URLs in [patch_workspace_release_wheel.py](../../scripts/release/patch_workspace_release_wheel.py).
+- The unpatched root [pyproject](../../pyproject.toml) declares ordinary dependencies named agentic-memory, agentic-planning, and agentic-verification. The release workflow has to rewrite the wheel metadata to direct GitHub asset URLs in `scripts/release/patch_workspace_release_wheel.py` (historical path at the audited revision).
 
 #### Generic host impact
 
@@ -246,37 +247,37 @@ A host following normal Python packaging conventions can resolve unrelated packa
 
 ---
 
-### F04 — The public project and all Python distributions lack a license
+### F04 — The public project and all Python distributions lack a licence
 
 **Priority:** P0  
-**Failure class:** Technically downloadable artifacts are not legally adoptable artifacts.
+**Failure class:** Technically downloadable artefacts are not legally adoptable artefacts.
 
 #### Evidence
 
 - The repository has no LICENSE or COPYING file.
-- GitHub reports no detected repository license.
+- GitHub reports no detected repository licence.
 - Root and all three module pyprojects have no project.license metadata.
 - The root pyproject also omits authors, project URLs, keywords, and classifiers.
 
 #### Generic host impact
 
-Without an explicit license, downstream users do not have a clear grant to use, modify, redistribute, or package the code. This blocks serious adoption regardless of technical quality and makes registry publication and third-party contribution risky.
+Without an explicit licence, downstream users do not have a clear grant to use, modify, redistribute, or package the code. This blocks serious adoption regardless of technical quality and makes registry publication and third-party contribution risky.
 
 #### Preventive AW package change
 
 This is primarily a repository decision, but AW should also prevent recurrence in package projects:
 
-- Select and add an SPDX-recognized license after owner review.
-- Add license metadata to every coordinated Python and npm distribution.
-- Include the license in wheels, sdists, npm tarballs, and release manifests.
-- Add a packaging policy check that fails release when license, source URL, issue URL, author/maintainer, and supported-runtime metadata are absent or inconsistent.
+- Select and add an SPDX-recognised licence after owner review.
+- Add licence metadata to every coordinated Python and npm distribution.
+- Include the licence in wheels, sdists, npm tarballs, and release manifests.
+- Add a packaging policy check that fails release when licence, source URL, issue URL, author/maintainer, and supported-runtime metadata are absent or inconsistent.
 - Add a generic AW release-readiness protocol that distinguishes “buildable” from “redistributable.”
 
 #### Exit criteria
 
-- GitHub detects the intended license.
-- Built artifacts contain the license and consistent SPDX metadata.
-- Release readiness fails on a fixture with missing or conflicting license data.
+- GitHub detects the intended licence.
+- Built artefacts contain the licence and consistent SPDX metadata.
+- Release readiness fails on a fixture with missing or conflicting licence data.
 
 ---
 
@@ -320,7 +321,7 @@ The exact moment when the CLI is missing or broken is when fallback instructions
 - For every module subset and footprint profile, fail packaging when a surviving required reference is neither:
   - installed locally;
   - available through a stable package-resource URI/API; nor
-  - explicitly marked optional with a valid degraded behavior.
+  - explicitly marked optional with a valid degraded behaviour.
 - Generate installed skills, config comments, docs, and the lifecycle removal manifest from one canonical surface manifest.
 - Add a “CLI unavailable” black-box fixture for every module combination.
 - Make ownership class machine-owned and generate public documentation from the same source.
@@ -330,7 +331,7 @@ The exact moment when the CLI is missing or broken is when fallback instructions
 
 - Zero required dangling references across memory, planning, verification, pairwise, and all-module installs.
 - The no-CLI fixture can recover the same forbidden actions and next safe action without package import or network access.
-- Ownership and installed-surface documentation exactly match command output and migration behavior.
+- Ownership and installed-surface documentation exactly match command output and migration behaviour.
 
 ---
 
@@ -399,9 +400,9 @@ The repository must enable branch protection; the reusable AW improvement is to 
 
 - Split CI into a fast required matrix and a full release matrix:
   - Python minimum, primary, and newest supported;
-  - Windows plus Linux for path/subprocess behavior;
+  - Windows plus Linux for path/subprocess behaviour;
   - Node minimum and release major;
-  - exact built artifacts.
+  - exact built artefacts.
 - Shard the complete root test set instead of selecting files by hand.
 - Run uv lock --check and sync with --frozen.
 - Set explicit job timeouts and read-only default permissions.
@@ -471,7 +472,7 @@ A host may believe a “strict” check protects current work while it only prov
 ### F09 — The shadow runtime has become a second implementation
 
 **Priority:** P1  
-**Failure class:** Compatibility mirroring duplicates behavior without semantic equivalence proof.
+**Failure class:** Compatibility mirroring duplicates behaviour without semantic equivalence proof.
 
 #### Evidence
 
@@ -499,7 +500,7 @@ Its own rule correctly says the check is not semantic equivalence proof.
 
 #### Generic host impact
 
-Every behavior fix has multiple potential owners. A change may land in the active owner but not the mirror, or vice versa. Shape checks can stay green while defaults, refusal behavior, side effects, or semantics diverge. The code is also costly for agents to inspect and expensive to review.
+Every behaviour fix has multiple potential owners. A change may land in the active owner but not the mirror, or vice versa. Shape checks can stay green while defaults, refusal behaviour, side effects, or semantics diverge. The code is also costly for agents to inspect and expensive to review.
 
 #### Preventive AW package change
 
@@ -512,7 +513,7 @@ Every behavior fix has multiple potential owners. A change may land in the activ
 
 #### Exit criteria
 
-- No behavior body is hand-maintained in both modules.
+- No behaviour body is hand-maintained in both modules.
 - The compatibility module contains only imports/adapters whose equivalence is directly testable.
 - The active owner is discoverable without reading historical migration contracts.
 
@@ -551,7 +552,7 @@ There are no action TODO/FIXME/HACK comments in production, which is positive, b
 
 #### Generic host impact
 
-Proof routing, safety policy, rendering, filesystem mutation, state migration, and compatibility behavior become hard to change independently. Agents must read enormous regions, increasing token cost and the chance of locally correct but globally inconsistent edits.
+Proof routing, safety policy, rendering, filesystem mutation, state migration, and compatibility behaviour become hard to change independently. Agents must read enormous regions, increasing token cost and the chance of locally correct but globally inconsistent edits.
 
 #### Preventive AW package change
 
@@ -570,7 +571,7 @@ Proof routing, safety policy, rendering, filesystem mutation, state migration, a
 #### Exit criteria
 
 - New or materially changed functions remain below agreed thresholds unless an exception includes proof and an expiry.
-- The five largest procedures shrink through behavior-preserving slices.
+- The five largest procedures shrink through behaviour-preserving slices.
 - Safety-critical policy is testable without invoking full CLI/report construction.
 
 ---
@@ -582,7 +583,7 @@ Proof routing, safety policy, rendering, filesystem mutation, state migration, a
 
 #### Evidence
 
-On an already-initialized fresh memory host:
+On an already-initialised fresh memory host:
 
 | Command | Bytes | Lines | Notes |
 | --- | ---: | ---: | --- |
@@ -662,7 +663,7 @@ Agents can spend time triaging repeated history while missing current code conce
 - The source checkout’s default findings view is action-first and bounded.
 - repo_friction surfaces the known runtime hotspots and ignores local cache by default.
 - Duplicate evidence produces one candidate identity.
-- A “full” proof candidate proves the actual full target or is labeled incomplete.
+- A “full” proof candidate proves the actual full target or is labelled incomplete.
 
 **Related existing work:** [#2176](https://github.com/rickardvh/agentic-workspace/issues/2176) covers projection reuse; [#2310](https://github.com/rickardvh/agentic-workspace/issues/2310) covers consequential AW-context findings.
 
@@ -695,14 +696,14 @@ The archive is therefore mostly classified as durable adopted state, not removab
 
 #### Generic host impact
 
-A mature host accumulates thousands of repo-visible planning artifacts, increases clone/search/review cost, and exposes future agents to historical intent that may no longer be authoritative. The package’s “small repo-native layer” becomes a second repository inside the repository.
+A mature host accumulates thousands of repo-visible planning artefacts, increases clone/search/review cost, and exposes future agents to historical intent that may no longer be authoritative. The package’s “small repo-native layer” becomes a second repository inside the repository.
 
 #### Preventive AW package change
 
 - Define a retention lifecycle rather than a delete command:
   - closeout distillation into canonical docs/Memory/issues;
   - compact immutable receipt retained in Git;
-  - optional full evidence bundle stored as CI/release artifact or compressed pack;
+  - optional full evidence bundle stored as CI/release artefact or compressed pack;
   - retention/age/value policy for full plans.
 - Add per-host file/byte/record budgets and trend them.
 - Make archive lookup explicit; exclude archives from ordinary routing and findings unless current intent references them.
@@ -754,7 +755,7 @@ Agents make authority and lifecycle decisions from whichever surface they encoun
 ### F15 — Security and supply-chain controls are below the risk of a mutation-capable agent tool
 
 **Priority:** P1  
-**Failure class:** Safety behavior is modeled inside the product, but repository and artifact security are largely implicit.
+**Failure class:** Safety behaviour is modelled inside the product, but repository and artefact security are largely implicit.
 
 #### Evidence
 
@@ -806,7 +807,7 @@ AW reads host-controlled config and can execute proof or executor commands. In a
 #### Exit criteria
 
 - Security policy and threat model are public.
-- Release artifacts have verifiable provenance and dependency inventory.
+- Release artefacts have verifiable provenance and dependency inventory.
 - Shell boundaries have focused adversarial tests and explicit admission semantics.
 - Security scanning is required and current.
 
@@ -845,7 +846,7 @@ Hosts cannot form stable compatibility expectations. Release notes, docs, suppor
 #### Preventive AW package change
 
 - Batch compatible changes into a predictable release cadence.
-- Separate canary/nightly artifacts from support-bearing releases.
+- Separate canary/nightly artefacts from support-bearing releases.
 - Require an evidence window for beta releases:
   - clean install;
   - upgrade from supported prior versions;
@@ -934,7 +935,7 @@ The open roadmap is not random: it aims at external adapters, evidence-backed or
 
 #### Preventive AW package change
 
-- Declare a stabilization milestone with a work-in-progress cap.
+- Declare a stabilisation milestone with a work-in-progress cap.
 - Freeze new public command families and schema families until Phase 0 exits.
 - Add a capability-cost gate: every new operation must name:
   - user/agent value;
@@ -997,7 +998,7 @@ This is primarily a project sustainability risk, but it also weakens dogfood val
 
 ---
 
-### F20 — Development invocation and pre-commit behavior can mutate the wrong context
+### F20 — Development invocation and pre-commit behaviour can mutate the wrong context
 
 **Priority:** P2  
 **Failure class:** A convenience invocation inherits ambient environment identity across worktrees.
@@ -1031,7 +1032,7 @@ Parallel agents, worktrees, and sibling clones are ordinary agent workflows. Amb
 - Preserve active uv posture only when its project identity matches.
 - Give every validation run a collision-resistant identity and atomic lifecycle.
 - Make pre-commit checks staged/narrow where possible; reserve full validation for pre-push/CI.
-- Deduplicate improvement issues by normalized evidence fingerprint before creating a second ticket.
+- Deduplicate improvement issues by normalised evidence fingerprint before creating a second ticket.
 
 #### Exit criteria
 
@@ -1049,8 +1050,8 @@ This is the central package-first interpretation of the findings.
 | --- | --- | --- |
 | Installed instruction points to absent file | Add the missing file manually in each host | Compile and validate reference closure for every footprint/module combination |
 | Temporary installer disappears | Tell each host to remember a custom command | Record and verify a durable invocation or block completion with an explicit handoff |
-| Generated adapter drifts from contract | Patch one generated package | Require artifact-level semantic conformance before maturity/publishability |
-| Freshness differs outside Git | Special-case each Dockerfile | Define a transportable artifact fingerprint independent of source-control metadata |
+| Generated adapter drifts from contract | Patch one generated package | Require artefact-level semantic conformance before maturity/publishability |
+| Freshness differs outside Git | Special-case each Dockerfile | Define a transportable artefact fingerprint independent of source-control metadata |
 | Diagnostics are green despite broken live state | Manually inspect warnings after every run | Policy-aware strict health that fails only current actionable classes |
 | Historical planning state floods reports | Delete archives ad hoc | Retention/distillation policy plus bounded compact receipts and optional external evidence |
 | Agent output becomes too large | Ask each agent to use selectors better | Enforced byte/token budgets and decision-first default schemas |
@@ -1059,24 +1060,24 @@ This is the central package-first interpretation of the findings.
 | Duplicate dogfood issue | Close duplicates later | Evidence fingerprints and pre-creation dedupe |
 | Host release branch is unsafe | Document “enable protection” | Provider posture detection that lowers release trust; explicit repo setting remains human-owned |
 | Proof discovery finds a plausible but incomplete command | Review every heuristic suggestion manually | Parse declared target dependencies and classify confidence/completeness |
-| Package is downloadable but not adoptable | Explain licensing in chat | Release-readiness policy for license, identity, metadata, SBOM, and provenance |
+| Package is downloadable but not adoptable | Explain licensing in chat | Release-readiness policy for licence, identity, metadata, SBOM, and provenance |
 
 ---
 
-## 8. Recommended stabilization roadmap
+## 8. Recommended stabilisation roadmap
 
-### Phase 0 — Stop invalid artifacts from shipping
+### Phase 0 — Stop invalid artefacts from shipping
 
 **Target:** Before the next support-bearing release.
 
-1. Resolve license and Python/npm package identity.
+1. Resolve licence and Python/npm package identity.
 2. Fix the transportable fingerprint and both Docker conformance lanes.
 3. Make complete TypeScript semantic conformance mandatory in PR/release promotion.
 4. Add clean-host module-matrix install/fallback tests and durable invocation verification.
 5. Protect master and require the exact release gates for the tagged commit.
-6. Either fix Python 3.14/Windows behavior or constrain declared support.
+6. Either fix Python 3.14/Windows behaviour or constrain declared support.
 
-**Exit gate:** A clean, protected commit produces artifacts that install and pass Python, TypeScript, and container conformance from a second process with zero dangling required references.
+**Exit gate:** A clean, protected commit produces artefacts that install and pass Python, TypeScript, and container conformance from a second process with zero dangling required references.
 
 ### Phase 1 — Make the operating kernel maintainable and honest
 
@@ -1122,17 +1123,17 @@ No issues were created because the audit was explicitly read-only. These are int
 | Suggested issue | Smallest useful intended outcome | Proof |
 | --- | --- | --- |
 | Release gate: require semantic conformance for every runnable adapter | Add full Node conformance to required PR/release promotion and derive publishability from its receipt | Known failing fixtures block release; exact tarballs pass |
-| Make generated source identity transportable outside Git | Split local Git acceleration from artifact content identity and fix both Docker conformance lanes | Git, no-Git, wheel, sdist, and npm identities agree |
+| Make generated source identity transportable outside Git | Split local Git acceleration from artefact content identity and fix both Docker conformance lanes | Git, no-Git, wheel, sdist, and npm identities agree |
 | Enforce necessary-footprint reference closure | Compile installed references across every module/footprint matrix | Zero required missing references, including CLI-unavailable fallback |
 | Resolve coordinated package names and durable install channel | Choose unique Python identities and publish one versioned, verified root install path | Clean second-process start succeeds without unrelated PyPI packages |
-| Add license and release metadata completeness gate | Add owner-selected license and coordinated package metadata | Wheels/sdists/tarballs contain license; release fails fixture omission |
+| Add licence and release metadata completeness gate | Add owner-selected licence and coordinated package metadata | Wheels/sdists/tarballs contain licence; release fails fixture omission |
 | Collapse workspace runtime mirror to one owner | Replace duplicated bodies with imports/generated facades and a shrinking allowlist | Duplicate body count ratchets to zero |
 | Make strict health current-state aware | Add health classes and a failing live-state policy | Broken lane fails; archive history does not |
 | Add output-profile budgets | Put config/effect inventories behind selectors and enforce byte/token limits | Idempotent init and ordinary start stay below budgets |
-| Add Planning archive retention and distillation | Keep compact Git receipts, route durable intent, externalize optional full evidence | Long-lived fixture stays within state budget |
+| Add Planning archive retention and distillation | Keep compact Git receipts, route durable intent, externalise optional full evidence | Long-lived fixture stays within state budget |
 | Make repo-friction tracked-source aware | Ignore local caches by default and surface line/symbol/duplication/churn hotspots | Current runtime files appear as top hotspots |
 | Integrate validation with Verification evidence | Turn successful proof manifests into admissible evidence bundles | Source checkout shows current evidence_bundle_count above zero |
-| Add release/security readiness profile | Detect license, protected promotion, scanning, SBOM, attestation, and package identity | Release readiness becomes lower-trust/failing when absent |
+| Add release/security readiness profile | Detect licence, protected promotion, scanning, SBOM, attestation, and package identity | Release readiness becomes lower-trust/failing when absent |
 | Deduplicate improvement intake | Fingerprint evidence before issue shaping | #2443/#2444-style duplicate yields one candidate |
 
 Existing issues that appear adjacent rather than complete substitutes:
@@ -1162,10 +1163,10 @@ The isolated clone remained clean after validation. Generated checks rendered cu
 | --- | --- | --- |
 | make check-bounded-parallel | **Pass**, 260.8 s | Strong local baseline; not sufficient as release proof |
 | Ruff lint, format checks, Ty type checks | **Pass** | Static quality is healthy |
-| Full root/module bounded test composition | **Pass** | Broad source behavior passes on local Windows/Python 3.14 environment |
+| Full root/module bounded test composition | **Pass** | Broad source behaviour passes on local Windows/Python 3.14 environment |
 | Generated Python adapter conformance | **Pass**, 48.3 s | Python semantic adapter path is currently healthy locally |
 | TypeScript/npm package self-tests in Docker | **Pass** | Package-local samples and parser basics pass |
-| Full TypeScript adapter conformance, Node 24 | **Fail**, 165 records | Release-major semantic behavior diverges |
+| Full TypeScript adapter conformance, Node 24 | **Fail**, 165 records | Release-major semantic behaviour diverges |
 | Full TypeScript adapter conformance, Node 25 | **Fail**, 165 records | Failure is not specific to Node 24 |
 | Python Docker conformance | **Fail before semantics** | Non-transportable fingerprint |
 | TypeScript Docker conformance | **Fail before semantics** | Same fingerprint defect; Windows decode traceback also observed |
@@ -1219,7 +1220,7 @@ Tracked line/size concentrations:
 - Memory coverage from its configured suite: 83%.
 - Planning coverage from its configured suite: 76%.
 - Root and Verification have no enforced coverage result.
-- Coverage percentage alone is not the main concern; un-gated semantic and installed-artifact paths are.
+- Coverage percentage alone is not the main concern; un-gated semantic and installed-artefact paths are.
 
 ### Churn
 
@@ -1272,7 +1273,7 @@ The intended direction—repo-native continuity, proof, authority, and adapter-n
 
 - one runtime owner;
 - one installed-surface manifest;
-- one artifact identity;
+- one artefact identity;
 - one strict live-health policy;
 - one durable install story;
 - one proof receipt per shipped target.
@@ -1303,7 +1304,7 @@ Agentic Workspace has enough real engineering and product thought to justify con
 The package-first improvement strategy is therefore:
 
 1. turn contracts into mandatory promotion gates;
-2. make identities and references portable across source and artifact contexts;
+2. make identities and references portable across source and artefact contexts;
 3. make live health, output cost, and residue budgets consequential;
 4. consolidate duplicated owners;
 5. publish a legally and technically durable install identity;

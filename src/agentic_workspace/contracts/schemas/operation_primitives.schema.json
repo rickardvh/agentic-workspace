@@ -64,7 +64,7 @@
             "type": "string",
             "minLength": 1
           },
-          "description": "Signals that behavior should remain a named runtime primitive instead of being decomposed further."
+          "description": "Signals that behaviour should remain a named runtime primitive instead of being decomposed further."
         }
       },
       "additionalProperties": false,
@@ -115,7 +115,7 @@
             },
             "additionalProperties": false
           },
-          "description": "Module namespaces that may own operation IR without making codegen package behavior module-specific."
+          "description": "Module namespaces that may own operation IR without making codegen package behaviour module-specific."
         }
       },
       "additionalProperties": false,
@@ -143,7 +143,7 @@
         "target_support_rule": {
           "type": "string",
           "minLength": 1,
-          "description": "Rule requiring each generated target to implement shared primitives or visibly report unsupported/deferred behavior."
+          "description": "Rule requiring each generated target to implement shared primitives or visibly report unsupported/deferred behaviour."
         },
         "target_support_matrix": {
           "type": "array",
@@ -253,7 +253,7 @@
         "generic_behavior_rule": {
           "type": "string",
           "minLength": 1,
-          "description": "Rule preventing generic deterministic behavior from being hidden behind package-domain primitive classification."
+          "description": "Rule preventing generic deterministic behaviour from being hidden behind package-domain primitive classification."
         }
       },
       "additionalProperties": false,

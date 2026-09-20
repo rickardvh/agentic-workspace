@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Pre-state reader compatibility observations
 
 Trusted pre-state configuration and reader observations; not public authority input.
@@ -19,5 +20,5 @@ Trusted pre-state configuration and reader observations; not public authority in
 | `observed_runtime` | object | yes |  | Identity and supported reader capabilities observed from the executing package, never supplied by ordinary start callers. |  |  |
 | `observed_runtime.package` | const `"agentic-workspace"` | yes |  | Product package whose reader is being admitted. |  |  |
 | `observed_runtime.version` | string | yes |  | Product release identity observed from its package authority, distinct from the Rust crate version. |  |  |
-| `observed_runtime.reader_epoch` | integer | yes |  | Reader contract epoch implemented by this executing artifact. |  |  |
-| `observed_runtime.reader_capabilities` | array of string | yes |  | Reader features implemented by this executing artifact, reported as executing-artifact facts. |  |  |
+| `observed_runtime.reader_epoch` | integer | yes |  | Reader contract epoch implemented by this executing artefact. |  |  |
+| `observed_runtime.reader_capabilities` | array of string | yes |  | Reader features implemented by this executing artefact, reported as executing-artefact facts. |  |  |

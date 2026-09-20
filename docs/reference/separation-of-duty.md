@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Review separation of duty
 
 Deterministic separation of owner-supplied review identities; this contract does not authenticate producers.

@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Conformance
 
 Source-maintenance model only; not native/public command authority. Conformance fixture contract for proving an operation adapter behaves as expected.
@@ -20,7 +21,7 @@ Source-maintenance model only; not native/public command authority. Conformance 
 | `adapter.cwd` | enum `"fixture_root"`, `"repo_root"` | yes |  | Working directory used when executing the adapter. |  |  |
 | `fixtures` | array of object | yes |  | Fixture roots and files used as conformance inputs. |  |  |
 | `expectations` | object | yes |  | Expected process, stream, filesystem, idempotency, and safety results. |  |  |
-| `expectations.exit` | object | yes |  | Expected process exit behavior. |  |  |
+| `expectations.exit` | object | yes |  | Expected process exit behaviour. |  |  |
 | `expectations.exit.code` | integer | yes |  | Expected process exit code. |  |  |
 | `expectations.stdout` | object | yes |  | Expected standard-output format and field assertions. |  |  |
 | `expectations.stdout.format` | enum `"json"`, `"text"` | yes |  | Expected stdout format. |  |  |
@@ -37,7 +38,7 @@ Source-maintenance model only; not native/public command authority. Conformance 
 | `expectations.filesystem.allowed_write_directories` | ref `#/$defs/path_list` | no |  | Fixture or repo directories below which the command may write recursively. |  |  |
 | `expectations.filesystem.required_paths` | ref `#/$defs/path_list` | yes |  | Paths that must exist after command execution. |  |  |
 | `expectations.filesystem.forbidden_paths` | ref `#/$defs/path_list` | yes |  | Paths that must not be created or modified. |  |  |
-| `expectations.idempotency` | object | yes |  | Repeated-run behavior expected from the adapter. |  |  |
+| `expectations.idempotency` | object | yes |  | Repeated-run behaviour expected from the adapter. |  |  |
 | `expectations.idempotency.run_twice` | boolean | yes |  | Whether to run the command twice against the fixture. |  |  |
 | `expectations.idempotency.ignored_stdout_json_paths` | array of array of string | no |  | Explicit volatile JSON paths omitted only from repeated-run stdout comparison. |  |  |
 | `expectations.safety` | object | yes |  | Safety invariants checked during conformance. |  |  |

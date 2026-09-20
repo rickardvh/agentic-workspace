@@ -32,7 +32,7 @@ Severity: high.
 
 The closest source of truth is split between `src/agentic_workspace/contracts/module_registry.json`, `src/agentic_workspace/contracts/cli_commands.json`, package READMEs, and historical review inventories. That is exactly the code archaeology the documentation should remove.
 
-Recommended action: create `docs/index.md` and `docs/package/` as the current-behavior spine before moving older pages.
+Recommended action: create `docs/index.md` and `docs/package/` as the current-behaviour spine before moving older pages.
 
 ### 2. Top-level `docs/` mixes current product explanation, maintainer doctrine, operational policy, and historical evidence
 
@@ -40,7 +40,7 @@ Severity: high.
 
 The current flat namespace makes pages with very different authority look equivalent:
 
-- current shipped behavior: `which-package.md`, `architecture.md`
+- current shipped behaviour: `which-package.md`, `architecture.md`
 - maintainer workflow: `contributor-playbook.md`, `maintainer-commands.md`
 - doctrine and review criteria: `design-principles.md`, `operational-affordance-design.md`, `collaboration-safety.md`
 - internal contract doctrine: `integration-contract.md`, `module-capability-contract.md`, `extension-boundary.md`
@@ -57,17 +57,17 @@ Severity: medium.
 
 `docs/reference/*.md` now has better field descriptions, but the generated pages still answer contract-shape questions, not product-understanding questions. A user should not have to read `workspace-report.md`, `startup-context.md`, or `module-registry.md` to understand how `start`, `summary`, `report`, `proof`, Memory, and Planning fit together.
 
-Recommended action: each conceptual package page should link down to the relevant generated reference pages only after it explains the behavior in prose.
+Recommended action: each conceptual package page should link down to the relevant generated reference pages only after it explains the behaviour in prose.
 
 ### 4. The package READMEs are useful but too deep to be second-hop docs
 
 Severity: medium.
 
-`packages/memory/README.md` and `packages/planning/README.md` contain strong descriptions of Memory and Planning, but they also include package-local install paths, stability details, skills, command summaries, optional payload behavior, and development commands. They are appropriate package references, not the first explanation of the root package's module model.
+`packages/memory/README.md` and `packages/planning/README.md` contain strong descriptions of Memory and Planning, but they also include package-local install paths, stability details, skills, command summaries, optional payload behaviour, and development commands. They are appropriate package references, not the first explanation of the root package's module model.
 
 Recommended action: add short root-level module overview pages that explain when each module is selected, what it installs, and what it owns. Link to package READMEs for package-local details.
 
-### 5. Several existing review artifacts already contain the inventory needed for cleanup, but they are hidden as history
+### 5. Several existing review artefacts already contain the inventory needed for cleanup, but they are hidden as history
 
 Severity: medium.
 
@@ -89,7 +89,7 @@ Severity: medium.
 
 The reader often gets sent to status or doctrine pages before seeing the object model. `documentation-status.md`, `design-principles.md`, `maturity-model.md`, and `agent-os-capabilities.md` are useful once the product shape is known. They are poor substitutes for a package map.
 
-Recommended action: make shipped behavior the first hierarchy, then status, doctrine, maturity, and roadmap as supporting material.
+Recommended action: make shipped behaviour the first hierarchy, then status, doctrine, maturity, and roadmap as supporting material.
 
 ## Proposed Target Shape
 
@@ -120,7 +120,7 @@ docs/
 
 The exact paths can change, but the separation should hold:
 
-- `docs/package/`: current shipped behavior and conceptual hierarchy.
+- `docs/package/`: current shipped behaviour and conceptual hierarchy.
 - `docs/reference/`: generated contract/schema details.
 - `docs/maintainer/`: source-checkout maintenance and internal operating rules.
 - `docs/reviews/`: dated evidence, audits, and cleanup justification.
@@ -134,7 +134,7 @@ Implement #635 with new docs before moving files:
 2. Add `docs/package/overview.md` explaining the root package, first-party modules, presets, and ordinary host-repo workflow.
 3. Add `docs/package/lifecycle.md` explaining `init`, `start`, `summary`, `report`, `proof`, `doctor`, `upgrade`, and `uninstall` by abstraction level.
 4. Add `docs/package/installed-surfaces.md` explaining what gets written into a host repo and who owns each surface.
-5. Add `docs/package/modules.md` summarizing Memory and Planning without duplicating their full READMEs.
+5. Add `docs/package/modules.md` summarising Memory and Planning without duplicating their full READMEs.
 6. Add `docs/package/contracts.md` explaining how contract JSON, JSON schemata, generated reference docs, and runtime outputs relate.
 
 Then implement #636 by re-indexing or moving old pages after the new spine exists.

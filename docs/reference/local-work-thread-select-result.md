@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace local work-thread select result
 
 Stdout payload emitted after selecting an ignored local work-thread record.

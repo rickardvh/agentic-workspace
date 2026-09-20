@@ -13,7 +13,7 @@ through another adapter; only retained execution avoids launch safety checks.
 Discovery offers persisted and disposable fresh alternatives where supported,
 without changing the human policy. Explicit native transports remain supported.
 The generic argv adapter retains
-its existing behavior. Neither transport has a fixed priority over the other;
+its existing behaviour. Neither transport has a fixed priority over the other;
 selection compares eligible execution configurations and keeps configured order
 as the existing tie breaker when contextual evidence is absent.
 
@@ -31,7 +31,7 @@ not retain a reusable reference for it. Resume/restart cannot silently use this
 setting. Configured persisted execution remains available for continuity.
 
 The adapter discovers the installed protocol schema and current account model
-catalog. Supported reasoning settings come from that catalog and are accepted
+catalogue. Supported reasoning settings come from that catalogue and are accepted
 only when the installed turn protocol can enforce them. Unknown adapter knobs
 fail closed. Native execution requires automatic transport authority and the
 separate command-safety permission. Changing relevant source authority invalidates
@@ -98,7 +98,7 @@ defer cleanup explicitly. It does not force another client's worker to stop.
 
 On 2026-09-06, the opt-in `test_installed_native_host_continuity` test passed on
 Windows with installed `codex-cli 0.153.4`, selecting a model and reasoning effort
-from its current catalog. Each mode used a separate app-server process. Resume
+from its current catalogue. Each mode used a separate app-server process. Resume
 and restart preserved the original identity; fork returned a distinct identity.
 A well-formed nonexistent thread was rejected before a turn started. Live steer
 remained unavailable. No opaque provider IDs are retained in this report.
@@ -114,7 +114,7 @@ These tiny JSON-return probes establish transport identity and counter contracts
 They do not establish task economics, independent Verification, or #2817's
 unrelated substantive-task dogfood. Economic cost, orientation, repair, review
 and integration burden remain unknown unless separately observed. Claude was
-not installed on this host; no Claude behavior is claimed.
+not installed on this host; no Claude behaviour is claimed.
 
 After the user observed test conversations accumulating in the app, cleanup was
 added to the opt-in test's `finally` path. A focused fresh-worker run passed with
@@ -150,7 +150,7 @@ the current offer revision and eligible configuration IDs. The acting orchestrat
 can acquire these through `implement --changed <paths> --task <task> --select
 context.delegation_decision --format json`, without expanding full context. It
 can pair `--configuration-revision` and `--configuration-id` on `assignment export`
-or `assignment dispatch` when materializing a bounded assignment. The supplied
+or `assignment dispatch` when materialising a bounded assignment. The supplied
 transport must agree with that configuration. The choice selects within human
 policy and owner eligibility; it cannot waive proof, change an existing assignment,
 or turn advisory policy into execution authority. It is retained on the existing
@@ -166,7 +166,7 @@ recheck executable identity. Stale choices block instead of selecting a differen
 route. Unrelated workspace launcher settings do not change this source binding.
 The Python and generated TypeScript public clients accept the paired fields;
 TypeScript requires the repository source host for source-owned admission and
-fails closed when that host is unavailable. A dry-run does not materialize a
+fails closed when that host is unavailable. A dry-run does not materialise a
 Planning assignment. Its `selection-preview` result explicitly leaves the run
 identity empty and construction unperformed. Hard-ineligible native routes skip
 provider discovery.
@@ -189,7 +189,7 @@ Reasoning effort was left at the provider default; no claim is made about its va
 
 After confirmed process release, ordinary exact cleanup completed with
 `already-absent`, preserving AW semantic state and deleting no provider history.
-This proves interrupted-dispatch observation and terminal cleanup behavior, not
+This proves interrupted-dispatch observation and terminal cleanup behaviour, not
 successful worker-shell entry or the full return/admission/proof lineage. No second
 inference run repeated this inspection. The adapter now retains a reported ephemeral
 guarantee before turn failure, so deterministic failed-ephemeral coverage requires
@@ -199,7 +199,7 @@ The ordinary selector initially omitted current offers and then exceeded its byt
 budget when full legacy detail was included. Both gaps were corrected, with public
 Python/TypeScript choice coverage and more than eight candidates. The verbose
 fallback was 2046293 bytes; complete selected output was 21584 bytes. These are AW
-serialization measurements, not token-price or credit-saving estimates.
+serialisation measurements, not token-price or credit-saving estimates.
 
 ## Adapter parameter choices and usage scope
 
@@ -211,10 +211,10 @@ exact adapter offer permits it. The source host validates the base revision and
 adapter parameters, then re-enters shared eligibility and configuration fingerprinting.
 The choice is local to the semantic assignment; it neither edits standing policy nor
 changes the selected target, history guarantee, or continuity topology. Generic
-process/manual routes do not pretend to support native parameterization.
+process/manual routes do not pretend to support native parameterisation.
 
 Codex discovers supported efforts and suggested defaults from its installed model
-catalog, and resolves effective provider settings for the target working directory.
+catalogue, and resolves effective provider settings for the target working directory.
 The selected effort is explicit in the sealed configuration and provider turn.
 Unknown effective settings require an explicit configured effort or exclude that
 implicit native route. Parameter choices do not produce a Cartesian offer list.
@@ -230,7 +230,7 @@ scope is a monetary estimate. A metadata-only query of the installed account usa
 endpoint for the exact interrupted worker returned no thread usage; that does not
 mean zero cost and does not justify reading unrelated account activity.
 
-The parameterized ordinary host check on Codex 0.153.4 selected Sol, explicit low
+The parameterised ordinary host check on Codex 0.153.4 selected Sol, explicit low
 effort, ephemeral execution and a 90-second turn deadline through public export.
 It timed out without a structured return after 91347 ms. The fresh cumulative
 observations were 103262 input, 73088 cached input and 1522 output tokens. This is
@@ -251,13 +251,13 @@ It is not a live-provider interrupt/steer proof.
 
 Native return admission uses the exact completed attempt's consumed lineage view. A successful persisted dispatch publishes its new continuation, but that publication cannot by itself invalidate the configuration which produced the return. The existing local run custody retains the bounded input-lineage metadata and resulting publication digest; no prompt, transcript or provider database is copied. Only the owner-held sealed packet, matching local run state, confirmed process release and unchanged publication admit that view. Current policy, safety, capability and evidence checks still apply. New selections do not get this admission view and cannot reuse a lineage whose producing return is awaiting admission. Missing custody, another run, changed publication or an unconfirmed live process fails closed.
 
-An ordinary read of that exact retained assignment uses the same view, so it can reach admission without mistaking its own publication for source drift. It does not grant a new dispatch or a replacement assignment. A different task, materialization request or missing current attempt cannot use it.
+An ordinary read of that exact retained assignment uses the same view, so it can reach admission without mistaking its own publication for source drift. It does not grant a new dispatch or a replacement assignment. A different task, materialisation request or missing current attempt cannot use it.
 
 ## Same-semantic repair and retry
 
-The existing assignment owner provides a bounded retry path. `assignment repair` records an exact repair admission for failed or unaccepted returned work. It can record that need when the former execution configuration has become stale; recording repair does not authorize another execution. `assignment reassign --dry-run` then exposes current eligible configurations. The acting orchestrator chooses a configuration revision/id and optional adapter parameters through `assignment reassign`. The owner checks the repair receipt, current semantic Planning source, current policy and eligibility, and native worker release before rebinding the existing assignment to a new attempt. No transcript or provider state is reconstructed.
+The existing assignment owner provides a bounded retry path. `assignment repair` records an exact repair admission for failed or unaccepted returned work. It can record that need when the former execution configuration has become stale; recording repair does not authorise another execution. `assignment reassign --dry-run` then exposes current eligible configurations. The acting orchestrator chooses a configuration revision/id and optional adapter parameters through `assignment reassign`. The owner checks the repair receipt, current semantic Planning source, current policy and eligibility, and native worker release before rebinding the existing assignment to a new attempt. No transcript or provider state is reconstructed.
 
-The semantic work, Planning file and assignment id remain unchanged. Execution revision, run id, return identity and structural receipt change together through the existing shared replacement contract. Prior packets, returned evidence and run artifacts remain intact. A chosen dry-run is only a preview; its next action applies reassignment, not export or dispatch. After application, the existing result supplies the exact next export action. Export itself does not execute a worker or satisfy Verification.
+The semantic work, Planning file and assignment id remain unchanged. Execution revision, run id, return identity and structural receipt change together through the existing shared replacement contract. Prior packets, returned evidence and run artefacts remain intact. A chosen dry-run is only a preview; its next action applies reassignment, not export or dispatch. After application, the existing result supplies the exact next export action. Export itself does not execute a worker or satisfy Verification.
 
 When an admitted repair has exact released persistent native custody, the adapter can publish its opaque continuation into the existing bounded local continuation record. Current discovery may then offer resume/fork/restart alongside fresh. Repair or supersession alone is insufficient: the binding receipt, matching custody, current semantic scope/capability and exclusivity still have to hold. An ephemeral or unknown reference yields no reuse offer. The actor chooses among eligible configurations; reuse is not forced.
 
@@ -272,8 +272,8 @@ The human/repository configuration owner can require provider-neutral execution 
 required_execution_guarantees = ["history.non-persisted"]
 ```
 
-This optional list is a hard constraint, not a provider preference or an execution-authority grant. Shared Rust checks that every required name is present in the current adapter facts, alongside safety, independence, result/proof constructibility and exclusivity. Unknown facts do not satisfy a requirement. Names are extensible; accepting a name in configuration does not establish its availability. The public policy projection carries source provenance. Configuration choice and parameterized variants use the same requirements, and changing policy invalidates incompatible sealed packets.
+This optional list is a hard constraint, not a provider preference or an execution-authority grant. Shared Rust checks that every required name is present in the current adapter facts, alongside safety, independence, result/proof constructibility and exclusivity. Unknown facts do not satisfy a requirement. Names are extensible; accepting a name in configuration does not establish its availability. The public policy projection carries source provenance. Configuration choice and parameterised variants use the same requirements, and changing policy invalidates incompatible sealed packets.
 
 The current Codex adapter establishes `history.non-persisted` for its supported ephemeral route and `history.provider-persisted` when it can explicitly request persistence. It requires the provider to confirm the selected guarantee before starting a turn; missing confirmation fails closed. These describe provider conversation history. They do not erase AW semantic assignment/proof state, establish general service retention, promise an unexpired conversation, or prove that a live worker is never visible. A required `history.never-visible` guarantee currently leaves these routes ineligible. Archive capability remains a separate fact; archive-after-completion cannot satisfy never-stored or never-visible intent. Resume/fork/recovery still require their independently discovered and current continuation capabilities.
 
-The generic process, retained host and manual transports do not invent history guarantees. With no required guarantees their established portability behavior is unchanged. A hard requirement can therefore leave no eligible route; economics cannot override it. For a softer quiet-list preference, the acting orchestrator can compare the disclosed current facts without converting that preference into a universal transport ordering.
+The generic process, retained host and manual transports do not invent history guarantees. With no required guarantees their established portability behaviour is unchanged. A hard requirement can therefore leave no eligible route; economics cannot override it. For a softer quiet-list preference, the acting orchestrator can compare the disclosed current facts without converting that preference into a universal transport ordering.

@@ -4,7 +4,7 @@
 
 The #2767 product claim is supported by the stacked implementation and the maintained `self_configuration_lifecycle_v1` scenario: a user performs the intentional install/lifecycle choices, while an ordinary contract-following agent receives setup from `start`, infers strong facts, applies typed owner decisions, defers and resumes from compact state, and returns the repository to quiet operation. Later capability changes surface only their current semantic/source delta.
 
-Parent closure is honest when the #2768–#2772, #2774, and this integration-review stack merges. The remaining limitations below are evidence-environment limits, not missing lifecycle behavior.
+Parent closure is honest when the #2768–#2772, #2774, and this integration-review stack merges. The remaining limitations below are evidence-environment limits, not missing lifecycle behaviour.
 
 ## Maintained evidence
 
@@ -22,7 +22,7 @@ The scenario starts with an ordinary repository containing a README, one explici
 | Minimal bootstrap | `init` creates thin routing/readiness surfaces | one intentional install command |
 | First ordinary task | `start` returns `reconcile-repository-configuration`, the setup skill, and the exact setup command | no setup/doctor discovery |
 | Strong inference | README/system-intent and explicit pytest metadata create zero-question owner actions; scratch policy is excluded | zero questions |
-| Semantic choice | human opts into orchestration through `config.policy-apply`; AW returns plain-language automatic-vs-explicit delegation consequences | genuine behavior choices only |
+| Semantic choice | human opts into orchestration through `config.policy-apply`; AW returns plain-language automatic-vs-explicit delegation consequences | genuine behaviour choices only |
 | Defer/resume | local deferral leaves readiness non-current; README work proceeds; delegation work re-elevates; a fresh call resumes the one unresolved id | no transcript or repeated settled question |
 | Completion/quiet | the generated TypeScript `config.policy-apply` operation removes the complete deferred `[setup]` table; Python startup then observes exact current basis/concern receipts and three representative direct tasks omit `configuration_readiness` | no ceremony |
 | Capability lifecycle | cosmetic contract refresh is quiet; v3 source need surfaces only the independent module concern; v7 is consumed directly; explicit uninstall retires it | intentional lifecycle actions and one domain policy answer |

@@ -6,7 +6,7 @@ Status: current reconstruction boundary. Repository-owned decision; no AW instal
 
 Deterministic operating semantics execute in one Rust core; Python, Node and JSON adapt the same implementation.
 
-Put new deterministic decision semantics in the shared Rust core. Keep Python/Node adapters thin and schemas declarative; leave semantic judgment with the responsible agent or human.
+Put new deterministic decision semantics in the shared Rust core. Keep Python/Node adapters thin and schemas declarative; leave semantic judgement with the responsible agent or human.
 
 ## Rationale and alternatives
 
@@ -24,7 +24,7 @@ The structured authority basis binds the current repository intent document. The
 
 ## Scope, evidence and supersession
 
-Exact initial applicability: `path:crates/agentic-workspace-core/src/lib.rs`, `path:src/agentic_workspace/decision.py`, `path:bindings/node/semantic-decision.mjs`. This bounded selection does not claim all future semantic applicability; broader relevance remains agent/owner judgment.
+Exact initial applicability: `path:crates/agentic-workspace-core/src/lib.rs`, `path:src/agentic_workspace/decision.py`, `path:bindings/node/semantic-decision.mjs`. This bounded selection does not claim all future semantic applicability; broader relevance remains agent/owner judgement.
 
 An agent-selected `workspace/ownership/audit` route also makes this boundary
 relevant: an ownership audit must keep deterministic custody/admission semantics

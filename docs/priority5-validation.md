@@ -34,7 +34,7 @@ records still require their original custody; absence is an explicit gap, not an
 implicit migration or imported authority. A current supported update observation
 must bind changed portable material. Declared local evidence refs are surfaced as
 present-unvalidated or unavailable, never as portable proof. Direct/no-Planning
-work receives no portable context and creates no Planning artifacts.
+work receives no portable context and creates no Planning artefacts.
 
 ## Worker entry and return
 
@@ -57,7 +57,7 @@ one exact owner return request from the packet. The host submits returned
 `reentry` to current `start` at the receiving repository target. Assignment still
 rejects stale sources, forged identity, malformed results and wider effects.
 Neither a checksum nor successful assembly authenticates a reviewer or proves a
-claim. Losing carriage requires current owner re-export; it never authorizes a
+claim. Losing carriage requires current owner re-export; it never authorises a
 repeat launch. Existing retained-local and process launch owners remain intact.
 
 ## Evidence design and retention
@@ -69,7 +69,7 @@ identity replacement; and hidden operating burden treated as zero.
 
 Reuse the stable Planning creation/update and Assignment capsule/typed-return
 journeys. Extend their native cases for fresh consumer, complete/partial local
-loss and worker CLI assembly. Existing adapter parameterization is unchanged;
+loss and worker CLI assembly. Existing adapter parameterisation is unchanged;
 new lifecycle semantics are not multiplied across adapters. One small Rust
 worker projection contract covers eager/lazy bytes, exact reference substitution,
 malformed capsules, seal alteration and identity material rejection. No new
@@ -78,12 +78,12 @@ previously uncovered disposable-worker presentation contract and extends existin
 owner evidence rather than mirroring each acceptance row.
 
 Validation results and measured fixture burden are recorded below after the
-current checks. The fixture counts serialized bytes, selected procedure sources,
-public/detail calls, bounded semantic judgments and material return size. Runtime
-burden fields explicitly distinguish known serialized sizes/helper writes from
+current checks. The fixture counts serialised bytes, selected procedure sources,
+public/detail calls, bounded semantic judgements and material return size. Runtime
+burden fields explicitly distinguish known serialised sizes/helper writes from
 unknown host skills, model turns, user steering, repair and elapsed time. Fixture
 observations do not turn those production unknowns into zero. No telemetry is
-persisted and no tokenization or provider-cost claim is made.
+persisted and no tokenisation or provider-cost claim is made.
 
 Stop when these bounded owner contracts, native journeys and required hooks pass
 with no unresolved implementation risk. Escalate if fresh source meaning cannot

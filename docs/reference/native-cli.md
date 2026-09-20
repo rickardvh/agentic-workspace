@@ -4,7 +4,7 @@
 Build both source-checkout binaries with `cargo build --locked --workspace --bins`.
 Installed wheel, npm and host-labelled native archives carry the paired CLI/core;
 see [release topology](../maintainer/native-release-topology.md) for provenance
-and the supported artifact boundary.
+and the supported artefact boundary.
 
 The CLI owns argument parsing, JSON transport, rendering and exit codes. Its
 public command and option declarations come from `source_decision_contract.json`:
@@ -43,12 +43,12 @@ owner quiescence or process success as completion. See
 [execution configurations](../maintainer/native-execution-configurations.md),
 [proof execution](../maintainer/native-proof-execution.md), and the canonical
 [workspace procedure](../../.agentic-workspace/skills/workspace-startup/SKILL.md).
-Unsupported transport/result classes remain explicit gaps. Semantic judgment,
+Unsupported transport/result classes remain explicit gaps. Semantic judgement,
 independent review and human approval retain their own authority.
 
 `tests/test_native_public_cli.py` and existing native owner scenarios exercise
 fresh native/JSON/Python/TypeScript consumers, real former/current sources,
-currentness, exact replay and claim-sensitive negatives. Exhaustive artifact mode
+currentness, exact replay and claim-sensitive negatives. Exhaustive artefact mode
 runs those consumers outside the checkout against one packaged set. Command proof
 reuse additionally binds the actual core location: byte-identical installations
 at different locations cannot silently inherit each other's receipts.

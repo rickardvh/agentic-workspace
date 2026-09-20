@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Assignment transport metrics
 
 Optional adapter-owned sidecar for observable assignment transport metrics. Core preserves absent fields as unknown.

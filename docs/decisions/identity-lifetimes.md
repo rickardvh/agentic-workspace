@@ -10,7 +10,7 @@ Bind currentness to material dependencies and replay to admitted operation seman
 
 ## Rationale and alternatives
 
-An aggregate revision changes whenever unrelated context changes. Using it as an effect or action key creates accidental repeats and invalidates safe work. Attempts must distinguish uncertain execution from a new owner-authorized generation.
+An aggregate revision changes whenever unrelated context changes. Using it as an effect or action key creates accidental repeats and invalidates safe work. Attempts must distinguish uncertain execution from a new owner-authorised generation.
 
 Rejected: workspace revision as universal identity, random retry IDs as semantic authority, and historical next-decision replay. Exact invocation admission is still required before effect.
 
@@ -24,7 +24,7 @@ The structured authority basis binds the current repository intent document. The
 
 ## Scope, evidence and supersession
 
-Exact initial applicability: `path:crates/agentic-workspace-core/src/lib.rs`, `path:crates/agentic-workspace-core/src/attempt.rs`, `path:crates/agentic-workspace-core/src/continuity.rs`. This bounded selection does not claim all future semantic applicability; broader relevance remains agent/owner judgment.
+Exact initial applicability: `path:crates/agentic-workspace-core/src/lib.rs`, `path:crates/agentic-workspace-core/src/attempt.rs`, `path:crates/agentic-workspace-core/src/continuity.rs`. This bounded selection does not claim all future semantic applicability; broader relevance remains agent/owner judgement.
 
 Authority/evidence: [#2987](https://github.com/rickardvh/agentic-workspace/issues/2987); [#3000](https://github.com/rickardvh/agentic-workspace/issues/3000); [System intent](../../SYSTEM_INTENT.md).
 

@@ -19,7 +19,7 @@ The original inventory is implemented as three product-semantic layers, one repo
 | Layer | PR | Issues | Result |
 | --- | --- | --- | --- |
 | Planning lifecycle composition | #2766 | #2345, #2590, #2729, #2765 | Canonical generated command parity, disjoint proposal admission, proof-bearing integration-to-closeout, and merged-owner reconciliation. |
-| Repository-local review anti-trap | #2776 | #2725 | Repo Memory tells implementation agents to report fixes and leave reviewer-formatted comments and decision markers to the repository's distinct reviewer; AW review behavior and external contracts are unchanged. |
+| Repository-local review anti-trap | #2776 | #2725 | Repo Memory tells implementation agents to report fixes and leave reviewer-formatted comments and decision markers to the repository's distinct reviewer; AW review behaviour and external contracts are unchanged. |
 | Enforcement ratchet | #2777 | #2762 | Provider-neutral cross-owner invariants reject split identities, invalid proof, excess custody, undisposed residue, and peer-decision divergence. |
 | Non-local delegation | #2778 | #2763 | Ordinary target selection produces a revision-bound assignment, real supported-host dispatch and return, fail-closed admission, orchestrator-owned proof/integration, and compact reconciliation. |
 | Parent/residue closure | this PR | #2562, #2721, #2752, #2754 | Current-contract replay, integrated evidence map, scope boundary, and subtraction review. #2752/#2754 were implemented in merged PR #2758 and remained administratively open. |
@@ -28,9 +28,9 @@ The original inventory is implemented as three product-semantic layers, one repo
 
 For #2562, the declared admission and compatibility boundaries remain in `operating_decision.py` and `runtime_compatibility.py`. The composed-operation gate plus #2777 assert that one admitted revision yields one owner, action, permission, proof/claim, terminal, and continuation answer. Query-shaped projection reuse and symmetric relevance remain covered by their existing domain suites. PR #2766 makes Planning transitions constructible and atomic; PR #2778 adds the return-admission/continuation path to the active release gate.
 
-For #2721, the replay classifies relevant completed contracts rather than reopening them indiscriminately. The supported-host non-local episode is checked in as a compact trace, while bounded effect custody, proof fixed-point behavior, review intake, merged-owner reconciliation, residue disposition, session chronology, and direct-work quietness retain source-owner tests. The machine-readable matrix is [open-issues-closure-2026-08-27.json](../../tools/model-cli-harness/external-agent-evaluation/open-issues-closure-2026-08-27.json).
+For #2721, the replay classifies relevant completed contracts rather than reopening them indiscriminately. The supported-host non-local episode is checked in as a compact trace, while bounded effect custody, proof fixed-point behaviour, review intake, merged-owner reconciliation, residue disposition, session chronology, and direct-work quietness retain source-owner tests. The machine-readable matrix is [open-issues-closure-2026-08-27.json](../../tools/model-cli-harness/external-agent-evaluation/open-issues-closure-2026-08-27.json).
 
-The user’s scope correction during this run was honored without turning discarded later-issue analysis into Planning or product residue. That is evidence of human authority preservation, not a product event log.
+The user’s scope correction during this run was honoured without turning discarded later-issue analysis into Planning or product residue. That is evidence of human authority preservation, not a product event log.
 
 ## Subtraction and boundaries
 
@@ -44,6 +44,6 @@ The user’s scope correction during this run was honored without turning discar
 
 ## Claim boundary
 
-The stack is ready for the repository's independent review when hosted checks pass. The issues close only as their PRs merge through repository policy. This review does not claim the excluded later issues, generalized delegation cost savings, or authority over repository review procedures.
+The stack is ready for the repository's independent review when hosted checks pass. The issues close only as their PRs merge through repository policy. This review does not claim the excluded later issues, generalised delegation cost savings, or authority over repository review procedures.
 
 The feature branch records `open-issues-nonlocal-delegation-implementation-archive-owner.integration-proposal.json`; target-branch integration must apply that proposal after the stack merges. The proposal deliberately does not rewrite current selection, aggregate indexes, unrelated owners, or parent truth from a feature branch.

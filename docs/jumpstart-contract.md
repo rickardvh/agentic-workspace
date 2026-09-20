@@ -10,13 +10,13 @@ Use the current `start` result and its exact owner request/action; see the [nati
 
 A fresh necessary-surfaces bootstrap records a versioned `configuration_readiness` identity in `.agentic-workspace/adoption-receipt.json`. Ordinary startup uses that durable receipt, not setup-shaped task wording, to route one exact `reconcile-repository-configuration` action to `workspace-setup-jumpstart` and the configured `setup` command. A current identity stays quiet. Missing readiness metadata in an adoption receipt is not, by itself, evidence that setup is incomplete; an explicit stale identity blocks only configured-workflow claims and effects while leaving unrelated read-only inspection available.
 
-Use `setup` as a pre-write and pre-seed discovery report. It may point at candidate surfaces, promotion rules, and follow-up routes, but it does not authorize bulk imports or automatic planning/memory writes by itself.
+Use `setup` as a pre-write and pre-seed discovery report. It may point at candidate surfaces, promotion rules, and follow-up routes, but it does not authorise bulk imports or automatic planning/memory writes by itself.
 
 ## Configuration concerns
 
 The setup report exposes the current native Configuration owner, its exact
 requests, and its bounded write actions. Follow the current setup skill and
-return only the requested human judgment. Source revisions bind each edit;
+return only the requested human judgement. Source revisions bind each edit;
 configuration grants no Memory, Planning, proof or completion authority.
 
 The human configuration grammar has no version marker. Shared choices belong in

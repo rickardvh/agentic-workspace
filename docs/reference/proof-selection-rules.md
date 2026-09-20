@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Proof Selection Rules
 
 Rules for selecting validation lanes from changed paths and task scope.
@@ -12,7 +13,7 @@ Rules for selecting validation lanes from changed paths and task scope.
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Rules for selecting validation lanes from changed paths and task scope. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `"agentic-workspace/proof-selection-rules/v1"` | yes |  | Contract version for this document. |  |  |
-| `rules` | array of object | yes |  | Policy rules that explain this contract behavior. |  |  |
+| `rules` | array of object | yes |  | Policy rules that explain this contract behaviour. |  |  |
 | `lane_proof_kinds` | object | no |  | Optional proof-kind classifications keyed by validation lane id. |  |  |
 | `lane_proof_kinds.<name>` | enum `"diff-review"`, `"surface-check"`, `"targeted-test"`, `"full-test"` | no |  | Proof kind for one validation lane. |  |  |
 | `broad_acceptance_lanes` | array of string | no |  | Lanes where broad proof is required when selected, even if the lane remains a targeted-test kind. |  |  |

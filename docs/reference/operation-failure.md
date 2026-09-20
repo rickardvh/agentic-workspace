@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # operation_failure.schema
 
 Structured failure envelope returned by an external operation invocation.

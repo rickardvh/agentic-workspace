@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Lifecycle Generation Readiness Contract
 
 Readiness contract for deciding whether lifecycle surfaces can be generated safely.

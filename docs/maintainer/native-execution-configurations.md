@@ -21,7 +21,7 @@ reflect the implemented path: process candidates can support `read-only` and
 `unapplied-patch`, while read-only manual routes do not acquire patch capability.
 Retained-local implementation can support `unapplied-patch`. Required result
 classes exclude incapable routes without claiming target-quality inferiority.
-Unresolved viable alternatives still block rather than silently authorizing local work.
+Unresolved viable alternatives still block rather than silently authorising local work.
 
 Current transport declarations use the Rust decoder. Discovery never
 runs the configured command. It observes the executable's current path, size,
@@ -57,14 +57,14 @@ A read-only packet uses the `unapplied-patch` delivery envelope with empty
 `changed_paths` and `patch`; file-changing returns fail its admission. A separately
 admitted patch task captures concrete mutation baselines before dispatch and
 uses the [native patch delivery](../../docs/native-patch-delivery.md) contract to
-preserve concurrent work through integration. The envelope alone never authorizes
+preserve concurrent work through integration. The envelope alone never authorises
 mutation. Packet checksums establish structural integrity only; they cannot grant
 Assignment or semantic authority.
 
 For a supported process, the exact native dispatch action retains execution
 custody and publishes a bounded returned observation. Interrupted publication
 can recover through the same owner without treating an incomplete worker as a
-successful result. The current typed observation and return judgment must be
+successful result. The current typed observation and return judgement must be
 admitted before Planning adoption and Verification re-entry. Process success,
 return acceptance, Planning consumption, Verification evidence and completion
 remain distinct authorities. Source/input/configuration drift rejects stale
@@ -82,7 +82,7 @@ its original host, mode and identity boundaries.
 
 `tests/test_native_execution_configurations.py` covers current feasibility,
 unsupported result/return paths, source/executable drift, safety and source
-preservation through native, JSON, Python and TypeScript. Assignment judgment
+preservation through native, JSON, Python and TypeScript. Assignment judgement
 tests retain the unresolved-alternative and currentness negatives.
 `tests/test_native_readonly_handoff.py` exercises the sealed capsule, actual
 process execution, failed/incomplete returns, exact observation/admission and

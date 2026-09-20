@@ -16,7 +16,7 @@ handwritten field list. For using the product, start with the
 | Files managed by repository adoption | [Installed-surface catalogue](../reference/installed-surface-catalogue.md), derived from the public footprint contract |
 | Published versions and supported platforms | The selected release and [installation guidance](../agentic-workspace-install.md) |
 
-A schema describes valid structure. It does not authorize an operation or establish
+A schema describes valid structure. It does not authorise an operation or establish
 that an old installed version provides the feature.
 
 ## Internal and historical material

@@ -8,7 +8,7 @@ Task-marker-only lanes remain current unresolved semantic scope; native code doe
 
 ## Bounded public output
 
-Discovery shows at most 32 source-bound descriptors and 16 domain command candidates, with explicit omitted counts and the exact source field reference. Descriptors are bounded to 2 KiB and command candidates to 4 KiB. The full forest is not copied into ordinary strategy or judgment packets. An explicitly selected lane exposes its current metadata up to 32 KiB; a larger lane gets an exact detail-bound blocker before any execution action. Remaining discovery/detail work is an explicit partial-coverage boundary, not silent retirement of source intent. Existing manifest behavior is unchanged.
+Discovery shows at most 32 source-bound descriptors and 16 domain command candidates, with explicit omitted counts and the exact source field reference. Descriptors are bounded to 2 KiB and command candidates to 4 KiB. The full forest is not copied into ordinary strategy or judgement packets. An explicitly selected lane exposes its current metadata up to 32 KiB; a larger lane gets an exact detail-bound blocker before any execution action. Remaining discovery/detail work is an explicit partial-coverage boundary, not silent retirement of source intent. Existing manifest behaviour is unchanged.
 
 The owner recomputes current source projection from confined, bounded configuration reads. This slice adds no cache or claim of cheaper durable reuse. Whole-strategy dependent currentness and repeated source parsing remain possible follow-up work under #2981, requiring measured benefit before retention machinery.
 
@@ -16,7 +16,7 @@ The owner recomputes current source projection from confined, bounded configurat
 
 | Control | Actual current meaning | Native state after this layer |
 | --- | --- | --- |
-| `default_level` | Baseline proof/trust guidance | Still requires current level/strategy judgment; no invented level inference. |
+| `default_level` | Baseline proof/trust guidance | Still requires current level/strategy judgement; no invented level inference. |
 | `agent_may_escalate` | Permission to raise the chosen assurance level | Still requires level owner consumption; command availability does not consume it. |
 | `agent_may_deescalate` | Permission to lower below the configured baseline | Still requires level owner consumption; a command choice cannot weaken it. |
 | `proof_profiles` | Required/optional command bundles selected by current requirements or Planning | Still unresolved selected-profile ingress; no global default activation. |

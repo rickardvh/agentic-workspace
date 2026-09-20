@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Subsystem Intent Set
 
 Editable durable subsystem-intent records used as scoped decision pressure, not active task state. Subsystem ids are defined by .agentic-workspace/OWNERSHIP.toml [[subsystems]].

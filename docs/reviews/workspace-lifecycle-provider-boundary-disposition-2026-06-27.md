@@ -19,7 +19,7 @@ Current checker baseline for this slice:
 - 75 accepted runtime symbols.
 - 19 workspace package runtime boundaries.
 - The scoped provider symbol remains classified as `provider-integration`.
-- The scoped lifecycle and reconcile symbols remain accepted hand-owned runtime boundaries; this PR changes semantic ownership for reconcile without claiming full generated minimization.
+- The scoped lifecycle and reconcile symbols remain accepted hand-owned runtime boundaries; this PR changes semantic ownership for reconcile without claiming full generated minimisation.
 
 ## Disposition Table
 
@@ -46,7 +46,7 @@ The GitHub external-intent refresh adapter is not a lifecycle adapter. It remain
 
 ## Proof
 
-Required checks for this artifact:
+Required checks for this artefact:
 
 ```powershell
 uv run pytest tests/test_workspace_cli.py::test_reconcile_report_adapter_routes_through_planning_owner tests/test_workspace_summary_cli.py::test_workspace_reconcile_json_exposes_provider_agnostic_planning_state tests/test_workspace_summary_cli.py::test_workspace_reconcile_apply_safe_prune_removes_exact_closed_items -q

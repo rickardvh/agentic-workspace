@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Source decision input
 
 Language-neutral input envelope for the shared operating-decision core.
@@ -17,7 +18,7 @@ Language-neutral input envelope for the shared operating-decision core.
 | `decision_context.reconciliation.native_owner` | string \| null | yes |  | Independently configured/discovered repo-native durable owner, or admitted absence. |  |  |
 | `decision_context.reconciliation.fallback_owner` | string | yes |  | Existing admitted AW fallback durable owner used only when native owner is absent. |  |  |
 | `decision_context.reconciliation.destinations` | array of ref `#/$defs/decision_admission` | yes |  | Independent destination evidence, rechecked against current source observations. |  |  |
-| `decision_context.reconciliation.dismissals` | array of ref `#/$defs/decision_dismissal` | yes |  | Explicit judgments, each bound to decision revision and current authority evidence. |  |  |
+| `decision_context.reconciliation.dismissals` | array of ref `#/$defs/decision_dismissal` | yes |  | Explicit judgements, each bound to decision revision and current authority evidence. |  |  |
 | `decision_context.records` | array of ref `#/$defs/material_decision` | yes |  | Bounded owner-selected records with complete applicable supersession closure. |  |  |
 | `decision_context.admissions` | array of ref `#/$defs/decision_admission` | yes |  | Source/authority-owner admissions. |  |  |
 | `decision_context.current_dependencies` | array of ref `#/$defs/decision_reference` | yes |  | Current independently observed material revisions. |  |  |
@@ -53,7 +54,7 @@ Language-neutral input envelope for the shared operating-decision core.
 | `intent.outcome` | object | no |  | Exact outcome authority required before the task may be terminal. |  |  |
 | `intent.outcome.required_claims` | array of string | no |  | Outcome-owner-declared claims that must be currently allowed before completion; absence of their owner or evidence does not waive them. |  |  |
 | `intent.outcome.id` | string | yes |  | Stable intended outcome identity. |  |  |
-| `intent.outcome.owner` | string | yes |  | Owner authorized to establish the intended outcome. |  |  |
+| `intent.outcome.owner` | string | yes |  | Owner authorised to establish the intended outcome. |  |  |
 | `intent.outcome.claim` | string | yes |  | Claim that must be allowed for terminal status. |  |  |
 | `capability_contract` | ref `#/$defs/capability_contract` | no |  | Current declarative ownership and constructibility authority for any authority-bearing contribution or public request. |  |  |
 | `capability_contract.kind` | const `"agentic-workspace/capability-contract/v1"` | yes |  | Capability contract discriminator. |  |  |

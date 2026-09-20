@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Resolved Evidence Producer
 
 Host-authenticated producer and result custody supplied independently of an external evidence candidate.

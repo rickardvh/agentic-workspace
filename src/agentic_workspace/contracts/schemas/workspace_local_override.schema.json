@@ -129,7 +129,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Machine-local session logging and path-normalization preferences."
+      "description": "Machine-local session logging and path-normalisation preferences."
     },
     "delegation_targets": {
       "type": "object",
@@ -185,7 +185,7 @@
                 "external",
                 "either"
               ],
-              "description": "Advisory execution-boundary context for comparative judgment; never availability or authorization."
+              "description": "Advisory execution-boundary context for comparative judgement; never availability or authorisation."
             },
             "confidence": {
               "type": "number",

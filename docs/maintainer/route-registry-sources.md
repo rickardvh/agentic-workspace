@@ -18,7 +18,7 @@ are read once. These declarations admit vocabulary only, never applicability,
 effects or completion. Skill procedure paths remain relative to their registry.
 
 The discovery result reports the selected `sources`. Its revision derives from
-their exact paths and normalized contents, including declarations of further
+their exact paths and normalised contents, including declarations of further
 sources. Changing or withdrawing a real source changes dependent route
 currentness. Unrelated local instructions, scratch, nested repositories and
 links outside selected paths do not participate. No scan ledger or index is

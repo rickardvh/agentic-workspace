@@ -31,7 +31,7 @@
       "properties": {
         "owner": {
           "const": "command-generation",
-          "description": "Package that owns generic generated target behavior."
+          "description": "Package that owns generic generated target behaviour."
         },
         "source_refs": {
           "type": "array",

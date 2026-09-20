@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Payload Verification Policy
 
 Declarative policy used by generated payload verification primitives to validate managed package payload files without embedding package-specific checks in codegen.
@@ -43,5 +44,5 @@ Declarative policy used by generated payload verification primitives to validate
 | `workspace_orchestrator_notice.role` | string | yes |  | Role label assigned to the orchestration notice status action. |  |  |
 | `workspace_orchestrator_notice.safety` | string | yes |  | Safety label assigned to the orchestration notice status action. |  |  |
 | `workspace_orchestrator_notice.category` | string | yes |  | Category label assigned to the orchestration notice status action. |  |  |
-| `status_files` | array of object | no |  | Payload files to summarize in declarative status reports. |  |  |
+| `status_files` | array of object | no |  | Payload files to summarise in declarative status reports. |  |  |
 | `obsolete_files` | ref `#/$defs/path_list` | no |  | Legacy payload files to report as obsolete when present. |  |  |

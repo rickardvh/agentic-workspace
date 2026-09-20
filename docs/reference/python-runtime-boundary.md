@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Python Runtime Boundary
 
 Source-maintenance model only; not native/public command authority. Boundary contract for what remains runtime-owned versus contract-owned in Python code.
@@ -18,7 +19,7 @@ Source-maintenance model only; not native/public command authority. Boundary con
 | `boundaries` | array of object | yes |  | Ordered boundaries entries used by this contract. |  |  |
 | `root_cli_authority_audit` | object | yes |  | Root cli authority audit details used by this contract. |  |  |
 | `root_cli_authority_audit.command` | string | yes |  | Command string or command name used by this contract. |  |  |
-| `root_cli_authority_audit.rule` | string | yes |  | Policy rule that explains this contract behavior. |  |  |
+| `root_cli_authority_audit.rule` | string | yes |  | Policy rule that explains this contract behaviour. |  |  |
 | `root_cli_authority_audit.responsibility_classes` | array of object | yes |  | Ordered responsibility classes entries used by this contract. |  |  |
 | `root_cli_authority_audit.current_audit` | array of object | yes |  | Ordered current audit entries used by this contract. |  |  |
 | `root_cli_authority_audit.next_extraction_or_guard_candidates` | array of object | yes |  | Ordered next extraction or guard candidates entries used by this contract. |  |  |

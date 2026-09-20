@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Agentic Workspace Setup Findings
 
 Setup findings payload for post-bootstrap issues that may need promotion into planning, docs, config, or follow-up work.

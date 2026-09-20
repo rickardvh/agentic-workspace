@@ -12,7 +12,7 @@ change without becoming a second source of truth for the others.
 | Component | Responsibility |
 | --- | --- |
 | Skills | Reusable procedure for the agent, loaded when useful. |
-| Repository instructions and configuration | Project rules, preferences, scope and authorization. |
+| Repository instructions and configuration | Project rules, preferences, scope and authorisation. |
 | Domain owners | The component responsible for a particular kind of state, evidence or effect, such as Planning or Verification. |
 | Rust core | Read current sources, compose applicable constraints, validate requests and execute supported effects. |
 | CLI and language clients | Transport and presentation over that core. |
@@ -34,7 +34,7 @@ references. Information that affects the next decision needs its scope and
 consequence explained when delivered, not in a later message.
 
 A request asks an owner to interpret supplied material. That owner may prepare an
-action, identify a blocker or ask for a bounded judgment. The caller cannot turn
+action, identify a blocker or ask for a bounded judgement. The caller cannot turn
 a request into permission by supplying a plausible operation name.
 
 Before an effect, AW rechecks the action's material dependencies and authority.
@@ -60,10 +60,10 @@ and grants no blanket permission. The [instruction schema](reference/instruction
 is an implementation reference, not a general-purpose public programming language.
 
 [Independent modules](module-capability-contract.md) add deterministic domain
-behavior through the Rust owner interface. Their registration describes the
-capability; repository configuration separately authorizes it. A read-only module
+behaviour through the Rust owner interface. Their registration describes the
+capability; repository configuration separately authorises it. A read-only module
 needs no fake state or mutation hook. Shared semantics belong in core, but core
-must not learn each module's domain or identity merely to recognize it.
+must not learn each module's domain or identity merely to recognise it.
 
 [External adapters](extension-boundary.md) integrate existing operations with agent
 hosts. They keep transport, credentials and vendor sessions outside core. Skills
@@ -86,7 +86,7 @@ cannot establish runtime capability, fresh proof or permission to mutate state.
 
 | Path | Work that belongs here |
 | --- | --- |
-| `crates/agentic-workspace-core/` | Shared deterministic behavior and native state/effect owners. |
+| `crates/agentic-workspace-core/` | Shared deterministic behaviour and native state/effect owners. |
 | `crates/agentic-workspace-cli/` | Public command parsing and forwarding. |
 | `bindings/python/`, `bindings/node/` | Installed language bindings and transport declarations. |
 | `src/agentic_workspace/contracts/` | Declarative contracts and schemas, including retained maintenance formats. |

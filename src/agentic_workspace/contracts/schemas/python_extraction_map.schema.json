@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/python-extraction-map.schema.json",
   "title": "Python-Owned Extraction Map",
-  "description": "Map of Python-owned behavior that can or cannot move into contracts.",
+  "description": "Map of Python-owned behaviour that can or cannot move into contracts.",
   "type": "object",
   "required": [
     "schema_version",

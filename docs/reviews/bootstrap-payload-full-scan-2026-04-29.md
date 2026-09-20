@@ -4,7 +4,7 @@ Date: 2026-04-29
 
 ## Scope
 
-Scanned the package bootstrap payload sources and built package artifacts for:
+Scanned the package bootstrap payload sources and built package artefacts for:
 
 - `packages/memory/bootstrap/`
 - `packages/planning/bootstrap/`
@@ -20,7 +20,7 @@ Commands used:
 - `uv build packages/memory --wheel --sdist -o .agentic-workspace/local/scratch/payload-scan`
 - `uv build packages/planning --wheel --sdist -o .agentic-workspace/local/scratch/payload-scan`
 - raw filesystem classification of bootstrap and skill source trees
-- built artifact classification of `_payload`, `bootstrap`, `_skills`, and `skills` entries
+- built artefact classification of `_payload`, `bootstrap`, `_skills`, and `skills` entries
 
 Skills are in scope because they are intentionally shipped declarative agent guidance. Their presence is not a finding. The hard boundary is executable code or runtime-specific assumptions in checked-in payload files.
 
@@ -33,15 +33,15 @@ No hard payload violations were found.
 - No `scripts/`, `tools/`, or `optional/` helper directories were present in bootstrap payloads.
 - No legacy `packages/memory/memory/` tree was present.
 - No active planning state such as `state.toml` was present in planning bootstrap payload.
-- No repo-specific memory runbook/note payloads were present in memory bootstrap artifacts.
+- No repo-specific memory runbook/note payloads were present in memory bootstrap artefacts.
 
 The strict source/payload/root-install checker reported zero warnings.
 
-## Built Artifact Counts
+## Built Artefact Counts
 
-Normalized shipped payload or skill entries:
+Normalised shipped payload or skill entries:
 
-| Artifact | Count | Composition | Executable files | Helper dirs |
+| Artefact | Count | Composition | Executable files | Helper dirs |
 | --- | ---: | --- | ---: | ---: |
 | memory wheel | 42 | 14 machine-data, 16 prose-doc, 9 structural-doc, 3 template | 0 | 0 |
 | memory sdist | 42 | 14 machine-data, 16 prose-doc, 9 structural-doc, 3 template | 0 | 0 |
@@ -78,22 +78,22 @@ The planning bootstrap source contains 21 files:
 - planning schemas
 - review/intake guidance files
 
-Default install copies the required payload only. The package artifact now ships only core planning docs, machine-readable capability data, review/intake optional surfaces, and bundled declarative planning skills.
+Default install copies the required payload only. The package artefact now ships only core planning docs, machine-readable capability data, review/intake optional surfaces, and bundled declarative planning skills.
 
-The previous unclear boundary was package-shipped optional prose. That surface has been compressed out of the planning bootstrap payload; advanced/deep behavior should route through compact CLI report sections, package README/source docs, or optional skills instead of target-repo prose docs.
+The previous unclear boundary was package-shipped optional prose. That surface has been compressed out of the planning bootstrap payload; advanced/deep behaviour should route through compact CLI report sections, package README/source docs, or optional skills instead of target-repo prose docs.
 
 ## Architecture Assessment
 
-The current architecture is clean with respect to executable code: executable behavior is in package source and CLI entry points, not bootstrap payloads.
+The current architecture is clean with respect to executable code: executable behaviour is in package source and CLI entry points, not bootstrap payloads.
 
 The remaining architecture question is whether "shipped payload" should mean:
 
-1. anything the package artifact carries for possible installation, or
+1. anything the package artefact carries for possible installation, or
 2. only the smallest default checked-in target-repo install.
 
 Today the implementation mixes both:
 
-- planning has a smaller default install and no longer ships optional/deep prose docs in the artifact;
+- planning has a smaller default install and no longer ships optional/deep prose docs in the artefact;
 - memory installs all managed memory skills and the temporary bootstrap workspace by default;
 - skills are treated as checked-in declarative workflow affordances, which is valid when they stay language-agnostic and route execution back through package CLIs or host-provided commands.
 
@@ -104,5 +104,5 @@ If the intended product shape is "smallest checked-in target repo by default, wi
 1. Add a memory payload classification record matching `packages/planning/payload-surface-classification.json`.
 2. Split memory default payload into the smallest durable install plus clearly managed declarative skills where they provide leverage.
 3. Add checks or review guidance that shipped skills stay runtime-agnostic: they may route to package CLIs or host-declared commands, but must not ship or require language-specific helper code in target repos.
-4. Keep advanced planning behavior discoverable through compact CLI report sections, package README/source docs, or optional skills rather than target-repo prose docs.
+4. Keep advanced planning behaviour discoverable through compact CLI report sections, package README/source docs, or optional skills rather than target-repo prose docs.
 5. Extend the source/payload checker with a non-failing payload-shape section that reports structural, machine, template, schema, prose, skill, optional, and temporary-lifecycle counts. This would make future scans cheap without making current architecture fail before the policy is settled.

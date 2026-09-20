@@ -13,7 +13,7 @@ The generated-adapter lane now has two generated read-only command surfaces:
 - root `agentic-workspace defaults`
 - package `agentic-planning-bootstrap status`
 
-Those generated surfaces are backed by `src/agentic_workspace/contracts/command_adapter_generation.json`, generated output files, no-direct-edit headers, freshness checks, and black-box conformance checks. Runtime primitive behavior remains hand-owned.
+Those generated surfaces are backed by `src/agentic_workspace/contracts/command_adapter_generation.json`, generated output files, no-direct-edit headers, freshness checks, and black-box conformance checks. Runtime primitive behaviour remains hand-owned.
 
 Most command/interface truth is still hand-authored or manifest-backed but not generated. That is acceptable for the current migration stage, but it means the next product-compression work should reduce visible startup and authoring burden rather than start broad lifecycle generation.
 
@@ -61,9 +61,9 @@ Runtime implementation remains intentionally hand-owned for:
 - local-only state preservation
 - payload assembly and detailed diagnostics
 - planning archive/promote mutation workflows
-- memory sync, routing, and search behavior
+- memory sync, routing, and search behaviour
 
-Generated adapters may route to these primitives; they should not embed the behavior.
+Generated adapters may route to these primitives; they should not embed the behaviour.
 
 ## Next Simplification Target
 

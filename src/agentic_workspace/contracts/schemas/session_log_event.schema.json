@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agentic-workspace.dev/schemas/session_log_event.schema.json",
   "title": "Agentic Workspace session-log event",
-  "description": "One append-only canonical event in a local Agentic Workspace session chronology or normalized export.",
+  "description": "One append-only canonical event in a local Agentic Workspace session chronology or normalised export.",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -42,7 +42,7 @@
     "timestamp": {"type": "string", "format": "date-time", "description": "UTC event timestamp."},
     "sequence": {"type": "integer", "minimum": 0, "description": "Monotonic position in the logical-session stream or merged export."},
     "source_sequence": {"type": "integer", "minimum": 0, "description": "Original physical-stream position retained in a merged export."},
-    "export_sequence": {"type": "integer", "minimum": 0, "description": "Monotonic position in a normalized export."},
+    "export_sequence": {"type": "integer", "minimum": 0, "description": "Monotonic position in a normalised export."},
     "logical_session_id": {"type": "string", "minLength": 1, "description": "Private stable identifier joining physical rotations."},
     "physical_session_id": {"type": "string", "minLength": 1, "description": "Identifier for the physical session-log directory."},
     "parent_logical_session_id": {"type": "string", "description": "Private parent logical-session identifier for delegated work, or empty."},

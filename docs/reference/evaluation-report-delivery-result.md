@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Evaluation report and delivery operation result
 
 Common generated-client result envelope for evaluation report preview, local delivery, external request, adapter receipt, status, and retry operations. Runtime handlers provide the precise kind/status contract.

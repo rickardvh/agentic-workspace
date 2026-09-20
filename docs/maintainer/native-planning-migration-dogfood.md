@@ -2,7 +2,7 @@
 
 This 2026-09-09 evidence addresses #2970's migration and continuation outcome on
 the #3138 reconstruction stack. It is separate from full #2909 conformance and
-exact #2990 release-artifact admission.
+exact #2990 release-artefact admission.
 
 ## Real sources and retained meaning
 
@@ -23,7 +23,7 @@ Planning adoption before checked target-outcome evidence.
 
 Historical fields are dispositioned explicitly. In the history control,
 `drift_log` first makes coverage ambiguous; an explicit irrelevant-history
-judgment records that omission without copying its prose into native custody.
+judgement records that omission without copying its prose into native custody.
 Active dependency, assignment, returned and integration-pending relationships
 remain preserved. No archive inventory is bulk-imported. The lived-in selected
 owner's current coverage reports no ambiguities or omitted history.

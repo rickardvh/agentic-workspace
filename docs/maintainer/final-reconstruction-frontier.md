@@ -18,13 +18,13 @@ cargo-deny advisory/license/source gate in security and publication. The narrow
 RSA public-key-only exception remains explicit in `deny.toml`. Source archives
 carry the same policy and runner. Existing actual Windows and Linux substrate
 proof is reused for those unchanged mechanisms; published platform support still
-requires the selected artifact's actual-host admission. No lower MSRV is implied.
+requires the selected artefact's actual-host admission. No lower MSRV is implied.
 See `rust-toolchain.md` for the deliberate deferral of nextest, coverage, caches,
 rustdoc strictness and profile tuning. This reconciliation records the accepted
 #3248/#3251 outcome; it is not a new review of those changes.
 
 PR #3252 supplies the remaining #3224/#2613/#2767 corrections and #3250 lived-in
-convergence below. Its new product behavior needs independent acceptance.
+convergence below. Its new product behaviour needs independent acceptance.
 
 ## Open-issue classification
 
@@ -46,7 +46,7 @@ to the final candidate. No row is new independent final-owner acceptance.
 | Open parent outcome: skills-first interface | #3223 | Administrative completion still requires independent satisfaction of its bounded children/amended owners and disposition of competing generic procedure surfaces. Its current stable-critical implementation dependency is the bounded #3224 correction, followed by exact-candidate/aggregate evidence under #2909. This does not make the broad parent a wholesale release gate. |
 | Candidate-complete / awaiting administrative closure: interface and control | #3218, #3217, #2989, #2987, #2986, #2985, #2981, #2930, #2638, #2606, #2334 | Accepted C53 foundations plus C54 owner/aggregate outcome. Keep currentness, proof, independent-owner and explicit unavailable-operation boundaries. |
 | Candidate-complete / awaiting administrative closure: safety and maintainer preparation | #3236, #3232, #3227, #3226, #3221, #3220, #3013, #3012, #3001, #3000, #2997, #2995, #2984 | Accepted C53/C54 safety, instruction, resource, source-preservation and test-strategy dispositions; #3138 already lists the independently accepted migration/intent leaves. |
-| Candidate-complete / awaiting administrative closure: Planning | #3195, #2970, #2661 | Accepted portable work/lifetime behavior; local custody and exact final-candidate proof remain distinct. |
+| Candidate-complete / awaiting administrative closure: Planning | #3195, #2970, #2661 | Accepted portable work/lifetime behaviour; local custody and exact final-candidate proof remain distinct. |
 | Candidate-complete / awaiting administrative closure: Assignment | #3231, #3194, #3193, #2947, #2916, #2818, #2817, #2210, #2209 | C54 accepted supported posture/transport/return/replacement/evidence composition. No universal provider or economic claim. |
 | Candidate-complete / awaiting administrative closure: retained knowledge | #3040, #2809, #2726, #2648, #2647, #2570 | C54 accepted Memory/decision/correction/adaptation destinations; no automatic refresh of stale archive authority. |
 | Candidate-complete / awaiting administrative closure: bounded owner leaves | #3139, #3140, #3141, #3142, #3143, #3144, #3145, #3146, #3147, #3149, #3150, #3151, #3152, #3153, #3154, #3155, #3156, #3157, #3158, #3159, #3160, #3161, #3162, #3163 | Existing #3138 accepted-leaf ledger; reconcile administrative closure in its owner, not from this table. |
@@ -58,7 +58,7 @@ dispositions: blanket legacy removal/adoption and the former Python lifecycle
 runtime; automatic provider transports or private-state guarantees without current
 host evidence; runtime/effect/proof authority from a repository-only read; custom
 self-approval enforcement; and published Windows/macOS/other-architecture support
-without actual-host artifact admission. These are not whole issues falsely marked
+without actual-host artefact admission. These are not whole issues falsely marked
 retired. The safety, delegation, C53/C54 conformance and Rust-toolchain documents
 retain their precise supported boundaries.
 
@@ -66,17 +66,17 @@ retain their precise supported boundaries.
 
 | Surface | Disposition and current owner |
 | --- | --- |
-| Config schema, module selection, invocation, artifact posture and latitude | Retain durable repository/environment choices; config is repository-owned policy. |
+| Config schema, module selection, invocation, artefact posture and latitude | Retain durable repository/environment choices; config is repository-owned policy. |
 | Assurance level/escalation/closeout and instruction/decision admissions | Retain owner policy and exact existing archive revisions; do not advance trust from HEAD. |
 | System-intent source selection | Retain repository intent; the native owner derives current observations. |
-| Payload target/capability/required-before-work | Retain target admission policy; derive byte currentness from the selected artifact and actual files. |
+| Payload target/capability/required-before-work | Retain target admission policy; derive byte currentness from the selected artefact and actual files. |
 | Compatibility advisory defaults | Retire old reader/resource preferences; current contracts derive capability, not a copied compatibility registry. |
-| Module update URLs/cadence | Retire obsolete master/git update machinery; installation identity comes from the selected immutable artifact, without automatic dependency movement. |
+| Module update URLs/cadence | Retire obsolete master/git update machinery; installation identity comes from the selected immutable artefact, without automatic dependency movement. |
 | Workflow obligations | Transfer still-useful required/recommended repository expectations to AGENTS.md with the same force. Retire command recipes and generic procedural duplication. |
 | Empty test-data policy | Retire inert empty representation; it carried no constraint. |
 | Jumpstart/config/findings manuals and system-intent WORKFLOW | Replace competing procedure with narrow references to the canonical skill/current owner. Historical setup findings are not current admission. |
 | No-CLI script/policy | Compatibility pointer only, exit 1, runtime facts unknown and authority none; no synthetic decision packet or module discovery. |
-| Package copies/read profile | Derive through the existing interface generator and artifact roster. Correct reference closure against actual installed files. |
+| Package copies/read profile | Derive through the existing interface generator and artefact roster. Correct reference closure against actual installed files. |
 | Planning/Memory roots | Preserve repository-owned domain state. Package-file removal never owns the whole domain tree. |
 | Human config/instructions and promoted output | Remain repository-owned; no package-wide overwrite or reset. |
 
@@ -91,7 +91,7 @@ checks every declared shipped file against the current native CLI contract.
 ## Native convergence and preservation evidence
 
 The existing Configuration writer now offers lazy payload discovery and exact
-per-file proposals from the selected native artifact. It reuses its source-bound
+per-file proposals from the selected native artefact. It reuses its source-bound
 human decision, admission, confinement, publication marker and recovery machinery.
 There is no new CLI family, lifecycle registry, migration ledger or Python host.
 Caller-chosen paths/content are rejected. Package refresh cannot be automatically
@@ -112,7 +112,7 @@ first native pass refreshed only payload provenance (postimage SHA-256
 `5a4e125f8f6f54adc597a0b4e69c7790eb78aca3a78a5cc20dd80d5a1807493c`)
 and reported all 20 declared files current. The second pass reported the same
 20 current files and made zero writes. Package source corrections had already
-been derived by their canonical generator; native convergence proved artifact
+been derived by their canonical generator; native convergence proved artefact
 byte parity rather than silently copying arbitrary target content. The exact
 committed subject and final validation are recorded in PR #3252.
 
@@ -120,7 +120,7 @@ Ignored local state was separately classified through the current Resources
 owner. Existing effects, decision-point intent, Planning and Verification proof
 receipts retain their structured owners; logs are local runtime material;
 scratch remains disposable only through its current resource owner. README,
-assignment-runs, conclusions, correction-event artifacts, delegation artifacts,
+assignment-runs, conclusions, correction-event artefacts, delegation artefacts,
 former-root-scratch, improvement-pressure, locks, mutation-claims and
 transport-capabilities were reported as unowned residue and preserved. A bounded
 native-source audit found no matching current readers for those historical
@@ -158,7 +158,7 @@ packet bound, and standalone module lifecycle defaults still carried old guidanc
 and ownership. Both corrections remain in PR #3252.
 
 Payload path enumeration is now lazy Configuration discovery data. The writer
-still validates every proposed artifact path/content and recovery source; ordinary
+still validates every proposed artefact path/content and recovery source; ordinary
 capability schemas do not repeat that roster. The existing four-surface former
 route test passes its unchanged 100,000-byte bound. Existing Configuration tests
 retain invalid source/content and currentness coverage.

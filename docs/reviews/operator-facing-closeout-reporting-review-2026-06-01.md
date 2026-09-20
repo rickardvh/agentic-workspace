@@ -12,22 +12,22 @@
 
 ## Problem / Intent
 
-Codex and other agents can usually summarize what changed and how it was validated for the immediately preceding turn. That summary is narrow, chat-local, and often insufficient for larger tranches, whole features, or epics.
+Codex and other agents can usually summarise what changed and how it was validated for the immediately preceding turn. That summary is narrow, chat-local, and often insufficient for larger tranches, whole features, or epics.
 
 As agent-authored work grows in scope, the human operator remains responsible for the delivered code and needs to understand what was produced, why it was shaped that way, what evidence supports it, and what remains unproven. Agents should be held to the same or a higher standard for documentation and code structure, but they cannot be expected to answer system questions accurately from chat memory alone.
 
-Agentic Workspace already preserves much of the underlying state: intent, planning, proof, handoff, verification, closeout trust, durable memory, workflow obligations, and reporting density. The gap is that these surfaces are mostly optimized for agent routing and internal continuity. The operator-facing explanation after a turn remains too dependent on the agent's local summary habits.
+Agentic Workspace already preserves much of the underlying state: intent, planning, proof, handoff, verification, closeout trust, durable memory, workflow obligations, and reporting density. The gap is that these surfaces are mostly optimised for agent routing and internal continuity. The operator-facing explanation after a turn remains too dependent on the agent's local summary habits.
 
 ## Current Substrate
 
 Existing repo surfaces already support most of the needed capability:
 
 - `README.md` frames AW as a repo-native operating layer for preserving intent, recovering context, validating changes, and handing off safely without relying on chat history.
-- `docs/package/overview.md` describes AW as an amortized coordination layer that avoids rediscovery, stale context, weak proof, unsafe handoff, and unreviewable output.
+- `docs/package/overview.md` describes AW as an amortised coordination layer that avoids rediscovery, stale context, weak proof, unsafe handoff, and unreviewable output.
 - `.agentic-workspace/docs/reporting-contract.md` defines report output as compact, machine-readable, derived from canonical module-owned surfaces, and not a second source-of-truth store.
 - `src/agentic_workspace/contracts/optimization_bias_policy.json` already separates rendering density from invariant truth, proof requirements, execution method, and ownership semantics.
 - `src/agentic_workspace/reporting_support.py` already has router/full/section report profiles and a compact `closeout_trust` section.
-- `.agentic-workspace/config.toml` already has assurance, strict closeout, optimization bias, and workflow obligations that push agents to separate validation success, issue completion, intent satisfaction, and operating-cost direction before claiming completion.
+- `.agentic-workspace/config.toml` already has assurance, strict closeout, optimisation bias, and workflow obligations that push agents to separate validation success, issue completion, intent satisfaction, and operating-cost direction before claiming completion.
 
 The proposed work should therefore avoid a new heavy module. It should add a configurable operator-facing closeout / explanation projection over existing state.
 
@@ -72,14 +72,14 @@ include_residual_risk = true
 include_operator_questions = true
 ```
 
-This should integrate with existing `optimization_bias` rather than replace it. Optimization bias can still influence terse versus explanatory rendering, but it must not weaken proof requirements or machine-readable report truth.
+This should integrate with existing `optimization_bias` rather than replace it. Optimisation bias can still influence terse versus explanatory rendering, but it must not weaken proof requirements or machine-readable report truth.
 
 ## Operator Questions The Report Should Answer
 
 A useful post-turn report should answer the questions a responsible human operator needs answered:
 
 1. What did the agent believe the user wanted?
-2. What landed, in behavior and affected surfaces?
+2. What landed, in behaviour and affected surfaces?
 3. Why was this implementation shape chosen?
 4. How does it map back to the plan, issue, prompt, or intended outcome?
 5. How was it validated?
@@ -103,7 +103,7 @@ For larger tranches, include a compact traceability table:
 
 | Intent / requirement | Implementation surface | Evidence | Status |
 | --- | --- | --- | --- |
-| Support a requested behavior | code, docs, config, or generated surface | test, check, review, or manual proof | landed / partial / unproven |
+| Support a requested behaviour | code, docs, config, or generated surface | test, check, review, or manual proof | landed / partial / unproven |
 | Preserve package quietness | `.agentic-workspace/` or package-owned surface | diff review / ownership check | satisfied / attention |
 | Maintain future continuation | planning state, issue, review doc, memory | summary/report/closeout evidence | satisfied / follow-up |
 
@@ -201,7 +201,7 @@ Do not treat the rendered report as a new durable state store. Route durable con
 | expensive-to-rediscover repo lesson | Memory |
 | stable architecture decision | ADR / decision surface |
 | repeated friction | issue / improvement intake |
-| user-facing behavior | docs only when docs are part of the product contract |
+| user-facing behaviour | docs only when docs are part of the product contract |
 
 This keeps the feature consistent with AW's low-residue, repo-native posture.
 

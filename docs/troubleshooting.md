@@ -8,7 +8,7 @@ Ask it to read `AGENTS.md`, then `.agentic-workspace/skills/workspace-startup/SK
 
 If the entry or skill is missing, check whether the repository was [adopted](agentic-workspace-install.md#2-add-aw-to-your-repository), not merely whether the executable was installed. Do not copy package files by hand to fill the gap.
 
-If direct reading works but native skill discovery does not, inspect the host's discovery configuration. The `AGENTS.md` route remains usable without discovery links. A model can also ignore valid guidance; distinguish that behavior from missing integration in a bug report.
+If direct reading works but native skill discovery does not, inspect the host's discovery configuration. The `AGENTS.md` route remains usable without discovery links. A model can also ignore valid guidance; distinguish that behaviour from missing integration in a bug report.
 
 ## The command cannot be found or the core cannot start
 
@@ -34,13 +34,13 @@ agentic-workspace start --target . --task "Inspect guidance for this API change"
 
 Replace the task and path. Full output should expose the applicable sources or a concrete gap. An irrelevant rule should not be forced into every startup response. A lesson whose assumptions changed needs reconsideration, not automatic promotion into a rule.
 
-Use [configuration](customization.md) to correct the existing source. A chat promise or a similarly named file is not proof that the intended behavior was saved.
+Use [configuration](customization.md) to correct the existing source. A chat promise or a similarly named file is not proof that the intended behaviour was saved.
 
-## An operation is rejected as stale or unauthorized
+## An operation is rejected as stale or unauthorised
 
 Resolve the current task again. A returned request is tied to the sources and permissions under which it was prepared. Changing the task, policy, target or relevant source can invalidate it.
 
-Use the new request or explain the remaining decision. Do not edit hashes, broaden permissions or substitute a different target to make an old action pass. A successful read does not authorize a write.
+Use the new request or explain the remaining decision. Do not edit hashes, broaden permissions or substitute a different target to make an old action pass. A successful read does not authorise a write.
 
 ## An operation stopped and I do not know whether it completed
 

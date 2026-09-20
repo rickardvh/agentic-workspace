@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Independent review authentication predicate
 
 Portable signature and provenance checks. Caller-supplied facts at the pure seam cannot establish ordinary trust authority.

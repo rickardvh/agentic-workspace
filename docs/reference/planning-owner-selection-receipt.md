@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Planning owner selection receipt
 
 Receipt for an atomic local or shared Planning owner selection.

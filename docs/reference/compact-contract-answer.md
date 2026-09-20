@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Compact Contract Answer
 
 Envelope for compact contract answers returned by workspace query commands.

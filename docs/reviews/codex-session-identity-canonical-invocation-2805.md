@@ -14,6 +14,6 @@ Observed result:
 - raw logical-session identity stored: `false`
 - first command captured: `true`
 
-Only boolean availability and normalized AW status fields were retained here. The raw provider identity, logical identity value, physical session id, and local paths were excluded.
+Only boolean availability and normalised AW status fields were retained here. The raw provider identity, logical identity value, physical session id, and local paths were excluded.
 
-The existing long-lived thread target retained its truthful recovered gap and was not reset, rewritten, or backfilled. A fresh target-local session was used so first-command behavior could be observed without destroying earlier diagnostic evidence.
+The existing long-lived thread target retained its truthful recovered gap and was not reset, rewritten, or backfilled. A fresh target-local session was used so first-command behaviour could be observed without destroying earlier diagnostic evidence.

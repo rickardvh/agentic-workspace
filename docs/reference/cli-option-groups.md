@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Cli Option Groups
 
 Source-maintenance model only; not native/public command authority. Reusable CLI option-group manifest used by generated command metadata.

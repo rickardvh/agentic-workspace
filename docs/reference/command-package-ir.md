@@ -1,4 +1,5 @@
 <!-- GENERATED FILE: edit the source schema and rerun `make render-schema-reference`. -->
+
 # Command Generation Command Package IR
 
 Intermediate representation for generating command package metadata and language/runtime adapters.
