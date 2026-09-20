@@ -2,11 +2,15 @@
 paths:
   - README.md
   - docs/**
+  - .release/changes/README.md
   - packages/memory/README.md
   - packages/planning/README.md
   - packages/verification/README.md
   - packages/memory/bootstrap/README.md
+  - packages/memory/skills/README.md
+  - packages/planning/skills/README.md
   - scripts/github/README.md
+  - tools/skills/README.md
   - tools/model-cli-harness/structured-executor/README.md
   - tools/model-cli-harness/external-agent-evaluation/README.md
 read:
