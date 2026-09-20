@@ -1,141 +1,109 @@
-# Contributor Playbook
+# Contribute to AW
 
-## Purpose
+Use this guide to change Agentic Workspace itself. To configure AW in another
+project, use the [user guide](../index.md). Agents contributing here must also read
+[AGENTS.md](../../AGENTS.md) and the applicable repository instructions.
 
-Use this playbook to choose the right package, planning surface, and validation lane before making changes in `agentic-workspace`.
+## Prepare a checkout
 
-Use `docs/maintainer/maintainer-commands.md` when you need the literal command to run; use this playbook when you need routing, ownership, or validation guidance.
+You need Git, the Rust toolchain pinned by `rust-toolchain.toml`, Python and `uv`.
+Node is needed for the TypeScript binding and cross-language checks. The
+[Rust toolchain guide](rust-toolchain.md) explains the compiler requirement.
 
-This playbook is primarily for maintainers operating as coding agents. Human contributors can use it too, but it is intentionally optimized for explicit routing, bounded reads, and narrow validation.
+```bash
+git clone https://github.com/rickardvh/agentic-workspace.git
+cd agentic-workspace
+make setup
+cargo build --locked --workspace --bins
+```
 
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
+`make setup` synchronizes the shared environment and installs this checkout's Git
+hooks. The Cargo command builds both native executables; keep them together.
+Rebuild after changing Rust code or bundled contracts/resources. Imports must not
+silently build Cargo or fall back to the former Python command host.
 
-## Documentation Role Map
+The root dependency lock covers the source workspace. Prefer its frozen setup
+rather than refreshing dependencies as a side effect of unrelated work.
+[Maintainer commands](maintainer-commands.md) lists focused setup and checking commands.
 
-- `README.md`: public entrypoint and ordinary user path.
-- `AGENTS.md`: repo-owned startup adapter for agents.
-- `docs/maintainer/contributor-playbook.md`: maintainer routing, ownership, and validation guide.
-- `docs/maintainer/maintainer-commands.md`: literal command index.
-- `docs/design-principles.md`: product doctrine and tradeoff guidance.
-- `docs/maintainer/dogfooding-feedback.md`: friction admission and routing policy.
-- `.agentic-workspace/docs/*`: product-managed installed contracts.
-- `packages/*/README.md`: package-specific install, ownership, and development reference.
-- `docs/reviews/*`: evidence and history, not ordinary startup input.
+## Find the right implementation
 
-## Start Here
+Start with the behavior being changed, then locate its responsible component:
 
-Treat `start`, `summary`, `report`, `defaults`, and `preflight` as context-router views over the same workspace state:
+| Change | Start here |
+| --- | --- |
+| Current context, authorization, state or effects | `crates/agentic-workspace-core/` |
+| CLI options or forwarding | `crates/agentic-workspace-cli/` and the native CLI contract |
+| Python / TypeScript transport | `bindings/python/` / `bindings/node/` |
+| Human instructions and examples | The relevant user, reference or contributor page |
+| Generated schemas or catalogues | Their named source contract, not the generated output |
+| Repository-maintainer workflow | `tools/skills/` and its current procedure |
 
-- `start`: ordinary entry
-- `summary`: current planning, active work, and handoff state
-- `report`: workspace routing, diagnostics, warnings, and section selectors
-- `defaults`: policy, contract, setup, proof, and startup answers
-- `preflight`: takeover and recovery bundle
+Read the [architecture](../architecture.md) when a change crosses those boundaries.
+The `packages/` trees and other Python source retain maintenance/development work;
+do not infer installed APIs from their presence. Current package topology is
+specified in the [distribution reference](native-release-topology.md).
 
-Default startup path for an agent maintainer:
+Repository state under `.agentic-workspace/` is not freehand implementation scratch.
+Use the responsible AW operation for interpreted state and use the canonical source
+for generated or packaged material. A change to README or another declared intent
+source needs its source reconciliation on the introducing PR, not a later repair.
 
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
+## Make a bounded change
 
-Prefer repository-native state over chat-only context. If a follow-up matters after the current turn, record it in planning or memory instead of relying on conversational residue.
+Describe the problem and expected result before choosing a mechanism. Keep the
+patch independently understandable: the relevant implementation, documentation
+and present-tense evidence should agree on what it establishes.
 
-If you are maintaining the repo through git commits locally, run `make setup` to sync the shared environment and install hooks for this clone. If the environment is already synced and you only need to restore the hook, run `make install-hooks`. The repo-managed pre-commit Git hook allocates one collision-safe validation run, synchronizes dependencies once, formats and stages Ruff-managed files, then runs the setup-free lint and typecheck lanes. The stock pre-commit wrapper routes through the same composition when installed explicitly with `uv run pre-commit install`.
-The hook set also runs `uv run python scripts/check/check_no_absolute_paths.py`, so tracked files cannot introduce absolute filesystem paths.
+For documentation, [write for the reader's next question](../documentation-status.md).
+Introduce purpose and subject before specialized terms; separate examples from
+general behavior. For runtime work, preserve the agent's judgment and the current
+source ownership rather than adding a competing control path.
 
-## Ownership Map
+If the work uses Planning, update its progress through Planning's owner. Do not
+create plans or memory entries merely to demonstrate use of AW. Preserve useful
+continuation before stopping; one-off narration can stay in the PR or Git history.
 
-- Root workspace: shared lifecycle orchestration, root planning surfaces, memory notes, root validation entrypoints, and the thin `agentic-workspace` CLI.
-- `packages/memory/`: reusable `agentic-memory` source, packaged payload, package skills, and memory-specific tests.
-- `packages/planning/`: reusable `agentic-planning` source, packaged payload, planning helpers, and planning-specific tests.
-- `packages/verification/`: reusable `agentic-verification` source, packaged payload, manifest/report primitives, and verification-specific tests.
-- `command-generation`: released, hash-pinned maintainer dependency for generated CLI package rendering and proof. Agentic Workspace consumes it through `scripts/generate/workspace_command_generation.py` and `scripts/check/check_generated_command_packages.py`; workspace command facts remain in `src/agentic_workspace/contracts/`, and runtime behavior remains in hand-written workspace/package code unless a generated target explicitly owns the projection.
+## Validate the claim
 
-## Pick The Right Surface
+Read the [testing strategy](testing-strategy.md) before changing behavior, tests or
+CI. Name the failure classes the patch could introduce, reuse current evidence,
+and choose the lowest sufficient stable contract to test. An incident does not
+automatically justify another permanent regression.
 
-- Use root planning surfaces for active work, roadmap candidates, and execplans.
-- Use memory notes for durable repo knowledge, decisions, and recurring failure modes.
-- Treat `.agentic-workspace/memory/repo/current/` as optional routing calibration and legacy migration residue: durable facts belong in memory/docs, active state belongs in planning/status, and transient context belongs in local-only scratch.
-- Use `.agentic-workspace/docs/extraction-and-discovery-contract.md` when one change spans package source, packaged payload, and the root installed surfaces.
-- Leave touched surfaces cleaner than you found them, and route broader cleanup as follow-up instead of treating it as invisible task residue.
-- Use `.agentic-workspace/docs/compatibility-policy.md` for surface-stability questions before deciding whether a doc, manifest, or managed mirror is safe to change directly.
-- Use `.agentic-workspace/docs/lifecycle-and-config-contract.md` before changing or explaining root lifecycle behavior or configuration so the semantics stay canonical.
-- Use `.agentic-workspace/docs/generated-surface-trust.md` for canonical-source and freshness questions before editing mirrors or routing docs.
-- Edit package code only when the change belongs to that package's shipped behavior or tests.
-- Keep the root CLI and language bindings thin; current deterministic domain semantics and effects belong to the Rust core. Package-local Python tools remain source-maintenance mechanisms.
-- Treat `.agentic-workspace/` module trees as product-managed surfaces; change them through the owning package or managed source rather than as freehand repo docs.
-- Treat `tools/` agent docs as generated mirrors; change `.agentic-workspace/planning/agent-manifest.json` and rerender instead of editing them directly.
-- Author current CLI commands and options in `source_decision_contract.json` and the native implementation. Retained command-generation metadata and process conformance fixtures are classified `source-maintenance-only`; they do not define installed/public commands. Keep Python `cli.py` a native launcher.
-- Treat command/code generation, autopilot/self-improvement loops, package extraction, and heavy maintenance pressure as source-checkout-only maintainer tooling. Review artifacts and external tracker adapters are the reusable host-repo diagnostics that may remain behind `workspace.advanced_features`.
-- In checked-in human-facing docs, prefer clickable Markdown links for navigation, but keep the target paths repo-relative. Do not introduce absolute filesystem paths into links or prose unless the absolute external path is itself the documented subject.
+Typical starting points are focused Cargo tests for shared behavior, focused
+Python or Node tests for transport, and links/examples/freshness checks for docs.
+Use [Maintainer commands](maintainer-commands.md) for exact commands. Changes to
+contracts or bundled resources also require the applicable generated/payload
+refresh and validation.
 
-Operation IR has a four-level ladder:
+The ordinary hosted job is **Merge sufficiency**. Broad artifact, runtime-matrix
+and support-promotion proof is a separate explicit escalation; do not call skipped
+jobs passing. Record the commands, subject and limits of your actual evidence.
+State why proof can stop or the named remaining risk that needs more checking.
 
-- Primitive: a minimal deterministic implementation unit owned by command generation when it is portable, or by a named package/runtime extension when it is domain-specific.
-- Fragment: an operation-local reusable sequence of primitive steps. Use this for repeated step shapes inside an operation before adding another primitive.
-- Operation: the behavior contract for one command-facing action, including effects, inputs, guards, proof, and the IR plan.
-- Command: the adapter projection that exposes an operation to a target CLI or package surface.
+For behavior, test or CI changes, include the testing strategy's compact delta
+disposition: retained claim, evidence level, duplication removed or justified, and
+recurring CI cost. Documentation cleanup must not silently weaken those floors.
 
-Prefer the lowest level that expresses the behavior clearly. Do not hide ordinary composition inside a broad primitive, and do not promote a fragment into a shared primitive until repeated use and proof show that the abstraction is stable across operations or targets.
+## Open the PR
 
-As a maintainer rule of thumb:
+Use the [PR template](../../.github/PULL_REQUEST_TEMPLATE.md). State what changed,
+why it serves the intended outcome, what was validated and what remains unresolved.
+Choose the required semver classification when package behavior or shipped content
+changes; a documentation change is not a release or support promotion.
 
-- if the fact should survive the current task, it probably belongs in memory or canonical docs
-- if the fact changes what is active now or what must happen next, it probably belongs in planning
-- if the behavior is package-specific, keep it in that package rather than teaching the workspace layer too much
+Keep stacked PRs independently truthful at their own base and head. A downstream
+fix does not repair an invalid lower layer.
 
-Design guardrails:
+An agent that implemented or materially changed the patch must not approve or
+independently review it, nor direct a child agent to supply that approval. Mark it
+**ready for independent review** and leave review to an externally initiated
+reviewer using the [review skill](../../tools/skills/pr-review-recheck/SKILL.md).
+The implementer can continue other authorized work; review is not automatically
+a gate on implementing the next stack layer.
 
-- prefer repo-native state over chat residue when the fact materially affects restart cost or safe execution
-- reduce reading and reasoning cost rather than adding broad new workflow surfaces
-- preserve one clear owner per concern instead of duplicating authority across docs, memory, planning, checks, or orchestration
-- keep simple work simple; add ceremony only when complexity, ambiguity, or collaboration risk justifies it
-- keep the workspace layer thin and explicit rather than absorbing package-local domain logic
-- favor portable, selective-adoption behavior over monorepo-local cleverness
-
-For execution scaling specifically:
-
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
-
-## Validation Lanes
-
-Run the narrowest lane that proves the change.
-
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
-
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
-
-Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
-
-The default suite-oriented `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and package `make test` lanes run `pytest` serial by default. Opt into xdist only when local capacity is known, for example with `PYTEST_PARALLEL_ARGS='-n 4'`; keep direct `uv run pytest <path>` invocations available for tiny focused runs where worker startup would dominate.
-
-Final repo sync after package work:
-
-- After module package changes, refresh the affected root repo install as a final compatibility test. Use `uv run agentic-planning upgrade --target .` for Planning, `uv run agentic-memory upgrade --target .` for Memory, and the Verification report/proof lane for Verification until it has a separate payload-upgrade command.
-
-## Common Routes
-
-Resolve this concern through the canonical startup skill and the current owner request returned by `start`. The [native CLI catalogue](/docs/reference/cli-catalogue.md) defines executable commands.
-
-Generated guidance lives under `tools/`, but the source of truth for that guidance is `.agentic-workspace/planning/agent-manifest.json`. When routing docs drift, update the managed manifest and rerender instead of editing generated files directly.
-
-## Dogfooding Feedback Capture
-
-When internal use reveals friction, classify it before routing it onward.
-
-- Package defect
-- Boundary issue
-- Install-flow issue
-- Docs or routing issue
-- Monorepo-only friction
-
-Use `docs/maintainer/dogfooding-feedback.md` for the durable admission and routing policy.
-Use `.agentic-workspace/memory/repo/runbooks/dogfooding-feedback-routing.md` for the capture convention and preferred destinations.
-Use `.agentic-workspace/planning/reviews/README.md` `context-cost` mode when the question is which startup or handoff surfaces are actually used, skipped, or too insider-shaped for normal work.
-
-Use `docs/maintainer/installed-contract-design-checklist.md` when a package change adds or materially reshapes an installed file, generated mirror, or other collaboration-sensitive contract surface.
-
-## Review Expectations
-
-- Preserve package boundaries and module CLI entrypoints for package-local maintenance/debugging, while keeping Workspace as the ordinary host-repo orchestrator.
-- Prefer explicit adapters, manifests, and generated artifacts over private cross-package assumptions.
-- Capture meaningful follow-up work through the planning helpers or the narrowest current planning surface instead of leaving it in chat-only residue.
-- For any changed operational surface, use the [operational affordance design guidance](operational-affordance-design.md): make the current action, legitimate choice, bounded question or recovery constructible; keep required restrictions visible and optional detail selective; and confirm unfamiliar agents can proceed while knowledgeable agents can use sufficient sources and tools directly.
+Use the [issue-shaping skill](../../tools/skills/github-issue-shaping/SKILL.md) and
+[issue-creation skill](../../tools/skills/github-issue-creation/SKILL.md) when filing
+follow-up work. For observed product friction, start with
+[dogfooding feedback](dogfooding-feedback.md).

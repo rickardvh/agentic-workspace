@@ -1,57 +1,95 @@
-# Native module capability contract
+# Add a reusable capability
 
-An independent module supplies deterministic domain semantics through the Rust
-`agentic_workspace_core::independent_owner` API. Link its crate into a native core
-assembly; Python, TypeScript, JSON and CLI clients all project that authority.
-Python entry points and the former `module-capability/v2` schema are historical
-source-maintenance fixtures, not installed extension or fallback execution paths.
+An AW module adds a domain that needs its own facts, operations or retained state.
+Use one when a capability should be reusable across repositories. A project rule
+or a procedure usually needs only [instructions or a skill](customization.md).
+Connecting an existing AW operation to an editor instead needs an
+[external integration](extension-boundary.md).
 
-## Small authoring boundary
+The supported independent-module interface is Rust:
+`agentic_workspace_core::independent_owner`. A module is linked into a native core
+assembly. It is not a Python plugin, a dynamically loaded script or a set of
+workflow hooks. Python and TypeScript clients can use its admitted requests
+through that assembled core.
 
-| Declaration | Domain meaning |
+## Start with a read-only capability
+
+The [neutral example module](../tests/fixtures/native-independent-owner/src/lib.rs)
+is a separate crate using the public interface, without adding its identity to
+core dispatch. Use it as a working source example alongside the
+[owner API](../crates/agentic-workspace-core/src/independent_owner.rs).
+
+Begin with a capability that observes one exact repository source and reports a
+bounded fact. That lets you establish discovery, repository authorization and
+source-change behavior before adding writes.
+
+The implementation has three parts:
+
+| Part | What you provide |
 | --- | --- |
-| Registration owner/revision/api_version | Implementation identity and compatibility. |
-| Registration describe | Lazily returns the domain descriptor, settings schema and required exact source paths. |
-| Registration resolve | Deterministically observes bounded Context and returns current domain facts, blockers, request templates and an optional prepared operation. It is not an agent workflow callback. |
-| Description capability | One capability-contract/v1 owner: domains, effect classes, typed requests and operations. Unknown owner fields fail closed. |
-| Description configuration_schema | Durable module settings; no task answer or workflow cursor. |
-| Description sources | Exact bounded repository sources, separately admitted for reading and freshly observed including absence. |
-| Context | Current work, settings, observed sources and an optional typed owner request. |
-| Resolution | Facts, blockers, requests and optional prepared operation; all may be empty. |
-| PreparedOperation / Publication | Exact owner result and optional immutable owner-namespaced publication, admitted by core before effect. |
+| `Registration` | Owner name, implementation revision, API version, and the `describe` and `resolve` functions. |
+| `Description` | The capability descriptor, optional settings schema and exact source paths it needs. |
+| `Resolution` | Current facts, restrictions, request templates and, when applicable, a prepared operation. |
 
-A facts-only owner returns `Resolution { facts, ..Default::default() }` and declares
-no operation or publication. A read-only operation may return a bounded computed
-result without state. An effectful operation additionally declares its own effect
-class and prepares publication. Neither needs act/reconcile hooks, posture fields,
-startup phases, report slots or mandatory skills.
+Register through the exported `submit!` macro. The assembly links the module crate
+and calls the shared `transport::run_stdio`; the standard CLI runs beside that
+core binary. Adding an independent module therefore requires rebuilding the
+assembly. The default distribution contains no independently registered owners.
 
-The repository admits implementation/descriptor revisions, scope, exact reads,
-effects, claims, restrictions and settings separately in `modules.independent`.
-Linking and descriptor claims do not grant any authority. Configuration owns the
-bounded authorization to change those grants. Missing, changed or revoked owner
-admission cannot be replaced by a skill or client-built invocation.
+A facts-only implementation returns its facts and leaves the other `Resolution`
+fields empty. It needs no dummy operation, output file or skill.
 
-## Optional procedure
+## Authorize use in a repository
 
-A module may distribute ordinary SKILL.md plus relative resources. Register its
-passive registry path using the repository's existing skill discovery contract;
-no native owner-name switch or phase hook is needed. An optional procedure can
-nominate a current request/action by generic exact identity. The owner validates
-all submitted material. Removing the skill cannot remove domain restrictions.
-A module need not ship any skill. A skill need not belong to a module.
+Linking code makes it available; it does not give it access to every repository.
+The repository separately authorizes the exact implementation and descriptor,
+scope, source reads, effects, claims, restrictions and durable settings through
+`modules.independent`.
 
-## Currentness, effects and removal
+Use the current Configuration requests to inspect and propose that configuration.
+Do not copy a grant from an unrelated example. Missing, changed or revoked
+authorization must remain visible rather than turning into an empty successful
+result. Unrelated modules should stay out of the current query.
 
-Core binds requests and prepared operations to work, observed source revisions,
-settings and repository admission. Direct callers use current start/invoke without
-selecting a skill. Facts-only results create no custody. Immutable publication
-uses existing attempts and recovery; unknown effects cannot be retried as new work.
-Foreign-owner material remains evidence for that owner's separate admission.
-Disabling/removing a module removes its contribution, not repository-owned outputs.
+The core supplies `Context`: current work, admitted settings, freshly observed
+sources and an optional typed request. Keep semantic decisions with the agent or
+human. `resolve` interprets bounded domain inputs; it is not a callback for
+choosing how the agent should perform a task.
 
-See [native owner authoring and recovery](maintainer/independent-native-owners.md)
-and the separate [neutral fixture](../tests/fixtures/native-independent-owner/src/lib.rs).
-Its assembly links the crate without adding either fixture identity to core.
-Planning, Memory and Verification retain their current domain semantics; first-party
-packaging does not confer independent authority or define a required module slot.
+## Add an operation only when needed
+
+Declare its request and operation schemas, then return a `PreparedOperation`
+when the current request supports it. The caller submits an intention; the module
+prepares the exact action and result. The core checks the work, sources, settings,
+authorization and declared effects before execution.
+
+For retained output, `Publication` supports immutable acquisition under the
+owner's namespace. It does not permit replacing an arbitrary file, rewriting an
+input source or modifying another module's state. Such changes need the relevant
+owner's supported update operation. A read-only computation need not publish
+anything.
+
+For example, a module can return material suitable for a plan without creating a
+Planning record. The caller then submits that material through Planning's own
+creation request. This keeps the two capabilities independently responsible for
+their state.
+
+## Procedure, safety and validation
+
+A module may include an ordinary `SKILL.md` and relative resources, discoverable
+through the existing skill registry. It can also ship no skill. Removing or
+bypassing a procedure must not remove the module's restrictions.
+
+A linked native module is trusted executable code, not sandboxed code. Review it
+before assembly. Publication constraints are not protection against malicious
+Rust code running in the same process.
+
+Validate ordinary observation, irrelevant/disabled absence, changed source or
+authorization, and malformed requests. An effectful module also needs evidence
+for exact publication, collision preservation and interrupted recovery. Reuse
+core contract coverage; add adapter tests only for distinct transport risks.
+
+The [authoring and recovery reference](maintainer/independent-native-owners.md)
+explains immutable publication and retained effects in more detail. The
+[architecture](architecture.md) explains why modules share one execution boundary
+without sharing ownership of each other's data.

@@ -1,52 +1,64 @@
-# Maintainer Commands
+# Maintainer commands
 
-This page is the single-source command index for routine repo maintenance.
+Run these in an AW source checkout, not in a project that merely uses AW.
+Start with [Contribute to AW](contributor-playbook.md) for setup and change boundaries.
 
-Use this page when you need the canonical command to run, not the broader routing, ownership, or workflow-history context.
+## Prepare and build
 
-## Setup
+| Command | Result |
+| --- | --- |
+| `make setup` | Synchronize the shared environment and install this clone's Git hooks. |
+| `make install-hooks` | Restore the repository-managed hooks without requesting a different workflow. |
+| `make sync-all` | Synchronize the shared workspace environment. |
+| `cargo build --locked --workspace --bins` | Build the paired native CLI and core with the pinned toolchain. |
+
+Build both binaries before using source-checkout AW and after changes to Rust or
+bundled resources. The [Makefile](../../Makefile) and
+[toolchain guide](rust-toolchain.md) define the exact setup behavior.
+
+## Check a change
+
+Choose evidence for the changed behavior using the [testing strategy](testing-strategy.md).
+These are available commands, not a checklist to run in full on every patch.
 
 | Command | Purpose |
 | --- | --- |
-| `make setup` | Sync the shared root environment and install local git hooks |
-| `make install-hooks` | Reinstall the repo-managed local git hooks for this clone |
-| `make sync-all` | Sync the shared root environment for all workspace packages |
+| `cargo fmt --all -- --check` | Check Rust formatting. |
+| `cargo test --locked -p agentic-workspace-core <test-filter>` | Run selected Rust core tests; replace the filter with the relevant test name. |
+| `uv run --frozen pytest <test-path> -q` | Run a focused Python or public-consumer test file. |
+| `make lint` | Run workspace lint. |
+| `make typecheck` | Run workspace type checks. |
+| `make check` | Run the broader root validation composition when the claim warrants it. |
 
-## Local Maintenance
+For a caller that has already synchronized dependencies, use the corresponding
+available `*-nosync` target rather than repeating setup. Test execution is serial
+by default; parallel execution needs a deliberate local capacity choice.
 
-| Command | Purpose |
-| --- | --- |
-| `python scripts/check/check_maintainer_surfaces.py` | Run the aggregate maintainer-surface checker directly |
-| `uv run python tools/chatgpt_review_loop.py handoff` | Opt the current pushed PR head into the repo-local external ChatGPT review continuation loop |
-| `uv run python tools/chatgpt_review_loop.py job-result --session-id <uuid> --proof-status passed --proof-command "<command>" --proof-exit-code 0 --push-status passed --supersede` | Explicitly correct an already-recorded same-launch result after a rebase and later successful push |
-| `uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60` | Run the bounded, model-free local review poller; see [ChatGPT review to Codex continuation](chatgpt-review-continuation.md) |
-| `make start-review-poller` | Idempotently start the detached global all-open PR-review poller for this checkout when a maintainer explicitly wants local review polling |
-| `make format` | Apply Ruff formatting across workspace and packages |
-| `make lint` | Run lint checks across workspace and packages |
-| `make typecheck` | Run type checks across workspace and packages |
-| `make render-agent-docs` | Regenerate routing docs from the planning manifest |
-| `python scripts/check/check_source_payload_operational_install.py` | Run advisory checks for source/payload/root-install boundary drift |
-| `make maintainer-surfaces` | Run the maintainer-surface liveness path for generated docs, startup-policy consistency, packaged payload contracts, and source/payload/root-install boundary drift |
-| `make planning-surfaces` | Run the underlying planning-surface audit directly |
-| `uv run python scripts/release/promote_command_generation_release.py --version <version>` | Promote the AW `command-generation` dependency pin to a released wheel, verify the wheel SHA-256, update generated conformance Dockerfile refs, and refresh `uv.lock` |
+The Git hook runs its own bounded formatting/lint/type checks. Passing it does not
+replace focused proof for the changed behavior. Hosted **Merge sufficiency** and
+explicit exhaustive admission are separate evidence levels; see the testing
+strategy for their current scope.
 
-## Validation Lanes
+## Refresh generated material
+
+Read a generated file's source notice before choosing a command.
 
 | Command | Purpose |
 | --- | --- |
-| `make check` | Root validation lane |
-| `make check-memory` | Memory package lane |
-| `make check-planning` | Planning package lane |
-| `make check-all` | Memory and planning package lanes |
+| `make render-schema-reference` | Regenerate schema and contract reference pages. |
+| `make schema-reference-docs` | Check the generated reference pages against their sources. |
+| `make render-agent-docs` | Regenerate the maintained agent-routing projections. |
+| `make maintainer-surfaces` | Check the relevant maintained source/payload/routing surfaces. |
 
-## Policy
+These commands maintain source-derived output; they do not adopt another
+repository or authorize edits to retained owner state. Package-specific refresh
+and release artifact checks belong to the [source/payload boundary](source-payload-operational-install.md)
+and [native distribution reference](native-release-topology.md).
 
-- The repo-managed pre-commit Git hook owns one collision-safe validation run, synchronizes once, formats and stages Ruff-managed files, and then runs setup-free lint, typecheck, and absolute-path checks.
-- Reinstall hooks with `make install-hooks`; do not use `uv run pre-commit install` directly unless you intentionally want the stock pre-commit wrapper instead of the repo-managed hook behavior.
-- `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and the package `make test` lanes run pytest serial by default; opt into xdist only when local capacity is known, for example with `PYTEST_PARALLEL_ARGS='-n 4'`.
-- Full tests should run in CI and in explicit local validation runs such as `make check-all`.
-- Run generated command package conformance and Docker conformance as explicit serial proof lanes. For Python-only generated output, prefer `uv run python scripts/check/check_generated_command_packages.py --python-conformance` followed by `uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker`; use the cross-target conformance and Docker flags only when proof selection names those broader targets.
-- Use `python scripts/check/check_maintainer_surfaces.py` when you want the aggregate maintainer wrapper directly; it includes the planning maintainer checks and the boundary checker when that checker exists in the repo.
-- Start `make start-review-poller` manually only when local all-open PR review polling is needed. Repeating it is safe: it reuses the recorded live poller PID instead of starting another process. Its local PID record and log are gitignored under `.agentic-workspace/local/chatgpt-review-loop/`.
-- Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, either package's installed contract surfaces, or the source/payload/root-install boundary.
-- Use `.agentic-workspace/docs/generated-surface-trust.md` for the canonical source and freshness rules behind generated maintainer surfaces.
+## Specialized maintenance
+
+Use the dedicated procedure rather than copying a long command from a historical
+report: [release and versioning](../release-and-versioning.md),
+[review workflow](../../tools/skills/pr-review-recheck/SKILL.md), or
+[local review continuation tooling](chatgpt-review-continuation.md).
+Review polling is opt-in local tooling, not part of ordinary contribution setup.
