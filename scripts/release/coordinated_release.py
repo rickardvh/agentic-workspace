@@ -182,6 +182,26 @@ def validate_next_rc(ownership: dict[str, Any], *, tag: str, source_commit: str)
 PROMOTION_RECORD = ".release/promotions/v1.0.0.json"
 
 
+def _verify_error_vector_reconciliation(before: str, after: str, path: str) -> None:
+    """Only diagnostic expectations in the retained error vectors may change."""
+    message = "Proof vector reconciliation may change only nonempty error_contains strings"
+    try:
+        old, new = (json.loads(_run(["git", "show", f"{commit}:{path}"]).stdout) for commit in (before, after))
+        old_cases, new_cases = old["error_cases"], new["error_cases"]
+        if not isinstance(old_cases, list) or not isinstance(new_cases, list) or len(old_cases) != len(new_cases):
+            raise ValueError(message)
+        for old_case, new_case in zip(old_cases, new_cases, strict=True):
+            for case in (old_case, new_case):
+                if not isinstance(case["error_contains"], str) or not case["error_contains"].strip():
+                    raise ValueError(message)
+            old_case["error_contains"] = new_case["error_contains"]
+        # Compare JSON encodings so a changed boolean cannot equal an integer.
+        if json.dumps(old, sort_keys=True) != json.dumps(new, sort_keys=True):
+            raise ValueError(message)
+    except (KeyError, TypeError, ValueError, subprocess.CalledProcessError) as error:
+        raise SystemExit(message) from error
+
+
 def _proof_reconciliation(verified: dict[str, Any], preparation_source: str) -> dict[str, str] | None:
     """Consume source-owned, exact-commit admission; never infer acceptance from paths."""
     source = verified["reconstruction_source_commit"]
@@ -242,9 +262,12 @@ def _proof_reconciliation(verified: dict[str, Any], preparation_source: str) -> 
                 or re.fullmatch(r"docs/reference/[a-zA-Z0-9_-]+\.md", changed_path)
                 or re.fullmatch(r"(?:packages/(?:memory|planning|verification)/)?tests/test_[a-zA-Z0-9_]+\.py", changed_path)
                 or changed_path == "packages/planning/scripts/check/check_planning_surfaces.py"
+                or changed_path == "tests/vectors/source_decision.json"
             )
             if not (changeset or (proof_path if field == "reconciliation_paths" else changed_path in tooling_paths)):
                 raise SystemExit(f"Product path cannot be admitted as proof reconciliation: {changed_path}")
+            if changed_path == "tests/vectors/source_decision.json":
+                _verify_error_vector_reconciliation(before, after, changed_path)
             for commit in (before, after):
                 entry = _run(["git", "ls-tree", commit, "--", changed_path]).stdout
                 if entry and not entry.startswith("100644 blob "):
