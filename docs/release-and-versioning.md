@@ -259,6 +259,12 @@ tooling paths are restricted to this release verifier, its RC tests, this docume
 and changesets. Runtime, payload, adapters, dependencies, file-mode changes and
 arbitrary release workflow modifications cannot enter through this admission.
 
+The retained `tests/vectors/source_decision.json` fixture may also be reconciled,
+but only its existing error cases' nonempty `error_contains` strings may change.
+The verifier preserves every input, case identity, case count/order and success
+expectation; this allowance cannot admit a changed product contract or weaker
+rejection inputs. The exact proof commit and finite path set remain required.
+
 The stable promotion record keeps `source_commit` as the accepted RC product
 source and separately binds the preparation source, both immutable reconciliation
 revisions and the admission digest (UTF-8 text with normalized newlines). The

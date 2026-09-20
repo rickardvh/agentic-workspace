@@ -175,13 +175,38 @@ def test_exact_rc_to_stable_promotion_rejects_product_and_lock_deltas(tmp_path, 
         module.verify_rc_promotion(ownership)
 
 
-def reconciled_repository(tmp_path, monkeypatch, proof_file="tests/test_proof.py"):
+def reconciled_repository(tmp_path, monkeypatch, proof_file="tests/test_proof.py", vector_change=None):
     module, ownership, source = repository(tmp_path, monkeypatch)
+    vector = proof_file == "tests/vectors/source_decision.json"
+    if vector:
+        proof_path = tmp_path / proof_file
+        proof_path.parent.mkdir(parents=True)
+        proof_path.write_text(
+            json.dumps(
+                {
+                    "cases": [{"id": "success", "input": {}, "expect": {"status": "direct"}}],
+                    "error_cases": [
+                        {"id": "rejected", "input": {"arguments": 1}, "error_contains": "old diagnostic"},
+                        {"id": "other", "input": {}, "error_contains": "other diagnostic"},
+                    ],
+                }
+            )
+        )
+        _git(tmp_path, "add", ".")
+        _git(tmp_path, "commit", "-m", "retained vectors")
+        source = _git(tmp_path, "rev-parse", "HEAD")
     _, rc = candidate(module, ownership, tmp_path, source)
     _git(tmp_path, "switch", "master")
     proof_path = tmp_path / proof_file
     proof_path.parent.mkdir(exist_ok=True)
-    proof_path.write_text("# Current proof; no product changes.\n")
+    if vector:
+        data = json.loads(proof_path.read_text())
+        data["error_cases"][0]["error_contains"] = "bounded diagnostic"
+        if vector_change:
+            vector_change(data)
+        proof_path.write_text(json.dumps(data))
+    else:
+        proof_path.write_text("# Current proof; no product changes.\n")
     _git(tmp_path, "add", ".")
     _git(tmp_path, "commit", "-m", "reviewed proof reconciliation")
     proof = _git(tmp_path, "rev-parse", "HEAD")
@@ -259,6 +284,30 @@ def test_reconciliation_rejects_any_intervening_source_drift(tmp_path, monkeypat
 def test_reconciliation_cannot_reclassify_product_or_dependencies_as_proof(tmp_path, monkeypatch, path):
     module, _, rc, _, _ = reconciled_repository(tmp_path, monkeypatch, proof_file=path)
     with pytest.raises(SystemExit, match="Product path cannot be admitted"):
+        module._proof_reconciliation(rc, _git(tmp_path, "rev-parse", "HEAD"))
+
+
+def test_reconciliation_admits_only_retained_vector_diagnostics(tmp_path, monkeypatch):
+    module, ownership, rc, _, _ = reconciled_repository(tmp_path, monkeypatch, "tests/vectors/source_decision.json")
+    assert module.plan_rc_promotion(ownership, rc_tag=rc["tag"])["release_required"] is True
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda data: data["error_cases"][0]["input"].update(arguments=True),
+        lambda data: data["error_cases"][0].update(id="changed"),
+        lambda data: data["error_cases"].pop(),
+        lambda data: data["error_cases"].reverse(),
+        lambda data: data["error_cases"][0].update(error_contains=""),
+        lambda data: data["error_cases"][0].update(error_contains=17),
+        lambda data: data["error_cases"][0].pop("error_contains"),
+        lambda data: data["cases"][0]["expect"].update(status="blocked"),
+    ],
+)
+def test_reconciliation_rejects_vector_contract_changes(tmp_path, monkeypatch, mutation):
+    module, _, rc, _, _ = reconciled_repository(tmp_path, monkeypatch, "tests/vectors/source_decision.json", vector_change=mutation)
+    with pytest.raises(SystemExit, match="only nonempty error_contains"):
         module._proof_reconciliation(rc, _git(tmp_path, "rev-parse", "HEAD"))
 
 

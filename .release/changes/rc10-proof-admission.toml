@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Admit independently accepted RC10 diagnostic proof reconciliation while preserving all vector inputs and exact release identities."
