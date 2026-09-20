@@ -128,8 +128,8 @@ permission to repeat a previous operation.
 
 For queries, detail selection and invocation, the Rust `operating` calls accept
 the corresponding JSON inputs directly. Clients must use returned references and
-actions rather than inventing their identity or effect-bearing fields. Optional questions and actions are not an instruction to
-execute everything offered.
+actions rather than inventing their identity or effect-bearing fields. Optional
+questions and actions are not an instruction to execute everything offered.
 
 An invocation can report rejection or uncertainty in its result; absence of a
 language exception is not proof that it applied. Read `effect_outcome` separately
