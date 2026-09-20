@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Expose current owner recovery routes for blocked consequences, preserve remaining restrictions after local Assignment, isolate validation subprocesses from caller Git context, and replace custom PR approval enforcement with ordinary independent-review instructions."
-issues = [3226, 3227, 3236]

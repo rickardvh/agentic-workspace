@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Align migrated conformance consumers with native command admission and retain explicit cumulative validation gaps."
-issues = [2909, 2983]

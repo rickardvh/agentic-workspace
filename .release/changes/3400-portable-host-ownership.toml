@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Preserve host ownership during portable refresh, migrate authenticated legacy source-policy payloads, and derive host read profiles without source-maintenance policy leakage."

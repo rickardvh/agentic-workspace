@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Align three retained public-request rejection vectors with the admitted bounded diagnostics; rejection behavior is unchanged."

@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Teach the ordinary AW procedure to submit non-trivial owner requests as UTF-8 JSON files through existing input and task-scratch lifecycles."

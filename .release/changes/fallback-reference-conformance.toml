@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Describe the current read-only fallback boundary and refresh generated surface references."
-issues = [3224, 3249, 3253]

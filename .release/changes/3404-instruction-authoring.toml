@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Document scoped instruction authoring, current admission and supported evidence boundaries."
-issues = [3404, 3445]

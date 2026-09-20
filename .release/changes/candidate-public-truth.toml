@@ -1,4 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Align candidate-facing usage and installed-surface documentation with delegation, retained knowledge and repository-only reading."
-issues = [3208, 2616, 2909, 3059]

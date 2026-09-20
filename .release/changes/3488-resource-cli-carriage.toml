@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Carry exact resource action envelopes through the native CLI without overriding bound context, and bind changed paths into resource currentness."

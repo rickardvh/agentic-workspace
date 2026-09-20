@@ -1,0 +1,19 @@
+{
+  "kind": "agentic-workspace/rc-stable-promotion/v1",
+  "rc_tag": "v1.0.0-rc.10",
+  "rc_artifact_commit": "00e9d6e46b64416e67ab62652cfa90b01bbefdf6",
+  "source_commit": "0223e03eca08425c95c0d31b1bbf820f2d45e870",
+  "stable_tag": "v1.0.0",
+  "rc_package_versions": {
+    "python": "1.0.0rc10",
+    "npm": "1.0.0-rc.10",
+    "cargo": "1.0.0-rc.10"
+  },
+  "proof_reconciliation": {
+    "preparation_source_commit": "8657b008407d590d3d60991e0cb60be05061d496",
+    "reconciliation_commit": "599e910cb99472c433b3bfa0ffbfb1a22769db96",
+    "release_tooling_commit": "1db0fd34636394caefc03d6af55a4ebd3984ae1a",
+    "admission_path": ".release/proof-reconciliations/v1.0.0-rc.10.json",
+    "admission_sha256": "380ce139e37f1502190a6db1d6d1f3b1de267950431623730c3bc0ac1688c091"
+  }
+}
