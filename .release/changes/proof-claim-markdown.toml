@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Remove redundant blank lines from the packaged proof claim reference so native refresh produces MD012-clean Markdown."
