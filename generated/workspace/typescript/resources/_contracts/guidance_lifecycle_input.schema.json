@@ -38,7 +38,7 @@
     },
     "expected_record_revisions_json": {
       "type": "string",
-      "description": "Serialized map of guidance identifiers to expected revisions for multi-record mutation."
+      "description": "Serialised map of guidance identifiers to expected revisions for multi-record mutation."
     },
     "reason": {
       "type": "string",

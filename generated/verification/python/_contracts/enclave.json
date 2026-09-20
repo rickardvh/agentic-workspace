@@ -56,6 +56,12 @@
       "lifetime": "repository"
     },
     {
+      "path": ".agentic-workspace/proof/current",
+      "scope": "subtree",
+      "class": "mutable-state",
+      "lifetime": "durable"
+    },
+    {
       "path": ".agentic-workspace/proof/receipts",
       "scope": "subtree",
       "class": "mutable-state",
