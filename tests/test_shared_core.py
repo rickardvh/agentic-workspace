@@ -471,6 +471,9 @@ def test_target_bindings_cannot_hide_reducer_semantics() -> None:
         "declaration",
         "help",
         "parse",
+        # Accepted CLI envelope transport: context assertions and unchanged
+        # forwarding, with effect/currentness semantics still in the core.
+        "carry_input",
         "run",
         "forward",
         "main",
