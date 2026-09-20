@@ -1,16 +1,16 @@
 //! Read-only ingress for existing governing sources and retained interpretation.
+use crate::dependency_binding::{self, Basis, Currentness, Observation, Scheme};
 use crate::{CoreError, digest};
 use cap_std::{ambient_authority, fs::Dir};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use std::path::Path;
 pub(crate) const MIRROR: &str = ".agentic-workspace/system-intent/intent.toml";
 
 pub(crate) fn bytes(root: &Dir, reference: &str) -> Result<Option<Vec<u8>>, CoreError> {
-    crate::native_verification::read(root, reference).map_err(CoreError::new)
+    dependency_binding::read(root, reference)
 }
 pub(crate) fn hash(bytes: &[u8]) -> String {
-    format!("sha256:{:x}", Sha256::digest(bytes))
+    dependency_binding::revision(bytes, Scheme::RawBytes).expect("raw bytes always have a revision")
 }
 pub(crate) fn observation(root: &Dir, reference: &str) -> Value {
     match bytes(root, reference) {
@@ -33,45 +33,51 @@ pub(crate) fn stale_references(root: &Dir, declaration: &Value, value: &Value) -
     let preferred = declaration["preferred_source"]
         .as_str()
         .or_else(|| references.first().copied());
-    let mut stale = Vec::new();
-    for reference in &references {
-        let record = value["source_records"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|r| r["path"] == *reference);
-        // Historical source_records hash Python universal-newline text.
-        let observed = bytes(root, reference)
-            .ok()
-            .flatten()
-            .and_then(|b| String::from_utf8(b).ok())
-            .map(|text| {
-                let normalized = text.replace("\r\n", "\n").replace('\r', "\n");
-                format!("{:x}", Sha256::digest(normalized.as_bytes()))
-            });
-        if !record.is_some_and(|r| {
-            r["present"] == true
-                && r["sha256"].as_str() == observed.as_deref()
-                && observed.is_some()
-        }) {
-            stale.push((*reference).to_owned());
-        }
-    }
-    for record in value["source_records"].as_array().into_iter().flatten() {
-        if let Some(reference) = record["path"].as_str() {
-            if !references.contains(&reference) {
-                stale.push(reference.to_owned());
-            }
-        } else {
-            stale.push("invalid-source-record".to_owned());
-        }
+    let observed: Vec<_> = references
+        .iter()
+        .map(|reference| dependency_binding::observe(root, reference, Scheme::UniversalNewlineUtf8))
+        .collect();
+    // Adapt historical records without rewriting their hashes or review meaning.
+    let records: Vec<_> = value["source_records"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|r| Observation {
+            identity: r["path"].as_str().unwrap_or("invalid-source-record").into(),
+            scheme: Scheme::UniversalNewlineUtf8,
+            revision: r["sha256"].as_str().map(|s| format!("sha256:{s}")),
+            status: if r["present"] == true {
+                Currentness::Current
+            } else {
+                Currentness::Missing
+            },
+        })
+        .collect();
+    // Records are an unordered set. Declaration/preference order still binds
+    // the ordinary view and proposal revision.
+    let mut observed = observed;
+    let mut records = records;
+    observed.sort_by(|a, b| a.identity.cmp(&b.identity));
+    records.sort_by(|a, b| a.identity.cmp(&b.identity));
+    let identity = json!({"owner":"system-intent","subject":MIRROR});
+    let comparison = dependency_binding::compare(
+        Basis {
+            conclusion: &identity,
+            dependencies: &observed,
+        },
+        Some(Basis {
+            conclusion: &identity,
+            dependencies: &records,
+        }),
+    );
+    let mut stale = comparison.changed;
+    if (comparison.membership_changed && comparison.status != Currentness::Current)
+        || value["source_records"].as_array().is_none()
+    {
+        stale.push("source_records".into());
     }
     if value["preferred_source"].as_str() != preferred {
         stale.push("preferred_source".to_owned());
-    }
-    // Duplicate records are not an exact declared-source set.
-    if value["source_records"].as_array().map(Vec::len) != Some(references.len()) {
-        stale.push("source_records".into());
     }
     stale
 }

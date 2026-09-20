@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Share native dependency observations while preserving System Intent source compatibility and authority."

@@ -5,6 +5,7 @@ pub mod attempt;
 pub mod attempt_store;
 pub mod continuity;
 pub mod decision_source;
+mod dependency_binding;
 pub mod direct_task;
 pub mod independent_owner;
 pub mod instruction_applicability;
