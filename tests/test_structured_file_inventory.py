@@ -21,6 +21,13 @@ def test_inventory_shape_is_valid() -> None:
 
 def test_current_tracked_structured_files_are_classified() -> None:
     assert check_structured_file_inventory.inventory_findings() == []
+    inventory = check_structured_file_inventory.load_inventory()
+    assert (
+        check_structured_file_inventory.unmatched_structured_files(
+            [".agentic-workspace/proof/current/source-reconciliation-" + "a" * 64 + ".json"], inventory
+        )
+        == []
+    )
 
 
 def test_tracked_files_exclude_planned_deletions(tmp_path: Path) -> None:
@@ -77,11 +84,15 @@ def test_staged_index_precondition_accepts_staged_structured_deletion(tmp_path: 
 def test_unmatched_structured_file_fails() -> None:
     inventory = check_structured_file_inventory.load_inventory()
 
-    findings = check_structured_file_inventory.unmatched_structured_files(["docs/new-machine-state.json"], inventory)
+    paths = [
+        "docs/new-machine-state.json",
+        ".agentic-workspace/proof/unowned/current.json",
+        ".agentic-workspace/proof/current/unrelated.json",
+    ]
+    findings = check_structured_file_inventory.unmatched_structured_files(paths, inventory)
 
-    assert len(findings) == 1
-    assert findings[0].path == "docs/new-machine-state.json"
-    assert "not classified" in findings[0].message
+    assert {finding.path for finding in findings} == set(paths)
+    assert all("not classified" in finding.message for finding in findings)
 
 
 def test_unstructured_files_are_ignored() -> None:
@@ -593,7 +604,7 @@ def test_generated_adapter_requires_matching_mirror_metadata() -> None:
     findings = check_structured_file_inventory.generated_mirror_policy_findings(["tools/agent-manifest.json"], inventory)
 
     assert len(findings) == 1
-    assert "generated mirror must declare" in findings[0].message
+    assert "matching generated_mirrors metadata" in findings[0].message
 
 
 def test_generated_mirror_metadata_accepts_markdown_adapter() -> None:

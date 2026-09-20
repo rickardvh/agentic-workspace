@@ -915,6 +915,25 @@
       "storage_class": "source-of-truth"
     },
     {
+      "checked_in_justification": "Verification-owned durable operational selection for source-reconciliation groups; repository-visible references do not transfer target-bound receipt custody.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "guardrails": {
+        "max_items": 4096,
+        "max_bytes": 262144,
+        "preferred_refs": [
+          "exact source-reconciliation receipt references"
+        ]
+      },
+      "notes": "One current projection per relation. Only Verification publication replaces superseded groups under its existing lock; current_groups validates bounded unique references and retained validates exact receipt/attempt custody before reuse. Preserve during package upgrade, adoption and uninstall. Generic cleanup must not remove it. Missing or corrupt current material leaves coverage unresolved; historical receipt enumeration is not a recovery substitute. Publication temporaries share the same owner and exact retry checks.",
+      "owner": "verification",
+      "pattern": ".agentic-workspace/proof/current/source-reconciliation-*.json",
+      "schema_or_validator": "crates/agentic-workspace-core/src/native_source_reconciliation.rs::current_groups / retained; crates/agentic-workspace-core/src/current_projection.rs; tests/test_native_source_reconciliation.py",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
       "checked_in_justification": "Trusted proof receipts bind reusable validation evidence to exact commands, paths, and repository state.",
       "editable_by_agents": false,
       "format": "json",
@@ -2428,6 +2447,114 @@
       "schema_or_validator": "uv/build-backend packaging validation",
       "status": "typed-validator-backed",
       "storage_class": "platform-tooling"
+    },
+    {
+      "checked_in_justification": "Canonical release target/runner matrix consumed by artifact production; this classification does not add or admit platforms.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Canonical release target/runner matrix consumed by artifact production; this classification does not add or admit platforms.",
+      "owner": "workspace-release-maintainers",
+      "pattern": ".github/release-platforms.json",
+      "schema_or_validator": "scripts/release/platform_release.py platform-set admission and consumer verification",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Exact existing stable promotion admission; preserve historical release decisions rather than regenerate acceptance.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "notes": "Exact existing stable promotion admission; preserve historical release decisions rather than regenerate acceptance.",
+      "owner": "workspace-release-maintainers",
+      "pattern": ".release/promotions/v1.0.0.json",
+      "schema_or_validator": "validator: scripts/release/coordinated_release.py::verify_rc_promotion",
+      "status": "typed-validator-backed",
+      "storage_class": "non-reconstructable-decision"
+    },
+    {
+      "checked_in_justification": "Canonical portable owner declarations; generated host ledgers preserve these facts separately from source-maintenance policy.",
+      "editable_by_agents": true,
+      "format": "toml",
+      "generated": false,
+      "notes": "Canonical portable owner declarations; generated host ledgers preserve these facts separately from source-maintenance policy.",
+      "owner": "workspace-agent-interface",
+      "pattern": "src/agentic_workspace/contracts/portable_ownership.toml",
+      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_ownership.rs and scripts/generate/generate_agent_interface.py::render_host_payload",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Existing exact source-owned release proof reconciliation admission; classification grants no new release acceptance.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "notes": "Existing exact source-owned release proof reconciliation admission; classification grants no new release acceptance.",
+      "owner": "workspace-release-maintainers",
+      "pattern": ".release/proof-reconciliations/v1.0.0-rc.8.json",
+      "schema_or_validator": "validator: scripts/release/coordinated_release.py::_proof_reconciliation",
+      "status": "typed-validator-backed",
+      "storage_class": "non-reconstructable-decision"
+    },
+    {
+      "checked_in_justification": "Existing exact source-owned release proof reconciliation admission; classification grants no new release acceptance.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "notes": "Existing exact source-owned release proof reconciliation admission; classification grants no new release acceptance.",
+      "owner": "workspace-release-maintainers",
+      "pattern": ".release/proof-reconciliations/v1.0.0-rc.9.json",
+      "schema_or_validator": "validator: scripts/release/coordinated_release.py::_proof_reconciliation",
+      "status": "typed-validator-backed",
+      "storage_class": "non-reconstructable-decision"
+    },
+    {
+      "checked_in_justification": "Existing exact source-owned release proof reconciliation admission; classification grants no new release acceptance.",
+      "editable_by_agents": false,
+      "format": "json",
+      "generated": false,
+      "notes": "Existing exact source-owned release proof reconciliation admission; classification grants no new release acceptance.",
+      "owner": "workspace-release-maintainers",
+      "pattern": ".release/proof-reconciliations/v1.0.0-rc.10.json",
+      "schema_or_validator": "validator: scripts/release/coordinated_release.py::_proof_reconciliation",
+      "status": "typed-validator-backed",
+      "storage_class": "non-reconstructable-decision"
+    },
+    {
+      "checked_in_justification": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
+      "owner": "memory",
+      "pattern": "packages/memory/src/repo_memory_bootstrap/contracts/enclave.json",
+      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_enclave.rs::declarations / validate",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
+      "owner": "planning",
+      "pattern": "packages/planning/src/repo_planning_bootstrap/contracts/enclave.json",
+      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_enclave.rs::declarations / validate",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
+    },
+    {
+      "checked_in_justification": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
+      "editable_by_agents": true,
+      "format": "json",
+      "generated": false,
+      "notes": "Canonical module declaration of enclave owner, class and lifetime; classification admits no writer or semantic conclusion.",
+      "owner": "verification",
+      "pattern": "packages/verification/src/repo_verification_bootstrap/contracts/enclave.json",
+      "schema_or_validator": "validator: crates/agentic-workspace-core/src/native_enclave.rs::declarations / validate",
+      "status": "typed-validator-backed",
+      "storage_class": "source-of-truth"
     }
   ],
   "generated_mirrors": [

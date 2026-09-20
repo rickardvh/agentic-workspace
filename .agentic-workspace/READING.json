@@ -2,7 +2,7 @@
   "kind": "agentic-workspace/repository-read-profile/v1",
   "source": {
     "path": ".agentic-workspace/OWNERSHIP.toml",
-    "git_blob_sha1": "0a653964edfe8dcc15f9f4fb0bef03161065fa3b"
+    "git_blob_sha1": "70aeb049c2812ecdd20a9af4c7a24af1c1accf55"
   },
   "authority": "orientation-only; no mutation, effect, proof, completion or issue-close authority",
   "currentness": "Read one repository revision; record each selected path and provider blob identity. Reconsider changed selected sources/dependencies; unrelated blobs do not invalidate the reading. Source identity is not truth or runtime admission.",
@@ -95,6 +95,20 @@
         "current proof selection",
         "fresh check success",
         "claim/effect authority"
+      ]
+    },
+    {
+      "concern": "verification-current-reconciliation",
+      "owner": "verification",
+      "refs": [
+        ".agentic-workspace/proof/current/"
+      ],
+      "select": "Select only source-reconciliation-<relation>.json for the relevant relation; follow its exact receipt references when needed. Verification validates the bounded projection and receipt custody. Publication supersedes current groups; upgrades, adoption and uninstall preserve this durable owner state and its exact publication temporaries. Missing or corrupt material is unresolved coverage, never authority to reconstruct acceptance from history.",
+      "unknown": [
+        "current coverage",
+        "receipt custody",
+        "semantic acceptance",
+        "publication authority"
       ]
     }
   ]

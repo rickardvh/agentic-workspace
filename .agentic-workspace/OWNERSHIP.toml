@@ -417,3 +417,19 @@ owner = "source-maintenance"
 scope = "exact"
 class = "managed-support"
 lifetime = "current-source"
+
+[[managed_surfaces]]
+module = "verification"
+path = ".agentic-workspace/proof/current/"
+kind = "current-source-reconciliation-state"
+ownership = "repo_owned"
+uninstall_policy = "preserve-current-owner-state"
+
+[[authority_surfaces]]
+concern = "verification-current-reconciliation"
+read = { refs = [".agentic-workspace/proof/current/"], select = "Select only source-reconciliation-<relation>.json for the relevant relation; follow its exact receipt references when needed. Verification validates the bounded projection and receipt custody. Publication supersedes current groups; upgrades, adoption and uninstall preserve this durable owner state and its exact publication temporaries. Missing or corrupt material is unresolved coverage, never authority to reconstruct acceptance from history.", unknown = ["current coverage", "receipt custody", "semantic acceptance", "publication authority"] }
+surface = ".agentic-workspace/proof/current/"
+owner = "verification"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Durable current source-reconciliation selection, owned and replaced only by Verification. Repository visibility does not transfer task/target-bound authority; generic cleanup must preserve it."
