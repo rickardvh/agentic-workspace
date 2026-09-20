@@ -1,0 +1,19 @@
+{
+  "kind": "agentic-workspace/rc-proof-reconciliation/v1",
+  "rc_tag": "v1.0.0-rc.10",
+  "rc_artifact_commit": "00e9d6e46b64416e67ab62652cfa90b01bbefdf6",
+  "product_source_commit": "0223e03eca08425c95c0d31b1bbf820f2d45e870",
+  "reconciliation_commit": "599e910cb99472c433b3bfa0ffbfb1a22769db96",
+  "release_tooling_commit": "1db0fd34636394caefc03d6af55a4ebd3984ae1a",
+  "reconciliation_paths": [
+    ".release/changes/rc10-diagnostic-proof-reconciliation.toml",
+    "tests/vectors/source_decision.json"
+  ],
+  "release_tooling_paths": [
+    ".release/changes/rc10-proof-admission.toml",
+    "docs/release-and-versioning.md",
+    "scripts/release/coordinated_release.py",
+    "tests/test_release_candidate.py"
+  ],
+  "acceptance_reference": "https://github.com/rickardvh/agentic-workspace/pull/3503#issuecomment-5750131130"
+}
