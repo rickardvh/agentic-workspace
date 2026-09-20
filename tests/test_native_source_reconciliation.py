@@ -540,11 +540,37 @@ def test_governing_source_reverse_scope_is_admitted_resumable_and_quiet(tmp_path
     context["changed"] = ["docs/guide.md"]
     (tmp_path / "docs/guide.md").write_text("Substantive wire-format change")
     assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
+    # Historical preparations cannot exhaust operational source discovery.
+    effects = tmp_path / ".agentic-workspace/local/effects"
+    for index in range(300):
+        (effects / f"instruction-historical-{index}.prepared.json").write_text("old preparation")
+    _, _, replacement = instruction(call, source, content + "Keep this explicit scope.\n")
+    assert call(invocation=replacement)["status"] == "applied"
     # An unadmitted withdrawal cannot erase the existing owner-published relation.
     (tmp_path / source).write_text("---\npaths: [elsewhere/**]\nread: [docs/guide.md]\n---\nContext only\n")
     assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
     (tmp_path / source).unlink()
     assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
+    # Corrupt real admitted custody after withdrawal must not erase governance.
+    import json
+
+    index = effects / "instruction-current/index.json"
+    posts = json.loads(index.read_text())[source]
+    assert isinstance(posts, str)
+    assert posts == replacement["arguments"]["post_revision"]
+    current = next(
+        p
+        for p in effects.glob("instruction-*.prepared.json")
+        if "historical" not in p.name and json.loads(p.read_text())["invocation"]["arguments"]["post_revision"] == posts
+    )
+    record = json.loads(current.read_text())
+    record["outcome"] = {"status": "forged"}
+    current.write_text(json.dumps(record))
+    view = call()
+    assert view["instructions"]["governance_discovery"]["status"] == "unavailable"
+    assert any(row["code"].endswith("admitted-source-discovery-unavailable") for row in view["decision_packet"]["blockers"])
+    index.unlink()
+    assert call()["instructions"]["governance_discovery"]["status"] == "unavailable"
 
 
 def test_governing_overlap_and_self_membership_keep_separate_authority(tmp_path, shared_core_binary, native_cli):

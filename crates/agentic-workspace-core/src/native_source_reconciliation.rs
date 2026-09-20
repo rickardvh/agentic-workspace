@@ -496,6 +496,7 @@ fn current_groups(root: &Dir, binding: &Value) -> Result<Vec<String>, CoreError>
 }
 fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<(), CoreError> {
     let mut paths = Vec::new();
+    let observations = RefCell::new(BTreeMap::new());
     for old_path in current_groups(root, binding)? {
         let bytes = native_planning::read(root, &old_path)?
             .or(native_planning::read(root, &format!("{old_path}.tmp"))?)
@@ -511,7 +512,7 @@ fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Resu
         projected["work_postimages"] = Value::Object(
             group
                 .keys()
-                .map(|key| Ok((key.clone(), observe(root, key)?)))
+                .map(|key| Ok((key.clone(), observe(root, key, &observations)?)))
                 .collect::<Result<_, CoreError>>()?,
         );
         // A new source/policy basis supersedes all old groups. An overlapping

@@ -239,7 +239,10 @@ bounded; an unsafe or incompletely observed scope remains unresolved for complet
 Large scopes are assessed in groups of at most 64 consumers. The proposal names
 the exact group; `coverage` reports total, accepted and pending consumers. Publish
 the group, then request the next one. A fresh process can recover accepted groups
-from Verification receipts without the original task or conversation. New tasks
+from Verification's current group references and their receipts without the
+original task or conversation. Superseded receipts remain historical evidence;
+ordinary discovery does not scan that history. Missing or damaged current
+evidence leaves coverage unresolved. New tasks
 still need their own current publication authority. Completion requires coverage
 of the entire current set, not a sample or the sum of overlapping groups.
 

@@ -68,58 +68,61 @@ pub(crate) fn admitted(target: &Path, source: &str, post: &str) -> Result<bool, 
     crate::attempt_store::inspect_committed(target.to_str().unwrap(), prepared["custody"].clone())?;
     Ok(true)
 }
-pub(crate) fn governance_sources(target: &Path) -> Result<Vec<(String, Vec<u8>)>, CoreError> {
-    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
-    let directory = ".agentic-workspace/local/effects";
-    crate::native_planning::read(&root, &format!("{directory}/.aw-confinement"))?;
-    let entries = match root.read_dir(directory) {
-        Ok(entries) => entries,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(e) => return Err(err(e)),
-    };
-    let mut results = Vec::new();
-    let mut superseded = std::collections::BTreeSet::new();
-    let mut count = 0;
-    for entry in entries {
-        let name = entry
-            .map_err(err)?
-            .file_name()
-            .to_string_lossy()
-            .into_owned();
-        if !name.starts_with("instruction-") || !name.ends_with(".prepared.json") {
-            continue;
+const CURRENT: &str = ".agentic-workspace/local/effects/instruction-current/index.json";
+fn current_sources(root: &Dir) -> Result<serde_json::Map<String, Value>, CoreError> {
+    match crate::current_projection::read(root, CURRENT)? {
+        Some(value) => {
+            let rows = value
+                .as_object()
+                .ok_or_else(|| err("invalid instruction current projection"))?;
+            if rows.len() > 256 {
+                return Err(err("instruction current source set exceeds bound"));
+            }
+            for (path, posts) in rows {
+                if crate::instruction_source::source_scope(path).is_none()
+                    || posts.as_str().is_none()
+                {
+                    return Err(err("invalid instruction current source reference"));
+                }
+            }
+            Ok(rows.clone())
         }
-        count += 1;
-        if count > 256 {
-            return Err(err("instruction custody discovery exceeds bounded history"));
-        }
-        let Some(bytes) = crate::native_planning::read(&root, &format!("{directory}/{name}"))?
-        else {
-            continue;
-        };
-        let Ok(record) = serde_json::from_slice::<Value>(&bytes) else {
-            continue;
-        };
-        let args = &record["invocation"]["arguments"];
-        let Some(path) = args["request"]["arguments"]["source"].as_str() else {
-            continue;
-        };
-        let Some(post) = args["post_revision"].as_str() else {
-            continue;
-        };
-        if !admitted(target, path, post).unwrap_or(false) {
-            continue;
-        }
-        if let Some(before) = args["binding"]["before_revision"].as_str() {
-            superseded.insert((path.to_owned(), before.to_owned()));
-        }
-        if let Some(content) = args["request"]["arguments"]["content"].as_str() {
-            results.push((path.to_owned(), content.as_bytes().to_vec()));
+        None => {
+            if root
+                .try_exists(".agentic-workspace/local/effects/instruction-current")
+                .map_err(err)?
+            {
+                return Err(err("instruction current projection unavailable"));
+            }
+            Ok(serde_json::Map::new())
         }
     }
-    results.retain(|(path, bytes)| {
-        !superseded.contains(&(path.clone(), crate::decision_source::hash(bytes)))
-    });
+}
+fn publish_current(root: &Dir, path: &str, post: &str) -> Result<(), CoreError> {
+    let mut rows = current_sources(root)?;
+    rows.insert(path.to_owned(), json!(post));
+    if rows.len() > 256 {
+        return Err(err("instruction current source set exceeds bound"));
+    }
+    crate::current_projection::write(root, CURRENT, &Value::Object(rows))
+}
+pub(crate) fn governance_sources(target: &Path) -> Result<Vec<(String, Vec<u8>)>, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let mut results = Vec::new();
+    for (path, post) in current_sources(&root)? {
+        let post = post.as_str().unwrap();
+        let record = held(target, &path, post)?
+            .ok_or_else(|| err("current instruction custody unavailable"))?;
+        // Missing or damaged commit custody is unresolved authority. Never
+        // fall back to an older admission or mistake it for policy withdrawal.
+        if !admitted(target, &path, post)? {
+            return Err(err("current instruction publication is unresolved"));
+        }
+        let content = record["invocation"]["arguments"]["request"]["arguments"]["content"]
+            .as_str()
+            .ok_or_else(|| err("current instruction content unavailable"))?;
+        results.push((path, content.as_bytes().to_vec()));
+    }
     Ok(results)
 }
 
@@ -358,6 +361,8 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
         format!("{source}.*.tmp"),
         marker(source, post)?,
         ".agentic-workspace/local/effects/instructions.lock".into(),
+        CURRENT.into(),
+        format!("{CURRENT}.tmp"),
     ]);
     Ok(paths)
 }
@@ -398,6 +403,7 @@ pub(crate) fn execute(
             json!({"target":target,"decision":decision,"invocation":i}),
         )?;
         revalidate()?;
+        publish_current(&root, path, post)?;
         crate::attempt_store::commit(
             json!({"target":target,"custody":record["custody"],"outcome":record["outcome"]}),
         )?;
@@ -463,6 +469,7 @@ pub(crate) fn execute(
     if current != args["binding"]["before_revision"] {
         return Err(err("instruction source changed at publication barrier"));
     }
+    publish_current(&root, path, post)?;
     if current.is_null() {
         root.hard_link(&temp, &root, path).map_err(err)?;
         root.remove_file(&temp).map_err(err)?;
