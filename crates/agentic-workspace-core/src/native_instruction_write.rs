@@ -68,6 +68,61 @@ pub(crate) fn admitted(target: &Path, source: &str, post: &str) -> Result<bool, 
     crate::attempt_store::inspect_committed(target.to_str().unwrap(), prepared["custody"].clone())?;
     Ok(true)
 }
+pub(crate) fn governance_sources(target: &Path) -> Result<Vec<(String, Vec<u8>)>, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let directory = ".agentic-workspace/local/effects";
+    crate::native_planning::read(&root, &format!("{directory}/.aw-confinement"))?;
+    let entries = match root.read_dir(directory) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(err(e)),
+    };
+    let mut results = Vec::new();
+    let mut superseded = std::collections::BTreeSet::new();
+    let mut count = 0;
+    for entry in entries {
+        let name = entry
+            .map_err(err)?
+            .file_name()
+            .to_string_lossy()
+            .into_owned();
+        if !name.starts_with("instruction-") || !name.ends_with(".prepared.json") {
+            continue;
+        }
+        count += 1;
+        if count > 256 {
+            return Err(err("instruction custody discovery exceeds bounded history"));
+        }
+        let Some(bytes) = crate::native_planning::read(&root, &format!("{directory}/{name}"))?
+        else {
+            continue;
+        };
+        let Ok(record) = serde_json::from_slice::<Value>(&bytes) else {
+            continue;
+        };
+        let args = &record["invocation"]["arguments"];
+        let Some(path) = args["request"]["arguments"]["source"].as_str() else {
+            continue;
+        };
+        let Some(post) = args["post_revision"].as_str() else {
+            continue;
+        };
+        if !admitted(target, path, post).unwrap_or(false) {
+            continue;
+        }
+        if let Some(before) = args["binding"]["before_revision"].as_str() {
+            superseded.insert((path.to_owned(), before.to_owned()));
+        }
+        if let Some(content) = args["request"]["arguments"]["content"].as_str() {
+            results.push((path.to_owned(), content.as_bytes().to_vec()));
+        }
+    }
+    results.retain(|(path, bytes)| {
+        !superseded.contains(&(path.clone(), crate::decision_source::hash(bytes)))
+    });
+    Ok(results)
+}
+
 pub(crate) fn extend_contract(contract: &mut Value) -> Result<(), CoreError> {
     let owner = &mut contract["owners"][0];
     owner["domains"] = json!(["scoped-instructions"]);
@@ -208,7 +263,7 @@ pub(crate) fn view(
             {
                 let old = crate::instruction_source::parsed(before, false);
                 let new = crate::instruction_source::parsed(&bytes, false);
-                if ["paths", "protect", "checks", "reconcile"]
+                if ["paths", "protect", "checks", "reconcile", "governed_by"]
                     .iter()
                     .any(|key| old["metadata"][key] != new["metadata"][key])
                 {

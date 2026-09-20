@@ -2,7 +2,7 @@
   "kind": "agentic-workspace/repository-read-profile/v1",
   "source": {
     "path": ".agentic-workspace/OWNERSHIP.toml",
-    "git_blob_sha1": "9704cef15b3b4034281587a7aa35a152234f4526"
+    "git_blob_sha1": "72fdfc578e2f8bd496e2b244210c4afa4cd2f988"
   },
   "authority": "orientation-only; no mutation, effect, proof, completion or issue-close authority",
   "currentness": "Read one repository revision; record each selected path and provider blob identity. Reconsider changed selected sources/dependencies; unrelated blobs do not invalidate the reading. Source identity is not truth or runtime admission.",
@@ -15,7 +15,7 @@
         "AGENTS.md",
         ".agentic-workspace/instructions/"
       ],
-      "select": "Read the repository bootstrap and only task-relevant scoped instruction files; their paths/routes and checks/protect/reconcile metadata retain source authority. Local instructions are not repository-visible.",
+      "select": "Read the repository bootstrap and only task-relevant scoped instruction files; their paths/routes and checks/protect/reconcile/governed_by metadata retain source authority. Local instructions are not repository-visible.",
       "unknown": [
         "runtime applicability",
         "local instruction state",

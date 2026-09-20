@@ -193,7 +193,7 @@ uninstall_policy = "remove-fence-only"
 
 [[authority_surfaces]]
 concern = "startup-instructions"
-read = { refs = ["AGENTS.md", ".agentic-workspace/instructions/"], select = "Read the repository bootstrap and only task-relevant scoped instruction files; their paths/routes and checks/protect/reconcile metadata retain source authority. Local instructions are not repository-visible.", unknown = ["runtime applicability", "local instruction state", "publication admission"] }
+read = { refs = ["AGENTS.md", ".agentic-workspace/instructions/"], select = "Read the repository bootstrap and only task-relevant scoped instruction files; their paths/routes and checks/protect/reconcile/governed_by metadata retain source authority. Local instructions are not repository-visible.", unknown = ["runtime applicability", "local instruction state", "publication admission"] }
 surface = "AGENTS.md"
 owner = "repo"
 ownership = "repo_owned"

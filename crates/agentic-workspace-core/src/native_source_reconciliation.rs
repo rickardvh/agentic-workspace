@@ -7,6 +7,7 @@ use cap_std::{
 };
 use serde_json::{Value, json};
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     io::Write,
     path::Path,
@@ -35,7 +36,7 @@ pub(crate) fn extend_contract(owner: &mut Value) -> Result<(), CoreError> {
     owner["requests"].as_array_mut().unwrap().push(json!({
         "kind":REQUEST,"result_kind":"agentic-workspace/source-reconciliation/v1",
         "input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
-            "properties":{"binding_revision":{"type":"string"},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]},"read_references":{"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"type":"string"}},"judgments":{"type":"object","maxProperties":64,
+            "properties":{"relation_id":{"type":"string"},"binding_revision":{"type":"string"},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]},"read_references":{"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"type":"string"}},"judgments":{"type":"object","maxProperties":64,
                 "additionalProperties":{"type":"object","additionalProperties":false,
                     "properties":{"disposition":{"enum":["updated","reviewed-current"]},"reason":{"type":"string","minLength":1,"maxLength":4096}},
                     "required":["disposition","reason"]}}},"required":["binding_revision","judgments"]}}));
@@ -48,16 +49,27 @@ pub(crate) fn extend_contract(owner: &mut Value) -> Result<(), CoreError> {
     Ok(())
 }
 
-fn observe(root: &Dir, path: &str) -> Result<Value, CoreError> {
+fn observe(
+    root: &Dir,
+    path: &str,
+    observations: &RefCell<BTreeMap<String, Value>>,
+) -> Result<Value, CoreError> {
+    if let Some(observed) = observations.borrow().get(path) {
+        return Ok(observed.clone());
+    }
     let observation =
         crate::dependency_binding::observe(root, path, crate::dependency_binding::Scheme::RawBytes);
-    Ok(match observation.status {
+    let observed = match observation.status {
         crate::dependency_binding::Currentness::Current => {
             json!({"status":"present","revision":observation.revision})
         }
         crate::dependency_binding::Currentness::Missing => json!({"status":"absent"}),
         _ => return Err(err(format!("source observation unavailable: {path}"))),
-    })
+    };
+    observations
+        .borrow_mut()
+        .insert(path.to_owned(), observed.clone());
+    Ok(observed)
 }
 
 // Reobserve the applicable declared path set, including newly created files.
@@ -223,6 +235,7 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
     Ok(Some(record))
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct Context<'a> {
     pub subject: Option<&'a Value>,
     pub executing: bool,
@@ -237,6 +250,100 @@ pub(crate) fn view(
     request: Option<&Value>,
     context: Context<'_>,
 ) -> Result<Value, CoreError> {
+    let observations = RefCell::new(BTreeMap::new());
+    let mut relations = Vec::new();
+    let mut ordinary = instructions.clone();
+    ordinary["sources"] = json!(
+        instructions["sources"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|row| !strings(&row["reconcile"]).is_empty())
+            .collect::<Vec<_>>()
+    );
+    if ordinary["sources"]
+        .as_array()
+        .is_some_and(|rows| !rows.is_empty())
+    {
+        relations.push(("canonical-sources".to_owned(), ordinary));
+    }
+    for row in instructions["sources"].as_array().into_iter().flatten() {
+        if strings(&row["governed_by"]).is_empty() {
+            continue;
+        }
+        let mut relation = instructions.clone();
+        let mut source = row.clone();
+        source["reconcile"] = row["governed_by"].clone();
+        // Governance is an explicit relation, not an inversion of read.
+        source["relation_kind"] = json!("governed-scope");
+        relation["sources"] = json!([source]);
+        relations.push((
+            row["source"]["reference"].as_str().unwrap().to_owned(),
+            relation,
+        ));
+    }
+    if relations.is_empty() {
+        return relation_view(
+            target,
+            work,
+            (instructions, &observations),
+            configuration,
+            contract,
+            request,
+            context,
+        );
+    }
+    let selected_id = request.and_then(|r| r["arguments"]["relation_id"].as_str());
+    let mut outputs = Vec::new();
+    let mut selected = None;
+    for (id, mut relation) in relations {
+        relation["relation_id"] = json!(id);
+        let current_request = request.filter(|_| selected_id.unwrap_or("canonical-sources") == id);
+        let mut output = relation_view(
+            target,
+            work,
+            (&relation, &observations),
+            configuration,
+            contract,
+            current_request,
+            Context {
+                executing: context.executing && current_request.is_some(),
+                ..context
+            },
+        )?;
+        output["relation_id"] = json!(id);
+        if current_request.is_some() {
+            selected = Some(outputs.len());
+        }
+        outputs.push(output);
+    }
+    if request.is_some() && selected.is_none() {
+        return Err(err("source relation is no longer applicable"));
+    }
+    let index = selected.unwrap_or_else(|| {
+        outputs
+            .iter()
+            .position(|v| v["status"] != "current")
+            .unwrap_or(0)
+    });
+    let mut output = outputs[index].clone();
+    if output["status"] == "current" && outputs.iter().any(|v| v["status"] != "current") {
+        output["status"] = json!("partial");
+    }
+    output["relations"] = json!(outputs.iter().map(|v|json!({"relation_id":v["relation_id"],"status":v["status"],"coverage":v["coverage"],"obligations":v["obligations"]})).collect::<Vec<_>>());
+    Ok(output)
+}
+
+fn relation_view(
+    target: &Path,
+    work: &Value,
+    inputs: (&Value, &RefCell<BTreeMap<String, Value>>),
+    configuration: &Value,
+    contract: &Value,
+    request: Option<&Value>,
+    context: Context<'_>,
+) -> Result<Value, CoreError> {
+    let (instructions, observations) = inputs;
     let subject = context.subject;
     let mut view = json!({"status":"not-required","obligations":[],"requests":[],"action":null,"decisions":[]});
     let mut sources = BTreeMap::new();
@@ -250,15 +357,18 @@ pub(crate) fn view(
             continue;
         }
         for source in &refs {
-            sources.insert(source.clone(), observe(&root, source)?);
+            sources.insert(source.clone(), observe(&root, source, observations)?);
         }
         for dependency in strings(&row["read"]) {
-            dependencies.insert(dependency.clone(), observe(&root, &dependency)?);
+            dependencies.insert(
+                dependency.clone(),
+                observe(&root, &dependency, observations)?,
+            );
         }
         // Admission is checked afresh; its transport (for example a Git
         // commit pointer) is not semantic evidence. The exact declaration
         // content below binds its requirements and authority.
-        declarations.push(json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"sources":refs,"paths":row["metadata"]["paths"]}));
+        declarations.push(json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"relation_kind":row["relation_kind"],"sources":refs,"paths":row["metadata"]["paths"]}));
         let patterns = strings(&row["metadata"]["paths"]);
         let global = ["**".to_owned()];
         let observed = scope_files(
@@ -302,9 +412,9 @@ pub(crate) fn view(
     }
     let mut postimages = BTreeMap::new();
     for path in scope {
-        postimages.insert(path.clone(), observe(&root, &path)?);
+        postimages.insert(path.clone(), observe(&root, &path, observations)?);
     }
-    let binding = json!({"semantics":SEMANTICS,"subject":subject,"declarations":declarations,
+    let binding = json!({"semantics":SEMANTICS,"relation_id":instructions["relation_id"],"subject":subject,"declarations":declarations,
         "sources":sources,"dependencies":dependencies,"work_postimages":postimages});
     // Retained semantic judgment is valid only under its actual producer as
     // well as current sources. No old receipt can survive an implementation
@@ -337,6 +447,7 @@ pub(crate) fn view(
             target,
             work,
             instructions,
+            observations,
             configuration,
             contract,
         },
@@ -351,6 +462,7 @@ struct Inputs<'a> {
     target: &'a Path,
     work: &'a Value,
     instructions: &'a Value,
+    observations: &'a RefCell<BTreeMap<String, Value>>,
     configuration: &'a Value,
     contract: &'a Value,
 }
@@ -549,6 +661,7 @@ fn group_view(
         target,
         work,
         instructions,
+        observations,
         configuration,
         contract,
     } = inputs;
@@ -565,7 +678,7 @@ fn group_view(
     let issued = json!({"kind":"agentic-workspace/public-request/v1","owner":"verification","id":REQUEST,"request_kind":REQUEST,
         "owner_revision":contract["owners"].as_array().unwrap().iter().find(|o|o["owner"]=="verification").unwrap()["revision"],
         "source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,
-        "arguments":{"binding_revision":revision,"judgments":{}}});
+        "arguments":{"relation_id":binding["relation_id"],"binding_revision":revision,"judgments":{}}});
     let mut material_request = issued.clone();
     material_request["arguments"]["read_references"] = json!(
         sources
@@ -682,7 +795,7 @@ fn group_view(
             "completion_authority":false,"semantic_truth":"judgment-not-mechanically-proven"});
         let proposal_revision = digest(&proposal)?;
         view["proposal"] = proposal;
-        let arguments = json!({"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
+        let arguments = json!({"relation_id":binding["relation_id"],"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
         let decisions = json!([{"id":"source-reconciliation","question":"Confirm these exact source judgments against the bound resulting work?",
                 "material":view["proposal"],
                 "response_request":{"request_kind":REQUEST,"arguments":arguments},
@@ -700,10 +813,10 @@ fn group_view(
                 let mut authorized =
                     compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
                 authorized["arguments"]["answer"] = json!("confirm");
-                return self::view(
+                return relation_view(
                     target,
                     work,
-                    instructions,
+                    (instructions, observations),
                     configuration,
                     contract,
                     Some(&authorized),

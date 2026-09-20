@@ -16,8 +16,8 @@ Use these steps when the selected destination is an instruction source.
 3. Use current `start` context and the matching `instructions.authoring.requests`
    entry. Supply a short descriptive Markdown filename under the intended source
    directory and the complete proposed `content`. Read existing content before
-   editing it; preserve unrelated guidance. The shared parser accepts the six
-   optional fields `paths`, `read`, `reconcile`, `use`, `checks`, `protect`.
+   editing it; preserve unrelated guidance. The shared parser accepts the
+   optional fields `paths`, `read`, `governed_by`, `reconcile`, `use`, `checks`, `protect`.
    Prefer constraints and skill references over embedding procedural scripts.
    Local destinations must already be untracked and gitignored. A missing ignore
    rule is a repository policy concern, not permission to silently edit ignores.
@@ -34,14 +34,18 @@ Use these steps when the selected destination is an instruction source.
    `instructions.authoring.recovery_requests` to finish interrupted publication.
 6. Resolve from a fresh process on relevant work. Verify the source identity,
    applicable guidance and hard consequences before claiming retention. A matching
-   filename or an apology is not proof of retention. Local absence removes local
-   consequences; checked-in instructions travel with the repository. Existing Git
+   filename or an apology is not proof of retention. Unadmitted withdrawal of governance preserves the prior scoped obligation;
+   checked-in instructions travel with the repository. Existing Git
    snapshot admission remains the portable trust path for checked-in hard checks.
 
 Both scopes compose through the same owner. Local advice cannot waive checked-in
 protections; exact publication admits the instruction declaration, not arbitrary
 shell execution, proof success, independent review, or task completion. `read`
-delivers context; `reconcile` requires a Verification judgment of current resulting
+delivers context; `governed_by` names a governing source once, supplies its context
+and requires current coverage of the instruction's consumer scope. Use
+Verification's bounded group requests, material reads and coverage to continue
+across sessions. Source changes require reconsideration, not automatic consumer
+edits. An accepted group is not whole-set completion. `reconcile` requires a Verification judgment of current resulting
 work; `checks` uses current Verification evidence; `use` resolves a skill reference.
 
 No correction transcript, event store, config receipt, or second instruction DSL
