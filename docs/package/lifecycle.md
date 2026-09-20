@@ -1,15 +1,27 @@
-# Repository integration lifecycle
+# Repository adoption, refresh and removal
 
-Configuration owns first adoption, refresh, removal, and interrupted recovery through current requests and actions returned by `start`. The native CLI catalogue remains the command authority; historical `init`, `install`, `upgrade`, and `uninstall` are not public commands.
+Use this reference when implementing a client that manages AW's repository integration. For interactive use, follow [Getting started](../agentic-workspace-install.md) or [Your repository and data](installed-surfaces.md).
 
-In a plain Git working tree, resolve `start` and follow Configuration's `repository_adoption_request`. Select its exact adoption request, inspect the proposed files and preserved state, supply the authorization judgment, and invoke the returned action. Existing user instructions remain outside the managed fence. No config, optional modules, Planning, Memory, or Verification state is created.
+Installation supplies the executable. **Adoption** establishes its small repository integration. **Refresh** reconciles that integration with the installed package. **Removal** relinquishes the package integration without deleting independent project data.
 
-An absent `.agentic-workspace/local/.gitignore` receives `*` so the local effect records remain ignored in a plain host. Existing local ignore policy is preserved. The local rule survives removal with the independent machine-local state.
+## Request the change
 
-Repeat adoption to converge the same public footprint. A current footprint is a no-op. A stale request or modified owned surface requires fresh resolution; unknown and edited content is preserved. Retired source-maintenance payload is removed only when its bytes match the contract's exact known preimage.
+Call `start` for the actual target/task and inspect Configuration's returned `repository_adoption_request`. Submit that exact request through `start --input` to obtain the available adoption, refresh, removal or recovery requests. Inspect the proposal and supply only its requested authorization before invoking the returned action.
 
-Removal uses the same discovery and exact removal request, with an explicit preserve disposition for independent repository, domain, and local state. Remove authenticated native skill-discovery links through their existing Configuration requests first. Removal preserves unknown files and all text outside the managed instruction fence. It does not reset domain history or delete the `.agentic-workspace` tree recursively.
+Do not generate effect-bearing fields from filenames or a schema example. An absent operation is an unsupported path for that artifact, not permission to emulate it with file copies. The [CLI reference](../reference/cli-catalogue.md) describes the transport.
 
-An interrupted effect exposes an exact recovery request bound to its original custody and preimages. Recovery accepts only the recorded preimage or intended postimage. A conflicting edit is preserved. After removal, deliberate adoption works again without a tombstone reset.
+## Preserve the right material
 
-See the [public surface catalogue](../reference/installed-surface-catalogue.md) for current file ownership and the [source-maintenance inventory](../reference/source-maintenance-surface-catalogue.md) for historical maintenance profiles. Those profiles do not describe the public host contract.
+The [host-surface contract](../../src/agentic_workspace/contracts/workspace_surfaces.json) drives the package file set and its materialization. Some files match package bytes; ownership combines portable package facts with supported project declarations; the read profile derives from the resulting ownership ledger.
+
+Use those operations rather than maintaining a second install/removal list. Package provenance does not make unrelated project content removable. Shared configuration, independent domain records, local state and unknown content remain separately owned. Edited or conflicting package material can require resolution before replacement or deletion.
+
+Remove authenticated host-discovery links through the existing skill-exposure operation before removing their canonical targets. Do not recursively remove `.agents/skills`.
+
+## Handle interruption
+
+Separate a committed file change from a failure to produce its continuation. Preserve returned effect/recovery information and request current recovery rather than replaying a possibly committed action.
+
+Check the resulting repository after completion. A second current refresh should not rewrite already-current content; removal should leave the integration absent while preserving independent material. Later adoption uses the ordinary path, not a retained uninstall history.
+
+Historical source-maintenance profiles are not native lifecycle commands. See [Troubleshooting](../troubleshooting.md) for user-facing recovery symptoms and the [generated catalogue](../reference/installed-surface-catalogue.md) for exact files.

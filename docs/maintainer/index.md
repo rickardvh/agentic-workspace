@@ -1,36 +1,29 @@
-# Maintainer Documentation
+# Contribute and maintain
 
-This section is for source-checkout maintenance of this repository. It is not the first-contact documentation for users installing `agentic-workspace` into another repository.
+This section is for changing AW itself. To use it in another repository, return
+to the [user guide](../index.md).
 
-## Core Maintainer Routes
+| I need to… | Start here |
+| --- | --- |
+| Prepare a checkout and open a PR | [Contribute to AW](contributor-playbook.md) |
+| Find a build, check or generation command | [Maintainer commands](maintainer-commands.md) |
+| Understand where an implementation belongs | [Architecture and source layout](../architecture.md) |
+| Choose or change tests | [Testing strategy](testing-strategy.md) |
+| Update generated references | [Contracts and reference maintenance](../package/contracts.md) |
+| Write human documentation | [Documentation maintenance](../documentation-status.md) |
+| Prepare a release | [Release and versioning](../release-and-versioning.md) and [native distribution topology](native-release-topology.md) |
 
-- [Contributor playbook](contributor-playbook.md): routing, ownership, validation lanes, and maintainer workflow.
-- [Maintainer commands](maintainer-commands.md): literal command index.
-- [Dogfooding feedback](dogfooding-feedback.md): friction classification and admission policy.
-- [Testing strategy](testing-strategy.md): inventory, consolidation, pruning, and contract-owned conformance guidance.
-- [Rust toolchain](rust-toolchain.md): pinned source builds, native compiler provenance and optional-tooling dispositions.
-- [Candidate conformance input](c54-conformance-input.md): owner/evidence composition and the remaining exact-candidate gates.
-- [Repository-only reading](repository-read-profile.md): generated source refs, Git identities and no-runtime authority limits.
-- [Contract-owned test replacement plan](contract-test-replacement-plan.md): sequencing and inventory for replacing regression tests with contract-owned conformance cases.
-- [AW contract test replacement inventory](aw-contract-test-replacement-inventory.md): retained keep/convert/merge/delete record for AW-side generated-command behavior tests.
-- [Generated command check inventory](generated-command-check-inventory.md): checked split between AW-owned generated-command proof and command-generation-owned generic target baselines.
-- [Installed-contract design checklist](installed-contract-design-checklist.md): review bar for collaboration-sensitive installed surfaces.
-- [Operational affordance design](operational-affordance-design.md): design review rubric for operational surfaces.
-- [Local installed-state action-shape audit](local-installed-state-action-shape-audit.md): disposition table for local and installed-state compatibility cautions.
-- [Ordinary caution action-shape audit](ordinary-caution-action-shape-audit.md): disposition table for ordinary warning and gate classes.
-- [Planning continuation action-shape audit](planning-continuation-action-shape-audit.md): disposition table for active-owner and Planning continuation cautions.
-- [Summary/status/preflight action-shape audit](summary-status-preflight-action-shape-audit.md): disposition table for recovery and status-adjacent caution outputs.
+[System intent](../../SYSTEM_INTENT.md) and [design principles](../design-principles.md)
+explain the product's constraints. [Dogfooding feedback](dogfooding-feedback.md)
+explains where to route observed friction.
 
-## Boundary And Measurement
+## Specialist references and evidence
 
-- [Source, payload, and root install boundary](source-payload-operational-install.md): maintainer boundary between package source, shipped payload, and root install.
-- [Lazy discovery measurements](lazy-discovery-measurements.md): framework for checking whether compact selectors beat broad reads.
-- [Benchmarking contract](benchmarking-contract.md): benchmark shape and evaluation policy.
+Use [Rust toolchain](rust-toolchain.md),
+[source/payload maintenance](source-payload-operational-install.md),
+[independent native owners](independent-native-owners.md), or
+[repository-only reading](repository-read-profile.md) when working on those areas.
 
-## Related Supporting Docs
-
-- [Design principles](../design-principles.md)
-- [Architecture](../architecture.md)
-- [Integration contract](../integration-contract.md)
-- [Module capability contract](../module-capability-contract.md)
-- [Historical reviews](../reviews/)
+Dated audits, candidate reports and migration inventories are evidence for their
+original subjects, not required contributor reading or current command manuals.
+They remain available in this directory and [historical reviews](../reviews/).
