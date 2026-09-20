@@ -4,6 +4,7 @@ use crate::CoreError;
 use cap_std::fs::Dir;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -32,7 +33,7 @@ pub(crate) enum Currentness {
 
 pub(crate) fn revision(bytes: &[u8], scheme: Scheme) -> Result<String, CoreError> {
     match scheme {
-        Scheme::RawBytes => Ok(crate::decision_source::hash(bytes)),
+        Scheme::RawBytes => Ok(format!("sha256:{:x}", Sha256::digest(bytes))),
         Scheme::UniversalNewlineUtf8 => {
             let text = std::str::from_utf8(bytes).map_err(|e| CoreError::new(e.to_string()))?;
             Ok(crate::decision_source::hash(
@@ -144,6 +145,20 @@ pub(crate) fn compare(current: Basis<'_>, accepted: Option<Basis<'_>>) -> Compar
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn raw_revision_preserves_crlf_and_non_utf8_bytes() {
+        for bytes in [b"a\r\nb\r\n".as_slice(), &[0xff, 0xfe]] {
+            assert_eq!(
+                revision(bytes, Scheme::RawBytes).unwrap(),
+                format!("sha256:{:x}", Sha256::digest(bytes))
+            );
+        }
+        assert_ne!(
+            revision(b"a\r\nb\r\n", Scheme::RawBytes).unwrap(),
+            revision(b"a\nb\n", Scheme::RawBytes).unwrap()
+        );
+    }
 
     #[test]
     fn exact_basis_preserves_scheme_membership_and_unknowns() {

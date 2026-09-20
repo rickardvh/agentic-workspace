@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Preserve raw-byte dependency identity for CRLF and binary sources, and reconcile proof-reuse tests with current command coverage boundaries."

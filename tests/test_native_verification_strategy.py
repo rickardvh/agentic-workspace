@@ -86,7 +86,10 @@ def test_exact_native_command_evidence_discharges_only_its_profile_obligation(
     assert "assurance:current:applicable" in blockers and "verification-evidence-unresolved" in blockers
     assert satisfied["decision_packet"]["claim_boundary"]["allowed"] == []
     assert satisfied["decision_packet"]["status"] != "terminal"
-    assert claim(refs, "A different requested outcome")["verification"]["strategy_control"]["obligations"][0]["missing_commands"]
+    changed_task = claim(refs, "A different requested outcome")
+    assert changed_task["verification"]["strategy_control"]["obligations"][0]["missing_commands"] == []
+    assert changed_task["decision_packet"]["claim_boundary"]["allowed"] == []
+    assert all(item["task_judgment"]["current_judgment_count"] == 0 for item in changed_task["verification"]["evidence"])
     (tmp_path / "a.txt").write_text("material source changed")
     assert claim(refs)["verification"]["strategy_control"]["obligations"][0]["missing_commands"] == [command, "echo second"]
     assert (tmp_path / "marker.txt").read_text().splitlines() == ["executed", "executed"]
@@ -353,7 +356,9 @@ def test_subsystem_profile_uses_current_ownership_without_granting_review(tmp_pa
     assert (tmp_path / "marker.txt").read_text().splitlines() == ["executed"]
     claim = call()["verification"]["requests"][0]
     claim["arguments"]["evidence_refs"] = [published]
-    assert call(request=claim)["verification"]["evidence"][0]["evidence_freshness"] == "stale"
+    rechecked = call(request=claim)
+    assert rechecked["verification"]["evidence"][0]["evidence_freshness"] == "reusable"
+    assert rechecked["decision_packet"]["claim_boundary"]["allowed"] == []
     ownership.write_text(scope + scope)
     with pytest.raises(AssertionError, match="one current Ownership"):
         call()
