@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Admit the merged RC9 CLI proof-inventory reconciliation for stable preparation while preserving the RC9 product source and exact stable-subject checks."
