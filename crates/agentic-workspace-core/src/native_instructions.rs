@@ -33,6 +33,7 @@ fn applicability(
 fn hard(metadata: &Value) -> bool {
     !strings(&metadata["protect"]).is_empty()
         || !strings(&metadata["reconcile"]).is_empty()
+        || !strings(&metadata["governed_by"]).is_empty()
         || metadata["checks"]
             .as_array()
             .into_iter()
@@ -64,9 +65,22 @@ pub(crate) fn resolve_with_targets(
     pin: &str,
     targets: &[String],
 ) -> Result<Value, CoreError> {
-    let documents = instruction_source::current_sources(target)?;
+    let observed = instruction_source::current_sources(target)?;
+    let (documents, discovery_gap) =
+        match instruction_source::preserve_governance(target, pin, observed.clone()) {
+            Ok(documents) => (documents, None),
+            Err(error) => (observed, Some(error.to_string())),
+        };
     let mut rows = Vec::new();
     let mut blockers = Vec::new();
+    if let Some(reason) = &discovery_gap {
+        blockers.push(blocker(
+            "governance",
+            "admitted-source-discovery-unavailable",
+            reason,
+            vec!["claim:complete".into()],
+        ));
+    }
     let mut scopes: BTreeSet<String> = [
         "task",
         "claim:complete",
@@ -83,7 +97,14 @@ pub(crate) fn resolve_with_targets(
         let reference = document["source"]["reference"].as_str().unwrap();
         let metadata = &document["metadata"];
         let valid = document["valid"] == true;
-        let scope = applicability(metadata, changed, route, targets)?;
+        let mut scope = applicability(metadata, changed, route, targets)?;
+        let upstream = strings(&metadata["governed_by"]);
+        let source_change = upstream.iter().any(|source| changed.contains(source));
+        if source_change && scope["route_applies"] == true {
+            scope["applies"] = json!(true);
+            scope["status"] = json!("applicable");
+            scope["reason"] = json!("explicit-governing-source-change");
+        }
         let applicable = valid && scope["applies"] == true;
         let unresolved = valid && scope["status"] == "unresolved";
         let binding = if valid && hard(metadata) {
@@ -112,7 +133,7 @@ pub(crate) fn resolve_with_targets(
         }
         if (applicable || unresolved) && hard(metadata) {
             let mut affects = Vec::new();
-            if unresolved && !strings(&metadata["reconcile"]).is_empty() {
+            if unresolved && (!strings(&metadata["reconcile"]).is_empty() || !upstream.is_empty()) {
                 affects.push("claim:complete".into());
             }
             if metadata["checks"]
@@ -127,7 +148,7 @@ pub(crate) fn resolve_with_targets(
             {
                 affects.push("claim:complete".into());
             }
-            if applicable && !strings(&metadata["reconcile"]).is_empty() {
+            if applicable && (!strings(&metadata["reconcile"]).is_empty() || !upstream.is_empty()) {
                 blockers.push(blocker(reference, "source-reconciliation-required",
                     "Canonical sources require a current authorized updated or reviewed-current judgment against the resulting work.",
                     vec!["claim:complete".into()]));
@@ -148,7 +169,7 @@ pub(crate) fn resolve_with_targets(
                     if unresolved {"Current semantic route applicability remains unresolved for this affected consequence."} else if binding["status"]=="current" {"Current repository protection/check obligations remain binding; no proof success is inferred."} else {"Current hard instruction intent requires source admission before affected behavior."},affects));
             }
         }
-        let guidance = if applicable {
+        let guidance = if applicable && document["retained_governance"] != true {
             instruction_source::current_document(target, reference, true)?["body"].clone()
         } else {
             json!("")
@@ -162,11 +183,12 @@ pub(crate) fn resolve_with_targets(
             vec![]
         };
         rows.push(json!({"source":document["source"],"metadata":metadata,"valid":valid,"applicable":applicable,"applicability":scope,
-            "guidance":guidance,"read":if applicable {metadata["read"].clone()} else {json!([])},
+            "guidance":guidance,"read":if applicable {json!(strings(&metadata["read"]).into_iter().chain(upstream.clone()).collect::<BTreeSet<_>>())} else {json!([])},
+            "governed_by":if applicable {json!(upstream)} else {json!([])},
             "reconcile":if applicable {metadata["reconcile"].clone()} else {json!([])},
             "procedure_resolution":procedures,"preferred_procedures":if applicable {metadata["use"].clone()} else {json!([])},
             "requirement_references":if applicable {json!(strings(&metadata["checks"]).into_iter().filter(|value| value.starts_with("requirement:")).collect::<Vec<_>>())} else {json!([])},
-            "binding_admission":binding}));
+            "binding_admission":binding,"retained_governance":document["retained_governance"]}));
     }
     let revision = digest(&json!({"sources":rows,"route":route,"changed":changed}))?;
     let mut contract = json!({"kind":"agentic-workspace/capability-contract/v1","revision":"pending",
@@ -178,12 +200,14 @@ pub(crate) fn resolve_with_targets(
         .iter()
         .filter(|row| row["applicable"] == true)
         .collect();
-    Ok(
-        json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
+    let mut result = json!({"kind":"agentic-workspace/native-instruction-view/v1","sources":rows,"revision":revision,
         "capability_contract":contract,"contribution":{"owner":"scoped-instructions","revision":revision,"blockers":blockers,
             "material":if material.is_empty(){Value::Null}else{json!(material)}},
-        "authority_boundary":"read/guidance surface context; reconcile requires a current source judgment; use prefers a replaceable procedure; requirement references retain their owner; only admitted reconcile/checks/protect bind and none grants proof or execution"}),
-    )
+        "authority_boundary":"read supplies context; admitted reconcile/governed_by require current judgment; use suggests procedure; checks/protect and requirements retain owner authority; none grants proof or effects"});
+    if let Some(reason) = discovery_gap {
+        result["governance_discovery"] = json!({"status":"unavailable","reason":reason});
+    }
+    Ok(result)
 }
 
 /// The instruction owner retains its existing protection authority over newly
@@ -292,6 +316,13 @@ pub fn restrict_pending(
             destination.to_owned(),
             format!("{destination}.tmp"),
             ".agentic-workspace/local/effects/source-reconciliation.lock".into(),
+            crate::native_source_reconciliation::projection_path(&action["arguments"]["binding"])?,
+            format!(
+                "{}.tmp",
+                crate::native_source_reconciliation::projection_path(
+                    &action["arguments"]["binding"]
+                )?
+            ),
         ]);
         for source in view["sources"].as_array().into_iter().flatten() {
             if source["applicable"] == true

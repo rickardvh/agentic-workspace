@@ -54,3 +54,13 @@ Unchanged sources are quiet, including across unrelated Git commits. No new inte
 store, workflow ledger or automatic mirror refresh is introduced. Without runtime,
 readers can inspect checked-in sources but cannot establish live acceptance,
 currentness or mutation authority.
+
+
+System Intent and Verification share native dependency observations and exact
+basis comparison. Interpretation records retain their historical newline-normalised
+text scheme; current read and effect bindings use raw bytes. A source change
+requires reconsidering the interpretation, while a changed governing guide requires
+reassessing its declared consumers. Neither comparison supplies semantic acceptance
+or write authority. See [governing sources](../package/scoped-instructions.md#source-reconciliation)
+for the grouped consumer path; interpretation judgement and recovery remain with
+System Intent.

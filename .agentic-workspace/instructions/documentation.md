@@ -13,7 +13,7 @@ paths:
   - tools/skills/README.md
   - tools/model-cli-harness/structured-executor/README.md
   - tools/model-cli-harness/external-agent-evaluation/README.md
-read:
+governed_by:
   - docs/documentation-style-guide.md
 ---
 
@@ -21,6 +21,7 @@ read:
 
 Apply the canonical documentation style guide when changing human-facing
 documentation. For generated documentation, change its authoritative source or
-template and regenerate the output. Reading the guide supplies semantic context;
-it is not evidence that the prose meets the guide. Writers and independent
-reviewers remain responsible for that judgement.
+template and regenerate the output. Guide changes require current coverage of
+this declared scope through Verification. Reading the guide is not evidence that
+prose meets it. Writers and independent reviewers remain responsible for that
+judgement.

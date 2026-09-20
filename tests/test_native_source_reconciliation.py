@@ -135,16 +135,81 @@ def test_exact_answer_stales_before_publication(tmp_path, shared_core_binary, na
     path = tmp_path / paths[drift]
     path.write_text(path.read_text() + "\n# changed\n")
     if drift == "policy":
-        # Shared policy currentness binds interpreted configuration, so a
-        # comment alone preserves the answer. Change an actual policy value.
+        # Comments preserve the answer; a matching delegation changes the
+        # semantic authority and requires a fresh request.
         assert call({"request": answer})["decision_packet"]["primary_action"] is not None
-        path.write_text(path.read_text() + '\n[workspace]\ncli_invoke="aw-current"\n')
+        path.write_text(
+            path.read_text() + '\ndecision_delegations=[{owner="verification",scope=["path:docs/guide.md","path:src/feature.txt"]}]\n'
+        )
     if drift == "instruction":
         assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
     else:
         with pytest.raises(AssertionError):
             call({"request": answer})
     assert not (tmp_path / ".agentic-workspace/proof/receipts").exists()
+
+
+@pytest.mark.parametrize("delegated", [False, True])
+def test_retained_semantics_ignore_unrelated_policy_and_admission_transport(tmp_path, shared_core_binary, native_cli, delegated):
+    context = repository(tmp_path)
+    config = tmp_path / ".agentic-workspace/config.toml"
+    grant = 'decision_delegations=[{owner="verification",scope=["path:docs/guide.md","path:src/feature.txt"]}]\n'
+    if delegated:
+        config.write_text(config.read_text() + grant)
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    if delegated:
+        answer = call()["verification"]["source_reconciliation"]["requests"][0]
+        answer["arguments"]["judgments"] = {"docs/guide.md": {"disposition": "reviewed-current", "reason": "Checked exact behavior."}}
+    else:
+        answer = answer_for(call)
+    action = call({"request": answer})["decision_packet"]["primary_action"]
+    assert call({"invocation": action})["status"] == "applied"
+    before = call()
+    evidence = before["verification"]["source_reconciliation"]["evidence"]
+    receipts = sorted((tmp_path / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json"))
+
+    # An unrelated interpreted policy value must not stale accepted semantics.
+    config.write_text(config.read_text() + '\n[workspace]\ncli_invoke="aw-current"\n')
+    assert call()["verification"]["source_reconciliation"]["evidence"] == evidence
+
+    # A different owner's restriction changes the aggregate action contract.
+    unrelated = tmp_path / ".agentic-workspace/instructions/unrelated.md"
+    unrelated.write_text("---\npaths: [other/**]\nprotect: [other/**]\n---\nUnrelated restriction.\n")
+    subprocess.run(["git", "-C", str(tmp_path), "add", str(unrelated)], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(tmp_path),
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "unrelated owner",
+        ],
+        check=True,
+        capture_output=True,
+    )
+    pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
+    old_pin = config.read_text().split('instruction_revision="')[1].split('"')[0]
+    config.write_text(config.read_text().replace(old_pin, pin))
+    current = call()["verification"]["source_reconciliation"]
+    assert current["status"] == "current"
+    assert current["evidence"] == evidence
+    assert sorted((tmp_path / ".agentic-workspace/proof/receipts").glob("source-reconciliation-*.json")) == receipts
+    # Coverage is reusable, but an old publication envelope is not new authority.
+    with pytest.raises(AssertionError):
+        call({"request": answer})
+
+    # Adding/removing the applicable grant changes semantic authority.
+    text = config.read_text()
+    config.write_text(text.replace(grant, "") if delegated else text.replace("[assurance]\n", "[assurance]\n" + grant))
+    assert call()["verification"]["source_reconciliation"]["status"] == "judgment-material-required"
 
 
 @pytest.mark.parametrize("stage", ["receipt", "temporary"])
@@ -364,3 +429,187 @@ def test_escaped_receipt_budget_rejects_before_admission(tmp_path, shared_core_b
         call({"invocation": action})
     assert not (tmp_path / ".agentic-workspace/local/effects").exists()
     assert not (tmp_path / ".agentic-workspace/proof/receipts").exists()
+
+
+def test_grouped_coverage_resumes_with_exact_membership_and_selective_drift(tmp_path, shared_core_binary, native_cli):
+    context = repository(tmp_path)
+    for index in range(270):
+        (tmp_path / f"src/item-{index:03}.txt").write_text("unchanged consumer")
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    material_request = call()["verification"]["source_reconciliation"]["material_request"]
+    material = call({"request": material_request})["verification"]["source_reconciliation"]["material"]
+    assert 1 <= len(material) <= 16
+    assert all(row["text"] and row["revision"] for row in material)
+    for group in range(5):
+        owner = call()["verification"]["source_reconciliation"]
+        assert owner["coverage"]["total"] == 271
+        assert owner["coverage"]["accepted"] == group * 64
+        assert len(owner["proposal"]["work_postimages"]) <= 64
+        answer = answer_for(call)
+        action = call({"request": answer})["decision_packet"]["primary_action"]
+        assert call({"invocation": action})["status"] == "applied"
+        repeated = call({"request": answer})["verification"]["source_reconciliation"]
+        assert repeated["status"] == ("partial" if group < 4 else "current")
+        # Fresh process and different task cannot erase repository-level coverage.
+        context["task"] = f"Continue exact source consistency group {group}"
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["status"] == "current"
+    assert owner["coverage"]["accepted"] == 271
+    assert owner["coverage"]["accepted_groups"] == 5
+    (tmp_path / "src/item-269.txt").write_text("changed consumer")
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["coverage"]["accepted"] == 256
+    assert owner["coverage"]["pending"] == 15
+    answer = answer_for(call)
+    (tmp_path / "src/added.txt").write_text("new membership")
+    with pytest.raises(AssertionError, match="stale or differs"):
+        call({"request": answer})
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["coverage"]["total"] == 272
+    assert owner["coverage"]["accepted"] == 256
+    (tmp_path / "docs/guide.md").write_text("changed governing source")
+    assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
+
+
+def test_current_group_projection_ignores_history_and_preserves_missing_evidence(tmp_path, shared_core_binary, native_cli):
+    import json
+
+    context = repository(tmp_path)
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+    call({"invocation": action})
+    receipt = tmp_path / action["arguments"]["receipt_ref"]
+    for index in range(300):
+        (receipt.parent / f"source-reconciliation-historical-{index}.json").write_text("historical, not operational")
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
+    (tmp_path / "docs/guide.md").write_text("Changed source basis")
+    assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
+    action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+    call({"invocation": action})
+    projection = next((tmp_path / ".agentic-workspace/proof/current").glob("source-reconciliation-*.json"))
+    assert json.loads(projection.read_text()) == [action["arguments"]["receipt_ref"]]
+    assert receipt.exists()  # superseded immutable evidence is preserved
+    current_receipt = tmp_path / action["arguments"]["receipt_ref"]
+    current_receipt.unlink()
+    with pytest.raises(AssertionError, match="current reconciliation receipt unavailable"):
+        call()
+    projection.write_text("corrupt current projection")
+    with pytest.raises(AssertionError):
+        call()
+
+
+def test_governing_source_reverse_scope_is_admitted_resumable_and_quiet(tmp_path, shared_core_binary, native_cli):
+    from tests.test_native_instruction_write import instruction
+
+    context = repository(tmp_path)
+    source = ".agentic-workspace/instructions/feature.md"
+    for index in range(65):
+        (tmp_path / f"src/adapter-{index:03}.txt").write_text("wire format adapter")
+
+    def call(extra=None, **kwargs):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {}), **kwargs})
+
+    content = "---\npaths: [src/**]\nread: [docs/context.md]\ngoverned_by: [docs/guide.md]\n---\nFollow the declared wire format.\n"
+    _, _, action = instruction(call, source, content)
+    assert call(invocation=action)["status"] == "applied"
+    row = call()["instructions"]["sources"][0]
+    assert row["binding_admission"]["status"] == "current"
+    assert row["read"] == ["docs/context.md", "docs/guide.md"]
+    context["changed"] = ["docs/guide.md"]  # Outside the declared consumer paths.
+    owner = call()["verification"]["source_reconciliation"]
+    assert owner["coverage"]["total"] == 66
+    assert owner["relations"][0]["relation_id"] == source
+    original = (tmp_path / "src/feature.txt").read_bytes()
+    for _ in range(2):
+        action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+        assert call({"invocation": action})["status"] == "applied"
+        context["task"] = "Continue wire-format consistency in a fresh task"
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
+    assert (tmp_path / "src/feature.txt").read_bytes() == original
+    context["changed"] = ["docs/context.md"]
+    (tmp_path / "docs/context.md").write_text("Changed ordinary background")
+    assert call()["verification"]["source_reconciliation"]["status"] == "not-required"
+    context["changed"] = ["unrelated.rs"]
+    assert call()["verification"]["source_reconciliation"]["status"] == "not-required"
+    context["changed"] = ["docs/guide.md"]
+    (tmp_path / "docs/guide.md").write_text("Substantive wire-format change")
+    assert call()["verification"]["source_reconciliation"]["coverage"]["accepted"] == 0
+    # Historical preparations cannot exhaust operational source discovery.
+    effects = tmp_path / ".agentic-workspace/local/effects"
+    for index in range(300):
+        (effects / f"instruction-historical-{index}.prepared.json").write_text("old preparation")
+    _, _, replacement = instruction(call, source, content + "Keep this explicit scope.\n")
+    assert call(invocation=replacement)["status"] == "applied"
+    # An unadmitted withdrawal cannot erase the existing owner-published relation.
+    (tmp_path / source).write_text("---\npaths: [elsewhere/**]\nread: [docs/guide.md]\n---\nContext only\n")
+    assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
+    (tmp_path / source).unlink()
+    assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"
+    # Corrupt real admitted custody after withdrawal must not erase governance.
+    import json
+
+    index = effects / "instruction-current/index.json"
+    posts = json.loads(index.read_text())[source]
+    assert isinstance(posts, str)
+    assert posts == replacement["arguments"]["post_revision"]
+    current = next(
+        p
+        for p in effects.glob("instruction-*.prepared.json")
+        if "historical" not in p.name and json.loads(p.read_text())["invocation"]["arguments"]["post_revision"] == posts
+    )
+    record = json.loads(current.read_text())
+    record["outcome"] = {"status": "forged"}
+    current.write_text(json.dumps(record))
+    view = call()
+    assert view["instructions"]["governance_discovery"]["status"] == "unavailable"
+    assert any(row["code"].endswith("admitted-source-discovery-unavailable") for row in view["decision_packet"]["blockers"])
+    index.unlink()
+    assert call()["instructions"]["governance_discovery"]["status"] == "unavailable"
+
+
+def test_governing_overlap_and_self_membership_keep_separate_authority(tmp_path, shared_core_binary, native_cli):
+    context = repository(tmp_path)
+    first = tmp_path / ".agentic-workspace/instructions/feature.md"
+    first.write_text("---\npaths: [docs/**]\ngoverned_by: [docs/guide.md]\n---\nGovern the declared scope.\n")
+    second = first.with_name("overlap.md")
+    second.write_text(first.read_text())
+    subprocess.run(["git", "-C", str(tmp_path), "add", "."], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(tmp_path),
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-qm",
+            "admitted governance",
+        ],
+        check=True,
+    )
+    pin = subprocess.check_output(["git", "-C", str(tmp_path), "rev-parse", "HEAD"], text=True).strip()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(f'[assurance]\ninstruction_revision="{pin}"\n')
+    context["changed"] = ["docs/guide.md"]
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    for index in range(2):
+        owner = call()["verification"]["source_reconciliation"]
+        assert owner["status"] != "current"
+        assert len(owner["relations"]) == 2
+        assert owner["coverage"]["total"] == 2
+        assert sum(row["status"] == "current" for row in owner["relations"]) == index
+        action = call({"request": answer_for(call)})["decision_packet"]["primary_action"]
+        assert call({"invocation": action})["status"] == "applied"
+    assert call()["verification"]["source_reconciliation"]["status"] == "current"
+    first.write_text("Ordinary background only")
+    assert call()["verification"]["source_reconciliation"]["status"] == "source-admission-required"

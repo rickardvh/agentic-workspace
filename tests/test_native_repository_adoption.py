@@ -414,6 +414,8 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
         ".agentic-workspace/planning/assignments/current.assignment.json": b"{}",
         ".agentic-workspace/proof/receipts/source-reconciliation.json": b"{}",
         ".agentic-workspace/proof/manifests/current.json": b"{}",
+        ".agentic-workspace/proof/current/source-reconciliation-current.json": b"[]",
+        ".agentic-workspace/proof/current/source-reconciliation-current.json.tmp": b"[]",
         ".agentic-workspace/evaluations.json": b'{"kind":"agentic-workspace/evaluations/v1","evaluations":[]}',
         ".agentic-workspace/evaluations/history.json": b"{}",
         ".agentic-workspace/agent-aids/candidate.md": b"repo-owned candidate",
@@ -449,6 +451,7 @@ def test_repository_foothold_currentness_removal_and_reentry(tmp_path, shared_co
     module_path.parent.mkdir(parents=True, exist_ok=True)
     module_path.write_bytes(b"Existing module-owned support, customized before Workspace adoption")
     stale = [
+        ".agentic-workspace/proof/unowned/current.json",
         ".agentic-workspace/planning/schemas/obsolete.json",
         ".agentic-workspace/memory/skills/obsolete/prepare.py",
         ".agentic-workspace/example/obsolete.md",

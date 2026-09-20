@@ -30,6 +30,7 @@ small metadata vocabulary is:
 | --- | --- |
 | `paths` | Limit applicability by repository-relative glob; omit for global scope. |
 | `read` | Supply named context for reasoning; availability does not prove it correct. |
+| `governed_by` | Supply exact governing sources and require consistency of the declared consumer scope when either side changes. |
 | `reconcile` | Require current consistency judgement for exact canonical files, without compulsory editing. |
 | `use` | Prefer an existing replaceable procedure; no guaranteed host activation, effect permission or proof. |
 | `checks` | Require current evidence through Verification; `- run: ...` declares a concrete command. |
@@ -95,7 +96,7 @@ These are deliberate scope/lifetime choices, not a priority mechanism.
 
 ## Publish hard requirements through the owner
 
-Editing a source and admitting its hard consequences are separate. `reconcile`,
+Editing a source and admitting its hard consequences are separate. `governed_by`, `reconcile`,
 concrete `checks` and `protect` require current instruction admission. A changed
 or unadmitted source stays unresolved; copying a hash or advancing a trust revision
 by hand is not admission. A current protection is not permission to run a command.
@@ -173,6 +174,37 @@ merely to make the example run.
 
 ## Source reconciliation
 
+To make a source govern consumers, name it once in `governed_by`:
+
+```markdown
+---
+paths: [src/adapters/**]
+governed_by: [spec/wire-format.md]
+---
+
+Keep adapters consistent with the wire format.
+```
+
+Publish this declaration through the instruction owner described above. Adapter
+work receives the specification as context; no duplicate `read` entry is needed.
+A change to `spec/wire-format.md` discovers the current adapter scope even though
+the specification is outside `paths`. Plain `read` never creates this reverse
+obligation. Existing `reconcile` continues to check named canonical files against
+resulting work.
+
+Inspect `verification.source_reconciliation`: `relation_id` identifies the
+declaration, `proposal.work_postimages` names the current group, and `coverage`
+shows what remains. Its `material_request` reads at most 16 exact references;
+select fewer if the existing byte budget is exceeded. Submit the issued judgement
+request after assessing the source and group, then publish with current authority.
+A justified no-impact assessment requires no consumer edits. For substantive
+impact, edit consumers through their normal owners and obtain a fresh request.
+
+Each declared relationship retains its own authority and coverage. Overlapping
+scopes and sources inside their own scope are direct relationships, not recursive
+expansion. Unrelated work does not acquire a corpus review. An unadmitted scope
+withdrawal remains unresolved until its instruction owner admits the change.
+
 Verification returns an exact material request for applicable `reconcile` sources.
 Propose `updated` or `reviewed-current`, with a reason, for each named source:
 
@@ -193,12 +225,30 @@ evidence of the bounded answer, not deciding authority or a semantic truth oracl
 It satisfies only the source-reconciliation obligation; other completion checks
 remain pending. No source body is copied into a documentation store.
 
-Currentness binds the current work, selected Planning subject when present,
-canonical sources, declared context dependencies, applicable instruction
-admission, relevant work files, policy and capability revisions. Every entry
+Currentness binds the selected Planning subject when present,
+canonical sources, declared context dependencies, admitted instruction content,
+relevant work files, the matching decision delegation and producer semantics.
+Admission is checked afresh; changing its Git pointer to identical instruction
+content preserves accepted coverage. Unrelated configuration and other owners'
+capability changes also preserve coverage. Fresh publication requests and actions
+still require their current capability envelope and exact authority. Every entry
 reobserves the declared file set, including additions made outside AW. An incomplete
 caller change list or a quiet event stream cannot prove freshness. Discovery is
-bounded; a scope too large or unsafe to observe remains unresolved for completion.
+bounded; an unsafe or incompletely observed scope remains unresolved for completion.
+
+Large scopes are assessed in groups of at most 64 consumers. The proposal names
+the exact group; `coverage` reports total, accepted and pending consumers. Publish
+the group, then request the next one. A fresh process can recover accepted groups
+from Verification's current group references and their receipts without the
+original task or conversation. Superseded receipts remain historical evidence;
+ordinary discovery does not scan that history. Missing or damaged current
+evidence leaves coverage unresolved. New tasks
+still need their own current publication authority. Completion requires coverage
+of the entire current set, not a sample or the sum of overlapping groups.
+
+A consumer change invalidates its group; a canonical source or governing policy
+change invalidates dependent groups. New consumers require additional coverage.
+These observations mean reconsideration, not that every consumer needs editing.
 
 Unresolved obligations are reobserved on Planning-owned continuation. Direct work
 does not acquire Planning. Unrelated scoped work has no reconciliation obligation;

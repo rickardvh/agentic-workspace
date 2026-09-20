@@ -36,7 +36,14 @@ The path identifies when the instruction applies; `read` identifies a prerequisi
 
 Then inspect both a matching and an unrelated task. The matching task should surface the rule; the unrelated task should not acquire an API requirement.
 
-The [scoped-instruction reference](package/scoped-instructions.md) explains `paths`, `read`, `reconcile`, `use`, `checks` and `protect`, including a worked inspection command. Add those fields only when their behaviour is needed.
+The [scoped-instruction reference](package/scoped-instructions.md) explains `paths`, `read`, `governed_by`, `reconcile`, `use`, `checks` and `protect`, including a worked inspection command. Add those fields only when their behaviour is needed.
+
+If the API contract governs the implementation, use `governed_by` in place of
+`read`. The contract then arrives as context for implementation work, and a
+contract-only change identifies the consumers needing reassessment. Follow the
+returned bounded groups until all current consumers are covered. A justified
+no-impact judgement needs no artificial edits. Publish the declaration through
+the instruction owner; ordinary background reading stays context-only.
 
 ## Change an existing setting
 

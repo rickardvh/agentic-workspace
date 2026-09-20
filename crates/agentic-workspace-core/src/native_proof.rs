@@ -224,11 +224,15 @@ pub(crate) fn select_mode(
                     gaps.push(format!("proof-dependency-selector-unresolved:{reference}"));
                     continue;
                 }
-                match crate::native_verification::read(&root, reference) {
-                    Ok(Some(bytes)) => {
-                        dependencies.insert(reference.into(), json!(sha(&bytes)));
-                    }
-                    _ => gaps.push(format!("proof-dependency-unavailable:{reference}")),
+                let observation = crate::dependency_binding::observe(
+                    &root,
+                    reference,
+                    crate::dependency_binding::Scheme::RawBytes,
+                );
+                if observation.status == crate::dependency_binding::Currentness::Current {
+                    dependencies.insert(reference.into(), json!(observation.revision.unwrap()));
+                } else {
+                    gaps.push(format!("proof-dependency-unavailable:{reference}"));
                 }
             }
         }
@@ -286,6 +290,41 @@ pub(crate) fn freshness(
         );
     };
     let choice = &committed["invocation"]["arguments"]["selection"]["choice"];
+    // Observe execution inputs independently of current strategy. Historical
+    // runtime strategy_revision participates in the old fingerprint, so retain
+    // that field only while rebuilding the observation, never as current policy.
+    let previous = &committed["invocation"]["arguments"]["selection"];
+    if previous["work"]["id"]
+        .as_str()
+        .is_some_and(|id| !id.starts_with("direct-task:") && !id.is_empty())
+        && previous["work"] != *work
+    {
+        return Ok(
+            json!({"status":"stale","strategy_coverage":"unproven","reason":"planning-proof-subject-changed"}),
+        );
+    }
+    let mut observed = runtime(&Value::Null)?;
+    observed["strategy_revision"] =
+        receipt["proof_subject"]["runtime"]["strategy_revision"].clone();
+    let current_subject = proof_subject::build(
+        target,
+        changed,
+        choice["command"].as_str().unwrap(),
+        None,
+        None,
+        &[],
+        &observed,
+    )?;
+    let comparison = proof_subject::compare(
+        &receipt["proof_subject"],
+        &current_subject,
+        receipt["command"].as_str().unwrap_or(""),
+    );
+    if comparison["status"] != "reusable" {
+        return Ok(
+            json!({"status":"stale","strategy_coverage":"unproven","reason":if receipt["proof_subject"]["runtime"]["producer"] != observed["producer"] {"native-producer-binary-compatibility-unproven"}else{"current-native-runtime-or-subject-mismatch"},"comparison":comparison}),
+        );
+    }
     let declared = strategy["proof_routes"]
         .get(choice["route_id"].as_str().unwrap_or(""))
         .is_some_and(|route| {
@@ -293,42 +332,89 @@ pub(crate) fn freshness(
                 .as_array()
                 .is_some_and(|commands| commands.contains(&choice["command"]))
         });
-    if declared {
-        let current = select_mode(
-            target,
-            task,
-            changed,
-            work,
-            strategy,
-            Some(choice),
-            SelectionMode {
-                report: None,
-                alternatives: false,
-            },
-        )?;
-        if current["status"] == "selected" {
-            let comparison = proof_subject::compare(
-                &receipt["proof_subject"],
-                &current["selection"]["proof_subject"],
-                receipt["command"].as_str().unwrap_or(""),
-            );
-            if comparison["status"] == "reusable" {
-                return Ok(
-                    json!({"status":if current["gaps"].as_array().is_some_and(Vec::is_empty) {"reusable"} else {"unproven"},"strategy_coverage":"selected-command-covered","command_coverage":choice,"comparison":comparison,
-                    "environment_scope":"producer-and-declared-shell","remaining_gaps":current["gaps"],"nested_tool_runtime":"unobserved"}),
-                );
-            }
-        }
+    if !declared {
+        return Ok(
+            json!({"status":"reusable","strategy_coverage":"not-required","reason":"observation-current-command-not-required","comparison":comparison}),
+        );
     }
-    let reason = if receipt["proof_subject"]["runtime"]["producer"]
-        != binary(&std::env::current_exe().map_err(err)?)?
-    {
-        "native-producer-binary-compatibility-unproven"
-    } else {
-        "current-native-runtime-subject-or-strategy-mismatch"
+    let current = select_mode(
+        target,
+        task,
+        changed,
+        work,
+        strategy,
+        Some(choice),
+        SelectionMode {
+            report: None,
+            alternatives: false,
+        },
+    )?;
+    if current["status"] != "selected" {
+        return Ok(
+            json!({"status":"reusable","strategy_coverage":"unproven","remaining_gaps":current,"comparison":comparison}),
+        );
+    }
+    use crate::dependency_binding::{Basis, Currentness, Observation, Scheme};
+    let adapt = |strategy: &Value| -> Vec<Observation> {
+        strategy["dependencies"]
+            .as_object()
+            .into_iter()
+            .flatten()
+            .map(|(identity, revision)| Observation {
+                identity: identity.clone(),
+                scheme: Scheme::RawBytes,
+                revision: revision.as_str().map(|s| {
+                    if s.starts_with("sha256:") {
+                        s.into()
+                    } else {
+                        format!("sha256:{s}")
+                    }
+                }),
+                status: Currentness::Current,
+            })
+            .collect()
     };
-    Ok(json!({"status":"stale","strategy_coverage":"unproven","reason":reason}))
+    let old_dependencies = adapt(&previous["strategy"]);
+    let dependencies = adapt(&current["selection"]["strategy"]);
+    let identity = json!({"conclusion":"selected-command-sufficiency","choice":choice});
+    let compared = crate::dependency_binding::compare(
+        Basis {
+            conclusion: &identity,
+            dependencies: &dependencies,
+        },
+        Some(Basis {
+            conclusion: &identity,
+            dependencies: &old_dependencies,
+        }),
+    );
+    let coverage = compared.status == Currentness::Current
+        && current["gaps"].as_array().is_some_and(Vec::is_empty);
+    let identity = |strategy: &Value| {
+        let mut route = strategy["route"].clone();
+        if let Some(route) = route.as_object_mut() {
+            route.remove("source_revision");
+        }
+        json!({"conclusion":"proof-sufficiency","choice":choice,"protocols":strategy["protocols"],"route":route})
+    };
+    let current_identity = identity(&current["selection"]["strategy"]);
+    let old_identity = identity(&previous["strategy"]);
+    let sufficiency = crate::dependency_binding::compare(
+        Basis {
+            conclusion: &current_identity,
+            dependencies: &dependencies,
+        },
+        Some(Basis {
+            conclusion: &old_identity,
+            dependencies: &old_dependencies,
+        }),
+    );
+    Ok(
+        json!({"status":"reusable","strategy_coverage":if coverage{"selected-command-covered"}else{"unproven"},"command_coverage":if coverage{choice.clone()}else{Value::Null},"comparison":comparison,
+        "sufficiency_currentness":sufficiency.status,"changed_dependencies":compared.changed,"remaining_gaps":current["gaps"],
+        "environment_scope":"producer-and-declared-shell","nested_tool_runtime":"unobserved"}),
+    )
 }
+
 pub(crate) fn action(
     target: &Path,
     task: &str,

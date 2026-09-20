@@ -14,9 +14,10 @@ improvement_latitude = "proactive"
 cli_invoke = "./target/debug/agentic-workspace"
 
 [assurance]
-# Repository-owner admission of binding checks/protect in this exact scoped
-# instruction snapshot. This grants obligations/restrictions, never proof success.
-instruction_revision = "a6ee404328744515ee004d526c0d58980daf517c"
+# Repository-owner admission of the exact instruction snapshot selected for #3514:
+# documentation governance plus the existing instruction/protection scope.
+# This grants obligations/restrictions, never proof success or corpus acceptance.
+instruction_revision = "e411a2a9dad61d80e9e109efa15ea762b75f92d8"
 # Source-owner admission of this exact archive snapshot and its provenance.
 # Never advance automatically from HEAD or an ordinary client request.
 decision_record_target = "docs/decisions"

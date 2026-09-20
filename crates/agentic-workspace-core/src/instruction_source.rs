@@ -52,6 +52,7 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
                 "routes",
                 "read",
                 "reconcile",
+                "governed_by",
                 "use",
                 "checks",
                 "protect",
@@ -97,14 +98,16 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
             if value.is_empty() {
                 return None;
             }
-            if matches!(field, "paths" | "read" | "reconcile" | "protect")
-                && (value.starts_with(['/', '~'])
-                    || value.contains(['\\', ':'])
-                    || value.split('/').any(|p| p == ".."))
+            if matches!(
+                field,
+                "paths" | "read" | "reconcile" | "governed_by" | "protect"
+            ) && (value.starts_with(['/', '~'])
+                || value.contains(['\\', ':'])
+                || value.split('/').any(|p| p == ".."))
             {
                 return None;
             }
-            if field == "reconcile"
+            if matches!(field, "reconcile" | "governed_by")
                 && (relative(value).is_err() || value.contains(['*', '?', '[', ']']))
             {
                 return None;
@@ -120,8 +123,7 @@ fn metadata(bytes: &[u8], result: &mut Value) -> Option<String> {
 }
 
 pub(crate) fn parsed(bytes: &[u8], include_body: bool) -> Value {
-    let mut fields =
-        json!({"paths":[],"routes":[],"read":[],"reconcile":[],"use":[],"checks":[],"protect":[]});
+    let mut fields = json!({"paths":[],"routes":[],"read":[],"reconcile":[],"governed_by":[],"use":[],"checks":[],"protect":[]});
     let body = metadata(bytes, &mut fields);
     json!({"metadata":fields,"valid":body.is_some(),"diagnostic":if body.is_some(){""}else{"invalid or unterminated scoped instruction metadata; preserve source and reconcile"},"has_guidance":body.as_ref().is_some_and(|b|!b.is_empty()),"body":if include_body{body.unwrap_or_default()}else{String::new()}})
 }
@@ -238,6 +240,88 @@ pub(crate) fn current_sources(target: &Path) -> Result<Vec<Value>, CoreError> {
         .collect()
 }
 
+/// Preserve admitted governance when an unadmitted edit withdraws its scope.
+/// Sources remain owner-local: the existing Git admission and write custody
+/// supply provenance; this is not a separate dependency registry.
+pub(crate) fn preserve_governance(
+    target: &Path,
+    pin: &str,
+    mut current: Vec<Value>,
+) -> Result<Vec<Value>, CoreError> {
+    let mut candidates = Vec::new();
+    if pin.len() == 40 && pin.bytes().all(|b| b.is_ascii_hexdigit()) {
+        let output = Command::new("git")
+            .arg("-C")
+            .arg(target)
+            .args([
+                "grep",
+                "-l",
+                "-F",
+                "governed_by",
+                pin,
+                "--",
+                ".agentic-workspace/instructions/*.md",
+            ])
+            .output()
+            .map_err(|e| CoreError::new(e.to_string()))?;
+        if output.status.success() {
+            let paths =
+                String::from_utf8(output.stdout).map_err(|e| CoreError::new(e.to_string()))?;
+            if paths.lines().count() > 64 {
+                return Err(CoreError::new(
+                    "admitted instruction discovery exceeds 64 sources",
+                ));
+            }
+            for path in paths
+                .lines()
+                .filter_map(|line| line.split_once(':').map(|(_, path)| path))
+                .filter(|path| source_scope(path) == Some("repository"))
+            {
+                let source = Command::new("git")
+                    .arg("-C")
+                    .arg(target)
+                    .args(["show", &format!("{pin}:{path}")])
+                    .output()
+                    .map_err(|e| CoreError::new(e.to_string()))?;
+                if source.status.success() && source.stdout.len() <= 262144 {
+                    candidates.push((path.to_owned(), source.stdout));
+                }
+            }
+        }
+    }
+    candidates.extend(crate::native_instruction_write::governance_sources(target)?);
+    for (path, bytes) in candidates {
+        let mut prior = parsed(&bytes, false);
+        if prior["valid"] != true
+            || prior["metadata"]["governed_by"]
+                .as_array()
+                .is_none_or(Vec::is_empty)
+        {
+            continue;
+        }
+        let existing = current
+            .iter()
+            .position(|d| d["source"]["reference"] == path);
+        if let Some(index) = existing {
+            let revision = current[index]["source"]["revision"].as_str().unwrap();
+            if revision == hash(&bytes)
+                || crate::native_instruction_write::admitted(target, &path, revision)?
+            {
+                continue;
+            }
+            prior["source"] = current[index]["source"].clone();
+            prior["retained_governance"] = json!(true);
+            current[index] = prior;
+        } else {
+            prior["source"] =
+                json!({"reference":path,"revision":hash(&bytes),"scope":source_scope(&path)});
+            prior["retained_governance"] = json!(true);
+            current.push(prior);
+        }
+    }
+    Ok(current)
+}
+
 pub fn view(value: Value) -> Result<Value, CoreError> {
     let input: Input = serde_json::from_value(value).map_err(|e| CoreError::new(e.to_string()))?;
     if input.sources.len() > 64 {
@@ -277,7 +361,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 "instruction source must be a unique exact scoped Markdown path",
             ));
         }
-        let mut row = json!({"source":{"reference":source}, "status":"unadmitted", "checks":[], "reconcile":[], "protect":[], "authority":{"effects":[],"target_patterns":[]}});
+        let mut row = json!({"source":{"reference":source}, "status":"unadmitted", "checks":[], "reconcile":[],"governed_by":[], "protect":[], "authority":{"effects":[],"target_patterns":[]}});
         if !revision.is_empty() && !snapshot_available {
             row["status"] = json!("unavailable");
         }
@@ -320,6 +404,11 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                                 .as_array()
                                 .unwrap()
                                 .is_empty();
+                        let hard_checks = hard_checks
+                            || !parsed["metadata"]["governed_by"]
+                                .as_array()
+                                .unwrap()
+                                .is_empty();
                         let mut effects = vec![];
                         let mut targets = vec![];
                         if hard_checks {
@@ -335,6 +424,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                         row["status"] = json!("current");
                         row["checks"] = json!(checks);
                         row["reconcile"] = parsed["metadata"]["reconcile"].clone();
+                        row["governed_by"] = parsed["metadata"]["governed_by"].clone();
                         row["protect"] = json!(protect);
                         row["authority"] = json!({"effects":effects,"target_patterns":targets});
                     } else {
@@ -355,7 +445,7 @@ pub fn view(value: Value) -> Result<Value, CoreError> {
                 row["status"] = json!("current");
                 row["source"] = document["source"].clone();
                 row["admission_basis"] = json!("exact-owner-published-instruction");
-                for field in ["checks", "reconcile", "protect"] {
+                for field in ["checks", "reconcile", "governed_by", "protect"] {
                     row[field] = document["metadata"][field].clone();
                 }
             }

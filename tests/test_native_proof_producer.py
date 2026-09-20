@@ -492,3 +492,41 @@ def test_native_core_byte_drift_and_other_location_do_not_reuse_proof(tmp_path: 
     with pytest.raises(AssertionError, match="stale"):
         call(launcher, {**context, "invocation": action})
     assert (target / "count.txt").read_text().splitlines() == ["executed"]
+
+
+def test_strategy_requirements_reuse_current_observations(tmp_path, shared_core_binary, native_cli):
+    context = fixture(tmp_path)
+    source = tmp_path / ".agentic-workspace/verification/manifest.toml"
+    command = "Add-Content -Path count.txt -Value executed" if os.name == "nt" else "echo executed >> count.txt"
+
+    def strategy(commands):
+        source.write_text(
+            'schema_version="agentic-workspace/verification-manifest/v1"\n[protocols]\n[proof_routes]\n'
+            "[assurance.proof_profiles.required]\nrequired_commands=" + json.dumps(commands) + "\n"
+            '[assurance.requirements.current]\nlevel="high"\nforce="required-before-closeout"\n'
+            'applies_to_paths=["a.txt"]\nproof_profile="required"\n'
+        )
+
+    def call(extra=None):
+        return consume("json", shared_core_binary, native_cli, {**context, **(extra or {})})
+
+    strategy([command])
+    request = call()["verification"]["execution_requests"][0]
+    action = call({"request": request})["decision_packet"]["primary_action"]
+    reference = call({"invocation": action})["value"]["publication"]["reference"]
+
+    def proof():
+        claim = call()["verification"]["requests"][0]
+        claim["arguments"]["evidence_refs"] = [reference]
+        return call({"request": claim})["verification"]
+
+    assert proof()["strategy_control"]["obligations"][0]["missing_commands"] == []
+    strategy([command, "echo additional"])
+    current = proof()
+    assert current["evidence"][0]["evidence_freshness"] == "reusable"
+    assert current["strategy_control"]["obligations"][0]["missing_commands"] == ["echo additional"]
+    strategy([command])
+    assert proof()["strategy_control"]["obligations"][0]["missing_commands"] == []
+    assert (tmp_path / "count.txt").read_text().splitlines() == ["executed"]
+    (tmp_path / "a.txt").write_text("material subject drift")
+    assert proof()["evidence"][0]["evidence_freshness"] == "stale"

@@ -81,9 +81,15 @@ capability, supported platforms, independent review or release publication.
 ## Apply the guide and judge the result
 
 The repository's [documentation instruction](../.agentic-workspace/instructions/documentation.md)
-uses `read` to surface this guide for documentation paths. Loading it supplies
-context; it does not prove understanding or compliance. Writers and independent
-reviewers judge prose quality against the reader's task.
+uses `governed_by` to supply this guide for its declared documentation scope.
+Changes to the guide expose that scope for bounded reassessment through
+Verification. Continue the returned groups until every current consumer is
+covered; unchanged and still-conforming documents need no artificial edits.
+
+Loading the guide supplies context; it does not prove understanding or compliance.
+Writers and independent reviewers judge prose quality against the reader's task.
+An accepted group records its exact sources, consumers and rationale. A fresh
+agent can continue pending groups without the original conversation.
 
 Use existing deterministic checks for the properties they actually establish,
 such as Markdown structure, links or generated-reference freshness. Passing them

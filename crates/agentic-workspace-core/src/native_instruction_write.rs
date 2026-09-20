@@ -68,6 +68,64 @@ pub(crate) fn admitted(target: &Path, source: &str, post: &str) -> Result<bool, 
     crate::attempt_store::inspect_committed(target.to_str().unwrap(), prepared["custody"].clone())?;
     Ok(true)
 }
+const CURRENT: &str = ".agentic-workspace/local/effects/instruction-current/index.json";
+fn current_sources(root: &Dir) -> Result<serde_json::Map<String, Value>, CoreError> {
+    match crate::current_projection::read(root, CURRENT)? {
+        Some(value) => {
+            let rows = value
+                .as_object()
+                .ok_or_else(|| err("invalid instruction current projection"))?;
+            if rows.len() > 256 {
+                return Err(err("instruction current source set exceeds bound"));
+            }
+            for (path, posts) in rows {
+                if crate::instruction_source::source_scope(path).is_none()
+                    || posts.as_str().is_none()
+                {
+                    return Err(err("invalid instruction current source reference"));
+                }
+            }
+            Ok(rows.clone())
+        }
+        None => {
+            if root
+                .try_exists(".agentic-workspace/local/effects/instruction-current")
+                .map_err(err)?
+            {
+                return Err(err("instruction current projection unavailable"));
+            }
+            Ok(serde_json::Map::new())
+        }
+    }
+}
+fn publish_current(root: &Dir, path: &str, post: &str) -> Result<(), CoreError> {
+    let mut rows = current_sources(root)?;
+    rows.insert(path.to_owned(), json!(post));
+    if rows.len() > 256 {
+        return Err(err("instruction current source set exceeds bound"));
+    }
+    crate::current_projection::write(root, CURRENT, &Value::Object(rows))
+}
+pub(crate) fn governance_sources(target: &Path) -> Result<Vec<(String, Vec<u8>)>, CoreError> {
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let mut results = Vec::new();
+    for (path, post) in current_sources(&root)? {
+        let post = post.as_str().unwrap();
+        let record = held(target, &path, post)?
+            .ok_or_else(|| err("current instruction custody unavailable"))?;
+        // Missing or damaged commit custody is unresolved authority. Never
+        // fall back to an older admission or mistake it for policy withdrawal.
+        if !admitted(target, &path, post)? {
+            return Err(err("current instruction publication is unresolved"));
+        }
+        let content = record["invocation"]["arguments"]["request"]["arguments"]["content"]
+            .as_str()
+            .ok_or_else(|| err("current instruction content unavailable"))?;
+        results.push((path, content.as_bytes().to_vec()));
+    }
+    Ok(results)
+}
+
 pub(crate) fn extend_contract(contract: &mut Value) -> Result<(), CoreError> {
     let owner = &mut contract["owners"][0];
     owner["domains"] = json!(["scoped-instructions"]);
@@ -208,7 +266,7 @@ pub(crate) fn view(
             {
                 let old = crate::instruction_source::parsed(before, false);
                 let new = crate::instruction_source::parsed(&bytes, false);
-                if ["paths", "protect", "checks", "reconcile"]
+                if ["paths", "protect", "checks", "reconcile", "governed_by"]
                     .iter()
                     .any(|key| old["metadata"][key] != new["metadata"][key])
                 {
@@ -303,6 +361,8 @@ pub(crate) fn write_scope(action: &Value) -> Result<Vec<String>, CoreError> {
         format!("{source}.*.tmp"),
         marker(source, post)?,
         ".agentic-workspace/local/effects/instructions.lock".into(),
+        CURRENT.into(),
+        format!("{CURRENT}.tmp"),
     ]);
     Ok(paths)
 }
@@ -343,6 +403,7 @@ pub(crate) fn execute(
             json!({"target":target,"decision":decision,"invocation":i}),
         )?;
         revalidate()?;
+        publish_current(&root, path, post)?;
         crate::attempt_store::commit(
             json!({"target":target,"custody":record["custody"],"outcome":record["outcome"]}),
         )?;
@@ -408,6 +469,7 @@ pub(crate) fn execute(
     if current != args["binding"]["before_revision"] {
         return Err(err("instruction source changed at publication barrier"));
     }
+    publish_current(&root, path, post)?;
     if current.is_null() {
         root.hard_link(&temp, &root, path).map_err(err)?;
         root.remove_file(&temp).map_err(err)?;

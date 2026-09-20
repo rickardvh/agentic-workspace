@@ -7,6 +7,7 @@ use cap_std::{
 };
 use serde_json::{Value, json};
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     io::Write,
     path::Path,
@@ -15,7 +16,8 @@ use std::{
 pub(crate) const REQUEST: &str = "verification/reconcile-sources/v1";
 pub(crate) const OP: &str = "verification.record-source-reconciliation";
 const EFFECT: &str = "proof-execution";
-const SEMANTICS: &str = "source-reconciliation/v1";
+const SEMANTICS: &str = "source-reconciliation/v2";
+const GROUP_SIZE: usize = 64;
 
 fn err(e: impl std::fmt::Display) -> CoreError {
     CoreError::new(e.to_string())
@@ -34,7 +36,7 @@ pub(crate) fn extend_contract(owner: &mut Value) -> Result<(), CoreError> {
     owner["requests"].as_array_mut().unwrap().push(json!({
         "kind":REQUEST,"result_kind":"agentic-workspace/source-reconciliation/v1",
         "input_schema":{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
-            "properties":{"binding_revision":{"type":"string"},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]},"judgments":{"type":"object","minProperties":1,"maxProperties":64,
+            "properties":{"relation_id":{"type":"string"},"binding_revision":{"type":"string"},"proposal_revision":{"type":"string"},"answer":{"enum":["confirm","defer"]},"read_references":{"type":"array","minItems":1,"maxItems":16,"uniqueItems":true,"items":{"type":"string"}},"judgments":{"type":"object","maxProperties":64,
                 "additionalProperties":{"type":"object","additionalProperties":false,
                     "properties":{"disposition":{"enum":["updated","reviewed-current"]},"reason":{"type":"string","minLength":1,"maxLength":4096}},
                     "required":["disposition","reason"]}}},"required":["binding_revision","judgments"]}}));
@@ -47,11 +49,27 @@ pub(crate) fn extend_contract(owner: &mut Value) -> Result<(), CoreError> {
     Ok(())
 }
 
-fn observe(root: &Dir, path: &str) -> Result<Value, CoreError> {
-    Ok(match native_planning::read(root, path)? {
-        Some(bytes) => json!({"status":"present","revision":crate::decision_source::hash(&bytes)}),
-        None => json!({"status":"absent"}),
-    })
+fn observe(
+    root: &Dir,
+    path: &str,
+    observations: &RefCell<BTreeMap<String, Value>>,
+) -> Result<Value, CoreError> {
+    if let Some(observed) = observations.borrow().get(path) {
+        return Ok(observed.clone());
+    }
+    let observation =
+        crate::dependency_binding::observe(root, path, crate::dependency_binding::Scheme::RawBytes);
+    let observed = match observation.status {
+        crate::dependency_binding::Currentness::Current => {
+            json!({"status":"present","revision":observation.revision})
+        }
+        crate::dependency_binding::Currentness::Missing => json!({"status":"absent"}),
+        _ => return Err(err(format!("source observation unavailable: {path}"))),
+    };
+    observations
+        .borrow_mut()
+        .insert(path.to_owned(), observed.clone());
+    Ok(observed)
 }
 
 // Reobserve the applicable declared path set, including newly created files.
@@ -137,11 +155,6 @@ pub(crate) fn scope_files(root: &Dir, patterns: &[String]) -> Result<BTreeSet<St
             }
         }
     }
-    if paths.len() > 256 {
-        return Err(err(
-            "source reconciliation selects more than 256 exact work files",
-        ));
-    }
     Ok(paths)
 }
 
@@ -222,6 +235,7 @@ fn retained(target: &Path, path: &str, binding: &Value) -> Result<Option<Value>,
     Ok(Some(record))
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct Context<'a> {
     pub subject: Option<&'a Value>,
     pub executing: bool,
@@ -236,7 +250,101 @@ pub(crate) fn view(
     request: Option<&Value>,
     context: Context<'_>,
 ) -> Result<Value, CoreError> {
-    let Context { subject, executing } = context;
+    let observations = RefCell::new(BTreeMap::new());
+    let mut relations = Vec::new();
+    let mut ordinary = instructions.clone();
+    ordinary["sources"] = json!(
+        instructions["sources"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|row| !strings(&row["reconcile"]).is_empty())
+            .collect::<Vec<_>>()
+    );
+    if ordinary["sources"]
+        .as_array()
+        .is_some_and(|rows| !rows.is_empty())
+    {
+        relations.push(("canonical-sources".to_owned(), ordinary));
+    }
+    for row in instructions["sources"].as_array().into_iter().flatten() {
+        if strings(&row["governed_by"]).is_empty() {
+            continue;
+        }
+        let mut relation = instructions.clone();
+        let mut source = row.clone();
+        source["reconcile"] = row["governed_by"].clone();
+        // Governance is an explicit relation, not an inversion of read.
+        source["relation_kind"] = json!("governed-scope");
+        relation["sources"] = json!([source]);
+        relations.push((
+            row["source"]["reference"].as_str().unwrap().to_owned(),
+            relation,
+        ));
+    }
+    if relations.is_empty() {
+        return relation_view(
+            target,
+            work,
+            (instructions, &observations),
+            configuration,
+            contract,
+            request,
+            context,
+        );
+    }
+    let selected_id = request.and_then(|r| r["arguments"]["relation_id"].as_str());
+    let mut outputs = Vec::new();
+    let mut selected = None;
+    for (id, mut relation) in relations {
+        relation["relation_id"] = json!(id);
+        let current_request = request.filter(|_| selected_id.unwrap_or("canonical-sources") == id);
+        let mut output = relation_view(
+            target,
+            work,
+            (&relation, &observations),
+            configuration,
+            contract,
+            current_request,
+            Context {
+                executing: context.executing && current_request.is_some(),
+                ..context
+            },
+        )?;
+        output["relation_id"] = json!(id);
+        if current_request.is_some() {
+            selected = Some(outputs.len());
+        }
+        outputs.push(output);
+    }
+    if request.is_some() && selected.is_none() {
+        return Err(err("source relation is no longer applicable"));
+    }
+    let index = selected.unwrap_or_else(|| {
+        outputs
+            .iter()
+            .position(|v| v["status"] != "current")
+            .unwrap_or(0)
+    });
+    let mut output = outputs[index].clone();
+    if output["status"] == "current" && outputs.iter().any(|v| v["status"] != "current") {
+        output["status"] = json!("partial");
+    }
+    output["relations"] = json!(outputs.iter().map(|v|json!({"relation_id":v["relation_id"],"status":v["status"],"coverage":v["coverage"],"obligations":v["obligations"]})).collect::<Vec<_>>());
+    Ok(output)
+}
+
+fn relation_view(
+    target: &Path,
+    work: &Value,
+    inputs: (&Value, &RefCell<BTreeMap<String, Value>>),
+    configuration: &Value,
+    contract: &Value,
+    request: Option<&Value>,
+    context: Context<'_>,
+) -> Result<Value, CoreError> {
+    let (instructions, observations) = inputs;
+    let subject = context.subject;
     let mut view = json!({"status":"not-required","obligations":[],"requests":[],"action":null,"decisions":[]});
     let mut sources = BTreeMap::new();
     let mut dependencies = BTreeMap::new();
@@ -249,12 +357,18 @@ pub(crate) fn view(
             continue;
         }
         for source in &refs {
-            sources.insert(source.clone(), observe(&root, source)?);
+            sources.insert(source.clone(), observe(&root, source, observations)?);
         }
         for dependency in strings(&row["read"]) {
-            dependencies.insert(dependency.clone(), observe(&root, &dependency)?);
+            dependencies.insert(
+                dependency.clone(),
+                observe(&root, &dependency, observations)?,
+            );
         }
-        declarations.push(json!({"source":row["source"],"admission":row["binding_admission"],"sources":refs,"paths":row["metadata"]["paths"]}));
+        // Admission is checked afresh; its transport (for example a Git
+        // commit pointer) is not semantic evidence. The exact declaration
+        // content below binds its requirements and authority.
+        declarations.push(json!({"source":row["source"],"admission":{"status":row["binding_admission"]["status"]},"relation_kind":row["relation_kind"],"sources":refs,"paths":row["metadata"]["paths"]}));
         let patterns = strings(&row["metadata"]["paths"]);
         let global = ["**".to_owned()];
         let observed = scope_files(
@@ -298,37 +412,329 @@ pub(crate) fn view(
     }
     let mut postimages = BTreeMap::new();
     for path in scope {
-        postimages.insert(path.clone(), observe(&root, &path)?);
+        postimages.insert(path.clone(), observe(&root, &path, observations)?);
     }
-    let binding = json!({"semantics":SEMANTICS,"work":work,"subject":subject,"declarations":declarations,
-        "sources":sources,"dependencies":dependencies,"work_postimages":postimages,"policy_revision":configuration["revision"],"capability_revision":contract["revision"]});
+    let binding = json!({"semantics":SEMANTICS,"relation_id":instructions["relation_id"],"subject":subject,"declarations":declarations,
+        "sources":sources,"dependencies":dependencies,"work_postimages":postimages});
     // Retained semantic judgment is valid only under its actual producer as
     // well as current sources. No old receipt can survive an implementation
     // change merely because its repository dependencies stayed unchanged.
     let mut binding = binding;
     static PRODUCER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-        digest(&json!(include_str!("native_source_reconciliation.rs"))).unwrap()
+        digest(&json!([
+            include_str!("native_source_reconciliation.rs"),
+            include_str!("dependency_binding.rs"),
+            include_str!("current_projection.rs"),
+            include_str!("native_decision_authority.rs")
+        ]))
+        .unwrap()
     });
     binding["producer_revision"] = json!(&*PRODUCER);
     let mut judgment_paths: Vec<String> = sources.keys().cloned().collect();
     judgment_paths.extend(postimages.keys().cloned());
     judgment_paths.sort();
     judgment_paths.dedup();
-    if let Some(authority) =
+    if let Some(mut authority) =
         crate::native_decision_authority::delegated(configuration, "verification", &judgment_paths)
     {
+        // Only the matching grant determines retained judgment authority.
+        // Fresh requests/actions still bind the aggregate capability contract.
+        authority.as_object_mut().unwrap().remove("policy_revision");
         binding["decision_authority"] = authority;
     }
+    grouped_view(
+        Inputs {
+            target,
+            work,
+            instructions,
+            observations,
+            configuration,
+            contract,
+        },
+        request,
+        context,
+        binding,
+    )
+}
+
+#[derive(Clone, Copy)]
+struct Inputs<'a> {
+    target: &'a Path,
+    work: &'a Value,
+    instructions: &'a Value,
+    observations: &'a RefCell<BTreeMap<String, Value>>,
+    configuration: &'a Value,
+    contract: &'a Value,
+}
+
+// Only this owner-local current projection is operational. Historical immutable
+// receipts are never enumerated. Absence grants no coverage; malformed or missing
+// referenced evidence is an explicit gap, not a reason to resurrect history.
+pub(crate) fn projection_path(binding: &Value) -> Result<String, CoreError> {
+    Ok(format!(
+        ".agentic-workspace/proof/current/source-reconciliation-{}.json",
+        &digest(&binding["relation_id"])?[7..]
+    ))
+}
+fn current_groups(root: &Dir, binding: &Value) -> Result<Vec<String>, CoreError> {
+    let Some(value) = crate::current_projection::read(root, &projection_path(binding)?)? else {
+        return Ok(Vec::new());
+    };
+    let paths: Vec<String> = serde_json::from_value(value).map_err(err)?;
+    if paths.len() > 4096 || paths.iter().collect::<BTreeSet<_>>().len() != paths.len() {
+        return Err(err("invalid bounded current reconciliation projection"));
+    }
+    for path in &paths {
+        if !path.starts_with(".agentic-workspace/proof/receipts/source-reconciliation-")
+            || !path.ends_with(".json")
+        {
+            return Err(err("invalid current reconciliation reference"));
+        }
+        crate::decision_source::relative(path)?;
+    }
+    Ok(paths)
+}
+fn publish_group(root: &Dir, target: &Path, binding: &Value, path: &str) -> Result<(), CoreError> {
+    let mut paths = Vec::new();
+    let observations = RefCell::new(BTreeMap::new());
+    for old_path in current_groups(root, binding)? {
+        let bytes = native_planning::read(root, &old_path)?
+            .or(native_planning::read(root, &format!("{old_path}.tmp"))?)
+            .ok_or_else(|| err("current reconciliation receipt unavailable"))?;
+        let record: Value = serde_json::from_slice(&bytes).map_err(err)?;
+        let old = &record["invocation"]["arguments"]["binding"];
+        retained(target, &old_path, old)?
+            .ok_or_else(|| err("current reconciliation custody unavailable"))?;
+        let group = old["work_postimages"]
+            .as_object()
+            .ok_or_else(|| err("invalid current group"))?;
+        let mut projected = binding.clone();
+        projected["work_postimages"] = Value::Object(
+            group
+                .keys()
+                .map(|key| Ok((key.clone(), observe(root, key, &observations)?)))
+                .collect::<Result<_, CoreError>>()?,
+        );
+        // A new source/policy basis supersedes all old groups. An overlapping
+        // group supersedes the whole prior judgment, never individual subjects.
+        if same_basis(&projected, old)?
+            && !group
+                .keys()
+                .any(|key| binding["work_postimages"].get(key).is_some())
+        {
+            paths.push(old_path);
+        }
+    }
+    paths.push(path.to_owned());
+    if paths.len() > 4096 {
+        return Err(err(
+            "current reconciliation projection exceeds subject bound",
+        ));
+    }
+    crate::current_projection::write(root, &projection_path(binding)?, &json!(paths))
+}
+
+fn grouped_view(
+    inputs: Inputs<'_>,
+    request: Option<&Value>,
+    context: Context<'_>,
+    binding: Value,
+) -> Result<Value, CoreError> {
+    let Inputs { target, .. } = inputs;
+    let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+    let all = binding["work_postimages"].as_object().unwrap();
+    let membership = digest(&json!(all.keys().collect::<Vec<_>>()))?;
+    let mut uncovered: BTreeSet<String> = all.keys().cloned().collect();
+    let mut evidence = Vec::new();
+    let mut selected = None;
+    for path in current_groups(&root, &binding)? {
+        let bytes = native_planning::read(&root, &path)?
+            .or(native_planning::read(&root, &format!("{path}.tmp"))?)
+            .ok_or_else(|| err("current reconciliation receipt unavailable"))?;
+        let record: Value = serde_json::from_slice(&bytes).map_err(err)?;
+        let old = &record["invocation"]["arguments"]["binding"];
+        let group = old["work_postimages"]
+            .as_object()
+            .ok_or_else(|| err("invalid current group"))?;
+        let mut projected = binding.clone();
+        projected["work_postimages"] = Value::Object(
+            group
+                .keys()
+                .filter_map(|key| all.get(key).map(|v| (key.clone(), v.clone())))
+                .collect(),
+        );
+        if !same_basis(&projected, old)? {
+            continue;
+        }
+        let prior = retained(target, &path, old)?;
+        if request
+            .is_some_and(|r| r["arguments"]["binding_revision"] == digest(old).unwrap_or_default())
+        {
+            selected = Some(old.clone());
+        }
+        if let Some(prior) = prior.filter(|p| p["committed"] == true && p["published"] == true) {
+            for key in group.keys() {
+                uncovered.remove(key);
+            }
+            evidence.push(prior["value"].clone());
+        }
+    }
+    let total = all.len();
+    let covered = total - uncovered.len();
+    let mut group = binding.clone();
+    group["work_postimages"] = Value::Object(
+        uncovered
+            .iter()
+            .take(GROUP_SIZE)
+            .map(|key| (key.clone(), all[key].clone()))
+            .collect(),
+    );
+    if let Some(selected) = selected {
+        group = selected;
+    }
+    let mut output = if uncovered.is_empty()
+        && !evidence.is_empty()
+        && request.is_none()
+        && !context.executing
+    {
+        json!({"status":"current","obligations":binding["sources"].as_object().unwrap().keys().collect::<Vec<_>>(),"requests":[],"action":null,"decisions":[],"evidence":evidence[0]})
+    } else {
+        group_view(inputs, request, context, group, &membership)?
+    };
+    if output["status"] == "current" && !uncovered.is_empty() {
+        output["status"] = json!("partial");
+    }
+    output["coverage"] = json!({"status":if uncovered.is_empty() && !evidence.is_empty(){"current"}else if covered>0{"partial"}else{"unassessed"},"total":total,"accepted":covered,"pending":uncovered.len(),"membership_revision":membership,"complete_enumeration":true,"group_limit":GROUP_SIZE,"accepted_groups":evidence.len()});
+    Ok(output)
+}
+
+// Domain adapters supply observations and conclusion metadata to the common
+// comparison; accepted publication custody is checked separately by retained.
+fn same_basis(current: &Value, accepted: &Value) -> Result<bool, CoreError> {
+    use crate::dependency_binding::{Basis, Currentness, Observation, Scheme};
+    let adapt = |value: &Value| -> Result<_, CoreError> {
+        let mut identity = value.clone();
+        let mut dependencies = Vec::new();
+        for field in ["sources", "dependencies", "work_postimages"] {
+            for (path, observation) in value[field]
+                .as_object()
+                .ok_or_else(|| err("invalid dependency basis"))?
+            {
+                dependencies.push(Observation {
+                    identity: format!("{field}:{path}"),
+                    scheme: Scheme::RawBytes,
+                    revision: observation["revision"].as_str().map(str::to_owned),
+                    status: if observation["status"] == "present" {
+                        Currentness::Current
+                    } else {
+                        Currentness::Missing
+                    },
+                });
+            }
+            identity.as_object_mut().unwrap().remove(field);
+        }
+        Ok((identity, dependencies))
+    };
+    let (current_identity, current_observations) = adapt(current)?;
+    let (accepted_identity, accepted_observations) = adapt(accepted)?;
+    Ok(crate::dependency_binding::compare(
+        Basis {
+            conclusion: &current_identity,
+            dependencies: &current_observations,
+        },
+        Some(Basis {
+            conclusion: &accepted_identity,
+            dependencies: &accepted_observations,
+        }),
+    )
+    .status
+        == Currentness::Current)
+}
+
+fn group_view(
+    inputs: Inputs<'_>,
+    request: Option<&Value>,
+    context: Context<'_>,
+    binding: Value,
+    membership: &str,
+) -> Result<Value, CoreError> {
+    let Inputs {
+        target,
+        work,
+        instructions,
+        observations,
+        configuration,
+        contract,
+    } = inputs;
+    let Context { subject, executing } = context;
+    let sources = binding["sources"].as_object().unwrap();
+    let mut view = json!({"status":"unassessed","obligations":sources.keys().collect::<Vec<_>>(),"requests":[],"action":null,"decisions":[]});
     let revision = digest(&binding)?;
-    view["source_revision"] = json!(revision);
+    let source_revision = digest(&json!([revision, membership]))?;
+    view["source_revision"] = json!(source_revision);
     let path = format!(
         ".agentic-workspace/proof/receipts/source-reconciliation-{}.json",
         &revision[7..]
     );
     let issued = json!({"kind":"agentic-workspace/public-request/v1","owner":"verification","id":REQUEST,"request_kind":REQUEST,
         "owner_revision":contract["owners"].as_array().unwrap().iter().find(|o|o["owner"]=="verification").unwrap()["revision"],
-        "source_revision":revision,"capability_revision":contract["revision"],"task_identity":work,
-        "arguments":{"binding_revision":revision,"judgments":{}}});
+        "source_revision":source_revision,"capability_revision":contract["revision"],"task_identity":work,
+        "arguments":{"relation_id":binding["relation_id"],"binding_revision":revision,"judgments":{}}});
+    let mut material_request = issued.clone();
+    material_request["arguments"]["read_references"] = json!(
+        sources
+            .keys()
+            .chain(binding["work_postimages"].as_object().unwrap().keys())
+            .take(16)
+            .collect::<BTreeSet<_>>()
+    );
+    view["material_request"] = material_request;
+    if let Some(request) = request.filter(|r| r["arguments"]["read_references"].is_array()) {
+        crate::prepare_request_value(
+            json!({"request":request,"current_work":work,"capability_contract":contract}),
+        )?;
+        let mut expected = issued.clone();
+        expected["arguments"] = request["arguments"].clone();
+        if *request != expected
+            || request["arguments"]["binding_revision"] != revision
+            || request["arguments"]["judgments"] != json!({})
+        {
+            return Err(err(
+                "source material request is stale or differs from the exact owner request",
+            ));
+        }
+        let root = Dir::open_ambient_dir(target, ambient_authority()).map_err(err)?;
+        let mut material = Vec::new();
+        let mut size = 0;
+        for reference in strings(&request["arguments"]["read_references"]) {
+            let observation = sources
+                .get(&reference)
+                .or_else(|| binding["work_postimages"].get(&reference))
+                .ok_or_else(|| err("material outside current group"))?;
+            let bytes = crate::dependency_binding::read(&root, &reference)?
+                .ok_or_else(|| err("group material disappeared"))?;
+            size += bytes.len();
+            if size > crate::decision_source::MAX_SOURCE_BYTES {
+                return Err(err(
+                    "group material exceeds bounded read; select fewer references",
+                ));
+            }
+            if observation["revision"]
+                != crate::dependency_binding::revision(
+                    &bytes,
+                    crate::dependency_binding::Scheme::RawBytes,
+                )?
+            {
+                return Err(err("group material changed during read"));
+            }
+            material.push(json!({"reference":reference,"revision":observation["revision"],"text":String::from_utf8(bytes).map_err(err)?}));
+        }
+        view["status"] = json!("judgment-material-required");
+        view["requests"] = json!([issued]);
+        view["proposal"] = binding;
+        view["material"] = json!(material);
+        return Ok(view);
+    }
     let prior = match retained(target, &path, &binding) {
         Ok(prior) => prior,
         Err(error) => {
@@ -340,6 +746,17 @@ pub(crate) fn view(
             return Ok(view);
         }
     };
+    if request.is_none()
+        && !executing
+        && let Some(prior) = prior
+            .as_ref()
+            .filter(|p| p["committed"] == true && p["published"] == true)
+    {
+        view["status"] = json!("current");
+        view["evidence"] = prior["value"].clone();
+        view["receipt_ref"] = json!(path);
+        return Ok(view);
+    }
     let selected = request.or_else(|| {
         prior
             .as_ref()
@@ -379,7 +796,7 @@ pub(crate) fn view(
             "completion_authority":false,"semantic_truth":"judgment-not-mechanically-proven"});
         let proposal_revision = digest(&proposal)?;
         view["proposal"] = proposal;
-        let arguments = json!({"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
+        let arguments = json!({"relation_id":binding["relation_id"],"binding_revision":revision,"judgments":judgments,"proposal_revision":proposal_revision});
         let decisions = json!([{"id":"source-reconciliation","question":"Confirm these exact source judgments against the bound resulting work?",
                 "material":view["proposal"],
                 "response_request":{"request_kind":REQUEST,"arguments":arguments},
@@ -392,15 +809,15 @@ pub(crate) fn view(
             }
             if binding.get("decision_authority").is_some() {
                 let compiled = crate::compile_value(
-                    json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":revision,"decisions":decisions}]}),
+                    json!({"intent":{"current_work":work},"capability_contract":contract,"contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
                 )?;
                 let mut authorized =
                     compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
                 authorized["arguments"]["answer"] = json!("confirm");
-                return self::view(
+                return relation_view(
                     target,
                     work,
-                    instructions,
+                    (instructions, observations),
                     configuration,
                     contract,
                     Some(&authorized),
@@ -413,7 +830,7 @@ pub(crate) fn view(
         }
         let compiled = crate::compile_value(
             json!({"intent":{"current_work":work},"capability_contract":contract,
-            "contributions":[{"owner":"verification","revision":revision,"decisions":decisions}]}),
+            "contributions":[{"owner":"verification","revision":source_revision,"decisions":decisions}]}),
         )?;
         let mut exact =
             compiled["pending_consequences"]["decisions"][0]["response_request"].clone();
@@ -549,6 +966,7 @@ pub(crate) fn execute(
         root.remove_file(&temporary).map_err(err)?;
     }
     revalidate()?;
+    publish_group(&root, target, binding, path)?;
     let committed = crate::attempt_store::commit(
         json!({"target":target,"custody":admission["custody"],"outcome":outcome}),
     )?;

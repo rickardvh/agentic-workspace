@@ -19,7 +19,7 @@ from agentic_workspace.semantic_task_routes import (
 )
 
 INSTRUCTION_DIR = Path(".agentic-workspace/instructions")
-FRONTMATTER_FIELDS = ("paths", "routes", "read", "reconcile", "use", "checks", "protect")
+FRONTMATTER_FIELDS = ("paths", "routes", "read", "reconcile", "governed_by", "use", "checks", "protect")
 _NAME = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 _DISPOSITION_PREFIX = "<!-- agentic-workspace:context-disposition "
 
@@ -143,9 +143,13 @@ def _frontmatter(text: str, *, load_body: bool) -> tuple[dict[str, list[Any]], s
 
 def _validate_metadata(metadata: dict[str, list[Any]]) -> list[dict[str, str]]:
     diagnostics: list[dict[str, str]] = []
-    for field in ("paths", "read", "reconcile", "protect"):
+    for field in ("paths", "read", "reconcile", "governed_by", "protect"):
         for index, value in enumerate(metadata[field]):
-            if not isinstance(value, str) or not _valid_repo_pattern(value) or (field == "reconcile" and any(c in value for c in "*?[]")):
+            if (
+                not isinstance(value, str)
+                or not _valid_repo_pattern(value)
+                or (field in ("reconcile", "governed_by") and any(c in value for c in "*?[]"))
+            ):
                 diagnostics.append(
                     {
                         "field": f"{field}[{index}]",
