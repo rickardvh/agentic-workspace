@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Consume compatible sequential Planning relation and posture answers while rejecting stale or contradictory carriage."

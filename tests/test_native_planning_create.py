@@ -608,6 +608,59 @@ def test_native_owned_selection_switches_only_by_current_explicit_request(
     assert {choice["id"] for choice in posture["choices"]} == {"direct", "planned"}
     direct = {**posture["response_request"], "arguments": {**posture["response_request"]["arguments"], "answer": "direct"}}
     assert call({**context, "request": direct})["planning"]["status"] == "direct"
+    if surface == "native":
+        # One fresh-process CLI journey covers serialized carriage; the native
+        # request matrix covers composition, currentness and owner preservation.
+        import copy
+
+        carried = call({**context, "projection": "carried"})
+        for answer in ("independent", "direct"):
+            carried = call(
+                {
+                    **context,
+                    "projection": "carried",
+                    "request": carried["carriage"],
+                    "reference": carried["view"]["decision_packet"]["decision_request"]["reference"],
+                    "answer": answer,
+                }
+            )
+            if answer == "independent":
+                assert carried["view"]["decision_packet"]["decision_request"]["id"] == "planning-posture"
+        combined = copy.deepcopy(unrelated)
+        combined["arguments"]["task_posture"] = "direct"
+        control = call({**context, "request": combined})
+        assert carried["view"]["decision_packet"]["decision_request"] is None
+        sequential = call(carried["carriage"]["context"])
+        for result in (sequential, call({**context, "request": [direct, unrelated]}), call({**context, "request": [unrelated, direct]})):
+            for field in ("status", "task_relation", "required_transition", "selected_owner", "custody_status"):
+                assert result["planning"][field] == control["planning"][field]
+            for field in ("blockers", "claim_boundary", "ready_actions", "decision_request"):
+                assert result["decision_packet"][field] == control["decision_packet"][field]
+        for index in (0, 1):
+            for field in ("source_revision", "capability_revision", "owner_revision", "task_identity"):
+                pair = copy.deepcopy([unrelated, direct])
+                pair[index][field] = {"kind": "current-work", "id": "wrong"} if field == "task_identity" else "stale"
+                with pytest.raises(AssertionError):
+                    call({**context, "request": pair})
+        for answer, posture_answer in (("continue-selected", None), ("independent", "planned"), ("unrelated-direct", "planned")):
+            pair = copy.deepcopy([unrelated, direct])
+            pair[0]["arguments"]["answer"] = answer
+            if posture_answer:
+                if answer == "unrelated-direct":
+                    pair[1]["arguments"]["answer"] = posture_answer
+                else:
+                    pair[0]["arguments"]["task_posture"] = posture_answer
+            for ordered in (pair, pair[::-1]):
+                with pytest.raises(AssertionError, match="conflicting Planning"):
+                    call({**context, "request": ordered})
+        for changed_context in ({"task": "Other task"}, {"changed": ["different.rs"]}, {"target": str(tmp_path.parent)}):
+            with pytest.raises(AssertionError):
+                call({**context, **changed_context, "request": [unrelated, direct]})
+        planned_pair = copy.deepcopy([unrelated, direct])
+        planned_pair[1]["arguments"]["answer"] = "planned"
+        assert call({**context, "request": planned_pair})["planning"]["required_transition"] == "create-or-select-owner"
+        assert selector.read_bytes() == before
+        assert first_path.read_bytes() == first_bytes
     unrelated = posture["response_request"]
     unrelated["arguments"]["answer"] = "planned"
     request = current["planning"]["creation_requests"][0]

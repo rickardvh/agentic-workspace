@@ -1574,6 +1574,32 @@ fn validate_operation_arguments(
         .map_err(|error| CoreError::new(format!("{field}.arguments violate input_schema: {error}")))
 }
 
+/// Maximum UTF-8 bytes for the ordinary serialized invalid-source-decision
+/// envelope produced by public request shape diagnostics (including newline).
+/// Messages are a closed set of ASCII contract guidance: no validator rendering,
+/// instance paths, unknown property names, or rejected values can enter them.
+pub const PUBLIC_REQUEST_DIAGNOSTIC_MAX_BYTES: usize = 512;
+
+pub(crate) enum PublicRequestShape {
+    Set,
+    Envelope,
+    Arguments,
+}
+
+pub(crate) fn invalid_public_request(shape: PublicRequestShape) -> CoreError {
+    CoreError::new(match shape {
+        PublicRequestShape::Set => {
+            "request: expected a returned public-request object or array of requests. For a carried reference answer, pass carriage with reference and answer, not the full presentation."
+        }
+        PublicRequestShape::Envelope => {
+            "request: expected the unchanged owner-issued public-request envelope with only its advertised arguments filled in; resolve a fresh request through start."
+        }
+        PublicRequestShape::Arguments => {
+            "request.arguments violate input_schema: use the advertised fields and bounded choices in the current owner-issued request; resolve a fresh request through start."
+        }
+    })
+}
+
 fn normalize_public_request(
     intent: &mut Value,
     capabilities: Option<&NormalizedCapabilityContract>,
@@ -1585,7 +1611,7 @@ fn normalize_public_request(
         CoreError::new("intent.public_request requires a current capability_contract")
     })?;
     let parsed: PublicRequestInput = serde_json::from_value(value.clone())
-        .map_err(|error| CoreError::new(format!("intent.public_request is invalid: {error}")))?;
+        .map_err(|_| invalid_public_request(PublicRequestShape::Envelope))?;
     if parsed.kind != PUBLIC_REQUEST_KIND {
         return Err(CoreError::new(format!(
             "intent.public_request.kind must be {PUBLIC_REQUEST_KIND}"
@@ -1615,28 +1641,29 @@ fn normalize_public_request(
         ));
     }
     let owner_capability = capabilities.owners.get(&owner).ok_or_else(|| {
-        CoreError::new(format!(
-            "public request names unknown capability owner {owner}"
-        ))
+        CoreError::new(
+            "public request names unknown capability owner; use a current owner-issued request",
+        )
     })?;
     if owner_revision != owner_capability.revision {
-        return Err(CoreError::new(format!(
-            "public request is stale for capability owner {owner}"
-        )));
+        return Err(CoreError::new(
+            "public request is stale for capability owner; resolve a fresh request through start",
+        ));
     }
     let request_shape = owner_capability
         .requests
         .get(&request_kind)
         .ok_or_else(|| {
-            CoreError::new(format!(
-                "public request names undeclared request kind {request_kind} for {owner}"
-            ))
+            CoreError::new(
+                "public request names undeclared request kind; use a current owner-issued request",
+            )
         })?;
-    validate_operation_arguments(
-        &parsed.arguments,
-        &request_shape.input_schema,
-        &format!("public request {request_kind}"),
-    )?;
+    if !parsed.arguments.is_object()
+        || !schema_validator(&request_shape.input_schema, "public request")?
+            .is_valid(&parsed.arguments)
+    {
+        return Err(invalid_public_request(PublicRequestShape::Arguments));
+    }
     let identity = digest(&json!({
         "id": id,
         "owner": owner,

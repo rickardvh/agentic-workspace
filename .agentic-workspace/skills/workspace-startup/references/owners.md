@@ -26,3 +26,28 @@ procedure does not guarantee that a host will accept every invocation.
 After an invocation, distinguish the effect outcome from continuation. Never retry a possibly committed effect merely because continuation failed. Use a current continuation when available; otherwise use exact re-entry/recovery or freshly resolve current state. Currentness is revalidated by the owner, not guaranteed by remembered model context.
 
 Detailed schemas and packet fields belong to generated contracts/reference surfaces. Load them only when a client or debugging task actually needs them.
+
+For an unrelated remembered Planning owner, answer the returned relation and
+posture questions separately. Independence alone leaves posture undecided. This
+PowerShell example assumes those are the current choices; check each process
+before consuming its output and preserve the same task and changed-path context:
+
+```powershell
+$task = 'Bounded independent work'
+$r = agentic-workspace start --target . --task $task --projection carried --format json | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) { throw 'Startup failed' }
+foreach ($choice in @('independent', 'direct')) {
+    $ref = $r.view.decision_packet.decision_request.reference
+    $answer = $choice | ConvertTo-Json -Compress
+    $r = ($r.carriage | ConvertTo-Json -Depth 100 -Compress) |
+        agentic-workspace start --target . --task $task --projection carried --input - --reference $ref --answer $answer --format json |
+        ConvertFrom-Json
+    if ($LASTEXITCODE -ne 0) { throw 'Planning answer failed' }
+}
+```
+
+Return `carriage`, not the whole presentation. The owner validates both answers;
+conflicting or stale answers cannot override each other. Direct posture preserves
+the remembered owner and grants no proof, effect or completion authority. For
+fresh resolution without answering a reference, reuse `carriage.context` as the
+public start context (its request through CLI `--input` and its work flags).
